@@ -87,7 +87,7 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"enableSplitConfigLoading":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
@@ -113,6 +113,10 @@ WunderGraph Cosmo Controlplane
 | jobs.deleteUser.email | string | `"foo@wundergraph.com"` | The email of the user |
 | jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
 | jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
+| jobs.enableSplitConfigLoading.additionalLabels | object | `{}` | Adds additional labels to the job |
+| jobs.enableSplitConfigLoading.enabled | bool | `false` | Enables the job to be run |
+| jobs.enableSplitConfigLoading.id | string | `"123"` | The unique identifier of the organization |
+| jobs.enableSplitConfigLoading.slug | string | `"foo"` | The slug of the organization |
 | jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
