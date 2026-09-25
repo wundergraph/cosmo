@@ -1,12 +1,15 @@
-import type { ConnectRouterOptions } from '@connectrpc/connect';
+import type { Client, ConnectRouterOptions } from '@connectrpc/connect';
 import { ConnectRouter } from '@connectrpc/connect';
+import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
 import Redlock from 'redlock';
+import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import * as schema from '../db/schema.js';
+import AIServiceImpl from './bufservices/AIService.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
 import { ClickHouseClient } from './clickhouse/index.js';
@@ -56,6 +59,7 @@ export interface RouterOptions {
   stripeSecretKey?: string;
   cdnBaseUrl: string;
   lockAdapter: Redlock;
+  promptToQueryClient?: Client<typeof PromptToQueryService>;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 120_000,
@@ -66,6 +70,7 @@ const handlerOptions: Partial<ConnectRouterOptions> = {
 
 export default (opts: RouterOptions) => {
   return (router: ConnectRouter) => {
+    router.service(AIService, AIServiceImpl(opts), handlerOptions);
     router.service(NodeService, NodeServiceImpl(opts), handlerOptions);
     router.service(PlatformService, PlatformServiceImpl(opts), handlerOptions);
   };

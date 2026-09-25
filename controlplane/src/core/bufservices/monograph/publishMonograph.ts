@@ -152,6 +152,8 @@ export function publishMonograph(
           opts.chClient,
           opts.webhookProxyUrl,
           false,
+          opts.promptToQueryClient,
+          opts.billingDefaultPlanId,
         );
 
         return subgraphRepo.update(

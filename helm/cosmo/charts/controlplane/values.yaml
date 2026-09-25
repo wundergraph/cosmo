@@ -216,6 +216,16 @@ configuration:
   cdnBaseUrl: 'http://cosmo-cdn:8787'
   # -- The domain for the cookie used to store SSO authentication information
   authSsoCookieDomain: '.wundergraph.local'
+  #-- Configuration for the Prompt to Query service
+  promptToQuery:
+    #-- Enables the prompt to query service. Default is false
+    enabled: false
+    #-- The address of the service
+    address: ''
+    #-- Which HTTP version to use for communication. Either 1.1 or 2
+    httpVersion: '2'
+    #-- The value of the token transmitted in the authorizaiton header as bearer. Must be a JWT
+    token: ''
 
   # -- Use this section to configure the smtp server.
   smtp:

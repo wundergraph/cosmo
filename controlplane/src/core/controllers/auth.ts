@@ -9,7 +9,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import cookie from 'cookie';
-import { PlainMessage, CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import {
+  PlainMessage,
+  CustomAccessTokenClaims,
+  UserInfoEndpointResponse,
+  UserSession,
+  OrganizationAcceptedFeatureTermDTO,
+} from '../../types/index.js';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { isSocialLoginProvider, resolveLoginMethod } from '../util.js';
 import * as schema from '../../db/schema.js';
@@ -101,6 +107,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       const orgLoginMethodRepo = new OrganizationLoginMethodRepository(opts.db);
 
       const loginMethodAllowedByOrg = new Map<string, boolean>();
+      const acceptedTermsByOrganizationId = new Map<string, OrganizationAcceptedFeatureTermDTO[]>();
       await Promise.all(
         orgs.map(async (o) => {
           const method = await resolveLoginMethod(
@@ -109,6 +116,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           );
           const allowed = await orgLoginMethodRepo.isLoginMethodAllowed({ organizationId: o.id, loginMethod: method });
           loginMethodAllowedByOrg.set(o.id, allowed);
+
+          acceptedTermsByOrganizationId.set(o.id, await opts.organizationRepository.getAcceptedFeatureTerms(o.id));
         }),
       );
 
@@ -152,6 +161,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               ...rest,
             })),
             loginMethodAllowed: loginMethodAllowedByOrg.get(org.id) ?? true,
+            acceptedFeatureTerms: acceptedTermsByOrganizationId.get(org.id) ?? [],
           })),
         invitations,
         expiresAt: userSession.expiresAt,
