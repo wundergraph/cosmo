@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -45,7 +46,8 @@ import (
 var (
 	// staticOperationName is used to replace the operation name in the document when generating the operation ID
 	// this ensures that the operation ID is the same for the same operation regardless of the operation name
-	staticOperationName = []byte("O")
+	staticOperationName      = []byte("O")
+	customPersistedIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,250}$`)
 )
 
 type ParsedOperation struct {
@@ -415,14 +417,7 @@ func (o *OperationKit) validatePersistedQueryID() error {
 	message := "persistedQuery does not have a valid sha256 hash"
 	if o.operationProcessor.allowCustomIDs {
 		message = "persistedQuery id must be 1-250 characters from [A-Za-z0-9_-]"
-		valid := len(pq.Sha256Hash) >= 1 && len(pq.Sha256Hash) <= 250
-		for _, c := range pq.Sha256Hash {
-			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-') {
-				valid = false
-				break
-			}
-		}
-		if valid {
+		if isValidCustomPersistedID(pq.Sha256Hash) {
 			if o.parsedOperation.Request.Query == "" {
 				return nil
 			}
@@ -430,6 +425,10 @@ func (o *OperationKit) validatePersistedQueryID() error {
 		}
 	}
 	return &httpGraphqlError{message: message, statusCode: http.StatusBadRequest}
+}
+
+func isValidCustomPersistedID(id string) bool {
+	return customPersistedIDPattern.MatchString(id)
 }
 
 func (o *OperationKit) hasCustomPersistedID() bool {
