@@ -145,4 +145,26 @@ describe('Create organization', () => {
       'Invalid slug. It must be of 3-32 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
     );
   });
+
+  test('new organizations should enable `split-config-loading` by default', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgName = genID('org');
+    const createOrganizationResponse = await client.createOrganization({
+      name: orgName,
+      slug: orgName,
+      plan: 'developer',
+    });
+
+    expect(createOrganizationResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const orgRepo = new OrganizationRepository(server.log, server.db);
+    const org = await orgRepo.byId(createOrganizationResponse.organization!.id);
+
+    expect(org).toBeDefined();
+
+    const isEnabled = await orgRepo.isFeatureEnabled(org!.id, 'split-config-loading');
+    expect(isEnabled).toBe(true);
+  });
 });
