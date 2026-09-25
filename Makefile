@@ -8,7 +8,7 @@ setup-build-tools:
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+	go install honnef.co/go/tools/cmd/staticcheck@2026.2.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 	go install github.com/vektra/mockery/v3@v3.3.1
@@ -69,6 +69,12 @@ FORMAT_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(FORMAT_ARGS):
 	@:
 endif
+
+.PHONY: tidy-all
+tidy-all:
+	find . -name 'go.mod' | while read -r mod; do \
+		(cd "$$(dirname "$$mod")" && go mod tidy) || exit 1; \
+	done
 
 seed:
 	pnpm -r run --filter './controlplane' seed
