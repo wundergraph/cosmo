@@ -230,8 +230,8 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
-// isValidHash verifies if the Sha256Hash string is valid and well-formed.
-func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
+// isValidSHA256Hash reports whether the persisted ID is a 64-character hexadecimal SHA256 hash.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isValidSHA256Hash() bool {
 	if len(pq.Sha256Hash) != 64 {
 		return false
 	}
@@ -411,7 +411,7 @@ func (o *OperationKit) unmarshalOperation() error {
 // Custom IDs identify pre-published, immutable operations, never APQ registrations.
 func (o *OperationKit) validatePersistedQueryID() error {
 	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
-	if pq.isValidHash() {
+	if pq.isValidSHA256Hash() {
 		return nil
 	}
 	message := "persistedQuery does not have a valid sha256 hash"
@@ -433,7 +433,7 @@ func isValidCustomPersistedID(id string) bool {
 
 func (o *OperationKit) hasCustomPersistedID() bool {
 	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
-	return o.operationProcessor.allowCustomIDs && pq.HasHash() && !pq.isValidHash()
+	return o.operationProcessor.allowCustomIDs && pq.HasHash() && !pq.isValidSHA256Hash()
 }
 
 func (o *OperationKit) computeVariablesHash() {
@@ -1378,7 +1378,7 @@ func (o *OperationKit) persistedOperationIdentity(clientName, id string) string 
 	identity := fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
 	if o.manifestSnapshot != nil {
 		pq := GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
-		if !pq.isValidHash() {
+		if !pq.isValidSHA256Hash() {
 			// Custom IDs can be reused with a different body. Scope them to that
 			// body while allowing unchanged operations to survive manifest reloads.
 			bodyHash := o.manifestSnapshot.BodyHash(id)
