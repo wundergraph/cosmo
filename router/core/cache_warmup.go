@@ -322,9 +322,9 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
-	client := c.operationProcessor.persistedOperationClient
-	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil && client != nil && !client.APQEnabled() {
-		if client.PQLStore() != nil {
+	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil &&
+		c.operationProcessor.persistedOperationClient != nil && !c.operationProcessor.persistedOperationClient.APQEnabled() {
+		if c.operationProcessor.persistedOperationClient.PQLStore() != nil {
 			// Resolve against the current manifest: copied bodies may be stale.
 			// The body hash and cache key must come from the same snapshot.
 			item.Request.Query = ""

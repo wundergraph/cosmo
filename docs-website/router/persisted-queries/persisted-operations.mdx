@@ -27,7 +27,9 @@ Persisted operations require some tooling on the client side. Consult the docume
 
 ### Supported manifest formats
 
-`wgc operations push` automatically detects the format of your manifest file. The following formats are supported:
+`wgc operations push` preserves the IDs supplied in a manifest or query map. With APQ disabled, IDs can contain 1–250 ASCII letters, digits, underscores, or hyphens. With APQ enabled, IDs must be SHA256 hashes of the operation body. Plain GraphQL files always use the body’s SHA256 as the ID.
+
+The following formats are detected automatically:
 
 <Tabs>
   <Tab title="Apollo">
@@ -53,8 +55,8 @@ Persisted operations require some tooling on the client side. Consult the docume
 
     ```json relay-query-map.json
     {
-      "dc67510fb4289672bea757e862d6b00e83db5d3c": "query GetEmployees { employees { id } }",
-      "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2": "mutation UpdateEmployee($id: ID!) { updateEmployee(id: $id) { id } }"
+      "get_employees_v1": "query GetEmployees { employees { id } }",
+      "update_employee_v1": "mutation UpdateEmployee($id: ID!) { updateEmployee(id: $id) { id } }"
     }
     ```
 
@@ -99,38 +101,16 @@ To see all available options for `wgc operations push`, see [Push](/cli/operatio
 
 Additionally, check the [Using Persisted Operation with Federated GraphQL](/tutorial/using-persisted-operations) tutorial for a step-by-step guide.
 
-## Custom operation IDs
+### Sending requests
 
-When persisted operations are configured and APQ is disabled, published custom IDs are supported automatically with individual-operation storage or manifest lookup. With APQ enabled, IDs must be SHA256 hashes and retain the existing registration and lookup behavior.
-
-```yaml
-persisted_operations:
-  manifest:
-    enabled: true
-automatic_persisted_queries:
-  enabled: false
-```
-
-IDs must contain 1–250 ASCII letters, digits, underscores, or hyphens. Publish a JSON query map through the existing CLI:
-
-```json operations.json
-{
-  "get_typename_v1": "query GetTypeName { __typename }"
-}
-```
-
-```bash
-wgc operations push mygraph -n default -c web -f operations.json
-```
-
-Send the ID in `extensions.persistedQuery.sha256Hash`, despite the field name, with the `graphql-client-name: web` header:
+Send the published ID in `extensions.persistedQuery.sha256Hash`, despite the field name, with the `graphql-client-name: web` header:
 
 ```json
 {
   "extensions": {
     "persistedQuery": {
       "version": 1,
-      "sha256Hash": "get_typename_v1"
+      "sha256Hash": "get_employees_v1"
     }
   }
 }
@@ -139,12 +119,6 @@ Send the ID in `extensions.persistedQuery.sha256Hash`, despite the field name, w
 Requests containing both a SHA256 ID and a `query` body remain supported when the ID matches the body’s SHA256 exactly. Mismatches are rejected. Custom IDs must be sent without a `query` body; this includes 64-character hexadecimal IDs that differ from the published body’s SHA256. Unknown IDs return `PersistedQueryNotFound`.
 
 The `persisted_operation_sha256` context field contains the supplied ID, while `operation_sha256` contains the actual body hash when requested.
-
-Enable `PERSISTED_OPERATIONS_MANIFEST_ENABLED=true` with APQ disabled to load all published operations into memory. Manifest warmup supports custom IDs. Custom-ID cache entries are scoped to the ID and the body’s SHA256, computed when the manifest loads. Unchanged operations remain cached across manifest updates. Each request checks the current manifest, so removed operations stop resolving and changed bodies cannot reuse stale cache entries.
-
-Manifest-mode routers observe deletion or replacement after polling the updated manifest. Routers using per-operation CDN lookup may retain old cached bodies, so do not reuse deleted IDs in that mode while they may still be cached.
-
-Manifest warmup pre-processes operations on each router replica. With manifest mode disabled, operations are fetched from the CDN on cache misses.
 
 ## Deleting persisted operations in Studio
 
@@ -158,6 +132,8 @@ You can delete persisted operations directly in Cosmo Studio after they have bee
 
 Only organization users with `organization-admin` or `organization-developer` roles can delete operations.
 Operations are currently deleted one at a time from the UI.
+
+Manifest-mode routers observe deletions after polling the updated manifest. Routers using individual-operation CDN lookup may retain cached bodies, so do not reuse deleted IDs while they may still be cached.
 
 <Note>
   Studio always asks for confirmation before deleting operations. If traffic is detected for the selected operation, the dialog warns that the operation is receiving traffic. If analytics data is unavailable, Studio cannot guarantee that existing clients won't break. You can always check the metrics using the link in the dialog.
@@ -176,8 +152,10 @@ persisted_operations:
 The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval` and `poll_jitter`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
 
 <Note>
-  When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.
+  When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation IDs are rejected immediately.
 </Note>
+
+With APQ disabled, manifest lookup supports both SHA256 and custom IDs. Unchanged operations remain cached across manifest updates. Each request checks the current manifest, so removed operations stop resolving and changed bodies cannot reuse stale cache entries.
 
 ### Cache warmup
 
@@ -221,7 +199,7 @@ We expose 4 different types of persisted operation blocking in the configuration
 
 3. **Safelist** — Operations that have been explicitly persisted will be allowed, based on matching the query body against persisted queries.
 
-4. **Block non-persisted operations** — Fully enforced blocking of non-persisted operations, clients are required to send a pre-computed SHA-256 hash instead of a query body.
+4. **Block non-persisted operations** — Fully enforced blocking of non-persisted operations, clients are required to send a published operation ID instead of a query body.
 
 ### Migration path to enforcing persisted operations
 

@@ -498,10 +498,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
-	client := operationKit.operationProcessor.persistedOperationClient
 	// Without APQ, even a 64-hex ID may not be the body hash.
 	// Defer hash telemetry until lookup resolves the body.
-	if client != nil && !client.APQEnabled() && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query == "" {
+	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query == "" {
 		return false
 	}
 
@@ -693,7 +692,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// Without APQ, resolution and cache hits provide the actual body hash.
 	// Never use the supplied ID as hash telemetry just because it looks like SHA256.
-	if client := operationKit.operationProcessor.persistedOperationClient; client != nil && !client.APQEnabled() && operationKit.parsedOperation.IsPersistedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
+	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.IsPersistedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
 		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)

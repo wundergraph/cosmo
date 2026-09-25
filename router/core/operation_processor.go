@@ -411,7 +411,7 @@ func (o *OperationKit) validatePersistedQueryID() error {
 		return nil
 	}
 	message := "persistedQuery does not have a valid sha256 hash"
-	if client := o.operationProcessor.persistedOperationClient; client != nil && !client.APQEnabled() {
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
 		message = "persistedQuery id must be 1-250 characters from [A-Za-z0-9_-]"
 		if isValidCustomPersistedID(pq.Sha256Hash) {
 			if o.parsedOperation.Request.Query == "" {
@@ -429,9 +429,19 @@ func isValidCustomPersistedID(id string) bool {
 	}
 	for i := range len(id) {
 		c := id[i]
-		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-') {
-			return false
+		if c >= 'a' && c <= 'z' {
+			continue
 		}
+		if c >= 'A' && c <= 'Z' {
+			continue
+		}
+		if c >= '0' && c <= '9' {
+			continue
+		}
+		if c == '_' || c == '-' {
+			continue
+		}
+		return false
 	}
 	return true
 }
@@ -477,16 +487,15 @@ func (o *OperationKit) ComputeOperationSha256() error {
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
 func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (skipParse bool, isAPQ bool, err error) {
-	client := o.operationProcessor.persistedOperationClient
-	if client == nil {
+	if o.operationProcessor.persistedOperationClient == nil {
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
 		}
 	}
 	// Capture one manifest for both cache identity and operation resolution.
-	if !client.APQEnabled() {
-		if store := client.PQLStore(); store != nil {
+	if !o.operationProcessor.persistedOperationClient.APQEnabled() {
+		if store := o.operationProcessor.persistedOperationClient.PQLStore(); store != nil {
 			o.manifestSnapshot = store.Snapshot()
 			if o.manifestSnapshot == nil {
 				return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
@@ -525,11 +534,11 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	}
 
 	// If APQ is enabled and the query body is in the request, short-circuit
-	if o.parsedOperation.Request.Query != "" && client.APQEnabled() {
+	if o.parsedOperation.Request.Query != "" && o.operationProcessor.persistedOperationClient.APQEnabled() {
 		isAPQ = true
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
-		err := client.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
+		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
 		if err != nil {
 			return false, true, err
 		}
@@ -537,7 +546,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		var persistedOperationData []byte
 		var err error
 
-		persistedOperationData, isAPQ, err = client.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		if err != nil {
 			return false, isAPQ, err
 		}
@@ -562,13 +571,13 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
 		if isAPQ {
-			if err = client.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 				return false, true, err
 			}
 		}
 	}
 
-	if !client.APQEnabled() && o.parsedOperation.Request.Query != "" {
+	if !o.operationProcessor.persistedOperationClient.APQEnabled() && o.parsedOperation.Request.Query != "" {
 		if err := o.ComputeOperationSha256(); err != nil {
 			return false, isAPQ, err
 		}
@@ -1266,7 +1275,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 }
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
-	if client := o.operationProcessor.persistedOperationClient; client != nil && !client.APQEnabled() {
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
 		o.parsedOperation.Request.Query = entry.originalQuery
 		o.parsedOperation.Sha256Hash = entry.sha256Hash
 	}
@@ -1336,7 +1345,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		inlineArguments:          o.parsedOperation.InlineArguments,
 	}
 
-	if client := o.operationProcessor.persistedOperationClient; client != nil && !client.APQEnabled() {
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
 		entry.originalQuery = o.parsedOperation.Request.Query
 		entry.sha256Hash = o.parsedOperation.Sha256Hash
 	}
