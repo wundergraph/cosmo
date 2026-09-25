@@ -1,8 +1,10 @@
 package pqlmanifest
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -15,6 +17,13 @@ type Manifest struct {
 	Revision    string            `json:"revision"`
 	GeneratedAt string            `json:"generatedAt"`
 	Operations  map[string]string `json:"operations"` // operation ID -> body
+
+	bodyHashes map[string]string
+}
+
+// BodyHash returns the body SHA256 computed when this snapshot was loaded.
+func (m *Manifest) BodyHash(id string) string {
+	return m.bodyHashes[id]
 }
 
 type Store struct {
@@ -54,7 +63,15 @@ func (s *Store) SetOnUpdate(fn func()) {
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
-	s.manifest.Store(manifest)
+	// Prepare a new immutable snapshot before publishing it. Cache identities can
+	// then use body hashes without hashing on each request or depending on revision.
+	snapshot := *manifest
+	snapshot.Operations = maps.Clone(manifest.Operations)
+	snapshot.bodyHashes = make(map[string]string, len(snapshot.Operations))
+	for id, body := range snapshot.Operations {
+		snapshot.bodyHashes[id] = fmt.Sprintf("%x", sha256.Sum256([]byte(body)))
+	}
+	s.manifest.Store(&snapshot)
 
 	if s.onUpdate.Load() == nil {
 		return

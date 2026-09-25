@@ -1341,12 +1341,19 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	o.cache.persistedOperationVariableNamesLock.Lock()
 	defer o.cache.persistedOperationVariableNamesLock.Unlock()
 	if o.manifestSnapshot != nil && o.cache.persistedOperationManifestRevision != o.manifestSnapshot.Revision {
-		// In-flight requests from superseded snapshots may finish, but must not
-		// repopulate metadata from an old generation or retain every past revision.
+		// Keep metadata for unchanged bodies so their normalized entries survive
+		// reloads. Superseded requests must not restore obsolete metadata.
 		if o.operationProcessor.persistedOperationClient.PQLStore().Snapshot() != o.manifestSnapshot {
 			return
 		}
-		o.cache.persistedOperationVariableNames = make(map[string][]string)
+		retained := make(map[string][]string)
+		for id := range o.manifestSnapshot.Operations {
+			identity := o.persistedOperationIdentity("", id)
+			if names, ok := o.cache.persistedOperationVariableNames[identity]; ok {
+				retained[identity] = names
+			}
+		}
+		o.cache.persistedOperationVariableNames = retained
 		o.cache.persistedOperationManifestRevision = o.manifestSnapshot.Revision
 	}
 	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)] = skipIncludeVariableNames
@@ -1355,9 +1362,6 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
 	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, persistedQuerySha256Hash)]
-	if o.manifestSnapshot != nil && o.cache.persistedOperationManifestRevision != o.manifestSnapshot.Revision {
-		present = false
-	}
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if o.manifestSnapshot != nil && !present {
 		return 0, false
@@ -1369,11 +1373,18 @@ func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuery
 // Length prefixes keep variable-length IDs, client names and operation names unambiguous.
 func (o *OperationKit) persistedOperationIdentity(clientName, id string) string {
 	if o.operationProcessor.persistedOperationClient != nil && o.operationProcessor.persistedOperationClient.ManifestEnabled() {
+		// Manifest IDs are graph-wide; individual operation storage is per-client.
 		clientName = ""
 	}
 	identity := fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
 	if o.manifestSnapshot != nil {
-		return fmt.Sprintf("%d:%s%s", len(o.manifestSnapshot.Revision), o.manifestSnapshot.Revision, identity)
+		pq := GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
+		if !pq.isValidHash() {
+			// Custom IDs can be reused with a different body. Scope them to that
+			// body while allowing unchanged operations to survive manifest reloads.
+			bodyHash := o.manifestSnapshot.BodyHash(id)
+			return fmt.Sprintf("%d:%s%s", len(bodyHash), bodyHash, identity)
+		}
 	}
 	return identity
 }

@@ -101,4 +101,4 @@ Version 1 manifests retain the global `operations` map. An ID must identify the 
 }
 ```
 
-Each request resolves against one manifest snapshot; cache keys include its revision. Change the revision whenever the manifest changes. The control plane computes it from the global operation map when publishing or deleting operations. Deleting the last registration removes the ID; routers stop using cached bodies after observing the new revision.
+Each request checks membership and resolves its body against one manifest snapshot. Custom-ID cache keys include the ID and the body’s SHA256, computed when the manifest loads, so unchanged operations remain cached across revisions. SHA256 IDs retain their existing cache identity. Change the revision whenever the manifest changes. The control plane computes it from the global operation map when publishing or deleting operations. Deleting the last registration removes the ID; routers stop using cached bodies after observing the new revision.

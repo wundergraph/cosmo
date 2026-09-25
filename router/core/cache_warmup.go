@@ -334,7 +334,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	// Resolve the ID before hashing or parsing the body. In custom-ID manifest mode,
-	// this captures one snapshot for both the body lookup and the cache revision.
+	// this captures one snapshot for both the body lookup and the cache identity.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
