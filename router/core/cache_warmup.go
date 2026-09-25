@@ -320,8 +320,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
-	// Resolve manifest warmup IDs through the same snapshot as live requests.
-	// Never attach a stale warmup body to a cache key from a newer manifest.
+	// Warmup items may include a body copied from an older manifest.
+	// Discard it before request validation, which rejects custom IDs with a body.
 	if c.operationProcessor.allowCustomIDs && c.operationProcessor.persistedOperationClient != nil &&
 		c.operationProcessor.persistedOperationClient.PQLStore() != nil && operation.Request.GetExtensions().GetPersistedQuery() != nil {
 		item.Request.Query = ""
@@ -333,6 +333,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
+	// Resolve the ID before hashing or parsing the body. In custom-ID manifest mode,
+	// this captures one snapshot for both the body lookup and the cache revision.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
