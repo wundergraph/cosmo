@@ -16,6 +16,7 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
 | `get_operation_info` | Returns instructions for executing the operation behind one of your tools directly via HTTP and integrating it into an application. |
 | `get_schema`         | Returns the full GraphQL schema of the API, helping AI models understand the entire API structure.                                  |
 | `execute_graphql`    | Executes an arbitrary GraphQL query or mutation, letting AI models craft operations beyond the tools you have created.              |
+| `get_context`        | Discovers and reads context documents and skills. Only registered when `resources.enabled` is `true`. See [Get Context Tool](#get-context-tool). |
 
 <Warning>
   `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
@@ -423,6 +424,34 @@ When `output_schema.enabled` is `true`, the result also carries the response as 
   }
 }
 ```
+
+## Get Context Tool
+
+`get_context` discovers and reads context documents and skills. The router registers it only when [`resources.enabled`](/router/mcp/configuration#context-resources) is `true`. See [Context Documents and Skills](/router/mcp#context-documents-and-skills) for the on-disk format.
+
+The tool takes one optional input:
+
+```json
+{ "uri": "skill://weather/trip-planning/SKILL.md" }
+```
+
+**Without a `uri`**, the tool returns an index of every available skill and document, as both text and structured content:
+
+```json
+{
+  "skills": [{ "name": "trip-planning", "description": "Plan a multi-day trip.", "uri": "skill://weather/trip-planning/SKILL.md" }],
+  "documents": [{ "uri": "context:///notes.md", "title": "Notes", "description": "Internal notes." }]
+}
+```
+
+**With a `uri`**, the tool returns the raw content of that resource. Blob resources (for example, images) are not returned this way; the tool returns an error that points the client at `resources/read` instead.
+
+An unknown `uri` returns a tool error naming the failed URI and pointing back at the index.
+
+<Tip>
+  A skill file that references another file by relative path, for example `references/REFERENCE.md`, resolves that
+  path against the skill root. In skill `foo`, this resolves to `skill://foo/references/REFERENCE.md`.
+</Tip>
 
 ## Best Practices
 

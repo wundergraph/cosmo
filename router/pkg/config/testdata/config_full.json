@@ -274,6 +274,9 @@
     "Storage": {
       "ProviderID": "mcp"
     },
+    "Resources": {
+      "Enabled": true
+    },
     "Session": {
       "Stateless": true
     },
