@@ -35,6 +35,7 @@ import (
 type subscriptionHooks struct {
 	onCreate             onCreateHooks
 	onStart              onStartHooks
+	graphqlLifecycle     []graphqlSubscriptionLifecycleHandler
 	onPublishEvents      onPublishEventsHooks
 	onReceiveEvents      onReceiveEventsHooks
 	beforeEventsDispatch beforeEventsDispatchHooks

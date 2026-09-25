@@ -779,6 +779,17 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
 
+		var graphqlLifecycle graphqlSubscriptionLifecycleHandler
+		if handler, ok := moduleInstance.(SubscriptionOperationStartHandler); ok {
+			graphqlLifecycle.onStart = handler.OnSubscriptionOperationStart
+		}
+		if handler, ok := moduleInstance.(SubscriptionOperationEndHandler); ok {
+			graphqlLifecycle.onEnd = handler.OnSubscriptionOperationEnd
+		}
+		if graphqlLifecycle.onStart != nil || graphqlLifecycle.onEnd != nil {
+			r.subscriptionHooks.graphqlLifecycle = append(r.subscriptionHooks.graphqlLifecycle, graphqlLifecycle)
+		}
+
 		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
 			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
 		}
