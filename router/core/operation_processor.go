@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -46,8 +45,7 @@ import (
 var (
 	// staticOperationName is used to replace the operation name in the document when generating the operation ID
 	// this ensures that the operation ID is the same for the same operation regardless of the operation name
-	staticOperationName      = []byte("O")
-	customPersistedIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,250}$`)
+	staticOperationName = []byte("O")
 )
 
 type ParsedOperation struct {
@@ -428,7 +426,16 @@ func (o *OperationKit) validatePersistedQueryID() error {
 }
 
 func isValidCustomPersistedID(id string) bool {
-	return customPersistedIDPattern.MatchString(id)
+	if len(id) < 1 || len(id) > 250 {
+		return false
+	}
+	for i := range len(id) {
+		c := id[i]
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-') {
+			return false
+		}
+	}
+	return true
 }
 
 func (o *OperationKit) computeVariablesHash() {
