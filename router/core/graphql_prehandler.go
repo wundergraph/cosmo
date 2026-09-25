@@ -498,7 +498,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
-	// If forced, always compute the hash
+	// A custom ID is not a body hash. Defer hashing until lookup resolves its body.
+	if operationKit.hasCustomPersistedID() && operationKit.parsedOperation.Request.Query == "" {
+		return false
+	}
+
+	// If forced, compute the hash once the body is available
 	if h.computeOperationSha256 || reqCtx.forceSha256Compute {
 		return true
 	}
@@ -581,7 +586,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.shouldComputeOperationSha256(operationKit, requestContext) && !operationKit.hasCustomPersistedID() {
+	if h.shouldComputeOperationSha256(operationKit, requestContext) {
 		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 			// No query body to hash; use the client-provided persisted hash for telemetry.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
