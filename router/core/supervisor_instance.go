@@ -9,6 +9,9 @@ import (
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/internal/prompttoquery"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
@@ -157,6 +160,26 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 			return nil, fmt.Errorf("could not create self register: %w", err)
 		}
 		options = append(options, WithSelfRegistration(selfRegister))
+	}
+
+	if cfg.MCP.Enabled && cfg.Graph.Token != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(cfg.Graph.Token)
+		if err != nil {
+			return nil, fmt.Errorf("could not inspect graph token features: %w", err)
+		}
+
+		if claims.HasFeature(rjwt.FeaturePromptToQuery) {
+			controlplaneTransport, err := controlplane.NewTransport(cfg.Graph.Token, logger)
+			if err != nil {
+				return nil, fmt.Errorf("could not create controlplane transport: %w", err)
+			}
+
+			promptToQueryClient, err := prompttoquery.New(cfg.ControlplaneURL, controlplaneTransport)
+			if err != nil {
+				return nil, fmt.Errorf("could not create prompt-to-query client: %w", err)
+			}
+			options = append(options, WithPromptToQueryClient(promptToQueryClient))
+		}
 	}
 
 	if opt := optionFromExecutionConfig(&cfg.ExecutionConfig, cfg.RouterConfigPath); opt != nil {
