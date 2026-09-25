@@ -1487,6 +1487,257 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		})
 	})
 
+	t.Run("known kid owned by a later provider does not block on earlier providers", func(t *testing.T) {
+		t.Parallel()
+
+		// Provider A is listed first but will NOT own the token's kid. Its endpoint is slow
+		// so that any cross-provider unknown-kid refresh on the request path is unmistakable
+		// in the timing. refresh_unknown_kid is enabled so a cache miss triggers a blocking
+		// refresh (this is the bug being fixed).
+		cryptoA, err := jwks.NewRSACrypto("kid-a", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverA, err := jwks.NewServerWithCrypto(t, cryptoA)
+		require.NoError(t, err)
+		t.Cleanup(serverA.Close)
+		serverA.SetRespondTime(2 * time.Second)
+
+		// Provider B is listed second and owns the token's kid. Its cache is populated by the
+		// initial synchronous refresh that NewStorageFromHTTP performs at decoder construction,
+		// so kid-b is cached before the first request — no warm-up required.
+		cryptoB, err := jwks.NewRSACrypto("kid-b", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverB, err := jwks.NewServerWithCrypto(t, cryptoB)
+		require.NoError(t, err)
+		t.Cleanup(serverB.Close)
+
+		authenticators := testutils.ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             serverA.JWKSURL(), // first
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+					MaxWait:  5 * time.Second, // larger than the slow refresh so it proceeds into it
+				},
+			},
+			{
+				URL:             serverB.JWKSURL(), // second — owns kid-b
+				RefreshInterval: 10 * time.Second,
+			},
+		})
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := serverB.TokenForKID("kid-b", nil, false)
+			require.NoError(t, err)
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			start := time.Now()
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Less(t, elapsed, 500*time.Millisecond,
+				"validation of a key owned by a later provider must not block on earlier providers")
+		})
+	})
+
+	t.Run("known kid owned by the first provider validates fast (no regression)", func(t *testing.T) {
+		t.Parallel()
+
+		// Owner is listed first.
+		cryptoA, err := jwks.NewRSACrypto("kid-a", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverA, err := jwks.NewServerWithCrypto(t, cryptoA)
+		require.NoError(t, err)
+		t.Cleanup(serverA.Close)
+
+		// A slow, penalized provider sits second — it must never be reached for a first-provider key.
+		cryptoB, err := jwks.NewRSACrypto("kid-b", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverB, err := jwks.NewServerWithCrypto(t, cryptoB)
+		require.NoError(t, err)
+		t.Cleanup(serverB.Close)
+		serverB.SetRespondTime(2 * time.Second)
+
+		authenticators := testutils.ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             serverA.JWKSURL(), // first — owns kid-a
+				RefreshInterval: 10 * time.Second,
+			},
+			{
+				URL:             serverB.JWKSURL(), // second
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+					MaxWait:  5 * time.Second,
+				},
+			},
+		})
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := serverA.TokenForKID("kid-a", nil, false)
+			require.NoError(t, err)
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			start := time.Now()
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Less(t, elapsed, 500*time.Millisecond)
+		})
+	})
+
+	t.Run("genuinely unknown kid still blocks across providers (unchanged semantics)", func(t *testing.T) {
+		t.Parallel()
+
+		// Two providers, neither owning the token's kid, both slow + refresh_unknown_kid enabled.
+		// Fix A intentionally leaves this path unchanged: a kid owned by nobody still pays the
+		// blocking refresh on each provider.
+		cryptoA, err := jwks.NewRSACrypto("kid-a", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverA, err := jwks.NewServerWithCrypto(t, cryptoA)
+		require.NoError(t, err)
+		t.Cleanup(serverA.Close)
+		serverA.SetRespondTime(1 * time.Second)
+
+		cryptoB, err := jwks.NewRSACrypto("kid-b", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverB, err := jwks.NewServerWithCrypto(t, cryptoB)
+		require.NoError(t, err)
+		t.Cleanup(serverB.Close)
+		serverB.SetRespondTime(1 * time.Second)
+
+		unknownKIDConfig := authentication.RefreshUnknownKIDConfig{
+			Enabled:  true,
+			Interval: 1 * time.Second,
+			Burst:    1,
+			MaxWait:  5 * time.Second,
+		}
+		authenticators := testutils.ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{URL: serverA.JWKSURL(), RefreshInterval: 10 * time.Second, RefreshUnknownKID: unknownKIDConfig},
+			{URL: serverB.JWKSURL(), RefreshInterval: 10 * time.Second, RefreshUnknownKID: unknownKIDConfig},
+		})
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Signed by a real key but stamped with a kid no provider publishes.
+			token, err := serverA.TokenForKID("unknown-kid", nil, true)
+			require.NoError(t, err)
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			start := time.Now()
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.GreaterOrEqual(t, elapsed, 700*time.Millisecond,
+				"an unknown kid should still pay the blocking refresh on the providers")
+		})
+	})
+
+	t.Run("known kid owned by the third provider does not block on earlier providers", func(t *testing.T) {
+		t.Parallel()
+
+		// Providers #1 and #2 are slow + penalized and do NOT own the kid; #3 owns it. Proves
+		// the cost of validating a later-provider key does not scale with config position.
+		cryptoA, err := jwks.NewRSACrypto("kid-a", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverA, err := jwks.NewServerWithCrypto(t, cryptoA)
+		require.NoError(t, err)
+		t.Cleanup(serverA.Close)
+		serverA.SetRespondTime(2 * time.Second)
+
+		cryptoB, err := jwks.NewRSACrypto("kid-b", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverB, err := jwks.NewServerWithCrypto(t, cryptoB)
+		require.NoError(t, err)
+		t.Cleanup(serverB.Close)
+		serverB.SetRespondTime(2 * time.Second)
+
+		cryptoC, err := jwks.NewRSACrypto("kid-c", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+		serverC, err := jwks.NewServerWithCrypto(t, cryptoC)
+		require.NoError(t, err)
+		t.Cleanup(serverC.Close)
+
+		penalized := authentication.RefreshUnknownKIDConfig{
+			Enabled:  true,
+			Interval: 1 * time.Second,
+			Burst:    1,
+			MaxWait:  5 * time.Second,
+		}
+		authenticators := testutils.ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{URL: serverA.JWKSURL(), RefreshInterval: 10 * time.Second, RefreshUnknownKID: penalized},
+			{URL: serverB.JWKSURL(), RefreshInterval: 10 * time.Second, RefreshUnknownKID: penalized},
+			{URL: serverC.JWKSURL(), RefreshInterval: 10 * time.Second}, // owns kid-c
+		})
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := serverC.TokenForKID("kid-c", nil, false)
+			require.NoError(t, err)
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			start := time.Now()
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Less(t, elapsed, 500*time.Millisecond,
+				"validation cost must not scale with the owning provider's position")
+		})
+	})
+
 }
 
 func TestNonHttpAuthorization(t *testing.T) {
