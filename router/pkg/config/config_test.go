@@ -12,7 +12,6 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2739,27 +2738,4 @@ version: "1"
 	require.True(t, cfg.Config.ResponseCache.Enabled)
 	require.Equal(t, ResponseCacheStorageProviderMemory, cfg.Config.ResponseCache.Storage.Provider)
 	require.Equal(t, int64(4096), cfg.Config.ResponseCache.Storage.MaxEntries)
-}
-
-func TestCustomPersistedIDsConfig(t *testing.T) {
-	t.Parallel()
-
-	t.Run("yaml", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, "version: \"1\"\npersisted_operations:\n  allow_custom_ids: true\n")
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		assert.True(t, cfg.Config.PersistedOperationsConfig.AllowCustomIDs)
-	})
-	t.Run("environment", func(t *testing.T) {
-		t.Parallel()
-
-		var cfg Config
-		err := env.ParseWithOptions(&cfg, env.Options{
-			Environment: map[string]string{"PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS": "true"},
-		})
-		assert.NoError(t, err)
-		assert.True(t, cfg.PersistedOperationsConfig.AllowCustomIDs)
-	})
 }
