@@ -103,6 +103,56 @@ func TestCustomOperationIDs(t *testing.T) {
 	})
 }
 
+func TestCustomOperationIDsWarmup(t *testing.T) {
+	t.Parallel()
+
+	const query = `query Get { employee(id: 1) { id } }`
+	sum := sha256.Sum256([]byte(query))
+	bodyHash := hex.EncodeToString(sum[:])
+	ids := []string{"get_employee_v1", strings.Repeat("a", 64), bodyHash}
+	var operations []map[string]any
+	for _, id := range ids {
+		copiedBody := `query Get { employee(id: 2) { id } }`
+		if id == bodyHash {
+			copiedBody = query
+		}
+		operations = append(operations, map[string]any{
+			"client": map[string]string{"name": "web"},
+			"request": map[string]any{
+				"query":      copiedBody,
+				"extensions": map[string]any{"persistedQuery": map[string]any{"version": 1, "sha256Hash": id}},
+			},
+		})
+	}
+	var fetches atomic.Int32
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/cache_warmup/operations.json") {
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"operations": operations}))
+			return
+		}
+		fetches.Add(1)
+		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": query}))
+	}))
+	defer cdn.Close()
+	testenv.Run(t, &testenv.Config{CdnSever: cdn, RouterOptions: []core.Option{
+		core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true}),
+		core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+			Enabled: true,
+			Workers: 1,
+			Timeout: 5 * time.Second,
+			Source:  config.CacheWarmupSource{CdnSource: config.CacheWarmupCDNSource{Enabled: true}},
+		}),
+	}}, func(t *testing.T, e *testenv.Environment) {
+		for _, id := range ids {
+			response := customOperationIDRequest(t, e, id, false)
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, response.Body)
+			assert.Equal(t, "HIT", response.Response.Header.Get(core.PersistedOperationCacheHeader))
+		}
+		// Only the two custom IDs need fetching; the matching SHA256 body is retained.
+		assert.Equal(t, int32(2), fetches.Load())
+	})
+}
+
 func TestCustomOperationIDsManifest(t *testing.T) {
 	t.Parallel()
 

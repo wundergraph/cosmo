@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -320,11 +322,20 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
-	// Warmup items may include a body copied from an older manifest.
-	// Discard it before request validation, which rejects custom IDs with a body.
-	if c.operationProcessor.allowCustomIDs && c.operationProcessor.persistedOperationClient != nil &&
-		c.operationProcessor.persistedOperationClient.PQLStore() != nil && operation.Request.GetExtensions().GetPersistedQuery() != nil {
-		item.Request.Query = ""
+	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil &&
+		c.operationProcessor.allowCustomIDs && c.operationProcessor.persistedOperationClient != nil {
+		if c.operationProcessor.persistedOperationClient.PQLStore() != nil {
+			// Resolve against the current manifest: copied bodies may be stale.
+			// The body hash and cache key must come from the same snapshot.
+			item.Request.Query = ""
+		} else if item.Request.Query != "" {
+			// Preserve matching SHA256-plus-body records. Otherwise resolve the ID
+			// from storage, even if its format looks like a SHA256 hash.
+			sum := sha256.Sum256([]byte(item.Request.Query))
+			if pq.GetSha256Hash() != hex.EncodeToString(sum[:]) {
+				item.Request.Query = ""
+			}
+		}
 	}
 	k.parsedOperation.Request = item.Request
 
@@ -333,8 +344,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	// Resolve the ID before hashing or parsing the body. In custom-ID manifest mode,
-	// this captures one snapshot for both the body lookup and the cache identity.
+	// Use the same persisted-operation lookup as live requests before planning.
+	// In custom-ID manifest mode, this also rejects IDs removed since collection.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
