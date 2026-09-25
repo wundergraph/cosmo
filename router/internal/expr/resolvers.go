@@ -1,7 +1,9 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 )
@@ -17,6 +19,8 @@ func ResolveAnyExpression(vm *vm.Program, ctx Context) (any, error) {
 	return r, nil
 }
 
+var ErrNilResult = errors.New("expression evaluated to nil")
+
 // ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to
 // provide the context for the expression evaluation. Not safe for concurrent use.
 func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
@@ -26,6 +30,8 @@ func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
 	}
 
 	switch v := r.(type) {
+	case nil:
+		return "", ErrNilResult
 	case string:
 		return v, nil
 	default:

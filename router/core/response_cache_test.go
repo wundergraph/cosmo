@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"net"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(nil, config.StorageProviders{})
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.Nil(t, r.responseCache)
 	})
 
@@ -52,7 +51,7 @@ func TestSetupResponseCache(t *testing.T) {
 			Storage: config.ResponseCacheStorageConfig{Provider: "memcached"},
 		}, config.StorageProviders{})
 
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.Nil(t, r.responseCache)
 	})
 
@@ -68,7 +67,7 @@ func TestSetupResponseCache(t *testing.T) {
 				Storage:     config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128},
 			}, config.StorageProviders{})
 
-			err := r.setupResponseCache(context.Background())
+			err := r.setupResponseCache(t.Context())
 			require.ErrorContains(t, err, "fallback_ttl")
 			require.Nil(t, r.responseCache)
 		}
@@ -83,7 +82,7 @@ func TestSetupResponseCache(t *testing.T) {
 			Storage:     config.ResponseCacheStorageConfig{Provider: "memcached"},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, `storage provider "memcached" is not supported`)
 		require.Nil(t, r.responseCache)
 	})
@@ -99,7 +98,7 @@ func TestSetupResponseCache(t *testing.T) {
 			FallbackTTL: 30 * time.Second,
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "no storage provider_id is configured")
 		require.Nil(t, r.responseCache)
 	})
@@ -116,7 +115,7 @@ func TestSetupResponseCache(t *testing.T) {
 			},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, `unknown redis storage provider "not_declared"`)
 		require.Nil(t, r.responseCache)
 	})
@@ -133,8 +132,26 @@ func TestSetupResponseCache(t *testing.T) {
 			},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "failed to create response cache")
+		require.Nil(t, r.responseCache)
+	})
+
+	t.Run("a bad private_id expression is refused before any store is built", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled:     true,
+			FallbackTTL: 30 * time.Second,
+			Storage: config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
+				MaxEntries: 128,
+			},
+			PrivateID: "request.nope",
+		}, config.StorageProviders{})
+
+		err := r.setupResponseCache(t.Context())
+		require.ErrorContains(t, err, "private_id")
 		require.Nil(t, r.responseCache)
 	})
 
@@ -150,7 +167,7 @@ func TestSetupResponseCache(t *testing.T) {
 			},
 		}, config.StorageProviders{})
 
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.NotNil(t, r.responseCache)
 		require.NoError(t, r.responseCache.Close())
 	})
@@ -177,7 +194,7 @@ func TestSetupResponseCache(t *testing.T) {
 			}},
 		}, config.StorageProviders{})
 
-		err = r.setupResponseCache(context.Background())
+		err = r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "failed to bind response cache invalidation server")
 		require.Nil(t, r.responseCacheInvalidationServer)
 		require.Nil(t, r.responseCache, "the cache opened before the failure must be released with it")

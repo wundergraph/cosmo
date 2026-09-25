@@ -368,7 +368,8 @@
       "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
-      "HeaderSources": null
+      "HeaderSources": null,
+      "OnError": "reject"
     },
     "IgnoreIntrospection": false
   },
@@ -458,7 +459,14 @@
         "Path": "/invalidation",
         "SharedKey": ""
       }
-    }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
+    },
+    "PrivateID": ""
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -573,6 +581,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

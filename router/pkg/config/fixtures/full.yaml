@@ -373,6 +373,7 @@ headers:
 authentication:
   ignore_introspection: false
   jwt:
+    on_error: continue
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
@@ -503,6 +504,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -556,6 +558,12 @@ response_cache:
       listen_addr: 'localhost:5027'
       path: '/invalidation'
       shared_key: 'a-shared-key-that-is-long-enough-to-pass'
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+    max_bytes: 1024
+  private_id: "request.auth.claims.sub"
 
 security:
   complexity_calculation_cache:
