@@ -1,6 +1,12 @@
 name: Release Preview
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-preview.yaml'
+      - '.github/workflows/release.yaml'
   push:
     tags-ignore:
       - '**'
@@ -21,43 +27,30 @@ env:
 
 jobs:
   version:
+    permissions:
+      contents: read
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
-      - name: Authenticate
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ secrets.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: |
-            cosmo
-          permission-actions: write
-          permission-contents: write
-          permission-workflows: write
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
 
       - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
         with:
           cache: true
           install: false
 
-      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-        shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Install
-        run: pnpm install --frozen-lockfile --filter='wundergraph-cosmo'
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter='wundergraph-cosmo'
 
       - name: Generate next release (dry-run)
-        run: pnpm run release-preview --yes
+        run: |
+          git checkout -B "${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          pnpm run release-preview --yes --no-git-tag-version
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Show CHANGELOG.md
-        run: echo -e "\`\`\`diff\n$(git --no-pager diff './*/CHANGELOG.md')\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+        run: echo -e "\`\`\`diff\n$(git --no-pager diff './*/CHANGELOG.md')\n\`\`\`" >> "$GITHUB_STEP_SUMMARY"
