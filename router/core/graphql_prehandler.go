@@ -298,6 +298,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestContext.operation.protocol = OperationProtocolHTTP
 		requestContext.operation.executionOptions = executionOptions
 		requestContext.operation.traceOptions = traceOptions
+		requestContext.cacheControl = parseRequestCacheControl(r.Header)
 
 		if traceOptions.Enable {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
