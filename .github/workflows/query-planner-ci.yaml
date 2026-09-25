@@ -273,15 +273,17 @@ jobs:
         if: ${{ needs.get_pr_url.outputs.pullrequest_url == '' }}
         uses: mshick/add-pr-comment@v2
         with:
+          # All Query Planner comments share this id, so each result replaces the previous one.
+          message-id: query-planner
           message: |
-            ❌ Internal Query Planner CI failed to run.
+            :x: Internal Query Planner CI failed to run.
       - name: Comment PR on failure
         if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
         uses: mshick/add-pr-comment@v2
         with:
+          message-id: query-planner
           message: |
-            # ❌ Internal Query Planner CI checks failed
-            The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
+            :x: The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
   comment-on-success:
     needs: [build_test, get_pr_url, check-labels-and-engine-changes]
@@ -292,6 +294,7 @@ jobs:
         if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
         uses: mshick/add-pr-comment@v2
         with:
+          message-id: query-planner
           message: |
             # ✅ Internal Query Planner CI checks passed
             The Internal Query Planner CI checks passed in the celestial repository, and this is going to allow the merge of this PR.
