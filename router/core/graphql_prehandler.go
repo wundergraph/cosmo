@@ -1239,14 +1239,25 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// A DeferResponsePlan is only produced when the operation contains @defer
 	// (and @defer support is enabled). Such operations stream incremental
 	// payloads as multipart/mixed, so reject the request early if the client
-	// does not accept that content type
+	// does not accept that content type, or asks for a format the router does
+	// not produce and would otherwise lose the deferred data silently.
 	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
-		if !clientAcceptsMultipartMixed(req) {
+		switch verdict, spec := deferAccept(req); verdict {
+		case deferAcceptNoMultipart:
 			return NewHttpGraphqlError(
 				"the router received a query with the @defer directive but the client does not accept "+
 					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
 					"'Accept: multipart/mixed'",
 				ExtCodeErrDeferMultipartNotAccepted,
+				http.StatusOK,
+			)
+		case deferAcceptUnsupportedSpec:
+			return NewHttpGraphqlError(
+				fmt.Sprintf("the router received a query with the @defer directive but the client requested the "+
+					"incremental delivery format '%s', while the router implements 'incrementalSpec=%s'. "+
+					"Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler",
+					spec, deferIncrementalSpec),
+				ExtCodeErrDeferSpecNotSupported,
 				http.StatusOK,
 			)
 		}
