@@ -1,11 +1,15 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -25,6 +29,10 @@ type GraphQLSubscriptionHookContext interface {
 	SubscriptionInstanceID() string
 	// RootFieldName is the non-empty schema field name, even if the client selected an alias.
 	RootFieldName() string
+	// RootFieldArguments contains the resolved arguments of the selected root
+	// field as a JSON object. It is computed once per subscriber, not per event.
+	// Like Operation.Variables, it can contain sensitive client input.
+	RootFieldArguments() json.RawMessage
 }
 
 // SubscriptionOperationStartHandler runs once for each downstream GraphQL
@@ -47,12 +55,13 @@ type graphqlSubscriptionLifecycleHandler struct {
 }
 
 type graphqlSubscriptionHookContext struct {
-	request        *http.Request
-	logger         *zap.Logger
-	operation      OperationContext
-	authentication authentication.Authentication
-	instanceID     string
-	rootFieldName  string
+	request            *http.Request
+	logger             *zap.Logger
+	operation          OperationContext
+	authentication     authentication.Authentication
+	instanceID         string
+	rootFieldName      string
+	rootFieldArguments json.RawMessage
 }
 
 func (c *graphqlSubscriptionHookContext) Request() *http.Request { return c.request }
@@ -65,6 +74,63 @@ func (c *graphqlSubscriptionHookContext) Authentication() authentication.Authent
 }
 func (c *graphqlSubscriptionHookContext) SubscriptionInstanceID() string { return c.instanceID }
 func (c *graphqlSubscriptionHookContext) RootFieldName() string          { return c.rootFieldName }
+func (c *graphqlSubscriptionHookContext) RootFieldArguments() json.RawMessage {
+	return c.rootFieldArguments
+}
+
+func subscriptionRootFieldArguments(operation *operationContext, rootFieldName string) (json.RawMessage, error) {
+	if operation == nil {
+		return nil, fmt.Errorf("subscription operation is missing")
+	}
+	doc, report := astparser.ParseGraphqlDocumentString(operation.Content())
+	if report.HasErrors() {
+		return nil, fmt.Errorf("parse subscription arguments: %s", report.Error())
+	}
+	// The normalized operation uses remapped variable names, while the request
+	// variable object retains its original names. Build the view expected by
+	// ast.Document.ValueToJSON so nested input objects resolve correctly too.
+	variables := make(map[string]json.RawMessage)
+	if operation.variables != nil && operation.variables.GetObject() != nil {
+		operation.variables.GetObject().Visit(func(key []byte, value *astjson.Value) {
+			variables[string(key)] = value.MarshalTo(nil)
+		})
+	}
+	for newName, oldName := range operation.remapVariables {
+		if value, ok := variables[oldName]; ok {
+			variables[newName] = value
+		}
+	}
+	var err error
+	doc.Input.Variables, err = json.Marshal(variables)
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range doc.RootNodes {
+		if node.Kind != ast.NodeKindOperationDefinition {
+			continue
+		}
+		definition := doc.OperationDefinitions[node.Ref]
+		if definition.OperationType != ast.OperationTypeSubscription {
+			continue
+		}
+		for _, selectionRef := range doc.SelectionSets[definition.SelectionSet].SelectionRefs {
+			selection := doc.Selections[selectionRef]
+			if selection.Kind != ast.SelectionKindField || doc.FieldNameString(selection.Ref) != rootFieldName {
+				continue
+			}
+			arguments := make(map[string]json.RawMessage)
+			for _, argRef := range doc.FieldArguments(selection.Ref) {
+				value, valueErr := doc.ValueToJSON(doc.ArgumentValue(argRef))
+				if valueErr != nil {
+					return nil, fmt.Errorf("resolve subscription argument %s: %w", doc.ArgumentNameString(argRef), valueErr)
+				}
+				arguments[doc.ArgumentNameString(argRef)] = value
+			}
+			return json.Marshal(arguments)
+		}
+	}
+	return nil, fmt.Errorf("subscription root field %q not found in operation", rootFieldName)
+}
 
 func subscriptionRootFieldName(subscription *resolve.GraphQLSubscription) (string, error) {
 	if subscription == nil || subscription.Response == nil || subscription.Response.Data == nil || len(subscription.Response.Data.Fields) == 0 {

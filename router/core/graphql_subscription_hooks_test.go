@@ -26,6 +26,19 @@ func TestSubscriptionRootFieldNameUsesSchemaName(t *testing.T) {
 	require.ErrorContains(t, err, "no root field name")
 }
 
+func TestSubscriptionRootFieldArgumentsResolveVariablesAndLiterals(t *testing.T) {
+	variables, err := astjson.Parse(`{"ids":["show-1","show-2"],"filter":{"region":"US"}}`)
+	require.NoError(t, err)
+	op := &operationContext{
+		content:        `subscription Updates($a: [ID!]!, $b: Filter) { alias: liveShowUpdates(showIds: $a, filter: $b, enabled: true) { id } }`,
+		variables:      variables,
+		remapVariables: map[string]string{"a": "ids", "b": "filter"},
+	}
+	got, err := subscriptionRootFieldArguments(op, "liveShowUpdates")
+	require.NoError(t, err)
+	require.JSONEq(t, `{"showIds":["show-1","show-2"],"filter":{"region":"US"},"enabled":true}`, string(got))
+}
+
 func TestGraphQLSubscriptionHookRejectsMissingRootField(t *testing.T) {
 	h := &GraphQLHandler{graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{onStart: func(GraphQLSubscriptionHookContext) error {
 		t.Fatal("hook must not run without a root field name")
@@ -82,7 +95,7 @@ func TestGraphQLSubscriptionHooksPerSubscriberAndReverseEndOrder(t *testing.T) {
 
 func TestGraphQLSubscriptionInstancesGetDistinctIDs(t *testing.T) {
 	request := httptest.NewRequest("GET", "/graphql", nil)
-	operation := &operationContext{clientInfo: &ClientInfo{Name: "mobile"}}
+	operation := &operationContext{clientInfo: &ClientInfo{Name: "mobile"}, content: "subscription { orders }"}
 	reqCtx := &requestContext{request: request, logger: zap.NewNop(), operation: operation}
 	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
 		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "orders"}}},
