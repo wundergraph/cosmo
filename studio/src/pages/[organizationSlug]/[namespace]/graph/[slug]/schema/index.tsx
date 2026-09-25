@@ -7,8 +7,10 @@ import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
-import { StaleCompositionIcon } from '@/components/schema/stale-composition-warning';
 import { SchemaToolbar } from '@/components/schema/toolbar';
+import { SchemaSelection, toSchemaType } from '@/components/schema/schema-selection';
+import { SchemaSelector } from '@/components/schema/schema-selector';
+import { SchemaTypeSelect } from '@/components/schema/schema-type-select';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,19 +21,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Kbd } from '@/components/ui/kbd';
 import { Loader } from '@/components/ui/loader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -67,13 +56,7 @@ import {
 } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@connectrpc/connect-query';
-import {
-  ChevronUpDownIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  LockClosedIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, InformationCircleIcon, LockClosedIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -89,8 +72,6 @@ import { GraphQLSchema, buildASTSchema, parse } from 'graphql';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { MdOutlineFeaturedPlayList } from 'react-icons/md';
-import { PiGraphLight } from 'react-icons/pi';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { useDebounce } from 'use-debounce';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -865,18 +846,24 @@ export const schemaSelectionParams = {
 
 export const GraphSelector = () => {
   const graphData = useContext(GraphContext);
-  const router = useRouter();
   const { slug: graphName } = useParams<{ slug: string }>();
-  const [{ featureFlag: activeFeatureFlag, schemaType }, setSchema] = useQueryStates(schemaSelectionParams, {
-    history: 'push',
-  });
+  const [{ featureFlag, schemaType: rawSchemaType }] = useQueryStates(schemaSelectionParams);
+  const activeFeatureFlag = featureFlag ?? undefined;
+  const schemaType = toSchemaType(rawSchemaType);
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const fullPath = router.asPath;
-  const pathWithHash = fullPath.split('?')[0];
-  const pathname = pathWithHash.split('#')[0];
+  const applyParams = useApplyParams();
+
+  const selectSchema = (next: SchemaSelection) =>
+    applyParams({
+      fieldName: null,
+      showUsage: null,
+      isNamedType: null,
+      featureFlag: next.featureFlag ?? null,
+      schemaType: next.schemaType ?? null,
+    });
 
   const { data: compositionFlagsData } = useQuery(
     getFeatureFlagsInLatestCompositionByFederatedGraph,
@@ -889,130 +876,25 @@ export const GraphSelector = () => {
     },
   );
 
-  const featureFlags =
-    compositionFlagsData?.featureFlags.map((each) => {
-      return {
-        name: each.name,
-        query: `?featureFlag=${each.name}`,
-        hasFailedLatestComposition: !!each.hasFailedLatestComposition,
-      };
-    }) ?? [];
+  const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
-  const activeGraphWithSDL = {
-    title: activeFeatureFlag || graphName,
-    targetId: graphData?.graph?.targetId ?? '',
-    routingUrl: graphData?.graph?.routingURL ?? '',
-  };
-
-  if (featureFlags.length > 0) {
+  if (featureFlags.length === 0) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          value={activeGraphWithSDL.title}
-          className="w-full md:ml-auto md:w-max md:min-w-[200px]"
-          asChild
-        >
-          <div className="flex items-center justify-center">
-            <Button className="flex w-[220px] text-sm" variant="outline" asChild>
-              <div className="flex justify-between">
-                <div className="flex">
-                  <p className="max-w-[120px] truncate">{activeGraphWithSDL.title}</p>
-                  <Badge variant="secondary" className="ml-2">
-                    {schemaType === 'router' ? 'router' : 'client'}
-                  </Badge>
-                </div>
-                <ChevronUpDownIcon className="h-4 w-4" />
-              </div>
-            </Button>
-          </div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="min-w-[220px]">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-              <PiGraphLight className="h-3 w-3" /> Graph
-            </DropdownMenuLabel>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>{graphData?.graph?.name}</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup
-                    onValueChange={(value) => setSchema({ featureFlag: null, schemaType: value })}
-                    value={activeFeatureFlag ? '' : schemaType}
-                  >
-                    <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">
-                      Client Schema
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="router">
-                      Router Schema
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-          </DropdownMenuGroup>
-          <Separator className="my-2" />
-
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-              <MdOutlineFeaturedPlayList className="h-3 w-3" /> Feature Flags
-            </DropdownMenuLabel>
-            {featureFlags.map(({ name, query, hasFailedLatestComposition }) => {
-              return (
-                <>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <span className="flex items-center gap-x-1.5">
-                        {name}
-                        {hasFailedLatestComposition && <StaleCompositionIcon />}
-                      </span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuRadioGroup
-                          value={activeFeatureFlag === name ? schemaType : ''}
-                          onValueChange={(value) => setSchema({ featureFlag: name, schemaType: value })}
-                        >
-                          <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="client">
-                            Client Schema
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem className="w-[150px] items-center justify-between pl-2" value="router">
-                            Router Schema
-                          </DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                </>
-              );
-            })}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  } else {
-    return (
-      <Select onValueChange={(value) => setSchema({ schemaType: value })} value={schemaType}>
-        <SelectTrigger className="w-max">
-          <SelectValue>{sentenceCase(schemaType)} Schema</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="client">
-            Client Schema{' '}
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              The schema available to the clients and through introspection
-            </p>
-          </SelectItem>
-          <Separator />
-          <SelectItem value="router">
-            Router Schema
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              The full schema used by the router to plan your operations
-            </p>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+      <SchemaTypeSelect className="w-max" value={schemaType} onValueChange={(v) => selectSchema({ schemaType: v })} />
     );
   }
+
+  // The explorer renders supergraph schemas, so subgraphs are not selectable here.
+  return (
+    <SchemaSelector
+      title={activeFeatureFlag || graphName}
+      graphName={graphName}
+      supportsFederation
+      featureFlags={featureFlags}
+      selection={{ featureFlag: activeFeatureFlag, schemaType }}
+      onSelect={selectSchema}
+    />
+  );
 };
 
 const Toolbar = ({
@@ -1257,6 +1139,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 
   const isLoadingAST = isLoading || isParsing;
 
+  const resolvedTypename = typename && (!ast || ast.getType(typename)) ? typename : undefined;
+
   let title = 'Schema';
   let breadcrumbs = [];
   if (selectedCategory) {
@@ -1275,8 +1159,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     );
   }
 
-  if (typename && typename.toLowerCase() !== selectedCategory) {
-    title = sentenceCase(typename);
+  if (resolvedTypename && resolvedTypename.toLowerCase() !== selectedCategory) {
+    title = sentenceCase(resolvedTypename);
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
@@ -1461,7 +1345,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               <AuthenticatedTypes types={authenticatedTypes} isRouterSchema={schemaType === 'router'} />
             )}
             {ast && !['deprecated', 'authenticated'].includes(selectedCategory) && (
-              <TypeWrapper typename={typename ?? undefined} category={category} />
+              <TypeWrapper typename={resolvedTypename} category={category} />
             )}
             <FieldUsageSheet />
           </div>
