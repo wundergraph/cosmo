@@ -1,4 +1,6 @@
 import { getCheckIcon } from '@/components/check-badge-icon';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { SchemaTypeSelect } from '@/components/schema/schema-type-select';
@@ -204,9 +206,8 @@ export const CompositionDetails = ({
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.compositionId as string;
-  const subgraph = router.query.subgraph as string;
+  const { slug, compositionId: id } = useParams<{ slug: string; compositionId: string }>();
+  const [subgraph] = useQueryState('subgraph');
 
   let tab = router.query.tab as string;
   tab = isFeatureFlagComposition && tab === 'ffCompostions' ? 'output' : tab;
@@ -574,14 +575,11 @@ export const CompositionDetails = ({
 };
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.compositionId as string;
+  const { slug, compositionId: id } = useParams<{ slug: string; compositionId: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
     compositionId: id,

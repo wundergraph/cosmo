@@ -260,6 +260,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
 			AllowOrigins:     config.CORS.AllowOrigins,
+			MatchOrigins:     config.CORS.MatchOrigins,
 			AllowMethods:     config.CORS.AllowMethods,
 			AllowCredentials: config.CORS.AllowCredentials,
 			AllowHeaders:     config.CORS.AllowHeaders,
@@ -354,9 +355,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 	}
 
 	opts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                 "jwks",
-		HeaderSourcePrefixes: headerSourceMap,
-		TokenDecoder:         tokenDecoder,
+		Name:                     "jwks",
+		HeaderSourcePrefixes:     headerSourceMap,
+		TokenDecoder:             tokenDecoder,
+		IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 	}
 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
@@ -374,9 +376,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 		}
 
 		opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
-			TokenDecoder:        tokenDecoder,
-			Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
-			HeaderValuePrefixes: headerPrefixes,
+			TokenDecoder:             tokenDecoder,
+			Key:                      cfg.WebSocket.Authentication.FromInitialPayload.Key,
+			HeaderValuePrefixes:      headerPrefixes,
+			IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 		}
 		authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 		if err != nil {

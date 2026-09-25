@@ -1,4 +1,5 @@
 import { useReducer } from 'react';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
 import { CodeViewer } from '@/components/code-viewer';
 import { EmptyState } from '@/components/empty-state';
@@ -52,8 +53,7 @@ import copy from 'copy-to-clipboard';
 import { formatDistanceToNow } from 'date-fns';
 import Fuse from 'fuse.js';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/router';
+import { useParams } from 'next/navigation';
 import { useContext, useState } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -176,17 +176,15 @@ const deletePersistedOperationReducer = (
   }
 };
 
+const clientParams = { clientId: parseAsString, clientName: parseAsString };
+
 const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
+  const { slug, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get('clientId');
-  const clientName = searchParams.get('clientName');
+  const [{ clientId, clientName }, setClient] = useQueryStates(clientParams);
   const graphContext = useContext(GraphContext);
   const [persistedOperationDeleteState, dispatch] = useReducer(deletePersistedOperationReducer, {
     id: null,
@@ -208,21 +206,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
 
   const { ast } = useParseSchema(sdlData?.sdl);
 
-  const [search, setSearch] = useState(router.query.search as string);
-  const applyParams = (search: string) => {
-    const query = { ...router.query };
-    query.search = search;
-
-    if (!search) {
-      delete query.search;
-    }
-
-    router.replace({
-      pathname: router.pathname,
-      query,
-    });
-  };
-
+  const [search, setSearch] = useQueryState('search', parseAsString.withDefault(''));
   const { data, isLoading, error, refetch } = useQuery(
     getPersistedOperations,
     {
@@ -354,19 +338,13 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
             placeholder="Search by Name or ID"
             className="pl-8 pr-10"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams(e.target.value);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
             <Button
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch('');
-                applyParams('');
-              }}
+              onClick={() => setSearch(null)}
             >
               <Cross1Icon />
             </Button>
@@ -451,9 +429,9 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
                                 href={{
                                   pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics`,
                                   query: {
-                                    organizationSlug: router.query.organizationSlug,
+                                    organizationSlug,
                                     namespace,
-                                    slug: router.query.slug,
+                                    slug,
                                     filterState: createFilterState({
                                       operationPersistedId: op.id,
                                     }),
@@ -555,12 +533,7 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
         open={!!clientId}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            const newQuery = { ...router.query };
-            delete newQuery['clientId'];
-            delete newQuery['clientName'];
-            router.replace({
-              query: newQuery,
-            });
+            setClient({ clientId: null, clientName: null });
           }
         }}
       >
@@ -613,11 +586,10 @@ type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
   const [isOpen, setIsOpen] = useState(false);
 
   const { toast } = useToast();
@@ -701,13 +673,13 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 };
 
 const ClientsPage: NextPageWithLayout = () => {
+  const [, setClient] = useQueryStates(clientParams);
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
 
   const constructLink = (name: string, mode: 'metrics' | 'traces') => {
     const filters = [];
@@ -832,14 +804,7 @@ const ClientsPage: NextPageWithLayout = () => {
                           variant="link"
                           className="px-0 hover:no-underline"
                           onClick={() => {
-                            router.replace({
-                              pathname: router.pathname,
-                              query: {
-                                ...router.query,
-                                clientId: id,
-                                clientName: name,
-                              },
-                            });
+                            setClient({ clientId: id, clientName: name });
                           }}
                         >
                           View Operations

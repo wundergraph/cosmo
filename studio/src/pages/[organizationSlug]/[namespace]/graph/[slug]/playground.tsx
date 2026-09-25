@@ -1,4 +1,6 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useParams } from 'next/navigation';
+import { parseAsString, useQueryState } from 'nuqs';
 import { CodeViewer } from '@/components/code-viewer';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
@@ -72,7 +74,6 @@ import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
 import { createContext, Fragment, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -285,9 +286,7 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const PersistOperation = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { slug, namespace } = useParams<{ slug: string; namespace: string }>();
 
   const { query } = useContext(TraceContext);
 
@@ -620,8 +619,6 @@ const parseConfigSelection = (value: string): ConfigSelection => {
 };
 
 const ConfigSelect = () => {
-  const router = useRouter();
-
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
   const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
@@ -631,9 +628,10 @@ const ConfigSelect = () => {
     [compositionFlagsData?.featureSubgraphs],
   );
 
-  const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const configType = toConfigType(router.query.type as string);
-  const activeFeatureFlag = (router.query.featureFlag as string) || '';
+  const [selected] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type');
+  const configType = toConfigType(type);
+  const [activeFeatureFlag] = useQueryState('featureFlag', parseAsString.withDefault(''));
 
   const applyParams = useApplyParams();
 
@@ -790,15 +788,15 @@ const PlaygroundPortal = () => {
 };
 
 const PlaygroundPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const operation = router.query.operation as string;
-  const variables = router.query.variables as string;
+  const [operation] = useQueryState('operation');
+  const [variables] = useQueryState('variables');
 
   const graphContext = useContext(GraphContext);
 
-  const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const configType = toConfigType(router.query.type as string);
-  const activeFeatureFlag = router.query.featureFlag as string;
+  const [loadSchemaGraphId] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type');
+  const configType = toConfigType(type);
+  const [activeFeatureFlag] = useQueryState('featureFlag', parseAsString.withDefault(''));
 
   const { data: compositionFlagsData, isLoading: isLoadingCompositionFlags } = useCompositionFlags();
 

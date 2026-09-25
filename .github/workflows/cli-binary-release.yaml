@@ -35,6 +35,12 @@ jobs:
       - name: Build
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
+      # The npm release sets the composition version in the postversion hook,
+      # binary builds skip that hook and set it here.
+      - name: Set composition version
+        working-directory: composition
+        run: node ./scripts/get-composition-version.mjs
+
       - uses: winterjung/split@v2
         id: split
         with:

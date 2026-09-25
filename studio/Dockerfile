@@ -45,7 +45,7 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./composition build
 
-FROM --platform=${TARGETPLATFORM} node:lts-alpine
+FROM node:lts-alpine
 
 RUN apk add --no-cache --upgrade bash
 

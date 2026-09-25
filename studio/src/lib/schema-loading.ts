@@ -9,7 +9,7 @@ export const CONFIG_TYPE_LABELS: Record<ConfigType, string> = {
 };
 
 /** Query string values are plain strings, so narrow them to a `ConfigType`. */
-export const toConfigType = (value: string | undefined): ConfigType =>
+export const toConfigType = (value: string | null | undefined): ConfigType =>
   value && Object.hasOwn(CONFIG_TYPE_LABELS, value) ? (value as ConfigType) : 'graph';
 
 export interface SchemaLoadingInput {

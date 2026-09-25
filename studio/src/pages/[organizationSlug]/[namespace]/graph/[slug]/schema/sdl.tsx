@@ -1,4 +1,6 @@
 import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
@@ -23,20 +25,17 @@ import {
   getSubgraphSDLFromLatestComposition,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useContext } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 
 const SDLPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const activeSubgraph = router.query.subgraph as string;
-  const activeFeatureFlag = router.query.featureFlag as string;
+  const [activeSubgraph] = useQueryState('subgraph');
+  const [activeFeatureFlag] = useQueryState('featureFlag');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const graphName = router.query.slug as string;
-  const organizationSlug = router.query.organizationSlug as string;
+  const { slug: graphName, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
 
   const hash = useHash();
 
@@ -68,7 +67,8 @@ const SDLPage: NextPageWithLayout = () => {
     isFeatureSubgraphSelected ? { featureFlagName: activeFeatureFlag, subgraphName: activeSubgraph } : undefined,
   );
 
-  const activeSchemaType = toSchemaType(router.query.schemaType as string);
+  const [schemaType] = useQueryState('schemaType');
+  const activeSchemaType = toSchemaType(schemaType);
 
   /** Only one schema can be selected, so every selection clears the other two params. */
   const selectSchema = (next: SchemaSelection) =>
@@ -83,7 +83,7 @@ const SDLPage: NextPageWithLayout = () => {
     {
       name: graphName,
       namespace,
-      featureFlagName: activeFeatureFlag,
+      featureFlagName: activeFeatureFlag ?? undefined,
     },
     {
       enabled: !activeSubgraph,
@@ -95,7 +95,7 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery(
     getSubgraphSDLFromLatestComposition,
     {
-      name: activeSubgraph,
+      name: activeSubgraph ?? undefined,
       fedGraphName: graphName,
       namespace,
     },
@@ -208,7 +208,11 @@ const SDLPage: NextPageWithLayout = () => {
                 graphName={graphName}
                 supportsFederation={!!graphData?.graph?.supportsFederation}
                 featureFlags={featureFlags}
-                selection={{ featureFlag: activeFeatureFlag, subgraph: activeSubgraph, schemaType: activeSchemaType }}
+                selection={{
+                  featureFlag: activeFeatureFlag ?? undefined,
+                  subgraph: activeSubgraph ?? undefined,
+                  schemaType: activeSchemaType,
+                }}
                 onSelect={selectSchema}
                 subgraphNames={subgraphs.map(({ name }) => name)}
                 featureSubgraphs={compositionFlagsData?.featureSubgraphs}

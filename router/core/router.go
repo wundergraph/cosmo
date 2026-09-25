@@ -37,6 +37,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -293,6 +294,11 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
+	}
+	if r.corsOptions.Enabled {
+		if err := r.corsOptions.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid CORS configuration: %w", err)
+		}
 	}
 
 	if r.subgraphTransportOptions == nil {
@@ -1083,6 +1089,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 func (r *Router) setupTelemetry(ctx context.Context) error {
+	// Install the shared error handler for either signal, but don't change it in tests.
+	if (r.traceConfig.Enabled || r.metricConfig.OpenTelemetry.Enabled) &&
+		r.traceConfig.TestMemoryExporter == nil && r.metricConfig.OpenTelemetry.TestReader == nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(rtrace.NewOtelErrorHandler(r.logger)))
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
 			Logger:            r.logger,
@@ -1202,6 +1214,14 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	// Validate the TTL during startup to avoid additional checks during execution.
 	if r.responseCacheConfig.FallbackTTL <= 0 {
 		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	}
+	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
+		return err
+	}
+	// The graph server compiles private_id again with its own manager; this
+	// compile only refuses a bad expression before any store is built.
+	if _, err := newResponseCachePrivateID(r.responseCacheConfig, expr.CreateNewExprManager()); err != nil {
+		return err
 	}
 
 	var err error

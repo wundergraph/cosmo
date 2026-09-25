@@ -9,7 +9,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -20,24 +31,16 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/cache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
-var (
-	_ resolve.LoaderHooks = (*engineLoaderHooks)(nil)
-)
+var _ resolve.LoaderHooks = (*engineLoaderHooks)(nil)
 
 type multiError = interface{ Unwrap() []error }
 
-const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
-const EngineLoaderHooksScopeVersion = "0.0.1"
+const (
+	EngineLoaderHooksScopeName    = "wundergraph/cosmo/router/engine/loader"
+	EngineLoaderHooksScopeVersion = "0.0.1"
+)
 
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
@@ -94,7 +97,6 @@ func NewEngineRequestHooks(
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
-
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
@@ -127,17 +129,50 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 // ttlToCacheControl renders the life a cache hit has left. A TTL of zero is
 // valid and means stale as of now, which is no-cache: max-age=0 would be dropped by
 // the most restrictive algorithm and let a longer default win instead.
-func ttlToCacheControl(ttl time.Duration) string {
+func ttlToCacheControl(ttl time.Duration, private bool) string {
 	maxAge := cache.ToDeltaSeconds(ttl)
 	if maxAge <= 0 {
+		if private {
+			return "private, " + noCache
+		}
 		return noCache
+	}
+	if private {
+		return fmt.Sprintf("private, max-age=%d", maxAge)
 	}
 	cacheControl := cache.CacheControlResponse{Public: true, MaxAge: &maxAge}
 	return cacheControl.ToHeaderString()
 }
 
-func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
+// applyResponseCacheLifetime puts the TTL left on the cached entries a fetch was
+// served from into its Cache-Control, where the most restrictive algorithm reads it.
+func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo) {
+	if !info.ResponseCacheHit && info.ResponseCacheTTL <= 0 {
+		return
+	}
+	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
 
+	origin := headers.Get(cacheControlKey)
+	if origin == "" {
+		headers.Set(cacheControlKey, cached)
+		return
+	}
+	originDirectives, err := cachedirective.ParseResponseCacheControl(origin)
+	if err != nil {
+		return
+	}
+	cachedDirectives, err := cachedirective.ParseResponseCacheControl(cached)
+	if err != nil {
+		return
+	}
+	_, merged := createMostRestrictivePolicy([]*cachedirective.Object{
+		{RespDirectives: originDirectives},
+		{RespDirectives: cachedDirectives},
+	})
+	headers.Set(cacheControlKey, merged)
+}
+
+func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
 	}
@@ -154,11 +189,9 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			responseInfo.ResponseHeaders = make(http.Header)
 		}
 		headers := responseInfo.ResponseHeaders
-		// A cache hit never reached the subgraph, so it carries no Cache-Control of
-		// its own. Present its remaining lifetime as one so the most restrictive
-		// algorithm still weighs it instead of the hit dropping out of the policy.
-		if responseInfo.ResponseCacheHit && headers.Get(cacheControlKey) == "" {
-			headers.Set(cacheControlKey, ttlToCacheControl(responseInfo.ResponseCacheTTL))
+		// The TTL is only for the most restrictive algorithm.
+		if f.headerPropagation.usesMostRestrictiveCacheControl(ds.Name) {
+			applyResponseCacheLifetime(headers, responseInfo)
 		}
 		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
 	}

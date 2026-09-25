@@ -1,4 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { useParams } from 'next/navigation';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
@@ -123,8 +125,7 @@ const TypeLink = ({ name, isHeading = false }: { name: string; isHeading?: boole
 const FieldUsageColumn = ({ fieldName, typename }: { typename: string; fieldName: string }) => {
   const { range, dateRange } = useAnalyticsQueryState();
   const graph = useContext(GraphContext);
-  const router = useRouter();
-  const featureFlagName = router.query.featureFlag as string;
+  const [featureFlagName] = useQueryState('featureFlag');
   const { ast } = useContext(ExplorerContext);
 
   const category = getCategoryForType(ast, typename);
@@ -142,7 +143,7 @@ const FieldUsageColumn = ({ fieldName, typename }: { typename: string; fieldName
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
-      featureFlagName,
+      featureFlagName: featureFlagName ?? undefined,
       isInput,
     },
     {
@@ -193,7 +194,7 @@ const Fields = (props: { typename: string; category: GraphQLTypeCategory; fields
     });
   };
 
-  const fieldName = router.query.fieldName as string;
+  const [fieldName] = useQueryState('fieldName');
   const filteredFields = useMemo(() => {
     return props.fields.filter((f) => (fieldName ? f.name === fieldName : true));
   }, [fieldName, props.fields]);
@@ -366,6 +367,7 @@ const Type = (props: {
   endLineNo?: number;
 }) => {
   const router = useRouter();
+  const [fieldName, setFieldName] = useQueryState('fieldName');
   const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
 
   return (
@@ -427,26 +429,15 @@ const Type = (props: {
           </p>
         </div>
       </div>
-      {router.query.fieldName && (
+      {fieldName && (
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <div className="flex w-full max-w-lg items-center gap-x-2 rounded-md border border-dashed px-2 py-1.5 text-sm lg:w-auto lg:max-w-none">
             <div>Filter:</div>
             <Badge variant="muted" className="w-full overflow-hidden">
-              <p className="w-full overflow-hidden truncate">{router.query.fieldName}</p>
+              <p className="w-full overflow-hidden truncate">{fieldName}</p>
             </Badge>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              delete router.query.fieldName;
-              router.push({
-                pathname: `${router.pathname}`,
-                query: {
-                  ...router.query,
-                },
-              });
-            }}
-          >
+          <Button variant="outline" onClick={() => setFieldName(null)}>
             <XMarkIcon className="mr-2 h-4 w-4" />
             Clear
           </Button>
@@ -459,7 +450,7 @@ const Type = (props: {
   );
 };
 
-const TypeWrapper = ({ typename, category }: { typename: string; category: GraphQLTypeCategory }) => {
+const TypeWrapper = ({ typename, category }: { typename?: string; category: GraphQLTypeCategory }) => {
   const router = useRouter();
 
   const { ast } = useContext(ExplorerContext);
@@ -848,12 +839,17 @@ const SearchType = ({ open, setOpen }: { open: boolean; setOpen: Dispatch<SetSta
   );
 };
 
+export const schemaSelectionParams = {
+  featureFlag: parseAsString,
+  schemaType: parseAsString.withDefault('client'),
+};
+
 export const GraphSelector = () => {
   const graphData = useContext(GraphContext);
-  const router = useRouter();
-  const activeFeatureFlag = router.query.featureFlag as string;
-  const graphName = router.query.slug as string;
-  const schemaType = toSchemaType(router.query.schemaType as string);
+  const { slug: graphName } = useParams<{ slug: string }>();
+  const [{ featureFlag, schemaType: rawSchemaType }] = useQueryStates(schemaSelectionParams);
+  const activeFeatureFlag = featureFlag ?? undefined;
+  const schemaType = toSchemaType(rawSchemaType);
   const {
     namespace: { name: namespace },
   } = useWorkspace();
@@ -1102,16 +1098,16 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const graphName = router.query.slug as string;
+  const { slug: graphName } = useParams<{ slug: string }>();
   const selectedCategory = (router.query.category as string) ?? 'query';
-  const typename = router.query.typename as string;
+  const [typename] = useQueryState('typename');
   const category = router.query.category as GraphQLTypeCategory;
-  const featureFlagName = router.query.featureFlag as string;
+  const [featureFlagName] = useQueryState('featureFlag');
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphSDLByName, {
     name: graphName,
     namespace,
-    featureFlagName: featureFlagName,
+    featureFlagName: featureFlagName ?? undefined,
   });
 
   const { data: compositionFlagsData } = useQuery(
@@ -1130,7 +1126,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     (flag) => flag.name === featureFlagName && flag.hasFailedLatestComposition,
   );
 
-  const schemaType = router.query.schemaType as string;
+  const [schemaType] = useQueryState('schemaType', parseAsString.withDefault('client'));
   const schema = schemaType === 'router' ? data?.sdl : data?.clientSchema || data?.sdl;
 
   const { ast, doc, isParsing } = useParseSchema(schema);
@@ -1155,7 +1151,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           organizationSlug,
           namespace,
           graphName,
-          schemaType: (router.query.schemaType as string) || 'client',
+          schemaType: schemaType,
         })}
       >
         Schema
@@ -1173,7 +1169,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
             namespace,
             graphName,
             category: selectedCategory,
-            schemaType: (router.query.schemaType as string) || 'client',
+            schemaType: schemaType,
           })}
         >
           {sentenceCase(selectedCategory)}
@@ -1349,7 +1345,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               <AuthenticatedTypes types={authenticatedTypes} isRouterSchema={schemaType === 'router'} />
             )}
             {ast && !['deprecated', 'authenticated'].includes(selectedCategory) && (
-              <TypeWrapper typename={typename} category={category} />
+              <TypeWrapper typename={typename ?? undefined} category={category} />
             )}
             <FieldUsageSheet />
           </div>

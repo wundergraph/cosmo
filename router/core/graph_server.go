@@ -1809,12 +1809,19 @@ func (s *graphServer) buildGraphMux(
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
+		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
 	}
 
 	if s.responseCache != nil {
 		handlerOpts.ResponseCache = s.responseCache
 		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
+		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
+
+		handlerOpts.ResponseCachePrivateID, err = newResponseCachePrivateID(s.responseCacheConfig, exprManager)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.redisClient != nil {

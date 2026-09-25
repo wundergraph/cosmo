@@ -3653,6 +3653,70 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("verify timeToLastRequestByte value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "time_to_last_request_byte",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.timeToLastRequestByte",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				timeToLastRequestByte, ok := requestContextMap["time_to_last_request_byte"].(time.Duration)
+				require.True(t, ok)
+
+				require.Greater(t, int(timeToLastRequestByte), 0)
+			})
+		})
+
+		t.Run("verify timeToLastByte value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "time_to_last_byte",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.timeToLastByte",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				timeToLastByte, ok := requestContextMap["time_to_last_byte"].(time.Duration)
+				require.True(t, ok)
+
+				require.Greater(t, int(timeToLastByte), 0)
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached for multiple subgraph calls", func(t *testing.T) {
 			t.Parallel()
 
@@ -4449,9 +4513,9 @@ func TestAccessLogs(t *testing.T) {
 						require.Equal(t, cacheHit, logContext["query_complexity_cache_hit"])
 					}
 
-					assertComplexityFields(requestLogs[0].ContextMap(), 3, 5, 2, 1, false)
-					assertComplexityFields(requestLogs[1].ContextMap(), 3, 5, 2, 1, true)
-					assertComplexityFields(requestLogs[2].ContextMap(), 4, 3, 1, 0, false)
+					assertComplexityFields(requestLogs[0].ContextMap(), 3, 11, 2, 1, false)
+					assertComplexityFields(requestLogs[1].ContextMap(), 3, 11, 2, 1, true)
+					assertComplexityFields(requestLogs[2].ContextMap(), 4, 4, 1, 0, false)
 				},
 			)
 		})

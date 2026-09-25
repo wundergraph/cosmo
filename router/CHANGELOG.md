@@ -4,6 +4,65 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.353.0](https://github.com/wundergraph/cosmo/compare/router@0.352.0...router@0.353.0) (2026-09-25)
+
+### Bug Fixes
+
+* **router:** count all selected fields for total_fields limits ([#3249](https://github.com/wundergraph/cosmo/issues/3249)) ([ba4df0e](https://github.com/wundergraph/cosmo/commit/ba4df0e9934f511809a6984f2f058900fb8cbd64)) (@fiam)
+* **router:** log OTEL errors when only metrics are enabled ([#3254](https://github.com/wundergraph/cosmo/issues/3254)) ([48cebe6](https://github.com/wundergraph/cosmo/commit/48cebe616494b76038e46d8b402f6a684aa3f7c8)) (@fiam)
+* **router:** use incrementalSpec=v0.2 in Content-Type header for defer ([#3264](https://github.com/wundergraph/cosmo/issues/3264)) ([3b7b3a3](https://github.com/wundergraph/cosmo/commit/3b7b3a34e9a732a0aacc3911337aa8726682eeda)) (@devsergiy)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
+# [0.352.0](https://github.com/wundergraph/cosmo/compare/router@0.351.0...router@0.352.0) (2026-09-23)
+
+### Features
+
+* private caching ([#3244](https://github.com/wundergraph/cosmo/issues/3244)) ([27cde1e](https://github.com/wundergraph/cosmo/commit/27cde1ed351364efb3b4d7c8115907dde18e84fd)) (@SkArchon)
+* response cache Vary support ([#3256](https://github.com/wundergraph/cosmo/issues/3256)) ([3376562](https://github.com/wundergraph/cosmo/commit/33765624c69c68830866c2f043ebfc2d39fb5c06)) (@SkArchon)
+* **router:** configure authentication error handling ([#3234](https://github.com/wundergraph/cosmo/issues/3234)) ([123c10c](https://github.com/wundergraph/cosmo/commit/123c10c591058e4bfb7cb4e4aebfc0b4aa410b84)) (@fiam)
+
+# [0.351.0](https://github.com/wundergraph/cosmo/compare/router@0.350.0...router@0.351.0) (2026-09-23)
+
+### Features
+
+* **router:** add default websocket subprotocol for clients without a protocol header ([#3271](https://github.com/wundergraph/cosmo/issues/3271)) ([4966f8e](https://github.com/wundergraph/cosmo/commit/4966f8e61554d49f068881569f08d39c82253e8d)) (@endigma)
+
+# [0.350.0](https://github.com/wundergraph/cosmo/compare/router@0.349.0...router@0.350.0) (2026-09-21)
+
+### Bug Fixes
+
+* **router:** preserve SSE subscription connection errors ([#3260](https://github.com/wundergraph/cosmo/issues/3260)) ([b7751fb](https://github.com/wundergraph/cosmo/commit/b7751fb74fcd215ad7f79ec7edb624308bbd6f3c)) (@endigma)
+
+### Features
+
+* router cache tag based invalidation for cdns ([#3218](https://github.com/wundergraph/cosmo/issues/3218)) ([9727872](https://github.com/wundergraph/cosmo/commit/97278728ab186482ef712fb9aafcb45d7eef5a91)) (@SkArchon)
+* **router:** add metric request timetolastbyte ([#3119](https://github.com/wundergraph/cosmo/issues/3119)) ([0f04cd8](https://github.com/wundergraph/cosmo/commit/0f04cd8c327449498b061f5cc911ad6463f0961d)) (@alepane21)
+* **router:** cache multi-fetches and cap Cache-Control at cached TTL ([#3258](https://github.com/wundergraph/cosmo/issues/3258)) ([8d77b1b](https://github.com/wundergraph/cosmo/commit/8d77b1be96c8d5dbe7e6c38f9b414aadd6daeac0)) (@ysmolski)
+
+# [0.349.0](https://github.com/wundergraph/cosmo/compare/router@0.348.0...router@0.349.0) (2026-09-17)
+
+### Bug Fixes
+
+* **router:** add SSE server write timeout ([#3238](https://github.com/wundergraph/cosmo/issues/3238)) ([a774b65](https://github.com/wundergraph/cosmo/commit/a774b6582b078ae224b56a1b7dbe9ebf58cee13c)) (@endigma)
+
+### Features
+
+* **router:** support regex-based CORS origin matching ([#3232](https://github.com/wundergraph/cosmo/issues/3232)) ([8dd66d3](https://github.com/wundergraph/cosmo/commit/8dd66d3ca612b5c18d03fd5a63f70fe03685aeb8)) (@fiam)
+
+# [0.348.0](https://github.com/wundergraph/cosmo/compare/router@0.347.1...router@0.348.0) (2026-09-16)
+
+### Bug Fixes
+
+* **router:** accept JSON array scope claims ([#3251](https://github.com/wundergraph/cosmo/issues/3251)) ([35e20ef](https://github.com/wundergraph/cosmo/commit/35e20efb489cc7b3f88da4a071fe2607534922e6)) (@gausie)
+
+### Features
+
+* add ability to log operation complexity ([#3176](https://github.com/wundergraph/cosmo/issues/3176)) ([390158e](https://github.com/wundergraph/cosmo/commit/390158e9584864e85d99d0a44e4fcf373cf48068)) (@alepane21)
+* **router:** support custom URL schemes in CORS origins ([#3230](https://github.com/wundergraph/cosmo/issues/3230)) ([3dba5d1](https://github.com/wundergraph/cosmo/commit/3dba5d1173bb41f0850242ce9e2adc52e7f8cdeb)) (@fiam)
+
 ## [0.347.1](https://github.com/wundergraph/cosmo/compare/router@0.347.0...router@0.347.1) (2026-09-15)
 
 ### Bug Fixes
