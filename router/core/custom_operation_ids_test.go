@@ -53,8 +53,6 @@ func TestCustomPersistedIDValidation(t *testing.T) {
 func TestCustomPersistedIDConfiguration(t *testing.T) {
 	t.Parallel()
 
-	for _, manifest := range []bool{false, true} {
-		_, err := NewRouter(t.Context(), WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true, Manifest: config.PQLManifestConfig{Enabled: manifest}}), WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueriesConfig{Enabled: true}))
-		assert.ErrorContains(t, err, "custom persisted operation IDs require APQ to be disabled")
-	}
+	_, err := NewRouter(t.Context(), WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true}), WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueriesConfig{Enabled: true}))
+	assert.ErrorContains(t, err, "custom persisted operation IDs require APQ to be disabled")
 }

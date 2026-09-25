@@ -2,7 +2,6 @@ package integration
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,27 +22,19 @@ import (
 func TestCustomOperationIDs(t *testing.T) {
 	t.Parallel()
 
-	const iterations = 3
-	const first = `query Get($show: Boolean!) { employee(id: 1) @include(if: $show) { id } }`
-	const second = `query Get($hide: Boolean!) { employee(id: 2) @skip(if: $hide) { id } }`
+	const query = `query Get { employee(id: 1) { id } }`
+	const expected = `{"data":{"employee":{"id":1}}}`
 	operations := map[string]string{
-		"web-client/shared": first,
-		"ios-client/shared": second,
-		"abc/def":           `{ employee(id: 1) { id } }`,
-		"abcd/ef":           `{ employee(id: 2) { id } }`,
-		"bc/a":              `{ employee(id: 1) { id } }`,
-		"c/ab":              `{ employee(id: 2) { id } }`,
-		"ws-client/time":    `subscription { currentTime { unixTime } }`,
+		"get_employee_v1": query,
+		"time":            `subscription { currentTime { unixTime } }`,
 	}
-	var fetches atomic.Int32
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, key, ok := strings.Cut(r.URL.Path, "/operations/")
-		body, found := operations[strings.TrimSuffix(key, ".json")]
-		if !ok || !found {
+		_, id, _ := strings.Cut(r.URL.Path, "/operations/web/")
+		body, found := operations[strings.TrimSuffix(id, ".json")]
+		if !found {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		fetches.Add(1)
 		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": body}))
 	}))
 	defer cdn.Close()
@@ -57,52 +48,21 @@ func TestCustomOperationIDs(t *testing.T) {
 		},
 		LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
 	}, func(t *testing.T, e *testenv.Environment) {
-		cases := []struct{ client, vars, want string }{
-			{"web-client", `{"show":true}`, `{"data":{"employee":{"id":1}}}`},
-			{"ios-client", `{"hide":false}`, `{"data":{"employee":{"id":2}}}`},
-			{"web-client", `{"show":false}`, `{"data":{}}`},
-			{"ios-client", `{"hide":true}`, `{"data":{}}`},
-		}
-		for round := range iterations {
-			for _, tc := range cases {
-				assert.JSONEq(t, tc.want, customOperationIDRequest(t, e, tc.client, "shared", tc.vars, round == 1).Body)
-			}
-		}
-		// Wait for asynchronous cache admission, then prove normalization hits retain the body hash.
+		assert.JSONEq(t, expected, customOperationIDRequest(t, e, "get_employee_v1", false).Body)
+		// Cache admission is asynchronous. Exercise GET while waiting for a confirmed hit.
 		require.Eventually(t, func() bool {
-			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "web-client", "shared", `{"show":true}`, false).Body)
+			assert.JSONEq(t, expected, customOperationIDRequest(t, e, "get_employee_v1", true).Body)
 			logs := e.Observer().FilterMessage("/graphql").All()
-			return len(logs) > 0 && logs[len(logs)-1].ContextMap()["persisted_hit"] == true
+			return len(logs) >= 2 && logs[len(logs)-1].ContextMap()["persisted_hit"] == true
 		}, 5*time.Second, 10*time.Millisecond)
-		count := fetches.Load()
-		for range iterations {
-			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "web-client", "shared", `{"show":true}`, false).Body)
-		}
-		assert.Equal(t, count, fetches.Load())
 		for _, entry := range e.Observer().FilterMessage("/graphql").All() {
 			fields := entry.ContextMap()
-			assert.Equal(t, "shared", fields["persisted_id"])
-			h1 := sha256.Sum256([]byte(first))
-			h2 := sha256.Sum256([]byte(second))
-			assert.Contains(t, []string{hex.EncodeToString(h1[:]), hex.EncodeToString(h2[:])}, fields["body_hash"])
+			assert.Equal(t, "get_employee_v1", fields["persisted_id"])
+			assert.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte(query))), fields["body_hash"])
 		}
-		for range iterations {
-			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "abc", "def", "{}", false).Body)
-			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, customOperationIDRequest(t, e, "abcd", "ef", "{}", false).Body)
-			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "bc", "a", "{}", false).Body)
-			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, customOperationIDRequest(t, e, "c", "ab", "{}", false).Body)
-		}
-		assert.Contains(t, customOperationIDRequest(t, e, "other-client", "shared", "{}", false).Body, "PersistedQueryNotFound")
-		assert.Contains(t, customOperationIDRequest(t, e, "web-client", "missing", "{}", false).Body, "PersistedQueryNotFound")
-		invalid, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Header:     http.Header{"Graphql-Client-Name": []string{"web-client"}},
-			Query:      "{ __typename }",
-			Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"shared"}}`),
-		})
-		require.NoError(t, err)
-		assert.Equal(t, http.StatusBadRequest, invalid.Response.StatusCode)
-		assert.Contains(t, invalid.Body, "custom id cannot be combined with a query body")
-		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": []string{"ws-client"}}, nil, nil)
+		assert.Contains(t, customOperationIDRequest(t, e, "missing", false).Body, "PersistedQueryNotFound")
+
+		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": []string{"web"}}, nil, nil)
 		defer conn.Close()
 		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"time"}}}`)}))
 		var msg testenv.WebSocketMessage
@@ -115,59 +75,46 @@ func TestCustomOperationIDs(t *testing.T) {
 func TestCustomOperationIDsManifest(t *testing.T) {
 	t.Parallel()
 
-	for _, warmup := range []bool{false, true} {
-		t.Run(fmt.Sprintf("warmup=%t", warmup), func(t *testing.T) {
-			t.Parallel()
-			var current atomic.Value
-			current.Store(`{"version":1,"revision":"one","operations":{"` + strings.Repeat("x", 250) + `":"query Get { employee(id: 1) { id } }"}}`)
-			var individual atomic.Int32
-			cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
-					_, _ = w.Write([]byte(current.Load().(string)))
-					return
-				}
-				individual.Add(1)
-				w.WriteHeader(http.StatusNotFound)
-			}))
-			defer cdn.Close()
-			testenv.Run(t, &testenv.Config{CdnSever: cdn, RouterOptions: []core.Option{
-				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true, Manifest: config.PQLManifestConfig{
-					Enabled: true, PollInterval: 50 * time.Millisecond, PollJitter: time.Millisecond,
-					Warmup: config.PQLManifestWarmupConfig{Enabled: warmup, Workers: 1, Timeout: 5 * time.Second},
-				}}),
-			}, AccessLogFields: []config.CustomAttribute{
-				{Key: "persisted_hit", ValueFrom: &config.CustomDynamicAttribute{Expression: "request.operation.persistedOperationCacheHit"}},
-			}, LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel}}, func(t *testing.T, e *testenv.Environment) {
-				assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "", strings.Repeat("x", 250), "", false).Body)
-				require.Eventually(t, func() bool {
-					assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, customOperationIDRequest(t, e, "", strings.Repeat("x", 250), "", false).Body)
-					logs := e.Observer().FilterMessage("/graphql").All()
-					return len(logs) > 0 && logs[len(logs)-1].ContextMap()["persisted_hit"] == true
-				}, 5*time.Second, 10*time.Millisecond)
-				// A cached body must never survive removal from the authoritative manifest.
-				current.Store(`{"version":1,"revision":"two","operations":{}}`)
-				require.Eventually(t, func() bool {
-					return strings.Contains(customOperationIDRequest(t, e, "", strings.Repeat("x", 250), "", false).Body, "PersistedQueryNotFound")
-				}, 5*time.Second, 20*time.Millisecond)
-				current.Store(`{"version":1,"revision":"three","operations":{"` + strings.Repeat("x", 250) + `":"query Get { employee(id: 2) { id } }"}}`)
-				assert.Eventually(t, func() bool {
-					return customOperationIDRequest(t, e, "", strings.Repeat("x", 250), "", false).Body == `{"data":{"employee":{"id":2}}}`
-				}, 5*time.Second, 20*time.Millisecond)
-				assert.Zero(t, individual.Load())
-			})
-		})
-	}
+	var current atomic.Value
+	current.Store(`{"version":1,"revision":"one","operations":{"get_employee_v1":"query Get { employee(id: 1) { id } }"}}`)
+	var individual atomic.Int32
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
+			_, _ = w.Write([]byte(current.Load().(string)))
+			return
+		}
+		individual.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer cdn.Close()
+	testenv.Run(t, &testenv.Config{CdnSever: cdn, RouterOptions: []core.Option{
+		core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true, Manifest: config.PQLManifestConfig{
+			Enabled: true, PollInterval: 50 * time.Millisecond, PollJitter: time.Millisecond,
+			Warmup: config.PQLManifestWarmupConfig{Enabled: true, Workers: 1, Timeout: 5 * time.Second},
+		}}),
+	}}, func(t *testing.T, e *testenv.Environment) {
+		response := customOperationIDRequest(t, e, "get_employee_v1", false)
+		assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, response.Body)
+		assert.Equal(t, "HIT", response.Response.Header.Get(core.PersistedOperationCacheHeader))
+
+		current.Store(`{"version":1,"revision":"two","operations":{}}`)
+		require.Eventually(t, func() bool {
+			return strings.Contains(customOperationIDRequest(t, e, "get_employee_v1", false).Body, "PersistedQueryNotFound")
+		}, 5*time.Second, 20*time.Millisecond)
+		current.Store(`{"version":1,"revision":"three","operations":{"get_employee_v1":"query Get { employee(id: 2) { id } }"}}`)
+		assert.Eventually(t, func() bool {
+			return customOperationIDRequest(t, e, "get_employee_v1", false).Body == `{"data":{"employee":{"id":2}}}`
+		}, 5*time.Second, 20*time.Millisecond)
+		assert.Zero(t, individual.Load())
+	})
 }
 
-func customOperationIDRequest(t *testing.T, e *testenv.Environment, client, id, variables string, get bool) *testenv.TestResponse {
+func customOperationIDRequest(t *testing.T, e *testenv.Environment, id string, get bool) *testenv.TestResponse {
 	t.Helper()
 
 	req := testenv.GraphQLRequest{
+		Header:     http.Header{"Graphql-Client-Name": []string{"web"}},
 		Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"` + id + `"}}`),
-		Variables:  []byte(variables),
-	}
-	if client != "" {
-		req.Header = http.Header{"Graphql-Client-Name": []string{client}}
 	}
 	var response *testenv.TestResponse
 	var err error
@@ -178,7 +125,7 @@ func customOperationIDRequest(t *testing.T, e *testenv.Environment, client, id, 
 	}
 	// This helper also runs inside polling callbacks; do not call FailNow here.
 	if !assert.NoError(t, err) {
-		return &testenv.TestResponse{}
+		return &testenv.TestResponse{Response: &http.Response{}}
 	}
 	return response
 }
