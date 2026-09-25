@@ -13,12 +13,14 @@ import (
 // GraphQLSubscriptionHookContext describes one downstream GraphQL subscription.
 // It is independent of the upstream trigger, which may be shared by subscribers.
 // Request and Operation are read-only and must not be retained after the hook returns.
+// Operation provides the operation name, type, hash, content, variables, and
+// ClientInfo; Authentication provides the authenticated identity and claims.
 type GraphQLSubscriptionHookContext interface {
 	Request() *http.Request
 	Logger() *zap.Logger
 	Operation() OperationContext
 	Authentication() authentication.Authentication
-	// RootFieldName is the schema field name, even if the client selected an alias.
+	// RootFieldName is the non-empty schema field name, even if the client selected an alias.
 	RootFieldName() string
 }
 
@@ -59,15 +61,15 @@ func (c *graphqlSubscriptionHookContext) Authentication() authentication.Authent
 }
 func (c *graphqlSubscriptionHookContext) RootFieldName() string { return c.rootFieldName }
 
-func subscriptionRootFieldName(subscription *resolve.GraphQLSubscription) string {
+func subscriptionRootFieldName(subscription *resolve.GraphQLSubscription) (string, error) {
 	if subscription == nil || subscription.Response == nil || subscription.Response.Data == nil || len(subscription.Response.Data.Fields) == 0 {
-		return ""
+		return "", fmt.Errorf("subscription plan has no root field")
 	}
 	field := subscription.Response.Data.Fields[0]
-	if field == nil || field.Info == nil {
-		return ""
+	if field == nil || field.Info == nil || field.Info.Name == "" {
+		return "", fmt.Errorf("subscription plan has no root field name")
 	}
-	return field.Info.Name
+	return field.Info.Name, nil
 }
 
 // startGraphQLSubscriptionHooks returns an exactly-once end function. The

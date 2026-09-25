@@ -495,12 +495,16 @@ func (h *GraphQLHandler) startGraphQLSubscription(reqCtx *requestContext, reques
 	if len(h.graphqlSubscriptionHooks) == 0 {
 		return nil, nil
 	}
+	rootFieldName, err := subscriptionRootFieldName(subscription)
+	if err != nil {
+		return nil, err
+	}
 	ctx := &graphqlSubscriptionHookContext{
 		request:        request,
 		logger:         reqCtx.Logger(),
 		operation:      reqCtx.Operation(),
 		authentication: reqCtx.Authentication(),
-		rootFieldName:  subscriptionRootFieldName(subscription),
+		rootFieldName:  rootFieldName,
 	}
 	return startGraphQLSubscriptionHooks(h.graphqlSubscriptionHooks, ctx)
 }

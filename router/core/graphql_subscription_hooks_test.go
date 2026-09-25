@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -15,26 +16,55 @@ func TestSubscriptionRootFieldNameUsesSchemaName(t *testing.T) {
 	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
 		Fields: []*resolve.Field{{Name: []byte("alias"), Info: &resolve.FieldInfo{Name: "actualSubscription"}}},
 	}}}
-	require.Equal(t, "actualSubscription", subscriptionRootFieldName(subscription))
-	require.Empty(t, subscriptionRootFieldName(nil))
+	name, err := subscriptionRootFieldName(subscription)
+	require.NoError(t, err)
+	require.Equal(t, "actualSubscription", name)
+	_, err = subscriptionRootFieldName(nil)
+	require.ErrorContains(t, err, "no root field")
+	subscription.Response.Data.Fields[0].Info = nil
+	_, err = subscriptionRootFieldName(subscription)
+	require.ErrorContains(t, err, "no root field name")
+}
+
+func TestGraphQLSubscriptionHookRejectsMissingRootField(t *testing.T) {
+	h := &GraphQLHandler{graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{onStart: func(GraphQLSubscriptionHookContext) error {
+		t.Fatal("hook must not run without a root field name")
+		return nil
+	}}}}
+	end, err := h.startGraphQLSubscription(nil, nil, &resolve.GraphQLSubscription{})
+	require.Nil(t, end)
+	require.ErrorContains(t, err, "no root field")
 }
 
 func TestGraphQLSubscriptionHooksPerSubscriberAndReverseEndOrder(t *testing.T) {
 	request := httptest.NewRequest("GET", "/graphql", nil)
+	request.Header.Set("X-Request-Identity", "user-42")
 	auth := authentication.NewEmptyAuthentication(authentication.DefaultScopeClaim)
-	operation := &operationContext{name: "WatchOrders", opType: OperationTypeSubscription, clientInfo: &ClientInfo{Name: "mobile", Version: "1.2"}}
+	auth.SetScopes([]string{"orders:read"})
+	variables, err := astjson.Parse(`{"accountId":"abc"}`)
+	require.NoError(t, err)
+	operation := &operationContext{name: "WatchOrders", opType: OperationTypeSubscription, hash: 42, content: "subscription WatchOrders { orders }", variables: variables, clientInfo: &ClientInfo{Name: "mobile", Version: "1.2"}}
 	ctx := &graphqlSubscriptionHookContext{request: request, logger: zap.NewNop(), operation: operation, authentication: auth, rootFieldName: "orders"}
 	var calls []string
+	assertDetails := func(got GraphQLSubscriptionHookContext) {
+		require.Same(t, request, got.Request())
+		require.Equal(t, "user-42", got.Request().Header.Get("X-Request-Identity"))
+		require.Same(t, auth, got.Authentication())
+		require.Equal(t, []string{"orders:read"}, got.Authentication().Scopes())
+		require.Equal(t, "orders", got.RootFieldName())
+		require.Equal(t, "WatchOrders", got.Operation().Name())
+		require.Equal(t, OperationTypeSubscription, got.Operation().Type())
+		require.Equal(t, uint64(42), got.Operation().Hash())
+		require.Equal(t, "subscription WatchOrders { orders }", got.Operation().Content())
+		require.JSONEq(t, `{"accountId":"abc"}`, string(got.Operation().Variables().MarshalTo(nil)))
+		require.Equal(t, ClientInfo{Name: "mobile", Version: "1.2"}, got.Operation().ClientInfo())
+	}
 	handlers := []graphqlSubscriptionLifecycleHandler{
 		{onStart: func(got GraphQLSubscriptionHookContext) error {
-			require.Same(t, request, got.Request())
-			require.Same(t, auth, got.Authentication())
-			require.Equal(t, "orders", got.RootFieldName())
-			require.Equal(t, "WatchOrders", got.Operation().Name())
-			require.Equal(t, ClientInfo{Name: "mobile", Version: "1.2"}, got.Operation().ClientInfo())
+			assertDetails(got)
 			calls = append(calls, "start-a")
 			return nil
-		}, onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end-a") }},
+		}, onEnd: func(got GraphQLSubscriptionHookContext) { assertDetails(got); calls = append(calls, "end-a") }},
 		{onStart: func(GraphQLSubscriptionHookContext) error { calls = append(calls, "start-b"); return nil },
 			onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end-b") }},
 	}
