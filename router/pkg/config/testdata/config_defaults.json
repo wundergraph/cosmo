@@ -670,8 +670,8 @@
     "IgnoredFeatureFlags": null
   },
   "PersistedOperationsConfig": {
-    "AllowCustomIDs": false,
     "Disabled": false,
+    "AllowCustomIDs": false,
     "LogUnknown": false,
     "Safelist": {
       "Enabled": false

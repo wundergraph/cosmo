@@ -6,10 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMaximumLengthCustomOperationID(t *testing.T) {
+	t.Parallel()
+
 	// 250 ASCII bytes plus ".json" fit a 255-byte filename component on macOS.
 	// Reject overlong IDs in parser tests, before attempting filesystem access.
 	id := strings.Repeat("x", 250)
@@ -19,6 +22,6 @@ func TestMaximumLengthCustomOperationID(t *testing.T) {
 	require.NoError(t, err)
 	defer storage.Close()
 	body, err := storage.PersistedOperation(t.Context(), "web", id)
-	require.NoError(t, err)
-	require.Equal(t, "query GetTypeName { __typename }", string(body))
+	assert.NoError(t, err)
+	assert.Equal(t, "query GetTypeName { __typename }", string(body))
 }

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -20,13 +21,19 @@ import (
 )
 
 func TestCustomOperationIDs(t *testing.T) {
+	t.Parallel()
+
+	const iterations = 3
 	const first = `query Get($show: Boolean!) { employee(id: 1) @include(if: $show) { id } }`
 	const second = `query Get($hide: Boolean!) { employee(id: 2) @skip(if: $hide) { id } }`
 	operations := map[string]string{
-		"web-client/shared": first, "ios-client/shared": second,
-		"abc/def": `{ employee(id: 1) { id } }`, "abcd/ef": `{ employee(id: 2) { id } }`,
-		"bc/a": `{ employee(id: 1) { id } }`, "c/ab": `{ employee(id: 2) { id } }`,
-		"ws-client/time": `subscription { currentTime { unixTime } }`,
+		"web-client/shared": first,
+		"ios-client/shared": second,
+		"abc/def":           `{ employee(id: 1) { id } }`,
+		"abcd/ef":           `{ employee(id: 2) { id } }`,
+		"bc/a":              `{ employee(id: 1) { id } }`,
+		"c/ab":              `{ employee(id: 2) { id } }`,
+		"ws-client/time":    `subscription { currentTime { unixTime } }`,
 	}
 	var fetches atomic.Int32
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +44,7 @@ func TestCustomOperationIDs(t *testing.T) {
 			return
 		}
 		fetches.Add(1)
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": body}))
+		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": body}))
 	}))
 	defer cdn.Close()
 	testenv.Run(t, &testenv.Config{
@@ -59,64 +66,69 @@ func TestCustomOperationIDs(t *testing.T) {
 			} else {
 				res, err = e.MakeGraphQLRequest(req)
 			}
-			require.NoError(t, err)
+			if !assert.NoError(t, err) {
+				return &testenv.TestResponse{}
+			}
 			return res
 		}
-		for round := 0; round < 3; round++ {
-			for _, tc := range []struct{ client, vars, want string }{
-				{"web-client", `{"show":true}`, `{"data":{"employee":{"id":1}}}`},
-				{"ios-client", `{"hide":false}`, `{"data":{"employee":{"id":2}}}`},
-				{"web-client", `{"show":false}`, `{"data":{}}`},
-				{"ios-client", `{"hide":true}`, `{"data":{}}`},
-			} {
-				require.JSONEq(t, tc.want, request(tc.client, "shared", tc.vars, round == 1).Body)
+		cases := []struct{ client, vars, want string }{
+			{"web-client", `{"show":true}`, `{"data":{"employee":{"id":1}}}`},
+			{"ios-client", `{"hide":false}`, `{"data":{"employee":{"id":2}}}`},
+			{"web-client", `{"show":false}`, `{"data":{}}`},
+			{"ios-client", `{"hide":true}`, `{"data":{}}`},
+		}
+		for round := range iterations {
+			for _, tc := range cases {
+				assert.JSONEq(t, tc.want, request(tc.client, "shared", tc.vars, round == 1).Body)
 			}
 		}
 		// Wait for asynchronous cache admission, then prove normalization hits retain the body hash.
 		require.Eventually(t, func() bool {
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("web-client", "shared", `{"show":true}`, false).Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("web-client", "shared", `{"show":true}`, false).Body)
 			logs := e.Observer().FilterMessage("/graphql").All()
 			return len(logs) > 0 && logs[len(logs)-1].ContextMap()["persisted_hit"] == true
 		}, 5*time.Second, 10*time.Millisecond)
 		count := fetches.Load()
-		for i := 0; i < 3; i++ {
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("web-client", "shared", `{"show":true}`, false).Body)
+		for range iterations {
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("web-client", "shared", `{"show":true}`, false).Body)
 		}
-		require.Equal(t, count, fetches.Load())
+		assert.Equal(t, count, fetches.Load())
 		for _, entry := range e.Observer().FilterMessage("/graphql").All() {
 			fields := entry.ContextMap()
-			require.Equal(t, "shared", fields["persisted_id"])
+			assert.Equal(t, "shared", fields["persisted_id"])
 			h1 := sha256.Sum256([]byte(first))
 			h2 := sha256.Sum256([]byte(second))
-			require.Contains(t, []string{hex.EncodeToString(h1[:]), hex.EncodeToString(h2[:])}, fields["body_hash"])
+			assert.Contains(t, []string{hex.EncodeToString(h1[:]), hex.EncodeToString(h2[:])}, fields["body_hash"])
 		}
-		for i := 0; i < 3; i++ {
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("abc", "def", "{}", false).Body)
-			require.JSONEq(t, `{"data":{"employee":{"id":2}}}`, request("abcd", "ef", "{}", false).Body)
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("bc", "a", "{}", false).Body)
-			require.JSONEq(t, `{"data":{"employee":{"id":2}}}`, request("c", "ab", "{}", false).Body)
+		for range iterations {
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("abc", "def", "{}", false).Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, request("abcd", "ef", "{}", false).Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request("bc", "a", "{}", false).Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, request("c", "ab", "{}", false).Body)
 		}
-		require.Contains(t, request("other-client", "shared", "{}", false).Body, "PersistedQueryNotFound")
-		require.Contains(t, request("web-client", "missing", "{}", false).Body, "PersistedQueryNotFound")
+		assert.Contains(t, request("other-client", "shared", "{}", false).Body, "PersistedQueryNotFound")
+		assert.Contains(t, request("web-client", "missing", "{}", false).Body, "PersistedQueryNotFound")
 		invalid, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Header:     http.Header{"Graphql-Client-Name": []string{"web-client"}},
 			Query:      "{ __typename }",
 			Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"shared"}}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, invalid.Response.StatusCode)
-		require.Contains(t, invalid.Body, "custom id cannot be combined with a query body")
+		assert.Equal(t, http.StatusBadRequest, invalid.Response.StatusCode)
+		assert.Contains(t, invalid.Body, "custom id cannot be combined with a query body")
 		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": []string{"ws-client"}}, nil, nil)
 		defer conn.Close()
 		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"time"}}}`)}))
 		var msg testenv.WebSocketMessage
 		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-		require.Equal(t, "next", msg.Type)
-		require.Contains(t, string(msg.Payload), "unixTime")
+		assert.Equal(t, "next", msg.Type)
+		assert.Contains(t, string(msg.Payload), "unixTime")
 	})
 }
 
 func TestCustomOperationIDsManifest(t *testing.T) {
+	t.Parallel()
+
 	for _, warmup := range []bool{false, true} {
 		t.Run(fmt.Sprintf("warmup=%t", warmup), func(t *testing.T) {
 			t.Parallel()
@@ -142,12 +154,14 @@ func TestCustomOperationIDsManifest(t *testing.T) {
 			}, LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel}}, func(t *testing.T, e *testenv.Environment) {
 				request := func() string {
 					res, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"` + strings.Repeat("x", 250) + `"}}`)})
-					require.NoError(t, err)
+					if !assert.NoError(t, err) {
+						return ""
+					}
 					return res.Body
 				}
-				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request())
+				assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request())
 				require.Eventually(t, func() bool {
-					require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request())
+					assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, request())
 					logs := e.Observer().FilterMessage("/graphql").All()
 					return len(logs) > 0 && logs[len(logs)-1].ContextMap()["persisted_hit"] == true
 				}, 5*time.Second, 10*time.Millisecond)
@@ -155,8 +169,8 @@ func TestCustomOperationIDsManifest(t *testing.T) {
 				current.Store(`{"version":1,"revision":"two","operations":{}}`)
 				require.Eventually(t, func() bool { return strings.Contains(request(), "PersistedQueryNotFound") }, 5*time.Second, 20*time.Millisecond)
 				current.Store(`{"version":1,"revision":"three","operations":{"` + strings.Repeat("x", 250) + `":"query Get { employee(id: 2) { id } }"}}`)
-				require.Eventually(t, func() bool { return request() == `{"data":{"employee":{"id":2}}}` }, 5*time.Second, 20*time.Millisecond)
-				require.Zero(t, individual.Load())
+				assert.Eventually(t, func() bool { return request() == `{"data":{"employee":{"id":2}}}` }, 5*time.Second, 20*time.Millisecond)
+				assert.Zero(t, individual.Load())
 			})
 		})
 	}
