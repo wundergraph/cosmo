@@ -26,7 +26,7 @@ runs:
         header: git-dirty-check-${{ inputs.package-name }}
         hide_and_recreate: true
         message: |
-          # ${{ inputs.package-name }} - uncommitted changes detected
+          ## ${{ inputs.package-name }} - uncommitted changes detected
 
           Seems like you forgot to commit some code. Possible causes:
           * Generated code not part of the PR, fix with: `make generate` and commit the changes
