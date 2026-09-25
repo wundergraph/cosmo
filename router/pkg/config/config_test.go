@@ -2739,3 +2739,19 @@ version: "1"
 	require.Equal(t, ResponseCacheStorageProviderMemory, cfg.Config.ResponseCache.Storage.Provider)
 	require.Equal(t, int64(4096), cfg.Config.ResponseCache.Storage.MaxEntries)
 }
+
+func TestCustomPersistedIDsConfig(t *testing.T) {
+	t.Run("yaml", func(t *testing.T) {
+		f := createTempFileFromFixture(t, "version: \"1\"\npersisted_operations:\n  allow_custom_ids: true\n")
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.PersistedOperationsConfig.AllowCustomIDs)
+	})
+	t.Run("environment", func(t *testing.T) {
+		t.Setenv("PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS", "true")
+		f := createTempFileFromFixture(t, "version: \"1\"\n")
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.PersistedOperationsConfig.AllowCustomIDs)
+	})
+}

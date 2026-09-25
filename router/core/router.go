@@ -476,6 +476,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		)
 	}
 
+	if r.persistedOperationsConfig.AllowCustomIDs && r.automaticPersistedQueriesConfig.Enabled {
+		return nil, errors.New("custom persisted operation IDs require APQ to be disabled")
+	}
+
 	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
 		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 	}

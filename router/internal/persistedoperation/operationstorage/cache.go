@@ -42,7 +42,7 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 }
 
 func (c *OperationsCache) key(clientName string, operationHash string) string {
-	return clientName + operationHash
+	return fmt.Sprintf("%d:%s%s", len(clientName), clientName, operationHash)
 }
 
 func (c *OperationsCache) Get(clientName string, operationHash string) []byte {

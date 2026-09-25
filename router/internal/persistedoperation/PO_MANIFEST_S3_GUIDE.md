@@ -84,3 +84,21 @@ The manifest file (configured via `manifest.file_name`, default `manifest.json`)
 ### Operation lookup
 
 When a client sends a persisted query request with `extensions.persistedQuery.sha256Hash`, the router looks up the hash directly in the `operations` map. This is an O(1) in-memory lookup with no network overhead.
+
+## Custom operation IDs
+
+Enable `persisted_operations.allow_custom_ids: true` (or `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS=true`) together with manifest mode. APQ must be disabled. IDs contain 1–250 ASCII letters, digits, underscores, or hyphens and are sent in `extensions.persistedQuery.sha256Hash` without a query body.
+
+Version 1 manifests retain the global `operations` map. An ID must identify the same body across all clients of the graph. The Cosmo control plane allows multiple clients to register identical ID/body pairs and returns `CONFLICT` for a different body, including conflicts within a batch or concurrent publishing requests.
+
+```json
+{
+  "version": 1,
+  "revision": "operations-1",
+  "operations": {
+    "get-user": "query { user { id } }"
+  }
+}
+```
+
+Each request resolves against one manifest snapshot; cache keys include its revision. Change the revision whenever the manifest changes. The control plane computes it from the global operation map when publishing or deleting operations. Deleting the last registration removes the ID; routers stop using cached bodies after observing the new revision.

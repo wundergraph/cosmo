@@ -14,7 +14,7 @@ type Manifest struct {
 	Version     int               `json:"version"`
 	Revision    string            `json:"revision"`
 	GeneratedAt string            `json:"generatedAt"`
-	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
+	Operations  map[string]string `json:"operations"` // operation ID -> body
 }
 
 type Store struct {
@@ -135,6 +135,12 @@ func validateManifest(m *Manifest) error {
 // IsLoaded returns whether a manifest has been loaded.
 func (s *Store) IsLoaded() bool {
 	return s.manifest.Load() != nil
+}
+
+// Snapshot returns the current immutable manifest. Keep this snapshot for the entire
+// operation so lookup and cache identity cannot observe different revisions.
+func (s *Store) Snapshot() *Manifest {
+	return s.manifest.Load()
 }
 
 // Revision returns the current manifest revision for polling.

@@ -99,6 +99,54 @@ To see all available options for `wgc operations push`, see [Push](/cli/operatio
 
 Additionally, check the [Using Persisted Operation with Federated GraphQL](/tutorial/using-persisted-operations) tutorial for a step-by-step guide.
 
+## Custom operation IDs
+
+Set `persisted_operations.allow_custom_ids: true` to use custom IDs with per-operation CDN or manifest lookup. The environment variable is `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS`. The option defaults to `false` and requires APQ to be disabled.
+
+```yaml
+persisted_operations:
+  allow_custom_ids: true
+  manifest:
+    enabled: true
+automatic_persisted_queries:
+  enabled: false
+```
+
+IDs must contain 1–250 ASCII letters, digits, underscores, or hyphens. Publish a JSON query map through the existing CLI:
+
+```json operations.json
+{
+  "get_typename_v1": "query GetTypeName { __typename }"
+}
+```
+
+```bash
+wgc operations push mygraph -n default -c web -f operations.json
+```
+
+Send the ID in `extensions.persistedQuery.sha256Hash`, despite the field name, with the `graphql-client-name: web` header:
+
+```json
+{
+  "extensions": {
+    "persistedQuery": {
+      "version": 1,
+      "sha256Hash": "get_typename_v1"
+    }
+  }
+}
+```
+
+A custom ID cannot be sent alongside a `query` body. A 64-character hexadecimal ID retains SHA256 semantics. Unknown IDs return `PersistedQueryNotFound`.
+
+The `persisted_operation_sha256` context field contains the supplied ID, while `operation_sha256` contains the actual body hash when requested.
+
+Enable `PERSISTED_OPERATIONS_MANIFEST_ENABLED=true` alongside `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS=true` to load all operations into memory. Manifest warmup supports custom IDs. Cache entries are scoped to the manifest revision, so removed operations stop resolving after an update and old cached bodies are not reused.
+
+Manifest-mode routers observe deletion or replacement after polling the updated manifest. Routers using per-operation CDN lookup may retain old cached bodies, so do not reuse deleted IDs in that mode while they may still be cached.
+
+Manifest warmup pre-processes operations on each router replica. With manifest mode disabled, operations are fetched from the CDN on cache misses.
+
 ## Deleting persisted operations in Studio
 
 You can delete persisted operations directly in Cosmo Studio after they have been uploaded via `wgc operations push`.
