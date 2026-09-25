@@ -397,6 +397,38 @@ WARN  Response cache degraded, serving from the subgraph instead
 
 That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
 
+### Metrics and traces
+
+While the cache is enabled, every subgraph fetch carries a `wg.response_cache.status` attribute on its metrics and on its `Engine - Fetch` span.
+
+| Value | Meaning |
+| --- | --- |
+| `hit` | The fetch was answered from the cache. Nothing was sent to the subgraph. |
+| `partial_hit` | Part of a merged fetch was answered from the cache and only the rest was sent. This needs `engine.enable_multi_fetch`. |
+| `miss` | The fetch was sent to the subgraph. |
+
+A fetch served from the cache still counts as a subgraph request, with a latency close to zero. The attribute sits next to `wg.subgraph.name` on `router.http.requests`, `router.http.request.duration_milliseconds` and `router.http.requests.error`, so a hit rate needs no join:
+
+```promql
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status="hit"}[5m]))
+/
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status!=""}[5m]))
+```
+
+The same split on the duration histogram shows what a hit saves:
+
+```promql
+histogram_quantile(0.95,
+  sum by (wg_subgraph_name, wg_response_cache_status, le) (
+    rate(router_http_request_duration_milliseconds_bucket{wg_response_cache_status!=""}[5m])
+  )
+)
+```
+
+The attribute is per fetch, not per client response. An operation that fans out to several subgraphs produces one status per fetch. It is not attached while the cache is disabled, and it can be dropped from metrics with `exclude_metric_labels` under `telemetry.metrics.prometheus` or `telemetry.metrics.otlp`.
+
+The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, which puts it within reach of custom attributes and the subgraph access log.
+
 ## Related
 
 * [Storage Providers](/router/storage-providers) defines the Redis instance the `redis` provider references.

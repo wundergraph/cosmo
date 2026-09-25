@@ -55,6 +55,30 @@ type engineLoaderHooks struct {
 
 	storeSubgraphResponseBody bool
 	headerPropagation         *HeaderPropagation
+	// responseCacheEnabled gates the cache status attribute: without a cache
+	// every fetch would read as a miss, which is noise rather than a signal.
+	responseCacheEnabled bool
+}
+
+// Values of the wg.response_cache.status attribute on subgraph metrics and spans.
+const (
+	ResponseCacheStatusHit        = "hit"
+	ResponseCacheStatusPartialHit = "partial_hit"
+	ResponseCacheStatusMiss       = "miss"
+)
+
+// responseCacheStatus reads what the cache did for a fetch. The engine sets the
+// TTL only from entries it found, so a positive TTL on a fetch that still went
+// out means part of a merged fetch was served from the cache.
+func responseCacheStatus(info *resolve.ResponseInfo) string {
+	switch {
+	case info.ResponseCacheHit:
+		return ResponseCacheStatusHit
+	case info.ResponseCacheTTL > 0:
+		return ResponseCacheStatusPartialHit
+	default:
+		return ResponseCacheStatusMiss
+	}
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -70,6 +94,7 @@ func NewEngineRequestHooks(
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
 	headerPropagation *HeaderPropagation,
+	responseCacheEnabled bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -93,6 +118,7 @@ func NewEngineRequestHooks(
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 		headerPropagation:             headerPropagation,
+		responseCacheEnabled:          responseCacheEnabled,
 	}
 }
 
@@ -218,6 +244,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		rotel.WgSubgraphName.String(ds.Name),
 	}
 
+	var cacheStatus string
+	if f.responseCacheEnabled {
+		cacheStatus = responseCacheStatus(responseInfo)
+		commonAttrs = append(commonAttrs, rotel.WgResponseCacheStatus.String(cacheStatus))
+	}
+
 	traceAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&traceAttrs)
 	traceAttrs = append(traceAttrs, reqContext.telemetry.traceAttrs...)
@@ -235,6 +267,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil
 	// header map is safe; http.Header.Get returns an empty string.
 	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
+	exprCtx.Subgraph.Response.Cache.Status = cacheStatus
 
 	// Get trace results from the context, that were introduced in OnLoad
 	if results := traceclient.ClientTraceResultsFromContext(ctx); results != nil {
