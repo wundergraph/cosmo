@@ -858,8 +858,6 @@ export const GraphSelector = () => {
 
   const selectSchema = (next: SchemaSelection) =>
     applyParams({
-      typename: null,
-      category: null,
       fieldName: null,
       showUsage: null,
       isNamedType: null,
@@ -1141,6 +1139,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 
   const isLoadingAST = isLoading || isParsing;
 
+  const resolvedTypename = typename && (!ast || ast.getType(typename)) ? typename : undefined;
+
   let title = 'Schema';
   let breadcrumbs = [];
   if (selectedCategory) {
@@ -1159,8 +1159,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     );
   }
 
-  if (typename && typename.toLowerCase() !== selectedCategory) {
-    title = sentenceCase(typename);
+  if (resolvedTypename && resolvedTypename.toLowerCase() !== selectedCategory) {
+    title = sentenceCase(resolvedTypename);
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
@@ -1345,7 +1345,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               <AuthenticatedTypes types={authenticatedTypes} isRouterSchema={schemaType === 'router'} />
             )}
             {ast && !['deprecated', 'authenticated'].includes(selectedCategory) && (
-              <TypeWrapper typename={typename ?? undefined} category={category} />
+              <TypeWrapper typename={resolvedTypename} category={category} />
             )}
             <FieldUsageSheet />
           </div>
