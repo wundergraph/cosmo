@@ -597,7 +597,8 @@ export function invalidInterfaceImplementationError(
       }
       if (invalidFieldImplementation.implementationContextCoords.size > 0) {
         message +=
-          `   "@${FROM_CONTEXT}" cannot be defined on the implementation of an Interface field.\n` +
+          `   "@${FROM_CONTEXT}" cannot be defined on the implementation of the Interface field` +
+          ` "${interfaceName}.${fieldName}".\n` +
           `    The following argument` +
           (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
