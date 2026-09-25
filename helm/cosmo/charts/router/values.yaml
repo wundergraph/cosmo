@@ -14,6 +14,9 @@ image:
 # -- Add labels to all deployed resources
 commonLabels: {}
 
+# -- Add additional annotations to the Deployment
+additionalDeploymentAnnotations: {}
+
 # -- Add labels to deployment (metadata.labels)
 additionalLabels: {}
 
@@ -283,7 +286,7 @@ configuration:
   httpProxy: ''
   # -- NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used.
   noProxy: ''
-  
+
   # Use this section to disable/enable and configure the MCP server.
   mcp:
     # -- Enables MCP server support. Default is false.
