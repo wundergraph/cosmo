@@ -320,14 +320,15 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
+	// Resolve manifest warmup IDs through the same snapshot as live requests.
+	// Never attach a stale warmup body to a cache key from a newer manifest.
+	if c.operationProcessor.allowCustomIDs && c.operationProcessor.persistedOperationClient != nil &&
+		c.operationProcessor.persistedOperationClient.PQLStore() != nil && operation.Request.GetExtensions().GetPersistedQuery() != nil {
+		item.Request.Query = ""
+	}
 	k.parsedOperation.Request = item.Request
 
 	err = k.unmarshalOperation()
-	if err != nil {
-		return nil, err
-	}
-
-	err = k.ComputeOperationSha256()
 	if err != nil {
 		return nil, err
 	}
@@ -337,6 +338,11 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	err = k.ComputeOperationSha256()
+	if err != nil {
+		return nil, err
 	}
 
 	err = k.Parse()

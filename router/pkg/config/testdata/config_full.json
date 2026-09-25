@@ -1171,6 +1171,7 @@
     ]
   },
   "PersistedOperationsConfig": {
+    "AllowCustomIDs": false,
     "Disabled": false,
     "LogUnknown": true,
     "Safelist": {

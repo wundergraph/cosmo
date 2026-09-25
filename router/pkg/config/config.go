@@ -1327,12 +1327,13 @@ type PQLManifestConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
-	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
-	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
-	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
-	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
-	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
+	AllowCustomIDs bool                             `yaml:"allow_custom_ids" env:"ALLOW_CUSTOM_IDS" envDefault:"false"`
+	Disabled       bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
+	LogUnknown     bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
+	Safelist       SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
+	Cache          PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage        PersistedOperationsStorageConfig `yaml:"storage"`
+	Manifest       PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
 type SafelistConfiguration struct {

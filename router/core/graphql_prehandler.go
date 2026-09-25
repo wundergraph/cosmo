@@ -510,7 +510,7 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, re
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
 	// If it has a hash already AND a body, we need to compute the hash again to ensure it matches the persisted hash
-	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+	if hasPersistedHash && !operationKit.hasCustomPersistedID() && operationKit.parsedOperation.Request.Query != "" {
 		return true
 	}
 
@@ -581,7 +581,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.shouldComputeOperationSha256(operationKit, requestContext) {
+	if h.shouldComputeOperationSha256(operationKit, requestContext) && !operationKit.hasCustomPersistedID() {
 		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 			// No query body to hash; use the client-provided persisted hash for telemetry.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
@@ -682,6 +682,19 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+	}
+
+	// A custom ID is not a body hash. Resolve it before computing hash telemetry.
+	if operationKit.hasCustomPersistedID() && h.shouldComputeOperationSha256(operationKit, requestContext) {
+		if operationKit.parsedOperation.Sha256Hash == "" {
+			if err := operationKit.ComputeOperationSha256(); err != nil {
+				return err
+			}
+		}
+		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
+		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
+		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, operationKit.parsedOperation.Sha256Hash)
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step
