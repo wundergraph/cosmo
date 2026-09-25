@@ -27,6 +27,7 @@ import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
   configureDescriptionPropagationError,
+  requiredContextArgumentError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
   incompatibleFederatedFieldNamedTypeError,
@@ -145,6 +146,7 @@ import {
   getDefinitionDataCoords,
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
+  doesArgumentDefineFromContext,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -400,6 +402,8 @@ export class FederationFactory {
           continue;
         }
         const invalidFieldImplementation: InvalidFieldImplementation = {
+          implementationContextCoords: new Set<string>(),
+          interfaceContextCoords: new Set<string>(),
           invalidAdditionalArguments: new Set<string>(),
           invalidImplementedArguments: [],
           isInaccessible: false,
@@ -424,16 +428,28 @@ export class FederationFactory {
         for (const [argumentName, inputValueData] of interfaceField.argumentDataByName) {
           const interfaceArgument = inputValueData.node;
           handledArguments.add(argumentName);
-          const argumentNode = fieldData.argumentDataByName.get(argumentName)?.node;
+          const implementationArgumentData = fieldData.argumentDataByName.get(argumentName);
           // The type implementing the interface must include all arguments with no variation for that argument
-          if (!argumentNode) {
+          if (!implementationArgumentData) {
             hasErrors = true;
             hasNestedErrors = true;
             invalidFieldImplementation.unimplementedArguments.add(argumentName);
             continue;
           }
+          // @fromContext cannot be defined on an interface field
+          if (doesArgumentDefineFromContext(inputValueData)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.interfaceContextCoords.add(inputValueData.federatedCoords);
+          }
+          // @fromContext cannot be defined on the implementation of an interface field
+          if (doesArgumentDefineFromContext(implementationArgumentData)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.implementationContextCoords.add(implementationArgumentData.federatedCoords);
+          }
           // Implemented arguments should be the exact same type
-          const actualType = printTypeNode(argumentNode.type);
+          const actualType = printTypeNode(implementationArgumentData.node.type);
           const expectedType = printTypeNode(interfaceArgument.type);
           if (expectedType !== actualType) {
             hasErrors = true;
@@ -768,6 +784,10 @@ export class FederationFactory {
       targetData.configureDescriptionDataBySubgraphName,
     );
     setLongestDescription(targetData, incomingData);
+    addIterableToSet({
+      source: incomingData.fromContextSubgraphNames,
+      target: targetData.fromContextSubgraphNames,
+    });
     addIterableToSet({
       source: incomingData.requiredSubgraphNames,
       target: targetData.requiredSubgraphNames,
@@ -1119,6 +1139,7 @@ export class FederationFactory {
   copyInputValueData(sourceData: InputValueData): InputValueData {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
+      fromContextSubgraphNames: new Set(sourceData.fromContextSubgraphNames),
       directivesByName: copyArrayValueMap(sourceData.directivesByName),
       federatedCoords: sourceData.federatedCoords,
       fieldName: sourceData.fieldName,
@@ -1934,6 +1955,18 @@ export class FederationFactory {
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldCoords = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
+      if (doesArgumentDefineFromContext(inputValueData)) {
+        if (inputValueData.requiredSubgraphNames.size > 0) {
+          this.errors.push(
+            requiredContextArgumentError(
+              inputValueData.federatedCoords,
+              [...inputValueData.fromContextSubgraphNames],
+              [...inputValueData.requiredSubgraphNames],
+            ),
+          );
+        }
+        continue;
+      }
       if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
         argumentNames.push(argumentName);
         const argumentNodeResult = routerSchemaInputValueNodeFromData({
