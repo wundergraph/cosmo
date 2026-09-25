@@ -10,9 +10,9 @@ export type InvalidArgumentImplementation = {
 };
 
 export type InvalidFieldImplementation = {
+  implementationContextCoords: Set<string>;
   implementedResponseType?: string;
-  interfaceContextFields: Set<ArgumentName>;
-  interfaceImplementationContextFields: Set<ArgumentName>;
+  interfaceContextCoords: Set<string>;
   invalidAdditionalArguments: Set<string>;
   invalidImplementedArguments: InvalidArgumentImplementation[];
   isInaccessible: boolean;

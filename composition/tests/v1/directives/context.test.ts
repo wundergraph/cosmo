@@ -747,8 +747,8 @@ describe('@context and @fromContext directives', () => {
                   [
                     'greeting',
                     {
-                      interfaceContextFields: new Set<string>(['locale']),
-                      interfaceImplementationContextFields: new Set<string>(['locale']),
+                      implementationContextCoords: new Set<string>(['Profile.greeting(locale: ...)']),
+                      interfaceContextCoords: new Set<string>(['Node.greeting(locale: ...)']),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -802,8 +802,8 @@ describe('@context and @fromContext directives', () => {
                   [
                     'greeting',
                     {
-                      interfaceContextFields: new Set<string>(),
-                      interfaceImplementationContextFields: new Set<string>(['locale']),
+                      implementationContextCoords: new Set<string>(['Profile.greeting(locale: ...)']),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -857,8 +857,8 @@ describe('@context and @fromContext directives', () => {
                   [
                     'greeting',
                     {
-                      interfaceContextFields: new Set<string>(['locale']),
-                      interfaceImplementationContextFields: new Set<string>(),
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(['Node.greeting(locale: ...)']),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -907,8 +907,8 @@ describe('@context and @fromContext directives', () => {
           [
             'a',
             {
-              interfaceContextFields: new Set<string>(),
-              interfaceImplementationContextFields: new Set<string>(['a']),
+              implementationContextCoords: new Set<string>(['Object.a(a: ...)']),
+              interfaceContextCoords: new Set<string>(),
               invalidAdditionalArguments: new Set<string>(),
               invalidImplementedArguments: [],
               isInaccessible: false,
@@ -964,8 +964,8 @@ describe('@context and @fromContext directives', () => {
           [
             'a',
             {
-              interfaceContextFields: new Set<string>(),
-              interfaceImplementationContextFields: new Set<string>(['a']),
+              implementationContextCoords: new Set<string>(['Object.a(a: ...)']),
+              interfaceContextCoords: new Set<string>(),
               invalidAdditionalArguments: new Set<string>(),
               invalidImplementedArguments: [],
               isInaccessible: false,

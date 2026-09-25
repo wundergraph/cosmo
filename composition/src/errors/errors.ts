@@ -586,22 +586,22 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
-      if (invalidFieldImplementation.interfaceContextFields.size > 0) {
+      if (invalidFieldImplementation.interfaceContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
           `    The following argument` +
-          (invalidFieldImplementation.interfaceContextFields.size > 1 ? `s define` : ` defines`) +
+          (invalidFieldImplementation.interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.interfaceContextFields].join(`", "`) +
+          [...invalidFieldImplementation.interfaceContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
-      if (invalidFieldImplementation.interfaceImplementationContextFields.size > 0) {
+      if (invalidFieldImplementation.implementationContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on the implementation of an Interface field.\n` +
           `    The following argument` +
-          (invalidFieldImplementation.interfaceImplementationContextFields.size > 1 ? `s define` : ` defines`) +
+          (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.interfaceImplementationContextFields].join(`", "`) +
+          [...invalidFieldImplementation.implementationContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
       if (invalidFieldImplementation.isInaccessible) {

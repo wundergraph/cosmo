@@ -402,8 +402,8 @@ export class FederationFactory {
           continue;
         }
         const invalidFieldImplementation: InvalidFieldImplementation = {
-          interfaceContextFields: new Set<ArgumentName>(),
-          interfaceImplementationContextFields: new Set<ArgumentName>(),
+          implementationContextCoords: new Set<string>(),
+          interfaceContextCoords: new Set<string>(),
           invalidAdditionalArguments: new Set<string>(),
           invalidImplementedArguments: [],
           isInaccessible: false,
@@ -440,13 +440,13 @@ export class FederationFactory {
           if (doesArgumentDefineFromContext(inputValueData)) {
             hasErrors = true;
             hasNestedErrors = true;
-            invalidFieldImplementation.interfaceContextFields.add(argumentName);
+            invalidFieldImplementation.interfaceContextCoords.add(inputValueData.federatedCoords);
           }
           // @fromContext cannot be defined on the implementation of an interface field
           if (doesArgumentDefineFromContext(implementationArgumentData)) {
             hasErrors = true;
             hasNestedErrors = true;
-            invalidFieldImplementation.interfaceImplementationContextFields.add(argumentName);
+            invalidFieldImplementation.implementationContextCoords.add(implementationArgumentData.federatedCoords);
           }
           // Implemented arguments should be the exact same type
           const actualType = printTypeNode(implementationArgumentData.node.type);
