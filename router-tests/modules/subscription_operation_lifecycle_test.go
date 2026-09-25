@@ -20,9 +20,10 @@ type subscriptionLifecycleRecorder struct {
 }
 
 type subscriptionLifecycleDetails struct {
-	rootFieldName string
-	operationName string
-	clientName    string
+	rootFieldName      string
+	rootFieldArguments string
+	operationName      string
+	clientName         string
 }
 
 func (r *subscriptionLifecycleRecorder) counts() (starts, ends int) {
@@ -49,9 +50,10 @@ func (m *subscriptionLifecycleModule) OnSubscriptionOperationStart(ctx core.Grap
 	m.recorder.mu.Lock()
 	defer m.recorder.mu.Unlock()
 	m.recorder.starts[ctx.SubscriptionInstanceID()] = subscriptionLifecycleDetails{
-		rootFieldName: ctx.RootFieldName(),
-		operationName: ctx.Operation().Name(),
-		clientName:    ctx.Operation().ClientInfo().Name,
+		rootFieldName:      ctx.RootFieldName(),
+		rootFieldArguments: string(ctx.RootFieldArguments()),
+		operationName:      ctx.Operation().Name(),
+		clientName:         ctx.Operation().ClientInfo().Name,
 	}
 	return nil
 }
@@ -60,9 +62,10 @@ func (m *subscriptionLifecycleModule) OnSubscriptionOperationEnd(ctx core.GraphQ
 	m.recorder.mu.Lock()
 	defer m.recorder.mu.Unlock()
 	m.recorder.ends[ctx.SubscriptionInstanceID()] = subscriptionLifecycleDetails{
-		rootFieldName: ctx.RootFieldName(),
-		operationName: ctx.Operation().Name(),
-		clientName:    ctx.Operation().ClientInfo().Name,
+		rootFieldName:      ctx.RootFieldName(),
+		rootFieldArguments: string(ctx.RootFieldArguments()),
+		operationName:      ctx.Operation().Name(),
+		clientName:         ctx.Operation().ClientInfo().Name,
 	}
 }
 
@@ -107,9 +110,10 @@ func TestSubscriptionOperationLifecycleIsPerSubscriberOnOneWebSocket(t *testing.
 		for instanceID, details := range recorder.starts {
 			require.NotEmpty(t, instanceID)
 			require.Equal(t, subscriptionLifecycleDetails{
-				rootFieldName: "currentTime",
-				operationName: "watch",
-				clientName:    "lifecycle-test",
+				rootFieldName:      "currentTime",
+				rootFieldArguments: "{}",
+				operationName:      "watch",
+				clientName:         "lifecycle-test",
 			}, details)
 			require.Equal(t, details, recorder.ends[instanceID])
 		}
@@ -176,9 +180,10 @@ func TestSubscriptionOperationLifecycleIsPerSSESubscriber(t *testing.T) {
 		for instanceID, details := range recorder.starts {
 			require.NotEmpty(t, instanceID)
 			require.Equal(t, subscriptionLifecycleDetails{
-				rootFieldName: "currentTime", // schema name, not the "tick" alias
-				operationName: "watch",
-				clientName:    "sse-lifecycle-test",
+				rootFieldName:      "currentTime", // schema name, not the "tick" alias
+				rootFieldArguments: "{}",
+				operationName:      "watch",
+				clientName:         "sse-lifecycle-test",
 			}, details)
 			require.Equal(t, details, recorder.ends[instanceID])
 		}
