@@ -47,8 +47,8 @@ jobs:
 
       - name: Generate next release (dry-run)
         run: |
-          git checkout -b release-preview
-          pnpm run release-preview --yes --no-push --no-git-tag-version --no-changelog-include-commits-client-login
+          git checkout -B "${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          pnpm run release-preview --yes --no-git-tag-version
         env:
           GH_TOKEN: ${{ github.token }}
 
