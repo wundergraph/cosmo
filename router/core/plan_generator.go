@@ -209,7 +209,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
@@ -232,13 +232,13 @@ func (pl *Planner) extractAndRemapVariables(operation *ast.Document, operationNa
 	)
 	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	remapper := astnormalization.NewVariablesMapper()
 	remapper.NormalizeOperation(operation, pl.definition, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
@@ -320,7 +320,7 @@ func (pl *Planner) validateOperation(operation *ast.Document) (err error) {
 	report := operationreport.Report{}
 	pl.operationValidator.Validate(operation, pl.clientDefinition, &report)
 	if report.HasErrors() {
-		return report
+		return &report
 	}
 
 	return nil
@@ -464,7 +464,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
-		return fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
+		return fmt.Errorf("failed to parse graphql schema from engine config: %w", &report)
 	}
 
 	// we need to merge the base schema, it contains the __schema and __type queries
@@ -478,7 +478,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	if clientSchemaStr := routerConfig.GetEngineConfig().GetGraphqlClientSchema(); clientSchemaStr != "" {
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
-			return fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
+			return fmt.Errorf("failed to parse graphql client schema from engine config: %w", &report)
 		}
 		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
 		if err != nil {
