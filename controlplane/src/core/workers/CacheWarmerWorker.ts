@@ -6,7 +6,7 @@ import { CacheWarmerOperationsSchema } from '@wundergraph/cosmo-connect/dist/nod
 import * as schema from '../../db/schema.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
-import { S3RouterConfigMetadata } from '../composition/composer.js';
+import { S3RouterConfigMetadata } from '../util/composition.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { IQueue, IWorker } from './Worker.js';
 
