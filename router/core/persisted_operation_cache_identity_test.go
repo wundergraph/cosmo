@@ -63,11 +63,10 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	require.NoError(t, err)
 	defer cache.Close()
 	processor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                         &Executor{},
-		AllowCustomPersistedOperationIDs: true,
-		PersistedOperationClient:         client,
-		EnablePersistedOperationsCache:   true,
-		PersistedOpsNormalizationCache:   cache,
+		Executor:                       &Executor{},
+		PersistedOperationClient:       client,
+		EnablePersistedOperationsCache: true,
+		PersistedOpsNormalizationCache: cache,
 	})
 	kit, err := processor.NewKit()
 	require.NoError(t, err)

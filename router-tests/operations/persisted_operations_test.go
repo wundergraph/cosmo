@@ -56,7 +56,10 @@ func TestPersistedOperationInvalidHash(t *testing.T) {
 		"000000000000000000000000000000000000000000000000000000000000000z",
 	}
 	for _, hash := range malformed {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{ApqConfig: config.AutomaticPersistedQueriesConfig{
+			Enabled: true,
+			Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+		}}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + hash + `"}}`),
 			})

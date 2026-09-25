@@ -45,8 +45,7 @@ func TestCustomOperationIDs(t *testing.T) {
 	}))
 	defer cdn.Close()
 	testenv.Run(t, &testenv.Config{
-		CdnSever:      cdn,
-		RouterOptions: []core.Option{core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true})},
+		CdnSever: cdn,
 		AccessLogFields: []config.CustomAttribute{
 			{Key: "body_hash", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldOperationSha256}},
 			{Key: "persisted_id", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldPersistedOperationSha256}},
@@ -135,7 +134,6 @@ func TestCustomOperationIDsWarmup(t *testing.T) {
 	}))
 	defer cdn.Close()
 	testenv.Run(t, &testenv.Config{CdnSever: cdn, RouterOptions: []core.Option{
-		core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true}),
 		core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 			Enabled: true,
 			Workers: 1,
@@ -170,7 +168,7 @@ func TestCustomOperationIDsManifest(t *testing.T) {
 	}))
 	defer cdn.Close()
 	testenv.Run(t, &testenv.Config{CdnSever: cdn, RouterOptions: []core.Option{
-		core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{AllowCustomIDs: true, Manifest: config.PQLManifestConfig{
+		core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{Manifest: config.PQLManifestConfig{
 			Enabled: true, PollInterval: 50 * time.Millisecond, PollJitter: time.Millisecond,
 			Warmup: config.PQLManifestWarmupConfig{Enabled: true, Workers: 1, Timeout: 5 * time.Second},
 		}}),

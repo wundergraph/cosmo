@@ -322,9 +322,9 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
-	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil &&
-		c.operationProcessor.allowCustomIDs && c.operationProcessor.persistedOperationClient != nil {
-		if c.operationProcessor.persistedOperationClient.PQLStore() != nil {
+	client := c.operationProcessor.persistedOperationClient
+	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil && client != nil && !client.APQEnabled() {
+		if client.PQLStore() != nil {
 			// Resolve against the current manifest: copied bodies may be stale.
 			// The body hash and cache key must come from the same snapshot.
 			item.Request.Query = ""
@@ -345,7 +345,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	// Use the same persisted-operation lookup as live requests before planning.
-	// In custom-ID manifest mode, this also rejects IDs removed since collection.
+	// With a non-APQ manifest, this also rejects IDs removed since collection.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {

@@ -1425,6 +1425,8 @@ So if you run many router replicas against one Redis, setting `pool_size` explic
 
 The configuration for the persisted operations allows you to maintain a fixed set of GraphQL operations that can be queried against the router without exposing your entire graph to the public. This approach enhances security and performance.
 
+When APQ is disabled, configured persisted-operation storage accepts published IDs of 1–250 ASCII letters, digits, underscores, or hyphens, including SHA256 IDs. With APQ enabled, IDs must be SHA256 hashes. Requests containing both an ID and a body require the ID to match the body’s SHA256 exactly.
+
 ### Example YAML config:
 
 ```yaml config.yaml
@@ -1432,7 +1434,6 @@ version: "1"
 
 persisted_operations:
   disabled: false
-  allow_custom_ids: false
   log_unknown: false
   safelist:
     enabled: false
@@ -1450,7 +1451,6 @@ These rules apply to requests being made from the Router to all Subgraphs.
 | Environment Variable                       | YAML                                       | Required                                      | Description                                                                                                                                                                                            | Default Value |
 | ------------------------------------------ | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
 |                                            | persisted_operations                       | <Icon icon="square" />                        | The configuration for the persisted operations.                                                                                                                                                        |               |
-| PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS | persisted_operations.allow_custom_ids | <Icon icon="square" /> | Accept immutable custom IDs of 1–250 ASCII letters, digits, underscores, or hyphens. Requires APQ to be disabled. Supports per-operation and manifest lookup. | false |
 | PERSISTED_OPERATIONS_DISABLED              | persisted_operations.disabled              | <Icon icon="square" />                        | Disable persisted operations. When set to true, the PQL manifest is also disabled.                                                                                                                     | false         |
 |                                            | persisted_operations.cache                 | <Icon icon="square" />                        | LRU cache for persisted operations.                                                                                                                                                                    |               |
 | PERSISTED_OPERATIONS_CACHE_SIZE            | persisted_operations.cache.size            | <Icon icon="square" />                        | The size of the cache in SI unit.                                                                                                                                                                      | "100MB"       |

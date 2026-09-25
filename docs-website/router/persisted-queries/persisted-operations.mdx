@@ -101,11 +101,10 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 ## Custom operation IDs
 
-Set `persisted_operations.allow_custom_ids: true` to use custom IDs with per-operation CDN or manifest lookup. The environment variable is `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS`. The option defaults to `false` and requires APQ to be disabled.
+When persisted operations are configured and APQ is disabled, published custom IDs are supported automatically with individual-operation storage or manifest lookup. With APQ enabled, IDs must be SHA256 hashes and retain the existing registration and lookup behavior.
 
 ```yaml
 persisted_operations:
-  allow_custom_ids: true
   manifest:
     enabled: true
 automatic_persisted_queries:
@@ -137,11 +136,11 @@ Send the ID in `extensions.persistedQuery.sha256Hash`, despite the field name, w
 }
 ```
 
-Enabling custom IDs preserves support for requests containing both a SHA256 ID and a `query` body when the ID matches the body’s SHA256 exactly. Mismatches are rejected. Custom IDs must be sent without a `query` body; this includes 64-character hexadecimal IDs that differ from the published body’s SHA256. Unknown IDs return `PersistedQueryNotFound`.
+Requests containing both a SHA256 ID and a `query` body remain supported when the ID matches the body’s SHA256 exactly. Mismatches are rejected. Custom IDs must be sent without a `query` body; this includes 64-character hexadecimal IDs that differ from the published body’s SHA256. Unknown IDs return `PersistedQueryNotFound`.
 
 The `persisted_operation_sha256` context field contains the supplied ID, while `operation_sha256` contains the actual body hash when requested.
 
-Enable `PERSISTED_OPERATIONS_MANIFEST_ENABLED=true` alongside `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS=true` to load all operations into memory. Manifest warmup supports custom IDs. Custom-ID cache entries are scoped to the ID and the body’s SHA256, computed when the manifest loads. Unchanged operations remain cached across manifest updates. Each request checks the current manifest, so removed operations stop resolving and changed bodies cannot reuse stale cache entries.
+Enable `PERSISTED_OPERATIONS_MANIFEST_ENABLED=true` with APQ disabled to load all published operations into memory. Manifest warmup supports custom IDs. Custom-ID cache entries are scoped to the ID and the body’s SHA256, computed when the manifest loads. Unchanged operations remain cached across manifest updates. Each request checks the current manifest, so removed operations stop resolving and changed bodies cannot reuse stale cache entries.
 
 Manifest-mode routers observe deletion or replacement after polling the updated manifest. Routers using per-operation CDN lookup may retain old cached bodies, so do not reuse deleted IDs in that mode while they may still be cached.
 

@@ -475,7 +475,7 @@ func TestCacheWarmup(t *testing.T) {
 						PlanHits:                          4,
 						PlanMisses:                        1,
 						QueryHashMisses:                   1, // Warmup hashes the resolved body.
-						QueryHashHits:                     2, // Both safelist requests reuse the warmed body hash.
+						QueryHashHits:                     4, // Both safelist requests hash before and after storage resolution.
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

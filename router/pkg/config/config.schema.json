@@ -143,11 +143,6 @@
       "additionalProperties": false,
       "description": "The configuration for the persisted operations.",
       "properties": {
-        "allow_custom_ids": {
-          "type": "boolean",
-          "description": "Allow immutable custom persisted operation IDs (1-250 characters: A-Z, a-z, 0-9, underscore, hyphen). Requires APQ to be disabled. Supports per-operation and manifest lookup.",
-          "default": false
-        },
         "disabled": {
           "type": "boolean",
           "description": "Disable persisted operations.",

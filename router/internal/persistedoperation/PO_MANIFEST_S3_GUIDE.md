@@ -87,9 +87,9 @@ When a client sends a persisted query request with `extensions.persistedQuery.sh
 
 ## Custom operation IDs
 
-Enable `persisted_operations.allow_custom_ids: true` (or `PERSISTED_OPERATIONS_ALLOW_CUSTOM_IDS=true`) together with manifest mode. APQ must be disabled. IDs contain 1–250 ASCII letters, digits, underscores, or hyphens and are sent in `extensions.persistedQuery.sha256Hash` without a query body. Existing requests containing both a SHA256 ID and a body remain supported when the hash matches exactly; custom-ID requests must omit the body.
+Manifest mode supports published custom IDs automatically when APQ is disabled. With APQ enabled, IDs must be SHA256 hashes. IDs contain 1–250 ASCII letters, digits, underscores, or hyphens and are sent in `extensions.persistedQuery.sha256Hash` without a query body. Existing requests containing both a SHA256 ID and a body remain supported when the hash matches exactly; custom-ID requests must omit the body.
 
-Version 1 manifests retain the global `operations` map. An ID must identify the same body across all clients of the graph. The Cosmo control plane allows multiple clients to register identical ID/body pairs and returns `CONFLICT` for a different body, including conflicts within a batch or concurrent publishing requests.
+Version 1 manifests retain the global `operations` map. An ID must identify the same body across all clients of the graph. Keep IDs consistent across clients when publishing operations.
 
 ```json
 {

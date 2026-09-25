@@ -1572,7 +1572,6 @@ func (s *graphServer) buildGraphMux(
 		Executor:                            executor,
 		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistedOperationClient:            s.persistedOperationClient,
-		AllowCustomPersistedOperationIDs:    s.persistedOperationsConfig.AllowCustomIDs,
 		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
