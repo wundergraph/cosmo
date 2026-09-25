@@ -317,3 +317,12 @@ jobs:
     schedule: '0 0 1 * *'
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}
+  enableSplitConfigLoading:
+    # -- Enables the job to be run
+    enabled: false
+    # -- Adds additional labels to the job
+    additionalLabels: {}
+    # -- The slug of the organization
+    slug: 'foo'
+    # -- The unique identifier of the organization
+    id: '123'
