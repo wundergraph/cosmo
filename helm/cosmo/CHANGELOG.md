@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.20.0...helm-cosmo@0.21.0) (2026-09-25)
+
+
+### Features
+
+* implement script for enabling `split-config-loading` ([#3227](https://github.com/wundergraph/cosmo/issues/3227)) ([e7162a7](https://github.com/wundergraph/cosmo/commit/e7162a756430e32d845ad0fe2f4152df59e01a03))
+
 ## [0.20.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.19.0...helm-cosmo@0.20.0) (2026-07-27)
 
 
