@@ -22,7 +22,7 @@ RUN pnpm run --filter=./admission-server build
 # use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
 RUN pnpm --filter=./admission-server --prod deploy --legacy pruned
 
-FROM --platform=${TARGETPLATFORM} node:22.22.2-slim
+FROM node:22.22.2-slim
 
 WORKDIR /app
 

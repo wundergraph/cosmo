@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { GraphContext } from '@/components/layout/graph-layout';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
@@ -21,7 +22,6 @@ import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext } from 'react';
-import { useApplyParams } from '../analytics/use-apply-params';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -168,19 +168,21 @@ const Override = ({
   );
 };
 
+export const overrideParams = {
+  override: parseAsString.withDefault(''),
+  overrideName: parseAsString.withDefault(''),
+};
+
 export const ConfigureOverride = () => {
   const graphContext = useContext(GraphContext);
   const checkUserAccess = useCheckUserAccess();
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
-  const router = useRouter();
-  const operationHash = router.query.override as string;
-  const operationName = router.query.overrideName as string;
+  const [{ override: operationHash, overrideName: operationName }, setOverride] = useQueryStates(overrideParams);
 
   const client = useQueryClient();
 
   const { toast } = useToast();
-  const applyParams = useApplyParams();
 
   const { data, error, isLoading, refetch } = useQuery(
     getOperationOverrides,
@@ -342,10 +344,7 @@ export const ConfigureOverride = () => {
       open={!!operationHash}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          applyParams({
-            override: null,
-            overrideName: null,
-          });
+          setOverride({ override: null, overrideName: null });
         }
       }}
     >

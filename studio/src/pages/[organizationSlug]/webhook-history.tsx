@@ -1,4 +1,5 @@
 import { RefreshInterval } from '@/components/analytics/refresh-interval';
+import { parseAsString, useQueryState } from 'nuqs';
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useAnalyticsQueryState, useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
@@ -33,27 +34,25 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getOrganizationWebhookHistory } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { GetOrganizationWebhookHistoryResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO } from 'date-fns';
-import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
   const {
     dateRange: { start, end },
     range,
   } = useDateRangeQueryState();
   const { refreshInterval } = useAnalyticsQueryState();
-  const type = (router.query.type as string) || '';
+  const [type] = useQueryState('type', parseAsString.withDefault(''));
 
-  const deliveryId = router.query.details as string;
+  const [deliveryId, setDeliveryId] = useQueryState('details');
   const { data, isLoading, error, isFetching, refetch } = useQuery(
     getOrganizationWebhookHistory,
     {
       pagination: {
-        limit: limit > 50 ? 50 : limit,
-        offset: (pageNumber - 1) * limit,
+        limit,
+        offset,
       },
       dateRange: {
         start: formatISO(range ? createDateRange(range).start : start),
@@ -227,9 +226,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
               <TableRow
                 key={row.id}
                 onClick={() => {
-                  applyParams({
-                    details: row.original.id,
-                  });
+                  setDeliveryId(row.original.id);
                 }}
                 className="group cursor-pointer hover:bg-secondary/30"
                 data-state={row.getIsSelected() && 'selected'}
@@ -256,14 +253,10 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
       <WebhookDeliveryDetails
-        deliveryId={deliveryId}
+        deliveryId={deliveryId ?? undefined}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            const newQuery = { ...router.query };
-            delete newQuery['details'];
-            router.replace({
-              query: newQuery,
-            });
+            setDeliveryId(null);
           }
         }}
         refreshDeliveries={refetch}

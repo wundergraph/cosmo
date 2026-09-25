@@ -21,7 +21,7 @@ func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {
-	return string(enginecache.EncodeEntry([]byte(value), nil))
+	return string(enginecache.EncodeItem(enginecache.Item{Value: []byte(value)}))
 }
 
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
@@ -191,6 +191,26 @@ func TestRedisCache(t *testing.T) {
 			}, results)
 		})
 
+		t.Run("a vary record comes back as a record", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newTestRedisCache(t)
+
+			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Vary: vary, TTL: time.Hour, Tags: []string{"subgraph:accounts"}},
+				{Key: "a+v", Value: []byte("value"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			results, err := c.GetMany(ctx, []string{"a", "a+v"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"a":   {Key: "a", TTL: time.Hour, Vary: vary},
+				"a+v": {Key: "a+v", Value: []byte("value"), TTL: time.Hour},
+			}, results)
+		})
+
 		t.Run("a value not in the entry format fails the batch", func(t *testing.T) {
 			t.Parallel()
 
@@ -271,7 +291,7 @@ func TestRedisCache(t *testing.T) {
 
 			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
-			value, _, err := enginecache.DecodeEntry([]byte(stored))
+			value, _, _, err := enginecache.DecodeEntry([]byte(stored))
 			require.NoError(t, err)
 			require.Equal(t, "1", string(value))
 

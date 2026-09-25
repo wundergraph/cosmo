@@ -735,7 +735,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
@@ -892,7 +893,8 @@
       "Name": "Surrogate-Key",
       "Delimiter": " ",
       "MaxBytes": 1024
-    }
+    },
+    "PrivateID": "request.auth.claims.sub"
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -1049,6 +1051,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

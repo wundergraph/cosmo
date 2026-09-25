@@ -824,6 +824,11 @@
             }
           }
         },
+        "default_subprotocol": {
+          "type": "string",
+          "enum": ["graphql-transport-ws", "graphql-ws"],
+          "description": "The subprotocol to use when the client does not send a Sec-WebSocket-Protocol header. By default such connections are rejected."
+        },
         "forward_upgrade_headers": {
           "type": "object",
           "additionalProperties": false,
@@ -2424,6 +2429,12 @@
                 ]
               }
             },
+            "on_error": {
+              "type": "string",
+              "enum": ["reject", "continue"],
+              "default": "reject",
+              "description": "Controls JWT credential failures. The default 'reject' returns HTTP 401 Unauthorized, or sends an error message and closes the connection for WebSocket initial-payload authentication. With 'continue', invalid tokens, unsupported header prefixes, and empty tokens are ignored. Custom authenticator errors and malformed WebSocket payloads still return errors. Required authentication and field authorization still apply."
+            },
             "scope_claim": {
               "type": "string",
               "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
@@ -3371,7 +3382,7 @@
     },
     "response_cache": {
       "type": "object",
-      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards, so a subgraph whose answer varies by request header must use private or no-store. Only subgraph responses whose Cache-Control header asks to be cached are stored; public is not required. NOTE: This option is experimental and may change in future versions.",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards on its own; a subgraph whose answer varies by request header names them in a Vary response header, and the router keeps one variant per set of values it sent, learned from the first response. Vary: *, or more than 100 names, is not cached. Only subgraph responses whose Cache-Control header asks to be cached are stored; public is not required. NOTE: This option is experimental and may change in future versions.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -3382,7 +3393,7 @@
         "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, private, invalid durations or a zero selected lifetime prevent caching. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
           "default": "30s",
           "duration": {
             "minimum": "1s"
@@ -3392,6 +3403,10 @@
           "type": "string",
           "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
           "default": "cosmo_response_cache:"
+        },
+        "private_id": {
+          "type": "string",
+          "description": "An expression, evaluated per request, that yields the id of the private context the request belongs to, such as a user or a tenant, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key partitioned by that id, so each context is served its own entry and requests sharing an id share it. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
         },
         "storage": {
           "type": "object",
@@ -3764,7 +3779,7 @@
             },
             "depth": {
               "type": "object",
-              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -3774,7 +3789,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3797,7 +3812,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3820,7 +3835,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3843,7 +3858,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field alias limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field alias limit for query. A limit of 0 disallows root field aliases when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3940,7 +3955,7 @@
             },
             "limit": {
               "type": "integer",
-              "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+              "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
               "default": 0,
               "minimum": 0
             },
