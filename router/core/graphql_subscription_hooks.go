@@ -27,18 +27,18 @@ type GraphQLSubscriptionHookContext interface {
 	RootFieldName() string
 }
 
-// GraphQLSubscriptionOnStartHandler runs once for each downstream GraphQL
+// SubscriptionOperationStartHandler runs once for each downstream GraphQL
 // subscription, before it is registered with the resolver. Returning an error
 // rejects only this subscription.
-type GraphQLSubscriptionOnStartHandler interface {
-	GraphQLSubscriptionOnStart(ctx GraphQLSubscriptionHookContext) error
+type SubscriptionOperationStartHandler interface {
+	OnSubscriptionOperationStart(ctx GraphQLSubscriptionHookContext) error
 }
 
-// GraphQLSubscriptionOnEndHandler runs once for each downstream GraphQL
+// SubscriptionOperationEndHandler runs once for each downstream GraphQL
 // subscription after it is removed from the resolver. It also runs for a
 // successful start that fails during subsequent setup.
-type GraphQLSubscriptionOnEndHandler interface {
-	GraphQLSubscriptionOnEnd(ctx GraphQLSubscriptionHookContext)
+type SubscriptionOperationEndHandler interface {
+	OnSubscriptionOperationEnd(ctx GraphQLSubscriptionHookContext)
 }
 
 type graphqlSubscriptionLifecycleHandler struct {

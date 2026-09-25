@@ -780,11 +780,11 @@ func (r *Router) initModules(ctx context.Context) error {
 		}
 
 		var graphqlLifecycle graphqlSubscriptionLifecycleHandler
-		if handler, ok := moduleInstance.(GraphQLSubscriptionOnStartHandler); ok {
-			graphqlLifecycle.onStart = handler.GraphQLSubscriptionOnStart
+		if handler, ok := moduleInstance.(SubscriptionOperationStartHandler); ok {
+			graphqlLifecycle.onStart = handler.OnSubscriptionOperationStart
 		}
-		if handler, ok := moduleInstance.(GraphQLSubscriptionOnEndHandler); ok {
-			graphqlLifecycle.onEnd = handler.GraphQLSubscriptionOnEnd
+		if handler, ok := moduleInstance.(SubscriptionOperationEndHandler); ok {
+			graphqlLifecycle.onEnd = handler.OnSubscriptionOperationEnd
 		}
 		if graphqlLifecycle.onStart != nil || graphqlLifecycle.onEnd != nil {
 			r.subscriptionHooks.graphqlLifecycle = append(r.subscriptionHooks.graphqlLifecycle, graphqlLifecycle)
