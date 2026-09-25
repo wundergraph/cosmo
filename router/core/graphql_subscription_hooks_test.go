@@ -44,7 +44,7 @@ func TestGraphQLSubscriptionHooksPerSubscriberAndReverseEndOrder(t *testing.T) {
 	variables, err := astjson.Parse(`{"accountId":"abc"}`)
 	require.NoError(t, err)
 	operation := &operationContext{name: "WatchOrders", opType: OperationTypeSubscription, hash: 42, content: "subscription WatchOrders { orders }", variables: variables, clientInfo: &ClientInfo{Name: "mobile", Version: "1.2"}}
-	ctx := &graphqlSubscriptionHookContext{request: request, logger: zap.NewNop(), operation: operation, authentication: auth, rootFieldName: "orders"}
+	ctx := &graphqlSubscriptionHookContext{request: request, logger: zap.NewNop(), operation: operation, authentication: auth, instanceID: "subscriber-1", rootFieldName: "orders"}
 	var calls []string
 	assertDetails := func(got GraphQLSubscriptionHookContext) {
 		require.Same(t, request, got.Request())
@@ -52,6 +52,7 @@ func TestGraphQLSubscriptionHooksPerSubscriberAndReverseEndOrder(t *testing.T) {
 		require.Same(t, auth, got.Authentication())
 		require.Equal(t, []string{"orders:read"}, got.Authentication().Scopes())
 		require.Equal(t, "orders", got.RootFieldName())
+		require.Equal(t, "subscriber-1", got.SubscriptionInstanceID())
 		require.Equal(t, "WatchOrders", got.Operation().Name())
 		require.Equal(t, OperationTypeSubscription, got.Operation().Type())
 		require.Equal(t, uint64(42), got.Operation().Hash())
@@ -77,6 +78,34 @@ func TestGraphQLSubscriptionHooksPerSubscriberAndReverseEndOrder(t *testing.T) {
 	require.Equal(t, []string{"start-a", "start-b", "start-a", "start-b", "end-b", "end-a"}, calls)
 	secondEnd()
 	require.Equal(t, []string{"start-a", "start-b", "start-a", "start-b", "end-b", "end-a", "end-b", "end-a"}, calls)
+}
+
+func TestGraphQLSubscriptionInstancesGetDistinctIDs(t *testing.T) {
+	request := httptest.NewRequest("GET", "/graphql", nil)
+	operation := &operationContext{clientInfo: &ClientInfo{Name: "mobile"}}
+	reqCtx := &requestContext{request: request, logger: zap.NewNop(), operation: operation}
+	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
+		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "orders"}}},
+	}}}
+	var starts, ends []string
+	h := &GraphQLHandler{graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
+		onStart: func(ctx GraphQLSubscriptionHookContext) error {
+			starts = append(starts, ctx.SubscriptionInstanceID())
+			return nil
+		},
+		onEnd: func(ctx GraphQLSubscriptionHookContext) {
+			ends = append(ends, ctx.SubscriptionInstanceID())
+		},
+	}}}
+	firstEnd, err := h.startGraphQLSubscription(reqCtx, request, subscription)
+	require.NoError(t, err)
+	secondEnd, err := h.startGraphQLSubscription(reqCtx, request, subscription)
+	require.NoError(t, err)
+	require.NotEmpty(t, starts[0])
+	require.NotEqual(t, starts[0], starts[1])
+	firstEnd()
+	secondEnd()
+	require.Equal(t, starts, ends)
 }
 
 func TestGraphQLSubscriptionStartFailureUnwindsSuccessfulHooks(t *testing.T) {

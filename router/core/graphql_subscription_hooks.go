@@ -20,6 +20,9 @@ type GraphQLSubscriptionHookContext interface {
 	Logger() *zap.Logger
 	Operation() OperationContext
 	Authentication() authentication.Authentication
+	// SubscriptionInstanceID is unique to this downstream subscriber and is
+	// identical in its start and end hooks, across all supported transports.
+	SubscriptionInstanceID() string
 	// RootFieldName is the non-empty schema field name, even if the client selected an alias.
 	RootFieldName() string
 }
@@ -48,6 +51,7 @@ type graphqlSubscriptionHookContext struct {
 	logger         *zap.Logger
 	operation      OperationContext
 	authentication authentication.Authentication
+	instanceID     string
 	rootFieldName  string
 }
 
@@ -59,7 +63,8 @@ func (c *graphqlSubscriptionHookContext) Operation() OperationContext {
 func (c *graphqlSubscriptionHookContext) Authentication() authentication.Authentication {
 	return c.authentication
 }
-func (c *graphqlSubscriptionHookContext) RootFieldName() string { return c.rootFieldName }
+func (c *graphqlSubscriptionHookContext) SubscriptionInstanceID() string { return c.instanceID }
+func (c *graphqlSubscriptionHookContext) RootFieldName() string          { return c.rootFieldName }
 
 func subscriptionRootFieldName(subscription *resolve.GraphQLSubscription) (string, error) {
 	if subscription == nil || subscription.Response == nil || subscription.Response.Data == nil || len(subscription.Response.Data.Fields) == 0 {

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -504,6 +505,7 @@ func (h *GraphQLHandler) startGraphQLSubscription(reqCtx *requestContext, reques
 		logger:         reqCtx.Logger(),
 		operation:      reqCtx.Operation(),
 		authentication: reqCtx.Authentication(),
+		instanceID:     uuid.NewString(),
 		rootFieldName:  rootFieldName,
 	}
 	return startGraphQLSubscriptionHooks(h.graphqlSubscriptionHooks, ctx)
