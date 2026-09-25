@@ -500,7 +500,7 @@ func (h *GraphQLHandler) startGraphQLSubscription(reqCtx *requestContext, reques
 	if err != nil {
 		return nil, err
 	}
-	rootFieldArguments, err := subscriptionRootFieldArguments(reqCtx.operation, rootFieldName)
+	rootFieldArguments, err := subscriptionRootFieldArguments(reqCtx.operation, h.executor.ClientSchema, rootFieldName)
 	if err != nil {
 		return nil, err
 	}

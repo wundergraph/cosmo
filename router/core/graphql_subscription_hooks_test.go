@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -34,9 +35,48 @@ func TestSubscriptionRootFieldArgumentsResolveVariablesAndLiterals(t *testing.T)
 		variables:      variables,
 		remapVariables: map[string]string{"a": "ids", "b": "filter"},
 	}
-	got, err := subscriptionRootFieldArguments(op, "liveShowUpdates")
+	got, err := subscriptionRootFieldArguments(op, nil, "liveShowUpdates")
 	require.NoError(t, err)
 	require.JSONEq(t, `{"showIds":["show-1","show-2"],"filter":{"region":"US"},"enabled":true}`, string(got))
+}
+
+func TestSubscriptionRootFieldArgumentsPreserveRemappedNameSwap(t *testing.T) {
+	variables, err := astjson.Parse(`{"a":"A","b":"B"}`)
+	require.NoError(t, err)
+	op := &operationContext{
+		content:        `subscription Swap($a: String, $b: String) { updates(first: $a, second: $b) }`,
+		variables:      variables,
+		remapVariables: map[string]string{"a": "b", "b": "a"},
+	}
+	got, err := subscriptionRootFieldArguments(op, nil, "updates")
+	require.NoError(t, err)
+	require.JSONEq(t, `{"first":"B","second":"A"}`, string(got))
+}
+
+func TestSubscriptionRootFieldArgumentsApplyFieldDefaults(t *testing.T) {
+	schema, report := astparser.ParseGraphqlDocumentString(`type Subscription { updates(optional: String, fallback: String = "default", explicit: String = "default", unmentioned: String = "also-default"): String }`)
+	require.False(t, report.HasErrors(), report.Error())
+	variables, err := astjson.Parse(`{"explicit":null}`)
+	require.NoError(t, err)
+	op := &operationContext{
+		content:   `subscription Updates($optional: String, $fallback: String, $explicit: String) { updates(optional: $optional, fallback: $fallback, explicit: $explicit) }`,
+		variables: variables,
+	}
+	request := httptest.NewRequest("GET", "/graphql", nil)
+	reqCtx := &requestContext{request: request, logger: zap.NewNop(), operation: op}
+	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
+		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "updates"}}},
+	}}}
+	var got []byte
+	h := &GraphQLHandler{executor: &Executor{ClientSchema: &schema}, graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
+		onStart: func(ctx GraphQLSubscriptionHookContext) error {
+			got = ctx.RootFieldArguments()
+			return nil
+		},
+	}}}
+	_, err = h.startGraphQLSubscription(reqCtx, request, subscription)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"fallback":"default","explicit":null,"unmentioned":"also-default"}`, string(got))
 }
 
 func TestGraphQLSubscriptionHookRejectsMissingRootField(t *testing.T) {
@@ -101,7 +141,7 @@ func TestGraphQLSubscriptionInstancesGetDistinctIDs(t *testing.T) {
 		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "orders"}}},
 	}}}
 	var starts, ends []string
-	h := &GraphQLHandler{graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
+	h := &GraphQLHandler{executor: &Executor{}, graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
 		onStart: func(ctx GraphQLSubscriptionHookContext) error {
 			starts = append(starts, ctx.SubscriptionInstanceID())
 			return nil

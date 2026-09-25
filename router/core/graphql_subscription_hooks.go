@@ -29,15 +29,17 @@ type GraphQLSubscriptionHookContext interface {
 	SubscriptionInstanceID() string
 	// RootFieldName is the non-empty schema field name, even if the client selected an alias.
 	RootFieldName() string
-	// RootFieldArguments contains the resolved arguments of the selected root
-	// field as a JSON object. It is computed once per subscriber, not per event.
-	// Like Operation.Variables, it can contain sensitive client input.
+	// RootFieldArguments contains the selected root field's argument values as a
+	// JSON object, including field defaults when an argument was omitted. It is
+	// computed once per subscriber, not per event. Like Operation.Variables, it
+	// can contain sensitive client input.
 	RootFieldArguments() json.RawMessage
 }
 
 // SubscriptionOperationStartHandler runs once for each downstream GraphQL
 // subscription, before it is registered with the resolver. Returning an error
-// rejects only this subscription.
+// rejects only this subscription. Request authentication has run, but engine
+// field authorization may run later; hooks must not assume it has succeeded.
 type SubscriptionOperationStartHandler interface {
 	OnSubscriptionOperationStart(ctx GraphQLSubscriptionHookContext) error
 }
@@ -78,7 +80,9 @@ func (c *graphqlSubscriptionHookContext) RootFieldArguments() json.RawMessage {
 	return c.rootFieldArguments
 }
 
-func subscriptionRootFieldArguments(operation *operationContext, rootFieldName string) (json.RawMessage, error) {
+// subscriptionRootFieldArguments resolves the selected root field's arguments
+// from the normalized operation and its request-scoped variables.
+func subscriptionRootFieldArguments(operation *operationContext, schema *ast.Document, rootFieldName string) (json.RawMessage, error) {
 	if operation == nil {
 		return nil, fmt.Errorf("subscription operation is missing")
 	}
@@ -89,14 +93,18 @@ func subscriptionRootFieldArguments(operation *operationContext, rootFieldName s
 	// The normalized operation uses remapped variable names, while the request
 	// variable object retains its original names. Build the view expected by
 	// ast.Document.ValueToJSON so nested input objects resolve correctly too.
-	variables := make(map[string]json.RawMessage)
+	originalVariables := make(map[string]json.RawMessage)
 	if operation.variables != nil && operation.variables.GetObject() != nil {
 		operation.variables.GetObject().Visit(func(key []byte, value *astjson.Value) {
-			variables[string(key)] = value.MarshalTo(nil)
+			originalVariables[string(key)] = value.MarshalTo(nil)
 		})
 	}
+	variables := make(map[string]json.RawMessage, len(originalVariables)+len(operation.remapVariables))
+	for name, value := range originalVariables {
+		variables[name] = value
+	}
 	for newName, oldName := range operation.remapVariables {
-		if value, ok := variables[oldName]; ok {
+		if value, ok := originalVariables[oldName]; ok {
 			variables[newName] = value
 		}
 	}
@@ -120,11 +128,37 @@ func subscriptionRootFieldArguments(operation *operationContext, rootFieldName s
 			}
 			arguments := make(map[string]json.RawMessage)
 			for _, argRef := range doc.FieldArguments(selection.Ref) {
-				value, valueErr := doc.ValueToJSON(doc.ArgumentValue(argRef))
+				argValue := doc.ArgumentValue(argRef)
+				if argValue.Kind == ast.ValueKindVariable {
+					variableName := doc.VariableValueNameString(argValue.Ref)
+					if _, provided := variables[variableName]; !provided {
+						continue // An omitted variable is not an explicit null.
+					}
+				}
+				value, valueErr := doc.ValueToJSON(argValue)
 				if valueErr != nil {
 					return nil, fmt.Errorf("resolve subscription argument %s: %w", doc.ArgumentNameString(argRef), valueErr)
 				}
 				arguments[doc.ArgumentNameString(argRef)] = value
+			}
+			if schema != nil {
+				subscriptionTypeName := schema.Index.SubscriptionTypeName
+				if len(subscriptionTypeName) == 0 {
+					subscriptionTypeName = ast.DefaultSubscriptionTypeName
+				}
+				if subscriptionType, exists := schema.Index.FirstNodeByNameBytes(subscriptionTypeName); exists {
+					for _, definitionRef := range schema.NodeFieldDefinitionArgumentsDefinitions(subscriptionType, []byte(rootFieldName)) {
+						name := schema.InputValueDefinitionNameString(definitionRef)
+						if _, provided := arguments[name]; provided || !schema.InputValueDefinitionHasDefaultValue(definitionRef) {
+							continue
+						}
+						value, valueErr := schema.ValueToJSON(schema.InputValueDefinitionDefaultValue(definitionRef))
+						if valueErr != nil {
+							return nil, fmt.Errorf("resolve subscription argument default %s: %w", name, valueErr)
+						}
+						arguments[name] = value
+					}
+				}
 			}
 			return json.Marshal(arguments)
 		}
