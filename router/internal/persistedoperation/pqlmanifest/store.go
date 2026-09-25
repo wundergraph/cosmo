@@ -2,6 +2,7 @@ package pqlmanifest
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -69,7 +70,8 @@ func (s *Store) Load(manifest *Manifest) {
 	snapshot.Operations = maps.Clone(manifest.Operations)
 	snapshot.bodyHashes = make(map[string]string, len(snapshot.Operations))
 	for id, body := range snapshot.Operations {
-		snapshot.bodyHashes[id] = fmt.Sprintf("%x", sha256.Sum256([]byte(body)))
+		sum := sha256.Sum256([]byte(body))
+		snapshot.bodyHashes[id] = hex.EncodeToString(sum[:])
 	}
 	s.manifest.Store(&snapshot)
 

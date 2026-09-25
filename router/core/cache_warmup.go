@@ -342,8 +342,10 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		}
 	}
 
-	if err := k.ComputeOperationSha256(); err != nil {
-		return nil, err
+	if k.parsedOperation.Sha256Hash == "" {
+		if err := k.ComputeOperationSha256(); err != nil {
+			return nil, err
+		}
 	}
 
 	err = k.Parse()

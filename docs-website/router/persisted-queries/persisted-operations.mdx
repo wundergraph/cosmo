@@ -137,7 +137,7 @@ Send the ID in `extensions.persistedQuery.sha256Hash`, despite the field name, w
 }
 ```
 
-A custom ID cannot be sent alongside a `query` body. A 64-character hexadecimal ID retains SHA256 semantics. Unknown IDs return `PersistedQueryNotFound`.
+A custom ID cannot be sent alongside a `query` body. A 64-character hexadecimal ID is treated as a custom ID if it differs from the published body’s SHA256. Requests containing both an ID and a `query` body still require the ID to match the body’s SHA256 exactly. Unknown IDs return `PersistedQueryNotFound`.
 
 The `persisted_operation_sha256` context field contains the supplied ID, while `operation_sha256` contains the actual body hash when requested.
 

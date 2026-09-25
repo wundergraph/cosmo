@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 
 	"github.com/dgraph-io/ristretto/v2"
@@ -72,10 +74,12 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	defer kit.Free()
 
 	const query = `query { __typename }`
-	store.Load(&pqlmanifest.Manifest{Revision: "one", Operations: map[string]string{"get_typename_v1": query}})
-	kit.manifestSnapshot = store.Snapshot()
-	kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: "get_typename_v1"}
-	kit.parsedOperation.Request.Query = query
+	sum := sha256.Sum256([]byte(query))
+	id := hex.EncodeToString(sum[:])
+	store.Load(&pqlmanifest.Manifest{Revision: "one", Operations: map[string]string{id: query}})
+	kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
+	_, _, err = kit.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
+	require.NoError(t, err)
 	kit.parsedOperation.NormalizedRepresentation = query
 	kit.savePersistedOperationToCache("web", false, nil)
 	cache.Wait()
@@ -83,7 +87,7 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	// Saving another operation after a reload must retain the unchanged entry
 	// and its variable metadata, without warmup repopulating the original entry.
 	store.Load(&pqlmanifest.Manifest{Revision: "two", Operations: map[string]string{
-		"get_typename_v1":   query,
+		id:                  query,
 		"another_operation": query,
 	}})
 	kit.manifestSnapshot = store.Snapshot()
@@ -91,20 +95,23 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	kit.savePersistedOperationToCache("web", false, nil)
 	cache.Wait()
 	kit.parsedOperation = &ParsedOperation{GraphQLRequestExtensions: GraphQLRequestExtensions{
-		PersistedQuery: &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: "get_typename_v1"},
+		PersistedQuery: &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id},
 	}}
 	hit, _, err := kit.FetchPersistedOperation(context.Background(), &ClientInfo{Name: "mobile"})
 	require.NoError(t, err)
 	assert.True(t, hit, "unchanged manifest entries remain cached across clients and revisions")
 	assert.Equal(t, query, kit.parsedOperation.Request.Query)
+	assert.Equal(t, id, kit.parsedOperation.Sha256Hash)
 
 	store.Load(&pqlmanifest.Manifest{Revision: "three", Operations: map[string]string{
-		"get_typename_v1": `query { changed: __typename }`,
+		id: `query { changed: __typename }`,
 	}})
 	hit, _, err = kit.FetchPersistedOperation(context.Background(), &ClientInfo{Name: "web"})
 	require.NoError(t, err)
 	assert.False(t, hit, "a changed body cannot reuse the old entry")
 	assert.Equal(t, `query { changed: __typename }`, kit.parsedOperation.Request.Query)
+	sum = sha256.Sum256([]byte(kit.parsedOperation.Request.Query))
+	assert.Equal(t, hex.EncodeToString(sum[:]), kit.parsedOperation.Sha256Hash)
 
 	store.Load(&pqlmanifest.Manifest{Revision: "four", Operations: map[string]string{}})
 	_, _, err = kit.FetchPersistedOperation(context.Background(), &ClientInfo{Name: "web"})

@@ -431,11 +431,6 @@ func isValidCustomPersistedID(id string) bool {
 	return customPersistedIDPattern.MatchString(id)
 }
 
-func (o *OperationKit) hasCustomPersistedID() bool {
-	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
-	return o.operationProcessor.allowCustomIDs && pq.HasHash() && !pq.isValidSHA256Hash()
-}
-
 func (o *OperationKit) computeVariablesHash() {
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
 	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
@@ -451,9 +446,11 @@ func (o *OperationKit) ComputeOperationSha256() error {
 	id := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
-	if v, ok := o.cache.operationHashCache.Get(id); ok {
-		o.parsedOperation.Sha256Hash = v
-		return nil
+	if o.cache != nil {
+		if v, ok := o.cache.operationHashCache.Get(id); ok {
+			o.parsedOperation.Sha256Hash = v
+			return nil
+		}
 	}
 
 	_, err := o.kit.sha256Hash.Write(unsafebytes.StringToBytes(o.parsedOperation.Request.Query))
@@ -464,7 +461,9 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 	// we're using the hex representation of the sha256 hash
 	sha256Hash := hex.EncodeToString(o.kit.sha256Hash.Sum(nil))
-	o.cache.operationHashCache.Set(id, sha256Hash, 1)
+	if o.cache != nil {
+		o.cache.operationHashCache.Set(id, sha256Hash, 1)
+	}
 	o.parsedOperation.Sha256Hash = sha256Hash
 
 	return nil
@@ -494,6 +493,8 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
 		}
 		o.parsedOperation.Request.Query = body
+		// Even a 64-hex ID may be custom. Use the hash of the resolved body.
+		o.parsedOperation.Sha256Hash = o.manifestSnapshot.BodyHash(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		o.parsedOperation.IsPersistedOperation = true
 	}
 
@@ -558,6 +559,12 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 				return false, true, err
 			}
+		}
+	}
+
+	if o.operationProcessor.allowCustomIDs && o.parsedOperation.Request.Query != "" {
+		if err := o.ComputeOperationSha256(); err != nil {
+			return false, isAPQ, err
 		}
 	}
 
@@ -1253,7 +1260,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 }
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
-	if o.hasCustomPersistedID() {
+	if o.operationProcessor.allowCustomIDs {
 		o.parsedOperation.Request.Query = entry.originalQuery
 		o.parsedOperation.Sha256Hash = entry.sha256Hash
 	}
@@ -1323,7 +1330,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		inlineArguments:          o.parsedOperation.InlineArguments,
 	}
 
-	if o.hasCustomPersistedID() {
+	if o.operationProcessor.allowCustomIDs {
 		entry.originalQuery = o.parsedOperation.Request.Query
 		entry.sha256Hash = o.parsedOperation.Sha256Hash
 	}
@@ -1377,11 +1384,10 @@ func (o *OperationKit) persistedOperationIdentity(clientName, id string) string 
 	}
 	identity := fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
 	if o.manifestSnapshot != nil {
-		pq := GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
-		if !pq.isValidSHA256Hash() {
-			// Custom IDs can be reused with a different body. Scope them to that
-			// body while allowing unchanged operations to survive manifest reloads.
-			bodyHash := o.manifestSnapshot.BodyHash(id)
+		bodyHash := o.manifestSnapshot.BodyHash(id)
+		if id != bodyHash {
+			// Only an ID matching the actual body hash identifies its contents.
+			// Scope all other IDs to the body, regardless of their format.
 			return fmt.Sprintf("%d:%s%s", len(bodyHash), bodyHash, identity)
 		}
 	}
