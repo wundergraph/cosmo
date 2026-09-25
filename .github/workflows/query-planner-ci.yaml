@@ -284,7 +284,7 @@ jobs:
           message-id: query-planner
           message: |
             # Query Planner CI checks failed
-            :x: The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
+            :x: The Internal Query Planner CI has failed in the celestial repository, and this prevents the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
   comment-on-success:
     needs: [build_test, get_pr_url, check-labels-and-engine-changes]
@@ -297,6 +297,6 @@ jobs:
         with:
           message-id: query-planner
           message: |
-            # ✅ Internal Query Planner CI checks passed
-            The Internal Query Planner CI checks passed in the celestial repository, and this is going to allow the merge of this PR.
+            # Query Planner CI has passed
+            :white_check_mark: The Internal Query Planner CI has passed in the celestial repository, and this does not prevent the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
