@@ -1,8 +1,11 @@
 package pqlmanifest
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -14,7 +17,14 @@ type Manifest struct {
 	Version     int               `json:"version"`
 	Revision    string            `json:"revision"`
 	GeneratedAt string            `json:"generatedAt"`
-	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
+	Operations  map[string]string `json:"operations"` // operation ID -> body
+
+	bodyHashes map[string]string
+}
+
+// BodyHash returns the body SHA256 computed when this snapshot was loaded.
+func (m *Manifest) BodyHash(id string) string {
+	return m.bodyHashes[id]
 }
 
 type Store struct {
@@ -54,7 +64,16 @@ func (s *Store) SetOnUpdate(fn func()) {
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
-	s.manifest.Store(manifest)
+	// Prepare a new immutable snapshot before publishing it. Cache identities can
+	// then use body hashes without hashing on each request or depending on revision.
+	snapshot := *manifest
+	snapshot.Operations = maps.Clone(manifest.Operations)
+	snapshot.bodyHashes = make(map[string]string, len(snapshot.Operations))
+	for id, body := range snapshot.Operations {
+		sum := sha256.Sum256([]byte(body))
+		snapshot.bodyHashes[id] = hex.EncodeToString(sum[:])
+	}
+	s.manifest.Store(&snapshot)
 
 	if s.onUpdate.Load() == nil {
 		return
@@ -135,6 +154,12 @@ func validateManifest(m *Manifest) error {
 // IsLoaded returns whether a manifest has been loaded.
 func (s *Store) IsLoaded() bool {
 	return s.manifest.Load() != nil
+}
+
+// Snapshot returns the current immutable manifest. Keep this snapshot for the entire
+// operation so lookup and cache identity cannot observe different revisions.
+func (s *Store) Snapshot() *Manifest {
+	return s.manifest.Load()
 }
 
 // Revision returns the current manifest revision for polling.

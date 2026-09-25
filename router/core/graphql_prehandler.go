@@ -498,7 +498,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
-	// If forced, always compute the hash
+	// Without APQ, even a 64-hex ID may not be the body hash.
+	// Defer hash telemetry until lookup resolves the body.
+	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query == "" {
+		return false
+	}
+
+	// If forced, compute the hash once the body is available
 	if h.computeOperationSha256 || reqCtx.forceSha256Compute {
 		return true
 	}
@@ -682,6 +688,15 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+	}
+
+	// Without APQ, resolution and cache hits provide the actual body hash.
+	// Never use the supplied ID as hash telemetry just because it looks like SHA256.
+	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.IsPersistedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
+		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
+		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
+		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, operationKit.parsedOperation.Sha256Hash)
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step

@@ -1425,6 +1425,8 @@ So if you run many router replicas against one Redis, setting `pool_size` explic
 
 The configuration for the persisted operations allows you to maintain a fixed set of GraphQL operations that can be queried against the router without exposing your entire graph to the public. This approach enhances security and performance.
 
+When APQ is disabled, configured persisted-operation storage accepts published IDs of 1–250 ASCII letters, digits, underscores, or hyphens, including SHA256 IDs. With APQ enabled, IDs must be SHA256 hashes. Requests containing both an ID and a body require the ID to match the body’s SHA256 exactly.
+
 ### Example YAML config:
 
 ```yaml config.yaml

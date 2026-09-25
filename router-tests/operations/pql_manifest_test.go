@@ -702,9 +702,8 @@ func TestPQLManifest(t *testing.T) {
 			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					// No warmup → all caches cold on first request.
-					// 2 persisted normalization misses: loadPersistedOperationFromCache checks
-					// once without operation name, once with (because OperationName is set).
-					PersistedQueryNormalizationMisses: 2,
+					// Missing manifest metadata short-circuits the named cache lookup.
+					PersistedQueryNormalizationMisses: 1,
 					ValidationMisses:                  1,
 					PlanMisses:                        1,
 				},
@@ -750,11 +749,12 @@ func TestPQLManifest(t *testing.T) {
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					// Custom warmup config (Workers=2, ItemsPerSecond=100) still warms all caches.
 					// 3 manifest ops → 2 unique plans during warmup, 1 hit from the request.
-					PersistedQueryNormalizationHits: 1,
-					ValidationMisses:                2,
-					ValidationHits:                  2,
-					PlanMisses:                      2,
-					PlanHits:                        2,
+					PersistedQueryNormalizationMisses: 3, // Each manifest ID is resolved before planning.
+					PersistedQueryNormalizationHits:   1,
+					ValidationMisses:                  2,
+					ValidationHits:                    2,
+					PlanMisses:                        2,
+					PlanHits:                          2,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -810,11 +810,12 @@ func TestPQLManifest(t *testing.T) {
 					// normalized form), ecf4e... misses (unique query).
 					// Request for dc675... hits all caches.
 					// Total: 2 misses (dc675 warmup + ecf4e manifest), 3 hits (dc675+33651 manifest + request).
-					PersistedQueryNormalizationHits: 1,
-					ValidationMisses:                2,
-					ValidationHits:                  3,
-					PlanMisses:                      2,
-					PlanHits:                        3,
+					PersistedQueryNormalizationMisses: 3, // One miss per unique manifest ID.
+					PersistedQueryNormalizationHits:   2, // Overlapping warmup ID and live request.
+					ValidationMisses:                  2,
+					ValidationHits:                    3,
+					PlanMisses:                        2,
+					PlanHits:                          3,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

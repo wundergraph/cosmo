@@ -26,6 +26,7 @@ import (
 	fastjson "github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -180,6 +181,7 @@ type parseKit struct {
 }
 
 type OperationCache struct {
+	persistedOperationManifestRevision  string
 	persistedOperationVariableNames     map[string][]string
 	persistedOperationVariableNamesLock *sync.RWMutex
 
@@ -198,6 +200,7 @@ type OperationCache struct {
 // After each step, the operation is available as a ParsedOperation.
 // It must be created for each request and freed after the request is done.
 type OperationKit struct {
+	manifestSnapshot         *pqlmanifest.Manifest
 	cache                    *OperationCache
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
@@ -223,8 +226,8 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
-// isValidHash verifies if the Sha256Hash string is valid and well-formed.
-func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
+// isValidSHA256Hash reports whether the persisted ID is a 64-character hexadecimal SHA256 hash.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isValidSHA256Hash() bool {
 	if len(pq.Sha256Hash) != 64 {
 		return false
 	}
@@ -344,11 +347,8 @@ func (o *OperationKit) unmarshalOperation() error {
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
-			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isValidHash() {
-				return &httpGraphqlError{
-					message:    "persistedQuery does not have a valid sha256 hash",
-					statusCode: http.StatusBadRequest,
-				}
+			if err := o.validatePersistedQueryID(); err != nil {
+				return err
 			}
 
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
@@ -404,6 +404,48 @@ func (o *OperationKit) unmarshalOperation() error {
 	return nil
 }
 
+// Custom IDs identify pre-published, immutable operations, never APQ registrations.
+func (o *OperationKit) validatePersistedQueryID() error {
+	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
+	if pq.isValidSHA256Hash() {
+		return nil
+	}
+	message := "persistedQuery does not have a valid sha256 hash"
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
+		message = "persistedQuery id must be 1-250 characters from [A-Za-z0-9_-]"
+		if isValidCustomPersistedID(pq.Sha256Hash) {
+			if o.parsedOperation.Request.Query == "" {
+				return nil
+			}
+			message = "persistedQuery with a custom id cannot be combined with a query body"
+		}
+	}
+	return &httpGraphqlError{message: message, statusCode: http.StatusBadRequest}
+}
+
+func isValidCustomPersistedID(id string) bool {
+	if len(id) < 1 || len(id) > 250 {
+		return false
+	}
+	for i := range len(id) {
+		c := id[i]
+		if c >= 'a' && c <= 'z' {
+			continue
+		}
+		if c >= 'A' && c <= 'Z' {
+			continue
+		}
+		if c >= '0' && c <= '9' {
+			continue
+		}
+		if c == '_' || c == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func (o *OperationKit) computeVariablesHash() {
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
 	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
@@ -419,9 +461,11 @@ func (o *OperationKit) ComputeOperationSha256() error {
 	id := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
-	if v, ok := o.cache.operationHashCache.Get(id); ok {
-		o.parsedOperation.Sha256Hash = v
-		return nil
+	if o.cache != nil {
+		if v, ok := o.cache.operationHashCache.Get(id); ok {
+			o.parsedOperation.Sha256Hash = v
+			return nil
+		}
 	}
 
 	_, err := o.kit.sha256Hash.Write(unsafebytes.StringToBytes(o.parsedOperation.Request.Query))
@@ -432,7 +476,9 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 	// we're using the hex representation of the sha256 hash
 	sha256Hash := hex.EncodeToString(o.kit.sha256Hash.Sum(nil))
-	o.cache.operationHashCache.Set(id, sha256Hash, 1)
+	if o.cache != nil {
+		o.cache.operationHashCache.Set(id, sha256Hash, 1)
+	}
 	o.parsedOperation.Sha256Hash = sha256Hash
 
 	return nil
@@ -447,6 +493,26 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			statusCode: http.StatusOK,
 		}
 	}
+	// Capture one manifest for both cache identity and operation resolution.
+	if !o.operationProcessor.persistedOperationClient.APQEnabled() {
+		if store := o.operationProcessor.persistedOperationClient.PQLStore(); store != nil {
+			o.manifestSnapshot = store.Snapshot()
+			if o.manifestSnapshot == nil {
+				return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
+			}
+		}
+	}
+	if o.manifestSnapshot != nil {
+		body, found := o.manifestSnapshot.Operations[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash]
+		if !found {
+			return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
+		}
+		o.parsedOperation.Request.Query = body
+		// Even a 64-hex ID may be custom. Use the hash of the resolved body.
+		o.parsedOperation.Sha256Hash = o.manifestSnapshot.BodyHash(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		o.parsedOperation.IsPersistedOperation = true
+	}
+
 	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
 	if err != nil {
 		return false, false, &httpGraphqlError{
@@ -461,6 +527,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			}
 		}
 		return true, false, nil
+	}
+
+	if o.manifestSnapshot != nil {
+		return false, false, nil
 	}
 
 	// If APQ is enabled and the query body is in the request, short-circuit
@@ -504,6 +574,12 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 				return false, true, err
 			}
+		}
+	}
+
+	if !o.operationProcessor.persistedOperationClient.APQEnabled() && o.parsedOperation.Request.Query != "" {
+		if err := o.ComputeOperationSha256(); err != nil {
+			return false, isAPQ, err
 		}
 	}
 
@@ -795,7 +871,11 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 	return false, nil
 }
 
+// For custom IDs, retain the original query and its optional hash for telemetry
+// on cache hits, including requests that opt into hashing after cache admission.
 type NormalizationCacheEntry struct {
+	originalQuery            string
+	sha256Hash               string
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
@@ -1195,6 +1275,10 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 }
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
+		o.parsedOperation.Request.Query = entry.originalQuery
+		o.parsedOperation.Sha256Hash = entry.sha256Hash
+	}
 	o.parsedOperation.PersistedOperationCacheHit = true
 	// we need to mark operation as persisted when it was called by query body
 	// otherwise in case it was already cached we will try to normalize an empty document
@@ -1241,7 +1325,7 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 	}
 
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames, present := o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash]
+	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if !present {
 		return false, variableNames
@@ -1261,6 +1345,11 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		inlineArguments:          o.parsedOperation.InlineArguments,
 	}
 
+	if o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled() {
+		entry.originalQuery = o.parsedOperation.Request.Query
+		entry.sha256Hash = o.parsedOperation.Sha256Hash
+	}
+
 	if isApq {
 		ttl := o.cache.automaticPersistedOperationCacheTtl
 		ttlD := time.Duration(ttl) * time.Second
@@ -1271,35 +1360,62 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 
 	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
 	o.cache.persistedOperationVariableNamesLock.Lock()
-	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
-	o.cache.persistedOperationVariableNamesLock.Unlock()
+	defer o.cache.persistedOperationVariableNamesLock.Unlock()
+	if o.manifestSnapshot != nil && o.cache.persistedOperationManifestRevision != o.manifestSnapshot.Revision {
+		// Keep metadata for unchanged bodies so their normalized entries survive
+		// reloads. Superseded requests must not restore obsolete metadata.
+		if o.operationProcessor.persistedOperationClient.PQLStore().Snapshot() != o.manifestSnapshot {
+			return
+		}
+		retained := make(map[string][]string)
+		for id := range o.manifestSnapshot.Operations {
+			identity := o.persistedOperationIdentity("", id)
+			if names, ok := o.cache.persistedOperationVariableNames[identity]; ok {
+				retained[identity] = names
+			}
+		}
+		o.cache.persistedOperationVariableNames = retained
+		o.cache.persistedOperationManifestRevision = o.manifestSnapshot.Revision
+	}
+	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)] = skipIncludeVariableNames
 }
 
 func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
+	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, persistedQuerySha256Hash)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	if o.manifestSnapshot != nil && !present {
+		return 0, false
+	}
 	key = o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 	return key, true
 }
 
-func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string, includeOperationName bool) uint64 {
-	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-	if includeOperationName {
-		// If there are multiple operations in the document, we need to include the operation name in the cache key
-		_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
+// Length prefixes keep variable-length IDs, client names and operation names unambiguous.
+func (o *OperationKit) persistedOperationIdentity(clientName, id string) string {
+	if o.operationProcessor.persistedOperationClient != nil && o.operationProcessor.persistedOperationClient.ManifestEnabled() {
+		// Manifest IDs are graph-wide; individual operation storage is per-client.
+		clientName = ""
 	}
-	manifestEnabled := o.operationProcessor.persistedOperationClient != nil &&
-		o.operationProcessor.persistedOperationClient.ManifestEnabled()
+	identity := fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
+	if o.manifestSnapshot != nil {
+		bodyHash := o.manifestSnapshot.BodyHash(id)
+		if id != bodyHash {
+			// Only an ID matching the actual body hash identifies its contents.
+			// Scope all other IDs to the body, regardless of their format.
+			return fmt.Sprintf("%d:%s%s", len(bodyHash), bodyHash, identity)
+		}
+	}
+	return identity
+}
 
-	if !manifestEnabled {
-		// Non-manifest mode: include clientName since operations are per-client.
-		// Manifest mode: exclude clientName because manifest operations are global
-		// and the SHA256 hash already uniquely identifies the operation body.
-		// Cache entries persist across manifest reloads — removed operations are
-		// naturally evicted by the LRU.
-		_, _ = o.kit.keyGen.WriteString(clientName)
+func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string, includeOperationName bool) uint64 {
+	_, _ = o.kit.keyGen.WriteString(o.persistedOperationIdentity(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash))
+	name := ""
+	if includeOperationName {
+		name = o.parsedOperation.Request.OperationName
 	}
+	_, _ = fmt.Fprintf(o.kit.keyGen, "%d:%s", len(name), name)
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()

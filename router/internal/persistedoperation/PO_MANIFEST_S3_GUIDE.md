@@ -84,3 +84,21 @@ The manifest file (configured via `manifest.file_name`, default `manifest.json`)
 ### Operation lookup
 
 When a client sends a persisted query request with `extensions.persistedQuery.sha256Hash`, the router looks up the hash directly in the `operations` map. This is an O(1) in-memory lookup with no network overhead.
+
+## Custom operation IDs
+
+Manifest mode supports published custom IDs automatically when APQ is disabled. With APQ enabled, IDs must be SHA256 hashes. IDs contain 1–250 ASCII letters, digits, underscores, or hyphens and are sent in `extensions.persistedQuery.sha256Hash` without a query body. Existing requests containing both a SHA256 ID and a body remain supported when the hash matches exactly; custom-ID requests must omit the body.
+
+Version 1 manifests retain the global `operations` map. An ID must identify the same body across all clients of the graph. Keep IDs consistent across clients when publishing operations.
+
+```json
+{
+  "version": 1,
+  "revision": "operations-1",
+  "operations": {
+    "get-user": "query { user { id } }"
+  }
+}
+```
+
+Each request checks membership and resolves its body against one manifest snapshot. Custom-ID cache keys include the ID and the body’s SHA256, computed when the manifest loads, so unchanged operations remain cached across revisions. IDs that exactly match the body’s SHA256 retain their existing cache identity. A 64-character hexadecimal ID that differs from the body hash is treated as a custom ID. Change the revision whenever the manifest changes. The control plane computes it from the global operation map when publishing or deleting operations. Deleting the last registration removes the ID; routers stop using cached bodies after observing the new revision.
