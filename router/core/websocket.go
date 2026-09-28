@@ -925,7 +925,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		isApq     bool
 	)
 
-	if !operationKit.isPublishedOperation() && h.shouldComputeOperationSha256(operationKit) {
+	if !operationKit.isNonAPQPersistedOperation() && h.shouldComputeOperationSha256(operationKit) {
 		err = operationKit.ComputeOperationSha256()
 		if err != nil {
 			return nil, nil, err

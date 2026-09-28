@@ -358,7 +358,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
 			if !o.validPersistedOperationID() {
 				message := "persistedQuery does not have a valid sha256 hash"
-				if o.isPublishedOperation() {
+				if o.isNonAPQPersistedOperation() {
 					message = "persistedQuery id must be 1-250 characters from [A-Za-z0-9_-]"
 				}
 				return &httpGraphqlError{message: message, statusCode: http.StatusBadRequest}
@@ -420,7 +420,7 @@ func (o *OperationKit) unmarshalOperation() error {
 // Published IDs are opaque storage keys. APQ IDs must be SHA256 hashes.
 func (o *OperationKit) validPersistedOperationID() bool {
 	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
-	if !o.isPublishedOperation() {
+	if !o.isNonAPQPersistedOperation() {
 		return pq.isValidHash()
 	}
 	if len(pq.Sha256Hash) == 0 || len(pq.Sha256Hash) > 250 {
@@ -435,7 +435,7 @@ func (o *OperationKit) validPersistedOperationID() bool {
 	return true
 }
 
-func (o *OperationKit) isPublishedOperation() bool {
+func (o *OperationKit) isNonAPQPersistedOperation() bool {
 	return o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
 		o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled()
 }
