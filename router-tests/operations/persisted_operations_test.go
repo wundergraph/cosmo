@@ -56,10 +56,7 @@ func TestPersistedOperationInvalidHash(t *testing.T) {
 		"000000000000000000000000000000000000000000000000000000000000000z",
 	}
 	for _, hash := range malformed {
-		testenv.Run(t, &testenv.Config{ApqConfig: config.AutomaticPersistedQueriesConfig{
-			Enabled: true,
-			Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-		}}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true, Cache: config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024}}}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + hash + `"}}`),
 			})
@@ -267,7 +264,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
-			require.Equal(t, 4, numberOfCDNRequests) // Every request resolves storage when the CDN cache is disabled.
+			require.Equal(t, 3, numberOfCDNRequests)
 		})
 	})
 }

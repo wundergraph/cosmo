@@ -1831,7 +1831,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					"service_name":             "service-name",                                                     // From request header
 					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
 					"operation_hash":           "1163600561566987607",                                              // From context
-					"operation_sha256":         "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
+					"operation_sha256":         "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937", // From context
 					"operation_name":           "Employees",                                                        // From context
 					"operation_type":           "query",                                                            // From context
 				}
@@ -2075,7 +2075,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 					val, ok := requestContext["operation_sha256_expression"].(string)
 					require.True(t, ok)
-					require.Equal(t, "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", val)
+					require.Equal(t, "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937", val)
 				},
 			)
 		})

@@ -14,7 +14,7 @@ type Manifest struct {
 	Version     int               `json:"version"`
 	Revision    string            `json:"revision"`
 	GeneratedAt string            `json:"generatedAt"`
-	Operations  map[string]string `json:"operations"` // operation ID -> body
+	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
 }
 
 type Store struct {
@@ -72,14 +72,14 @@ func (s *Store) Close() {
 	close(s.updateCh)
 }
 
-// LookupByID performs an O(1) map lookup by persisted operation ID.
-func (s *Store) LookupByID(id string) (body []byte, found bool) {
+// LookupByHash performs an O(1) map lookup by sha256 hash.
+func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	m := s.manifest.Load()
 	if m == nil {
 		return nil, false
 	}
 
-	op, ok := m.Operations[id]
+	op, ok := m.Operations[sha256Hash]
 	if !ok {
 		return nil, false
 	}

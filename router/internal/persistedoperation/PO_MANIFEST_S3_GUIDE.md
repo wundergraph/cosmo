@@ -79,14 +79,8 @@ The manifest file (configured via `manifest.file_name`, default `manifest.json`)
 | `version` | `int` | Yes | Must be `1`. The router rejects manifests with any other version. |
 | `revision` | `string` | Yes | An opaque revision identifier. Used to detect changes during polling. In CDN mode it doubles as an ETag. It can be any non-empty string (e.g. a git SHA, timestamp, or UUID). **You must change this value whenever you update the operations**, otherwise the router will not pick up the changes. |
 | `generatedAt` | `string` | No | ISO 8601 timestamp of when the manifest was generated. Informational only; not used by the router. |
-| `operations` | `map<string, string>` | Yes | A map of operation IDs to GraphQL operation bodies. Values are the full GraphQL operation string. The field must be present (can be an empty `{}`). |
+| `operations` | `map<string, string>` | Yes | A map of SHA256 hashes to GraphQL operation bodies. Keys are the SHA256 hash of the operation text. Values are the full GraphQL operation string. The field must be present (can be an empty `{}`). |
 
 ### Operation lookup
 
-When a client sends a persisted query request with `extensions.persistedQuery.sha256Hash`, the router looks up the ID directly in the `operations` map. This is an O(1) in-memory lookup with no network overhead.
-
-## Custom operation IDs
-
-With APQ disabled, IDs can contain 1–250 ASCII letters, digits, underscores, or hyphens. Send the ID in `extensions.persistedQuery.sha256Hash` without a query body. Requests containing both an ID and a body are rejected. With APQ enabled, IDs must be SHA256 hashes and must match the body when both are supplied.
-
-Manifest IDs are graph-wide. Change the manifest revision whenever its operations change.
+When a client sends a persisted query request with `extensions.persistedQuery.sha256Hash`, the router looks up the hash directly in the `operations` map. This is an O(1) in-memory lookup with no network overhead.

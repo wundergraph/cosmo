@@ -83,8 +83,8 @@ func NewClient(endpoint string, token string, opts Options) (*Client, error) {
 	}, nil
 }
 
-func (cdn *Client) PersistedOperation(ctx context.Context, clientName string, operationID string) ([]byte, error) {
-	content, err := cdn.persistedOperation(ctx, clientName, operationID)
+func (cdn *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (cdn *Client) PersistedOperation(ctx context.Context, clientName string, op
 	return content, nil
 }
 
-func (cdn *Client) persistedOperation(ctx context.Context, clientName string, operationID string) ([]byte, error) {
+func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 
 	span := trace.SpanFromContext(ctx)
 
@@ -100,7 +100,7 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, op
 		cdn.organizationID,
 		cdn.federatedGraphID,
 		url.PathEscape(clientName),
-		url.PathEscape(operationID))
+		url.PathEscape(sha256Hash))
 	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)
@@ -131,8 +131,8 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, op
 
 		if resp.StatusCode == http.StatusNotFound {
 			return nil, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName:  clientName,
-				OperationID: operationID,
+				ClientName: clientName,
+				Sha256Hash: sha256Hash,
 			}
 		}
 		if resp.StatusCode == http.StatusUnauthorized {

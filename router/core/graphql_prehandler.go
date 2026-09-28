@@ -498,11 +498,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
-	if operationKit.shouldDeferOperationSha256() {
-		return false
-	}
-
-	// If forced, compute the hash once the body is available
+	// If forced, always compute the hash
 	if h.computeOperationSha256 || reqCtx.forceSha256Compute {
 		return true
 	}
@@ -513,8 +509,8 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, re
 
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
-	// If it has a hash already AND a body, we need to compute the hash again to ensure it matches the persisted hash
-	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+	// APQ requests with a body must match their supplied hash.
+	if hasPersistedHash && !operationKit.isPublishedOperation() && operationKit.parsedOperation.Request.Query != "" {
 		return true
 	}
 
@@ -584,8 +580,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.shouldComputeOperationSha256(operationKit, requestContext) {
+	// Published IDs are not hashes; defer their hash telemetry until storage resolves the body.
+	publishedOperation := operationKit.isPublishedOperation()
+	if !publishedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
 		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 			// No query body to hash; use the client-provided persisted hash for telemetry.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
@@ -618,8 +615,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	// Ensure if request has both hash and query, that the hash matches the query
-	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
+	// APQ IDs must match the supplied query body.
+	if !publishedOperation && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
 		if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
 			return &httpGraphqlError{
 				message:    "persistedQuery sha256 hash does not match query body",
@@ -666,13 +663,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
-				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.OperationID))
+				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
 				// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
 				// persisted operation are logged above. We only allow execution to continue
 				// when the request includes a query body (the ad-hoc query to run) and
 				// safelist is not enforced. Hash-only requests without a body have nothing
 				// to execute, so we always return the not-found error in that case.
-				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" {
+				if !h.operationBlocker.safelistEnabled && !operationKit.parsedOperation.IsPersistedOperation && operationKit.parsedOperation.Request.Query != "" {
 					err = nil
 				}
 			}
@@ -688,9 +685,10 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
-	// Without APQ, resolution and cache hits provide the actual body hash.
-	// Never use the supplied ID as hash telemetry just because it looks like SHA256.
-	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.IsPersistedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
+	if publishedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
+		if err := operationKit.ComputeOperationSha256(); err != nil {
+			return err
+		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
 		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
@@ -699,7 +697,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	// can do it because published operations are immutable within their storage scope.
 	if !skipParse {
 		parseCtx, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),

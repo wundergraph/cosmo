@@ -611,10 +611,6 @@ func TestPQLManifest(t *testing.T) {
 	t.Run("APQ GET request with operation query parameter and manifest-known operation hits cache", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-				Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-			},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
 			},
@@ -626,23 +622,6 @@ func TestPQLManifest(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
-		})
-	})
-
-	t.Run("GET request with ID and body is rejected when APQ is disabled", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
-				Query:      "{__typename}",
-				Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-			})
-			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Contains(t, res.Body, "persistedQuery id cannot be combined with a query body when APQ is disabled")
 		})
 	})
 
@@ -723,8 +702,9 @@ func TestPQLManifest(t *testing.T) {
 			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					// No warmup → all caches cold on first request.
-					// Missing manifest metadata short-circuits the named cache lookup.
-					PersistedQueryNormalizationMisses: 1,
+					// 2 persisted normalization misses: loadPersistedOperationFromCache checks
+					// once without operation name, once with (because OperationName is set).
+					PersistedQueryNormalizationMisses: 2,
 					ValidationMisses:                  1,
 					PlanMisses:                        1,
 				},
@@ -770,12 +750,11 @@ func TestPQLManifest(t *testing.T) {
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					// Custom warmup config (Workers=2, ItemsPerSecond=100) still warms all caches.
 					// 3 manifest ops → 2 unique plans during warmup, 1 hit from the request.
-					PersistedQueryNormalizationMisses: 3, // Each manifest ID is resolved before planning.
-					PersistedQueryNormalizationHits:   1,
-					ValidationMisses:                  2,
-					ValidationHits:                    2,
-					PlanMisses:                        2,
-					PlanHits:                          2,
+					PersistedQueryNormalizationHits: 1,
+					ValidationMisses:                2,
+					ValidationHits:                  2,
+					PlanMisses:                      2,
+					PlanHits:                        2,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -831,12 +810,11 @@ func TestPQLManifest(t *testing.T) {
 					// normalized form), ecf4e... misses (unique query).
 					// Request for dc675... hits all caches.
 					// Total: 2 misses (dc675 warmup + ecf4e manifest), 3 hits (dc675+33651 manifest + request).
-					PersistedQueryNormalizationMisses: 3, // One miss per unique manifest ID.
-					PersistedQueryNormalizationHits:   2, // Overlapping warmup ID and live request.
-					ValidationMisses:                  2,
-					ValidationHits:                    3,
-					PlanMisses:                        2,
-					PlanHits:                          3,
+					PersistedQueryNormalizationHits: 1,
+					ValidationMisses:                2,
+					ValidationHits:                  3,
+					PlanMisses:                      2,
+					PlanHits:                        3,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

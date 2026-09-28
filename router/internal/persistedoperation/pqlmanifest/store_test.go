@@ -14,7 +14,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	t.Run("Load and LookupByID", func(t *testing.T) {
+	t.Run("Load and LookupByHash", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
 
 		store.Load(&Manifest{
@@ -23,25 +23,25 @@ func TestStore(t *testing.T) {
 			Operations: map[string]string{"abc": "query { a }"},
 		})
 
-		body, found := store.LookupByID("abc")
+		body, found := store.LookupByHash("abc")
 		require.True(t, found)
 		require.Equal(t, "query { a }", string(body))
 		require.Equal(t, "rev-1", store.Revision())
 	})
 
-	t.Run("LookupByID returns false on empty store", func(t *testing.T) {
+	t.Run("LookupByHash returns false on empty store", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
 
-		body, found := store.LookupByID("abc")
+		body, found := store.LookupByHash("abc")
 		require.False(t, found)
 		require.Nil(t, body)
 	})
 
-	t.Run("LookupByID returns false for unknown ID", func(t *testing.T) {
+	t.Run("LookupByHash returns false for unknown hash", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"abc": "query { a }"}})
 
-		body, found := store.LookupByID("unknown")
+		body, found := store.LookupByHash("unknown")
 		require.False(t, found)
 		require.Nil(t, body)
 	})
@@ -56,9 +56,9 @@ func TestStore(t *testing.T) {
 		require.Equal(t, "rev-2", store.Revision())
 
 		// Old operation gone, new one present
-		_, found := store.LookupByID("abc")
+		_, found := store.LookupByHash("abc")
 		require.False(t, found)
-		body, found := store.LookupByID("def")
+		body, found := store.LookupByHash("def")
 		require.True(t, found)
 		require.Equal(t, "query { b }", string(body))
 	})
@@ -231,12 +231,12 @@ func TestStore(t *testing.T) {
 
 		// Even though the signal was dropped, the manifest pointer should reflect the latest load
 		require.Equal(t, "rev-3", store.Revision())
-		body, found := store.LookupByID("c")
+		body, found := store.LookupByHash("c")
 		require.True(t, found)
 		require.Equal(t, "q3", string(body))
 
 		// Old operations should be gone
-		_, found = store.LookupByID("a")
+		_, found = store.LookupByHash("a")
 		require.False(t, found)
 
 		close(block)
@@ -316,7 +316,7 @@ func TestLoadFromData(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, store.IsLoaded())
 		require.Equal(t, "rev-1", store.Revision())
-		body, found := store.LookupByID("h1")
+		body, found := store.LookupByHash("h1")
 		require.True(t, found)
 		require.Equal(t, "query { a }", string(body))
 	})

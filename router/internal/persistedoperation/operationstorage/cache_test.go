@@ -1,20 +1,13 @@
 package operationstorage
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestVariableLengthOperationIDs(t *testing.T) {
-	t.Parallel()
-
-	cache, err := NewOperationsCache(1024 * 1024)
-	require.NoError(t, err)
-	defer cache.Cache.Close()
-	cache.Set("abc", "def", []byte("first"), 0)
-	cache.Set("abcd", "ef", []byte("second"), 0)
-	cache.Cache.Wait()
-	assert.Equal(t, []byte("first"), cache.Get("abc", "def"))
-	assert.Equal(t, []byte("second"), cache.Get("abcd", "ef"))
+func TestCacheKeyBoundaries(t *testing.T) {
+	cache := &OperationsCache{}
+	require.NotEqual(t, cache.key("a", "bc"), cache.key("ab", "c"))
+	require.NotEqual(t, cache.key("web", "shared"), cache.key("mobile", "shared"))
 }

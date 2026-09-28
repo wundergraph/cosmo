@@ -925,7 +925,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		isApq     bool
 	)
 
-	if h.shouldComputeOperationSha256(operationKit) {
+	if !operationKit.isPublishedOperation() && h.shouldComputeOperationSha256(operationKit) {
 		err = operationKit.ComputeOperationSha256()
 		if err != nil {
 			return nil, nil, err
@@ -951,8 +951,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		if err != nil {
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
-				h.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.OperationID))
-				if h.operationBlocker.safelistEnabled {
+				h.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+				if h.operationBlocker.safelistEnabled || operationKit.parsedOperation.IsPersistedOperation {
 					return nil, nil, err
 				}
 			} else {
@@ -963,7 +963,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	// can do it because published operations are immutable within their storage scope.
 	if !skipParse {
 		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {

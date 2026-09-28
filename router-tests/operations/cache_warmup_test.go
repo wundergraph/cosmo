@@ -338,10 +338,6 @@ func TestCacheWarmup(t *testing.T) {
 		t.Run("cache warmup persisted operation with and without queries passed", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -389,8 +385,8 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   0, // Client mismatch fails storage resolution before cache lookup.
-						PersistedQueryNormalizationMisses: 1, // Warmup only.
+						PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch, , 1x request miss because checking with operation name
+						PersistedQueryNormalizationMisses: 3, // same as above
 						ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
 						ValidationHits:                    0, // no hits because of client mismatch
 						PlanMisses:                        1, // 1x warmup miss
@@ -478,8 +474,8 @@ func TestCacheWarmup(t *testing.T) {
 						ValidationMisses:                  1,
 						PlanHits:                          4,
 						PlanMisses:                        1,
-						QueryHashMisses:                   1, // Warmup hashes the resolved body.
-						QueryHashHits:                     6, // All requests hash the resolved body, including cache hits.
+						QueryHashMisses:                   2, // 2x miss for safelist queries (raw query body hashed for safelist check)
+						QueryHashHits:                     3, // Repeated body plus the two resolved persisted requests.
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -711,10 +707,6 @@ func TestCacheWarmup(t *testing.T) {
 			t.Parallel()
 			const employeeQueryCount = 2
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -833,10 +825,6 @@ func TestCacheWarmup(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -875,10 +863,6 @@ func TestCacheWarmup(t *testing.T) {
 
 		t.Run("should correctly also warm the feature flag cache", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
-				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,

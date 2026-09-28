@@ -292,7 +292,8 @@ type CacheWarmupPlanningProcessor struct {
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 
 	var (
-		isAPQ bool
+		skipParse bool
+		isAPQ     bool
 	)
 
 	k, err := c.operationProcessor.NewIndependentKit()
@@ -320,11 +321,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 	}
 
-	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil &&
-		c.operationProcessor.persistedOperationClient != nil && !c.operationProcessor.persistedOperationClient.APQEnabled() {
-		// Resolve persisted IDs through storage, just like live requests.
-		item.Request.Query = ""
-	}
 	k.parsedOperation.Request = item.Request
 
 	err = k.unmarshalOperation()
@@ -332,24 +328,22 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	// Use the same persisted-operation lookup as live requests before planning.
-	// This also rejects IDs removed from the manifest since collection.
+	err = k.ComputeOperationSha256()
+	if err != nil {
+		return nil, err
+	}
+
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
-		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
+		skipParse, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if k.parsedOperation.Sha256Hash == "" {
-		if err := k.ComputeOperationSha256(); err != nil {
+	if !skipParse {
+		if err = k.Parse(); err != nil {
 			return nil, err
 		}
-	}
-
-	err = k.Parse()
-	if err != nil {
-		return nil, err
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
