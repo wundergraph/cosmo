@@ -1323,6 +1323,9 @@ func (o *OperationKit) loadPersistedOperationCacheKey(clientName string, include
 	o.cache.persistedOperationVariableNamesLock.RLock()
 	entry, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	// A reused ID can have different @skip/@include variables after a reload.
+	// An in-flight request may have written metadata from another revision, so
+	// only use variable names that match this request's captured manifest.
 	var variableNames []string
 	if present && entry.manifestRevision == o.manifestRevision() {
 		variableNames = entry.names
