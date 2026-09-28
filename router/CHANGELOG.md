@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.353.0](https://github.com/wundergraph/cosmo/compare/router@0.352.0...router@0.353.0) (2026-09-25)
+
+### Bug Fixes
+
+* **router:** count all selected fields for total_fields limits ([#3249](https://github.com/wundergraph/cosmo/issues/3249)) ([ba4df0e](https://github.com/wundergraph/cosmo/commit/ba4df0e9934f511809a6984f2f058900fb8cbd64)) (@fiam)
+* **router:** log OTEL errors when only metrics are enabled ([#3254](https://github.com/wundergraph/cosmo/issues/3254)) ([48cebe6](https://github.com/wundergraph/cosmo/commit/48cebe616494b76038e46d8b402f6a684aa3f7c8)) (@fiam)
+* **router:** use incrementalSpec=v0.2 in Content-Type header for defer ([#3264](https://github.com/wundergraph/cosmo/issues/3264)) ([3b7b3a3](https://github.com/wundergraph/cosmo/commit/3b7b3a34e9a732a0aacc3911337aa8726682eeda)) (@devsergiy)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
 # [0.352.0](https://github.com/wundergraph/cosmo/compare/router@0.351.0...router@0.352.0) (2026-09-23)
 
 ### Features
