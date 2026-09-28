@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -40,7 +39,7 @@ func TestCustomOperationIDs(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		CdnSever: cdn,
 		AccessLogFields: []config.CustomAttribute{
-			{Key: "body_hash", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldOperationSha256}},
+			{Key: "operation_id", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldOperationSha256}},
 		},
 		LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
 		RouterOptions:  []core.Option{core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{LogUnknown: true})},
@@ -64,13 +63,15 @@ func TestCustomOperationIDs(t *testing.T) {
 			// A supplied body neither replaces the published operation nor has to hash to its ID.
 			res := request(id, "web", `query { __typename }`, `{"show":true}`, false)
 			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			logs := e.Observer().FilterMessage("/graphql").All()
+			require.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
 			require.Eventually(t, func() bool {
 				res = request(id, "web", "", `{"show":true}`, true)
 				return res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
 			}, time.Second*5, time.Millisecond*10)
 			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-			logs := e.Observer().FilterMessage("/graphql").All()
-			require.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte(query))), logs[len(logs)-1].ContextMap()["body_hash"])
+			logs = e.Observer().FilterMessage("/graphql").All()
+			require.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
 		}
 		// Different clients may use the same ID with different conditional variables.
 		require.Eventually(t, func() bool {

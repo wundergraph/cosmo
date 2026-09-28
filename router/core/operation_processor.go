@@ -821,8 +821,6 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 }
 
 type NormalizationCacheEntry struct {
-	originalQuery string
-
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
@@ -1223,7 +1221,6 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
 	o.parsedOperation.PersistedOperationCacheHit = true
-	o.parsedOperation.Request.Query = entry.originalQuery
 	// we need to mark operation as persisted when it was called by query body
 	// otherwise in case it was already cached we will try to normalize an empty document
 	// as we skip parse for the cached persisted operations
@@ -1283,7 +1280,6 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames, o.kit.numOperations > 1)
 	entry := NormalizationCacheEntry{
-		originalQuery:            o.parsedOperation.Request.Query,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 		operationDefinitionRef:   o.operationDefinitionRef,

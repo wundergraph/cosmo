@@ -580,11 +580,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	// Published IDs are not hashes; defer their hash telemetry until storage resolves the body.
+	// Populate operation telemetry before resolving persisted operations.
 	publishedOperation := operationKit.isPublishedOperation()
-	if !publishedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
-			// No query body to hash; use the client-provided persisted hash for telemetry.
+	if h.shouldComputeOperationSha256(operationKit, requestContext) {
+		if publishedOperation || operationKit.parsedOperation.Request.Query == "" &&
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+			// Preserve the supplied persisted ID in telemetry, including custom IDs.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
 
@@ -683,16 +684,6 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
-	}
-
-	if publishedOperation && h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if err := operationKit.ComputeOperationSha256(); err != nil {
-			return err
-		}
-		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
-		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
-		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
-		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, operationKit.parsedOperation.Sha256Hash)
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step

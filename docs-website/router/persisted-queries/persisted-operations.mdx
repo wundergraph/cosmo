@@ -115,7 +115,7 @@ With APQ enabled, IDs must be SHA256 hashes and must match the query body when b
 
 Publish a new ID when an operation changes. Cached operations retain the existing cache lifetime. Body-based safelisting and `log_unknown` still look up operations by the body's SHA256, so publish under that hash when using those features with body-only requests.
 
-The `persisted_operation_sha256` context field contains the supplied ID. The `operation_sha256` field contains the executed body's hash when requested.
+For persisted operations, both the `persisted_operation_sha256` and `operation_sha256` context fields contain the supplied ID, including custom IDs.
 
 ## Deleting persisted operations in Studio
 
