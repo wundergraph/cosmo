@@ -292,7 +292,8 @@ type CacheWarmupPlanningProcessor struct {
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 
 	var (
-		isAPQ bool
+		skipParse bool
+		isAPQ     bool
 	)
 
 	k, err := c.operationProcessor.NewIndependentKit()
@@ -333,15 +334,16 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
-		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
+		skipParse, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = k.Parse()
-	if err != nil {
-		return nil, err
+	if !skipParse {
+		if err = k.Parse(); err != nil {
+			return nil, err
+		}
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
