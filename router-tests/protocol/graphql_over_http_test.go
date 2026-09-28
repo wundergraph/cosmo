@@ -62,6 +62,20 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, string(data))
 		})
+		t.Run("return 400 bad request for a PUT request", func(t *testing.T) {
+			header := http.Header{
+				"Content-Type": []string{"application/json"},
+				"Accept":       []string{"application/json"},
+			}
+			body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
+			res, err := xEnv.MakeRequest("PUT", "/graphql", header, bytes.NewReader(body))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.StatusCode)
+			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"error parsing variables: cannot parse JSON: cannot parse empty string; unparsed tail: \"\""}]}`, string(data))
+		})
 		t.Run("return 400 bad request when extensions is not a map", func(t *testing.T) {
 			header := http.Header{
 				"Content-Type": []string{"application/json"},

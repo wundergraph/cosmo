@@ -61,7 +61,7 @@ type ParsedOperation struct {
 
 	// Type is a string representing the operation type. One of "query", "mutation", "subscription".
 	Type           string
-	Variables      *fastjson.Object
+	Variables      *fastjson.Value
 	VariablesHash  uint64
 	RemapVariables map[string]string
 
@@ -376,9 +376,9 @@ func (o *OperationKit) unmarshalOperation() error {
 			// set variables to empty object if they are null, so we can later add exported defaults
 			// also, other parts of the engine depend on variables being a valid JSON object
 			o.parsedOperation.Request.Variables = []byte("{}")
-			o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
+			o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables)
 		case fastjson.TypeObject:
-			o.parsedOperation.Variables = variables.GetObject()
+			o.parsedOperation.Variables = variables
 		default:
 			return &httpGraphqlError{
 				message:    "variables must be a JSON object",
@@ -389,7 +389,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		// Set variables to an empty object if they are null, so we can add exported defaults later.
 		// Also, other parts of the engine depend on variables being a valid JSON object.
 		o.parsedOperation.Request.Variables = []byte("{}")
-		o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
+		o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables)
 	}
 
 	// we're doing string matching on the operation name, so we override null with empty string
@@ -1379,17 +1379,17 @@ func (o *OperationKit) ValidateOperation() (cacheHit bool, err error) {
 	return cacheHit, nil
 }
 
-// ValidateOperationVariables validates the operation variables. Schema validation
-// of the operation itself is performed separately by ValidateOperation, before
-// variable extraction.
-func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) error {
+// ValidateOperationVariables validates the operation variables, which must be the parsed
+// normalized request variables. Schema validation of the operation itself is performed
+// separately by ValidateOperation, before variable extraction.
+func (o *OperationKit) ValidateOperationVariables(variables *fastjson.Value, skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) error {
 	if skipLoader {
 		// in case we're skipping the loader, it means that we won't execute the operation
 		// this means that we don't need to validate the variables as they are not used
 		// this is useful to return a query plan without having to provide variables
 		return nil
 	}
-	err := o.kit.variablesValidator.ValidateWithRemap(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables, remapVariables)
+	err := o.kit.variablesValidator.ValidateValueWithRemap(o.kit.doc, o.operationProcessor.executor.ClientSchema, variables, remapVariables)
 	if err != nil {
 		var invalidVarErr *variablesvalidation.InvalidVariableError
 		if errors.As(err, &invalidVarErr) {

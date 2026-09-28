@@ -626,7 +626,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
-	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	// Unmarshalling a GET or POST operation already parsed the variables. Other methods
+	// skip unmarshalling, so parsing their empty variables reports the error below.
+	requestContext.operation.variables = operationKit.parsedOperation.Variables
+	if requestContext.operation.variables == nil {
+		requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	}
 	// Expose the variables JSON to expressions as early as possible so it is available for access logs
 	// even if a later stage fails. It is only serialized when an expression references
 	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
@@ -1098,7 +1103,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// validation span rather than the normalization span.
 	err = operationValidationErr
 	if err == nil {
-		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+		err = operationKit.ValidateOperationVariables(requestContext.operation.variables, requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	}
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
