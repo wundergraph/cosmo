@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -40,13 +41,23 @@ func selectCacheStore(store caching.Cache, directives *cachedirective.RequestCac
 	return store
 }
 
-// writeOnlyCache is a store every lookup misses on. Writes pass through.
+// writeOnlyCache is a store every lookup for a body misses on. Writes pass through.
 type writeOnlyCache struct {
 	store caching.Cache
 }
 
-func (writeOnlyCache) GetMany(context.Context, []string) (map[string]caching.Item, error) {
-	return nil, nil
+// GetMany finds vary records only.
+// A refresh merges their sets into the record it writes,
+// so variants stored under earlier sets stay reachable.
+func (w writeOnlyCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
+	found, err := w.store.GetMany(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+	maps.DeleteFunc(found, func(_ string, item caching.Item) bool {
+		return len(item.Vary) == 0
+	})
+	return found, nil
 }
 
 func (w writeOnlyCache) SetMany(ctx context.Context, items []caching.Item) error {

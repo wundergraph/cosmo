@@ -98,19 +98,28 @@ func TestWriteOnlyCache(t *testing.T) {
 	ctx := context.Background()
 	store := newTestCache(t)
 	warm := caching.Item{Key: "warm", Value: []byte(`{"a":1}`), TTL: time.Minute}
-	require.NoError(t, store.SetMany(ctx, []caching.Item{warm}))
+	record := caching.Item{Key: "record", Vary: [][]string{{"accept-language"}, {"x-region"}}, TTL: time.Minute}
+	require.NoError(t, store.SetMany(ctx, []caching.Item{warm, record}))
 
-	bypass := writeOnlyCache{store}
+	noCache := writeOnlyCache{store}
 
-	t.Run("every lookup misses", func(t *testing.T) {
-		found, err := bypass.GetMany(ctx, []string{"warm"})
+	t.Run("bodies and uncached keys miss", func(t *testing.T) {
+		found, err := noCache.GetMany(ctx, []string{"warm", "cold"})
 		require.NoError(t, err)
 		require.Empty(t, found)
 	})
 
+	t.Run("vary records are found so a refresh keeps their sets", func(t *testing.T) {
+		found, err := noCache.GetMany(ctx, []string{"warm", "record", "cold"})
+		require.NoError(t, err)
+		require.Len(t, found, 1)
+		require.Equal(t, record.Vary, found["record"].Vary)
+		require.Empty(t, found["record"].Value)
+	})
+
 	t.Run("writes reach the store", func(t *testing.T) {
 		fresh := caching.Item{Key: "fresh", Value: []byte(`{"b":2}`), TTL: time.Minute}
-		require.NoError(t, bypass.SetMany(ctx, []caching.Item{fresh}))
+		require.NoError(t, noCache.SetMany(ctx, []caching.Item{fresh}))
 
 		found, err := store.GetMany(ctx, []string{"fresh"})
 		require.NoError(t, err)

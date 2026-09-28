@@ -3,12 +3,14 @@ package integration
 import (
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // TestResponseCacheRequestDirectives covers the Cache-Control a client sends to the router.
@@ -105,6 +107,47 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 			require.Contains(t, third.Body, `"currentMood":"HAPPY"`,
 				"a warm entry may answer a no-store request")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
+	t.Run("no-cache keeps the variants of an earlier Vary reachable", func(t *testing.T) {
+		t.Parallel()
+
+		var vary atomic.Value
+		vary.Store(varyLanguageHeader)
+		middleware := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				varyMoodMiddleware(vary.Load().(string))(next).ServeHTTP(w, r)
+			})
+		}
+
+		_, opts := varyMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
+			cfg.Storage = config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
+				MaxEntries: 1000,
+			}
+		})
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: opts,
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: middleware},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			requireMood(t, moodIn(t, xEnv, "de"), "SAD")
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			// The refresh varies on another set, which leads the record from now on.
+			vary.Store(varyLanguageHeader + ", X-Region")
+			refresh := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  moodQuery,
+				Header: http.Header{"Cache-Control": []string{"no-cache"}, varyLanguageHeader: []string{"en"}},
+			})
+			requireMood(t, refresh, "HAPPY")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+
+			requireMood(t, moodIn(t, xEnv, "de"), "SAD")
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
+				"the refreshed record must still point at the first variant")
 		})
 	})
 
