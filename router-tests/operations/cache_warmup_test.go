@@ -338,6 +338,10 @@ func TestCacheWarmup(t *testing.T) {
 		t.Run("cache warmup persisted operation with and without queries passed", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -351,7 +355,7 @@ func TestCacheWarmup(t *testing.T) {
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						PersistedQueryNormalizationHits:   1,
-						PersistedQueryNormalizationMisses: 1, // Warmup resolves the supplied ID before normalization.
+						PersistedQueryNormalizationMisses: 0,
 						ValidationHits:                    1,
 						ValidationMisses:                  1,
 						PlanHits:                          1,
@@ -707,6 +711,10 @@ func TestCacheWarmup(t *testing.T) {
 			t.Parallel()
 			const employeeQueryCount = 2
 			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -723,7 +731,7 @@ func TestCacheWarmup(t *testing.T) {
 						// this will be possible to solve only by having operation variants populated
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount + employeeQueryCount,
 						QueryNormalizationHits:            3,
-						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
+						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
 						// Validation is keyed on the pre-extraction operation. The 2 request-time
 						// employee queries differ (a `$id` variant and an inline `2` variant) from the warmed
@@ -825,6 +833,10 @@ func TestCacheWarmup(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -839,7 +851,7 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
+						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   1,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    1,
@@ -863,6 +875,10 @@ func TestCacheWarmup(t *testing.T) {
 
 		t.Run("should correctly also warm the feature flag cache", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
@@ -877,7 +893,7 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
+						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    0,
@@ -888,7 +904,7 @@ func TestCacheWarmup(t *testing.T) {
 						"myff": {
 							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 							QueryNormalizationHits:            1,
-							PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
+							PersistedQueryNormalizationMisses: cdnPOCount,
 							PersistedQueryNormalizationHits:   0,
 							ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 							ValidationHits:                    1,

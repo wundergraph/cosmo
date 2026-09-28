@@ -608,6 +608,27 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
+	t.Run("APQ GET request with operation query parameter and manifest-known operation hits cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache:   config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query:      "{__typename}",
+				Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		})
+	})
+
 	t.Run("GET request with ID and body is rejected when APQ is disabled", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
