@@ -25,7 +25,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -1833,12 +1832,9 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
-	var cdnRequestLogMu sync.Mutex
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			cdnRequestLogMu.Lock()
 			requestLog, err := json.Marshal(cdnRequestLog)
-			cdnRequestLogMu.Unlock()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1852,9 +1848,7 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 			return
 		}
 
-		cdnRequestLogMu.Lock()
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
-		cdnRequestLogMu.Unlock()
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
 		token, ok := strings.CutPrefix(authorization, "Bearer ")
