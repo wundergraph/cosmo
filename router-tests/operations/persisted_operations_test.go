@@ -267,7 +267,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
-			require.Equal(t, 3, numberOfCDNRequests)
+			require.Equal(t, 4, numberOfCDNRequests) // Every request resolves storage when the CDN cache is disabled.
 		})
 	})
 }

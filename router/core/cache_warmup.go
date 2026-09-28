@@ -2,8 +2,6 @@ package core
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -324,18 +322,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	if pq := operation.Request.GetExtensions().GetPersistedQuery(); pq != nil &&
 		c.operationProcessor.persistedOperationClient != nil && !c.operationProcessor.persistedOperationClient.APQEnabled() {
-		if c.operationProcessor.persistedOperationClient.PQLStore() != nil {
-			// Resolve against the current manifest: copied bodies may be stale.
-			// The body hash and cache key must come from the same snapshot.
-			item.Request.Query = ""
-		} else if item.Request.Query != "" {
-			// Preserve matching SHA256-plus-body records. Otherwise resolve the ID
-			// from storage, even if its format looks like a SHA256 hash.
-			sum := sha256.Sum256([]byte(item.Request.Query))
-			if pq.GetSha256Hash() != hex.EncodeToString(sum[:]) {
-				item.Request.Query = ""
-			}
-		}
+		// Resolve persisted IDs through storage, just like live requests.
+		item.Request.Query = ""
 	}
 	k.parsedOperation.Request = item.Request
 
@@ -345,7 +333,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	// Use the same persisted-operation lookup as live requests before planning.
-	// With a non-APQ manifest, this also rejects IDs removed since collection.
+	// This also rejects IDs removed from the manifest since collection.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {

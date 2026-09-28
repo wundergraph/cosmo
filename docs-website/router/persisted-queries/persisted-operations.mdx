@@ -27,9 +27,7 @@ Persisted operations require some tooling on the client side. Consult the docume
 
 ### Supported manifest formats
 
-`wgc operations push` preserves the IDs supplied in a manifest or query map. With APQ disabled, IDs can contain 1–250 ASCII letters, digits, underscores, or hyphens. With APQ enabled, IDs must be SHA256 hashes of the operation body. Plain GraphQL files always use the body’s SHA256 as the ID.
-
-The following formats are detected automatically:
+`wgc operations push` automatically detects the format of your manifest file. The following formats are supported:
 
 <Tabs>
   <Tab title="Apollo">
@@ -103,7 +101,7 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 ### Sending requests
 
-Send the published ID in `extensions.persistedQuery.sha256Hash`, despite the field name, with the `graphql-client-name: web` header:
+With APQ disabled, published IDs can contain 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive. Send the published ID in `extensions.persistedQuery.sha256Hash`, despite the field name, with the `graphql-client-name: web` header:
 
 ```json
 {
@@ -116,7 +114,7 @@ Send the published ID in `extensions.persistedQuery.sha256Hash`, despite the fie
 }
 ```
 
-Requests containing both a SHA256 ID and a `query` body remain supported when the ID matches the body’s SHA256 exactly. Mismatches are rejected. Custom IDs must be sent without a `query` body; this includes 64-character hexadecimal IDs that differ from the published body’s SHA256. Unknown IDs return `PersistedQueryNotFound`.
+With APQ disabled, requests containing both an ID and a `query` body are rejected, including SHA256 IDs that match the body. With APQ enabled, IDs must be SHA256 hashes and must match the body when both are supplied. Unknown IDs return `PersistedQueryNotFound`.
 
 The `persisted_operation_sha256` context field contains the supplied ID, while `operation_sha256` contains the actual body hash when requested.
 

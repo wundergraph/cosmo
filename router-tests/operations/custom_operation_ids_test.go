@@ -35,11 +35,15 @@ func TestCustomOperationIDs(t *testing.T) {
 		subscriptionID:    `subscription { currentTime { unixTime } }`,
 	}
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, id, _ := strings.Cut(r.URL.Path, "/operations/web/")
+		_, operationPath, _ := strings.Cut(r.URL.Path, "/operations/")
+		client, id, _ := strings.Cut(operationPath, "/")
 		body, found := operations[strings.TrimSuffix(id, ".json")]
 		if !found {
 			w.WriteHeader(http.StatusNotFound)
 			return
+		}
+		if client == "mobile" {
+			body = `query Get { employee(id: 2) { id } }`
 		}
 		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": body}))
 	}))
@@ -69,12 +73,23 @@ func TestCustomOperationIDs(t *testing.T) {
 				assert.Equal(t, bodyHash, fields["body_hash"])
 			}
 		}
+		// The same custom ID may resolve to different bodies for different clients.
+		for range 2 {
+			response, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header:     http.Header{"Graphql-Client-Name": []string{"mobile"}},
+				Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"get_employee_v1"}}`),
+			})
+			require.NoError(t, err)
+			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, response.Body)
+			assert.JSONEq(t, expected, customOperationIDRequest(t, e, "get_employee_v1", false).Body)
+		}
 		cases := []struct {
 			id     string
 			status int
 		}{
-			{id: bodyHash, status: http.StatusOK},
+			{id: bodyHash, status: http.StatusBadRequest},
 			{id: customHexID, status: http.StatusBadRequest},
+			{id: "get_employee_v1", status: http.StatusBadRequest},
 		}
 		for _, tc := range cases {
 			response, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -87,13 +102,24 @@ func TestCustomOperationIDs(t *testing.T) {
 			if tc.status == http.StatusOK {
 				assert.JSONEq(t, expected, response.Body)
 			} else {
-				assert.Contains(t, response.Body, "persistedQuery sha256 hash does not match query body")
+				assert.Contains(t, response.Body, "persistedQuery id cannot be combined with a query body when APQ is disabled")
 			}
 		}
 		assert.Contains(t, customOperationIDRequest(t, e, "missing", false).Body, "PersistedQueryNotFound")
+		assert.Contains(t, customOperationIDRequest(t, e, "GET_EMPLOYEE_V1", false).Body, "PersistedQueryNotFound")
 
 		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": []string{"web"}}, nil, nil)
 		defer conn.Close()
+		payload, err := json.Marshal(testenv.GraphQLRequest{
+			Query:      query,
+			Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"` + bodyHash + `"}}`),
+		})
+		require.NoError(t, err)
+		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "rejected", Type: "subscribe", Payload: payload}))
+		var rejected testenv.WebSocketMessage
+		require.NoError(t, testenv.WSReadJSON(t, conn, &rejected))
+		assert.Equal(t, "error", rejected.Type)
+		assert.Contains(t, string(rejected.Payload), "persistedQuery id cannot be combined with a query body when APQ is disabled")
 		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"` + subscriptionID + `"}}}`)}))
 		var msg testenv.WebSocketMessage
 		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
@@ -146,8 +172,8 @@ func TestCustomOperationIDsWarmup(t *testing.T) {
 			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, response.Body)
 			assert.Equal(t, "HIT", response.Response.Header.Get(core.PersistedOperationCacheHeader))
 		}
-		// Only the two custom IDs need fetching; the matching SHA256 body is retained.
-		assert.Equal(t, int32(2), fetches.Load())
+		// Warmup resolves every ID, including matching SHA256-plus-body records.
+		assert.Equal(t, int32(3), fetches.Load())
 	})
 }
 

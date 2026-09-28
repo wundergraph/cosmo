@@ -608,7 +608,7 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("APQ GET request with operation query parameter and manifest-known operation hits cache", func(t *testing.T) {
+	t.Run("GET request with ID and body is rejected when APQ is disabled", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
@@ -620,8 +620,8 @@ func TestPQLManifest(t *testing.T) {
 				Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Contains(t, res.Body, "persistedQuery id cannot be combined with a query body when APQ is disabled")
 		})
 	})
 

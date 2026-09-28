@@ -351,7 +351,7 @@ func TestCacheWarmup(t *testing.T) {
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						PersistedQueryNormalizationHits:   1,
-						PersistedQueryNormalizationMisses: 0,
+						PersistedQueryNormalizationMisses: 1, // Warmup resolves the supplied ID before normalization.
 						ValidationHits:                    1,
 						ValidationMisses:                  1,
 						PlanHits:                          1,
@@ -385,8 +385,8 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch, , 1x request miss because checking with operation name
-						PersistedQueryNormalizationMisses: 3, // same as above
+						PersistedQueryNormalizationHits:   0, // Client mismatch fails storage resolution before cache lookup.
+						PersistedQueryNormalizationMisses: 1, // Warmup only.
 						ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
 						ValidationHits:                    0, // no hits because of client mismatch
 						PlanMisses:                        1, // 1x warmup miss
@@ -475,7 +475,7 @@ func TestCacheWarmup(t *testing.T) {
 						PlanHits:                          4,
 						PlanMisses:                        1,
 						QueryHashMisses:                   1, // Warmup hashes the resolved body.
-						QueryHashHits:                     4, // Both safelist requests hash before and after storage resolution.
+						QueryHashHits:                     6, // All requests hash the resolved body, including cache hits.
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -723,7 +723,7 @@ func TestCacheWarmup(t *testing.T) {
 						// this will be possible to solve only by having operation variants populated
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount + employeeQueryCount,
 						QueryNormalizationHits:            3,
-						PersistedQueryNormalizationMisses: cdnPOCount,
+						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
 						PersistedQueryNormalizationHits:   0,
 						// Validation is keyed on the pre-extraction operation. The 2 request-time
 						// employee queries differ (a `$id` variant and an inline `2` variant) from the warmed
@@ -839,7 +839,7 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount,
+						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
 						PersistedQueryNormalizationHits:   1,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    1,
@@ -877,7 +877,7 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount,
+						PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
 						PersistedQueryNormalizationHits:   0,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    0,
@@ -888,7 +888,7 @@ func TestCacheWarmup(t *testing.T) {
 						"myff": {
 							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 							QueryNormalizationHits:            1,
-							PersistedQueryNormalizationMisses: cdnPOCount,
+							PersistedQueryNormalizationMisses: cdnPOCount + cdnPOCountWithQuery,
 							PersistedQueryNormalizationHits:   0,
 							ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 							ValidationHits:                    1,

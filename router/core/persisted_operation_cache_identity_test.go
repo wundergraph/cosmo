@@ -89,7 +89,6 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 		id:                  query,
 		"another_operation": query,
 	}})
-	kit.manifestSnapshot = store.Snapshot()
 	kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash = "another_operation"
 	kit.savePersistedOperationToCache("web", false, nil)
 	cache.Wait()
@@ -102,6 +101,13 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	assert.Equal(t, query, kit.parsedOperation.Request.Query)
 	assert.Equal(t, id, kit.parsedOperation.Sha256Hash)
 
+	// Hold a request with the old body until after the new manifest is cached.
+	older, err := processor.NewIndependentKit()
+	require.NoError(t, err)
+	older.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
+	_, _, err = older.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
+	require.NoError(t, err)
+
 	store.Load(&pqlmanifest.Manifest{Revision: "three", Operations: map[string]string{
 		id: `query { changed: __typename }`,
 	}})
@@ -111,6 +117,20 @@ func TestManifestPersistedOperationCacheReuse(t *testing.T) {
 	assert.Equal(t, `query { changed: __typename }`, kit.parsedOperation.Request.Query)
 	sum = sha256.Sum256([]byte(kit.parsedOperation.Request.Query))
 	assert.Equal(t, hex.EncodeToString(sum[:]), kit.parsedOperation.Sha256Hash)
+
+	kit.parsedOperation.NormalizedRepresentation = kit.parsedOperation.Request.Query
+	kit.savePersistedOperationToCache("web", false, nil)
+	cache.Wait()
+	older.savePersistedOperationToCache("web", false, nil)
+	cache.Wait()
+	kit.parsedOperation = &ParsedOperation{GraphQLRequestExtensions: GraphQLRequestExtensions{
+		PersistedQuery: &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id},
+	}}
+	hit, _, err = kit.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
+	require.NoError(t, err)
+	assert.True(t, hit)
+	assert.Equal(t, `query { changed: __typename }`, kit.parsedOperation.NormalizedRepresentation,
+		"late cache admission for an old body cannot replace the current body")
 
 	store.Load(&pqlmanifest.Manifest{Revision: "four", Operations: map[string]string{}})
 	_, _, err = kit.FetchPersistedOperation(context.Background(), &ClientInfo{Name: "web"})

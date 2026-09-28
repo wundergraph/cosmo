@@ -37,6 +37,7 @@ func TestCustomPersistedIDValidation(t *testing.T) {
 		{name: "unicode", id: "ä", client: publishedClient},
 		{name: "body", id: "get_typename_v1", query: "{ __typename }", client: publishedClient},
 		{name: "sha without APQ", id: strings.Repeat("a", 64), valid: true, client: publishedClient},
+		{name: "sha and body without APQ", id: strings.Repeat("a", 64), query: "{ __typename }", client: publishedClient},
 		{name: "sha with APQ", client: apqClient, id: strings.Repeat("a", 64), valid: true},
 	}
 
