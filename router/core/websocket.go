@@ -963,7 +963,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because published operations are immutable within their storage scope.
+	// can do it because manifest cache entries are scoped to the captured revision.
+	// Operations outside a manifest must remain immutable within their storage scope.
 	if !skipParse {
 		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {

@@ -688,7 +688,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because published operations are immutable within their storage scope.
+	// can do it because manifest cache entries are scoped to the captured revision.
+	// Operations outside a manifest must remain immutable within their storage scope.
 	if !skipParse {
 		parseCtx, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),

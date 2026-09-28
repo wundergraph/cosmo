@@ -9,14 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 )
 
 func TestPersistedOperationIDValidation(t *testing.T) {
+	t.Parallel()
+
 	store, err := apq.NewMemoryStore(1024, time.Minute)
 	require.NoError(t, err)
 	apqClient, err := persistedoperation.NewClient(&persistedoperation.Options{APQStore: store})
 	require.NoError(t, err)
-	defer apqClient.Close()
+	t.Cleanup(func() { require.NoError(t, apqClient.Close()) })
 
 	modes := []struct {
 		name           string
@@ -45,12 +48,16 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 
 	for _, mode := range modes {
 		t.Run(mode.name, func(t *testing.T) {
+			t.Parallel()
+
 			processor := NewOperationProcessor(OperationProcessorOptions{
 				Executor:                 &Executor{},
 				PersistedOperationClient: mode.client,
 			})
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
+					t.Parallel()
+
 					kit, err := processor.NewKit()
 					require.NoError(t, err)
 					defer kit.Free()
@@ -76,6 +83,8 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 }
 
 func TestPersistedOperationCacheKeyBoundaries(t *testing.T) {
+	t.Parallel()
+
 	processor := NewOperationProcessor(OperationProcessorOptions{Executor: &Executor{}})
 	kit, err := processor.NewKit()
 	require.NoError(t, err)
@@ -88,4 +97,12 @@ func TestPersistedOperationCacheKeyBoundaries(t *testing.T) {
 	require.NotEqual(t, key("a", "bc", ""), key("ab", "c", ""))
 	require.NotEqual(t, key("id", "web", "a"), key("ida", "web", ""))
 	require.NotEqual(t, key("shared", "web", ""), key("shared", "mobile", ""))
+
+	withoutManifest := key("shared", "", "")
+	kit.persistedOperationManifest = &pqlmanifest.Manifest{Revision: "one"}
+	manifestKey := key("shared", "web", "")
+	require.Equal(t, manifestKey, key("shared", "mobile", ""))
+	require.NotEqual(t, withoutManifest, key("shared", "", ""))
+	kit.persistedOperationManifest = &pqlmanifest.Manifest{Revision: "two"}
+	require.NotEqual(t, manifestKey, key("shared", "web", ""))
 }

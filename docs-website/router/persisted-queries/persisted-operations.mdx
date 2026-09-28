@@ -101,7 +101,7 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 ### Operation IDs
 
-With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive and identify immutable operations. The router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
+With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive. The router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
 
 With APQ enabled, IDs must be SHA256 hashes and must match the query body when both are supplied.
 
@@ -113,7 +113,9 @@ With APQ enabled, IDs must be SHA256 hashes and must match the query body when b
 }
 ```
 
-Publish a new ID when an operation changes. Cached operations retain the existing cache lifetime. Body-based safelisting and `log_unknown` still look up operations by the body's SHA256, so publish under that hash when using those features with body-only requests.
+Manifest cache entries are scoped to the manifest revision. Changing the revision makes replacements and deletions effective for new requests; in-flight requests finish against their captured manifest. A revision must change whenever the operation map changes.
+
+Without a manifest, publish a new ID when an operation changes because cached operations retain the existing cache lifetime. Body-based safelisting and `log_unknown` still look up operations by the body's SHA256, so publish under that hash when using those features with body-only requests.
 
 For persisted operations, both the `persisted_operation_sha256` and `operation_sha256` context fields contain the supplied ID, including custom IDs.
 

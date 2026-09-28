@@ -26,6 +26,7 @@ import (
 	fastjson "github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -179,8 +180,13 @@ type parseKit struct {
 	inlineArgumentsIncludePersisted bool
 }
 
+type persistedOperationVariableNames struct {
+	manifestRevision string
+	names            []string
+}
+
 type OperationCache struct {
-	persistedOperationVariableNames     map[string][]string
+	persistedOperationVariableNames     map[string]persistedOperationVariableNames
 	persistedOperationVariableNamesLock *sync.RWMutex
 
 	automaticPersistedOperationCacheTtl float64
@@ -205,6 +211,8 @@ type OperationKit struct {
 	kit                      *parseKit
 	parsedOperation          *ParsedOperation
 	introspectionEnabled     bool
+
+	persistedOperationManifest *pqlmanifest.Manifest
 }
 
 type GraphQLRequest struct {
@@ -252,6 +260,8 @@ func NewOperationKit(processor *OperationProcessor) *OperationKit {
 		cache:                  processor.operationCache,
 		parsedOperation:        &ParsedOperation{},
 		introspectionEnabled:   processor.introspectionEnabled,
+
+		persistedOperationManifest: processor.persistedOperationClient.ManifestSnapshot(),
 	}
 }
 
@@ -264,6 +274,8 @@ func NewIndependentOperationKit(processor *OperationProcessor) *OperationKit {
 		cache:                  processor.operationCache,
 		parsedOperation:        &ParsedOperation{},
 		introspectionEnabled:   processor.introspectionEnabled,
+
+		persistedOperationManifest: processor.persistedOperationClient.ManifestSnapshot(),
 	}
 }
 
@@ -500,7 +512,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		var persistedOperationData []byte
 		var err error
 
-		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperationWithManifest(
+			ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
+			o.persistedOperationManifest,
+		)
 		if err != nil {
 			return false, isAPQ, err
 		}
@@ -1195,7 +1210,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, false, nil
 	}
 
-	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, false)
+	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, false)
 	if !ok {
 		_, _ = o.cache.persistedOperationNormalizationCache.Get(0) // register cache miss
 		return false, false, nil
@@ -1210,7 +1225,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, false, nil
 	}
 
-	if namedCacheKey, namedOk := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, true); namedOk {
+	if namedCacheKey, namedOk := o.loadPersistedOperationCacheKey(clientName, true); namedOk {
 		if namedEntry, ok := o.cache.persistedOperationNormalizationCache.Get(namedCacheKey); ok {
 			return true, true, o.handleFoundPersistedOperationEntry(namedEntry)
 		}
@@ -1266,11 +1281,12 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 	}
 
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
+	entry, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
-	if !present {
-		return false, variableNames
+	if !present || entry.manifestRevision != o.manifestRevision() {
+		return false, nil
 	}
+	variableNames := entry.names
 	cacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 
 	ttl, ok := o.cache.persistedOperationNormalizationCache.GetTTL(cacheKey)
@@ -1296,28 +1312,48 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 
 	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
 	o.cache.persistedOperationVariableNamesLock.Lock()
-	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)] = skipIncludeVariableNames
+	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)] = persistedOperationVariableNames{
+		manifestRevision: o.manifestRevision(),
+		names:            skipIncludeVariableNames,
+	}
 	o.cache.persistedOperationVariableNamesLock.Unlock()
 }
 
-func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
+func (o *OperationKit) loadPersistedOperationCacheKey(clientName string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
+	entry, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	var variableNames []string
+	if present && entry.manifestRevision == o.manifestRevision() {
+		variableNames = entry.names
+	}
 	key = o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 	return key, true
 }
 
-// IDs are immutable within their storage scope; manifests are graph-wide.
-func (o *OperationKit) persistedOperationIdentity(clientName string) string {
-	if o.operationProcessor.persistedOperationClient != nil && o.operationProcessor.persistedOperationClient.ManifestEnabled() {
-		clientName = ""
+func (o *OperationKit) manifestRevision() string {
+	if o.persistedOperationManifest == nil {
+		return ""
 	}
+	return o.persistedOperationManifest.Revision
+}
+
+// Keep one metadata entry per scoped ID; its revision is checked before reuse.
+func (o *OperationKit) persistedOperationIdentity(clientName string) string {
 	id := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+	if o.persistedOperationManifest != nil {
+		// Manifest operations are graph-wide, so their identity excludes clientName.
+		// The normalization cache key adds the captured manifest revision separately.
+		return id
+	}
+	// Without a manifest, operations are per-client. Framing prevents ambiguous keys
+	// and keeps them distinct from manifest IDs, which cannot contain a colon.
 	return fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
 }
 
 func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string, includeOperationName bool) uint64 {
+	revision := o.manifestRevision()
+	_, _ = fmt.Fprintf(o.kit.keyGen, "%d:%s", len(revision), revision)
 	_, _ = o.kit.keyGen.WriteString(o.persistedOperationIdentity(clientName))
 	name := ""
 	if includeOperationName {
@@ -1716,7 +1752,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache.automaticPersistedOperationCacheTtl = float64(opts.AutomaticPersistedOperationCacheTtl)
-		processor.operationCache.persistedOperationVariableNames = map[string][]string{}
+		processor.operationCache.persistedOperationVariableNames = map[string]persistedOperationVariableNames{}
 		processor.operationCache.persistedOperationVariableNamesLock = &sync.RWMutex{}
 		processor.operationCache.persistedOperationNormalizationCache = opts.PersistedOpsNormalizationCache
 	}

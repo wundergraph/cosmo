@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -325,6 +326,19 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	err = k.unmarshalOperation()
 	if err != nil {
 		return nil, err
+	}
+
+	// Queued warmup bodies may belong to an older manifest revision.
+	if k.persistedOperationManifest != nil && k.parsedOperation.IsPersistedOperation {
+		hash := k.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		body, found := k.persistedOperationManifest.Operations[hash]
+		if !found {
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: item.Client.Name,
+				Sha256Hash: hash,
+			}
+		}
+		k.parsedOperation.Request.Query = body
 	}
 
 	err = k.ComputeOperationSha256()

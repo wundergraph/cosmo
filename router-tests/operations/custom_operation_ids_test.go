@@ -18,6 +18,8 @@ import (
 )
 
 func TestCustomOperationIDs(t *testing.T) {
+	t.Parallel()
+
 	const query = `query Get($show: Boolean!) { employee(id: 1) { id @include(if: $show) } }`
 	const mobileQuery = `query Get($other: Boolean!) { employee(id: 2) { id @include(if: $other) } }`
 	ids := []string{"get_employee_v1", strings.Repeat("a", 64)}
@@ -96,6 +98,8 @@ func TestCustomOperationIDs(t *testing.T) {
 }
 
 func TestCustomOperationIDManifestWarmup(t *testing.T) {
+	t.Parallel()
+
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.True(t, strings.HasSuffix(r.URL.Path, "/operations/manifest.json"))
 		_, _ = w.Write([]byte(`{"version":1,"revision":"one","operations":{"get_employee_v1":"query Get { employee(id: 1) { id } }"}}`))

@@ -65,6 +65,22 @@ func NewClient(opts *Options) (*Client, error) {
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+	return c.PersistedOperationWithManifest(ctx, clientName, sha256Hash, c.ManifestSnapshot())
+}
+
+// ManifestSnapshot captures the manifest used for cache identity and body lookup.
+func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
+	if c == nil || c.pqlStore == nil {
+		return nil
+	}
+	return c.pqlStore.Snapshot()
+}
+
+// PersistedOperationWithManifest resolves against the captured manifest, even if it has since reloaded.
+// A nil snapshot uses the storage provider, as before the initial manifest load.
+func (c *Client) PersistedOperationWithManifest(
+	ctx context.Context, clientName, sha256Hash string, manifest *pqlmanifest.Manifest,
+) ([]byte, bool, error) {
 	if c.APQEnabled() {
 		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
@@ -72,14 +88,10 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		}
 	}
 
-	if data := c.cache.Get(clientName, sha256Hash); data != nil {
-		return data, false, nil
-	}
-
-	// PQL manifest check (local, no network)
-	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
-		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
-			return body, false, nil
+	// A loaded manifest takes precedence over cached storage-provider responses.
+	if manifest != nil {
+		if body, found := manifest.Operations[sha256Hash]; found {
+			return []byte(body), false, nil
 		}
 		// Manifest is authoritative — operation not found
 		if c.APQEnabled() {
@@ -88,6 +100,10 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return nil, false, &PersistentOperationNotFoundError{
 			ClientName: clientName, Sha256Hash: sha256Hash,
 		}
+	}
+
+	if data := c.cache.Get(clientName, sha256Hash); data != nil {
+		return data, false, nil
 	}
 
 	if c.providerClient == nil {
