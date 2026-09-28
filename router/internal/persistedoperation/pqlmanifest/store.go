@@ -72,14 +72,14 @@ func (s *Store) Close() {
 	close(s.updateCh)
 }
 
-// LookupByHash performs an O(1) map lookup by persisted operation ID.
-func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
+// LookupByID performs an O(1) map lookup by persisted operation ID.
+func (s *Store) LookupByID(id string) (body []byte, found bool) {
 	m := s.manifest.Load()
 	if m == nil {
 		return nil, false
 	}
 
-	op, ok := m.Operations[sha256Hash]
+	op, ok := m.Operations[id]
 	if !ok {
 		return nil, false
 	}

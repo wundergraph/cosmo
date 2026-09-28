@@ -36,8 +36,8 @@ func NewClient(path string, options *Options) (*client, error) {
 	return client, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
-	content, err := c.persistedOperation(clientName, sha256Hash)
+func (c client) PersistedOperation(ctx context.Context, clientName, operationID string) ([]byte, error) {
+	content, err := c.persistedOperation(clientName, operationID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +45,16 @@ func (c client) PersistedOperation(ctx context.Context, clientName, sha256Hash s
 	return content, nil
 }
 
-func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte, error) {
-	operationName := fmt.Sprintf("%s.json", sha256Hash)
+func (c client) persistedOperation(clientName string, operationID string) ([]byte, error) {
+	operationName := fmt.Sprintf("%s.json", operationID)
 	objectPath := filepath.Join(c.path, c.options.ObjectPathPrefix, operationName)
 
 	content, err := os.ReadFile(objectPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName: clientName,
-				Sha256Hash: sha256Hash,
+				ClientName:  clientName,
+				OperationID: operationID,
 			}
 		}
 		return nil, fmt.Errorf("failed to read persisted operation: %w", err)

@@ -17,16 +17,16 @@ type PersistedOperation struct {
 }
 
 type PersistentOperationNotFoundError struct {
-	ClientName string
-	Sha256Hash string
+	ClientName  string
+	OperationID string
 }
 
 func (e PersistentOperationNotFoundError) Error() string {
-	return fmt.Sprintf("operation '%s' for client '%s' not found", e.Sha256Hash, e.ClientName)
+	return fmt.Sprintf("operation '%s' for client '%s' not found", e.OperationID, e.ClientName)
 }
 
 type StorageClient interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+	PersistedOperation(ctx context.Context, clientName string, operationID string) ([]byte, error)
 	Close()
 }
 
@@ -64,21 +64,21 @@ func NewClient(opts *Options) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+func (c *Client) PersistedOperation(ctx context.Context, clientName string, operationID string) ([]byte, bool, error) {
 	if c.APQEnabled() {
-		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
+		resp, apqErr := c.apqStore.Get(ctx, operationID)
 		if len(resp) > 0 || apqErr != nil {
 			return resp, true, apqErr
 		}
 	}
 
-	if data := c.cache.Get(clientName, sha256Hash); data != nil {
+	if data := c.cache.Get(clientName, operationID); data != nil {
 		return data, false, nil
 	}
 
 	// PQL manifest check (local, no network)
 	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
-		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
+		if body, found := c.pqlStore.LookupByID(operationID); found {
 			return body, false, nil
 		}
 		// Manifest is authoritative — operation not found
@@ -86,7 +86,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 			return nil, true, nil
 		}
 		return nil, false, &PersistentOperationNotFoundError{
-			ClientName: clientName, Sha256Hash: sha256Hash,
+			ClientName: clientName, OperationID: operationID,
 		}
 	}
 
@@ -98,7 +98,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 
 	var poNotFound *PersistentOperationNotFoundError
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	content, err := c.providerClient.PersistedOperation(ctx, clientName, operationID)
 	if errors.As(err, &poNotFound) && c.APQEnabled() {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil
@@ -107,7 +107,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return nil, false, err
 	}
 
-	c.cache.Set(clientName, sha256Hash, content, 0)
+	c.cache.Set(clientName, operationID, content, 0)
 
 	return content, false, nil
 }
@@ -118,7 +118,7 @@ func (c *Client) SaveOperation(ctx context.Context, sha256Hash, operationBody st
 		// the manifest is the authoritative source and avoids redundant cache entries.
 		// For distributed APQ (Redis), always save so all router instances can resolve the operation.
 		if !c.apqStore.IsDistributed() && c.ManifestEnabled() {
-			if _, found := c.pqlStore.LookupByHash(sha256Hash); found {
+			if _, found := c.pqlStore.LookupByID(sha256Hash); found {
 				return nil
 			}
 		}

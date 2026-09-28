@@ -668,7 +668,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
-				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.OperationID))
 				// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
 				// persisted operation are logged above. We only allow execution to continue
 				// when the request includes a query body (the ad-hoc query to run) and

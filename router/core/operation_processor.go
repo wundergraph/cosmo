@@ -497,7 +497,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			return false, false, err
 		}
 		if len(body) == 0 {
-			return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
+			return false, false, &persistedoperation.PersistentOperationNotFoundError{ClientName: clientInfo.Name, OperationID: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash}
 		}
 		o.parsedOperation.Request.Query = string(body)
 		o.parsedOperation.IsPersistedOperation = true
@@ -547,8 +547,8 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 			// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
 			return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
-				ClientName: clientInfo.Name,
-				Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
+				ClientName:  clientInfo.Name,
+				OperationID: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
 			}
 		}
 
@@ -1338,9 +1338,9 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)] = skipIncludeVariableNames
 }
 
-func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
+func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedOperationID string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, persistedQuerySha256Hash)]
+	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName, persistedOperationID)]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if !present {
 		return 0, false

@@ -82,8 +82,8 @@ func NewClient(endpoint string, options *Options) (*Client, error) {
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
-	content, err := c.persistedOperation(ctx, clientName, sha256Hash)
+func (c Client) PersistedOperation(ctx context.Context, clientName, operationID string) ([]byte, error) {
+	content, err := c.persistedOperation(ctx, clientName, operationID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +91,8 @@ func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash s
 	return content, nil
 }
 
-func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
-	objectPath := fmt.Sprintf("%s/%s.json", c.options.ObjectPathPrefix, sha256Hash)
+func (c Client) persistedOperation(ctx context.Context, clientName, operationID string) ([]byte, error) {
+	objectPath := fmt.Sprintf("%s/%s.json", c.options.ObjectPathPrefix, operationID)
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err

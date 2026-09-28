@@ -41,27 +41,27 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 	return oc, nil
 }
 
-func (c *OperationsCache) key(clientName string, operationHash string) string {
-	return fmt.Sprintf("%d:%s%s", len(clientName), clientName, operationHash)
+func (c *OperationsCache) key(clientName string, operationID string) string {
+	return fmt.Sprintf("%d:%s%s", len(clientName), clientName, operationID)
 }
 
-func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
+func (c *OperationsCache) Get(clientName string, operationID string) []byte {
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
 	c.cacheLock.RLock()
-	item, _ := c.Cache.Get(c.key(clientName, operationHash))
+	item, _ := c.Cache.Get(c.key(clientName, operationID))
 	c.cacheLock.RUnlock()
 	return item
 }
 
-func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl time.Duration) {
+func (c *OperationsCache) Set(clientName, operationID string, operationBody []byte, ttl time.Duration) {
 	if ttl > 0 {
 		c.cacheLock.Lock()
-		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttl)
+		c.Cache.SetWithTTL(c.key(clientName, operationID), operationBody, int64(len(operationBody)), ttl)
 		c.cacheLock.Unlock()
 		return
 	}
 	c.cacheLock.Lock()
-	c.Cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
+	c.Cache.Set(c.key(clientName, operationID), operationBody, int64(len(operationBody)))
 	c.cacheLock.Unlock()
 }
