@@ -30,6 +30,7 @@ import {
   ARGUMENT,
   FIELD,
   FIELD_PATH,
+  FROM_CONTEXT,
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
@@ -585,6 +586,25 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
+      if (invalidFieldImplementation.interfaceContextCoords.size > 0) {
+        message +=
+          `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.interfaceContextCoords].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+      if (invalidFieldImplementation.implementationContextCoords.size > 0) {
+        message +=
+          `   "@${FROM_CONTEXT}" cannot be defined on the implementation of the Interface field` +
+          ` "${interfaceName}.${fieldName}".\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.implementationContextCoords].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
       if (invalidFieldImplementation.isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
@@ -623,6 +643,27 @@ export function invalidRequiredInputValueError(
       ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
+}
+
+export function requiredContextArgumentError(
+  coords: string,
+  fromContextSubgraphNames: Array<string>,
+  requiredSubgraphNames: Array<string>,
+): Error {
+  return new Error(
+    `The ${ARGUMENT} "${coords}" is invalid because:\n` +
+      ` It defines "@${FROM_CONTEXT}" in the following subgraph` +
+      (fromContextSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      fromContextSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` However, this argument is required in the following subgraph` +
+      (requiredSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      requiredSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must be optional in any subgraph that references it.\n`,
+  );
 }
 
 export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {
