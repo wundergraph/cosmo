@@ -30,7 +30,7 @@ func TestMCPOAuthAuthentication(t *testing.T) {
 				JWKS: []config.JWKSConfiguration{
 					{URL: oauthServer.JWKSURL()},
 				},
-				AuthorizationServerURL: oauthServer.Issuer(),
+				AuthorizationServerURLs: []string{oauthServer.Issuer()},
 			},
 		},
 		MCPAuthToken:      validToken,
@@ -82,7 +82,7 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 				JWKS: []config.JWKSConfiguration{
 					{URL: oauthServer.JWKSURL()},
 				},
-				AuthorizationServerURL: oauthServer.Issuer(),
+				AuthorizationServerURLs: []string{oauthServer.Issuer()},
 				Scopes: config.MCPOAuthScopesConfiguration{
 					Initialize:     []string{"mcp:connect"},
 					GetSchema:      []string{"mcp:tools:read"},
@@ -216,7 +216,7 @@ func TestMCPOAuthArrayScopeClaim(t *testing.T) {
 				JWKS: []config.JWKSConfiguration{
 					{URL: oauthServer.JWKSURL()},
 				},
-				AuthorizationServerURL: oauthServer.Issuer(),
+				AuthorizationServerURLs: []string{oauthServer.Issuer()},
 				Scopes: config.MCPOAuthScopesConfiguration{
 					Initialize: []string{"mcp:connect"},
 					GetSchema:  []string{"mcp:tools:read"},
@@ -265,7 +265,7 @@ func TestMCPOAuthUnreadableScopeClaim(t *testing.T) {
 				JWKS: []config.JWKSConfiguration{
 					{URL: oauthServer.JWKSURL()},
 				},
-				AuthorizationServerURL: oauthServer.Issuer(),
+				AuthorizationServerURLs: []string{oauthServer.Issuer()},
 				Scopes: config.MCPOAuthScopesConfiguration{
 					Initialize: []string{"mcp:connect"},
 				},

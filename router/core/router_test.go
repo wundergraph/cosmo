@@ -1,15 +1,52 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"net/url"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestSetupTelemetryMetricsOnlyErrorHandler(t *testing.T) {
+	// Don't run in parallel: telemetry setup changes OTEL globals.
+	previousHandler := otel.GetErrorHandler()
+	previousMeterProvider := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetErrorHandler(previousHandler)
+		otel.SetMeterProvider(previousMeterProvider)
+	})
+
+	logCore, logs := observer.New(zap.ErrorLevel)
+	r := &Router{Config: Config{
+		logger:               zap.New(logCore),
+		traceConfig:          &rtrace.Config{Enabled: false},
+		metricConfig:         &rmetric.Config{OpenTelemetry: rmetric.OpenTelemetry{Enabled: true}},
+		graphqlMetricsConfig: &GraphQLMetricsConfig{},
+	}}
+	require.NoError(t, r.setupTelemetry(t.Context()))
+	t.Cleanup(func() {
+		require.NoError(t, r.otlpMeterProvider.Shutdown(context.Background()))
+	})
+
+	exportErr := errors.New("metrics export failed")
+	otel.Handle(exportErr)
+	require.Equal(t, 1, logs.Len())
+	entry := logs.All()[0]
+	assert.Equal(t, "otel error", entry.Message)
+	assert.Equal(t, exportErr.Error(), entry.ContextMap()["error"])
+}
 
 func TestOverrideURLConfig(t *testing.T) {
 	options := []Option{
