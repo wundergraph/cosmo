@@ -209,5 +209,6 @@ replace (
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
 	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+	// Temporary until the subscriber lifecycle callback is released upstream.
+	github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20260925114140-d98f7099f35b
 )
