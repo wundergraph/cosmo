@@ -498,9 +498,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
-	// Without APQ, even a 64-hex ID may not be the body hash.
-	// Defer hash telemetry until lookup resolves the body.
-	if operationKit.operationProcessor.persistedOperationClient != nil && !operationKit.operationProcessor.persistedOperationClient.APQEnabled() && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query == "" {
+	if operationKit.shouldDeferOperationSha256() {
 		return false
 	}
 

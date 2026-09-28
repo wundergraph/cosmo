@@ -448,6 +448,15 @@ func (o *OperationKit) computeVariablesHash() {
 	o.kit.keyGen.Reset()
 }
 
+// Without APQ, even a 64-hex ID may not be the body hash.
+// Defer hashing and hash telemetry until lookup resolves the body.
+func (o *OperationKit) shouldDeferOperationSha256() bool {
+	return o.operationProcessor.persistedOperationClient != nil &&
+		!o.operationProcessor.persistedOperationClient.APQEnabled() &&
+		o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
+		o.parsedOperation.Request.Query == ""
+}
+
 func (o *OperationKit) ComputeOperationSha256() error {
 	// Calculate a fast hash of the operation query to save the
 	// expensive compute on the same request. We can't use the operation id at this point
