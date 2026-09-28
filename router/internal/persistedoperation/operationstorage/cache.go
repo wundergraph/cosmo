@@ -42,8 +42,8 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 	return oc, nil
 }
 
-func (c *OperationsCache) key(clientName string, operationID string) string {
-	return strconv.Itoa(len(clientName)) + ":" + clientName + operationID
+func (c *OperationsCache) key(clientName string, operationHash string) string {
+	return strconv.Itoa(len(clientName)) + ":" + clientName + operationHash
 }
 
 func (c *OperationsCache) Get(clientName string, operationHash string) []byte {

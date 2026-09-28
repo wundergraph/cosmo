@@ -14,12 +14,12 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/dgraph-io/ristretto/v2"
-	"github.com/hashicorp/golang-lru/v2"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
 
@@ -180,7 +180,8 @@ type parseKit struct {
 }
 
 type OperationCache struct {
-	persistedOperationVariableNames *lru.Cache[string, []string]
+	persistedOperationVariableNames     map[string][]string
+	persistedOperationVariableNamesLock *sync.RWMutex
 
 	automaticPersistedOperationCacheTtl float64
 
@@ -1196,8 +1197,11 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, false, nil
 	}
 
-	variableNames, _ := o.cache.persistedOperationVariableNames.Get(o.persistedOperationIdentity(clientName))
-	cacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames, false)
+	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, false)
+	if !ok {
+		_, _ = o.cache.persistedOperationNormalizationCache.Get(0) // register cache miss
+		return false, false, nil
+	}
 
 	entry, ok := o.cache.persistedOperationNormalizationCache.Get(cacheKey)
 	if ok {
@@ -1208,9 +1212,10 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, false, nil
 	}
 
-	namedCacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames, true)
-	if namedEntry, ok := o.cache.persistedOperationNormalizationCache.Get(namedCacheKey); ok {
-		return true, true, o.handleFoundPersistedOperationEntry(namedEntry)
+	if namedCacheKey, namedOk := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, true); namedOk {
+		if namedEntry, ok := o.cache.persistedOperationNormalizationCache.Get(namedCacheKey); ok {
+			return true, true, o.handleFoundPersistedOperationEntry(namedEntry)
+		}
 	}
 
 	return false, false, nil
@@ -1263,7 +1268,9 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 		return false, nil
 	}
 
-	variableNames, present := o.cache.persistedOperationVariableNames.Get(o.persistedOperationIdentity(clientName))
+	o.cache.persistedOperationVariableNamesLock.RLock()
+	variableNames, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
+	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	if !present {
 		return false, variableNames
 	}
@@ -1292,7 +1299,17 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	}
 
 	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
-	o.cache.persistedOperationVariableNames.Add(o.persistedOperationIdentity(clientName), skipIncludeVariableNames)
+	o.cache.persistedOperationVariableNamesLock.Lock()
+	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)] = skipIncludeVariableNames
+	o.cache.persistedOperationVariableNamesLock.Unlock()
+}
+
+func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
+	o.cache.persistedOperationVariableNamesLock.RLock()
+	variableNames := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
+	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	key = o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
+	return key, true
 }
 
 // IDs are immutable within their storage scope; manifests are graph-wide.
@@ -1703,8 +1720,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache.automaticPersistedOperationCacheTtl = float64(opts.AutomaticPersistedOperationCacheTtl)
-		// Metadata must be client-scoped too, and bounded like the normalization cache.
-		processor.operationCache.persistedOperationVariableNames, _ = lru.New[string, []string](max(1, int(opts.PersistedOpsNormalizationCache.MaxCost())))
+		processor.operationCache.persistedOperationVariableNames = map[string][]string{}
+		processor.operationCache.persistedOperationVariableNamesLock = &sync.RWMutex{}
 		processor.operationCache.persistedOperationNormalizationCache = opts.PersistedOpsNormalizationCache
 	}
 
