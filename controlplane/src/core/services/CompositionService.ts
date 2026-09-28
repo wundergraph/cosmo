@@ -77,11 +77,13 @@ export class CompositionService {
   public async composeAndDeployFederatedGraph({
     actorId,
     federatedGraph,
+    splitConfigLoading,
   }: {
     actorId: string;
     federatedGraph: FederatedGraphDTO;
+    splitConfigLoading?: boolean;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures(splitConfigLoading);
     const compositionOptions: CompositionOptions = {
       disableResolvabilityValidation: this.disableResolvabilityValidation,
       ignoreExternalKeys: orgFeatures.ignoreExternalKeys,
@@ -156,13 +158,15 @@ export class CompositionService {
     featureFlag,
     isEnabled,
     prevFederatedGraphs,
+    splitConfigLoading,
   }: {
     actorId: string;
     featureFlag: FeatureFlagDTO;
     isEnabled?: boolean;
     prevFederatedGraphs?: FederatedGraphDTO[];
+    splitConfigLoading?: boolean;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures(splitConfigLoading);
     const enabled = isEnabled ?? featureFlag.isEnabled;
     if (!orgFeatures.splitConfigLoading) {
       return await this.legacyComposeAndDeployFeatureFlag({
@@ -948,12 +952,19 @@ export class CompositionService {
     }
   }
 
-  private async getOrganizationFeatures(): Promise<OrganizationFeatures> {
+  private async getOrganizationFeatures(splitConfigLoading?: boolean): Promise<OrganizationFeatures> {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: this.organizationId,
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
+
+    if (splitConfigLoading !== undefined) {
+      return {
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        splitConfigLoading,
+      };
+    }
 
     const splitConfigFeature = await orgRepo.getFeature({
       organizationId: this.organizationId,

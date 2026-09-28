@@ -17,6 +17,7 @@ import {
 import {
   CACHE_TAG_DIRECTIVE,
   CONTEXT_DIRECTIVE,
+  CONTEXT_FIELD_VALUE_SCALAR,
   FROM_CONTEXT_DIRECTIVE,
   OVERRIDE_DIRECTIVE,
   POLICY_DIRECTIVE,
@@ -100,7 +101,7 @@ describe('Unsupported directives test', () => {
       
       ${FROM_CONTEXT_DIRECTIVE}
       
-      scalar ContextFieldValue
+      ${CONTEXT_FIELD_VALUE_SCALAR}
       
       type Query {
         a(a: ID @fromContext(field: "test")): ID
@@ -134,7 +135,7 @@ describe('Unsupported directives test', () => {
       
       ${FROM_CONTEXT_DIRECTIVE}
       
-      scalar ContextFieldValue
+      ${CONTEXT_FIELD_VALUE_SCALAR}
       
       type Query {
         a(a: ID @fromContext(field: "test")): ID
