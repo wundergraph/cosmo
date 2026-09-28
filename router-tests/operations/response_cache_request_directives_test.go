@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -148,6 +149,39 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 			requireMood(t, moodIn(t, xEnv, "de"), "SAD")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
 				"the refreshed record must still point at the first variant")
+		})
+	})
+
+	t.Run("no-cache does not join an in-flight request that reads the cache", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: append(responseCacheOptions(t, time.Minute),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					EnableInboundRequestDeduplication: true,
+				})),
+			Subgraphs: testenv.SubgraphsConfig{
+				// The uncacheable root fetch keeps a request in flight for the delay.
+				Employees: testenv.SubgraphConfig{Delay: 300 * time.Millisecond, Middleware: cacheControlMiddleware("no-store")},
+				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			// The leader reads mood from the warm entry once its root fetch returns.
+			leader := make(chan struct{})
+			go func() {
+				defer close(leader)
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			}()
+			time.Sleep(100 * time.Millisecond)
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noCache})
+			<-leader
+
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),
+				"a no-cache request must fetch mood itself, not take the leader's answer from the cache")
 		})
 	})
 

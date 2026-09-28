@@ -244,6 +244,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			PrivateID: h.responseCachePrivateID.resolve(reqCtx.expressionContext, h.responseCacheErrorHandler),
 		})
 	}
+	if h.responseCacheStore != nil && reqCtx.cacheControl != nil && reqCtx.cacheControl.NoCache {
+		// The leader of a shared flight may answer from the cache,
+		// so a no-cache request resolves on its own.
+		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
+	}
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
 	}
