@@ -2,9 +2,11 @@ package operationstorage
 
 import (
 	"fmt"
-	"github.com/dgraph-io/ristretto/v2"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/ristretto/v2"
 )
 
 var (
@@ -42,7 +44,7 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 }
 
 func (c *OperationsCache) key(clientName string, operationID string) string {
-	return fmt.Sprintf("%d:%s%s", len(clientName), clientName, operationID)
+	return strconv.Itoa(len(clientName)) + ":" + clientName + operationID
 }
 
 func (c *OperationsCache) Get(clientName string, operationID string) []byte {
