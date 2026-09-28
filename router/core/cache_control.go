@@ -34,22 +34,22 @@ func selectCacheStore(store caching.Cache, directives *cachedirective.RequestCac
 	case directives.NoCache && directives.NoStore:
 		return nil
 	case directives.NoCache:
-		return writeOnlyCache{store}
+		return notCached{store}
 	case directives.NoStore:
-		return readOnlyCache{store}
+		return notStored{store}
 	}
 	return store
 }
 
-// writeOnlyCache is a store every lookup for a body misses on. Writes pass through.
-type writeOnlyCache struct {
+// notCached is a store every lookup for a body misses on. Writes pass through.
+type notCached struct {
 	store caching.Cache
 }
 
 // GetMany finds vary records only.
 // A refresh merges their sets into the record it writes,
 // so variants stored under earlier sets stay reachable.
-func (w writeOnlyCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
+func (w notCached) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	found, err := w.store.GetMany(ctx, keys)
 	if err != nil {
 		return nil, err
@@ -60,23 +60,24 @@ func (w writeOnlyCache) GetMany(ctx context.Context, keys []string) (map[string]
 	return found, nil
 }
 
-func (w writeOnlyCache) SetMany(ctx context.Context, items []caching.Item) error {
+func (w notCached) SetMany(ctx context.Context, items []caching.Item) error {
 	return w.store.SetMany(ctx, items)
 }
 
-var _ caching.Cache = writeOnlyCache{}
-
-// readOnlyCache is a store that drops every write. Lookups pass through.
-type readOnlyCache struct {
+// notStored is a store that drops every write. Lookups pass through.
+type notStored struct {
 	store caching.Cache
 }
 
-func (r readOnlyCache) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
+func (r notStored) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	return r.store.GetMany(ctx, keys)
 }
 
-func (readOnlyCache) SetMany(context.Context, []caching.Item) error {
+func (notStored) SetMany(context.Context, []caching.Item) error {
 	return nil
 }
 
-var _ caching.Cache = readOnlyCache{}
+var (
+	_ caching.Cache = notCached{}
+	_ caching.Cache = notStored{}
+)

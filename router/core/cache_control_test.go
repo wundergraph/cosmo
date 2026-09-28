@@ -68,8 +68,8 @@ func TestSelectCacheStore(t *testing.T) {
 	t.Run("no-store reads the store but does not write to it", func(t *testing.T) {
 		t.Parallel()
 		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoStore: true})
-		require.IsType(t, readOnlyCache{}, got)
-		require.Same(t, store, got.(readOnlyCache).store)
+		require.IsType(t, notStored{}, got)
+		require.Same(t, store, got.(notStored).store)
 	})
 
 	t.Run("no-cache with no-store keeps the request out of the cache", func(t *testing.T) {
@@ -80,8 +80,8 @@ func TestSelectCacheStore(t *testing.T) {
 	t.Run("no-cache misses but writes to the store", func(t *testing.T) {
 		t.Parallel()
 		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoCache: true})
-		require.IsType(t, writeOnlyCache{}, got)
-		require.Same(t, store, got.(writeOnlyCache).store)
+		require.IsType(t, notCached{}, got)
+		require.Same(t, store, got.(notCached).store)
 	})
 
 	t.Run("a nil store is not wrapped", func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestSelectCacheStore(t *testing.T) {
 	})
 }
 
-func TestWriteOnlyCache(t *testing.T) {
+func TestNotCached(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -101,7 +101,7 @@ func TestWriteOnlyCache(t *testing.T) {
 	record := caching.Item{Key: "record", Vary: [][]string{{"accept-language"}, {"x-region"}}, TTL: time.Minute}
 	require.NoError(t, store.SetMany(ctx, []caching.Item{warm, record}))
 
-	noCache := writeOnlyCache{store}
+	noCache := notCached{store}
 
 	t.Run("bodies and uncached keys miss", func(t *testing.T) {
 		found, err := noCache.GetMany(ctx, []string{"warm", "cold"})
@@ -127,7 +127,7 @@ func TestWriteOnlyCache(t *testing.T) {
 	})
 }
 
-func TestReadOnlyCache(t *testing.T) {
+func TestNotStored(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -135,7 +135,7 @@ func TestReadOnlyCache(t *testing.T) {
 	warm := caching.Item{Key: "warm", Value: []byte(`{"a":1}`), TTL: time.Minute}
 	require.NoError(t, store.SetMany(ctx, []caching.Item{warm}))
 
-	noStore := readOnlyCache{store}
+	noStore := notStored{store}
 
 	t.Run("lookups reach the store", func(t *testing.T) {
 		found, err := noStore.GetMany(ctx, []string{"warm"})
