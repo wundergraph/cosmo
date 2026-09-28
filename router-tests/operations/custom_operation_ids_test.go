@@ -46,16 +46,13 @@ func TestCustomOperationIDs(t *testing.T) {
 		LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
 		RouterOptions:  []core.Option{core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{LogUnknown: true})},
 	}, func(t *testing.T, e *testenv.Environment) {
-		request := func(id, client, body, variables string, get bool) *testenv.TestResponse {
-			req := testenv.GraphQLRequest{Query: body, Variables: json.RawMessage(variables), Header: http.Header{"Graphql-Client-Name": {client}},
-				Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id))}
-			var res *testenv.TestResponse
-			var err error
-			if get {
-				res, err = e.MakeGraphQLRequestOverGET(req)
-			} else {
-				res, err = e.MakeGraphQLRequest(req)
-			}
+		request := func(id, client, body, variables string) *testenv.TestResponse {
+			res, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:      body,
+				Variables:  json.RawMessage(variables),
+				Header:     http.Header{"Graphql-Client-Name": {client}},
+				Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id)),
+			})
 			if !assert.NoError(t, err) {
 				return &testenv.TestResponse{Response: &http.Response{}}
 			}
@@ -63,12 +60,12 @@ func TestCustomOperationIDs(t *testing.T) {
 		}
 		for _, id := range ids {
 			// A supplied body neither replaces the published operation nor has to hash to its ID.
-			res := request(id, "web", `query { __typename }`, `{"show":true}`, false)
+			res := request(id, "web", `query { __typename }`, `{"show":true}`)
 			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			logs := e.Observer().FilterMessage("/graphql").All()
 			require.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
 			require.Eventually(t, func() bool {
-				res = request(id, "web", "", `{"show":true}`, true)
+				res = request(id, "web", "", `{"show":true}`)
 				return res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
 			}, time.Second*5, time.Millisecond*10)
 			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
@@ -77,14 +74,14 @@ func TestCustomOperationIDs(t *testing.T) {
 		}
 		// Different clients may use the same ID with different conditional variables.
 		require.Eventually(t, func() bool {
-			res := request(ids[0], "mobile", "", `{"other":true}`, false)
+			res := request(ids[0], "mobile", "", `{"other":true}`)
 			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, res.Body)
 			return res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
 		}, time.Second*5, time.Millisecond*10)
-		require.JSONEq(t, `{"data":{"employee":{}}}`, request(ids[0], "web", "", `{"show":false,"other":true}`, false).Body)
+		require.JSONEq(t, `{"data":{"employee":{}}}`, request(ids[0], "web", "", `{"show":false,"other":true}`).Body)
 		for _, id := range []string{"missing", "GET_EMPLOYEE_V1"} {
-			require.Contains(t, request(id, "web", query, `{"show":true}`, false).Body, "PersistedQueryNotFound")
-			require.Contains(t, request(id, "web", "", `{"show":true}`, false).Body, "PersistedQueryNotFound")
+			require.Contains(t, request(id, "web", query, `{"show":true}`).Body, "PersistedQueryNotFound")
+			require.Contains(t, request(id, "web", "", `{"show":true}`).Body, "PersistedQueryNotFound")
 		}
 
 		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": {"web"}}, nil, nil)
