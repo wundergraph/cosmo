@@ -60,11 +60,12 @@ storage_providers:
 
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   key_prefix: 'cosmo_response_cache:'
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -78,10 +79,11 @@ Each replica holds its own cache, nothing survives a restart, and no Redis is ne
 ```yaml config.yaml
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   storage:
     provider: 'memory'
     max_entries: 2048
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -93,19 +95,33 @@ response_cache:
 response_cache:
   # Enable response caching. Default: false.
   enabled: true
-  # Lifetime for a response with a recognized caching directive but no lifetime.
-  # A response naming its own max-age or s-maxage gets that instead.
-  # Minimum 1s. Default: 30s.
-  fallback_ttl: 30s
   # Prepended to every cache key so entries cannot collide with anything else
   # sharing the Redis instance. Redis only, ignored by the memory provider.
   # Default: cosmo_response_cache:
   key_prefix: 'cosmo_response_cache:'
-  # Expression yielding the id of the private context a request belongs
-  # to, such as a user or a tenant, so private subgraph responses can be
-  # cached per context. See Private responses.
-  # Default: none, private responses are not cached.
-  private_id: ''
+  # What the cache does for every subgraph without an entry under subgraphs.
+  all:
+    # Cache this subgraph's responses. Set to false to cache only the
+    # subgraphs listed under subgraphs. Default: true.
+    enabled: true
+    # Lifetime for a response with a recognized caching directive but no lifetime.
+    # A response naming its own max-age or s-maxage gets that instead.
+    # Minimum 1s. Default: 30s.
+    fallback_ttl: 30s
+    # Expression yielding the id of the private context a request belongs
+    # to, such as a user or a tenant, so private subgraph responses can be
+    # cached per context. See Private responses.
+    # Default: none, private responses are not cached.
+    private_id: ''
+  # Per-subgraph settings, keyed by subgraph name. An entry replaces all
+  # entirely and is explicit: nothing is inherited and nothing is defaulted.
+  # See Per-subgraph configuration.
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
   storage:
     # redis or memory. Default: redis.
     provider: 'redis'
@@ -149,7 +165,42 @@ response_cache:
 
 `storage` is required when `enabled` is `true`.
 
-Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less fails startup either way, as does a `private_id` that does not compile.
+Environment variables bypass the config schema validation. In each enabled scope, a `fallback_ttl` of zero or less fails startup, as does a `private_id` that does not compile.
+
+## Per-subgraph configuration
+
+`all` applies to every subgraph. An entry under `subgraphs`, keyed by subgraph name, replaces `all` for that subgraph:
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+```
+
+Here `inventory` is never cached, `products` keeps responses without a lifetime for five minutes, and every other subgraph keeps them for thirty seconds.
+
+An entry is a full override and is explicit. Nothing under `all` reaches a subgraph that has an entry, and no key is defaulted:
+
+* `enabled` must be set. An entry without it does not cache that subgraph. A `fallback_ttl` on its own does not enable anything.
+* An enabled entry must set `fallback_ttl`, or startup fails naming the entry.
+* An entry without `private_id` has none. So `products` above does not cache its `private` responses, although `all` names an id. Repeat the `private_id` in the entry to keep it.
+
+Setting `all.enabled` to `false` turns the cache off for every subgraph without an entry, so only the entries that set `enabled: true` are cached. With no such entry the router starts and logs a warning, and nothing is cached.
+
+An entry naming a subgraph the graph does not have is kept and logged at startup, since a feature flag graph may have it.
+
+The invalidation indexes, the invalidation endpoint, and the cache tag header are not per subgraph.
 
 ## Private responses
 
@@ -163,15 +214,18 @@ response_cache:
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
-  private_id: "request.auth.claims.sub"
+  all:
+    private_id: "request.auth.claims.sub"
 ```
+
+Under `all` it applies to every subgraph. Under a `subgraphs` entry it applies to that subgraph alone, and an entry without one has none. See [Per-subgraph configuration](#per-subgraph-configuration).
 
 With a `private_id` in place:
 
 * A `private` response is stored under a key that includes the id, so each context has an entry of its own. A lookup with one id never finds an entry stored under another.
 * A request for which the expression yields nothing, such as an anonymous request whose claim is `nil`, is not cached when the subgraph answers `private`. The subgraph is asked every time. This is not an error.
 * `public` responses are unaffected. They are stored under the shared key and served to every request, whatever the id.
-* A response served from a private entry reaches the client with `Cache-Control: private` and the entry's remaining lifetime, so a browser or CDN in front of the router does not share it either.
+* With [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control) or a `most_restrictive_cache_control` response header rule in place, a response served from a private entry reaches the client with `Cache-Control: private` and the entry's remaining lifetime, so a browser or CDN in front of the router does not share it either. Without one, the router sends no `Cache-Control` for the hit.
 * Invalidation by subgraph, type, or cache tag drops private entries like any other.
 
 The id is digested with SHA-256 before it becomes part of the key, so raw ids never reach the store. The expression must evaluate to a string. A value of any other type is reported through the response cache warning described under [Observability](#observability) and treated as no id.
@@ -180,6 +234,8 @@ The id is digested with SHA-256 before it becomes part of the key, so raw ids ne
   `private_id` partitions the cache. It does not by itself guarantee that a response is served only to those it was meant for: two requests with the same id share an entry, whatever else differs between them. Propagated headers are not part of the key unless the subgraph names them in `Vary`, so a `private` answer that also depends on a header the id does not account for is served to every request with that id. Name the header in `Vary`, fold it into the expression, or have the subgraph answer `no-store`.
 
   An expression that yields the same value for different contexts, or one that can be set by the client itself, lets one context be served another's entry. Prefer a verified claim over a plain header.
+
+  A [`set` response header rule](/router/proxy-capabilities/subgraph-response-header-operations) on `Cache-Control` replaces what the subgraph sent, `private` included. A hit served from a private entry is treated the same as the origin response, so such a rule can hand the client a `public` policy for it.
 </Warning>
 
 ## Varying responses
@@ -190,7 +246,7 @@ A subgraph whose answer depends on a request header, such as `Accept-Language`, 
 * A later lookup finds the record, digests the values this request sends the subgraph for those headers, and looks the variant up under the resulting key. A varying response costs two cache round trips per lookup. A response without `Vary` costs one, as before.
 * Values are taken from the request as the subgraph receives it, after header propagation. A header named in `Vary` that the router does not forward counts as empty, so it never splits the cache.
 * `Vary: *` is never cached, and neither is a response naming more than 100 headers.
-* A header whose value differs per caller, such as `Cookie` or `Authorization`, yields one variant per caller. Nobody is served another caller's body, but the entries are rarely reused. A subgraph whose answer is per user should say `private` instead.
+* A header whose value differs per caller, such as `Cookie` or `Authorization`, yields one variant per caller. Nobody is served another caller's body, but the entries are rarely reused. A subgraph whose answer is per caller should say `private` instead.
 * A subgraph that changes what it varies on adds the new set of names to the record on its next miss, newest first, rather than replacing it. A lookup tries one variant per set in that order and serves the first it finds, so variants stored under the old names stay reachable until they expire. A record keeps at most 8 sets; past that the oldest are dropped.
 * With `engine.enable_multi_fetch` on, a merged entity fetch carries one `Vary` for the whole response, and the router applies it to every alias in it. An alias whose own answer would have varied on less is stored under the wider set, which splits its entries by headers they do not depend on. That costs extra misses, never a wrong body. A merged fetch follows records the same way a single fetch does, with one second round trip for all of its aliases together. The lever for the cost is on the subgraph side: emit the minimum `Vary` for what was actually resolved rather than a fixed union for the service.
 
@@ -378,14 +434,16 @@ Startup fails when `name` is not a valid header name or is `Content-Length`, `Co
 The router logs once at startup when the cache is enabled. With the Redis provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
 ```
 
 With the memory provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "memory", "max_entries": 2048}
 ```
+
+`fallback_ttl` is the value under `all` and `subgraph_overrides` counts the entries under `subgraphs`.
 
 Nothing is logged when the cache is disabled.
 
