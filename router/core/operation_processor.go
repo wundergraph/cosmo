@@ -520,8 +520,8 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			return false, isAPQ, err
 		}
 
-		if !o.operationProcessor.persistedOperationClient.APQEnabled() && len(persistedOperationData) == 0 ||
-			isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+		if (!o.operationProcessor.persistedOperationClient.APQEnabled() && len(persistedOperationData) == 0) ||
+			(isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "") {
 			// Published IDs must resolve; APQ misses need a body to register.
 			return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
 				ClientName: clientInfo.Name,
