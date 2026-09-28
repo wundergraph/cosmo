@@ -18,16 +18,60 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 	require.NoError(t, err)
 	defer apqClient.Close()
 
-	for _, client := range []*persistedoperation.Client{nil, {}, apqClient} {
-		processor := NewOperationProcessor(OperationProcessorOptions{Executor: &Executor{}, PersistedOperationClient: client})
-		for _, id := range []string{"get_employee-v1", strings.Repeat("a", 64), strings.Repeat("z", 250), "", "../operation", "a b", "ä", strings.Repeat("z", 251)} {
-			kit, err := processor.NewKit()
-			require.NoError(t, err)
-			err = kit.UnmarshalOperationFromBody([]byte(fmt.Sprintf(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`, id)))
-			valid := id == strings.Repeat("a", 64) || client != nil && !client.APQEnabled() && (id == "get_employee-v1" || len(id) == 250)
-			require.Equal(t, valid, err == nil, "ID %q, client %v", id, client)
-			kit.Free()
-		}
+	modes := []struct {
+		name           string
+		client         *persistedoperation.Client
+		allowCustomIDs bool
+	}{
+		{name: "unconfigured"},
+		{name: "published", client: &persistedoperation.Client{}, allowCustomIDs: true},
+		{name: "APQ", client: apqClient},
+	}
+	tests := []struct {
+		name          string
+		id            string
+		validHash     bool
+		validCustomID bool
+	}{
+		{name: "custom ID", id: "get_employee-v1", validCustomID: true},
+		{name: "SHA256", id: strings.Repeat("a", 64), validHash: true, validCustomID: true},
+		{name: "maximum length", id: strings.Repeat("z", 250), validCustomID: true},
+		{name: "empty", id: ""},
+		{name: "path traversal", id: "../operation"},
+		{name: "space", id: "a b"},
+		{name: "non-ASCII", id: "ä"},
+		{name: "too long", id: strings.Repeat("z", 251)},
+	}
+
+	for _, mode := range modes {
+		t.Run(mode.name, func(t *testing.T) {
+			processor := NewOperationProcessor(OperationProcessorOptions{
+				Executor:                 &Executor{},
+				PersistedOperationClient: mode.client,
+			})
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					kit, err := processor.NewKit()
+					require.NoError(t, err)
+					defer kit.Free()
+
+					body := fmt.Sprintf(
+						`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`,
+						tt.id,
+					)
+					err = kit.UnmarshalOperationFromBody([]byte(body))
+					valid := tt.validHash
+					if mode.allowCustomIDs {
+						valid = tt.validCustomID
+					}
+					if valid {
+						require.NoError(t, err)
+					} else {
+						require.Error(t, err)
+					}
+				})
+			}
+		})
 	}
 }
 
