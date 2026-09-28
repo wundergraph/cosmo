@@ -2354,7 +2354,14 @@ func TestWebSockets(t *testing.T) {
 	t.Run("operation with mismatched hash is rejected", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true, Cache: config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024}}}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
 
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
