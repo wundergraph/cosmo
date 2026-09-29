@@ -295,48 +295,6 @@ func TestCacheWarmup(t *testing.T) {
 		})
 		t.Run("cache warmup persisted operation", func(t *testing.T) {
 			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-						Enabled: true,
-						Source: config.CacheWarmupSource{
-							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "testdata/cache_warmup/json_po",
-							},
-						},
-					}),
-				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   2,
-						PersistedQueryNormalizationMisses: 1,
-						ValidationHits:                    2,
-						ValidationMisses:                  1,
-						PlanHits:                          2,
-						PlanMisses:                        1,
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				header := make(http.Header)
-				header.Add("graphql-client-name", "my-client")
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
-					Header:        header,
-				})
-				require.NoError(t, err)
-				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-
-				res2, err2 := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
-					Header:     header,
-				})
-				require.NoError(t, err2)
-				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
-			})
-		})
-		t.Run("cache warmup persisted operation normalization cache hit", func(t *testing.T) {
-			t.Parallel()
 
 			metricReader := metric.NewManualReader()
 			testenv.Run(t, &testenv.Config{
@@ -421,13 +379,16 @@ func TestCacheWarmup(t *testing.T) {
 				assert.Equal(t, uint64(2), planned, "both hash-only warmup items must reach planning")
 				assert.Zero(t, xEnv.Observer().FilterMessage("Failed to process operation, skipping").Len())
 
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
-					Header:     http.Header{"Graphql-Client-Name": {"my-client"}},
-				})
-				assert.JSONEq(t, testutils.EmployeesIDData, res.Body)
-				assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
-				assert.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				for _, operationName := range []string{`"Employees"`, ""} {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(operationName),
+						Extensions:    []byte(`{"persistedQuery":{"version":1,"sha256Hash":"dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        http.Header{"Graphql-Client-Name": {"my-client"}},
+					})
+					assert.JSONEq(t, testutils.EmployeesIDData, res.Body)
+					assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+					assert.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				}
 			})
 		})
 		t.Run("cache warmup persisted operation with and without queries passed", func(t *testing.T) {
