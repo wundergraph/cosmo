@@ -245,7 +245,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.subgraphTrippers,
 		b.pluginHost,
 		b.logger,
-		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
 	), b.logger, b.subscriptionHooks)
 

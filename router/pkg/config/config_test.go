@@ -2842,3 +2842,34 @@ response_cache:
 		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products'")
 	})
 }
+
+func TestDeprecatedWebSocketPollerOptions(t *testing.T) {
+	for _, source := range []string{"absent", "yaml", "environment"} {
+		t.Run(source, func(t *testing.T) {
+			for _, key := range []string{"ENGINE_ENABLE_NET_POLL", "ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT", "ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE"} {
+				t.Setenv(key, "")
+			}
+			input := "version: '1'\ngraph:\n  token: test\n"
+			switch source {
+			case "yaml":
+				input += "engine:\n  enable_net_poll: false\n  websocket_server_poll_timeout: 0s\n  websocket_server_conn_buffer_size: 0\n"
+			case "environment":
+				t.Setenv("ENGINE_ENABLE_NET_POLL", "false")
+				t.Setenv("ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT", "0s")
+				t.Setenv("ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE", "0")
+			}
+			loaded, err := LoadConfig([]string{createTempFileFromFixture(t, input)})
+			require.NoError(t, err)
+			cfg := loaded.Config.EngineExecutionConfiguration
+			if source == "absent" {
+				require.Nil(t, cfg.EnableNetPoll)
+				require.Nil(t, cfg.WebSocketServerPollTimeout)
+				require.Nil(t, cfg.WebSocketServerConnBufferSize)
+			} else {
+				require.Equal(t, new(false), cfg.EnableNetPoll)
+				require.Equal(t, new(time.Duration(0)), cfg.WebSocketServerPollTimeout)
+				require.Equal(t, new(0), cfg.WebSocketServerConnBufferSize)
+			}
+		})
+	}
+}

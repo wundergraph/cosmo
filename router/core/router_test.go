@@ -444,3 +444,32 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
 }
+
+func TestDeprecatedWebSocketPollerWarnings(t *testing.T) {
+	t.Parallel()
+	for _, explicit := range []bool{false, true} {
+		t.Run(map[bool]string{false: "absent", true: "explicit zero values"}[explicit], func(t *testing.T) {
+			t.Parallel()
+			logCore, logs := observer.New(zap.WarnLevel)
+			cfg := &config.EngineExecutionConfiguration{}
+			if explicit {
+				cfg.EnableNetPoll = new(false)
+				cfg.WebSocketServerPollTimeout = new(time.Duration(0))
+				cfg.WebSocketServerConnBufferSize = new(0)
+			}
+			r := &Router{Config: Config{logger: zap.New(logCore), engineExecutionConfiguration: *cfg}}
+			r.warnDeprecatedWebSocketPollerOptions()
+			if !explicit {
+				require.Zero(t, logs.Len())
+				return
+			}
+			require.Len(t, logs.All(), 3)
+			for i, option := range []string{"engine.enable_net_poll", "engine.websocket_server_poll_timeout", "engine.websocket_server_conn_buffer_size"} {
+				entry := logs.All()[i]
+				require.Contains(t, entry.Message, "has no effect")
+				require.Equal(t, option, entry.ContextMap()["option"])
+				require.NotEmpty(t, entry.ContextMap()["environment_variable"])
+			}
+		})
+	}
+}

@@ -481,8 +481,9 @@ type EngineExecutionConfiguration struct {
 	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
-	MaxConcurrentResolvers int  `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll          bool `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	MaxConcurrentResolvers int `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	// Deprecated: the manual WebSocket poller has been removed. This option has no effect.
+	EnableNetPoll *bool `env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll,omitempty"`
 
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
@@ -514,10 +515,12 @@ type EngineExecutionConfiguration struct {
 	EnableScheduleFetches bool `envDefault:"true" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
-	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
-	WebSocketServerWriteTimeout   time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
-	WebSocketServerPollTimeout    time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
-	WebSocketServerConnBufferSize int           `envDefault:"128" env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
+	WebSocketServerReadTimeout  time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
+	WebSocketServerWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
+	// Deprecated: the manual WebSocket poller has been removed. This option has no effect.
+	WebSocketServerPollTimeout *time.Duration `env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
+	// Deprecated: the manual WebSocket poller has been removed. This option has no effect.
+	WebSocketServerConnBufferSize *int `env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
 
 	// Subscription client options (router connecting to subgraphs)
 	WebSocketClientWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`

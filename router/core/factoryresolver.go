@@ -88,7 +88,6 @@ func NewDefaultFactoryResolver(
 	subgraphTransports map[string]http.RoundTripper,
 	connector *grpcconnector.Connector,
 	log *zap.Logger,
-	enableNetPoll bool,
 	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)

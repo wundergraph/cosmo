@@ -1559,7 +1559,6 @@ func TestErrorPropagation(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -1591,7 +1590,6 @@ func TestErrorPropagation(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -1623,7 +1621,6 @@ func TestErrorPropagation(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -1655,7 +1652,6 @@ func TestErrorPropagation(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),

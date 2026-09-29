@@ -1,18 +1,18 @@
 package core
 
 import (
+	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
 	"slices"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/buger/jsonparser"
@@ -33,7 +33,6 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -59,10 +58,6 @@ type WebsocketMiddlewareOptions struct {
 	Stats              statistics.EngineStatistics
 	ReadTimeout        time.Duration
 	WriteTimeout       time.Duration
-
-	EnableNetPoll         bool
-	NetPollTimeout        time.Duration
-	NetPollConnBufferSize int
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
@@ -130,18 +125,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.forwardQueryParamsConfig.withStaticAllowList = len(handler.forwardQueryParamsConfig.staticAllowList) > 0
 		handler.forwardQueryParamsConfig.withRegexAllowList = len(handler.forwardQueryParamsConfig.regexAllowList) > 0
 	}
-	if opts.EnableNetPoll {
-		poller, err := netpoll.NewPoller(opts.NetPollConnBufferSize, opts.NetPollTimeout)
-		if err == nil {
-			opts.Logger.Debug("Net poller is available")
-
-			handler.netPoll = poller
-			handler.connections = make(map[int]*WebSocketConnectionHandler)
-			go handler.runPoller()
-		}
-
-	}
-
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !websocket.IsWebSocketUpgrade(r) {
@@ -153,37 +136,103 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 	}
 }
 
-// wsConnectionWrapper is a wrapper around websocket.Conn that allows
-// writing from multiple goroutines
+// wsConnectionWrapper owns a single reader and serializes writes to a WebSocket.
 type wsConnectionWrapper struct {
+	ctx          context.Context
+	reader       *bufio.Reader
+	stopRead     func() bool
 	conn         net.Conn
 	mu           sync.Mutex
 	readTimeout  time.Duration
 	writeTimeout time.Duration
 }
 
-func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
-	return &wsConnectionWrapper{
+// errWebsocketIdleTimeout means no bytes of the next message have been consumed.
+// Only this timeout is safe to retry; a partial message must close the connection.
+var errWebsocketIdleTimeout = errors.New("websocket idle read timeout")
+
+func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
+	c := &wsConnectionWrapper{
+		ctx:          ctx,
 		conn:         conn,
+		reader:       bufio.NewReaderSize(conn, ws.MaxHeaderSize),
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 	}
+	// Interrupt idle and partial reads on shutdown, even without a read timeout.
+	c.stopRead = context.AfterFunc(ctx, func() {
+		_ = conn.SetReadDeadline(time.Now())
+	})
+	return c
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
-	if c.readTimeout > 0 {
-		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+	controlHandler := c.handleControlFrame
+	reader := wsutil.Reader{
+		Source:         c.reader,
+		State:          ws.StateServerSide,
+		CheckUTF8:      true,
+		OnIntermediate: controlHandler,
+	}
+	for {
+		if err := c.resetReadDeadline(); err != nil {
+			return err
+		}
+		if _, err := c.reader.Peek(1); err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return errWebsocketIdleTimeout
+			}
+			return err
+		}
+		// Time the message from its first byte, not from the start of the idle wait.
+		if err := c.resetReadDeadline(); err != nil {
+			return err
+		}
+		header, err := reader.NextFrame()
 		if err != nil {
 			return err
 		}
+		if header.OpCode.IsControl() {
+			if err := controlHandler(header, &reader); err != nil {
+				return err
+			}
+			continue
+		}
+		if header.OpCode != ws.OpText {
+			if err := reader.Discard(); err != nil {
+				return err
+			}
+			continue
+		}
+		text, err := io.ReadAll(&reader)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(text, v)
 	}
+}
 
-	text, err := wsutil.ReadClientText(c.conn)
-	if err != nil {
-		return err
+func (c *wsConnectionWrapper) resetReadDeadline() error {
+	if c.readTimeout > 0 {
+		if err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout)); err != nil {
+			return err
+		}
 	}
+	// Check after setting the deadline so cancellation cannot be overwritten.
+	return c.ctx.Err()
+}
 
-	return json.Unmarshal(text, v)
+// Serialize the entire control response, including close frames written in multiple parts.
+func (c *wsConnectionWrapper) handleControlFrame(header ws.Header, reader io.Reader) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.writeTimeout > 0 {
+		if err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout)); err != nil {
+			return err
+		}
+	}
+	return wsutil.ControlFrameHandler(c.conn, ws.StateServerSide)(header, reader)
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
@@ -233,8 +282,7 @@ func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string)
 }
 
 func (c *wsConnectionWrapper) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.stopRead()
 	return c.conn.Close()
 }
 
@@ -249,10 +297,6 @@ type WebsocketHandler struct {
 	metrics            RouterMetrics
 	accessController   *AccessController
 	logger             *zap.Logger
-
-	netPoll       netpoll.Poller
-	connections   map[int]*WebSocketConnectionHandler
-	connectionsMu sync.RWMutex
 
 	stats statistics.EngineStatistics
 
@@ -330,11 +374,11 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout)
+	conn := newWSConnectionWrapper(h.ctx, c, h.readTimeout, h.writeTimeout)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
-		_ = c.Close()
+		_ = conn.Close()
 		return
 	}
 
@@ -344,7 +388,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	executionOptions, traceOptions, err := h.preHandler.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
-		_ = c.Close()
+		_ = conn.Close()
 		return
 	}
 
@@ -388,7 +432,11 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
 
-		handler.Close(false, wsproto.CloseKindOf(err))
+		closeKind := wsproto.CloseKindOf(err)
+		if h.ctx.Err() != nil {
+			closeKind = wsproto.CloseKindGoingAway
+		}
+		handler.Close(false, closeKind)
 		return
 	}
 
@@ -439,195 +487,39 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
-	// Only when epoll/kqueue is available. On Windows, epoll is not available
-	if h.netPoll != nil {
-		err = h.addConnection(c, handler)
-		if err != nil {
-			requestLogger.Error("Adding connection to net poller", zap.Error(err))
-			handler.Close(true, wsproto.CloseKindNormal)
-		}
-		return
-	}
-
-	// Handle messages sync when net poller implementation is not available
-
-	go h.handleConnectionSync(handler)
+	go h.handleConnection(handler)
 }
 
-func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHandler) {
+// handleConnection reads and dispatches messages until the connection closes.
+func (h *WebsocketHandler) handleConnection(handler *WebSocketConnectionHandler) {
 	h.stats.ConnectionsInc()
 	defer h.stats.ConnectionsDec()
-	serverDone := h.ctx.Done()
-
-	for {
-		select {
-		case <-serverDone:
-			handler.Close(true, wsproto.CloseKindGoingAway)
-			return
-		default:
-			msg, err := handler.protocol.ReadMessage()
-			if err != nil {
-				if isReadTimeout(err) {
-					continue
-				}
-				h.logger.Debug("Client closed connection", zap.Error(err))
-				handler.Close(true, wsproto.CloseKindOf(err))
-				return
-			}
-			err = h.HandleMessage(handler, msg)
-			if err != nil {
-				h.logger.Debug("Handling websocket message", zap.Error(err))
-				var closeErr *wsproto.CloseError
-				if errors.As(err, &closeErr) {
-					handler.Close(true, closeErr.Kind)
-					return
-				}
-			}
-		}
-	}
-}
-
-func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnectionHandler) error {
-	h.stats.ConnectionsInc()
-	h.connectionsMu.Lock()
-	defer h.connectionsMu.Unlock()
-	fd := socketFd(conn)
-	if fd == 0 {
-		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
-	}
-	h.connections[fd] = handler
-	return h.netPoll.Add(underlyingConn(conn))
-}
-
-func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int, closeKind wsproto.CloseKind) {
-	h.stats.ConnectionsDec()
-	h.connectionsMu.Lock()
-	delete(h.connections, fd)
-	h.connectionsMu.Unlock()
-	err := h.netPoll.Remove(conn)
-	if err != nil {
-		h.logger.Warn("Removing connection from net poller", zap.Error(err))
-	}
-	handler.Close(true, closeKind)
-}
-
-// underlyingConn unwraps a *tls.Conn to the network connection it wraps. wss
-// connections are presented as *tls.Conn, which implements neither syscall.Conn
-// nor netpoll.ConnImpl, so its socket fd can only be resolved via the underlying
-// connection. Non-TLS connections are returned unchanged.
-func underlyingConn(conn net.Conn) net.Conn {
-	if tlsConn, ok := conn.(*tls.Conn); ok {
-		return tlsConn.NetConn()
-	}
-	return conn
-}
-
-func socketFd(conn net.Conn) int {
-	conn = underlyingConn(conn)
-	if con, ok := conn.(syscall.Conn); ok {
-		raw, err := con.SyscallConn()
-		if err != nil {
-			return 0
-		}
-		sfd := 0
-		_ = raw.Control(func(fd uintptr) {
-			sfd = int(fd)
-		})
-		return sfd
-	}
-	if con, ok := conn.(netpoll.ConnImpl); ok {
-		return con.GetFD()
-	}
-	return 0
-}
-
-func isReadTimeout(err error) bool {
-	if err == nil {
-		return false
-	}
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return netErr.Timeout()
-	}
-	return false
-}
-
-func (h *WebsocketHandler) runPoller() {
-	done := h.ctx.Done()
+	closeKind := wsproto.CloseKindNormal
 	defer func() {
-		_ = h.netPoll.Close(false)
+		if h.ctx.Err() != nil {
+			closeKind = wsproto.CloseKindGoingAway
+		}
+		handler.Close(true, closeKind)
 	}()
-	for {
-		select {
-		case <-done:
-			h.closeAllConnections()
-			return
-		default:
-			connections, err := h.netPoll.Wait(128)
-			if err != nil {
-				h.logger.Warn("Net Poller wait", zap.Error(err))
+
+	for h.ctx.Err() == nil {
+		msg, err := handler.protocol.ReadMessage()
+		if err != nil {
+			if errors.Is(err, errWebsocketIdleTimeout) {
 				continue
 			}
-			for i := range len(connections) {
-				if connections[i] == nil {
-					continue
-				}
-				conn := connections[i].(netpoll.ConnImpl)
-				// check if the connection is still valid
-				fd := socketFd(conn)
-				h.connectionsMu.RLock()
-				handler, exists := h.connections[fd]
-				h.connectionsMu.RUnlock()
-
-				if !exists {
-					h.logger.Debug("Connection not found", zap.Int("fd", fd))
-					continue
-				}
-
-				if fd == 0 {
-					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
-					h.removeConnection(conn, handler, fd, wsproto.CloseKindNormal)
-					continue
-				}
-
-				msg, err := handler.protocol.ReadMessage()
-				if err != nil {
-					if isReadTimeout(err) {
-						continue
-					}
-					h.logger.Debug("Client closed connection", zap.Error(err))
-					h.removeConnection(conn, handler, fd, wsproto.CloseKindOf(err))
-					continue
-				}
-				err = h.HandleMessage(handler, msg)
-				if err != nil {
-					h.logger.Debug("Handling websocket message", zap.Error(err))
-
-					// Only closeErr closes, which is why we're not using wsproto.CloseKindOf,
-					// which defaults to CloseKindNormal
-					var closeErr *wsproto.CloseError
-					if errors.As(err, &closeErr) {
-						h.removeConnection(conn, handler, fd, closeErr.Kind)
-						continue
-					}
-				}
+			h.logger.Debug("Client closed connection", zap.Error(err))
+			closeKind = wsproto.CloseKindOf(err)
+			return
+		}
+		if err := h.HandleMessage(handler, msg); err != nil {
+			h.logger.Debug("Handling websocket message", zap.Error(err))
+			var closeErr *wsproto.CloseError
+			if errors.As(err, &closeErr) {
+				closeKind = closeErr.Kind
+				return
 			}
 		}
-	}
-}
-
-func (h *WebsocketHandler) closeAllConnections() {
-	h.connectionsMu.Lock()
-	handlers := make([]*WebSocketConnectionHandler, 0, len(h.connections))
-	for fd, handler := range h.connections {
-		handlers = append(handlers, handler)
-		delete(h.connections, fd)
-	}
-	h.connectionsMu.Unlock()
-
-	for _, handler := range handlers {
-		h.stats.ConnectionsDec()
-		handler.Close(true, wsproto.CloseKindGoingAway)
 	}
 }
 

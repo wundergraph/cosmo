@@ -67,8 +67,6 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 type IPAnonymizationMethod string
@@ -502,6 +500,8 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.logger.Warn("The security configuration field 'block_persisted_operations' is enabled alongside the persisted operations safelist. Take care to ensure this is intentional. Misconfiguration will result in safelisted queries being blocked.")
 	}
 
+	r.warnDeprecatedWebSocketPollerOptions()
+
 	if r.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader {
 		r.logger.Warn("The engine execution configuration field 'enable_execution_plan_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
@@ -556,26 +556,6 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
-	}
-
-	if !r.engineExecutionConfiguration.EnableNetPoll {
-		r.logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
-	} else if err := netpoll.Supported(); err != nil {
-
-		// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
-		r.engineExecutionConfiguration.EnableNetPoll = false
-
-		if errors.Is(err, netpoll.ErrUnsupported) {
-			r.logger.Warn(
-				"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
-				zap.Error(err),
-			)
-		} else {
-			r.logger.Warn(
-				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
-				zap.Error(err),
-			)
-		}
 	}
 
 	if r.hostName == "" {
@@ -3151,4 +3131,23 @@ func or[T any](maybe *T, or T) T {
 		return *maybe
 	}
 	return or
+}
+
+// Warn only for explicitly configured options, including false and zero values.
+func (r *Router) warnDeprecatedWebSocketPollerOptions() {
+	cfg := r.engineExecutionConfiguration
+	for _, option := range []struct {
+		set  bool
+		name string
+		env  string
+	}{
+		{cfg.EnableNetPoll != nil, "engine.enable_net_poll", "ENGINE_ENABLE_NET_POLL"},
+		{cfg.WebSocketServerPollTimeout != nil, "engine.websocket_server_poll_timeout", "ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT"},
+		{cfg.WebSocketServerConnBufferSize != nil, "engine.websocket_server_conn_buffer_size", "ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE"},
+	} {
+		if option.set {
+			r.logger.Warn("The manual WebSocket poller has been removed. This deprecated option has no effect and should be removed from your configuration.",
+				zap.String("option", option.name), zap.String("environment_variable", option.env))
+		}
+	}
 }

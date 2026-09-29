@@ -4165,8 +4165,7 @@
         },
         "enable_net_poll": {
           "type": "boolean",
-          "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
-          "default": true
+          "description": "Deprecated. The manual WebSocket poller has been removed. This option has no effect."
         },
         "enable_multi_fetch": {
           "type": "boolean",
@@ -4199,13 +4198,11 @@
         "websocket_server_poll_timeout": {
           "type": "string",
           "format": "go-duration",
-          "description": "The poll timeout for the server-side WebSocket net poller. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "1s"
+          "description": "Deprecated. The manual WebSocket poller has been removed. This option has no effect."
         },
         "websocket_server_conn_buffer_size": {
           "type": "integer",
-          "default": 128,
-          "description": "The buffer size for the server-side WebSocket net poller. Determines how many connections can be handled in one poll loop."
+          "description": "Deprecated. The manual WebSocket poller has been removed. This option has no effect."
         },
         "websocket_client_ping_interval": {
           "type": "string",
