@@ -145,6 +145,8 @@ type wsConnectionWrapper struct {
 	mu           sync.Mutex
 	readTimeout  time.Duration
 	writeTimeout time.Duration
+	// Once initialized, idle waits have no deadline, so idle connections cost no wakeups.
+	initialized bool
 }
 
 // errWebsocketIdleTimeout means no bytes of the next message have been consumed.
@@ -175,7 +177,7 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 		OnIntermediate: controlHandler,
 	}
 	for {
-		if err := c.resetReadDeadline(); err != nil {
+		if err := c.setReadDeadline(true); err != nil {
 			return err
 		}
 		if _, err := c.reader.Peek(1); err != nil {
@@ -186,7 +188,7 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 			return err
 		}
 		// Time the message from its first byte, not from the start of the idle wait.
-		if err := c.resetReadDeadline(); err != nil {
+		if err := c.setReadDeadline(false); err != nil {
 			return err
 		}
 		header, err := reader.NextFrame()
@@ -213,9 +215,14 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 	}
 }
 
-func (c *wsConnectionWrapper) resetReadDeadline() error {
+// Before initialization, the read timeout also bounds idle waits.
+func (c *wsConnectionWrapper) setReadDeadline(idle bool) error {
 	if c.readTimeout > 0 {
-		if err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout)); err != nil {
+		var deadline time.Time
+		if !idle || !c.initialized {
+			deadline = time.Now().Add(c.readTimeout)
+		}
+		if err := c.conn.SetReadDeadline(deadline); err != nil {
 			return err
 		}
 	}
@@ -487,6 +494,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
+	conn.initialized = true
 	go h.handleConnection(handler)
 }
 

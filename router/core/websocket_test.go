@@ -61,6 +61,39 @@ func TestWebsocketIdleTimeoutCanRetry(t *testing.T) {
 	require.NoError(t, <-written)
 }
 
+func TestWebsocketInitializedConnectionHasNoIdleTimeout(t *testing.T) {
+	t.Parallel()
+	const timeout = 50 * time.Millisecond
+	t.Run("idle", func(t *testing.T) {
+		t.Parallel()
+		conn, client := websocketTestConnection(t, t.Context(), timeout)
+		conn.initialized = true
+		written := make(chan error, 1)
+		go func() {
+			time.Sleep(3 * timeout)
+			_, err := client.Write(clientFrame(ws.OpText, true, `{}`))
+			written <- err
+		}()
+		var msg json.RawMessage
+		require.NoError(t, conn.ReadJSON(&msg))
+		require.NoError(t, <-written)
+	})
+	t.Run("partial", func(t *testing.T) {
+		t.Parallel()
+		conn, client := websocketTestConnection(t, t.Context(), timeout)
+		conn.initialized = true
+		written := make(chan error, 1)
+		go func() { _, err := client.Write([]byte{0x81}); written <- err }()
+		var msg json.RawMessage
+		err := conn.ReadJSON(&msg)
+		require.NotErrorIs(t, err, errWebsocketIdleTimeout)
+		var netErr net.Error
+		require.ErrorAs(t, err, &netErr)
+		require.True(t, netErr.Timeout())
+		require.NoError(t, <-written)
+	})
+}
+
 func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 	t.Parallel()
 	const timeout = 300 * time.Millisecond
