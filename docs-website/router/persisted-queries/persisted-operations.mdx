@@ -149,6 +149,8 @@ If a storage operation or manifest publication fails, the request returns an err
 
 Existing conflicting registrations also prevent manifest generation. Deleting one registration succeeds only if the remaining registrations allow a valid manifest to be generated. Graphs with multiple conflicting IDs may require administrative cleanup before publishing or deleting operations.
 
+Deploy the updated control plane to all instances that publish or delete persisted operations before relying on graph-wide consistency. These requests serialize per graph through storage and manifest publication. Other graph updates and graph deletion may wait for publication to finish.
+
 ## Deleting persisted operations in Studio
 
 You can delete persisted operations directly in Cosmo Studio after they have been uploaded via `wgc operations push`.

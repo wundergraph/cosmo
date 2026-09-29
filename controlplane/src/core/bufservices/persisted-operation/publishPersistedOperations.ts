@@ -64,7 +64,7 @@ export function publishPersistedOperations(
     }
 
     for (const operation of req.operations) {
-      if (operation.id.length < 1 || operation.id.length > 250 || /[^A-Za-z0-9_-]/.test(operation.id)) {
+      if (operation.id.length === 0 || operation.id.length > 250 || /[^\w-]/.test(operation.id)) {
         return {
           response: {
             code: EnumStatusCode.ERR,

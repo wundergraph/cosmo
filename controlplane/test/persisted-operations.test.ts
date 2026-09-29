@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { federatedGraphs } from '../src/db/schema.js';
 import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -16,6 +15,7 @@ import {
   onTestFinished,
   type Mock,
 } from 'vitest';
+import { federatedGraphs, federatedGraphPersistedOperations } from '../src/db/schema.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
@@ -109,10 +109,14 @@ describe('Persisted operations', (ctx) => {
             ...base,
             operations: [{ id: 'shared', contents: 'query { hello }' }],
           });
-        if (action !== 'publish') expect((await publish()).response?.code).toBe(EnumStatusCode.OK);
+        if (action !== 'publish') {
+          expect((await publish()).response?.code).toBe(EnumStatusCode.OK);
+        }
         const put = blobStorage.putObject.bind(blobStorage);
-        const spy = vi.spyOn(blobStorage, 'putObject').mockImplementation(async (input) => {
-          if (input.key.endsWith('/operations/manifest.json')) throw new Error('manifest unavailable');
+        const spy = vi.spyOn(blobStorage, 'putObject').mockImplementation((input) => {
+          if (input.key.endsWith('/operations/manifest.json')) {
+            return Promise.reject(new Error('manifest unavailable'));
+          }
           return put(input);
         });
         const mutate = () =>
@@ -202,7 +206,9 @@ describe('Persisted operations', (ctx) => {
           ).then((response) => {
             completed = true;
             expect(response.response?.code).toBe(EnumStatusCode.OK);
-            if ('operations' in response) expect(response.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+            if ('operations' in response) {
+              expect(response.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+            }
           });
           await attempt;
           const independent = await client.publishPersistedOperations({
@@ -282,7 +288,9 @@ describe('Persisted operations', (ctx) => {
       });
       const put = blobStorage.putObject.bind(blobStorage);
       const spy = vi.spyOn(blobStorage, 'putObject').mockImplementation(async (input) => {
-        if (input.key.endsWith('/failed.json')) throw new Error('upload unavailable');
+        if (input.key.endsWith('/failed.json')) {
+          throw new Error('upload unavailable');
+        }
         if (input.key.endsWith('/delayed.json')) {
           entered();
           await held;
@@ -834,12 +842,12 @@ describe('Persisted operations', (ctx) => {
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should delete persisted operation from blob storage when deleted', async (testContext) => {
+    test.each(['curl', 'web/mobile %'])('Should delete the published blob for client %s', async (clientName) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
       });
-      testContext.onTestFinished(() => server.close());
+      onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
@@ -850,22 +858,25 @@ describe('Persisted operations', (ctx) => {
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         namespace: 'default',
-        clientName: 'curl',
+        clientName,
         operations: [{ id, contents: query }],
       });
 
-      const storageKeys = blobStorage.keys();
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+      const key = blobStorage.keys().find((key) => key.endsWith(`/${encodeURIComponent(clientName)}/${id}.json`));
+      expect(key).toBeDefined();
 
-      await client.deletePersistedOperation({
+      const deleted = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
-        clientName: 'curl',
+        clientName,
       });
 
+      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
       await expect(
         blobStorage.getObject({
-          key: storageKeys[1],
+          key: key!,
         }),
       ).rejects.toThrow(/not found/);
     });
@@ -1106,6 +1117,36 @@ describe('Persisted operations', (ctx) => {
       expect(Object.keys(manifest.operations)).toStrictEqual([]);
     });
 
+    test('Should preserve blobs and registrations of clients sharing a name prefix', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const base = { fedGraphName, namespace: 'default' };
+      for (const clientName of ['web/app', 'web/application']) {
+        const published = await client.publishPersistedOperations({
+          ...base,
+          clientName,
+          operations: [{ id: 'shared', contents: 'query { hello }' }],
+        });
+        expect(published.response?.code).toBe(EnumStatusCode.OK);
+      }
+      const deleted = await client.deleteClient({ ...base, clientName: 'web/app' });
+      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
+      expect(deleted.deletedOperationsCount).toBe(1);
+      expect((await client.getClients(base)).clients.map((client) => client.name)).toEqual(['web/application']);
+      expect(blobStorage.keys().some((key) => key.endsWith('/web%2Fapp/shared.json'))).toBe(false);
+      const key = blobStorage.keys().find((key) => key.endsWith('/web%2Fapplication/shared.json'));
+      expect(key).toBeDefined();
+      const stored = JSON.parse(await new Response((await blobStorage.getObject({ key: key! })).stream).text());
+      expect(stored.body).toBe('query { hello }');
+      const manifestKey = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(
+        await new Response((await blobStorage.getObject({ key: manifestKey })).stream).text(),
+      );
+      expect(manifest.operations).toEqual({ shared: 'query { hello }' });
+    });
+
     test('Should roll back client deletion when blob storage removal fails', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
@@ -1193,6 +1234,32 @@ describe('Persisted operations', (ctx) => {
   });
 
   describe('manifest generation', () => {
+    test('Should preserve __proto__ as an own ID in the uploaded manifest', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const contents = 'query { hello }';
+      const result = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'web',
+        operations: [{ id: '__proto__', contents }],
+      });
+      expect(result.response?.code).toBe(EnumStatusCode.OK);
+      expect(result.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(Object.hasOwn(manifest.operations, '__proto__')).toBe(true);
+      expect(Object.entries(manifest.operations)).toEqual([['__proto__', contents]]);
+      expect(manifest.revision).toBe(
+        crypto
+          .createHash('sha256')
+          .update(JSON.stringify({ ['__proto__']: contents }))
+          .digest('hex'),
+      );
+    });
+
     test('Should generate a PQL manifest after publishing persisted operations', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
@@ -1322,6 +1389,86 @@ describe('Persisted operations', (ctx) => {
       const updated = await readManifest();
       expect(updated.operations).toEqual({ shared: 'query { __typename }' });
       expect(updated.revision).not.toBe(original.revision);
+    });
+
+    test('Should check legacy registrations without stored contents for conflicts', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const user = users.adminAliceCompanyA;
+      const graph = await new FederatedGraphRepository(server.log, server.db, user.organizationId).byName(
+        fedGraphName,
+        'default',
+      );
+      const repo = new OperationsRepository(server.db, graph!.id);
+      const clientId = await repo.registerClient('legacy', user.userId);
+      const contents = 'query { hello }';
+      const hash = crypto.createHash('sha256').update(contents).digest('hex');
+      await server.db.insert(federatedGraphPersistedOperations).values({
+        federatedGraphId: graph!.id,
+        clientId,
+        operationId: 'shared',
+        hash,
+        filePath: `${graph!.id}/legacy/shared.json`,
+        createdById: user.userId,
+      });
+      const base = { fedGraphName, namespace: 'default', clientName: 'web' };
+      const conflict = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'shared', contents: 'query { __typename }' }],
+      });
+      expect(conflict.response?.code).toBe(EnumStatusCode.OK);
+      expect(conflict.operations[0]).toMatchObject({ status: PublishedOperationStatus.CONFLICT, hash });
+      expect(blobStorage.keys().some((key) => key.endsWith('/web/shared.json'))).toBe(false);
+      const accepted = await client.publishPersistedOperations({ ...base, operations: [{ id: 'shared', contents }] });
+      expect(accepted.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: contents });
+    });
+
+    test('Should refuse a conflicting legacy manifest without overwriting the published manifest', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const base = { fedGraphName, namespace: 'default', clientName: 'web' };
+      const published = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'shared', contents: 'query { hello }' }],
+      });
+      expect(published.response?.code).toBe(EnumStatusCode.OK);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const readManifest = async () => new Response((await blobStorage.getObject({ key })).stream).text();
+      const originalManifest = await readManifest();
+      const user = users.adminAliceCompanyA;
+      const graph = await new FederatedGraphRepository(server.log, server.db, user.organizationId).byName(
+        fedGraphName,
+        'default',
+      );
+      const repo = new OperationsRepository(server.db, graph!.id);
+      const clientId = await repo.registerClient('legacy', user.userId);
+      const contents = 'query { __typename }';
+      await repo.updatePersistedOperations(clientId, user.userId, [
+        {
+          operationId: 'shared',
+          hash: crypto.createHash('sha256').update(contents).digest('hex'),
+          contents,
+          filePath: `${graph!.id}/legacy/shared.json`,
+          operationNames: [],
+        },
+      ]);
+      const failed = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'new_id', contents }],
+      });
+      expect(failed.response?.code).toBe(EnumStatusCode.ERR);
+      expect(await repo.getPersistedOperation({ operationId: 'new_id', clientName: 'web' })).toBeUndefined();
+      expect(await readManifest()).toBe(originalManifest);
+      const removed = await client.deletePersistedOperation({ ...base, clientName: 'legacy', operationId: 'shared' });
+      expect(removed.response?.code).toBe(EnumStatusCode.OK);
+      expect(JSON.parse(await readManifest()).operations).toEqual({ shared: 'query { hello }' });
     });
 
     test('Should reject conflicting IDs within a batch and accept identical duplicates', async (testContext) => {
