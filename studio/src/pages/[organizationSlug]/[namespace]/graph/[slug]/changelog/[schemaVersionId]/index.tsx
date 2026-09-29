@@ -1,4 +1,5 @@
 import { Changelog } from '@/components/changelog/changelog';
+import { useParams } from 'next/navigation';
 import { EmptyState } from '@/components/empty-state';
 import { GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,7 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.schemaVersionId as string;
+  const { slug, schemaVersionId: id } = useParams<{ slug: string; schemaVersionId: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(getChangelogBySchemaVersion, {
     schemaVersionId: id,

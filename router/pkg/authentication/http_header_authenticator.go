@@ -13,9 +13,10 @@ const (
 )
 
 type httpHeaderAuthenticator struct {
-	tokenDecoder    TokenDecoder
-	name            string
-	headerSourceMap map[string][]string
+	tokenDecoder             TokenDecoder
+	name                     string
+	headerSourceMap          map[string][]string
+	ignoreInvalidCredentials bool
 }
 
 func (a *httpHeaderAuthenticator) Name() string {
@@ -74,6 +75,10 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 		}
 	}
 
+	// Leave the headers intact for modules and configured subgraph propagation.
+	if a.ignoreInvalidCredentials {
+		return nil, nil
+	}
 	return nil, errs
 }
 
@@ -86,6 +91,8 @@ type HttpHeaderAuthenticatorOptions struct {
 	HeaderSourcePrefixes map[string][]string
 	// TokenDecoder is the token decoder to use for decoding the token. It cannot be nil.
 	TokenDecoder TokenDecoder
+	// IgnoreInvalidCredentials treats unsupported prefixes and invalid tokens as absent credentials.
+	IgnoreInvalidCredentials bool
 }
 
 // NewHttpHeaderAuthenticator returns a HttpHeader based authenticator. See HttpHeaderAuthenticatorOptions
@@ -106,8 +113,9 @@ func NewHttpHeaderAuthenticator(opts HttpHeaderAuthenticatorOptions) (Authentica
 	}
 
 	return &httpHeaderAuthenticator{
-		tokenDecoder:    opts.TokenDecoder,
-		name:            opts.Name,
-		headerSourceMap: opts.HeaderSourcePrefixes,
+		tokenDecoder:             opts.TokenDecoder,
+		name:                     opts.Name,
+		headerSourceMap:          opts.HeaderSourcePrefixes,
+		ignoreInvalidCredentials: opts.IgnoreInvalidCredentials,
 	}, nil
 }

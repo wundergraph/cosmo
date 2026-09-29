@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { useParams } from 'next/navigation';
 import { SubgraphPageLayout, getSubgraphLayout } from '@/components/layout/subgraph-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -165,8 +166,7 @@ export const FederatedGraphsTable = ({
 };
 
 const FederatedGraphsPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const subgraphSlug = router.query.subgraphSlug as string;
+  const { subgraphSlug } = useParams<{ subgraphSlug: string }>();
   const {
     namespace: { name: namespace },
   } = useWorkspace();

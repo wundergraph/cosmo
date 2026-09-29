@@ -74,7 +74,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 
 		stored, err := mr.Get(entryKey("v1:a"))
 		require.NoError(t, err)
-		value, _, err := enginecache.DecodeEntry([]byte(stored))
+		value, _, _, err := enginecache.DecodeEntry([]byte(stored))
 		require.NoError(t, err)
 		require.JSONEq(t, `{"real":true}`, string(value))
 

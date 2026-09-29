@@ -45,7 +45,8 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		sn := exporter.GetSpans().Snapshots()
 		assert.Len(t, sn, 1)
-		assert.Equal(t, "", sn[0].Name())
+		// Without a custom formatter, otelhttp names server spans after the HTTP semantic conventions
+		assert.Equal(t, "GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 		assert.Len(t, sn[0].Attributes(), 9)
@@ -56,6 +57,40 @@ func TestWrapHttpHandler(t *testing.T) {
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(200))
 		assert.Contains(t, sn[0].Attributes(), semconv12.HTTPHostKey.String("example.com"))
+	})
+
+	t.Run("use the configured span name formatter", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter(t)
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSyncer(exporter),
+			sdktrace.WithSpanProcessor(&semconvProcessor{}),
+		)
+		h := NewMiddleware(
+			WithOtelHttp(
+				otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: tp}),
+				otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+					return "custom " + r.Method + " " + r.URL.Path
+				}),
+			),
+		)
+
+		router := chi.NewRouter()
+
+		router.Use(h.Handler)
+		router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test?a=b", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		sn := exporter.GetSpans().Snapshots()
+		assert.Len(t, sn, 1)
+		assert.Equal(t, "custom GET /test", sn[0].Name())
+		assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 	})
 
 	t.Run("set span status to error", func(t *testing.T) {
@@ -103,7 +138,7 @@ func TestWrapHttpHandler(t *testing.T) {
 			sn := exporter.GetSpans().Snapshots()
 
 			assert.Len(t, sn, 1)
-			assert.Equal(t, "", sn[0].Name())
+			assert.Equal(t, "GET", sn[0].Name())
 			assert.Equal(t, test.expected, sn[0].Status())
 			assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 

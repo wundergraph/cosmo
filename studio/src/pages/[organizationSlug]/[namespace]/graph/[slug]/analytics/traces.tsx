@@ -1,4 +1,5 @@
-import { AnalyticsDataTable } from '@/components/analytics/data-table';
+import { AnalyticsDataTable, traceParams } from '@/components/analytics/data-table';
+import { useQueryStates } from 'nuqs';
 import { AnalyticsToolbar } from '@/components/analytics/toolbar';
 import TraceDetails from '@/components/analytics/trace-details';
 import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
@@ -25,7 +26,6 @@ import {
   getFederatedGraphSDLByName,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { formatISO } from 'date-fns';
-import { useRouter } from 'next/router';
 import { useContext, useRef, useState } from 'react';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
@@ -123,10 +123,7 @@ const sizes = {
 };
 
 const TraceSheet: React.FC<any> = (props) => {
-  const router = useRouter();
-
-  const traceId = router.query.traceID as string;
-  const spanId = router.query.spanID as string;
+  const [{ traceID: traceId, spanID: spanId }, setTrace] = useQueryStates(traceParams);
 
   const index = props.data.findIndex((r: any) => r.traceId === traceId && r.spanId === spanId);
 
@@ -134,23 +131,13 @@ const TraceSheet: React.FC<any> = (props) => {
 
   const nextTrace = () => {
     if (index + 1 < props.data.length) {
-      const newQuery = { ...router.query };
-      newQuery['traceID'] = props.data[index + 1].traceId;
-      newQuery['spanID'] = props.data[index + 1].spanId;
-      router.replace({
-        query: newQuery,
-      });
+      setTrace({ traceID: props.data[index + 1].traceId, spanID: props.data[index + 1].spanId });
     }
   };
 
   const previousTrace = () => {
     if (index - 1 >= 0) {
-      const newQuery = { ...router.query };
-      newQuery['traceID'] = props.data[index - 1].traceId;
-      newQuery['spanID'] = props.data[index - 1].spanId;
-      router.replace({
-        query: newQuery,
-      });
+      setTrace({ traceID: props.data[index - 1].traceId, spanID: props.data[index - 1].spanId });
     }
   };
 
@@ -178,12 +165,7 @@ const TraceSheet: React.FC<any> = (props) => {
       open={!!traceId && !!spanId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery['traceID'];
-          delete newQuery['spanID'];
-          router.replace({
-            query: newQuery,
-          });
+          setTrace({ traceID: null, spanID: null });
         }
       }}
     >
@@ -225,7 +207,7 @@ const TraceSheet: React.FC<any> = (props) => {
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{traceId}</code>
-            <CopyButton tooltip="Copy trace id" value={router.query.traceID?.toString() || ''} />
+            <CopyButton tooltip="Copy trace id" value={traceId ?? ''} />
           </SheetTitle>
 
           <Spacer />

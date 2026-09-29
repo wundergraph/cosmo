@@ -735,7 +735,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
@@ -869,7 +870,6 @@
   },
   "ResponseCache": {
     "Enabled": true,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "response_cache_test:",
     "Storage": {
       "Provider": "redis",
@@ -892,6 +892,23 @@
       "Name": "Surrogate-Key",
       "Delimiter": " ",
       "MaxBytes": 1024
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": "request.auth.claims.sub"
+    },
+    "Subgraphs": {
+      "inventory": {
+        "Enabled": false,
+        "FallbackTTL": 0,
+        "PrivateID": ""
+      },
+      "products": {
+        "Enabled": true,
+        "FallbackTTL": 300000000000,
+        "PrivateID": "request.header.Get('X-User-Id')"
+      }
     }
   },
   "RouterConfigPath": "latest.json",
