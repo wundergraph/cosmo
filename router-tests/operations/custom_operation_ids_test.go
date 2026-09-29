@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,7 +29,7 @@ func TestCustomOperationIDs(t *testing.T) {
 		_, path, _ := strings.Cut(r.URL.Path, "/operations/")
 		client, id, _ := strings.Cut(path, "/")
 		id = strings.TrimSuffix(id, ".json")
-		if id != ids[0] && id != ids[1] {
+		if !slices.Contains(ids, id) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -110,5 +112,70 @@ func TestCustomOperationIDManifestWarmup(t *testing.T) {
 		res := e.MakeGraphQLRequestOK(testenv.GraphQLRequest{Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"get_employee_v1"}}`)})
 		require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+}
+
+func TestCustomOperationIDManifestReload(t *testing.T) {
+	t.Parallel()
+
+	const operationID = "employee_v1"
+	var manifest atomic.Value
+	setManifest := func(revision, query string) {
+		operations := map[string]string{}
+		if query != "" {
+			operations[operationID] = query
+		}
+		body, err := json.Marshal(map[string]any{
+			"version":    1,
+			"revision":   revision,
+			"operations": operations,
+		})
+		require.NoError(t, err)
+		manifest.Store(body)
+	}
+	setManifest("one", "query { employee(id: 1) { id } }")
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.True(t, strings.HasSuffix(r.URL.Path, "/operations/manifest.json"))
+		_, _ = w.Write(manifest.Load().([]byte))
+	}))
+	defer cdn.Close()
+
+	testenv.Run(t, &testenv.Config{
+		CdnSever: cdn,
+		RouterOptions: []core.Option{
+			core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+				Manifest: config.PQLManifestConfig{
+					Enabled:      true,
+					PollInterval: 100 * time.Millisecond,
+					PollJitter:   5 * time.Millisecond,
+				},
+			}),
+		},
+	}, func(t *testing.T, e *testenv.Environment) {
+		request := testenv.GraphQLRequest{
+			Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, operationID)),
+		}
+		waitForCachedBody := func(expected string) {
+			t.Helper()
+			require.Eventually(t, func() bool {
+				res, err := e.MakeGraphQLRequest(request)
+				return err == nil && res.Body == expected &&
+					res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
+			}, 5*time.Second, 10*time.Millisecond)
+		}
+		waitForCachedBody(`{"data":{"employee":{"id":1}}}`)
+
+		// Replacing a custom ID must supersede the cached body from the old revision.
+		setManifest("two", "query { employee(id: 2) { id } }")
+		waitForCachedBody(`{"data":{"employee":{"id":2}}}`)
+
+		// Removing the ID must reject requests despite both cached revisions.
+		setManifest("three", "")
+		const notFound = `{"errors":[{"message":"PersistedQueryNotFound",` +
+			`"extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`
+		require.Eventually(t, func() bool {
+			res, err := e.MakeGraphQLRequest(request)
+			return err == nil && res.Body == notFound
+		}, 5*time.Second, 10*time.Millisecond)
 	})
 }

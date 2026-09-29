@@ -436,10 +436,10 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("manifest reload replaces and removes cached operations", func(t *testing.T) {
+	t.Run("manifest reload preserves cache hits", func(t *testing.T) {
 		t.Parallel()
 
-		employeesHash := "employees_v1"
+		employeesHash := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
 		employeesQuery := "query Employees {\n  employees {\n    id\n    }\n}"
 
 		manifestV1, _ := json.Marshal(map[string]interface{}{
@@ -450,13 +450,13 @@ func TestPQLManifest(t *testing.T) {
 				employeesHash: employeesQuery,
 			},
 		})
-		// The same ID now resolves to a different operation body.
+		// manifestV2 has the same operation but a new revision
 		manifestV2, _ := json.Marshal(map[string]interface{}{
 			"version":     1,
 			"revision":    "rev-v2",
 			"generatedAt": "2024-01-02T00:00:00Z",
 			"operations": map[string]string{
-				employeesHash: "query Employees { employee(id: 1) { id } }",
+				employeesHash: employeesQuery,
 			},
 		})
 
@@ -523,7 +523,7 @@ func TestPQLManifest(t *testing.T) {
 			require.Equal(t, expectedEmployeesBody, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
-			// 2. Replace the operation under the same ID.
+			// 2. Swap to manifest v2 (new revision, same operations)
 			currentManifest.Store(manifestV2)
 
 			// 3. Wait for the poller to pick up the new manifest
@@ -531,25 +531,15 @@ func TestPQLManifest(t *testing.T) {
 				return manifestFetchCount.Load() >= 2
 			}, 5*time.Second, 50*time.Millisecond)
 
-			// 4. Requests must execute the replacement, including once it is cached.
+			// 4. The new revision has its own cache entry, populated asynchronously.
 			require.Eventually(t, func() bool {
 				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery":{"version":1,"sha256Hash":"employees_v1"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
 					Header:        header,
 				})
-				return err == nil && res.Body == `{"data":{"employee":{"id":1}}}` &&
+				return err == nil && res.Body == expectedEmployeesBody &&
 					res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
-			}, 5*time.Second, 10*time.Millisecond)
-
-			// 5. Removing the ID must reject requests despite the cached entry.
-			currentManifest.Store([]byte(`{"version":1,"revision":"rev-v3","operations":{}}`))
-			require.Eventually(t, func() bool {
-				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"employees_v1"}}`),
-					Header:     header,
-				})
-				return err == nil && res.Body == persistedNotFoundResp
 			}, 5*time.Second, 10*time.Millisecond)
 		})
 	})
