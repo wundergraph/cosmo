@@ -338,15 +338,23 @@ telemetry:
 * `router.response_cache.operation.duration_seconds`: Histogram of the duration of those calls, in seconds.
 * `router.response_cache.keys`: Counter of the entries the store was asked for, found, stored or removed.
 * `router.response_cache.write.ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
+* `router.response_cache.fetches`: Counter of subgraph fetches, by what the cache did for them.
 
 #### Attributes
 
 * `wg.response_cache.provider`: The storage provider, `redis` or `memory`. On every metric.
 * `wg.response_cache.operation`: `lookup`, `write` or `invalidate`. `engine` counts a failure around the store, such as an entry that could not be read.
 * `wg.response_cache.result`: On `router.response_cache.keys`. `found` or `missing` for a lookup, `stored` or `failed` for a write, `removed` for an invalidation.
-* `wg.error.type`: On `router.response_cache.operations`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`.
+* `wg.error.type`: On `router.response_cache.operations`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`. For the `engine` operation `invalid_entry` or `invalid_response`, with the `wg.subgraph.name` it happened for.
 
-The metrics describe the cache as a whole. They are not split by subgraph or operation.
+`router.response_cache.fetches` carries its own:
+
+* `wg.subgraph.name`: The name of the subgraph.
+* `wg.entity.type`: The type the fetch resolves fields of.
+* `wg.response_cache.status`: `hit`, `partial_hit`, `miss` or `not_cacheable`.
+* `wg.response_cache.store_decision`: `stored`, or the [reason](/router/response-cache#store-decision) the response was not stored.
+
+The other metrics describe the cache as a whole. They are not split by subgraph or operation.
 
 ### Connection Metrics
 

@@ -607,7 +607,7 @@ telemetry:
       response_cache: true
 ```
 
-They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). They describe the cache as a whole and are not split by subgraph or operation.
+They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). Apart from `router.response_cache.fetches` they describe the cache as a whole and are not split by subgraph or operation.
 
 A lookup asks for every entity under its shared key and, when the request carries a user id for [private responses](#private-responses), under that user's key as well. At most one of the two is found, so the keys counted as `missing` are no measure of the hit rate. Use the [status of the fetches](#per-fetch) for that.
 
@@ -648,6 +648,20 @@ The lifetime entries are written with, which is what the subgraphs ask for in `C
 ```promql
 histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_seconds_bucket[15m])))
 ```
+
+#### Cache-hostile types
+
+`router.response_cache.fetches` counts every subgraph fetch by subgraph, by the type it resolves and by its [store decision](#store-decision). It tells which types are never answered from the cache, and why:
+
+```promql
+topk(10,
+  sum by (wg_subgraph_name, wg_entity_type, wg_response_cache_store_decision) (
+    rate(router_response_cache_fetches_total{wg_response_cache_status="miss"}[15m])
+  )
+)
+```
+
+The decision is taken before the write. A write that then fails is counted with the failed calls above.
 
 #### Evictions
 

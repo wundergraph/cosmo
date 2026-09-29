@@ -45,13 +45,20 @@ const (
 	ResponseCacheErrorPartialWrite    = "partial_write"
 	ResponseCacheErrorInvalidArgument = "invalid_argument"
 	ResponseCacheErrorOther           = "other"
+	// ResponseCacheErrorInvalidEntry is an entry that was found and could not be used.
+	ResponseCacheErrorInvalidEntry = "invalid_entry"
+	// ResponseCacheErrorInvalidResponse is a response that could not be taken apart for the cache.
+	ResponseCacheErrorInvalidResponse = "invalid_response"
 )
 
 // ResponseCacheMetricStore is the interface for the health metrics of the response cache.
 type ResponseCacheMetricStore interface {
 	// MeasureOperation counts and times a call to the store. errorType is empty for a call that succeeded.
 	MeasureOperation(ctx context.Context, operation string, duration time.Duration, errorType string)
-	MeasureEngineError(ctx context.Context)
+	// MeasureEngineError counts a failure of the engine around the store.
+	MeasureEngineError(ctx context.Context, subgraph, errorType string)
+	// MeasureFetch counts a subgraph fetch. typeNames and storeDecision may be empty.
+	MeasureFetch(ctx context.Context, subgraph, typeNames, status, storeDecision string)
 	MeasureKeys(ctx context.Context, operation, result string, count int64)
 	// MeasureWriteTTL records the lifetime the entries of a write were stored with.
 	MeasureWriteTTL(ctx context.Context, ttl time.Duration)
@@ -121,14 +128,34 @@ func (s *ResponseCacheMetrics) MeasureOperation(ctx context.Context, operation s
 	}
 }
 
-func (s *ResponseCacheMetrics) MeasureEngineError(ctx context.Context) {
-	opt := s.withAttrs(
+func (s *ResponseCacheMetrics) MeasureEngineError(ctx context.Context, subgraph, errorType string) {
+	attrs := []attribute.KeyValue{
 		otel.WgResponseCacheOperation.String(ResponseCacheOperationEngine),
-		otel.WgErrorType.String(ResponseCacheErrorOther),
-	)
+		otel.WgErrorType.String(errorType),
+	}
+	if subgraph != "" {
+		attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
+	}
+	opt := s.withAttrs(attrs...)
 
 	for _, provider := range s.providers {
 		provider.operations.Add(ctx, 1, opt)
+	}
+}
+
+func (s *ResponseCacheMetrics) MeasureFetch(ctx context.Context, subgraph, typeNames, status, storeDecision string) {
+	attrs := make([]attribute.KeyValue, 0, 4)
+	attrs = append(attrs, otel.WgSubgraphName.String(subgraph), otel.WgResponseCacheStatus.String(status))
+	if typeNames != "" {
+		attrs = append(attrs, otel.WgEntityType.String(typeNames))
+	}
+	if storeDecision != "" {
+		attrs = append(attrs, otel.WgResponseCacheStoreDecision.String(storeDecision))
+	}
+	opt := s.withAttrs(attrs...)
+
+	for _, provider := range s.providers {
+		provider.fetches.Add(ctx, 1, opt)
 	}
 }
 

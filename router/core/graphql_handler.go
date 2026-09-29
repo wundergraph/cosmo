@@ -21,7 +21,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -149,11 +148,30 @@ func newResponseCacheErrorHandler(log *zap.Logger, metrics rmetric.ResponseCache
 	}
 
 	return func(err error) {
-		// A failure of the store itself was counted where it happened.
-		if metrics != nil && !responsecaching.IsMeasured(err) {
-			metrics.MeasureEngineError(context.Background())
+		if metrics != nil {
+			measureResponseCacheEngineError(metrics, err)
 		}
 		sampled.Warn("Response cache degraded, serving from the subgraph instead", zap.Error(err))
+	}
+}
+
+// measureResponseCacheEngineError counts a failure of the engine around the store.
+// A failure of the store itself was counted where it happened.
+func measureResponseCacheEngineError(metrics rmetric.ResponseCacheMetricStore, err error) {
+	var cacheErr *resolve.ResponseCacheError
+	if !errors.As(err, &cacheErr) {
+		metrics.MeasureEngineError(context.Background(), "", rmetric.ResponseCacheErrorOther)
+		return
+	}
+
+	switch cacheErr.Operation {
+	case resolve.ResponseCacheOperationLookup, resolve.ResponseCacheOperationWrite:
+	case resolve.ResponseCacheOperationRead:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorInvalidEntry)
+	case resolve.ResponseCacheOperationCollect:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorInvalidResponse)
+	default:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorOther)
 	}
 }
 

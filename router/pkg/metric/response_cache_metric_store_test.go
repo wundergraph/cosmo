@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/zap"
@@ -68,7 +69,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 
 		store.MeasureOperation(ctx, ResponseCacheOperationLookup, 2*time.Millisecond, "")
 		store.MeasureOperation(ctx, ResponseCacheOperationLookup, 3*time.Millisecond, ResponseCacheErrorTimeout)
-		store.MeasureEngineError(ctx)
+		store.MeasureEngineError(ctx, "mood", ResponseCacheErrorInvalidEntry)
 
 		scope := responseCacheScope(t, reader)
 
@@ -85,9 +86,9 @@ func TestResponseCacheMetricStore(t *testing.T) {
 			counts[operation.AsString()+"/"+errorType.AsString()] += dp.Value
 		}
 		require.Equal(t, map[string]int64{
-			"lookup/":        1,
-			"lookup/timeout": 1,
-			"engine/other":   1,
+			"lookup/":              1,
+			"lookup/timeout":       1,
+			"engine/invalid_entry": 1,
 		}, counts)
 
 		duration := responseCacheMetric(t, scope, "router.response_cache.operation.duration_seconds")
@@ -126,6 +127,41 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		require.True(t, ok)
 		require.InDelta(t, 60, ttl.DataPoints[0].Sum, 1e-9)
 		require.Equal(t, float64(86400), ttl.DataPoints[0].Bounds[len(ttl.DataPoints[0].Bounds)-1])
+	})
+
+	t.Run("fetches are counted by status, decision and type", func(t *testing.T) {
+		t.Parallel()
+
+		store, reader := newOtlpResponseCacheStore(t)
+
+		store.MeasureFetch(ctx, "mood", "Employee", "miss", "no_store")
+		store.MeasureFetch(ctx, "mood", "Employee", "miss", "no_store")
+		store.MeasureFetch(ctx, "mood", "", "not_cacheable", "")
+
+		fetches, ok := responseCacheMetric(t, responseCacheScope(t, reader), "router.response_cache.fetches").Data.(metricdata.Sum[int64])
+		require.True(t, ok)
+		require.Len(t, fetches.DataPoints, 2)
+
+		for _, dp := range fetches.DataPoints {
+			status, _ := dp.Attributes.Value(otel.WgResponseCacheStatus)
+			if status.AsString() == "not_cacheable" {
+				require.EqualValues(t, 1, dp.Value)
+				_, hasType := dp.Attributes.Value(otel.WgEntityType)
+				_, hasDecision := dp.Attributes.Value(otel.WgResponseCacheStoreDecision)
+				require.False(t, hasType)
+				require.False(t, hasDecision)
+				continue
+			}
+
+			require.EqualValues(t, 2, dp.Value)
+			require.Equal(t, attribute.NewSet(
+				otel.WgResponseCacheProvider.String("redis"),
+				otel.WgSubgraphName.String("mood"),
+				otel.WgResponseCacheStatus.String("miss"),
+				otel.WgEntityType.String("Employee"),
+				otel.WgResponseCacheStoreDecision.String("no_store"),
+			), dp.Attributes)
+		}
 	})
 
 	t.Run("nothing is recorded while both exporters are off", func(t *testing.T) {

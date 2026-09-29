@@ -12,6 +12,7 @@ const (
 	responseCacheOperationDuration = "router.response_cache.operation.duration_seconds"
 	responseCacheKeys              = "router.response_cache.keys"
 	responseCacheWriteTTL          = "router.response_cache.write.ttl_seconds"
+	responseCacheFetches           = "router.response_cache.fetches"
 
 	// Not milliseconds, which the meter views force onto buckets starting at 10 ms.
 	unitSeconds = "s"
@@ -37,6 +38,10 @@ var (
 		otelmetric.WithDescription("Shortest lifetime of the entries of a write to the response cache store"),
 		otelmetric.WithExplicitBucketBoundaries(1, 5, 15, 30, 60, 300, 900, 3600, 21600, 86400),
 	}
+
+	responseCacheFetchesOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Subgraph fetches by what the response cache did for them"),
+	}
 )
 
 type responseCacheInstruments struct {
@@ -44,6 +49,7 @@ type responseCacheInstruments struct {
 	operationDuration otelmetric.Float64Histogram
 	keys              otelmetric.Int64Counter
 	writeTTL          otelmetric.Float64Histogram
+	fetches           otelmetric.Int64Counter
 }
 
 func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstruments, error) {
@@ -63,6 +69,10 @@ func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstrume
 	}
 	if instruments.writeTTL, err = meter.Float64Histogram(responseCacheWriteTTL, responseCacheWriteTTLOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache write ttl histogram: %w", err)
+	}
+
+	if instruments.fetches, err = meter.Int64Counter(responseCacheFetches, responseCacheFetchesOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create response cache fetches counter: %w", err)
 	}
 
 	return &instruments, nil
