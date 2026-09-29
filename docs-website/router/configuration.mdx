@@ -1899,6 +1899,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. Only top level claims are supported. | scope         |
+| on_error | <Icon icon="square" /> | Handle invalid JWT credentials with `reject` (HTTP 401, or an error message and connection closure for WebSocket initial-payload authentication) or `continue` (ignore the credential). Required authentication and field authorization still apply. See [JWT validation error handling](/router/authentication-and-authorization#configuring-jwt-validation-error-handling). | reject |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 
@@ -2219,7 +2220,7 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_REQUIRE_FETCH_REASONS                           | enable_require_fetch_reasons                           | <Icon icon="square" /> | Enable the openfed__requireFetchReasons directive, and forces the adding of the "fetch_reasons" extension to upstream subgraph requests. This extension explains why each field was requested.                                                                                                                                              | false         |
 | ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS                      | validate_required_external_fields                      | <Icon icon="square" /> | Validate nullable external "@requires" dependencies. When a subgraph entity fetch returns a null value with an error for a field set specified in the "@requires" directive, any following fetch that depends on it should not receive such an entity.                                                                                      | false         |
 | ENGINE_SUBSCRIPTION_FETCH_TIMEOUT                             | subscription_fetch_timeout                             | <Icon icon="square" /> | The maximum time a subscription fetch can take before it is considered timed out.                                                                                                                                                                                                                                                           | 30s           |
-| ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the `@defer` directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                                      | false         |
+| ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the [`@defer`](/router/defer) directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                      | false         |
 | ENGINE_ENABLE_MULTI_FETCH                                     | enable_multi_fetch                                     | <Icon icon="square" /> | Merges entity fetches that target the same subgraph and execute at the same point in the query plan into a single request with aliased `_entities` fields. This reduces the number of requests sent to subgraphs.                                                                                                                           | true          |
 | ENGINE_ENABLE_SCHEDULE_FETCHES                                | enable_schedule_fetches                                | <Icon icon="square" /> | Replaces the wave-based fetch execution with a dependency-aware fetch scheduler. Independent fetch chains progress as soon as their own dependencies complete, instead of waiting for the slowest fetch in each wave.                                                                                                                       | true          |
 | ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                    | false         |
@@ -2642,7 +2643,18 @@ The configuration for adding a complexity limits for queries. We currently expos
 - **Root Fields in Query**
 - **Root Field Aliases in Query**
 
-A limit is not applied when its value is 0 or `enabled` is not true.
+All four limits enforce their configured value, including 0, when `enabled: true` in `enforce` mode. Set `enabled: false` to disable a limit.
+
+For `root_field_aliases`, a limit of 0 disallows root field aliases when enabled in `enforce` mode. Queries without root field aliases remain allowed. Nested field aliases are unaffected.
+
+```yaml
+security:
+  complexity_limits:
+    mode: enforce
+    root_field_aliases:
+      enabled: true
+      limit: 0
+```
 
 The `mode` field controls enforcement versus measurement:
 
@@ -2653,8 +2665,38 @@ The `mode` field controls enforcement versus measurement:
 | ------------------------ | --------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 |                          | mode                        | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                                                                      | enforce       |
 |                          | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied.                                                           | false         |
-|                          | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit is not applied.                                                                                                              | 0             |
+|                          | limit                       | <Icon icon="square" /> | The maximum allowed value, including 0. Set `enabled: false` to disable the limit.                                                                                                     | 0             |
 |                          | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations. | false         |
+
+#### Migrating from zero as a disabled limit
+
+Previously, a limit of 0 disabled enforcement even with `enabled: true`. Enabled zero limits now reject operations whose measured value exceeds 0. Omitting `limit` has the same effect because its default is 0.
+
+This affects `security.complexity_limits.depth`, `total_fields`, `root_fields`, and `root_field_aliases` in `enforce` mode. Omitting `mode` also enforces limits. The deprecated `security.depth_limit` is affected when it supplies the depth limit. An explicit `security.complexity_limits.depth` takes precedence over that deprecated setting.
+
+Before upgrading the Router, set `enabled: false` on each limit that used zero to disable enforcement. This configuration works with both the previous and new behavior. For example:
+
+```yaml
+# Before: zero implicitly disabled this limit.
+security:
+  complexity_limits:
+    depth:
+      enabled: true
+      limit: 0
+```
+
+```yaml
+# After: explicitly disable this limit before upgrading.
+security:
+  complexity_limits:
+    depth:
+      enabled: false
+      limit: 0
+```
+
+Apply the same change to the other affected limits, including `security.depth_limit` if it is still used. To enforce a limit instead, set an appropriate positive value. Keep `root_field_aliases.enabled: true` with `limit: 0` only when root aliases should be rejected.
+
+Existing positive limits, disabled limits, and `measure` mode retain their behavior. Persisted operations remain exempt from a limit when its `ignore_persisted_operations` setting is true. No Control Plane, composition, or execution-configuration version change is required for this migration.
 
 ## File Upload
 

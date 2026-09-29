@@ -368,7 +368,8 @@
       "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
-      "HeaderSources": null
+      "HeaderSources": null,
+      "OnError": "reject"
     },
     "IgnoreIntrospection": false
   },
@@ -441,7 +442,6 @@
   },
   "ResponseCache": {
     "Enabled": false,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "cosmo_response_cache:",
     "Storage": {
       "Provider": "redis",
@@ -464,7 +464,13 @@
       "Name": "Cache-Tag",
       "Delimiter": ",",
       "MaxBytes": 16384
-    }
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": ""
+    },
+    "Subgraphs": null
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,

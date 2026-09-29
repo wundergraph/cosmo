@@ -167,6 +167,16 @@
                 ]
               },
               {
+                "group": "Defer",
+                "icon": "forward-step",
+                "pages": [
+                  "router/defer",
+                  "router/defer/usage",
+                  "router/defer/how-it-works",
+                  "router/defer/when-to-use"
+                ]
+              },
+              {
                 "group": "Persisted Queries",
                 "icon": "cloud-binary",
                 "pages": [
@@ -416,6 +426,7 @@
                   "federation/directives/authenticated",
                   "federation/directives/composeddirective",
                   "federation/directives/connect__fieldresolver",
+                  "federation/directives/defer",
                   "federation/directives/deprecated",
                   "federation/directives/external",
                   "federation/directives/key",

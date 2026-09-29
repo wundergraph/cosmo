@@ -1,4 +1,6 @@
 import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
 import { EmptySchema } from '@/components/schema/empty-schema-state';
@@ -45,14 +47,13 @@ import { useWorkspace } from '@/hooks/use-workspace';
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const activeSubgraph = router.query.subgraph as string;
-  const activeFeatureFlag = router.query.featureFlag as string;
+  const [activeSubgraph] = useQueryState('subgraph');
+  const [activeFeatureFlag] = useQueryState('featureFlag');
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const graphName = router.query.slug as string;
-  const organizationSlug = router.query.organizationSlug as string;
-  const schemaType = router.query.schemaType as string;
+  const { slug: graphName, organizationSlug } = useParams<{ slug: string; organizationSlug: string }>();
+  const [schemaType] = useQueryState('schemaType');
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split('?')[0];
@@ -65,7 +66,7 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(getFederatedGraphSDLByName, {
     name: graphName,
     namespace,
-    featureFlagName: activeFeatureFlag,
+    featureFlagName: activeFeatureFlag ?? undefined,
   });
 
   let validGraph = graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
@@ -73,7 +74,7 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery(
     getSubgraphSDLFromLatestComposition,
     {
-      name: activeSubgraph,
+      name: activeSubgraph ?? undefined,
       fedGraphName: graphName,
       namespace,
     },

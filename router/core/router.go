@@ -1088,6 +1088,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 func (r *Router) setupTelemetry(ctx context.Context) error {
+	// Install the shared error handler for either signal, but don't change it in tests.
+	if (r.traceConfig.Enabled || r.metricConfig.OpenTelemetry.Enabled) &&
+		r.traceConfig.TestMemoryExporter == nil && r.metricConfig.OpenTelemetry.TestReader == nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(rtrace.NewOtelErrorHandler(r.logger)))
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
 			Logger:            r.logger,
@@ -1204,14 +1210,12 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return nil
 	}
 
-	// Validate the TTL during startup to avoid additional checks during execution.
-	if r.responseCacheConfig.FallbackTTL <= 0 {
-		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	if err := validateResponseCacheSubgraphs(r.responseCacheConfig, r.logger); err != nil {
+		return err
 	}
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
 		return err
 	}
-
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
@@ -1285,7 +1289,8 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
 		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
 	)
@@ -1336,7 +1341,8 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),

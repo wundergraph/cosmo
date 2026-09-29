@@ -1,4 +1,6 @@
 import { formatDateTime } from '@/lib/format-date';
+import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { FederatedGraphsTable } from '@/pages/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]/graphs';
 import { CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { Component1Icon, HomeIcon } from '@radix-ui/react-icons';
@@ -26,12 +28,11 @@ const FeatureFlagOverview = ({
   featureSubgraphs: Subgraph[];
   isEnabled: boolean;
 }) => {
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const currentOrg = useCurrentOrganization();
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
 
   let content: React.ReactNode;
   if (featureSubgraphs.length === 0) {
@@ -145,8 +146,8 @@ export const FeatureFlagDetails = ({
   featureSubgraphs: Subgraph[];
 }) => {
   const router = useRouter();
-  const slug = router.query.slug as string;
-  const tab = router.query.tab as string;
+  const { slug } = useParams<{ slug: string }>();
+  const [tab] = useQueryState('tab');
   const { name, labels, createdAt, createdBy, isEnabled } = featureFlag;
 
   return (

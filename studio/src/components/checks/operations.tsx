@@ -1,4 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { useCheckParams } from '@/hooks/use-check-params';
+import { parseAsString, useQueryStates } from 'nuqs';
 import { ChangesTable } from '@/components/checks/changes-table';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext } from '@/components/layout/graph-layout';
@@ -34,9 +36,8 @@ import { create } from '@bufbuild/protobuf';
 import { OverrideChangeSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import Fuse from 'fuse.js';
-import { useRouter } from 'next/router';
+import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useApplyParams } from '../analytics/use-apply-params';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { OperationContentDialog } from './operation-content';
@@ -113,14 +114,12 @@ const CopyableOperationHash = ({ hash }: { hash: string }) => {
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const { toast } = useToast();
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
+  const { pageNumber, pageSize: limit, offset } = usePaginationParams();
 
-  const id = router.query.checkId as string;
+  const { checkId: id } = useCheckParams();
 
-  const [search, setSearch] = useState(router.query.search as string);
+  const [{ search }, setSearch] = useQueryStates({ search: parseAsString.withDefault(''), page: pageParam });
   const [debouncedSearch] = useDebounce(search, 500);
   const [applyOnlyFiltered, setApplyOnlyFiltered] = useState(false);
 
@@ -130,8 +129,8 @@ export const CheckOperations = () => {
       checkId: id,
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-      limit: limit > 200 ? 200 : limit,
-      offset: (pageNumber - 1) * limit,
+      limit,
+      offset,
       search: debouncedSearch,
     },
     {
@@ -265,8 +264,6 @@ export const CheckOperations = () => {
     },
   );
 
-  const applyParams = useApplyParams();
-
   const copyLink = (hash: string) => {
     const [base, _] = window.location.href.split('?');
     const link = base + `?search=${hash.slice(0, 6)}`;
@@ -322,19 +319,13 @@ export const CheckOperations = () => {
             placeholder="Search by hash or name"
             className="pl-8 pr-10"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams({ search: e.target.value });
-            }}
+            onChange={(e) => setSearch({ search: e.target.value, page: null })}
           />
           {search && (
             <Button
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch('');
-                applyParams({ search: null });
-              }}
+              onClick={() => setSearch({ search: null, page: null })}
             >
               <Cross1Icon />
             </Button>
