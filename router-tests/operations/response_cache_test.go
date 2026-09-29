@@ -1183,9 +1183,9 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 	prefix := "response_cache_test:" + uuid.New().String() + ":"
 
 	return &config.ResponseCacheConfiguration{
-		Enabled:     true,
-		FallbackTTL: ttl,
-		KeyPrefix:   prefix,
+		Enabled:   true,
+		All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: ttl},
+		KeyPrefix: prefix,
 		Storage: config.ResponseCacheStorageConfig{
 			Provider:   config.ResponseCacheStorageProviderRedis,
 			ProviderID: responseCacheRedisProviderID,
