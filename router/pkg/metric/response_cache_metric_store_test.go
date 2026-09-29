@@ -101,7 +101,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		require.Equal(t, 0.00025, hist.DataPoints[0].Bounds[0], "the buckets of the instrument survive the views of the meter provider")
 	})
 
-	t.Run("keys, writes and invalidated tags are counted", func(t *testing.T) {
+	t.Run("keys and writes are counted", func(t *testing.T) {
 		t.Parallel()
 
 		store, reader := newOtlpResponseCacheStore(t)
@@ -110,7 +110,6 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		store.MeasureKeys(ctx, ResponseCacheOperationLookup, ResponseCacheResultMissing, 0)
 		store.MeasureKeys(ctx, ResponseCacheOperationWrite, ResponseCacheResultStored, 2)
 		store.MeasureWrite(ctx, 128, time.Minute)
-		store.MeasureInvalidatedTags(ctx, 4)
 
 		scope := responseCacheScope(t, reader)
 
@@ -132,10 +131,6 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		require.True(t, ok)
 		require.InDelta(t, 60, ttl.DataPoints[0].Sum, 1e-9)
 		require.Equal(t, float64(86400), ttl.DataPoints[0].Bounds[len(ttl.DataPoints[0].Bounds)-1])
-
-		tags, ok := responseCacheMetric(t, scope, "router.response_cache.invalidation.tags").Data.(metricdata.Sum[int64])
-		require.True(t, ok)
-		require.EqualValues(t, 4, tags.DataPoints[0].Value)
 	})
 
 	t.Run("fetches are counted by status, decision and type", func(t *testing.T) {

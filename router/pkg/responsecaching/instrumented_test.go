@@ -48,7 +48,6 @@ type recorder struct {
 	operations []operation
 	keys       map[string]int64
 	writes     []write
-	tags       int64
 }
 
 func newRecorder() *recorder {
@@ -67,10 +66,6 @@ func (r *recorder) MeasureKeys(_ context.Context, operation, result string, coun
 
 func (r *recorder) MeasureWrite(_ context.Context, bytes int64, ttl time.Duration) {
 	r.writes = append(r.writes, write{bytes: bytes, ttl: ttl})
-}
-
-func (r *recorder) MeasureInvalidatedTags(_ context.Context, count int64) {
-	r.tags += count
 }
 
 type timeoutError struct{}
@@ -174,7 +169,7 @@ func TestInstrumentedStore(t *testing.T) {
 		require.Equal(t, map[string]int64{"write/stored": 1, "write/failed": 2}, rec.keys)
 	})
 
-	t.Run("an invalidation counts its tags and the entries it removed", func(t *testing.T) {
+	t.Run("an invalidation counts the entries it removed", func(t *testing.T) {
 		t.Parallel()
 
 		rec := newRecorder()
@@ -186,7 +181,6 @@ func TestInstrumentedStore(t *testing.T) {
 
 		require.Equal(t, []operation{{name: metric.ResponseCacheOperationInvalidate}}, rec.operations)
 		require.Equal(t, map[string]int64{"invalidate/removed": 5}, rec.keys)
-		require.EqualValues(t, 2, rec.tags)
 	})
 
 	t.Run("a failed invalidation still counts what it removed", func(t *testing.T) {

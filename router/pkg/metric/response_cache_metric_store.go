@@ -61,7 +61,6 @@ type ResponseCacheMetricStore interface {
 	MeasureFetch(ctx context.Context, subgraph, typeNames, status, storeDecision string)
 	MeasureKeys(ctx context.Context, operation, result string, count int64)
 	MeasureWrite(ctx context.Context, bytes int64, ttl time.Duration)
-	MeasureInvalidatedTags(ctx context.Context, count int64)
 }
 
 // ResponseCacheMetrics is the store for the health metrics of the response cache.
@@ -176,16 +175,5 @@ func (s *ResponseCacheMetrics) MeasureWrite(ctx context.Context, bytes int64, tt
 	for _, provider := range s.providers {
 		provider.writeBytes.Add(ctx, bytes, opt)
 		provider.writeTTL.Record(ctx, ttl.Seconds(), opt)
-	}
-}
-
-func (s *ResponseCacheMetrics) MeasureInvalidatedTags(ctx context.Context, count int64) {
-	if count <= 0 {
-		return
-	}
-	opt := s.withAttrs()
-
-	for _, provider := range s.providers {
-		provider.invalidationTags.Add(ctx, count, opt)
 	}
 }
