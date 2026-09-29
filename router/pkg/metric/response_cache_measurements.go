@@ -15,10 +15,6 @@ const (
 	responseCacheWriteTTL          = "router.response_cache.write.ttl_seconds"
 	responseCacheInvalidationTags  = "router.response_cache.invalidation.tags"
 
-	responseCacheMemoryEvictions      = "router.response_cache.memory.evictions"
-	responseCacheMemoryRejectedWrites = "router.response_cache.memory.rejected_writes"
-	responseCacheMemoryMaxEntries     = "router.response_cache.memory.max_entries"
-
 	// Not milliseconds, which the meter views force onto buckets starting at 10 ms.
 	unitSeconds = "s"
 )
@@ -52,18 +48,6 @@ var (
 	responseCacheInvalidationTagsOptions = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription("Tags the response cache store was asked to invalidate"),
 	}
-
-	responseCacheMemoryEvictionsOptions = []otelmetric.Int64ObservableCounterOption{
-		otelmetric.WithDescription("Entries evicted from the in memory response cache"),
-	}
-
-	responseCacheMemoryRejectedWritesOptions = []otelmetric.Int64ObservableCounterOption{
-		otelmetric.WithDescription("Writes the in memory response cache did not admit"),
-	}
-
-	responseCacheMemoryMaxEntriesOptions = []otelmetric.Int64ObservableGaugeOption{
-		otelmetric.WithDescription("Configured size of the in memory response cache"),
-	}
 )
 
 type responseCacheInstruments struct {
@@ -73,14 +57,9 @@ type responseCacheInstruments struct {
 	writeBytes        otelmetric.Int64Counter
 	writeTTL          otelmetric.Float64Histogram
 	invalidationTags  otelmetric.Int64Counter
-
-	// Only created for a cache that reports memory stats.
-	memoryEvictions      otelmetric.Int64ObservableCounter
-	memoryRejectedWrites otelmetric.Int64ObservableCounter
-	memoryMaxEntries     otelmetric.Int64ObservableGauge
 }
 
-func newResponseCacheInstruments(meter otelmetric.Meter, memory bool) (*responseCacheInstruments, error) {
+func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstruments, error) {
 	var (
 		instruments responseCacheInstruments
 		err         error
@@ -103,20 +82,6 @@ func newResponseCacheInstruments(meter otelmetric.Meter, memory bool) (*response
 	}
 	if instruments.invalidationTags, err = meter.Int64Counter(responseCacheInvalidationTags, responseCacheInvalidationTagsOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache invalidation tags counter: %w", err)
-	}
-
-	if !memory {
-		return &instruments, nil
-	}
-
-	if instruments.memoryEvictions, err = meter.Int64ObservableCounter(responseCacheMemoryEvictions, responseCacheMemoryEvictionsOptions...); err != nil {
-		return nil, fmt.Errorf("failed to create response cache evictions counter: %w", err)
-	}
-	if instruments.memoryRejectedWrites, err = meter.Int64ObservableCounter(responseCacheMemoryRejectedWrites, responseCacheMemoryRejectedWritesOptions...); err != nil {
-		return nil, fmt.Errorf("failed to create response cache rejected writes counter: %w", err)
-	}
-	if instruments.memoryMaxEntries, err = meter.Int64ObservableGauge(responseCacheMemoryMaxEntries, responseCacheMemoryMaxEntriesOptions...); err != nil {
-		return nil, fmt.Errorf("failed to create response cache max entries gauge: %w", err)
 	}
 
 	return &instruments, nil

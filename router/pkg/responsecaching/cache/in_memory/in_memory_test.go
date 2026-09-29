@@ -411,45 +411,6 @@ func TestInMemoryCache(t *testing.T) {
 		})
 	})
 
-	t.Run("Stats", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("writes beyond the cache size are counted as evicted or rejected", func(t *testing.T) {
-			t.Parallel()
-
-			c, err := NewInMemoryCache(1, WithStats())
-			require.NoError(t, err)
-			t.Cleanup(func() {
-				require.NoError(t, c.Close())
-			})
-
-			for _, key := range []string{"a", "b", "c", "d", "e", "f"} {
-				require.NoError(t, c.SetMany(ctx, []enginecache.Item{
-					{Key: key, Value: []byte(key), TTL: time.Hour},
-				}))
-			}
-
-			// Which of the two a write ends up as is for the cache to decide.
-			require.Positive(t, c.Evictions()+c.RejectedWrites())
-			require.EqualValues(t, 1, c.MaxEntries())
-		})
-
-		t.Run("nothing is counted without stats", func(t *testing.T) {
-			t.Parallel()
-
-			c := newTestCacheOfSize(t, 1)
-
-			for _, key := range []string{"a", "b", "c"} {
-				require.NoError(t, c.SetMany(ctx, []enginecache.Item{
-					{Key: key, Value: []byte(key), TTL: time.Hour},
-				}))
-			}
-
-			require.Zero(t, c.Evictions())
-			require.Zero(t, c.RejectedWrites())
-		})
-	})
-
 	t.Run("GetMany", func(t *testing.T) {
 		t.Parallel()
 
