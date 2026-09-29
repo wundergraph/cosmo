@@ -150,10 +150,10 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true)
 
 		ctx, rc := setupTestContext(t, tp)
-		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCacheHit: true})
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit}})
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK})
 
-		require.Equal(t, ResponseCacheStatusPartialHit, rc.responseCacheStatus())
+		require.Equal(t, ResponseCacheStatusPartialHit, rc.responseCacheStatus(), "a fetch that is not cacheable counts against a hit")
 	})
 
 	t.Run("a fetch without hook context is still counted", func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 
 		rc := newTestRequestContext(t)
 		ctx := withRequestContext(context.Background(), rc)
-		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCacheHit: true})
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit}})
 
 		require.Equal(t, ResponseCacheStatusHit, rc.responseCacheStatus())
 	})
