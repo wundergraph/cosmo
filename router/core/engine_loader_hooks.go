@@ -87,25 +87,9 @@ func responseCacheStatus(info *resolve.ResponseInfo) string {
 // fetchTypeNames names the types a fetch resolves fields of, for an entity
 // fetch the entity type. Several types are sorted and joined with a comma.
 func fetchTypeNames(rootFields []resolve.GraphCoordinate) string {
-	if len(rootFields) == 0 {
-		return ""
-	}
-
-	first := rootFields[0].TypeName
-	single := true
-	for i := 1; i < len(rootFields); i++ {
-		if rootFields[i].TypeName != first {
-			single = false
-			break
-		}
-	}
-	if single {
-		return first
-	}
-
 	names := make([]string, 0, len(rootFields))
-	for i := range rootFields {
-		names = append(names, rootFields[i].TypeName)
+	for _, field := range rootFields {
+		names = append(names, field.TypeName)
 	}
 	slices.Sort(names)
 	return strings.Join(slices.Compact(names), ",")
