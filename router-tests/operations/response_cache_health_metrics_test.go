@@ -121,10 +121,6 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			keys := responseCacheKeysByResult(t, metricReader)
 			require.EqualValues(t, removed, keys["invalidate/removed"])
 			require.Equal(t, keys["write/stored"], keys["invalidate/removed"], "everything stored for mood is removed")
-
-			tags, ok := testutils.GetMetricByName(responseCacheScope(t, metricReader), "router.response_cache.invalidation.tags").Data.(metricdata.Sum[int64])
-			require.True(t, ok)
-			require.EqualValues(t, 1, tags.DataPoints[0].Value)
 		})
 	})
 

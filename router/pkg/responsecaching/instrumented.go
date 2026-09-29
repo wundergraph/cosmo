@@ -93,7 +93,6 @@ func (s *instrumentedStore) InvalidateByTags(ctx context.Context, tags []string)
 	start := time.Now()
 	removed, err := s.inner.InvalidateByTags(ctx, tags)
 	s.metrics.MeasureOperation(ctx, metric.ResponseCacheOperationInvalidate, time.Since(start), errorType(err))
-	s.metrics.MeasureInvalidatedTags(ctx, int64(len(tags)))
 	// Counted on failure as well, the entries removed before it are gone.
 	s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationInvalidate, metric.ResponseCacheResultRemoved, int64(removed))
 	if err != nil {
