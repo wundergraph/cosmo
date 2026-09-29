@@ -46,8 +46,8 @@ type notCached struct {
 	store caching.Cache
 }
 
-// GetMany returns only vary records only.
-// This done to keep variants in the cache when they get stored later,
+// GetMany returns vary records only.
+// This done to keep variants in the cache when they get stored later via SetMany,
 // otherwise "no-cache" would wipe variants from cache.
 func (w notCached) GetMany(ctx context.Context, keys []string) (map[string]caching.Item, error) {
 	found, err := w.store.GetMany(ctx, keys)
