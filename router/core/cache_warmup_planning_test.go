@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/ristretto/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -33,7 +34,7 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	})
 	client, err := persistedoperation.NewClient(&persistedoperation.Options{PQLStore: store})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	t.Cleanup(func() { assert.NoError(t, client.Close()) })
 	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
 		NumCounters:        100,
 		MaxCost:            10,
@@ -57,7 +58,7 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	))))
 	skipParse, _, err := kit.FetchPersistedOperation(t.Context(), &ClientInfo{})
 	require.NoError(t, err)
-	require.False(t, skipParse)
+	assert.False(t, skipParse)
 	require.NoError(t, kit.Parse())
 	_, err = kit.NormalizeOperation("", false)
 	require.NoError(t, err)
@@ -75,8 +76,8 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, "GetHello", result.OperationName)
-	require.True(t, result.PlanCacheHit)
+	assert.Equal(t, "GetHello", result.OperationName)
+	assert.True(t, result.PlanCacheHit)
 }
 
 // Keep planning out of this regression: the cached document must still pass validation.
