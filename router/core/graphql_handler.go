@@ -228,23 +228,27 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
+
 	if h.responseCacheStore != nil && h.responseCacheSettings != nil {
-		if store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl); store != nil {
-		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
-		cacheOpts.Store = store
-		cacheOpts.OnError = h.responseCacheErrorHandler
-		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
-			CacheTag: h.responseCacheInvalidation.CacheTag,
-			Subgraph: h.responseCacheInvalidation.Subgraph,
-			Type:     h.responseCacheInvalidation.Type,
+		store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl)
+		if store != nil {
+			cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
+			cacheOpts.Store = store
+			cacheOpts.OnError = h.responseCacheErrorHandler
+			cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
+				CacheTag: h.responseCacheInvalidation.CacheTag,
+				Subgraph: h.responseCacheInvalidation.Subgraph,
+				Type:     h.responseCacheInvalidation.Type,
+			}
+			resolveCtx.SetResponseCache(cacheOpts)
 		}
-		resolveCtx.SetResponseCache(cacheOpts)
 	}
 	if h.responseCacheStore != nil && reqCtx.cacheControl != nil && reqCtx.cacheControl.NoCache {
 		// The leader of a shared flight may answer from the cache,
 		// so a no-cache request resolves on its own.
 		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
 	}
+
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
 	}
