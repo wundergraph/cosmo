@@ -14,5 +14,4 @@ func (n *NoopResponseCacheMetricStore) MeasureOperation(ctx context.Context, ope
 func (n *NoopResponseCacheMetricStore) MeasureEngineError(ctx context.Context) {}
 func (n *NoopResponseCacheMetricStore) MeasureKeys(ctx context.Context, operation, result string, count int64) {
 }
-func (n *NoopResponseCacheMetricStore) MeasureWrite(ctx context.Context, bytes int64, ttl time.Duration) {
-}
+func (n *NoopResponseCacheMetricStore) MeasureWriteTTL(ctx context.Context, ttl time.Duration) {}

@@ -108,7 +108,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		store.MeasureKeys(ctx, ResponseCacheOperationLookup, ResponseCacheResultFound, 3)
 		store.MeasureKeys(ctx, ResponseCacheOperationLookup, ResponseCacheResultMissing, 0)
 		store.MeasureKeys(ctx, ResponseCacheOperationWrite, ResponseCacheResultStored, 2)
-		store.MeasureWrite(ctx, 128, time.Minute)
+		store.MeasureWriteTTL(ctx, time.Minute)
 
 		scope := responseCacheScope(t, reader)
 
@@ -121,10 +121,6 @@ func TestResponseCacheMetricStore(t *testing.T) {
 			counts[operation.AsString()+"/"+result.AsString()] += dp.Value
 		}
 		require.Equal(t, map[string]int64{"lookup/found": 3, "write/stored": 2}, counts)
-
-		bytes, ok := responseCacheMetric(t, scope, "router.response_cache.write.bytes").Data.(metricdata.Sum[int64])
-		require.True(t, ok)
-		require.EqualValues(t, 128, bytes.DataPoints[0].Value)
 
 		ttl, ok := responseCacheMetric(t, scope, "router.response_cache.write.ttl_seconds").Data.(metricdata.Histogram[float64])
 		require.True(t, ok)

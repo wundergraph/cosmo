@@ -53,7 +53,8 @@ type ResponseCacheMetricStore interface {
 	MeasureOperation(ctx context.Context, operation string, duration time.Duration, errorType string)
 	MeasureEngineError(ctx context.Context)
 	MeasureKeys(ctx context.Context, operation, result string, count int64)
-	MeasureWrite(ctx context.Context, bytes int64, ttl time.Duration)
+	// MeasureWriteTTL records the lifetime the entries of a write were stored with.
+	MeasureWriteTTL(ctx context.Context, ttl time.Duration)
 }
 
 // ResponseCacheMetrics is the store for the health metrics of the response cache.
@@ -142,11 +143,10 @@ func (s *ResponseCacheMetrics) MeasureKeys(ctx context.Context, operation, resul
 	}
 }
 
-func (s *ResponseCacheMetrics) MeasureWrite(ctx context.Context, bytes int64, ttl time.Duration) {
+func (s *ResponseCacheMetrics) MeasureWriteTTL(ctx context.Context, ttl time.Duration) {
 	opt := s.withAttrs()
 
 	for _, provider := range s.providers {
-		provider.writeBytes.Add(ctx, bytes, opt)
 		provider.writeTTL.Record(ctx, ttl.Seconds(), opt)
 	}
 }

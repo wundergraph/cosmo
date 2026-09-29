@@ -73,18 +73,14 @@ func (s *instrumentedStore) SetMany(ctx context.Context, items []caching.Item) e
 		return &measuredError{err: err}
 	}
 
-	var (
-		bytes int64
-		ttl   time.Duration
-	)
+	var ttl time.Duration
 	for i, item := range items {
-		bytes += int64(len(item.Value))
 		if i == 0 || item.TTL < ttl {
 			ttl = item.TTL
 		}
 	}
 	s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationWrite, metric.ResponseCacheResultStored, int64(len(items)))
-	s.metrics.MeasureWrite(ctx, bytes, ttl)
+	s.metrics.MeasureWriteTTL(ctx, ttl)
 
 	return nil
 }

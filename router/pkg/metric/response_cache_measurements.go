@@ -11,7 +11,6 @@ const (
 	responseCacheOperations        = "router.response_cache.operations"
 	responseCacheOperationDuration = "router.response_cache.operation.duration_seconds"
 	responseCacheKeys              = "router.response_cache.keys"
-	responseCacheWriteBytes        = "router.response_cache.write.bytes"
 	responseCacheWriteTTL          = "router.response_cache.write.ttl_seconds"
 
 	// Not milliseconds, which the meter views force onto buckets starting at 10 ms.
@@ -33,11 +32,6 @@ var (
 		otelmetric.WithDescription("Entries the response cache store was asked for, found, stored or removed"),
 	}
 
-	responseCacheWriteBytesOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithUnit(unitBytes),
-		otelmetric.WithDescription("Size of the values written to the response cache store"),
-	}
-
 	responseCacheWriteTTLOptions = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit(unitSeconds),
 		otelmetric.WithDescription("Shortest lifetime of the entries of a write to the response cache store"),
@@ -49,7 +43,6 @@ type responseCacheInstruments struct {
 	operations        otelmetric.Int64Counter
 	operationDuration otelmetric.Float64Histogram
 	keys              otelmetric.Int64Counter
-	writeBytes        otelmetric.Int64Counter
 	writeTTL          otelmetric.Float64Histogram
 }
 
@@ -67,9 +60,6 @@ func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstrume
 	}
 	if instruments.keys, err = meter.Int64Counter(responseCacheKeys, responseCacheKeysOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache keys counter: %w", err)
-	}
-	if instruments.writeBytes, err = meter.Int64Counter(responseCacheWriteBytes, responseCacheWriteBytesOptions...); err != nil {
-		return nil, fmt.Errorf("failed to create response cache write bytes counter: %w", err)
 	}
 	if instruments.writeTTL, err = meter.Float64Histogram(responseCacheWriteTTL, responseCacheWriteTTLOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache write ttl histogram: %w", err)

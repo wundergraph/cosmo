@@ -80,10 +80,6 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			require.Len(t, ttl.DataPoints, 1)
 			require.InDelta(t, 60, ttl.DataPoints[0].Sum/float64(ttl.DataPoints[0].Count), 1e-9, "the max-age mood answered with")
 
-			bytes, ok := testutils.GetMetricByName(scope, "router.response_cache.write.bytes").Data.(metricdata.Sum[int64])
-			require.True(t, ok)
-			require.Positive(t, bytes.DataPoints[0].Value)
-
 			for _, m := range scope.Metrics {
 				require.NotContains(t, m.Name, "memory", "nothing is reported about a provider that is for tests only")
 			}
@@ -153,7 +149,6 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 				"router_response_cache_operations_total",
 				"router_response_cache_operation_duration_seconds",
 				"router_response_cache_keys_total",
-				"router_response_cache_write_bytes_total",
 				"router_response_cache_write_ttl_seconds",
 			} {
 				require.Contains(t, names, name)
