@@ -22,7 +22,8 @@ type entry struct {
 }
 
 type InMemoryCache struct {
-	cache *ristretto.Cache[string, entry]
+	cache      *ristretto.Cache[string, entry]
+	maxEntries int64
 	// tags indexes entries by the tags they were stored under, so they can be
 	// found again by something other than their key.
 	tags *tagIndex
@@ -33,9 +34,28 @@ type InMemoryCache struct {
 
 var _ enginecache.Cache = (*InMemoryCache)(nil)
 
+// Option configures an InMemoryCache.
+type Option func(*options)
+
+type options struct {
+	stats bool
+}
+
+// WithStats keeps the counters Evictions and RejectedWrites read.
+func WithStats() Option {
+	return func(o *options) {
+		o.stats = true
+	}
+}
+
 // NewInMemoryCache returns a cache holding at most maxEntries entries. The
 // caller owns it and must Close it.
-func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
+func NewInMemoryCache(maxEntries int64, opts ...Option) (*InMemoryCache, error) {
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	if maxEntries <= 0 {
 		return nil, fmt.Errorf("in memory response cache needs a positive size, got %d", maxEntries)
 	}
@@ -48,12 +68,34 @@ func NewInMemoryCache(maxEntries int64) (*InMemoryCache, error) {
 		NumCounters:        maxEntries * 10,
 		IgnoreInternalCost: true,
 		BufferItems:        64,
+		Metrics:            o.stats,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create in memory response cache: %w", err)
 	}
 
-	return &InMemoryCache{cache: cache, tags: newTagIndex()}, nil
+	return &InMemoryCache{cache: cache, maxEntries: maxEntries, tags: newTagIndex()}, nil
+}
+
+// Evictions is the number of entries evicted to make room. Zero without WithStats.
+func (c *InMemoryCache) Evictions() uint64 {
+	if c.cache.Metrics == nil {
+		return 0
+	}
+	return c.cache.Metrics.KeysEvicted()
+}
+
+// RejectedWrites is the number of writes that were not admitted. Zero without WithStats.
+func (c *InMemoryCache) RejectedWrites() uint64 {
+	if c.cache.Metrics == nil {
+		return 0
+	}
+	return c.cache.Metrics.SetsRejected() + c.cache.Metrics.SetsDropped()
+}
+
+// MaxEntries is the size the cache was created with.
+func (c *InMemoryCache) MaxEntries() int64 {
+	return c.maxEntries
 }
 
 // GetMany implements enginecache.GetMany.

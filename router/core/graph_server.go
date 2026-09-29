@@ -1815,6 +1815,7 @@ func (s *graphServer) buildGraphMux(
 
 	if s.responseCache != nil {
 		handlerOpts.ResponseCache = s.responseCache
+		handlerOpts.ResponseCacheMetrics = s.responseCacheMetrics
 		handlerOpts.ResponseCacheFallbackTTL = s.responseCacheConfig.FallbackTTL
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader

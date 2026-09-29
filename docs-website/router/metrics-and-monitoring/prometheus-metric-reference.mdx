@@ -188,6 +188,39 @@ A generic error type to indicate an error occurred. This is available only for `
 You can find more examples here under [`Streams`](/router/metrics-and-monitoring#example-prometheus-queries)
 
 
+### Response Cache Metrics
+We expose metrics for the store of the [response cache](/router/response-cache): its lookups, writes and invalidations, how long they take and how they fail.
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      response_cache: true
+```
+
+#### Metrics
+
+* `router_response_cache_operations_total`: Counter of calls to the store.
+* `router_response_cache_operation_duration_seconds`: Histogram of the duration of those calls, in seconds.
+* `router_response_cache_keys_total`: Counter of the entries the store was asked for, found, stored or removed.
+* `router_response_cache_write_bytes_total`: Counter of the size of the values written.
+* `router_response_cache_write_ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
+* `router_response_cache_invalidation_tags_total`: Counter of the tags the store was asked to invalidate.
+* `router_response_cache_memory_evictions_total`: Counter of entries evicted to make room. Memory provider only.
+* `router_response_cache_memory_rejected_writes_total`: Counter of writes that were not admitted. Memory provider only.
+* `router_response_cache_memory_max_entries`: The configured size. Memory provider only.
+
+#### Attributes
+
+* `wg_response_cache_provider`: The storage provider, `redis` or `memory`. On every metric.
+* `wg_response_cache_operation`: `lookup`, `write` or `invalidate`. `engine` counts a failure around the store, such as an entry that could not be read.
+* `wg_response_cache_result`: On `router_response_cache_keys_total`. `found` or `missing` for a lookup, `stored` or `failed` for a write, `removed` for an invalidation.
+* `wg_error_type`: On `router_response_cache_operations_total`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`.
+
+#### Examples
+
+You can find examples under [Cache health](/router/response-cache#cache-health).
+
 ### Connection Metrics
 
 These metrics provide lower level metrics which helps track connection and pool metrics. By utilizing these metrics users can figure out when the router's connection pool is full and when connections are misbehaving by for example observing spikes in time to acquire connections.

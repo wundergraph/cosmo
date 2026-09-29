@@ -21,6 +21,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -94,6 +95,7 @@ type HandlerOptions struct {
 	HeaderPropagation                        *HeaderPropagation
 
 	ResponseCache             caching.Cache
+	ResponseCacheMetrics      rmetric.ResponseCacheMetricStore
 	ResponseCacheFallbackTTL  time.Duration
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
@@ -124,7 +126,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheFallbackTTL:                 opts.ResponseCacheFallbackTTL,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
-		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
+		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
 	}
 	return graphQLHandler
 }
@@ -134,16 +136,23 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // either way; this only decides whether anyone finds out that the cache is no
 // longer doing anything.
 
-func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
-	if log == nil {
+func newResponseCacheErrorHandler(log *zap.Logger, metrics rmetric.ResponseCacheMetricStore) func(error) {
+	if log == nil && metrics == nil {
 		return nil
 	}
 
-	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
-	}))
+	sampled := zap.NewNop()
+	if log != nil {
+		sampled = log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+			return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
+		}))
+	}
 
 	return func(err error) {
+		// A failure of the store itself was counted where it happened.
+		if metrics != nil && !responsecaching.IsMeasured(err) {
+			metrics.MeasureEngineError(context.Background())
+		}
 		sampled.Warn("Response cache degraded, serving from the subgraph instead", zap.Error(err))
 	}
 }

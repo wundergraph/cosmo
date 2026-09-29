@@ -1526,6 +1526,11 @@
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
+                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1711,6 +1716,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",

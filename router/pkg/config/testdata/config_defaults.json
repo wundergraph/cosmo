@@ -40,6 +40,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -71,6 +72,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
