@@ -1163,13 +1163,31 @@ func TestResponseCacheInvalidation(t *testing.T) {
 }
 
 func fixedResponseMiddleware(cacheControl, body string) func(http.Handler) http.Handler {
-	return func(http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Cache-Control", cacheControl)
-			_, _ = w.Write([]byte(body))
-		})
-	}
+	return newSwitchableResponse(cacheControl, body).middleware
+}
+
+// switchableResponse is a subgraph answer whose body a test can change between requests.
+type switchableResponse struct {
+	cacheControl string
+	body         atomic.Value
+}
+
+func newSwitchableResponse(cacheControl, body string) *switchableResponse {
+	r := &switchableResponse{cacheControl: cacheControl}
+	r.set(body)
+	return r
+}
+
+func (r *switchableResponse) set(body string) {
+	r.body.Store(body)
+}
+
+func (r *switchableResponse) middleware(http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", r.cacheControl)
+		_, _ = w.Write([]byte(r.body.Load().(string)))
+	})
 }
 
 // responseCacheConfig builds a redis backed response cache namespaced to this
