@@ -17,9 +17,14 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -710,5 +715,49 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		_, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.False(t, ok, "without a cache every fetch would read as a miss")
+	})
+
+	// Known limit: the engine has no partial hit flag, only the TTL tells.
+	t.Run("a partial hit with no life left reads as a miss", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheTTL: 0,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, ResponseCacheStatusMiss, status.AsString())
+	})
+
+	t.Run("the access log of a hit carries the expression fields", func(t *testing.T) {
+		t.Parallel()
+
+		zCore, logs := observer.New(zapcore.InfoLevel)
+
+		program, err := expr.CreateNewExprManager().CompileAnyExpression("subgraph.response.cache.status")
+		require.NoError(t, err)
+
+		accessLogger := requestlogger.NewSubgraphAccessLogger(zap.New(zCore), requestlogger.SubgraphOptions{
+			FieldsHandler:  SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+		})
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, accessLogger, tp, nil, nil, nil, false, nil, true)
+
+		ctx, _ := setupTestContext(t, tp)
+		// No request is sent for a hit.
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+			ResponseCacheTTL: time.Minute,
+		})
+
+		require.Equal(t, 1, logs.Len())
+		fields := logs.All()[0].ContextMap()
+		require.Equal(t, ResponseCacheStatusHit, fields["cache_status"])
+		require.Equal(t, trace.SpanFromContext(ctx).SpanContext().TraceID().String(), fields["trace_id"])
+		require.Contains(t, fields, "request_id")
 	})
 }

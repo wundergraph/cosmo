@@ -161,7 +161,7 @@ All metrics are tracked along different dimensions. A dimension is an attribute 
 
 * `wg.operation.protocol`: The used protocol `http` , `ws`
 
-* `wg.operation.name`: The name of the operation
+* `wg.operation.name`: The name of the operation. Left out unless the router exports to Cosmo Cloud or the attribute is enabled with the `operation_name` context field, see [Metrics Only Attributes](/router/open-telemetry/custom-attributes#metrics-only-attributes).
 
 * `wg.operation.type`: The type of the operation e.g. `query`
 

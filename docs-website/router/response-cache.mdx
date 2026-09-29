@@ -153,7 +153,7 @@ These apply to the current alpha.
 
 **Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must use `private` or `no-store`. Omitting `public` does not prevent caching.
 
-**Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
+**Cache hits produce no transport telemetry.** A hit skips the subgraph request, so nothing is recorded for the HTTP round trip: no request or response size, no in-flight count, no connection metrics. The fetch itself is still recorded, with its `Engine - Fetch` span and request metrics marked as a hit. See [Metrics and traces](#metrics-and-traces).
 
 **A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
 
@@ -360,19 +360,36 @@ sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_sta
 sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status!=""}[5m]))
 ```
 
-The same split on the duration histogram shows what a hit saves:
+The same split on the duration histogram shows what a hit saves. Compare means, not quantiles: the smallest Prometheus bucket is 10 ms, which every hit falls into.
 
 ```promql
-histogram_quantile(0.95,
-  sum by (wg_subgraph_name, wg_response_cache_status, le) (
-    rate(router_http_request_duration_milliseconds_bucket{wg_response_cache_status!=""}[5m])
-  )
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_sum{wg_response_cache_status!=""}[5m])
 )
+/
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_count{wg_response_cache_status!=""}[5m])
+)
+```
+
+The duration of a fetch starts after the cache was looked up, for a hit and a miss alike. The time spent in the cache itself is in neither.
+
+To break the hit rate down by operation, add the operation name to the metrics. It is on every span, but left out of metrics unless the router exports to Cosmo Cloud:
+
+```yaml
+telemetry:
+  metrics:
+    attributes:
+      - key: "wg.operation.name"
+        value_from:
+          context_field: operation_name
 ```
 
 The attribute is per fetch, not per client response. An operation that fans out to several subgraphs produces one status per fetch. It is not attached while the cache is disabled, and it can be dropped from metrics with `exclude_metric_labels` under `telemetry.metrics.prometheus` or `telemetry.metrics.otlp`.
 
-The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, which puts it within reach of custom attributes and the subgraph access log.
+A partial hit is told apart from a miss by the life left on the cached entries. One served from entries with no life left is reported as a `miss`.
+
+The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, which puts it within reach of custom attributes and the subgraph access log. No request is sent for a hit, so its access log line has no `method`, `path`, `url` or request header fields.
 
 ## Related
 

@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltracetest "go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -179,6 +181,103 @@ func TestResponseCacheMetrics(t *testing.T) {
 				core.ResponseCacheStatusMiss: 1,
 				core.ResponseCacheStatusHit:  1,
 			}, custom)
+		})
+	})
+
+	t.Run("the subgraph access log of a hit carries the status", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:             memoryCacheOptions(t, nil),
+			SubgraphAccessLogsEnabled: true,
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key: "cache_status",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.response.cache.status",
+					},
+				},
+				{
+					Key: "operation_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationName,
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const namedMoodQuery = `query Moods { employees { id currentMood } }`
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: namedMoodQuery})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: namedMoodQuery})
+
+			var statuses []string
+			for _, entry := range xEnv.Observer().FilterField(zap.String("subgraph_name", "mood")).All() {
+				fields := entry.ContextMap()
+				if fields["log_type"] != "client/subgraph" {
+					continue
+				}
+				require.Equal(t, "Moods", fields["operation_name"])
+				require.NotEmpty(t, fields["request_id"])
+				statuses = append(statuses, fields["cache_status"].(string))
+			}
+			require.Equal(t, []string{core.ResponseCacheStatusMiss, core.ResponseCacheStatusHit}, statuses,
+				"no request is sent for a hit, its fields must not depend on one")
+		})
+	})
+
+	t.Run("the hit rate can be split by operation once the operation name is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			RouterOptions: memoryCacheOptions(t, nil),
+			CustomMetricAttributes: []config.CustomAttribute{
+				{
+					Key: string(otel.WgOperationName),
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationName,
+					},
+				},
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const namedMoodQuery = `query Moods { employees { id currentMood } }`
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: namedMoodQuery})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: namedMoodQuery})
+
+			rm := collectMetrics(t, metricReader)
+			scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.NotNil(t, scope)
+			requests := testutils.GetMetricByName(scope, "router.http.requests")
+			require.NotNil(t, requests)
+			sum, ok := requests.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			byOperation := map[string]int64{}
+			for _, dp := range sum.DataPoints {
+				if name, _ := dp.Attributes.Value(otel.WgSubgraphName); name.AsString() != "mood" {
+					continue
+				}
+				operation, _ := dp.Attributes.Value(otel.WgOperationName)
+				status, _ := dp.Attributes.Value(otel.WgResponseCacheStatus)
+				byOperation[operation.AsString()+"/"+status.AsString()] += dp.Value
+			}
+			require.Equal(t, map[string]int64{
+				"Moods/" + core.ResponseCacheStatusMiss: 1,
+				"Moods/" + core.ResponseCacheStatusHit:  1,
+			}, byOperation)
 		})
 	})
 

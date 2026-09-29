@@ -323,12 +323,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.Int("status", responseInfo.StatusCode),
 			zap.Duration("latency", latency),
 		}
+		fields = append(fields, f.accessLogger.RequestFields(ctx, responseInfo, exprCtx)...)
 		path := ds.Name
-		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.RequestFields(responseInfo, exprCtx)...)
-			if responseInfo.Request.URL != nil {
-				path = responseInfo.Request.URL.Path
-			}
+		if responseInfo.Request != nil && responseInfo.Request.URL != nil {
+			path = responseInfo.Request.URL.Path
 		}
 
 		if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {

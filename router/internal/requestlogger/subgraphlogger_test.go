@@ -1,16 +1,19 @@
 package requestlogger_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -26,7 +29,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{})
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		require.NoError(t, err)
-		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
@@ -55,7 +58,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
@@ -89,7 +92,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
@@ -123,7 +126,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
@@ -169,7 +172,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req.Header.Add("test-header", "test-value")
 
 		require.NoError(t, err)
-		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        nil,
 			Request:    req,
@@ -228,7 +231,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			},
 		})
 
-		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        errors.New("my-test-error"),
 			Request:    nil,
@@ -245,7 +248,42 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"request-error-msg": "my-test-error",
 			"test-response":     "test-response-value",
 		}
-		additionalExpectedKeys := []string{"hostname", "pid"}
+		additionalExpectedKeys := []string{"request_id", "hostname", "pid"}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+	})
+
+	t.Run("a fetch without a request keeps the trace id and expression fields", func(t *testing.T) {
+		var zCore zapcore.Core
+		zCore, logObserver := observer.New(zapcore.InfoLevel)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
+
+		program, err := expr.CreateNewExprManager().CompileAnyExpression("subgraph.response.cache.status")
+		require.NoError(t, err)
+
+		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
+			FieldsHandler:  core.SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+		})
+
+		ctx, span := sdktrace.NewTracerProvider().Tracer("test").Start(context.Background(), "Engine - Fetch")
+		defer span.End()
+
+		exprCtx := &expr.Context{}
+		exprCtx.Subgraph.Response.Cache.Status = core.ResponseCacheStatusHit
+
+		subgraphLogger.Info("", subgraphLogger.RequestFields(ctx, &resolve.ResponseInfo{
+			StatusCode:       200,
+			ResponseCacheHit: true,
+		}, exprCtx))
+
+		require.Equal(t, 1, logObserver.Len())
+		requestContext := logObserver.All()[0].ContextMap()
+		expectedValues := map[string]interface{}{
+			"log_type":     "client/subgraph",
+			"cache_status": core.ResponseCacheStatusHit,
+			"trace_id":     span.SpanContext().TraceID().String(),
+		}
+		additionalExpectedKeys := []string{"request_id", "hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 }
