@@ -1,4 +1,5 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { parseAsString, useQueryState } from 'nuqs';
 import { EmptyState } from '@/components/empty-state';
 import { FederatedGraphsCards } from '@/components/federatedgraphs-cards';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
@@ -14,7 +15,6 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { capitalCase } from 'change-case';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -23,13 +23,12 @@ import { buildUrl } from '@/lib/build-url';
 const GraphToolbar = () => {
   const checkUserAccess = useCheckUserAccess();
   const org = useCurrentOrganization();
-  const router = useRouter();
   const applyParams = useApplyParams();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const type = (router.query.type as string) || 'all-graphs';
+  const [type] = useQueryState('type', parseAsString.withDefault('all-graphs'));
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
   return (
@@ -59,12 +58,11 @@ const GraphToolbar = () => {
 };
 
 const GraphsDashboardPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const type = (router.query.type as string) || 'all-graphs';
+  const [type] = useQueryState('type', parseAsString.withDefault('all-graphs'));
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphs, {
     includeMetrics: true,

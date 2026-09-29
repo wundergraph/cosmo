@@ -1432,7 +1432,7 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
 		Depth:       globalComplexity.Depth,
-		TotalFields: globalComplexity.NodeCount,
+		TotalFields: globalComplexity.FieldCount,
 	}
 	for _, entry := range rootFieldStats {
 		if entry.Alias == "" {
@@ -1473,7 +1473,7 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	}
 
 	for _, comparison := range testComparisons {
-		valid := comparison.field <= 0 || comparison.cachedField <= comparison.field
+		valid := comparison.field < 0 || comparison.cachedField <= comparison.field
 		if !valid {
 			return &httpGraphqlError{
 				message:    comparison.errorMessage,

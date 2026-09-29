@@ -32,7 +32,8 @@ func (t *localhostFallbackRoundTripper) rewriteToTargetHost(r *http.Request) (*h
 	var newHost string
 	_, port, err := net.SplitHostPort(r.Host)
 	if err == nil {
-		newHost = t.targetHost + ":" + port
+		// Use net.JoinHostPort to ensure correct formatting for IPv4 and IPv6 addresses
+		newHost = net.JoinHostPort(t.targetHost, port)
 	} else {
 		newHost = t.targetHost
 	}

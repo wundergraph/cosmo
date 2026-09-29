@@ -747,16 +747,15 @@ describe('openfed_FieldSet tests', () => {
         nonExternalConditionalFieldWarning('Entity.name', naaaa.name, 'Entity.__typename', '__typename', REQUIRES),
       );
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          KEY_DIRECTIVE +
-            REQUIRES_DIRECTIVE +
-            `
+        normalizeString(`
+          ${KEY_DIRECTIVE}
+          ${REQUIRES_DIRECTIVE}
           type Entity @key(fields: "id") {
             id: ID!
             name: String! @requires(fields: "__typename")
-          }` +
-            OPENFED_FIELD_SET,
-        ),
+          }
+          ${OPENFED_FIELD_SET}
+        `),
       );
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([

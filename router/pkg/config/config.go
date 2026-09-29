@@ -714,12 +714,23 @@ type HeaderSource struct {
 	ValuePrefixes []string `yaml:"value_prefixes"`
 }
 
+// JWTOnError controls how JWT credential failures are handled.
+type JWTOnError string
+
+const (
+	JWTOnErrorReject   JWTOnError = "reject"
+	JWTOnErrorContinue JWTOnError = "continue"
+)
+
 type JWTAuthenticationConfiguration struct {
 	JWKS              []JWKSConfiguration `yaml:"jwks"`
 	ScopeClaim        string              `yaml:"scope_claim" envDefault:"scope"`
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
+	// OnError controls whether invalid JWT credentials reject the request or are ignored.
+	// Required authentication and field authorization still apply.
+	OnError JWTOnError `yaml:"on_error" envDefault:"reject"`
 }
 
 type AuthenticationConfiguration struct {
@@ -1127,8 +1138,7 @@ type SubgraphExtensionPropagationConfiguration struct {
 
 // ResponseCacheConfiguration configures caching of subgraph responses.
 type ResponseCacheConfiguration struct {
-	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
@@ -1136,6 +1146,19 @@ type ResponseCacheConfiguration struct {
 	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
 	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
+	// All is what every subgraph gets unless Subgraphs names it.
+	All ResponseCacheSubgraphConfiguration `yaml:"all" envPrefix:"ALL_"`
+	// Subgraphs replaces All whole for the named subgraph; nothing is inherited.
+	// An entry is explicit: only yaml reaches it, so the env defaults All gets
+	// do not apply, and an omitted enabled is false. Keys are subgraph names.
+	Subgraphs map[string]ResponseCacheSubgraphConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+// ResponseCacheSubgraphConfiguration is what the cache does for a subgraph.
+type ResponseCacheSubgraphConfiguration struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	PrivateID   string        `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
 }
 
 type ResponseCacheTagHeaderConfig struct {

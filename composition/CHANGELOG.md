@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.65.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.65.1...@wundergraph/composition@0.65.2) (2026-09-28)
+
+### Bug Fixes
+
+* strip context arguments and internal scalars from federated schemas ([#3229](https://github.com/wundergraph/cosmo/issues/3229)) ([3f52fcc](https://github.com/wundergraph/cosmo/commit/3f52fcc9b321baedcdf4e984d09532abe7d786f5)) (@gausie)
+
 ## [0.65.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.65.0...@wundergraph/composition@0.65.1) (2026-09-16)
 
 ### Bug Fixes
