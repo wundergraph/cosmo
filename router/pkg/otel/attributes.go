@@ -50,6 +50,7 @@ const (
 	WgResponseCacheControlWarnings     = attribute.Key("wg.operation.cache_control_warnings")
 	WgResponseCacheControlExpiration   = attribute.Key("wg.operation.cache_control_expiration")
 	WgResponseCacheStatus              = attribute.Key("wg.response_cache.status")
+	WgOperationResponseCacheStatus     = attribute.Key("wg.operation.response_cache.status")
 	WgIsBatchingOperation              = attribute.Key("wg.operation.batching.is_batched")
 	WgBatchingOperationsCount          = attribute.Key("wg.operation.batching.operations_count")
 	WgBatchingOperationIndex           = attribute.Key("wg.operation.batching.operation_index")

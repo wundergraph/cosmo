@@ -169,6 +169,10 @@ All metrics are tracked along different dimensions. A dimension is an attribute 
 
 * `wg.client.version`: The client version
 
+#### Router specific
+
+* `wg.operation.response_cache.status`: Whether the response was answered by the [response cache](/router/response-cache): `hit`, `partial_hit` or `miss`. Only present on the metrics of the router request, while the response cache is enabled.
+
 **Error identification**
 
 You can use the `router.http.requests.error` metric to track errors across router and subgraph requests. In addition to that, you can also use the `router.http.requests` metric to identify errors. We attach the following fields:

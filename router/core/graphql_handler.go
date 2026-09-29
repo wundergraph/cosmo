@@ -193,6 +193,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithAttributes(reqCtx.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
+	defer func() {
+		if cacheStatus := reqCtx.responseCacheStatus(); cacheStatus != "" {
+			graphqlExecutionSpan.SetAttributes(rotel.WgOperationResponseCacheStatus.String(cacheStatus))
+		}
+	}()
 
 	resolveCtx := resolve.NewContext(executionContext)
 	resolveCtx.Variables = reqCtx.operation.variables

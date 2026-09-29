@@ -281,6 +281,100 @@ func TestResponseCacheMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("a response is a partial hit while one of its subgraphs is never cached", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, map[string]int64{
+				core.ResponseCacheStatusMiss: 1,
+			}, routerRequestsByCacheStatus(t, metricReader))
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, map[string]int64{
+				core.ResponseCacheStatusMiss:       1,
+				core.ResponseCacheStatusPartialHit: 1,
+			}, routerRequestsByCacheStatus(t, metricReader), "mood was answered from the cache, employees was not")
+		})
+	})
+
+	t.Run("a response is a hit once every fetch is answered from the cache", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			TraceExporter: exporter,
+			RouterOptions: memoryCacheOptions(t, nil),
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "cache_status",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "response.cache.status",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			exporter.Reset()
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			require.Equal(t, map[string]int64{
+				core.ResponseCacheStatusMiss: 1,
+				core.ResponseCacheStatusHit:  1,
+			}, routerRequestsByCacheStatus(t, metricReader))
+
+			for _, name := range []string{"Operation - Execute", "query unnamed"} {
+				attrs := attribute.NewSet(spanByName(t, exporter, name).Attributes()...)
+				status, ok := attrs.Value(otel.WgOperationResponseCacheStatus)
+				require.True(t, ok, "span %q carries no cache status", name)
+				require.Equal(t, core.ResponseCacheStatusHit, status.AsString())
+			}
+
+			var statuses []string
+			for _, entry := range xEnv.Observer().FilterField(zap.String("log_type", "request")).All() {
+				statuses = append(statuses, entry.ContextMap()["cache_status"].(string))
+			}
+			require.Equal(t, []string{core.ResponseCacheStatusMiss, core.ResponseCacheStatusHit}, statuses)
+		})
+	})
+
+	t.Run("a response without a fetch has no status", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			RouterOptions: memoryCacheOptions(t, nil),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { __schema { queryType { name } } }`})
+
+			require.Equal(t, map[string]int64{"": 1}, routerRequestsByCacheStatus(t, metricReader))
+		})
+	})
+
 	t.Run("nothing is attached when the cache is not configured", func(t *testing.T) {
 		t.Parallel()
 
@@ -304,6 +398,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 			attrs := attribute.NewSet(fetchSpanFor(t, exporter, "mood").Attributes()...)
 			_, ok := attrs.Value(otel.WgResponseCacheStatus)
 			require.False(t, ok)
+
+			require.Equal(t, map[string]int64{"": 2}, routerRequestsByCacheStatus(t, metricReader))
 		})
 	})
 
@@ -397,6 +493,42 @@ func subgraphRequestsByCacheStatus(t *testing.T, reader *metric.ManualReader, su
 		counts[status.AsString()] += dp.Value
 	}
 	return counts
+}
+
+// routerRequestsByCacheStatus sums router.http.requests of the router itself,
+// keyed by wg.operation.response_cache.status. Responses without the attribute land under "".
+func routerRequestsByCacheStatus(t *testing.T, reader *metric.ManualReader) map[string]int64 {
+	t.Helper()
+
+	rm := collectMetrics(t, reader)
+	scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+	require.NotNil(t, scope)
+	requests := testutils.GetMetricByName(scope, "router.http.requests")
+	require.NotNil(t, requests)
+	sum, ok := requests.Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+
+	counts := map[string]int64{}
+	for _, dp := range sum.DataPoints {
+		if _, ok := dp.Attributes.Value(otel.WgSubgraphName); ok {
+			continue
+		}
+		status, _ := dp.Attributes.Value(otel.WgOperationResponseCacheStatus)
+		counts[status.AsString()] += dp.Value
+	}
+	return counts
+}
+
+func spanByName(t *testing.T, exporter *oteltracetest.InMemoryExporter, name string) sdktrace.ReadOnlySpan {
+	t.Helper()
+
+	for _, span := range exporter.GetSpans().Snapshots() {
+		if span.Name() == name {
+			return span
+		}
+	}
+	require.FailNowf(t, "span not found", "no span named %q", name)
+	return nil
 }
 
 // fetchSpanFor is the Engine - Fetch span of one subgraph among the exported spans.

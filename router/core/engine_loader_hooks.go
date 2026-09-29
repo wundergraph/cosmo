@@ -222,6 +222,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
+	var cacheStatus string
+	if f.responseCacheEnabled {
+		cacheStatus = responseCacheStatus(responseInfo)
+		reqContext.responseCache.record(cacheStatus)
+	}
+
 	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
 	if !ok {
 		return
@@ -238,9 +244,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		rotel.WgSubgraphName.String(ds.Name),
 	}
 
-	var cacheStatus string
 	if f.responseCacheEnabled {
-		cacheStatus = responseCacheStatus(responseInfo)
 		commonAttrs = append(commonAttrs, rotel.WgResponseCacheStatus.String(cacheStatus))
 	}
 
