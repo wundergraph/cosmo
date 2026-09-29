@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -65,20 +66,49 @@ const (
 	ResponseCacheStatusHit        = "hit"
 	ResponseCacheStatusPartialHit = "partial_hit"
 	ResponseCacheStatusMiss       = "miss"
+	// ResponseCacheStatusNotCacheable is a fetch the cache was never asked about.
+	ResponseCacheStatusNotCacheable = "not_cacheable"
 )
 
-// responseCacheStatus reads what the cache did for a fetch. The engine sets the
-// TTL only from entries it found, so a positive TTL on a fetch that still went
-// out means part of a merged fetch was served from the cache.
+// responseCacheStatus reads what the cache did for a fetch.
 func responseCacheStatus(info *resolve.ResponseInfo) string {
-	switch {
-	case info.ResponseCacheHit:
+	switch info.ResponseCache.Status {
+	case resolve.ResponseCacheStatusHit:
 		return ResponseCacheStatusHit
-	case info.ResponseCacheTTL > 0:
+	case resolve.ResponseCacheStatusPartialHit:
 		return ResponseCacheStatusPartialHit
-	default:
+	case resolve.ResponseCacheStatusMiss:
 		return ResponseCacheStatusMiss
+	default:
+		return ResponseCacheStatusNotCacheable
 	}
+}
+
+// fetchTypeNames names the types a fetch resolves fields of, for an entity
+// fetch the entity type. Several types are sorted and joined with a comma.
+func fetchTypeNames(rootFields []resolve.GraphCoordinate) string {
+	if len(rootFields) == 0 {
+		return ""
+	}
+
+	first := rootFields[0].TypeName
+	single := true
+	for i := 1; i < len(rootFields); i++ {
+		if rootFields[i].TypeName != first {
+			single = false
+			break
+		}
+	}
+	if single {
+		return first
+	}
+
+	names := make([]string, 0, len(rootFields))
+	for i := range rootFields {
+		names = append(names, rootFields[i].TypeName)
+	}
+	slices.Sort(names)
+	return strings.Join(slices.Compact(names), ",")
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -173,7 +203,9 @@ func ttlToCacheControl(ttl time.Duration, private bool) string {
 // applyResponseCacheLifetime puts the TTL left on the cached entries a fetch was
 // served from into its Cache-Control, where the most restrictive algorithm reads it.
 func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo) {
-	if !info.ResponseCacheHit && info.ResponseCacheTTL <= 0 {
+	switch info.ResponseCache.Status {
+	case resolve.ResponseCacheStatusHit, resolve.ResponseCacheStatusPartialHit:
+	default:
 		return
 	}
 	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
@@ -228,9 +260,11 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
-	var cacheStatus string
+	var cacheStatus, storeDecision, typeNames string
 	if f.responseCacheEnabled {
 		cacheStatus = responseCacheStatus(responseInfo)
+		storeDecision = responseInfo.ResponseCache.StoreDecision.String()
+		typeNames = fetchTypeNames(responseInfo.RootFields)
 		reqContext.responseCache.record(cacheStatus)
 	}
 
@@ -260,6 +294,20 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
+	// On the span only, a metric of every fetch is not split by them.
+	if f.responseCacheEnabled {
+		if typeNames != "" {
+			traceAttrs = append(traceAttrs, rotel.WgEntityType.String(typeNames))
+		}
+		if storeDecision != "" {
+			traceAttrs = append(traceAttrs, rotel.WgResponseCacheStoreDecision.String(storeDecision))
+		}
+		if cacheStatus != ResponseCacheStatusNotCacheable {
+			lookup := float64(responseInfo.ResponseCache.LookupDuration) / float64(time.Millisecond)
+			traceAttrs = append(traceAttrs, rotel.WgResponseCacheLookupDurationMs.Float64(lookup))
+		}
+	}
+
 	exprCtx := reqContext.expressionContext.Clone()
 	exprCtx.Subgraph.Id = ds.ID
 	exprCtx.Subgraph.Name = ds.Name
@@ -272,6 +320,9 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// header map is safe; http.Header.Get returns an empty string.
 	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
 	exprCtx.Subgraph.Response.Cache.Status = cacheStatus
+	exprCtx.Subgraph.Response.Cache.StoreDecision = storeDecision
+	exprCtx.Subgraph.Response.Cache.LookupDuration = responseInfo.ResponseCache.LookupDuration
+	exprCtx.Subgraph.Response.Cache.EntityType = typeNames
 
 	// Get trace results from the context, that were introduced in OnLoad
 	if results := traceclient.ClientTraceResultsFromContext(ctx); results != nil {

@@ -122,6 +122,67 @@ func TestResponseCacheMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("the fetch span carries the type, the store decision and the lookup time", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("no-store")},
+				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			for subgraph, want := range map[string][2]string{
+				"employees": {"Query", "no_store"},
+				"mood":      {"Employee", "stored"},
+			} {
+				attrs := attribute.NewSet(fetchSpanFor(t, exporter, subgraph).Attributes()...)
+
+				entityType, ok := attrs.Value(otel.WgEntityType)
+				require.True(t, ok)
+				require.Equal(t, want[0], entityType.AsString())
+
+				decision, ok := attrs.Value(otel.WgResponseCacheStoreDecision)
+				require.True(t, ok)
+				require.Equal(t, want[1], decision.AsString())
+
+				_, ok = attrs.Value(otel.WgResponseCacheLookupDurationMs)
+				require.True(t, ok)
+			}
+
+			exporter.Reset()
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			attrs := attribute.NewSet(fetchSpanFor(t, exporter, "mood").Attributes()...)
+			_, ok := attrs.Value(otel.WgResponseCacheStoreDecision)
+			require.False(t, ok, "nothing is decided for a hit")
+		})
+	})
+
+	t.Run("a mutation is not cacheable", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			RouterOptions: memoryCacheOptions(t, nil),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeTag(id: 1, tag: "cached") { id } }`,
+			})
+
+			require.Equal(t, map[string]int64{
+				core.ResponseCacheStatusNotCacheable: 1,
+			}, subgraphRequestsByCacheStatus(t, metricReader, "employees"))
+		})
+	})
+
 	t.Run("the status is available to expressions", func(t *testing.T) {
 		t.Parallel()
 
