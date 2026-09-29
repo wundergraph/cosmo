@@ -170,9 +170,9 @@ To run one test file:
 uv run --locked python -m unittest discover -s tests -p 'test_ingress.py' -v
 ```
 
-### Optional Kubernetes validation
+### Kubernetes validation
 
-Cluster validation runs the same suite and submits each rendered manifest to the Kubernetes API with `--dry-run=server`. It does not start workloads or execute migration jobs.
+Cluster validation runs the same suite and submits each rendered manifest to the Kubernetes API with `--dry-run=server`. It runs in a separate Helm CI job alongside the rendering and documentation checks, and can also be run locally. It does not start workloads or execute migration jobs.
 
 Install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), [kubectl](https://kubernetes.io/docs/tasks/tools/), and a running Docker daemon ([Docker Desktop](https://docs.docker.com/desktop/) on macOS or [Docker Engine](https://docs.docker.com/engine/install/) on Linux). On macOS:
 
