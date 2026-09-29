@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
+	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
@@ -264,6 +265,8 @@ type requestContext struct {
 	request *http.Request
 	// operation is the GraphQL operation context
 	operation *operationContext
+	// cacheControl is the Cache-Control the client sent, nil when absent or malformed
+	cacheControl *cachedirective.RequestCacheDirectives
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
 	// dataSourceNames the list of datasource involved in resolving the operation
