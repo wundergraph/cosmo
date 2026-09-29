@@ -2,4 +2,3 @@
 realm-config-map.yaml
 /cosmo-*.tgz
 /cosmo/charts/router-*.tgz
-/.venv/

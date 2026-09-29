@@ -1,4 +1,0 @@
-# The chart's existing ClickHouse defaults put CPU/memory directly under resources.
-# Omit these unrelated defaults for full-manifest server validation.
-clickhouse:
-  resources: null
