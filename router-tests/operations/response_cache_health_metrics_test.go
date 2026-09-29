@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 const responseCacheMetricScope = "cosmo.router.response_cache"
@@ -128,6 +130,55 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("fetches are counted with the type they resolve and what became of the response", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			TraceExporter: exporter,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("no-store")},
+				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			span := attribute.NewSet(fetchSpanFor(t, exporter, "mood").Attributes()...)
+			entityType, ok := span.Value(otel.WgEntityType)
+			require.True(t, ok)
+			require.Equal(t, "Employee", entityType.AsString())
+			decision, ok := span.Value(otel.WgResponseCacheStoreDecision)
+			require.True(t, ok)
+			require.Equal(t, "stored", decision.AsString())
+			_, ok = span.Value(otel.WgResponseCacheLookupDurationMs)
+			require.True(t, ok)
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			fetches, ok := testutils.GetMetricByName(responseCacheScope(t, metricReader), "router.response_cache.fetches").Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			counts := map[string]int64{}
+			for _, dp := range fetches.DataPoints {
+				subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
+				entityType, _ := dp.Attributes.Value(otel.WgEntityType)
+				status, _ := dp.Attributes.Value(otel.WgResponseCacheStatus)
+				decision, _ := dp.Attributes.Value(otel.WgResponseCacheStoreDecision)
+				counts[subgraph.AsString()+"/"+entityType.AsString()+"/"+status.AsString()+"/"+decision.AsString()] += dp.Value
+			}
+			require.Equal(t, map[string]int64{
+				"employees/Query/miss/no_store": 2,
+				"mood/Employee/miss/stored":     1,
+				"mood/Employee/hit/":            1,
+			}, counts)
+		})
+	})
+
 	t.Run("prometheus exposes the metrics", func(t *testing.T) {
 		t.Parallel()
 
@@ -159,6 +210,7 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 				"router_response_cache_keys_total",
 				"router_response_cache_write_bytes_total",
 				"router_response_cache_write_ttl_seconds",
+				"router_response_cache_fetches_total",
 				"router_response_cache_memory_evictions_total",
 				"router_response_cache_memory_rejected_writes_total",
 				"router_response_cache_memory_max_entries",

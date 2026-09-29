@@ -173,9 +173,17 @@ type SubgraphResponse struct {
 }
 
 // SubgraphResponseCache is what the response cache did for the fetch.
+// Everything is empty when the response cache is not enabled.
 type SubgraphResponseCache struct {
-	// Status is "hit", "partial_hit" or "miss". It is empty when the response cache is not enabled.
+	// Status is "hit", "partial_hit", "miss" or "not_cacheable".
 	Status string `expr:"status"`
+	// StoreDecision is "stored", or the reason the response was not stored.
+	// It is empty for a fetch nothing was decided for.
+	StoreDecision string `expr:"storeDecision"`
+	// LookupDuration is the time spent asking the cache.
+	LookupDuration time.Duration `expr:"lookupDuration"`
+	// EntityType names the types the fetch resolves fields of.
+	EntityType string `expr:"entityType"`
 }
 
 type ClientTrace struct {

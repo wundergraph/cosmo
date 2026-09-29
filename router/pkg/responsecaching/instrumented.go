@@ -19,20 +19,6 @@ type Store interface {
 	io.Closer
 }
 
-// measuredError marks a store failure the instrumented store has counted already.
-type measuredError struct {
-	err error
-}
-
-func (e *measuredError) Error() string { return e.err.Error() }
-func (e *measuredError) Unwrap() error { return e.err }
-
-// IsMeasured reports whether err is a store failure that has been counted already.
-func IsMeasured(err error) bool {
-	var measured *measuredError
-	return errors.As(err, &measured)
-}
-
 type instrumentedStore struct {
 	inner   Store
 	metrics metric.ResponseCacheMetricStore
@@ -48,7 +34,7 @@ func (s *instrumentedStore) GetMany(ctx context.Context, keys []string) (map[str
 	found, err := s.inner.GetMany(ctx, keys)
 	s.metrics.MeasureOperation(ctx, metric.ResponseCacheOperationLookup, time.Since(start), errorType(err))
 	if err != nil {
-		return found, &measuredError{err: err}
+		return found, err
 	}
 
 	s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationLookup, metric.ResponseCacheResultFound, int64(len(found)))
@@ -70,7 +56,7 @@ func (s *instrumentedStore) SetMany(ctx context.Context, items []caching.Item) e
 		}
 		s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationWrite, metric.ResponseCacheResultStored, int64(stored))
 		s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationWrite, metric.ResponseCacheResultFailed, int64(len(items)-stored))
-		return &measuredError{err: err}
+		return err
 	}
 
 	var (
@@ -96,11 +82,7 @@ func (s *instrumentedStore) InvalidateByTags(ctx context.Context, tags []string)
 	s.metrics.MeasureInvalidatedTags(ctx, int64(len(tags)))
 	// Counted on failure as well, the entries removed before it are gone.
 	s.metrics.MeasureKeys(ctx, metric.ResponseCacheOperationInvalidate, metric.ResponseCacheResultRemoved, int64(removed))
-	if err != nil {
-		return removed, &measuredError{err: err}
-	}
-
-	return removed, nil
+	return removed, err
 }
 
 func (s *instrumentedStore) Close() error {

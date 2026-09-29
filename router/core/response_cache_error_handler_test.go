@@ -3,70 +3,76 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 )
+
+type engineError struct {
+	subgraph, errorType string
+}
 
 type engineErrorSpy struct {
 	rmetric.NoopResponseCacheMetricStore
-	engineErrors int
+	engineErrors []engineError
 }
 
-func (s *engineErrorSpy) MeasureEngineError(context.Context) {
-	s.engineErrors++
+func (s *engineErrorSpy) MeasureEngineError(_ context.Context, subgraph, errorType string) {
+	s.engineErrors = append(s.engineErrors, engineError{subgraph: subgraph, errorType: errorType})
 }
-
-type failingStore struct {
-	err error
-}
-
-func (f failingStore) GetMany(context.Context, []string) (map[string]caching.Item, error) {
-	return nil, f.err
-}
-func (f failingStore) SetMany(context.Context, []caching.Item) error { return f.err }
-func (f failingStore) InvalidateByTags(context.Context, []string) (int, error) {
-	return 0, f.err
-}
-func (f failingStore) Close() error { return nil }
 
 func TestResponseCacheErrorHandler(t *testing.T) {
 	t.Parallel()
 
-	t.Run("a failure of the engine is counted", func(t *testing.T) {
-		t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want []engineError
+	}{
+		{
+			name: "an entry that could not be used is counted for its subgraph",
+			err:  &resolve.ResponseCacheError{Operation: resolve.ResponseCacheOperationRead, Subgraph: "mood", Err: errors.New("wrong response cache value")},
+			want: []engineError{{subgraph: "mood", errorType: rmetric.ResponseCacheErrorInvalidEntry}},
+		},
+		{
+			name: "a response that could not be taken apart is counted for its subgraph",
+			err:  &resolve.ResponseCacheError{Operation: resolve.ResponseCacheOperationCollect, Subgraph: "mood", Err: errors.New("parse error")},
+			want: []engineError{{subgraph: "mood", errorType: rmetric.ResponseCacheErrorInvalidResponse}},
+		},
+		{
+			name: "a failed lookup was counted by the store",
+			err:  &resolve.ResponseCacheError{Operation: resolve.ResponseCacheOperationLookup, Subgraph: "mood", Err: errors.New("connection reset")},
+		},
+		{
+			name: "a failed write was counted by the store",
+			err:  &resolve.ResponseCacheError{Operation: resolve.ResponseCacheOperationWrite, Subgraph: "mood", Err: errors.New("connection reset")},
+		},
+		{
+			name: "anything else is counted as it is",
+			err:  errors.New("unexpected"),
+			want: []engineError{{errorType: rmetric.ResponseCacheErrorOther}},
+		},
+	}
 
-		spy := &engineErrorSpy{}
-		zCore, logs := observer.New(zapcore.WarnLevel)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		handler := newResponseCacheErrorHandler(zap.New(zCore), spy)
-		handler(errors.New("wrong response cache value for key a"))
+			spy := &engineErrorSpy{}
+			zCore, logs := observer.New(zapcore.WarnLevel)
 
-		require.Equal(t, 1, spy.engineErrors)
-		require.Equal(t, 1, logs.Len())
-	})
+			newResponseCacheErrorHandler(zap.New(zCore), spy)(tt.err)
 
-	t.Run("a failure of the store is not counted twice", func(t *testing.T) {
-		t.Parallel()
-
-		spy := &engineErrorSpy{}
-		store := responsecaching.NewInstrumentedStore(failingStore{err: errors.New("connection reset")}, spy)
-		_, err := store.GetMany(context.Background(), []string{"a"})
-		require.Error(t, err)
-
-		handler := newResponseCacheErrorHandler(zap.NewNop(), spy)
-		handler(fmt.Errorf("response cache lookup of 1 keys: %w", err))
-
-		require.Zero(t, spy.engineErrors)
-	})
+			require.Equal(t, tt.want, spy.engineErrors)
+			require.Equal(t, 1, logs.Len(), "logged either way")
+		})
+	}
 
 	t.Run("failures are logged without metrics", func(t *testing.T) {
 		t.Parallel()

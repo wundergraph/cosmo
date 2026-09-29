@@ -107,8 +107,7 @@ func TestInstrumentedStore(t *testing.T) {
 
 		_, err := store.GetMany(ctx, []string{"a"})
 		require.ErrorIs(t, err, failure)
-		require.Equal(t, failure.Error(), err.Error())
-		require.True(t, IsMeasured(fmt.Errorf("response cache lookup of 1 keys: %w", err)))
+		require.Equal(t, failure, err, "the failure of the store is handed on as it is")
 
 		require.Equal(t, []operation{{
 			name:      metric.ResponseCacheOperationLookup,
@@ -142,7 +141,6 @@ func TestInstrumentedStore(t *testing.T) {
 
 		err := store.SetMany(ctx, []caching.Item{{Key: "a", TTL: time.Minute}, {Key: "b", TTL: time.Minute}})
 		require.Error(t, err)
-		require.True(t, IsMeasured(err))
 
 		require.Equal(t, []operation{{
 			name:      metric.ResponseCacheOperationWrite,
@@ -245,9 +243,4 @@ func TestErrorType(t *testing.T) {
 			require.Equal(t, tt.want, errorType(tt.err))
 		})
 	}
-
-	t.Run("an error the store did not return is not measured", func(t *testing.T) {
-		t.Parallel()
-		require.False(t, IsMeasured(errors.New("wrong response cache value")))
-	})
 }

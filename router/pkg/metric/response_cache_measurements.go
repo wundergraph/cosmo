@@ -14,6 +14,7 @@ const (
 	responseCacheWriteBytes        = "router.response_cache.write.bytes"
 	responseCacheWriteTTL          = "router.response_cache.write.ttl_seconds"
 	responseCacheInvalidationTags  = "router.response_cache.invalidation.tags"
+	responseCacheFetches           = "router.response_cache.fetches"
 
 	responseCacheMemoryEvictions      = "router.response_cache.memory.evictions"
 	responseCacheMemoryRejectedWrites = "router.response_cache.memory.rejected_writes"
@@ -53,6 +54,10 @@ var (
 		otelmetric.WithDescription("Tags the response cache store was asked to invalidate"),
 	}
 
+	responseCacheFetchesOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Subgraph fetches by what the response cache did for them"),
+	}
+
 	responseCacheMemoryEvictionsOptions = []otelmetric.Int64ObservableCounterOption{
 		otelmetric.WithDescription("Entries evicted from the in memory response cache"),
 	}
@@ -73,6 +78,7 @@ type responseCacheInstruments struct {
 	writeBytes        otelmetric.Int64Counter
 	writeTTL          otelmetric.Float64Histogram
 	invalidationTags  otelmetric.Int64Counter
+	fetches           otelmetric.Int64Counter
 
 	// Only created for a cache that reports memory stats.
 	memoryEvictions      otelmetric.Int64ObservableCounter
@@ -103,6 +109,10 @@ func newResponseCacheInstruments(meter otelmetric.Meter, memory bool) (*response
 	}
 	if instruments.invalidationTags, err = meter.Int64Counter(responseCacheInvalidationTags, responseCacheInvalidationTagsOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache invalidation tags counter: %w", err)
+	}
+
+	if instruments.fetches, err = meter.Int64Counter(responseCacheFetches, responseCacheFetchesOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create response cache fetches counter: %w", err)
 	}
 
 	if !memory {

@@ -51,7 +51,6 @@ func TestInstrumentedRedisCache(t *testing.T) {
 
 		var partial *enginecache.SetManyError
 		require.ErrorAs(t, err, &partial)
-		require.True(t, responsecaching.IsMeasured(err))
 
 		require.Equal(t, metric.ResponseCacheErrorPartialWrite, m.errorTypes[metric.ResponseCacheOperationWrite])
 		require.Equal(t, map[string]int64{"write/stored": 2, "write/failed": 1}, m.keys)
