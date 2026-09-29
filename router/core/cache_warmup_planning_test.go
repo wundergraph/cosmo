@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -21,7 +22,8 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schema))
 
 	const query = `query GetHello { hello }`
-	id := fmt.Sprintf("%x", sha256.Sum256([]byte(query)))
+	hash := sha256.Sum256([]byte(query))
+	id := hex.EncodeToString(hash[:])
 	store := pqlmanifest.NewStore(zap.NewNop())
 	t.Cleanup(store.Close)
 	store.Load(&pqlmanifest.Manifest{
