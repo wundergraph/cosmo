@@ -81,9 +81,8 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 }
 
 // Keep planning out of this regression: the cached document must still pass validation.
-type warmupCachedPlan struct{}
+type warmupCachedPlan struct {
+	ExecutionPlanCache[uint64, *planWithMetaData]
+}
 
-func (warmupCachedPlan) Get(uint64) (*planWithMetaData, bool)      { return &planWithMetaData{}, true }
-func (warmupCachedPlan) Set(uint64, *planWithMetaData, int64) bool { return true }
-func (warmupCachedPlan) IterValues(func(*planWithMetaData) bool)   {}
-func (warmupCachedPlan) Close()                                    {}
+func (warmupCachedPlan) Get(uint64) (*planWithMetaData, bool) { return &planWithMetaData{}, true }
