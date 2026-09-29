@@ -1,6 +1,10 @@
-test: build
+test: test-ingress build
 	helm lint --strict -f ./cosmo/values.yaml ./cosmo
 	kubeconform -strict -summary generated/cosmo.yaml
+
+.PHONY: test-ingress
+test-ingress:
+	python3 -m unittest discover -s tests -v
 
 KAPP_ARGS:="--logs-all"
 deploy: build

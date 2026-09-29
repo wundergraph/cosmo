@@ -103,6 +103,22 @@ By default, the chart deploys a ready to use Cosmo stack with a development conf
 The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
 All secrets are stored in the `values.yaml` file. You should replace them with your own secrets before deploying the stack to your cluster.
 
+### Disable individual ingress routes
+
+Set `global.<component>.ingress.enabled: false` to remove a component's route from the shared Cosmo Ingress while keeping the component enabled. For example, to keep the OTEL collector and ClickHouse migration job without exposing the collector through the shared ingress:
+
+```yaml
+global:
+  otelcollector:
+    enabled: true
+    ingress:
+      enabled: false
+```
+
+This setting is available for `controlplane`, `keycloak`, `otelcollector`, `graphqlmetrics`, `studio`, `router`, and `cdn`, and defaults to `true`. A route is only included when its component is also enabled. Internal Service access is unaffected; clients must use a reachable internal endpoint when its public route is disabled.
+
+These settings only control the shared Ingress. The separate `<component>.ingress.enabled` settings control each subchart's own Ingress and remain independent. Set `ingress.enabled: false` to disable the shared Ingress entirely. If all shared routes are disabled, the chart omits that Ingress unless `ingress.defaultBackend` is configured.
+
 ## Seed your organization and account
 
 The seed is a special component that is used to seed your organization and admin account. It is only needed once and can be disabled after the initial setup. This user allows you to invite people or configure SSO. Ensure that your postgres and keycloak are running before you enable the seed to avoid any issues.

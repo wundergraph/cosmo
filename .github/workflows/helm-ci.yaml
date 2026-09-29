@@ -21,6 +21,18 @@ jobs:
 
       - uses: ./.github/actions/go
 
+      - uses: azure/setup-helm@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test ingress configuration
+        run: |
+          python3 -m pip install -r tests/requirements.txt
+          make test-ingress
+        working-directory: ./helm
+
       - name: Install tools
         run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 

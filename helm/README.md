@@ -145,3 +145,17 @@ minikube addons enable ingress
 ```shell
 make docs
 ```
+
+## Test ingress configuration
+
+Install the Python dependencies with `python3 -m pip install -r tests/requirements.txt`, then run `make test-ingress` from this directory. These tests render the chart and check individual route controls, component resources, migrations, and empty/default-backend configurations.
+
+To also validate every rendered manifest against a local kind cluster:
+
+```shell
+kind create cluster --name cosmo-ingress --kubeconfig /tmp/cosmo-ingress.kubeconfig
+HELM_TEST_KUBECONFIG=/tmp/cosmo-ingress.kubeconfig make test-ingress
+kind delete cluster --name cosmo-ingress
+```
+
+Cluster validation uses server-side dry runs and does not start the Cosmo workloads. It uses `tests/kind-values.yaml` to omit the chart's existing malformed ClickHouse resource defaults.
