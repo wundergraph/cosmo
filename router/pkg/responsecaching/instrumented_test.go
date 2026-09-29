@@ -37,17 +37,12 @@ type operation struct {
 	errorType string
 }
 
-type write struct {
-	bytes int64
-	ttl   time.Duration
-}
-
 // recorder keeps what the store measured.
 type recorder struct {
 	metric.NoopResponseCacheMetricStore
 	operations []operation
 	keys       map[string]int64
-	writes     []write
+	ttls       []time.Duration
 }
 
 func newRecorder() *recorder {
@@ -64,8 +59,8 @@ func (r *recorder) MeasureKeys(_ context.Context, operation, result string, coun
 	}
 }
 
-func (r *recorder) MeasureWrite(_ context.Context, bytes int64, ttl time.Duration) {
-	r.writes = append(r.writes, write{bytes: bytes, ttl: ttl})
+func (r *recorder) MeasureWriteTTL(_ context.Context, ttl time.Duration) {
+	r.ttls = append(r.ttls, ttl)
 }
 
 type timeoutError struct{}
@@ -111,7 +106,7 @@ func TestInstrumentedStore(t *testing.T) {
 		require.Empty(t, rec.keys)
 	})
 
-	t.Run("a write counts its entries, size and shortest lifetime", func(t *testing.T) {
+	t.Run("a write counts its entries and shortest lifetime", func(t *testing.T) {
 		t.Parallel()
 
 		rec := newRecorder()
@@ -125,7 +120,7 @@ func TestInstrumentedStore(t *testing.T) {
 
 		require.Equal(t, []operation{{name: metric.ResponseCacheOperationWrite}}, rec.operations)
 		require.Equal(t, map[string]int64{"write/stored": 2}, rec.keys)
-		require.Equal(t, []write{{bytes: 6, ttl: 30 * time.Second}}, rec.writes)
+		require.Equal(t, []time.Duration{30 * time.Second}, rec.ttls)
 	})
 
 	t.Run("a failed write counts every entry as failed", func(t *testing.T) {
@@ -142,7 +137,7 @@ func TestInstrumentedStore(t *testing.T) {
 			errorType: metric.ResponseCacheErrorTimeout,
 		}}, rec.operations)
 		require.Equal(t, map[string]int64{"write/failed": 2}, rec.keys)
-		require.Empty(t, rec.writes)
+		require.Empty(t, rec.ttls)
 	})
 
 	t.Run("a partial write tells the stored entries from the failed ones", func(t *testing.T) {
