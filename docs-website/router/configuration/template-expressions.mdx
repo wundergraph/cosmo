@@ -265,6 +265,7 @@ The `response` object is a read-only entity that provides details about the outg
 **Available Fields**:
 
 - `response.body` (ResponseBody)
+- `response.cache.status` (string): What the [response cache](/router/response-cache) did for the response as a whole: `hit`, `partial_hit` or `miss`. Empty when the response cache is not enabled or no subgraph was fetched. Only known once the response has been resolved, so it is available to router access logs and not to telemetry attributes.
 
 ### ResponseBody Object
 

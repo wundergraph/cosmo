@@ -264,6 +264,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
+			if cacheStatus := requestContext.responseCacheStatus(); cacheStatus != "" {
+				routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus))
+				requestContext.expressionContext.Response.Cache.Status = cacheStatus
+			}
+
 			// Read the actual status code from the wrapped response w.
 			// This captures the correct status code for all paths, including early returns.
 			statusCode := ww.Status()

@@ -75,7 +75,14 @@ type Request struct {
 }
 
 type Response struct {
-	Body Body `expr:"body"`
+	Body  Body          `expr:"body"`
+	Cache ResponseCache `expr:"cache"`
+}
+
+// ResponseCache is what the response cache did for the response as a whole.
+type ResponseCache struct {
+	// Status is "hit", "partial_hit" or "miss". It is empty when no fetch was counted.
+	Status string `expr:"status"`
 }
 
 type Operation struct {
