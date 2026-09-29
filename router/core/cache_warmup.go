@@ -341,7 +341,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	if !skipParse {
-		if err = k.Parse(); err != nil {
+		if err := k.Parse(); err != nil {
 			return nil, err
 		}
 	}
