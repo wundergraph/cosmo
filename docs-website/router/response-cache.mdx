@@ -466,7 +466,7 @@ Cache failures never fail a request. When a read or a write fails, the router se
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage. Every failure is counted in the metrics of [cache health](#cache-health).
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage. With the metrics of [cache health](#cache-health) enabled, every failure is counted there.
 
 ### Metrics and traces
 
