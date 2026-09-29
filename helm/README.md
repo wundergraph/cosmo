@@ -186,12 +186,18 @@ On Linux, install kind from the [release binaries](https://kind.sigs.k8s.io/docs
 go install sigs.k8s.io/kind@v0.32.0
 ```
 
-Ensure the Go bin directory is on your `PATH`. With Docker running, create a dedicated cluster and kubeconfig:
+Ensure the Go bin directory is on your `PATH`. With Docker running, run:
 
 ```shell
-kind create cluster --name cosmo-helm-tests --kubeconfig /tmp/cosmo-helm-tests.kubeconfig --wait 60s
-HELM_TEST_KUBECONFIG=/tmp/cosmo-helm-tests.kubeconfig make test-cluster
-kind delete cluster --name cosmo-helm-tests --kubeconfig /tmp/cosmo-helm-tests.kubeconfig
+make test-kind
+```
+
+This creates a temporary kind cluster using the same Kubernetes version as CI, runs the validation suite, and removes the cluster and its kubeconfig on exit, including when tests fail.
+
+To use an existing local cluster instead:
+
+```shell
+HELM_TEST_KUBECONFIG=/path/to/kubeconfig make test-cluster
 ```
 
 `test-cluster` requires an explicit kubeconfig. The test namespace defaults to `default`; create any custom namespace before running its tests. Cosmo cluster tests use `tests/fixtures/cosmo-cluster.yaml` to omit the chart's existing malformed ClickHouse resource defaults.

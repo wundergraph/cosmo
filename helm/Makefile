@@ -2,13 +2,23 @@ test: test-render build
 	helm lint --strict -f ./cosmo/values.yaml ./cosmo
 	kubeconform -strict -summary generated/cosmo.yaml
 
-.PHONY: test-render test-cluster
+.PHONY: test-render test-cluster test-kind
 test-render:
 	uv run --locked python -m unittest discover -s tests -v
 
 test-cluster:
 	@test -n "$(HELM_TEST_KUBECONFIG)" || (echo "Set HELM_TEST_KUBECONFIG to a local cluster's kubeconfig (see README.md)."; exit 1)
 	HELM_TEST_KUBECONFIG="$(HELM_TEST_KUBECONFIG)" uv run --locked python -m unittest discover -s tests -v
+
+test-kind:
+	@set -eu; \
+	test_dir=$$(mktemp -d); \
+	cluster_name="cosmo-helm-tests-$$(basename "$$test_dir" | tr '[:upper:].' '[:lower:]-')"; \
+	trap 'kind delete cluster --name "$$cluster_name" --kubeconfig "$$test_dir/kubeconfig"; rm -rf "$$test_dir"' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	kind create cluster --name "$$cluster_name" --kubeconfig "$$test_dir/kubeconfig" --image kindest/node:v1.36.1 --wait 60s; \
+	$(MAKE) test-cluster HELM_TEST_KUBECONFIG="$$test_dir/kubeconfig"
 
 KAPP_ARGS:="--logs-all"
 deploy: build
