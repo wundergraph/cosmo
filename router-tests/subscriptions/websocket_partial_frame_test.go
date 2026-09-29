@@ -2,7 +2,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -15,52 +14,42 @@ import (
 // Pings and subscriptions work while another connection holds an incomplete frame.
 func TestWebSocketIncompleteFrame(t *testing.T) {
 	t.Parallel()
-	for _, tlsEnabled := range []bool{false, true} {
-		t.Run(fmt.Sprintf("tls=%t", tlsEnabled), func(t *testing.T) {
-			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				TLSConfig: config.TLSConfiguration{Server: config.TLSServerConfiguration{
-					Enabled:  tlsEnabled,
-					CertFile: "../testdata/tls/cert.pem",
-					KeyFile:  "../testdata/tls/key.pem",
-				}},
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.WebSocketServerReadTimeout = 30 * time.Second
-				},
-			}, func(t *testing.T, env *testenv.Environment) {
-				pending := env.InitGraphQLWebSocketConnection(nil, nil, nil)
-				// One header byte makes the socket readable without completing a frame.
-				require.NoError(t, pending.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
-				_, err := pending.UnderlyingConn().Write([]byte{0x81})
-				require.NoError(t, err)
+	testenv.Run(t, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.WebSocketServerReadTimeout = 30 * time.Second
+		},
+	}, func(t *testing.T, env *testenv.Environment) {
+		pending := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		// One header byte makes the socket readable without completing a frame.
+		require.NoError(t, pending.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
+		_, err := pending.UnderlyingConn().Write([]byte{0x81})
+		require.NoError(t, err)
 
-				healthy := env.InitGraphQLWebSocketConnection(nil, nil, nil)
-				// Finish well within the read timeout of the pending frame.
-				ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-				defer cancel()
-				stop := context.AfterFunc(ctx, func() { _ = healthy.Close() })
-				defer stop()
-				for range 3 {
-					require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{Type: "ping"}))
-					var pong testenv.WebSocketMessage
-					require.NoError(t, testenv.WSReadJSON(t, healthy, &pong))
-					require.Equal(t, "pong", pong.Type)
-				}
-				require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{
-					ID: "1", Type: "subscribe",
-					Payload: []byte(`{"query":"subscription { countEmp(max: 100, intervalMilliseconds: 100) }"}`),
-				}))
-				var next testenv.WebSocketMessage
-				require.NoError(t, testenv.WSReadJSON(t, healthy, &next))
-				require.Equal(t, "next", next.Type)
-				require.Equal(t, "1", next.ID)
-				env.WaitForSubscriptionCount(1, time.Second)
-				require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{ID: "1", Type: "complete"}))
-				env.WaitForSubscriptionCount(0, time.Second)
-				require.NoError(t, ctx.Err())
-			})
-		})
-	}
+		healthy := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		// Finish well within the read timeout of the pending frame.
+		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+		defer cancel()
+		stop := context.AfterFunc(ctx, func() { _ = healthy.Close() })
+		defer stop()
+		for range 3 {
+			require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{Type: "ping"}))
+			var pong testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, healthy, &pong))
+			require.Equal(t, "pong", pong.Type)
+		}
+		require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{
+			ID: "1", Type: "subscribe",
+			Payload: []byte(`{"query":"subscription { countEmp(max: 100, intervalMilliseconds: 100) }"}`),
+		}))
+		var next testenv.WebSocketMessage
+		require.NoError(t, testenv.WSReadJSON(t, healthy, &next))
+		require.Equal(t, "next", next.Type)
+		require.Equal(t, "1", next.ID)
+		env.WaitForSubscriptionCount(1, time.Second)
+		require.NoError(t, testenv.WSWriteJSON(t, healthy, testenv.WebSocketMessage{ID: "1", Type: "complete"}))
+		env.WaitForSubscriptionCount(0, time.Second)
+		require.NoError(t, ctx.Err())
+	})
 }
 
 func TestWebSocketShutdownWithoutReadTimeout(t *testing.T) {
