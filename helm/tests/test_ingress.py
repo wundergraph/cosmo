@@ -1,14 +1,10 @@
-"""Render regressions; set HELM_TEST_KUBECONFIG for Kubernetes server validation."""
+"""Shared ingress route regressions for the Cosmo chart."""
 
-import os
-from pathlib import Path
-import subprocess
 import unittest
 
-import yaml
+from helm_test import HELM_DIR, HelmTestCase
 
 
-CHART = Path(__file__).resolve().parents[1] / "cosmo"
 COMPONENTS = {
     "controlplane": 3001,
     "keycloak": 8080,
@@ -23,26 +19,6 @@ ALL_ROUTES_OFF = {
 }
 
 
-def render(overrides=None):
-    command = ["helm", "template", "cosmo", str(CHART), "--namespace", "default"]
-    kubeconfig = os.environ.get("HELM_TEST_KUBECONFIG")
-    if kubeconfig:
-        command.extend(["--values", str(Path(__file__).with_name("kind-values.yaml"))])
-    for key, value in (overrides or {}).items():
-        command.extend(["--set", f"{key}={str(value).lower() if isinstance(value, bool) else value}"])
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode:
-        raise AssertionError(result.stderr)
-    if kubeconfig:
-        validation = subprocess.run(
-            ["kubectl", "--kubeconfig", kubeconfig, "apply", "--dry-run=server", "-f", "-"],
-            input=result.stdout, capture_output=True, text=True,
-        )
-        if validation.returncode:
-            raise AssertionError(validation.stderr)
-    return [doc for doc in yaml.safe_load_all(result.stdout) if doc]
-
-
 def shared_ingress(documents):
     return next(
         (doc for doc in documents
@@ -55,9 +31,12 @@ def hosts(ingress):
     return {rule["host"] for rule in ingress["spec"]["rules"]}
 
 
-class IngressTests(unittest.TestCase):
+class IngressTests(HelmTestCase):
+    chart = HELM_DIR / "cosmo"
+    cluster_values = (HELM_DIR / "tests/fixtures/cosmo-cluster.yaml",)
+
     def test_defaults_preserve_routes_and_backends(self):
-        ingress = shared_ingress(render())
+        ingress = shared_ingress(self.render())
         self.assertEqual(hosts(ingress), {
             f"{component}.wundergraph.local" for component in COMPONENTS if component != "router"
         })
@@ -75,7 +54,7 @@ class IngressTests(unittest.TestCase):
     def test_disabling_each_route_preserves_its_component(self):
         for component in COMPONENTS:
             with self.subTest(component=component):
-                documents = render({
+                documents = self.render({
                     "global.router.enabled": True,
                     f"global.{component}.ingress.enabled": False,
                 })
@@ -98,9 +77,9 @@ class IngressTests(unittest.TestCase):
         # Helm --reuse-values can retain old values without the new defaults.
         for setting in ("ingress", "ingress.enabled"):
             with self.subTest(setting=setting):
-                documents = render({
+                documents = self.render({
                     "global.router.enabled": True,
-                    **{f"global.{component}.{setting}": "null" for component in COMPONENTS},
+                    **{f"global.{component}.{setting}": None for component in COMPONENTS},
                 })
                 self.assertEqual(hosts(shared_ingress(documents)), {
                     f"{component}.wundergraph.local" for component in COMPONENTS
@@ -109,7 +88,7 @@ class IngressTests(unittest.TestCase):
     def test_disabled_components_have_no_route(self):
         for component in COMPONENTS:
             with self.subTest(component=component):
-                documents = render({
+                documents = self.render({
                     "global.router.enabled": True,
                     f"global.{component}.enabled": False,
                     f"global.{component}.ingress.enabled": True,
@@ -119,15 +98,15 @@ class IngressTests(unittest.TestCase):
                 })
 
     def test_all_routes_disabled_omits_shared_ingress(self):
-        self.assertIsNone(shared_ingress(render(ALL_ROUTES_OFF)))
+        self.assertIsNone(shared_ingress(self.render(ALL_ROUTES_OFF)))
 
     def test_all_components_disabled_omits_shared_ingress(self):
-        self.assertIsNone(shared_ingress(render({
+        self.assertIsNone(shared_ingress(self.render({
             f"global.{component}.enabled": False for component in COMPONENTS
         })))
 
     def test_default_backend_without_routes(self):
-        ingress = shared_ingress(render({
+        ingress = shared_ingress(self.render({
             **ALL_ROUTES_OFF,
             "ingress.defaultBackend.name": "fallback",
             "ingress.defaultBackend.port": 8080,
@@ -138,14 +117,14 @@ class IngressTests(unittest.TestCase):
         })
 
     def test_global_ingress_disable_overrides_routes_and_default_backend(self):
-        self.assertIsNone(shared_ingress(render({
+        self.assertIsNone(shared_ingress(self.render({
             "ingress.enabled": False,
             "ingress.defaultBackend.name": "fallback",
             "ingress.defaultBackend.port": 8080,
         })))
 
     def test_subchart_ingress_remains_independent(self):
-        documents = render({
+        documents = self.render({
             "global.otelcollector.ingress.enabled": False,
             "otelcollector.ingress.enabled": True,
             "otelcollector.ingress.hosts[0].host": "private-otel.example.com",

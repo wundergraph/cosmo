@@ -23,14 +23,14 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v7
         with:
-          python-version: '3.12'
+          version: '0.12.20'
+          enable-cache: true
+          cache-dependency-glob: helm/uv.lock
 
-      - name: Test ingress configuration
-        run: |
-          python3 -m pip install -r tests/requirements.txt
-          make test-ingress
+      - name: Test Helm charts
+        run: make test-render
         working-directory: ./helm
 
       - name: Install tools

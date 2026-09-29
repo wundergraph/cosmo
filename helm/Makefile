@@ -1,10 +1,14 @@
-test: test-ingress build
+test: test-render build
 	helm lint --strict -f ./cosmo/values.yaml ./cosmo
 	kubeconform -strict -summary generated/cosmo.yaml
 
-.PHONY: test-ingress
-test-ingress:
-	python3 -m unittest discover -s tests -v
+.PHONY: test-render test-cluster
+test-render:
+	uv run --locked python -m unittest discover -s tests -v
+
+test-cluster:
+	@test -n "$(HELM_TEST_KUBECONFIG)" || (echo "Set HELM_TEST_KUBECONFIG to a local cluster's kubeconfig (see README.md)."; exit 1)
+	HELM_TEST_KUBECONFIG="$(HELM_TEST_KUBECONFIG)" uv run --locked python -m unittest discover -s tests -v
 
 KAPP_ARGS:="--logs-all"
 deploy: build

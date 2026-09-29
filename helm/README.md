@@ -146,16 +146,71 @@ minikube addons enable ingress
 make docs
 ```
 
-## Test ingress configuration
+## Testing Helm charts
 
-Install the Python dependencies with `python3 -m pip install -r tests/requirements.txt`, then run `make test-ingress` from this directory. These tests render the chart and check individual route controls, component resources, migrations, and empty/default-backend configurations.
+### Setup and rendering tests
 
-To also validate every rendered manifest against a local kind cluster:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Helm](https://helm.sh/docs/intro/install/). On macOS:
 
 ```shell
-kind create cluster --name cosmo-ingress --kubeconfig /tmp/cosmo-ingress.kubeconfig
-HELM_TEST_KUBECONFIG=/tmp/cosmo-ingress.kubeconfig make test-ingress
-kind delete cluster --name cosmo-ingress
+brew install uv helm
 ```
 
-Cluster validation uses server-side dry runs and does not start the Cosmo workloads. It uses `tests/kind-values.yaml` to omit the chart's existing malformed ClickHouse resource defaults.
+From this directory, run:
+
+```shell
+make test-render
+```
+
+uv installs the pinned Python version and dependencies from `uv.lock` into `.venv` automatically. No manual virtual environment setup is needed. The rendering tests require neither Docker nor Kubernetes, and run in Helm CI. Use `uv lock` after changing dependencies in `pyproject.toml`.
+
+To run one test file:
+
+```shell
+uv run --locked python -m unittest discover -s tests -p 'test_ingress.py' -v
+```
+
+### Optional Kubernetes validation
+
+Cluster validation runs the same suite and submits each rendered manifest to the Kubernetes API with `--dry-run=server`. It does not start workloads or execute migration jobs.
+
+Install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), [kubectl](https://kubernetes.io/docs/tasks/tools/), and a running Docker daemon ([Docker Desktop](https://docs.docker.com/desktop/) on macOS or [Docker Engine](https://docs.docker.com/engine/install/) on Linux). On macOS:
+
+```shell
+brew install kind kubectl
+```
+
+On Linux, install kind from the [release binaries](https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries), or with Go:
+
+```shell
+go install sigs.k8s.io/kind@v0.32.0
+```
+
+Ensure the Go bin directory is on your `PATH`. With Docker running, create a dedicated cluster and kubeconfig:
+
+```shell
+kind create cluster --name cosmo-helm-tests --kubeconfig /tmp/cosmo-helm-tests.kubeconfig --wait 60s
+HELM_TEST_KUBECONFIG=/tmp/cosmo-helm-tests.kubeconfig make test-cluster
+kind delete cluster --name cosmo-helm-tests --kubeconfig /tmp/cosmo-helm-tests.kubeconfig
+```
+
+`test-cluster` requires an explicit kubeconfig. The test namespace defaults to `default`; create any custom namespace before running its tests. Cosmo cluster tests use `tests/fixtures/cosmo-cluster.yaml` to omit the chart's existing malformed ClickHouse resource defaults.
+
+### Adding tests
+
+Add `tests/test_<feature>.py` using `unittest` and the shared `HelmTestCase` from `tests/helm_test.py`. Set `chart` to the chart under test, call `self.render()` with Helm-style dotted overrides, and assert on the returned Kubernetes objects. Test discovery includes new files in both local runs and CI.
+
+```python
+from helm_test import HELM_DIR, HelmTestCase
+
+
+class RouterServiceTests(HelmTestCase):
+    chart = HELM_DIR / "cosmo/charts/router"
+
+    def test_service_type(self):
+        documents = self.render({"service.type": "NodePort"})
+        service = next(doc for doc in documents if doc["kind"] == "Service")
+        self.assertEqual(service["spec"]["type"], "NodePort")
+```
+
+Tests can override `release` and `namespace`, pass `values_files=(path,)` to `render`, or set `cluster_values=(path,)` for fixtures applied only during cluster validation. Keep chart-specific fixtures in `tests/fixtures/`.
