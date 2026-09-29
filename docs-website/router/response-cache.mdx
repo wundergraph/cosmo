@@ -626,8 +626,10 @@ It is Redis that evicts, under its `maxmemory` policy, and the router does not s
 ```promql
 rate(redis_evicted_keys_total[5m])
 rate(redis_expired_keys_total[5m])
-redis_memory_used_bytes / redis_memory_max_bytes
+redis_memory_used_bytes / (redis_memory_max_bytes > 0)
 ```
+
+The last one needs Redis to have a `maxmemory`. Without one Redis reports a maximum of zero, evicts nothing, and the query returns no value.
 
 These count for the whole Redis instance, including what else is stored on it.
 
