@@ -24,18 +24,19 @@ func TestCustomOperationIDs(t *testing.T) {
 
 	const query = `query Get($show: Boolean!) { employee(id: 1) { id @include(if: $show) } }`
 	const mobileQuery = `query Get($other: Boolean!) { employee(id: 2) { id @include(if: $other) } }`
+	queries := map[string]string{
+		"web":    query,
+		"mobile": mobileQuery,
+	}
 	ids := []string{"get_employee_v1", strings.Repeat("a", 64)}
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, path, _ := strings.Cut(r.URL.Path, "/operations/")
 		client, id, _ := strings.Cut(path, "/")
 		id = strings.TrimSuffix(id, ".json")
-		if !slices.Contains(ids, id) {
+		body, ok := queries[client]
+		if !ok || !slices.Contains(ids, id) {
 			w.WriteHeader(http.StatusNotFound)
 			return
-		}
-		body := query
-		if client == "mobile" {
-			body = mobileQuery
 		}
 		assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": body}))
 	}))
