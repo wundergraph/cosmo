@@ -86,9 +86,9 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			require.True(t, ok)
 			require.Positive(t, bytes.DataPoints[0].Value)
 
-			maxEntries, ok := testutils.GetMetricByName(scope, "router.response_cache.memory.max_entries").Data.(metricdata.Gauge[int64])
-			require.True(t, ok)
-			require.EqualValues(t, 1000, maxEntries.DataPoints[0].Value)
+			for _, m := range scope.Metrics {
+				require.NotContains(t, m.Name, "memory", "nothing is reported about a provider that is for tests only")
+			}
 		})
 	})
 
@@ -211,9 +211,6 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 				"router_response_cache_write_bytes_total",
 				"router_response_cache_write_ttl_seconds",
 				"router_response_cache_fetches_total",
-				"router_response_cache_memory_evictions_total",
-				"router_response_cache_memory_rejected_writes_total",
-				"router_response_cache_memory_max_entries",
 			} {
 				require.Contains(t, names, name)
 			}

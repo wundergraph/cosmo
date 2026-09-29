@@ -20,4 +20,3 @@ func (n *NoopResponseCacheMetricStore) MeasureKeys(ctx context.Context, operatio
 func (n *NoopResponseCacheMetricStore) MeasureWrite(ctx context.Context, bytes int64, ttl time.Duration) {
 }
 func (n *NoopResponseCacheMetricStore) MeasureInvalidatedTags(ctx context.Context, count int64) {}
-func (n *NoopResponseCacheMetricStore) Shutdown(ctx context.Context) error                      { return nil }

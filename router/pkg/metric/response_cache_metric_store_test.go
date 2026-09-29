@@ -14,15 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
-type fakeMemoryStats struct {
-	evictions, rejected uint64
-	maxEntries          int64
-}
-
-func (f fakeMemoryStats) Evictions() uint64      { return f.evictions }
-func (f fakeMemoryStats) RejectedWrites() uint64 { return f.rejected }
-func (f fakeMemoryStats) MaxEntries() int64      { return f.maxEntries }
-
 func responseCacheScope(t *testing.T, reader *metric.ManualReader) *metricdata.ScopeMetrics {
 	t.Helper()
 
@@ -49,7 +40,7 @@ func responseCacheMetric(t *testing.T, scope *metricdata.ScopeMetrics, name stri
 	return metricdata.Metrics{}
 }
 
-func newOtlpResponseCacheStore(t *testing.T, memoryStats ResponseCacheMemoryStats) (*ResponseCacheMetrics, *metric.ManualReader) {
+func newOtlpResponseCacheStore(t *testing.T) (*ResponseCacheMetrics, *metric.ManualReader) {
 	t.Helper()
 
 	reader := metric.NewManualReader()
@@ -60,9 +51,8 @@ func newOtlpResponseCacheStore(t *testing.T, memoryStats ResponseCacheMemoryStat
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
 
-	store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, mp, nil, cfg, "memory", memoryStats)
+	store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, mp, nil, cfg, "redis")
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, store.Shutdown(context.Background())) })
 
 	return store, reader
 }
@@ -75,7 +65,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 	t.Run("operations are counted by outcome and timed in seconds", func(t *testing.T) {
 		t.Parallel()
 
-		store, reader := newOtlpResponseCacheStore(t, nil)
+		store, reader := newOtlpResponseCacheStore(t)
 
 		store.MeasureOperation(ctx, ResponseCacheOperationLookup, 2*time.Millisecond, "")
 		store.MeasureOperation(ctx, ResponseCacheOperationLookup, 3*time.Millisecond, ResponseCacheErrorTimeout)
@@ -89,7 +79,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		counts := map[string]int64{}
 		for _, dp := range operations.DataPoints {
 			provider, _ := dp.Attributes.Value(otel.WgResponseCacheProvider)
-			require.Equal(t, "memory", provider.AsString())
+			require.Equal(t, "redis", provider.AsString())
 
 			operation, _ := dp.Attributes.Value(otel.WgResponseCacheOperation)
 			errorType, _ := dp.Attributes.Value(otel.WgErrorType)
@@ -114,7 +104,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 	t.Run("keys, writes and invalidated tags are counted", func(t *testing.T) {
 		t.Parallel()
 
-		store, reader := newOtlpResponseCacheStore(t, nil)
+		store, reader := newOtlpResponseCacheStore(t)
 
 		store.MeasureKeys(ctx, ResponseCacheOperationLookup, ResponseCacheResultFound, 3)
 		store.MeasureKeys(ctx, ResponseCacheOperationLookup, ResponseCacheResultMissing, 0)
@@ -151,7 +141,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 	t.Run("fetches are counted by status, decision and type", func(t *testing.T) {
 		t.Parallel()
 
-		store, reader := newOtlpResponseCacheStore(t, nil)
+		store, reader := newOtlpResponseCacheStore(t)
 
 		store.MeasureFetch(ctx, "mood", "Employee", "miss", "no_store")
 		store.MeasureFetch(ctx, "mood", "Employee", "miss", "no_store")
@@ -174,43 +164,13 @@ func TestResponseCacheMetricStore(t *testing.T) {
 
 			require.EqualValues(t, 2, dp.Value)
 			require.Equal(t, attribute.NewSet(
-				otel.WgResponseCacheProvider.String("memory"),
+				otel.WgResponseCacheProvider.String("redis"),
 				otel.WgSubgraphName.String("mood"),
 				otel.WgResponseCacheStatus.String("miss"),
 				otel.WgEntityType.String("Employee"),
 				otel.WgResponseCacheStoreDecision.String("no_store"),
 			), dp.Attributes)
 		}
-	})
-
-	t.Run("memory stats are observed", func(t *testing.T) {
-		t.Parallel()
-
-		_, reader := newOtlpResponseCacheStore(t, fakeMemoryStats{evictions: 7, rejected: 2, maxEntries: 1000})
-
-		scope := responseCacheScope(t, reader)
-
-		evictions, ok := responseCacheMetric(t, scope, "router.response_cache.memory.evictions").Data.(metricdata.Sum[int64])
-		require.True(t, ok)
-		require.EqualValues(t, 7, evictions.DataPoints[0].Value)
-		require.Equal(t, attribute.NewSet(otel.WgResponseCacheProvider.String("memory")), evictions.DataPoints[0].Attributes)
-
-		rejected, ok := responseCacheMetric(t, scope, "router.response_cache.memory.rejected_writes").Data.(metricdata.Sum[int64])
-		require.True(t, ok)
-		require.EqualValues(t, 2, rejected.DataPoints[0].Value)
-
-		maxEntries, ok := responseCacheMetric(t, scope, "router.response_cache.memory.max_entries").Data.(metricdata.Gauge[int64])
-		require.True(t, ok)
-		require.EqualValues(t, 1000, maxEntries.DataPoints[0].Value)
-	})
-
-	t.Run("memory stats are not observed after shutdown", func(t *testing.T) {
-		t.Parallel()
-
-		store, reader := newOtlpResponseCacheStore(t, fakeMemoryStats{evictions: 7})
-		require.NoError(t, store.Shutdown(ctx))
-
-		require.Nil(t, responseCacheScope(t, reader))
 	})
 
 	t.Run("nothing is recorded while both exporters are off", func(t *testing.T) {
@@ -223,7 +183,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
 
-		store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, mp, nil, cfg, "redis", nil)
+		store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, mp, nil, cfg, "redis")
 		require.NoError(t, err)
 
 		store.MeasureOperation(ctx, ResponseCacheOperationLookup, time.Millisecond, "")
@@ -240,7 +200,7 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
 
-		store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, nil, mp, cfg, "redis", nil)
+		store, err := NewResponseCacheMetricStore(zap.NewNop(), nil, nil, mp, cfg, "redis")
 		require.NoError(t, err)
 
 		store.MeasureOperation(ctx, ResponseCacheOperationWrite, time.Millisecond, ResponseCacheErrorPartialWrite)

@@ -659,14 +659,7 @@ The decision is left out for a fetch nothing was decided for: one answered from 
 
 #### Evictions
 
-With the memory provider the router evicts, and reports it:
-
-```promql
-rate(router_response_cache_memory_evictions_total[5m])
-rate(router_response_cache_memory_rejected_writes_total[5m])
-```
-
-With the redis provider it is Redis that evicts, under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):
+It is Redis that evicts, under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):
 
 ```promql
 rate(redis_evicted_keys_total[5m])
