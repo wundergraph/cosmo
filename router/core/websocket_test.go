@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/stretchr/testify/require"
 )
+
+// The tests below run in synctest bubbles: net.Pipe deadlines follow the bubble's
+// fake clock, so timeouts are exact and cost no wall-clock time.
 
 func websocketTestConnection(t *testing.T, ctx context.Context, timeout time.Duration) (*wsConnectionWrapper, net.Conn) {
 	t.Helper()
@@ -18,12 +22,26 @@ func websocketTestConnection(t *testing.T, ctx context.Context, timeout time.Dur
 	t.Cleanup(func() { _ = client.Close() })
 	conn := newWSConnectionWrapper(ctx, server, timeout, time.Second)
 	t.Cleanup(func() { _ = conn.Close() })
-	require.NoError(t, client.SetDeadline(time.Now().Add(5*time.Second)))
+	// A read that never returns would deadlock the bubble and abort the whole
+	// test binary. Close both ends after an hour of fake time so it fails this test instead.
+	watchdog := time.AfterFunc(time.Hour, func() {
+		_ = conn.Close()
+		_ = client.Close()
+	})
+	t.Cleanup(func() { watchdog.Stop() })
 	return conn, client
 }
 
 func clientFrame(op ws.OpCode, final bool, payload string) []byte {
 	return ws.MustCompileFrame(ws.MaskFrameInPlace(ws.NewFrame(op, final, []byte(payload))))
+}
+
+func assertTimeout(t *testing.T, err error) {
+	t.Helper()
+	require.NotErrorIs(t, err, errWebsocketIdleTimeout)
+	var netErr net.Error
+	require.ErrorAs(t, err, &netErr)
+	require.True(t, netErr.Timeout())
 }
 
 func TestWebsocketReadJSON(t *testing.T) {
@@ -38,83 +56,101 @@ func TestWebsocketReadJSON(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			conn, client := websocketTestConnection(t, t.Context(), time.Second)
-			written := make(chan error, 1)
-			go func() { _, err := client.Write(tc.frames); written <- err }()
-			var msg map[string]string
-			require.NoError(t, conn.ReadJSON(&msg))
-			require.Equal(t, "ping", msg["type"])
-			require.NoError(t, <-written)
+			synctest.Test(t, func(t *testing.T) {
+				conn, client := websocketTestConnection(t, t.Context(), time.Second)
+				written := make(chan error, 1)
+				go func() { _, err := client.Write(tc.frames); written <- err }()
+				var msg map[string]string
+				require.NoError(t, conn.ReadJSON(&msg))
+				require.Equal(t, "ping", msg["type"])
+				require.NoError(t, <-written)
+			})
 		})
 	}
 }
 
 func TestWebsocketIdleTimeoutCanRetry(t *testing.T) {
 	t.Parallel()
-	conn, client := websocketTestConnection(t, t.Context(), 20*time.Millisecond)
-	var msg json.RawMessage
-	require.ErrorIs(t, conn.ReadJSON(&msg), errWebsocketIdleTimeout)
-	written := make(chan error, 1)
-	go func() { _, err := client.Write(clientFrame(ws.OpText, true, `{}`)); written <- err }()
-	require.NoError(t, conn.ReadJSON(&msg))
-	require.JSONEq(t, `{}`, string(msg))
-	require.NoError(t, <-written)
+	synctest.Test(t, func(t *testing.T) {
+		const timeout = 5 * time.Second
+		conn, client := websocketTestConnection(t, t.Context(), timeout)
+		start := time.Now()
+		var msg json.RawMessage
+		require.ErrorIs(t, conn.ReadJSON(&msg), errWebsocketIdleTimeout)
+		require.Equal(t, timeout, time.Since(start))
+		written := make(chan error, 1)
+		go func() { _, err := client.Write(clientFrame(ws.OpText, true, `{}`)); written <- err }()
+		require.NoError(t, conn.ReadJSON(&msg))
+		require.JSONEq(t, `{}`, string(msg))
+		require.NoError(t, <-written)
+	})
 }
 
 func TestWebsocketInitializedConnectionHasNoIdleTimeout(t *testing.T) {
 	t.Parallel()
-	const timeout = 50 * time.Millisecond
+	const timeout = 5 * time.Second
 	t.Run("idle", func(t *testing.T) {
 		t.Parallel()
-		conn, client := websocketTestConnection(t, t.Context(), timeout)
-		conn.initialized = true
-		written := make(chan error, 1)
-		go func() {
-			time.Sleep(3 * timeout)
+		synctest.Test(t, func(t *testing.T) {
+			conn, client := websocketTestConnection(t, t.Context(), timeout)
+			conn.initialized = true
+			result := make(chan error, 1)
+			go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
+			time.Sleep(10 * timeout)
+			synctest.Wait()
+			require.Empty(t, result, "idle read returned before any data arrived")
 			_, err := client.Write(clientFrame(ws.OpText, true, `{}`))
-			written <- err
-		}()
-		var msg json.RawMessage
-		require.NoError(t, conn.ReadJSON(&msg))
-		require.NoError(t, <-written)
+			require.NoError(t, err)
+			require.NoError(t, <-result)
+		})
 	})
 	t.Run("partial", func(t *testing.T) {
 		t.Parallel()
-		conn, client := websocketTestConnection(t, t.Context(), timeout)
-		conn.initialized = true
-		written := make(chan error, 1)
-		go func() { _, err := client.Write([]byte{0x81}); written <- err }()
-		var msg json.RawMessage
-		err := conn.ReadJSON(&msg)
-		require.NotErrorIs(t, err, errWebsocketIdleTimeout)
-		var netErr net.Error
-		require.ErrorAs(t, err, &netErr)
-		require.True(t, netErr.Timeout())
-		require.NoError(t, <-written)
+		synctest.Test(t, func(t *testing.T) {
+			conn, client := websocketTestConnection(t, t.Context(), timeout)
+			conn.initialized = true
+			written := make(chan error, 1)
+			go func() { _, err := client.Write([]byte{0x81}); written <- err }()
+			start := time.Now()
+			var msg json.RawMessage
+			assertTimeout(t, conn.ReadJSON(&msg))
+			require.Equal(t, timeout, time.Since(start))
+			require.NoError(t, <-written)
+		})
 	})
 }
 
 func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 	t.Parallel()
-	const timeout = 300 * time.Millisecond
-	conn, client := websocketTestConnection(t, t.Context(), timeout)
-	frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
-	written := make(chan error, 1)
-	go func() {
-		// Split the frame across the deadline that was armed for the idle wait.
-		time.Sleep(timeout - 50*time.Millisecond)
-		if _, err := client.Write(frame[:1]); err != nil {
-			written <- err
-			return
+	synctest.Test(t, func(t *testing.T) {
+		const timeout = 5 * time.Second
+		conn, client := websocketTestConnection(t, t.Context(), timeout)
+		frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
+		result := make(chan error, 1)
+		go func() {
+			var msg map[string]string
+			err := conn.ReadJSON(&msg)
+			if err == nil && msg["type"] != "ping" {
+				err = fmt.Errorf("unexpected message: %v", msg)
+			}
+			result <- err
+		}()
+		// The first byte arrives 1s before the idle deadline; the rest arrives
+		// after it, but within the timeout counted from the first byte.
+		time.Sleep(timeout - time.Second)
+		_, err := client.Write(frame[:1])
+		require.NoError(t, err)
+		time.Sleep(timeout - time.Second)
+		synctest.Wait()
+		select {
+		case err := <-result:
+			t.Fatalf("read ended before the message completed: %v", err)
+		default:
 		}
-		time.Sleep(timeout / 2)
-		_, err := client.Write(frame[1:])
-		written <- err
-	}()
-	var msg map[string]string
-	require.NoError(t, conn.ReadJSON(&msg))
-	require.Equal(t, "ping", msg["type"])
-	require.NoError(t, <-written)
+		_, err = client.Write(frame[1:])
+		require.NoError(t, err)
+		require.NoError(t, <-result)
+	})
 }
 
 func TestWebsocketPartialMessageTimeoutCannotRetry(t *testing.T) {
@@ -130,17 +166,17 @@ func TestWebsocketPartialMessageTimeoutCannotRetry(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			conn, client := websocketTestConnection(t, t.Context(), 50*time.Millisecond)
-			written := make(chan error, 1)
-			go func() { _, err := client.Write(tc.data); written <- err }()
-			var msg json.RawMessage
-			err := conn.ReadJSON(&msg)
-			require.Error(t, err)
-			require.NotErrorIs(t, err, errWebsocketIdleTimeout)
-			var netErr net.Error
-			require.ErrorAs(t, err, &netErr)
-			require.True(t, netErr.Timeout())
-			require.NoError(t, <-written)
+			synctest.Test(t, func(t *testing.T) {
+				const timeout = 5 * time.Second
+				conn, client := websocketTestConnection(t, t.Context(), timeout)
+				written := make(chan error, 1)
+				go func() { _, err := client.Write(tc.data); written <- err }()
+				start := time.Now()
+				var msg json.RawMessage
+				assertTimeout(t, conn.ReadJSON(&msg))
+				require.Equal(t, timeout, time.Since(start))
+				require.NoError(t, <-written)
+			})
 		})
 	}
 }
@@ -150,33 +186,35 @@ func TestWebsocketControlFrames(t *testing.T) {
 	for _, fragmented := range []bool{false, true} {
 		t.Run(map[bool]string{false: "idle", true: "fragmented"}[fragmented], func(t *testing.T) {
 			t.Parallel()
-			conn, client := websocketTestConnection(t, t.Context(), time.Second)
-			result := make(chan error, 1)
-			go func() {
-				var msg map[string]string
-				err := conn.ReadJSON(&msg)
-				if err == nil && msg["type"] != "ping" {
-					err = fmt.Errorf("unexpected message: %v", msg)
+			synctest.Test(t, func(t *testing.T) {
+				conn, client := websocketTestConnection(t, t.Context(), time.Second)
+				result := make(chan error, 1)
+				go func() {
+					var msg map[string]string
+					err := conn.ReadJSON(&msg)
+					if err == nil && msg["type"] != "ping" {
+						err = fmt.Errorf("unexpected message: %v", msg)
+					}
+					result <- err
+				}()
+				if fragmented {
+					_, err := client.Write(clientFrame(ws.OpText, false, `{"type":`))
+					require.NoError(t, err)
 				}
-				result <- err
-			}()
-			if fragmented {
-				_, err := client.Write(clientFrame(ws.OpText, false, `{"type":`))
+				_, err := client.Write(clientFrame(ws.OpPing, true, "heartbeat"))
 				require.NoError(t, err)
-			}
-			_, err := client.Write(clientFrame(ws.OpPing, true, "heartbeat"))
-			require.NoError(t, err)
-			pong, err := ws.ReadFrame(client)
-			require.NoError(t, err)
-			require.Equal(t, ws.OpPong, pong.Header.OpCode)
-			require.Equal(t, "heartbeat", string(pong.Payload))
-			if fragmented {
-				_, err = client.Write(clientFrame(ws.OpContinuation, true, `"ping"}`))
-			} else {
-				_, err = client.Write(clientFrame(ws.OpText, true, `{"type":"ping"}`))
-			}
-			require.NoError(t, err)
-			require.NoError(t, <-result)
+				pong, err := ws.ReadFrame(client)
+				require.NoError(t, err)
+				require.Equal(t, ws.OpPong, pong.Header.OpCode)
+				require.Equal(t, "heartbeat", string(pong.Payload))
+				if fragmented {
+					_, err = client.Write(clientFrame(ws.OpContinuation, true, `"ping"}`))
+				} else {
+					_, err = client.Write(clientFrame(ws.OpText, true, `{"type":"ping"}`))
+				}
+				require.NoError(t, err)
+				require.NoError(t, <-result)
+			})
 		})
 	}
 }
@@ -186,22 +224,28 @@ func TestWebsocketCancellationInterruptsRead(t *testing.T) {
 	for _, partial := range []bool{false, true} {
 		t.Run(map[bool]string{false: "idle", true: "partial"}[partial], func(t *testing.T) {
 			t.Parallel()
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
-			conn, client := websocketTestConnection(t, ctx, 0)
-			result := make(chan error, 1)
-			go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
-			if partial {
-				_, err := client.Write([]byte{0x81})
-				require.NoError(t, err)
-			}
-			cancel()
-			select {
-			case err := <-result:
-				require.Error(t, err)
-			case <-time.After(time.Second):
-				t.Fatal("cancellation did not interrupt the read")
-			}
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				// No read timeout: only cancellation can end the read.
+				conn, client := websocketTestConnection(t, ctx, 0)
+				result := make(chan error, 1)
+				go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
+				if partial {
+					_, err := client.Write([]byte{0x81})
+					require.NoError(t, err)
+				}
+				synctest.Wait()
+				require.Empty(t, result, "read returned before cancellation")
+				cancel()
+				synctest.Wait()
+				select {
+				case err := <-result:
+					require.Error(t, err)
+				default:
+					t.Fatal("cancellation did not interrupt the read")
+				}
+			})
 		})
 	}
 }
