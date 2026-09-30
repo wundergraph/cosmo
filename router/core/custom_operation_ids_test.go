@@ -82,27 +82,96 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 	}
 }
 
-func TestPersistedOperationCacheKeyBoundaries(t *testing.T) {
+type persistedOperationCacheKeyInput struct {
+	manifest      *pqlmanifest.Manifest
+	id            string
+	clientName    string
+	operationName string
+}
+
+func TestPersistedOperationCacheKey(t *testing.T) {
 	t.Parallel()
 
+	revisionOne := &pqlmanifest.Manifest{Revision: "one"}
+	revisionTwo := &pqlmanifest.Manifest{Revision: "two"}
+
+	tests := []struct {
+		name  string
+		a, b  persistedOperationCacheKeyInput
+		equal bool
+	}{
+		// Variable-length key components are length-prefixed, so moving bytes
+		// across a component boundary must produce a different key.
+		{
+			name: "client name and ID boundary",
+			a:    persistedOperationCacheKeyInput{id: "a", clientName: "bc"},
+			b:    persistedOperationCacheKeyInput{id: "ab", clientName: "c"},
+		},
+		{
+			name: "ID and operation name boundary",
+			a:    persistedOperationCacheKeyInput{id: "id", clientName: "web", operationName: "a"},
+			b:    persistedOperationCacheKeyInput{id: "ida", clientName: "web"},
+		},
+		{
+			name: "ID and operation name boundary with manifest",
+			a:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "id", operationName: "a"},
+			b:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "ida"},
+		},
+		{
+			name: "manifest revision and ID boundary",
+			a:    persistedOperationCacheKeyInput{manifest: &pqlmanifest.Manifest{Revision: "r1"}, id: "x"},
+			b:    persistedOperationCacheKeyInput{manifest: &pqlmanifest.Manifest{Revision: "r"}, id: "1x"},
+		},
+		// Without a manifest, operations are stored per client.
+		{
+			name: "clients are isolated without manifest",
+			a:    persistedOperationCacheKeyInput{id: "shared", clientName: "web"},
+			b:    persistedOperationCacheKeyInput{id: "shared", clientName: "mobile"},
+		},
+		// Manifest operations are graph-wide and scoped to the manifest revision.
+		{
+			name:  "clients share manifest operations",
+			a:     persistedOperationCacheKeyInput{manifest: revisionOne, id: "shared", clientName: "web"},
+			b:     persistedOperationCacheKeyInput{manifest: revisionOne, id: "shared", clientName: "mobile"},
+			equal: true,
+		},
+		{
+			name: "manifest and non-manifest operations are distinct",
+			a:    persistedOperationCacheKeyInput{id: "shared"},
+			b:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "shared"},
+		},
+		{
+			name: "manifest revision change invalidates key",
+			a:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "shared", clientName: "web"},
+			b:    persistedOperationCacheKeyInput{manifest: revisionTwo, id: "shared", clientName: "web"},
+		},
+	}
+
 	processor := NewOperationProcessor(OperationProcessorOptions{Executor: &Executor{}})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			a := persistedOperationCacheKey(t, processor, tt.a)
+			b := persistedOperationCacheKey(t, processor, tt.b)
+			if tt.equal {
+				require.Equal(t, a, b)
+			} else {
+				require.NotEqual(t, a, b)
+			}
+		})
+	}
+}
+
+func persistedOperationCacheKey(t *testing.T, processor *OperationProcessor, input persistedOperationCacheKeyInput) uint64 {
+	t.Helper()
+
 	kit, err := processor.NewKit()
 	require.NoError(t, err)
 	defer kit.Free()
-	key := func(id, client, name string) uint64 {
-		kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: id}
-		kit.parsedOperation.Request.OperationName = name
-		return kit.generatePersistedOperationCacheKey(client, nil, name != "")
-	}
-	require.NotEqual(t, key("a", "bc", ""), key("ab", "c", ""))
-	require.NotEqual(t, key("id", "web", "a"), key("ida", "web", ""))
-	require.NotEqual(t, key("shared", "web", ""), key("shared", "mobile", ""))
 
-	withoutManifest := key("shared", "", "")
-	kit.persistedOperationManifest = &pqlmanifest.Manifest{Revision: "one"}
-	manifestKey := key("shared", "web", "")
-	require.Equal(t, manifestKey, key("shared", "mobile", ""))
-	require.NotEqual(t, withoutManifest, key("shared", "", ""))
-	kit.persistedOperationManifest = &pqlmanifest.Manifest{Revision: "two"}
-	require.NotEqual(t, manifestKey, key("shared", "web", ""))
+	kit.persistedOperationManifest = input.manifest
+	kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: input.id}
+	kit.parsedOperation.Request.OperationName = input.operationName
+	return kit.generatePersistedOperationCacheKey(input.clientName, nil, input.operationName != "")
 }
