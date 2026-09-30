@@ -583,8 +583,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// Populate operation telemetry before resolving persisted operations.
 	if h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if operationKit.hasCustomPersistedOperationID() || operationKit.parsedOperation.Request.Query == "" &&
-			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+		if operationKit.hasCustomPersistedOperationID() ||
+			(operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()) {
 			// Preserve the supplied persisted ID in telemetry, including custom IDs.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
