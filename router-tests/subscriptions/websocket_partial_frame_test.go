@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -64,9 +65,13 @@ func TestWebSocketShutdownWithoutReadTimeout(t *testing.T) {
 			}, func(t *testing.T, env *testenv.Environment) {
 				var conn *websocket.Conn
 				if state == "initializing" {
-					var err error
-					conn, _, err = env.GraphQLWebsocketDialWithRetry(nil, nil)
+					var (
+						resp *http.Response
+						err  error
+					)
+					conn, resp, err = env.GraphQLWebsocketDialWithRetry(nil, nil)
 					require.NoError(t, err)
+					_ = resp.Body.Close()
 					t.Cleanup(func() { _ = conn.Close() })
 				} else {
 					conn = env.InitGraphQLWebSocketConnection(nil, nil, nil)
