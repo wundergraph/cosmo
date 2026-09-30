@@ -328,8 +328,9 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	// Queued warmup bodies may belong to an older manifest revision.
-	if k.persistedOperationManifest != nil && k.parsedOperation.IsPersistedOperation {
+	// A custom ID doesn't identify its body, so a queued body may belong to an older
+	// manifest revision. APQ IDs are query hashes, so their bodies can't be stale.
+	if k.persistedOperationManifest != nil && k.hasCustomPersistedOperationID() {
 		hash := k.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		body, found := k.persistedOperationManifest.Operations[hash]
 		if !found {

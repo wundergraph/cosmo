@@ -1,26 +1,32 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
 )
 
-func newManifestProcessor(t *testing.T) (*OperationProcessor, *pqlmanifest.Store) {
+func newManifestProcessor(t *testing.T, opts persistedoperation.Options) (*OperationProcessor, *pqlmanifest.Store) {
 	t.Helper()
 	schema, report := astparser.ParseGraphqlDocumentString(`type Query { old: String new: String }`)
 	require.False(t, report.HasErrors())
 	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schema))
 	store := pqlmanifest.NewStore(zap.NewNop())
 	t.Cleanup(store.Close)
-	client, err := persistedoperation.NewClient(&persistedoperation.Options{PQLStore: store})
+	opts.PQLStore = store
+	client, err := persistedoperation.NewClient(&opts)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
@@ -49,7 +55,7 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			processor, store := newManifestProcessor(t)
+			processor, store := newManifestProcessor(t, persistedoperation.Options{})
 			load := func(revision, body string) {
 				store.Load(&pqlmanifest.Manifest{
 					Version:    1,
@@ -116,16 +122,13 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	t.Parallel()
 
-	processor, store := newManifestProcessor(t)
+	processor, store := newManifestProcessor(t, persistedoperation.Options{})
 	store.Load(&pqlmanifest.Manifest{
 		Version:    1,
 		Revision:   "new",
 		Operations: map[string]string{"shared": `query Current { new }`},
 	})
-	warmup := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
-		OperationProcessor: processor,
-		OperationPlanner:   NewOperationPlanner(&Executor{}, manifestWarmupPlanCache{}, nil, nil),
-	})
+	warmup := newManifestWarmup(processor)
 	item := &nodev1.Operation{
 		Request: &nodev1.OperationRequest{
 			Query: `query Stale { old }`,
@@ -153,6 +156,42 @@ func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	_, err = warmup.ProcessOperation(t.Context(), item)
 	var notFound *persistedoperation.PersistentOperationNotFoundError
 	require.ErrorAs(t, err, &notFound)
+}
+
+func TestManifestWarmupKeepsAPQOperationsOutsideManifest(t *testing.T) {
+	t.Parallel()
+
+	apqStore, err := apq.NewMemoryStore(1024, time.Minute)
+	require.NoError(t, err)
+	processor, store := newManifestProcessor(t, persistedoperation.Options{APQStore: apqStore})
+	store.Load(&pqlmanifest.Manifest{
+		Version:    1,
+		Revision:   "rev-1",
+		Operations: map[string]string{"published": `query Published { old }`},
+	})
+	warmup := newManifestWarmup(processor)
+
+	// With APQ, the ID is the hash of the query, so the query cannot be stale
+	// and warmup must not require the ID to be in the manifest.
+	query := `query Current { new }`
+	hash := sha256.Sum256([]byte(query))
+	result, err := warmup.ProcessOperation(t.Context(), &nodev1.Operation{
+		Request: &nodev1.OperationRequest{
+			Query: query,
+			Extensions: &nodev1.Extension{
+				PersistedQuery: &nodev1.PersistedQuery{Version: 1, Sha256Hash: hex.EncodeToString(hash[:])},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "Current", result.OperationName)
+}
+
+func newManifestWarmup(processor *OperationProcessor) *CacheWarmupPlanningProcessor {
+	return NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
+		OperationProcessor: processor,
+		OperationPlanner:   NewOperationPlanner(&Executor{}, manifestWarmupPlanCache{}, nil, nil),
+	})
 }
 
 // The warmup regression exercises parsing and normalization with an already cached plan.
