@@ -1372,15 +1372,16 @@ func (o *OperationKit) loadPersistedOperationVariableNames(clientName string) (p
 }
 
 // Keep one metadata entry per scoped ID; its revision is checked before reuse.
+// Each component is length-prefixed so bytes can't shift between the ID and the
+// components written around it in the normalization cache key.
 func (o *OperationKit) appendPersistedOperationIdentity(dst []byte, clientName string) []byte {
 	id := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	if o.persistedOperationManifest != nil {
 		// Manifest operations are graph-wide, so their identity excludes clientName.
 		// The normalization cache key adds the captured manifest revision separately.
-		return append(dst, id...)
+		return appendLengthPrefixed(dst, id)
 	}
-	// Without a manifest, operations are per-client. Framing prevents ambiguous keys
-	// and keeps them distinct from manifest IDs, which cannot contain a colon.
+	// Without a manifest, operations are per-client.
 	dst = appendLengthPrefixed(dst, clientName)
 	return appendLengthPrefixed(dst, id)
 }

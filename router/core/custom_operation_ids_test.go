@@ -2,12 +2,14 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	fastjson "github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
@@ -95,6 +97,9 @@ type persistedOperationCacheKeyInput struct {
 	id            string
 	clientName    string
 	operationName string
+	// skipIncludeValues are the values of the @skip/@include variables, which the
+	// key encodes as one byte each.
+	skipIncludeValues []bool
 }
 
 func TestPersistedOperationCacheKey(t *testing.T) {
@@ -124,6 +129,12 @@ func TestPersistedOperationCacheKey(t *testing.T) {
 			name: "ID and operation name boundary with manifest",
 			a:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "id", operationName: "a"},
 			b:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "ida"},
+		},
+		{
+			// "op2" + "0:" + 20 skip/include bytes vs "op" + "20:" + a 20-byte name.
+			name: "manifest ID and skip/include values boundary",
+			a:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "op2", skipIncludeValues: slices.Repeat([]bool{true}, 20)},
+			b:    persistedOperationCacheKeyInput{manifest: revisionOne, id: "op", operationName: strings.Repeat("t", 20)},
 		},
 		{
 			name: "manifest revision and ID boundary",
@@ -181,5 +192,13 @@ func persistedOperationCacheKey(t *testing.T, processor *OperationProcessor, inp
 	kit.persistedOperationManifest = input.manifest
 	kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{Sha256Hash: input.id}
 	kit.parsedOperation.Request.OperationName = input.operationName
-	return kit.generatePersistedOperationCacheKey(input.clientName, nil, input.operationName != "")
+
+	skipIncludeVariableNames := make([]string, len(input.skipIncludeValues))
+	variables := make([]string, len(input.skipIncludeValues))
+	for i, value := range input.skipIncludeValues {
+		skipIncludeVariableNames[i] = fmt.Sprintf("v%d", i)
+		variables[i] = fmt.Sprintf("%q:%t", skipIncludeVariableNames[i], value)
+	}
+	kit.parsedOperation.Variables = fastjson.MustParseBytes([]byte("{" + strings.Join(variables, ",") + "}")).GetObject()
+	return kit.generatePersistedOperationCacheKey(input.clientName, skipIncludeVariableNames, input.operationName != "")
 }
