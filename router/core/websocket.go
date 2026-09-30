@@ -501,12 +501,14 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 // handleConnection reads and dispatches messages until the connection closes.
 func (h *WebsocketHandler) handleConnection(handler *WebSocketConnectionHandler) {
 	h.stats.ConnectionsInc()
-	defer h.stats.ConnectionsDec()
 	closeKind := wsproto.CloseKindNormal
 	defer func() {
 		if h.ctx.Err() != nil {
 			closeKind = wsproto.CloseKindGoingAway
 		}
+		// Close unsubscribes; count the connection as gone first, so it never
+		// outlives its subscriptions in the engine statistics.
+		h.stats.ConnectionsDec()
 		handler.Close(true, closeKind)
 	}()
 
