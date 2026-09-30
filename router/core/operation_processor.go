@@ -1299,9 +1299,7 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 		return false, nil
 	}
 
-	o.cache.persistedOperationVariableNamesLock.RLock()
-	entry, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
-	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	entry, present := o.loadPersistedOperationVariableNames(clientName)
 	if !present || entry.manifestRevision != o.manifestRevision() {
 		return false, nil
 	}
@@ -1330,8 +1328,10 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	}
 
 	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
+	var buf [persistedOperationKeyBufferSize]byte
+	identity := o.appendPersistedOperationIdentity(buf[:0], clientName)
 	o.cache.persistedOperationVariableNamesLock.Lock()
-	o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)] = persistedOperationVariableNames{
+	o.cache.persistedOperationVariableNames[string(identity)] = persistedOperationVariableNames{
 		manifestRevision: o.manifestRevision(),
 		names:            skipIncludeVariableNames,
 	}
@@ -1339,9 +1339,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 }
 
 func (o *OperationKit) loadPersistedOperationCacheKey(clientName string, includeOperationName bool) (key uint64, ok bool) {
-	o.cache.persistedOperationVariableNamesLock.RLock()
-	entry, present := o.cache.persistedOperationVariableNames[o.persistedOperationIdentity(clientName)]
-	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	entry, present := o.loadPersistedOperationVariableNames(clientName)
 	// A reused ID can have different @skip/@include variables after a reload.
 	// An in-flight request may have written metadata from another revision, so
 	// only use variable names that match this request's captured manifest.
@@ -1360,28 +1358,43 @@ func (o *OperationKit) manifestRevision() string {
 	return o.persistedOperationManifest.Revision
 }
 
+// persistedOperationKeyBufferSize fits a manifest revision, a maximum-length custom
+// ID and typical client and operation names, so building keys doesn't allocate.
+const persistedOperationKeyBufferSize = 512
+
+func (o *OperationKit) loadPersistedOperationVariableNames(clientName string) (persistedOperationVariableNames, bool) {
+	var buf [persistedOperationKeyBufferSize]byte
+	identity := o.appendPersistedOperationIdentity(buf[:0], clientName)
+	o.cache.persistedOperationVariableNamesLock.RLock()
+	entry, present := o.cache.persistedOperationVariableNames[string(identity)]
+	o.cache.persistedOperationVariableNamesLock.RUnlock()
+	return entry, present
+}
+
 // Keep one metadata entry per scoped ID; its revision is checked before reuse.
-func (o *OperationKit) persistedOperationIdentity(clientName string) string {
+func (o *OperationKit) appendPersistedOperationIdentity(dst []byte, clientName string) []byte {
 	id := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 	if o.persistedOperationManifest != nil {
 		// Manifest operations are graph-wide, so their identity excludes clientName.
 		// The normalization cache key adds the captured manifest revision separately.
-		return id
+		return append(dst, id...)
 	}
 	// Without a manifest, operations are per-client. Framing prevents ambiguous keys
 	// and keeps them distinct from manifest IDs, which cannot contain a colon.
-	return fmt.Sprintf("%d:%s%d:%s", len(clientName), clientName, len(id), id)
+	dst = appendLengthPrefixed(dst, clientName)
+	return appendLengthPrefixed(dst, id)
 }
 
 func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string, includeOperationName bool) uint64 {
-	revision := o.manifestRevision()
-	_, _ = fmt.Fprintf(o.kit.keyGen, "%d:%s", len(revision), revision)
-	_, _ = o.kit.keyGen.WriteString(o.persistedOperationIdentity(clientName))
 	name := ""
 	if includeOperationName {
 		name = o.parsedOperation.Request.OperationName
 	}
-	_, _ = fmt.Fprintf(o.kit.keyGen, "%d:%s", len(name), name)
+	var buf [persistedOperationKeyBufferSize]byte
+	key := appendLengthPrefixed(buf[:0], o.manifestRevision())
+	key = o.appendPersistedOperationIdentity(key, clientName)
+	key = appendLengthPrefixed(key, name)
+	_, _ = o.kit.keyGen.Write(key)
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
@@ -1643,6 +1656,13 @@ func (o *OperationKit) conditionalsVariableNames() []string {
 	}
 	slices.Sort(names)
 	return names
+}
+
+// appendLengthPrefixed appends "<len(s)>:<s>" to dst.
+func appendLengthPrefixed(dst []byte, s string) []byte {
+	dst = strconv.AppendInt(dst, int64(len(s)), 10)
+	dst = append(dst, ':')
+	return append(dst, s...)
 }
 
 func isCustomPersistedOperationIDChar(c byte) bool {
