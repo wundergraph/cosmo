@@ -437,10 +437,6 @@ func (o *OperationKit) validatePersistedOperationID(pq *GraphQLRequestExtensions
 	return nil
 }
 
-func isCustomPersistedOperationIDChar(c byte) bool {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-'
-}
-
 // persistedOperationIDsAreQueryHashes reports whether persisted operation IDs must be
 // SHA-256 hashes of the request query. This holds unless persisted operation storage
 // is configured with APQ disabled, which enables custom IDs.
@@ -1647,6 +1643,10 @@ func (o *OperationKit) conditionalsVariableNames() []string {
 	}
 	slices.Sort(names)
 	return names
+}
+
+func isCustomPersistedOperationIDChar(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-'
 }
 
 type parseKitOptions struct {
