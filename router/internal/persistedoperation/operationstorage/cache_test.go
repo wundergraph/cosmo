@@ -3,18 +3,19 @@ package operationstorage
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-// TestOperationsCacheKeyIncludesClientName verifies that cached operation
-// bodies are scoped to the client that requested them, so clients using the
-// same operation ID never share a cache entry.
-func TestOperationsCacheKeyIncludesClientName(t *testing.T) {
+// TestOperationsCacheKeyVariableLengthComponents verifies that cache keys stay
+// unambiguous when client names and operation IDs vary in length. Custom
+// operation IDs are 1-250 characters, so the key length-prefixes the client
+// name instead of relying on a fixed-size ID.
+func TestOperationsCacheKeyVariableLengthComponents(t *testing.T) {
 	t.Parallel()
 
 	type keyInput struct {
-		clientName    string
-		operationHash string
+		clientName  string
+		operationID string
 	}
 
 	tests := []struct {
@@ -23,22 +24,27 @@ func TestOperationsCacheKeyIncludesClientName(t *testing.T) {
 		equal bool
 	}{
 		{
-			name:  "same client and operation hash share a key",
-			a:     keyInput{clientName: "web", operationHash: "shared"},
-			b:     keyInput{clientName: "web", operationHash: "shared"},
+			// Guards against a key that differs for every input.
+			name:  "identical inputs share a key",
+			a:     keyInput{clientName: "web", operationID: "get_employee"},
+			b:     keyInput{clientName: "web", operationID: "get_employee"},
 			equal: true,
 		},
 		{
-			name: "different clients with the same operation hash get different keys",
-			a:    keyInput{clientName: "web", operationHash: "shared"},
-			b:    keyInput{clientName: "mobile", operationHash: "shared"},
+			name: "bytes shifted from the operation ID into the client name",
+			a:    keyInput{clientName: "a", operationID: "bc"},
+			b:    keyInput{clientName: "ab", operationID: "c"},
 		},
 		{
-			// The client name is length-prefixed, so bytes cannot move between
-			// the client name and the operation hash to produce the same key.
-			name: "client name cannot absorb the start of the operation hash",
-			a:    keyInput{clientName: "a", operationHash: "bc"},
-			b:    keyInput{clientName: "ab", operationHash: "c"},
+			name: "empty client name",
+			a:    keyInput{clientName: "", operationID: "abc"},
+			b:    keyInput{clientName: "a", operationID: "bc"},
+		},
+		{
+			// "1:a" + "b" must not collide with the prefix written for "a" + "b".
+			name: "client name containing a length prefix",
+			a:    keyInput{clientName: "1:a", operationID: "b"},
+			b:    keyInput{clientName: "a", operationID: "b"},
 		},
 	}
 
@@ -47,12 +53,12 @@ func TestOperationsCacheKeyIncludesClientName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			a := cache.key(tt.a.clientName, tt.a.operationHash)
-			b := cache.key(tt.b.clientName, tt.b.operationHash)
+			a := cache.key(tt.a.clientName, tt.a.operationID)
+			b := cache.key(tt.b.clientName, tt.b.operationID)
 			if tt.equal {
-				require.Equal(t, a, b)
+				assert.Equal(t, a, b)
 			} else {
-				require.NotEqual(t, a, b)
+				assert.NotEqual(t, a, b)
 			}
 		})
 	}
