@@ -156,3 +156,42 @@ describe('span export when a request is aborted', () => {
     expect(spanNames(await transactionOf(traceId))).toContain('pg.query');
   });
 });
+
+describe('requests sharing one distributed trace', () => {
+  test('aborting one request does not end spans belonging to another', async () => {
+    // Two requests arriving under the same incoming trace, as a browser pageload trace
+    // or an upstream service would produce.
+    const incoming = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+    const header = `${incoming}-1111111111111111-1`;
+
+    const aborted = new AbortController();
+    let victimStatus: string | undefined;
+
+    await Promise.all([
+      Sentry.continueTrace({ sentryTrace: header, baggage: undefined }, () =>
+        Sentry.startSpanManual({ name: 'http.server A' }, async (rootA) => {
+          await withRequestSpans(aborted.signal, async () => {
+            const hung = withSpan('A.work', () => new Promise(() => {}));
+            expect(hung).toBeInstanceOf(Promise);
+            await new Promise((resolve) => setImmediate(resolve));
+            aborted.abort();
+          });
+          rootA.end();
+        }),
+      ),
+      Sentry.continueTrace({ sentryTrace: header, baggage: undefined }, () =>
+        Sentry.startSpanManual({ name: 'http.server B' }, async (rootB) => {
+          await withRequestSpans(new AbortController().signal, async () => {
+            await Sentry.startSpan({ name: 'B.work' }, async (span) => {
+              await new Promise((resolve) => setTimeout(resolve, 60));
+              victimStatus = Sentry.spanToJSON(span).status;
+            });
+          });
+          rootB.end();
+        }),
+      ),
+    ]);
+
+    expect(victimStatus).not.toBe('deadline_exceeded');
+  });
+});

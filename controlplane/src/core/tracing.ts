@@ -4,39 +4,42 @@ import type { Span } from '@sentry/node';
 type OpenTelemetrySpanProcessor = NonNullable<Sentry.NodeOptions['openTelemetrySpanProcessors']>[number];
 
 /**
- * Every span currently open, keyed by trace id.
+ * Every span currently open, keyed by the local root span it belongs to.
  *
  * Sentry exports a span only when it ends, and attaches it to the transaction only if
  * every ancestor up to the root has ended too. A single unfinished ancestor drops the
  * whole subtree, so an aborted request has to close the intermediate spans as well as
- * its own -- hence keying by trace rather than by what this module opened.
+ * the ones this module opened.
+ *
+ * Keyed by root span rather than trace id: concurrent requests share a trace whenever
+ * trace context is propagated in, and one aborting must not end another's spans.
  */
-const openSpansByTrace = new Map<string, Set<Span>>();
+const openSpansByRoot = new Map<Span, Set<Span>>();
 
 /** Registers every span the SDK starts, including instrumentation spans we never see. */
 class OpenSpanRegistry implements OpenTelemetrySpanProcessor {
   onStart(span: any): void {
-    const traceId = span?.spanContext?.()?.traceId;
-    if (!traceId) {
+    const root = Sentry.getRootSpan(span);
+    if (!root) {
       return;
     }
-    let open = openSpansByTrace.get(traceId);
+    let open = openSpansByRoot.get(root);
     if (!open) {
       open = new Set();
-      openSpansByTrace.set(traceId, open);
+      openSpansByRoot.set(root, open);
     }
     open.add(span);
   }
 
   onEnd(span: any): void {
-    const traceId = span?.spanContext?.()?.traceId;
-    const open = traceId ? openSpansByTrace.get(traceId) : undefined;
+    const root = Sentry.getRootSpan(span);
+    const open = root ? openSpansByRoot.get(root) : undefined;
     if (!open) {
       return;
     }
     open.delete(span);
     if (open.size === 0) {
-      openSpansByTrace.delete(traceId);
+      openSpansByRoot.delete(root);
     }
   }
 
@@ -45,7 +48,7 @@ class OpenSpanRegistry implements OpenTelemetrySpanProcessor {
   }
 
   shutdown(): Promise<void> {
-    openSpansByTrace.clear();
+    openSpansByRoot.clear();
     return Promise.resolve();
   }
 }
@@ -103,13 +106,12 @@ export function withSpan<T>(name: string, fn: () => Promise<T> | T): Promise<T> 
  */
 export async function withRequestSpans<T>(signal: AbortSignal | undefined, fn: () => Promise<T>): Promise<T> {
   const active = Sentry.getActiveSpan();
-  const traceId = active ? Sentry.spanToJSON(active).trace_id : undefined;
   // Left for the HTTP instrumentation to end, so it ends last and the exporter has the
   // children buffered when it flushes.
   const rootSpan = active ? Sentry.getRootSpan(active) : undefined;
 
   const endOpenSpans = () => {
-    const open = traceId ? openSpansByTrace.get(traceId) : undefined;
+    const open = rootSpan ? openSpansByRoot.get(rootSpan) : undefined;
     if (!open) {
       return;
     }
