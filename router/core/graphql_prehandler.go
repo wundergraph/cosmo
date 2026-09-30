@@ -511,8 +511,7 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, re
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
 	// APQ requests with a body must match their supplied hash.
-	if hasPersistedHash && !operationKit.isNonAPQPersistedOperation() &&
-		operationKit.parsedOperation.Request.Query != "" {
+	if operationKit.persistedQueryHashMustMatchQuery() {
 		return true
 	}
 
@@ -583,9 +582,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// Populate operation telemetry before resolving persisted operations.
-	nonAPQPersistedOperation := operationKit.isNonAPQPersistedOperation()
 	if h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if nonAPQPersistedOperation || operationKit.parsedOperation.Request.Query == "" &&
+		if operationKit.hasCustomPersistedOperationID() || operationKit.parsedOperation.Request.Query == "" &&
 			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 			// Preserve the supplied persisted ID in telemetry, including custom IDs.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
@@ -619,9 +617,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// APQ IDs must match the supplied query body.
-	if !nonAPQPersistedOperation &&
-		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
-		operationKit.parsedOperation.Request.Query != "" {
+	if operationKit.persistedQueryHashMustMatchQuery() {
 		if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
 			return &httpGraphqlError{
 				message:    "persistedQuery sha256 hash does not match query body",

@@ -925,7 +925,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		isApq     bool
 	)
 
-	if !operationKit.isNonAPQPersistedOperation() && h.shouldComputeOperationSha256(operationKit) {
+	if h.shouldComputeOperationSha256(operationKit) {
 		err = operationKit.ComputeOperationSha256()
 		if err != nil {
 			return nil, nil, err
@@ -1390,7 +1390,7 @@ func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
 func (h *WebSocketConnectionHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
-	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+	if operationKit.persistedQueryHashMustMatchQuery() {
 		return true
 	}
 

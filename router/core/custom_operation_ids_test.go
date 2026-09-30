@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
@@ -30,20 +31,27 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 		{name: "published", client: &persistedoperation.Client{}, allowCustomIDs: true},
 		{name: "APQ", client: apqClient},
 	}
+	const (
+		invalidHash   = "persistedQuery does not have a valid sha256 hash"
+		invalidLength = "persistedQuery id must be 1-250 characters long"
+		invalidChars  = "persistedQuery id may only contain [A-Za-z0-9_-]"
+	)
 	tests := []struct {
-		name          string
-		id            string
-		validHash     bool
-		validCustomID bool
+		name string
+		id   string
+		// Expected errors when IDs must be SHA256 hashes and when custom IDs are
+		// allowed. An empty string means the ID is valid.
+		hashErr     string
+		customIDErr string
 	}{
-		{name: "custom ID", id: "get_employee-v1", validCustomID: true},
-		{name: "SHA256", id: strings.Repeat("a", 64), validHash: true, validCustomID: true},
-		{name: "maximum length", id: strings.Repeat("z", 250), validCustomID: true},
-		{name: "empty", id: ""},
-		{name: "path traversal", id: "../operation"},
-		{name: "space", id: "a b"},
-		{name: "non-ASCII", id: "ä"},
-		{name: "too long", id: strings.Repeat("z", 251)},
+		{name: "custom ID", id: "get_employee-v1", hashErr: invalidHash},
+		{name: "SHA256", id: strings.Repeat("a", 64)},
+		{name: "maximum length", id: strings.Repeat("z", 250), hashErr: invalidHash},
+		{name: "empty", id: "", hashErr: invalidHash, customIDErr: invalidLength},
+		{name: "path traversal", id: "../operation", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "space", id: "a b", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "non-ASCII", id: "ä", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "too long", id: strings.Repeat("z", 251), hashErr: invalidHash, customIDErr: invalidLength},
 	}
 
 	for _, mode := range modes {
@@ -67,14 +75,14 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 						tt.id,
 					)
 					err = kit.UnmarshalOperationFromBody([]byte(body))
-					valid := tt.validHash
+					wantErr := tt.hashErr
 					if mode.allowCustomIDs {
-						valid = tt.validCustomID
+						wantErr = tt.customIDErr
 					}
-					if valid {
-						require.NoError(t, err)
+					if wantErr == "" {
+						assert.NoError(t, err)
 					} else {
-						require.Error(t, err)
+						assert.EqualError(t, err, wantErr)
 					}
 				})
 			}

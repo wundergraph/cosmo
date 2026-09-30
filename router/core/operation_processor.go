@@ -360,13 +360,9 @@ func (o *OperationKit) unmarshalOperation() error {
 				statusCode: http.StatusBadRequest,
 			}
 		}
-		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
-			if !o.validPersistedOperationID() {
-				message := "persistedQuery does not have a valid sha256 hash"
-				if o.isNonAPQPersistedOperation() {
-					message = "persistedQuery id must be 1-250 characters from [A-Za-z0-9_-]"
-				}
-				return &httpGraphqlError{message: message, statusCode: http.StatusBadRequest}
+		if pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery; pq != nil {
+			if err := o.validatePersistedOperationID(pq); err != nil {
+				return err
 			}
 
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
@@ -422,27 +418,49 @@ func (o *OperationKit) unmarshalOperation() error {
 	return nil
 }
 
-// Published IDs are opaque storage keys. APQ IDs must be SHA256 hashes.
-func (o *OperationKit) validPersistedOperationID() bool {
-	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
-	if !o.isNonAPQPersistedOperation() {
-		return pq.isValidHash()
+// APQ IDs must be SHA256 hashes. Published IDs are opaque storage keys.
+func (o *OperationKit) validatePersistedOperationID(pq *GraphQLRequestExtensionsPersistedQuery) error {
+	if o.operationProcessor.persistedOperationIDsAreQueryHashes() {
+		if !pq.isValidHash() {
+			return &httpGraphqlError{message: "persistedQuery does not have a valid sha256 hash", statusCode: http.StatusBadRequest}
+		}
+		return nil
 	}
 	if len(pq.Sha256Hash) == 0 || len(pq.Sha256Hash) > 250 {
-		return false
+		return &httpGraphqlError{message: "persistedQuery id must be 1-250 characters long", statusCode: http.StatusBadRequest}
 	}
 	for _, c := range []byte(pq.Sha256Hash) {
-		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-' {
-			continue
+		if !isCustomPersistedOperationIDChar(c) {
+			return &httpGraphqlError{message: "persistedQuery id may only contain [A-Za-z0-9_-]", statusCode: http.StatusBadRequest}
 		}
-		return false
 	}
-	return true
+	return nil
 }
 
-func (o *OperationKit) isNonAPQPersistedOperation() bool {
+func isCustomPersistedOperationIDChar(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-'
+}
+
+// persistedOperationIDsAreQueryHashes reports whether persisted operation IDs must be
+// SHA-256 hashes of the request query. This holds unless persisted operation storage
+// is configured with APQ disabled, which enables custom IDs.
+func (p *OperationProcessor) persistedOperationIDsAreQueryHashes() bool {
+	return p.persistedOperationClient == nil || p.persistedOperationClient.APQEnabled()
+}
+
+// hasCustomPersistedOperationID reports whether the request's persisted ID is an
+// opaque published ID, resolved without checking it against a query.
+func (o *OperationKit) hasCustomPersistedOperationID() bool {
 	return o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
-		o.operationProcessor.persistedOperationClient != nil && !o.operationProcessor.persistedOperationClient.APQEnabled()
+		!o.operationProcessor.persistedOperationIDsAreQueryHashes()
+}
+
+// persistedQueryHashMustMatchQuery reports whether the request supplies both a
+// SHA-256 persisted ID and a query, which must hash to that ID.
+func (o *OperationKit) persistedQueryHashMustMatchQuery() bool {
+	return o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
+		o.parsedOperation.Request.Query != "" &&
+		o.operationProcessor.persistedOperationIDsAreQueryHashes()
 }
 
 func (o *OperationKit) computeVariablesHash() {
