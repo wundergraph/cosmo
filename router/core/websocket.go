@@ -931,8 +931,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 			return nil, nil, err
 		}
 
-		// Ensure if operation has both hash and query, that the hash matches the query
-		if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
+		// APQ IDs must match the supplied query body.
+		if operationKit.persistedQueryHashMustMatchQuery() {
 			if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
 				return nil, nil, errors.New("persistedQuery sha256 hash does not match query body")
 			}
