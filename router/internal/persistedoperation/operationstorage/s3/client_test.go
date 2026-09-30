@@ -20,7 +20,6 @@ import (
 func TestPersistedOperationNotFound(t *testing.T) {
 	t.Parallel()
 
-	// Written by the handler before it responds, so it's visible once the request returns.
 	var requestedPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestedPath = r.URL.Path
