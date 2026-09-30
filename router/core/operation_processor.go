@@ -212,6 +212,11 @@ type OperationKit struct {
 	parsedOperation          *ParsedOperation
 	introspectionEnabled     bool
 
+	// persistedOperationManifest is the manifest snapshot captured when the kit
+	// is created. The manifest poller replaces the store's manifest in the
+	// background, and custom IDs can keep their ID while their body changes, so
+	// every persisted operation lookup, cache key and variable metadata check in
+	// this request must read this snapshot instead of the live store.
 	persistedOperationManifest *pqlmanifest.Manifest
 }
 
