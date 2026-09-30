@@ -41,10 +41,10 @@ func TestOperationsCacheKeyVariableLengthComponents(t *testing.T) {
 			b:    keyInput{clientName: "a", operationID: "bc"},
 		},
 		{
-			// "1:a" + "b" must not collide with the prefix written for "a" + "b".
+			// Both concatenate to "1:ab"; only the length prefix tells them apart.
 			name: "client name containing a length prefix",
 			a:    keyInput{clientName: "1:a", operationID: "b"},
-			b:    keyInput{clientName: "a", operationID: "b"},
+			b:    keyInput{clientName: "1:", operationID: "ab"},
 		},
 	}
 
