@@ -174,9 +174,9 @@ func TestPersistedOperationCacheKey(t *testing.T) {
 			a := persistedOperationCacheKey(t, processor, tt.a)
 			b := persistedOperationCacheKey(t, processor, tt.b)
 			if tt.equal {
-				require.Equal(t, a, b)
+				assert.Equal(t, a, b)
 			} else {
-				require.NotEqual(t, a, b)
+				assert.NotEqual(t, a, b)
 			}
 		})
 	}

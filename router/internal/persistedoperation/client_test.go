@@ -35,21 +35,21 @@ func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
 	})
 	snapshot := client.ManifestSnapshot()
 	body, _, err := client.PersistedOperation(t.Context(), "web", "operation")
-	require.NoError(t, err)
-	require.Equal(t, "manifest body", string(body))
+	assert.NoError(t, err)
+	assert.Equal(t, "manifest body", string(body))
 
 	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "two", Operations: map[string]string{}})
 	_, _, err = client.PersistedOperation(t.Context(), "web", "operation")
 	var notFound *PersistentOperationNotFoundError
-	require.ErrorAs(t, err, &notFound)
+	assert.ErrorAs(t, err, &notFound)
 
 	// In-flight requests continue using their captured snapshot, including nil.
 	body, _, err = client.PersistedOperationWithManifest(t.Context(), "web", "operation", snapshot)
-	require.NoError(t, err)
-	require.Equal(t, "manifest body", string(body))
+	assert.NoError(t, err)
+	assert.Equal(t, "manifest body", string(body))
 	body, _, err = client.PersistedOperationWithManifest(t.Context(), "web", "operation", beforeLoad)
-	require.NoError(t, err)
-	require.Equal(t, "provider body", string(body))
+	assert.NoError(t, err)
+	assert.Equal(t, "provider body", string(body))
 }
 
 type staticStorageClient struct {

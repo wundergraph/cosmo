@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -532,7 +533,7 @@ func TestPQLManifest(t *testing.T) {
 			}, 5*time.Second, 50*time.Millisecond)
 
 			// 4. The new revision has its own cache entry, populated asynchronously.
-			require.Eventually(t, func() bool {
+			assert.Eventually(t, func() bool {
 				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
 					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),

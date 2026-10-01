@@ -95,26 +95,26 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 			current := newKit()
 			fetch(current, false)
 			normalize(current)
-			require.Contains(t, current.parsedOperation.NormalizedRepresentation, "new")
+			assert.Contains(t, current.parsedOperation.NormalizedRepresentation, "new")
 			if reloadBeforeFetch {
 				fetch(old, false)
 			}
 			normalize(old) // Finish the older request after the newer cache entry was written.
-			require.Contains(t, old.parsedOperation.NormalizedRepresentation, "old")
+			assert.Contains(t, old.parsedOperation.NormalizedRepresentation, "old")
 
 			current = newKit()
 			fetch(current, false) // Old metadata must not be used for the new revision.
 			normalize(current)
-			require.Contains(t, current.parsedOperation.NormalizedRepresentation, "new")
+			assert.Contains(t, current.parsedOperation.NormalizedRepresentation, "new")
 			cached := newKit()
 			fetch(cached, true)
-			require.Contains(t, cached.parsedOperation.NormalizedRepresentation, "new")
-			require.Len(t, processor.operationCache.persistedOperationVariableNames, 1)
+			assert.Contains(t, cached.parsedOperation.NormalizedRepresentation, "new")
+			assert.Len(t, processor.operationCache.persistedOperationVariableNames, 1)
 
 			store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "three", Operations: map[string]string{}})
 			_, _, err := newKit().FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
 			var notFound *persistedoperation.PersistentOperationNotFoundError
-			require.ErrorAs(t, err, &notFound)
+			assert.ErrorAs(t, err, &notFound)
 		})
 	}
 }
@@ -139,7 +139,7 @@ func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	}
 	result, err := warmup.ProcessOperation(t.Context(), item)
 	require.NoError(t, err)
-	require.Equal(t, "Current", result.OperationName)
+	assert.Equal(t, "Current", result.OperationName)
 	processor.operationCache.persistedOperationNormalizationCache.Wait()
 	kit, err := processor.NewKit()
 	require.NoError(t, err)
@@ -149,13 +149,13 @@ func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	)))
 	hit, _, err := kit.FetchPersistedOperation(t.Context(), &ClientInfo{})
 	require.NoError(t, err)
-	require.True(t, hit)
-	require.Contains(t, kit.parsedOperation.NormalizedRepresentation, "new")
+	assert.True(t, hit)
+	assert.Contains(t, kit.parsedOperation.NormalizedRepresentation, "new")
 
 	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "removed", Operations: map[string]string{}})
 	_, err = warmup.ProcessOperation(t.Context(), item)
 	var notFound *persistedoperation.PersistentOperationNotFoundError
-	require.ErrorAs(t, err, &notFound)
+	assert.ErrorAs(t, err, &notFound)
 }
 
 func TestManifestWarmupKeepsAPQOperationsOutsideManifest(t *testing.T) {

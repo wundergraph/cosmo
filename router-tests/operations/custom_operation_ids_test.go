@@ -65,27 +65,27 @@ func TestCustomOperationIDs(t *testing.T) {
 		for _, id := range ids {
 			// A supplied body neither replaces the published operation nor has to hash to its ID.
 			res := request(id, "web", `query { __typename }`, `{"show":true}`)
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			logs := e.Observer().FilterMessage("/graphql").All()
-			require.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
-			require.Eventually(t, func() bool {
+			assert.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
+			assert.Eventually(t, func() bool {
 				res = request(id, "web", "", `{"show":true}`)
 				return res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
 			}, time.Second*5, time.Millisecond*10)
-			require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			logs = e.Observer().FilterMessage("/graphql").All()
-			require.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
+			assert.Equal(t, id, logs[len(logs)-1].ContextMap()["operation_id"])
 		}
 		// Different clients may use the same ID with different conditional variables.
-		require.Eventually(t, func() bool {
+		assert.Eventually(t, func() bool {
 			res := request(ids[0], "mobile", "", `{"other":true}`)
 			assert.JSONEq(t, `{"data":{"employee":{"id":2}}}`, res.Body)
 			return res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
 		}, time.Second*5, time.Millisecond*10)
-		require.JSONEq(t, `{"data":{"employee":{}}}`, request(ids[0], "web", "", `{"show":false,"other":true}`).Body)
+		assert.JSONEq(t, `{"data":{"employee":{}}}`, request(ids[0], "web", "", `{"show":false,"other":true}`).Body)
 		for _, id := range []string{"missing", "GET_EMPLOYEE_V1"} {
-			require.Contains(t, request(id, "web", query, `{"show":true}`).Body, "PersistedQueryNotFound")
-			require.Contains(t, request(id, "web", "", `{"show":true}`).Body, "PersistedQueryNotFound")
+			assert.Contains(t, request(id, "web", query, `{"show":true}`).Body, "PersistedQueryNotFound")
+			assert.Contains(t, request(id, "web", "", `{"show":true}`).Body, "PersistedQueryNotFound")
 		}
 
 		conn := e.InitGraphQLWebSocketConnection(http.Header{"Graphql-Client-Name": {"web"}}, nil, nil)
@@ -93,8 +93,8 @@ func TestCustomOperationIDs(t *testing.T) {
 		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"query":"query { __typename }","variables":{"show":true},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"get_employee_v1"}}}`)}))
 		var msg testenv.WebSocketMessage
 		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-		require.Equal(t, "next", msg.Type)
-		require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, string(msg.Payload))
+		assert.Equal(t, "next", msg.Type)
+		assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, string(msg.Payload))
 	})
 }
 
@@ -112,8 +112,8 @@ func TestCustomOperationIDManifestWarmup(t *testing.T) {
 		}}),
 	}}, func(t *testing.T, e *testenv.Environment) {
 		res := e.MakeGraphQLRequestOK(testenv.GraphQLRequest{Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"get_employee_v1"}}`)})
-		require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+		assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 	})
 }
 
@@ -175,7 +175,7 @@ func TestCustomOperationIDManifestReload(t *testing.T) {
 		setManifest("three", "")
 		const notFound = `{"errors":[{"message":"PersistedQueryNotFound",` +
 			`"extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`
-		require.Eventually(t, func() bool {
+		assert.Eventually(t, func() bool {
 			res, err := e.MakeGraphQLRequest(request)
 			return err == nil && res.Body == notFound
 		}, 5*time.Second, 10*time.Millisecond)
