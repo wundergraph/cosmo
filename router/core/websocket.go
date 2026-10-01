@@ -169,6 +169,12 @@ func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, wri
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
+	// Initialization has one deadline for receiving connection_init, including
+	// any preceding control or binary frames and the entire initial message.
+	var initDeadline time.Time
+	if !c.initialized && c.readTimeout > 0 {
+		initDeadline = time.Now().Add(c.readTimeout)
+	}
 	controlHandler := c.handleControlFrame
 	reader := wsutil.Reader{
 		Source:         c.reader,
@@ -177,7 +183,7 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 		OnIntermediate: controlHandler,
 	}
 	for {
-		if err := c.setReadDeadline(true); err != nil {
+		if err := c.setReadDeadline(true, initDeadline); err != nil {
 			return err
 		}
 		if _, err := c.reader.Peek(1); err != nil {
@@ -187,8 +193,8 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 			}
 			return err
 		}
-		// Time the message from its first byte, not from the start of the idle wait.
-		if err := c.setReadDeadline(false); err != nil {
+		// After initialization, time the message from its first byte.
+		if err := c.setReadDeadline(false, initDeadline); err != nil {
 			return err
 		}
 		header, err := reader.NextFrame()
@@ -215,11 +221,13 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 	}
 }
 
-// Before initialization, the read timeout also bounds idle waits.
-func (c *wsConnectionWrapper) setReadDeadline(idle bool) error {
+// Before initialization, all reads share the initial message's deadline.
+func (c *wsConnectionWrapper) setReadDeadline(idle bool, initDeadline time.Time) error {
 	if c.readTimeout > 0 {
 		var deadline time.Time
-		if !idle || !c.initialized {
+		if !c.initialized {
+			deadline = initDeadline
+		} else if !idle {
 			deadline = time.Now().Add(c.readTimeout)
 		}
 		if err := c.conn.SetReadDeadline(deadline); err != nil {

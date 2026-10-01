@@ -125,6 +125,7 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const timeout = 5 * time.Second
 		conn, client := websocketTestConnection(t, t.Context(), timeout)
+		conn.initialized = true
 		frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
 		result := make(chan error, 1)
 		go func() {
@@ -151,6 +152,47 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, <-result)
 	})
+}
+
+func TestWebsocketInitializationDeadline(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		frames []byte
+		pong   bool
+	}{
+		{"ping", clientFrame(ws.OpPing, true, "heartbeat"), true},
+		{"pong", clientFrame(ws.OpPong, true, "heartbeat"), false},
+		{"binary", clientFrame(ws.OpBinary, true, "ignored"), false},
+		{"fragmented binary", append(clientFrame(ws.OpBinary, false, "ignored"), clientFrame(ws.OpContinuation, true, "ignored")...), false},
+		{"partial initialization", clientFrame(ws.OpText, false, `{"type":"connection_init"`), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				const timeout = 5 * time.Second
+				conn, client := websocketTestConnection(t, t.Context(), timeout)
+				written := make(chan error, 1)
+				go func() {
+					time.Sleep(timeout - time.Second)
+					_, err := client.Write(tc.frames)
+					if err == nil && tc.pong {
+						var pong ws.Frame
+						pong, err = ws.ReadFrame(client)
+						if err == nil && pong.Header.OpCode != ws.OpPong {
+							err = fmt.Errorf("expected pong, got %v", pong.Header.OpCode)
+						}
+					}
+					written <- err
+				}()
+				start := time.Now()
+				var msg json.RawMessage
+				require.Error(t, conn.ReadJSON(&msg))
+				require.Equal(t, timeout, time.Since(start), "frames before connection_init must not extend its deadline")
+				require.NoError(t, <-written)
+			})
+		})
+	}
 }
 
 func TestWebsocketPartialMessageTimeoutCannotRetry(t *testing.T) {
