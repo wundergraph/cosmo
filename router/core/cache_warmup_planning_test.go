@@ -51,8 +51,7 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	})
 
 	// Populate the normalization cache as a live persisted-operation request would.
-	kit, err := processor.NewIndependentKit()
-	require.NoError(t, err)
+	kit := NewIndependentOperationKit(processor)
 	require.NoError(t, kit.UnmarshalOperationFromBody([]byte(fmt.Sprintf(
 		`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`, id,
 	))))
