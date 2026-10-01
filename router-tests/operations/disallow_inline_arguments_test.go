@@ -292,7 +292,7 @@ func TestValidateInlineArguments(t *testing.T) {
 func TestValidateInlineArgumentsPersistedOperations(t *testing.T) {
 	t.Parallel()
 
-	const persistedInlineArgHash = "4000000000000000000000000000000000000000000000000000000000000000"
+	const persistedInlineArgHash = "0e77273273405d787611ff60755c97f9e9de86879723253d6df7b2a03d9d7a26"
 	const okBody = `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`
 
 	persistedInlineArgRequest := func() testenv.GraphQLRequest {
