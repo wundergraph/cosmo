@@ -535,7 +535,7 @@ export class CompositionService {
     const subgraphs = await this.listSubgraphsByFederatedGraph(
       new SubgraphRepository(this.logger, this.db, this.organizationId),
       federatedGraph.targetId,
-      subgraphsByGraphTargetId
+      subgraphsByGraphTargetId,
     );
 
     let tagOptionsByContractName: SerializedContractTagOptions[];
@@ -599,7 +599,7 @@ export class CompositionService {
           const subgraphs = await this.listSubgraphsByFederatedGraph(
             subgraphRepo,
             graph.targetId,
-            subgraphsByGraphTargetId
+            subgraphsByGraphTargetId,
           );
 
           const baseCompositionSubgraphs = subgraphs.map((s) => ({
