@@ -64,8 +64,7 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 				})
 			}
 			newKit := func() *OperationKit {
-				kit, err := processor.NewIndependentKit()
-				require.NoError(t, err)
+				kit := NewIndependentOperationKit(processor)
 				require.NoError(t, kit.UnmarshalOperationFromBody([]byte(`{
 					"variables":{"old":true,"new":true},
 					"extensions":{"persistedQuery":{"version":1,"sha256Hash":"shared"}}
