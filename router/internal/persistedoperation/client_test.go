@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
@@ -70,43 +69,39 @@ func TestStorageOperationsWithMismatchedSHA256IDs(t *testing.T) {
 	const body = `query Employees { employees { id } }`
 	sum := sha256.Sum256([]byte(body))
 
-	newClient := func(t *testing.T) (*Client, *staticStorageClient, *observer.ObservedLogs) {
+	newClient := func(t *testing.T) (*Client, *staticStorageClient) {
 		t.Helper()
-		logCore, logs := observer.New(zap.WarnLevel)
 		provider := &staticStorageClient{body: []byte(body)}
-		client, err := NewClient(&Options{ProviderClient: provider, CacheSize: 1024 * 1024, Logger: zap.New(logCore)})
+		client, err := NewClient(&Options{ProviderClient: provider, CacheSize: 1024 * 1024})
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, client.Close()) })
-		return client, provider, logs
+		return client, provider
 	}
 
 	for name, id := range map[string]string{"SHA256 of the body": hex.EncodeToString(sum[:]), "custom ID": "get_employees"} {
 		t.Run(name+" is served", func(t *testing.T) {
 			t.Parallel()
-			client, _, logs := newClient(t)
+			client, _ := newClient(t)
 
 			content, _, err := client.PersistedOperation(t.Context(), "web", id)
 			assert.NoError(t, err)
 			assert.Equal(t, body, string(content))
-			assert.Equal(t, 0, logs.Len())
 		})
 	}
 
-	t.Run("other SHA256 is ignored with a warning", func(t *testing.T) {
+	t.Run("other SHA256 returns an error", func(t *testing.T) {
 		t.Parallel()
-		client, provider, logs := newClient(t)
+		client, provider := newClient(t)
 		mismatchedID := strings.Repeat("a", 64)
 
 		content, _, err := client.PersistedOperation(t.Context(), "web", mismatchedID)
-		var notFound *PersistentOperationNotFoundError
-		assert.ErrorAs(t, err, &notFound)
+		var mismatch *OperationIDMismatchError
+		if assert.ErrorAs(t, err, &mismatch) {
+			assert.Equal(t, mismatchedID, mismatch.Sha256Hash)
+		}
 		assert.Nil(t, content)
 
-		warnings := logs.FilterField(zap.String("operation_id", mismatchedID)).All()
-		require.Len(t, warnings, 1)
-		assert.Contains(t, warnings[0].Message, "will become an error in a future release")
-
-		// The ignored operation isn't cached, so the next lookup asks the provider again.
+		// The invalid operation isn't cached, so the next lookup asks the provider again.
 		client.cache.Cache.Wait()
 		_, _, _ = client.PersistedOperation(t.Context(), "web", mismatchedID)
 		assert.Equal(t, 2, provider.calls)

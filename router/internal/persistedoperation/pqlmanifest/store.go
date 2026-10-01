@@ -185,10 +185,6 @@ func (s *Store) AllOperations() map[string]string {
 	return m.Operations
 }
 
-// MismatchedOperationIDWarning is logged for each stored operation ignored because
-// its SHA256-like ID is not the SHA256 of its body.
-const MismatchedOperationIDWarning = "Ignoring persisted operation whose SHA256-like ID is not the SHA256 of its body. This will become an error in a future release."
-
 // OperationIDMatchesBody reports whether a persisted operation ID is consistent
 // with its body. The router looks up query-only requests by the SHA256 of their
 // query, so an ID that looks like a SHA256 hash (64 lowercase hex characters)
