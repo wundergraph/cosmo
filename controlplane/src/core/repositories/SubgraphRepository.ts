@@ -308,60 +308,61 @@ export class SubgraphRepository {
     let subgraphChanged = false;
     let labelChanged = false;
 
-    await this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-
-      // The collection of federated graphs that will be potentially re-composed
+    /**
+     * Phase 1: mirror what `batchWriteAndCollect` does, which is to write the schema version and collect
+     * what it affects in a short transaction so we don't block the database on composition and uploading the
+     * router configs
+     */
+    const { subgraph, affectedFederatedGraphById, affectedFeatureFlags } = await this.db.transaction(async (tx) => {
       const collected = await this.writeSchemaAndCollectAffected(tx, data);
-      const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
       subgraphChanged = collected.subgraphChanged;
       labelChanged = collected.labelChanged;
 
-      if (!subgraph) {
-        return {
-          compositionErrors,
-          compositionWarnings,
-          updatedFederatedGraphs,
-          deploymentErrors,
-          subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
-        };
-      }
-
-      // Resolve the affected feature flag DTOs.
-      const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
-      if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
-        return {
-          compositionErrors,
-          compositionWarnings,
-          updatedFederatedGraphs,
-          deploymentErrors,
-          subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
-        };
-      }
-
-      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
-      const result = await compositionService.recomposeAndDeployAffected({
-        actorId: data.updatedBy,
-        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
-        affectedFeatureFlags,
-        isFeatureSubgraph: subgraph.isFeatureSubgraph,
-      });
-
-      deploymentErrors.push(...result.deploymentErrors);
-      compositionErrors.push(...result.compositionErrors);
-      compositionWarnings.push(...result.compositionWarnings);
-
-      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(
-        [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-      );
-      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = refreshedGraphs[i];
-        if (refreshedGraph) {
-          updatedFederatedGraphs[i] = refreshedGraph;
-        }
-      }
+      return {
+        subgraph: collected.subgraph,
+        affectedFederatedGraphById: collected.affectedFederatedGraphById,
+        // Resolve the affected feature flag DTOs.
+        affectedFeatureFlags: collected.subgraph
+          ? await this.resolveFeatureFlags(tx, data.namespaceId, collected.affectedFeatureFlagIds)
+          : [],
+      };
     });
+
+    if (!subgraph || (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0)) {
+      return {
+        compositionErrors,
+        compositionWarnings,
+        updatedFederatedGraphs,
+        deploymentErrors,
+        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+      };
+    }
+
+    updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
+
+    // Compose the affected graphs in parallel outside the database transaction to avoid blocking it
+    const result = await compositionService.recomposeAndDeployAffectedBatch({
+      actorId: data.updatedBy,
+      affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
+      affectedFeatureFlags,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
+    });
+
+    deploymentErrors.push(...result.deploymentErrors);
+    compositionErrors.push(...result.compositionErrors);
+    compositionWarnings.push(...result.compositionWarnings);
+
+    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const refreshedGraphs = await Promise.all(
+      [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
+    );
+    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+      const refreshedGraph = refreshedGraphs[i];
+      if (refreshedGraph) {
+        updatedFederatedGraphs[i] = refreshedGraph;
+      }
+    }
 
     return {
       compositionErrors,
@@ -1339,6 +1340,8 @@ export class SubgraphRepository {
       .where(and(...conditions))
       .execute();
 
+    const alreadySeenTargetIds = new Set<string>();
+
     // Transform the selected subgraphs into SubgraphDTO objects
     return (
       subgraphs
@@ -1346,8 +1349,17 @@ export class SubgraphRepository {
          * Because a subgraph can be part of multiple federated graphs in the same namespace, we need to filter out
          * duplicates. This have not been an issue so far because the method was called for a specific federated graph
          * or with specific target ids.
+         *
+         * Deduplicated through a Set rather than `findIndex`.
          */
-        .filter((sg, index, self) => self.findIndex((x) => x.targetId === sg.targetId) === index)
+        .filter((sg) => {
+          if (alreadySeenTargetIds.has(sg.targetId)) {
+            return false;
+          }
+
+          alreadySeenTargetIds.add(sg.targetId);
+          return true;
+        })
         .map((sg) => {
           let proto: ProtoSubgraph | undefined;
           if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
