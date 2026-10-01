@@ -1,8 +1,11 @@
 package pqlmanifest
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -54,7 +57,7 @@ func (s *Store) SetOnUpdate(fn func()) {
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
-	s.manifest.Store(manifest)
+	s.manifest.Store(s.withoutMismatchedOperationIDs(manifest))
 
 	if s.onUpdate.Load() == nil {
 		return
@@ -168,4 +171,59 @@ func (s *Store) AllOperations() map[string]string {
 		return nil
 	}
 	return m.Operations
+}
+
+// OperationIDMatchesBody reports whether a persisted operation ID is consistent
+// with its body. The router looks up query-only requests by the SHA256 of their
+// query, so an ID that looks like a SHA256 hash (64 lowercase hex characters)
+// must be the hash of its body. Other IDs are custom IDs and always match.
+func OperationIDMatchesBody(id, body string) bool {
+	if !isSHA256Hex(id) {
+		return true
+	}
+	sum := sha256.Sum256([]byte(body))
+	return hex.EncodeToString(sum[:]) == id
+}
+
+func isSHA256Hex(id string) bool {
+	if len(id) != sha256.Size*2 {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		if !isLowerHex(id[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func isLowerHex(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f'
+}
+
+// TODO(2027-03-30): reject the manifest instead of ignoring these operations.
+func (s *Store) withoutMismatchedOperationIDs(manifest *Manifest) *Manifest {
+	if manifest == nil {
+		return nil
+	}
+	var operations map[string]string
+	for id, body := range manifest.Operations {
+		if OperationIDMatchesBody(id, body) {
+			continue
+		}
+		if operations == nil {
+			operations = maps.Clone(manifest.Operations)
+		}
+		delete(operations, id)
+		s.logger.Warn("Ignoring persisted operation whose SHA256-like ID is not the SHA256 of its body. This will become an error in a future release.",
+			zap.String("operation_id", id),
+			zap.String("revision", manifest.Revision),
+		)
+	}
+	if operations == nil {
+		return manifest
+	}
+	filtered := *manifest
+	filtered.Operations = operations
+	return &filtered
 }

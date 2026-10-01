@@ -1,13 +1,17 @@
 package pqlmanifest
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -347,4 +351,35 @@ func TestLoadFromFile(t *testing.T) {
 		err := store.LoadFromFile("/nonexistent/path/manifest.json")
 		require.ErrorContains(t, err, "failed to read manifest file")
 	})
+}
+
+func TestStoreIgnoresOperationsWithMismatchedSHA256IDs(t *testing.T) {
+	t.Parallel()
+
+	const body = `query Employees { employees { id } }`
+	sum := sha256.Sum256([]byte(body))
+	hashID := hex.EncodeToString(sum[:])
+	mismatchedID := strings.Repeat("a", 64)
+	operations := map[string]string{
+		hashID:                  body,
+		mismatchedID:            body,
+		"get_employees":         body,
+		strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
+	}
+
+	logCore, logs := observer.New(zap.WarnLevel)
+	store := NewStore(zap.New(logCore))
+	store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: operations})
+
+	loaded := store.Snapshot().Operations
+	assert.Contains(t, loaded, hashID)
+	assert.Contains(t, loaded, "get_employees")
+	assert.Contains(t, loaded, strings.ToUpper(hashID))
+	assert.NotContains(t, loaded, mismatchedID)
+	assert.Len(t, operations, 4, "the caller's manifest must not be modified")
+
+	warnings := logs.FilterField(zap.String("operation_id", mismatchedID)).All()
+	require.Len(t, warnings, 1)
+	assert.Contains(t, warnings[0].Message, "will become an error in a future release")
+	assert.Equal(t, 1, logs.Len())
 }
