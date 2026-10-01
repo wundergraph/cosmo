@@ -842,4 +842,223 @@ func TestComplexityLimits(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("fragments", func(t *testing.T) {
+		t.Parallel()
+
+		depthLimit := func(limit int) *config.ComplexityLimits {
+			return &config.ComplexityLimits{Depth: &config.ComplexityLimit{Enabled: true, Limit: limit}}
+		}
+		totalFieldsLimit := func(limit int) *config.ComplexityLimits {
+			return &config.ComplexityLimits{TotalFields: &config.ComplexityLimit{Enabled: true, Limit: limit}}
+		}
+		rootFieldsLimit := func(limit int) *config.ComplexityLimits {
+			return &config.ComplexityLimits{RootFields: &config.ComplexityLimit{Enabled: true, Limit: limit}}
+		}
+		rootFieldAliasesLimit := func(limit int) *config.ComplexityLimits {
+			return &config.ComplexityLimits{RootFieldAliases: &config.ComplexityLimit{Enabled: true, Limit: limit}}
+		}
+
+		// Each operation selects its fields through fragments and must be measured exactly like its
+		// hand-inlined equivalent: blocked with the exact value one below the limit, allowed at the limit.
+		testCases := []struct {
+			name         string
+			limits       func(limit int) *config.ComplexityLimits
+			errorMessage string // formatted with the computed value and the limit
+			value        int
+			query        string
+			inlinedQuery string
+			data         string
+		}{
+			{
+				name:         "depth follows nested named fragments",
+				limits:       depthLimit,
+				errorMessage: "The query depth %d exceeds the max query depth allowed (%d)",
+				value:        5,
+				query: `
+					query {
+					  employee(id: 1) { ...EmployeeLocation }
+					}
+					fragment EmployeeLocation on Employee { details { ...DetailsLocation } }
+					fragment DetailsLocation on Details { location { ...CountryKey } }
+					fragment CountryKey on Country { key { name } }`,
+				inlinedQuery: `{ employee(id: 1) { details { location { key { name } } } } }`,
+				data:         `{"data":{"employee":{"details":{"location":{"key":{"name":"Germany"}}}}}}`,
+			},
+			{
+				name:         "total fields counts leaf fields and __typename inside fragments",
+				limits:       totalFieldsLimit,
+				errorMessage: "The total number of fields %d exceeds the limit allowed (%d)",
+				value:        7,
+				query: `
+					query {
+					  employee(id: 1) { ...EmployeeFields }
+					}
+					fragment EmployeeFields on Employee { __typename id details { ...DetailsNames } }
+					fragment DetailsNames on Details { __typename forename surname }`,
+				inlinedQuery: `{ employee(id: 1) { __typename id details { __typename forename surname } } }`,
+				data:         `{"data":{"employee":{"__typename":"Employee","id":1,"details":{"__typename":"Details","forename":"Jens","surname":"Neuse"}}}}`,
+			},
+			{
+				name:         "root fields counts fields of root level fragment spreads",
+				limits:       rootFieldsLimit,
+				errorMessage: "The number of root fields %d exceeds the root field limit allowed (%d)",
+				value:        3,
+				query: `
+					query { ...RootFields }
+					fragment RootFields on Query { employee(id: 1) { id } ...MoreRootFields }
+					fragment MoreRootFields on Query { employeeAsList(id: 2) { id } firstEmployee { id } }`,
+				inlinedQuery: `{ employee(id: 1) { id } employeeAsList(id: 2) { id } firstEmployee { id } }`,
+				data:         `{"data":{"employee":{"id":1},"employeeAsList":[{"id":2}],"firstEmployee":{"id":1}}}`,
+			},
+			{
+				name:         "root field aliases counts aliases inside root level fragment spreads",
+				limits:       rootFieldAliasesLimit,
+				errorMessage: "The number of root field aliases %d exceeds the root field aliases limit allowed (%d)",
+				value:        2,
+				query: `
+					query { ...AliasedRootFields }
+					fragment AliasedRootFields on Query { first: employee(id: 1) { id } ...MoreAliasedRootFields }
+					fragment MoreAliasedRootFields on Query { second: employee(id: 2) { id } employee(id: 3) { id } }`,
+				inlinedQuery: `{ first: employee(id: 1) { id } second: employee(id: 2) { id } employee(id: 3) { id } }`,
+				data:         `{"data":{"first":{"id":1},"second":{"id":2},"employee":{"id":3}}}`,
+			},
+			{
+				name:         "total fields counts named and inline fragments on interfaces",
+				limits:       totalFieldsLimit,
+				errorMessage: "The total number of fields %d exceeds the limit allowed (%d)",
+				value:        7,
+				query: `
+					query {
+					  employee(id: 1) { ...IdentifiableFields role { ...RoleFields } }
+					}
+					fragment IdentifiableFields on Identifiable { id }
+					fragment RoleFields on RoleType {
+					  title
+					  ... on Engineer { ...EngineerFields }
+					  ... on Operator { operatorType }
+					}
+					fragment EngineerFields on Engineer { __typename engineerType }`,
+				inlinedQuery: `{ employee(id: 1) { id role { title ... on Engineer { __typename engineerType } ... on Operator { operatorType } } } }`,
+				data:         `{"data":{"employee":{"id":1,"role":{"title":["Founder","CEO"],"__typename":"Engineer","engineerType":"BACKEND"}}}}`,
+			},
+			{
+				name:         "depth follows named and inline fragments on unions",
+				limits:       depthLimit,
+				errorMessage: "The query depth %d exceeds the max query depth allowed (%d)",
+				value:        4,
+				query: `
+					query {
+					  products { ...ProductFields }
+					}
+					fragment ProductFields on Products {
+					  __typename
+					  ... on Consultancy { upc lead { ...LeadFields } }
+					  ...CosmoFields
+					}
+					fragment CosmoFields on Cosmo { upc lead { id } }
+					fragment LeadFields on Employee { id details { forename } }`,
+				inlinedQuery: `{ products { __typename ... on Consultancy { upc lead { id details { forename } } } ... on Cosmo { upc lead { id } } } }`,
+				data:         `{"data":{"products":[{"__typename":"Consultancy","upc":"consultancy","lead":{"id":1,"details":{"forename":"Jens"}}},{"__typename":"Cosmo","upc":"cosmo","lead":{"id":2}},{"__typename":"SDK"}]}}`,
+			},
+			{
+				// Only the spreads repeat (no field is also selected outside its fragment), so the value
+				// is the same whether or not normalization merged the repeated selections first.
+				name:         "repeated fragment spreads in one selection set are counted once",
+				limits:       totalFieldsLimit,
+				errorMessage: "The total number of fields %d exceeds the limit allowed (%d)",
+				value:        5,
+				query: `
+					query {
+					  employee(id: 1) { ...EmployeeFields ...EmployeeFields }
+					}
+					fragment EmployeeFields on Employee { id details { ...DetailsNames ...DetailsNames } }
+					fragment DetailsNames on Details { forename surname }`,
+				inlinedQuery: `{ employee(id: 1) { id details { forename surname } } }`,
+				data:         `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`,
+			},
+			{
+				name:         "repeated root level fragment spreads are counted once",
+				limits:       rootFieldsLimit,
+				errorMessage: "The number of root fields %d exceeds the root field limit allowed (%d)",
+				value:        2,
+				query: `
+					query { ...RootFields ...RootFields ...RootFields }
+					fragment RootFields on Query { employee(id: 1) { id } employeeAsList(id: 2) { id } }`,
+				inlinedQuery: `{ employee(id: 1) { id } employeeAsList(id: 2) { id } }`,
+				data:         `{"data":{"employee":{"id":1},"employeeAsList":[{"id":2}]}}`,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				for _, limit := range []int{tc.value - 1, tc.value} {
+					t.Run(fmt.Sprintf("limit %d", limit), func(t *testing.T) {
+						t.Parallel()
+						testenv.Run(t, &testenv.Config{
+							ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+								securityConfiguration.ComplexityLimits = tc.limits(limit)
+							},
+						}, func(t *testing.T, xEnv *testenv.Environment) {
+							res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: tc.query})
+							require.NoError(t, err)
+							if limit < tc.value {
+								require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+								require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"%s"}]}`, fmt.Sprintf(tc.errorMessage, tc.value, limit)), res.Body)
+							} else {
+								require.Equal(t, http.StatusOK, res.Response.StatusCode)
+								require.JSONEq(t, tc.data, res.Body)
+							}
+
+							inlinedRes, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: tc.inlinedQuery})
+							require.NoError(t, err)
+							require.Equal(t, res.Response.StatusCode, inlinedRes.Response.StatusCode)
+							require.Equal(t, res.Body, inlinedRes.Body)
+						})
+					})
+				}
+			})
+		}
+
+		t.Run("persisted operation with fragments", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.ComplexityLimits = depthLimit(5)
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// The persisted "Employees" operation selects its deepest fields and all pet fields
+				// through fragments. The second request is served from the persisted operation cache.
+				for _, cacheHit := range []bool{false, true} {
+					exporter.Reset()
+					header := make(http.Header)
+					header.Add("graphql-client-name", "my-client")
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employees"`),
+						Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        header,
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+					require.Equal(t, `{"errors":[{"message":"The query depth 6 exceeds the max query depth allowed (5)"}]}`, res.Body)
+
+					normalizeSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Normalize")
+					require.Contains(t, normalizeSpan.Attributes(), otel.WgEnginePersistedOperationCacheHit.Bool(cacheHit))
+					testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
+					require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(6))
+					require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(44))
+					require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFields.Int(1))
+					require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
+					if !cacheHit {
+						// wait to let cache get consistent
+						time.Sleep(100 * time.Millisecond)
+					}
+				}
+			})
+		})
+	})
 }
