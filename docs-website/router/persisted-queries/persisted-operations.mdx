@@ -106,7 +106,9 @@ With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs 
 An ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. For a different ID of that length, use uppercase letters or other characters.
 
 <Warning>
-The router ignores published operations that break this rule and logs a warning with the operation ID. A request for such an operation returns `PersistedQueryNotFound`. A future release will treat these operations as an error.
+The router rejects a manifest that contains an operation breaking this rule, and the error lists the offending IDs. The router fails to start with such a manifest. If a manifest update breaks the rule, the router logs the error and keeps using the previous revision.
+
+Without a manifest, the router ignores an operation that breaks this rule, logs a warning with its ID, and returns `PersistedQueryNotFound`. A future release will treat these operations as an error as well.
 </Warning>
 
 With APQ enabled, IDs must be SHA256 hashes and must match the query body when both are supplied.

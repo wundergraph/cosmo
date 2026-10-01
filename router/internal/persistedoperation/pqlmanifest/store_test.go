@@ -353,33 +353,31 @@ func TestLoadFromFile(t *testing.T) {
 	})
 }
 
-func TestStoreIgnoresOperationsWithMismatchedSHA256IDs(t *testing.T) {
+func TestParseManifestRejectsMismatchedSHA256IDs(t *testing.T) {
 	t.Parallel()
 
 	const body = `query Employees { employees { id } }`
 	sum := sha256.Sum256([]byte(body))
 	hashID := hex.EncodeToString(sum[:])
-	mismatchedID := strings.Repeat("a", 64)
-	operations := map[string]string{
-		hashID:                  body,
-		mismatchedID:            body,
-		"get_employees":         body,
-		strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
+	parse := func(operations map[string]string) (*Manifest, error) {
+		return ParseManifest(mustMarshalManifest(&Manifest{Version: 1, Revision: "rev-1", Operations: operations}))
 	}
 
-	logCore, logs := observer.New(zap.WarnLevel)
-	store := NewStore(zap.New(logCore))
-	store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: operations})
+	t.Run("hash, custom and uppercase IDs are accepted", func(t *testing.T) {
+		t.Parallel()
+		manifest, err := parse(map[string]string{
+			hashID:                  body,
+			"get_employees":         body,
+			strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
+		})
+		require.NoError(t, err)
+		assert.Len(t, manifest.Operations, 3)
+	})
 
-	loaded := store.Snapshot().Operations
-	assert.Contains(t, loaded, hashID)
-	assert.Contains(t, loaded, "get_employees")
-	assert.Contains(t, loaded, strings.ToUpper(hashID))
-	assert.NotContains(t, loaded, mismatchedID)
-	assert.Len(t, operations, 4, "the caller's manifest must not be modified")
-
-	warnings := logs.FilterField(zap.String("operation_id", mismatchedID)).All()
-	require.Len(t, warnings, 1)
-	assert.Contains(t, warnings[0].Message, "will become an error in a future release")
-	assert.Equal(t, 1, logs.Len())
+	t.Run("other SHA256 is rejected", func(t *testing.T) {
+		t.Parallel()
+		mismatchedID := strings.Repeat("a", 64)
+		_, err := parse(map[string]string{hashID: body, mismatchedID: body})
+		assert.ErrorContains(t, err, mismatchedID)
+	})
 }

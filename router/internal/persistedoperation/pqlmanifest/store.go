@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -57,7 +58,7 @@ func (s *Store) SetOnUpdate(fn func()) {
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
-	s.manifest.Store(s.withoutMismatchedOperationIDs(manifest))
+	s.manifest.Store(manifest)
 
 	if s.onUpdate.Load() == nil {
 		return
@@ -137,6 +138,17 @@ func validateManifest(m *Manifest) error {
 	if m.Operations == nil {
 		return fmt.Errorf("manifest operations field is required")
 	}
+	var mismatchedIDs []string
+	for id, body := range m.Operations {
+		if !OperationIDMatchesBody(id, body) {
+			mismatchedIDs = append(mismatchedIDs, id)
+		}
+	}
+	if len(mismatchedIDs) > 0 {
+		slices.Sort(mismatchedIDs)
+		return fmt.Errorf("operation IDs that look like SHA256 hashes must be the SHA256 of their body: %s",
+			strings.Join(mismatchedIDs, ", "))
+	}
 	return nil
 }
 
@@ -173,8 +185,8 @@ func (s *Store) AllOperations() map[string]string {
 	return m.Operations
 }
 
-// MismatchedOperationIDWarning is logged for each operation ignored because its
-// SHA256-like ID is not the SHA256 of its body.
+// MismatchedOperationIDWarning is logged for each stored operation ignored because
+// its SHA256-like ID is not the SHA256 of its body.
 const MismatchedOperationIDWarning = "Ignoring persisted operation whose SHA256-like ID is not the SHA256 of its body. This will become an error in a future release."
 
 // OperationIDMatchesBody reports whether a persisted operation ID is consistent
@@ -203,31 +215,4 @@ func isSHA256Hex(id string) bool {
 
 func isLowerHex(c byte) bool {
 	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f'
-}
-
-// TODO(2027-03-30): reject the manifest instead of ignoring these operations.
-func (s *Store) withoutMismatchedOperationIDs(manifest *Manifest) *Manifest {
-	if manifest == nil {
-		return nil
-	}
-	var operations map[string]string
-	for id, body := range manifest.Operations {
-		if OperationIDMatchesBody(id, body) {
-			continue
-		}
-		if operations == nil {
-			operations = maps.Clone(manifest.Operations)
-		}
-		delete(operations, id)
-		s.logger.Warn(MismatchedOperationIDWarning,
-			zap.String("operation_id", id),
-			zap.String("revision", manifest.Revision),
-		)
-	}
-	if operations == nil {
-		return manifest
-	}
-	filtered := *manifest
-	filtered.Operations = operations
-	return &filtered
 }

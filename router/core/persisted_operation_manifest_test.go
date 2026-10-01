@@ -187,68 +187,6 @@ func TestManifestWarmupKeepsAPQOperationsOutsideManifest(t *testing.T) {
 	assert.Equal(t, "Current", result.OperationName)
 }
 
-func TestManifestIgnoresOperationsWithMismatchedSHA256IDs(t *testing.T) {
-	t.Parallel()
-
-	// Safelist and log_unknown look up a query-only request by the SHA256 of its
-	// query, so an operation published under a SHA256-like ID must be that hash.
-	// Until that is an error, the manifest ignores operations that break the rule.
-	const requested = `query Requested { old }`
-	sum := sha256.Sum256([]byte(requested))
-	id := hex.EncodeToString(sum[:])
-
-	newQueryOnlyKit := func(t *testing.T, processor *OperationProcessor) *OperationKit {
-		t.Helper()
-		kit := NewIndependentOperationKit(processor)
-		require.NoError(t, kit.UnmarshalOperationFromBody([]byte(`{"query":"`+requested+`"}`)))
-		require.NoError(t, kit.ComputeOperationSha256())
-		kit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
-			Sha256Hash: kit.parsedOperation.Sha256Hash,
-		}
-		return kit
-	}
-	loadManifest := func(store *pqlmanifest.Store, body string) {
-		store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{id: body}})
-	}
-
-	t.Run("matching stored operation", func(t *testing.T) {
-		t.Parallel()
-		processor, store := newManifestProcessor(t, persistedoperation.Options{})
-		loadManifest(store, requested)
-
-		kit := newQueryOnlyKit(t, processor)
-		_, _, err := kit.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
-		assert.NoError(t, err)
-		assert.Equal(t, requested, kit.parsedOperation.Request.Query)
-	})
-
-	t.Run("different stored operation", func(t *testing.T) {
-		t.Parallel()
-		processor, store := newManifestProcessor(t, persistedoperation.Options{})
-		loadManifest(store, `query Published { new }`)
-
-		kit := newQueryOnlyKit(t, processor)
-		_, _, err := kit.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
-		var notFound *persistedoperation.PersistentOperationNotFoundError
-		assert.ErrorAs(t, err, &notFound)
-		assert.Equal(t, requested, kit.parsedOperation.Request.Query)
-	})
-
-	t.Run("request by ID", func(t *testing.T) {
-		t.Parallel()
-		processor, store := newManifestProcessor(t, persistedoperation.Options{})
-		loadManifest(store, `query Published { new }`)
-
-		kit := NewIndependentOperationKit(processor)
-		require.NoError(t, kit.UnmarshalOperationFromBody([]byte(
-			`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"`+id+`"}}}`,
-		)))
-		_, _, err := kit.FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
-		var notFound *persistedoperation.PersistentOperationNotFoundError
-		assert.ErrorAs(t, err, &notFound)
-	})
-}
-
 func newManifestWarmup(processor *OperationProcessor) *CacheWarmupPlanningProcessor {
 	return NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
 		OperationProcessor: processor,
