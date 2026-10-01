@@ -1742,9 +1742,3 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 func (p *OperationProcessor) NewKit() (*OperationKit, error) {
 	return NewOperationKit(p), nil
 }
-
-// NewIndependentKit creates a new OperationKit which will not be pooled.
-// This is useful, e.g. for warming up the caches
-func (p *OperationProcessor) NewIndependentKit() (*OperationKit, error) {
-	return NewIndependentOperationKit(p), nil
-}
