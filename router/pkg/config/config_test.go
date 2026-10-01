@@ -124,6 +124,50 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
+func TestParserLimitsEnforceAfterNormalizationConfigLoading(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		yaml     string
+		env      string
+		expected bool
+	}{
+		{name: "defaults to false"},
+		{
+			name:     "can be enabled from yaml",
+			yaml:     "true",
+			expected: true,
+		},
+		{
+			name:     "can be enabled from env",
+			env:      "true",
+			expected: true,
+		},
+		{
+			name: "yaml false takes precedence over env true",
+			yaml: "false",
+			env:  "true",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("SECURITY_PARSER_LIMITS_ENFORCE_AFTER_NORMALIZATION", tt.env)
+			fixture := `
+version: "1"
+
+graph:
+  token: "token"
+`
+			if tt.yaml != "" {
+				fixture += "\nsecurity:\n  parser_limits:\n    enforce_after_normalization: " + tt.yaml + "\n"
+			}
+
+			f := createTempFileFromFixture(t, fixture)
+			cfg, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cfg.Config.SecurityConfiguration.ParserLimits.EnforceAfterNormalization)
+		})
+	}
+}
+
 func TestForceUnauthenticatedRequestTracingConfigLoading(t *testing.T) {
 	t.Run("defaults to false", func(t *testing.T) {
 		t.Parallel()

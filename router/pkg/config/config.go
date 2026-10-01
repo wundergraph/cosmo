@@ -554,8 +554,9 @@ type SecurityConfiguration struct {
 }
 
 type ParserLimitsConfiguration struct {
-	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
-	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
+	ApproximateDepthLimit     int  `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
+	TotalFieldsLimit          int  `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
+	EnforceAfterNormalization bool `yaml:"enforce_after_normalization" envDefault:"false" env:"SECURITY_PARSER_LIMITS_ENFORCE_AFTER_NORMALIZATION"`
 }
 
 type QueryDepthConfiguration struct {
