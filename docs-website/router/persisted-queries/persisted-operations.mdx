@@ -103,6 +103,12 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive. The router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
 
+An ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. For a different ID of that length, use uppercase letters or other characters.
+
+<Warning>
+The router ignores published operations that break this rule and logs a warning with the operation ID. A request for such an operation returns `PersistedQueryNotFound`. A future release will treat these operations as an error.
+</Warning>
+
 With APQ enabled, IDs must be SHA256 hashes and must match the query body when both are supplied.
 
 ```json
