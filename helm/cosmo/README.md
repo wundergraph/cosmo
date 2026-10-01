@@ -108,15 +108,18 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
 | controlplane.jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
 | global.cdn.enabled | bool | `true` |  |
+| global.cdn.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
 | global.clickhouse.enabled | bool | `true` |  |
 | global.controlplane.admissionJwtSecret | string | `"uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW"` |  |
 | global.controlplane.enabled | bool | `true` |  |
+| global.controlplane.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.controlplane.jwtSecret | string | `"1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"` |  |
 | global.controlplane.port | int | `3001` |  |
 | global.controlplane.webUrl | string | `"http://controlplane.wundergraph.local"` |  |
 | global.graphqlmetrics.enabled | bool | `true` |  |
+| global.graphqlmetrics.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.graphqlmetrics.port | int | `4005` |  |
 | global.graphqlmetrics.webUrl | string | `"http://graphqlmetrics.wundergraph.local"` |  |
 | global.helmTests.enabled | bool | `false` |  |
@@ -129,6 +132,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.databaseSchema | string | `"public"` |  |
 | global.keycloak.databaseUsername | string | `"postgres"` |  |
 | global.keycloak.enabled | bool | `true` |  |
+| global.keycloak.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.keycloak.loginRealm | string | `"master"` |  |
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |
@@ -145,16 +149,19 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.minio.enabled | bool | `true` |  |
 | global.otelcollector.enabled | bool | `true` |  |
+| global.otelcollector.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.otelcollector.port | int | `4318` |  |
 | global.otelcollector.webUrl | string | `"http://otelcollector.wundergraph.local"` |  |
 | global.postgresql.enabled | bool | `true` |  |
 | global.redis.enabled | bool | `true` |  |
 | global.router.enabled | bool | `false` | Disabled by default because we don't have a token yet |
+| global.router.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.router.port | int | `3002` |  |
 | global.router.webUrl | string | `"http://router.wundergraph.local"` |  |
 | global.seed | object | `{"apiKey":"cosmo_669b576aaadc10ee1ae81d9193425705","enabled":true,"firstName":"Foo","lastName":"Bar","organizationName":"WunderGraph","organizationSlug":"wundergraph","userEmail":"foo@wundergraph.com","userPassword":"wunder@123"}` | Enable this once to seed a new organization |
 | global.seed.apiKey | string | `"cosmo_669b576aaadc10ee1ae81d9193425705"` | Important: Remove this once the organization has been seeded and create a new secret |
 | global.studio.enabled | bool | `true` |  |
+| global.studio.ingress.enabled | bool | `true` | Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings. |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
 | graphqlmetrics.commonLabels | object | `{}` | Add labels to all deployed resources |

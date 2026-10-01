@@ -442,7 +442,6 @@
   },
   "ResponseCache": {
     "Enabled": false,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "cosmo_response_cache:",
     "Storage": {
       "Provider": "redis",
@@ -466,7 +465,12 @@
       "Delimiter": ",",
       "MaxBytes": 16384
     },
-    "PrivateID": ""
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": ""
+    },
+    "Subgraphs": null
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,

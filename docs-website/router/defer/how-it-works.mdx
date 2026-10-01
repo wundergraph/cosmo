@@ -1,0 +1,129 @@
+---
+title: "How the Router Executes @defer"
+description: "How @defer affects subgraph requests, response order, and errors."
+icon: "diagram-project"
+sidebarTitle: How It Works
+---
+
+This page is for schema developers and router operators.
+It explains how `@defer` affects subgraph load, response order, and errors.
+
+See [Using @defer](/router/defer/usage) for client configuration and complete examples.
+
+## Initial and deferred data
+
+The router divides an operation into initial fields and deferred fragments.
+
+The router resolves the initial fields first.
+It sends those fields with a `pending` entry for each top-level deferred fragment.
+
+The router then resolves each deferred fragment.
+It sends the results in later parts of the same multipart response.
+
+A response part can contain one or more `incremental` entries.
+The final response part contains `hasNext: false`.
+
+## Subgraph requests
+
+`@defer` changes when the router fetches fields.
+It can also change the number of subgraph requests.
+
+Consider this operation:
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    ... @defer {
+      tag
+    }
+  }
+}
+```
+
+The router first requests `id` for `employee`.
+It then sends another request for `tag` on the same employee.
+
+The employees subgraph can therefore resolve `employee(id: 1)` twice.
+Do not defer a cheap field when another request costs more than the saved latency.
+
+## Deferred entity fields
+
+A deferred field can belong to another subgraph:
+
+```graphql
+query {
+  employee(id: 1) {
+    id
+    ... @defer {
+      hobbies {
+        __typename
+      }
+    }
+  }
+}
+```
+
+The initial request supplies the entity key for `Employee`.
+The router uses that key to fetch `hobbies` through `_entities`.
+
+The router adds a required key field when the client does not select it.
+The router does not return that added field to the client.
+
+## Fields with @requires
+
+A deferred field can depend on fields from other subgraphs.
+The router resolves those dependencies as part of the deferred work.
+
+For example, a deferred field can use `@requires(fields: "currentMood")`.
+The router first fetches `currentMood`.
+It then fetches the deferred field with that value.
+
+These requests do not delay the initial response.
+
+## Sibling and nested fragments
+
+Sibling deferred fragments can run concurrently.
+Their completion order is not guaranteed.
+
+The router starts a nested deferred fragment after it delivers the parent fragment.
+The router announces the nested fragment in the response part for its parent.
+
+The router sends each response part as a complete unit.
+
+## Lists
+
+A deferred fragment inside a list can apply to multiple list items.
+
+The `pending.path` field identifies the list.
+Each `incremental.subPath` field identifies the applicable list item.
+
+The router can include several `incremental` entries in one response part.
+
+See [@defer inside a list](/router/defer/usage#defer-inside-a-list) for an example.
+
+## Repeated field selections
+
+A query can select the same field inside and outside a deferred fragment.
+
+The router returns that field in the initial response.
+It does not return a second deferred copy.
+
+If this removes every deferred field, the router returns one JSON response.
+
+## Errors
+
+Errors from initial fields appear in the initial response.
+
+Errors from deferred fields appear in their `incremental` or `completed` entries.
+An error in one deferred fragment does not stop its sibling fragments.
+
+The router completes every announced fragment.
+The final response part contains `hasNext: false`.
+
+## Query plan caching
+
+The router caches operations with `@defer` like other operations.
+
+The value of a variable used by `@defer(if:)` belongs to the query plan cache key.
+The deferred and non-deferred forms use separate cache entries.
