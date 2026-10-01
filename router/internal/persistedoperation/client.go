@@ -42,6 +42,7 @@ type Options struct {
 }
 
 type Client struct {
+	logger         *zap.Logger
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
 	apqStore       apq.Store
@@ -56,7 +57,13 @@ func NewClient(opts *Options) (*Client, error) {
 		return nil, errors.Join(err, fmt.Errorf("initializing CDN cache"))
 	}
 
+	logger := opts.Logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	return &Client{
+		logger:         logger,
 		providerClient: opts.ProviderClient,
 		cache:          cache,
 		apqStore:       opts.APQStore,
@@ -115,6 +122,14 @@ func (c *Client) PersistedOperationWithManifest(
 	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	if err == nil && !pqlmanifest.OperationIDMatchesBody(sha256Hash, string(content)) {
+		// TODO(2027-03-30): return an error instead of ignoring the operation.
+		c.logger.Warn(pqlmanifest.MismatchedOperationIDWarning,
+			zap.String("operation_id", sha256Hash),
+			zap.String("client_name", clientName),
+		)
+		content, err = nil, &PersistentOperationNotFoundError{ClientName: clientName, Sha256Hash: sha256Hash}
+	}
 	if errors.As(err, &poNotFound) && c.APQEnabled() {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil

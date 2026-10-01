@@ -28,7 +28,8 @@ func TestCustomOperationIDs(t *testing.T) {
 		"web":    query,
 		"mobile": mobileQuery,
 	}
-	ids := []string{"get_employee_v1", strings.Repeat("a", 64)}
+	// Lowercase 64-hex IDs must be the SHA256 of their body; uppercase ones are custom IDs.
+	ids := []string{"get_employee_v1", strings.Repeat("A", 64)}
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, path, _ := strings.Cut(r.URL.Path, "/operations/")
 		client, id, _ := strings.Cut(path, "/")
