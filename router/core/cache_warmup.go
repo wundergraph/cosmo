@@ -294,12 +294,10 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	var (
 		isAPQ bool
+		err   error
 	)
 
-	k, err := c.operationProcessor.NewIndependentKit()
-	if err != nil {
-		return nil, err
-	}
+	k := NewIndependentOperationKit(c.operationProcessor)
 
 	var s []byte
 	if operation.Request.GetExtensions() != nil {
