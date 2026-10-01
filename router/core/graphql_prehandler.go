@@ -669,8 +669,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				// persisted operation are logged above. We only allow execution to continue
 				// when the request includes a query body (the ad-hoc query to run) and
 				// safelist is not enforced. Hash-only requests without a body have nothing
-				// to execute, so we always return the not-found error in that case.
-				if !h.operationBlocker.safelistEnabled && !operationKit.parsedOperation.IsPersistedOperation && operationKit.parsedOperation.Request.Query != "" {
+				// to execute, so we always return the not-found error in that case. Custom
+				// IDs don't identify their body, so an unknown custom ID is always rejected.
+				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" && !operationKit.hasCustomPersistedOperationID() {
 					err = nil
 				}
 			}

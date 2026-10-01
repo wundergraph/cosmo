@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -95,6 +97,55 @@ func TestCustomOperationIDs(t *testing.T) {
 		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
 		assert.Equal(t, "next", msg.Type)
 		assert.JSONEq(t, `{"data":{"employee":{"id":1}}}`, string(msg.Payload))
+	})
+}
+
+// With APQ disabled, SHA256 IDs keep their behavior from before custom IDs: a
+// supplied query must hash to the ID, and log_unknown logs and executes an
+// unpublished hash sent with its query. Custom IDs still ignore the query.
+func TestLogUnknownSHA256OperationIDs(t *testing.T) {
+	t.Parallel()
+
+	const query = `query LogUnknownSHA256 { employees { id } }`
+	const employees = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+	sum := sha256.Sum256([]byte(query))
+	hash := hex.EncodeToString(sum[:])
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions:  []core.Option{core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{LogUnknown: true})},
+		LogObservation: testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		request := func(id string) *testenv.TestResponse {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:      query,
+				Header:     http.Header{"Graphql-Client-Name": {"my-client"}},
+				Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id)),
+			})
+			require.NoError(t, err)
+			return res
+		}
+
+		assert.Equal(t, employees, request(hash).Body)
+		assert.Len(t, xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All(), 1)
+
+		mismatched := request(strings.Repeat("0", 64))
+		assert.Equal(t, http.StatusBadRequest, mismatched.Response.StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"persistedQuery sha256 hash does not match query body"}]}`, mismatched.Body)
+
+		assert.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`,
+			request("unknown_custom_id").Body)
+
+		conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+		defer conn.Close()
+		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(fmt.Sprintf(`{"query":%q,"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`, query, hash)),
+		}))
+		var msg testenv.WebSocketMessage
+		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+		assert.Equal(t, "next", msg.Type)
+		assert.JSONEq(t, employees, string(msg.Payload))
 	})
 }
 

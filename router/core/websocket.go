@@ -952,7 +952,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
 				h.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
-				if h.operationBlocker.safelistEnabled || operationKit.parsedOperation.IsPersistedOperation {
+				if h.operationBlocker.safelistEnabled || operationKit.parsedOperation.Request.Query == "" || operationKit.hasCustomPersistedOperationID() {
 					return nil, nil, err
 				}
 			} else {

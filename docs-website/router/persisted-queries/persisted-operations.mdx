@@ -101,9 +101,9 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 ### Operation IDs
 
-With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive. The router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
+With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 ASCII letters, digits, underscores, or hyphens. IDs are case-sensitive. For custom IDs, the router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
 
-An ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. For a different ID of that length, use uppercase letters or other characters.
+An ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. For a different ID of that length, use uppercase letters or other characters. A query sent with a SHA256 ID must hash to that ID, as with APQ.
 
 <Warning>
 The router rejects a manifest that contains an operation breaking this rule, and the error lists the offending IDs. The router fails to start with such a manifest. If a manifest update breaks the rule, the router logs the error and keeps using the previous revision.
@@ -125,7 +125,7 @@ Update the manifest revision whenever you add, change, or remove an operation. T
 
 Without a manifest, use a new ID when you change an operation. Otherwise, the router may keep serving the old body from its cache.
 
-Safelisting and `log_unknown` use the query's SHA256 hash to find published operations when a request doesn't include an ID. To support these requests, publish the operation with its SHA256 hash as the ID.
+Safelisting and `log_unknown` use the query's SHA256 hash to find published operations when a request doesn't include an ID. To support these requests, publish the operation with its SHA256 hash as the ID. With `log_unknown` and without safelisting, a request with an unpublished SHA256 ID and its query is logged and executed. An unknown custom ID is always rejected.
 
 Both `persisted_operation_sha256` and `operation_sha256` record the ID from the request. If you send `get_employees_v1`, both fields contain `get_employees_v1`.
 

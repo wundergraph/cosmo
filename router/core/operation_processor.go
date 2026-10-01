@@ -445,18 +445,22 @@ func (p *OperationProcessor) persistedOperationIDsAreQueryHashes() bool {
 }
 
 // hasCustomPersistedOperationID reports whether the request's persisted ID is an
-// opaque published ID, resolved without checking it against a query.
+// opaque published ID, resolved without checking it against a query. SHA256 IDs
+// are never custom: a stored SHA256 ID must be the hash of its body.
 func (o *OperationKit) hasCustomPersistedOperationID() bool {
-	return o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
-		!o.operationProcessor.persistedOperationIDsAreQueryHashes()
+	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
+	return pq.HasHash() &&
+		!o.operationProcessor.persistedOperationIDsAreQueryHashes() &&
+		!pqlmanifest.IsSHA256ID(pq.Sha256Hash)
 }
 
 // persistedQueryHashMustMatchQuery reports whether the request supplies both a
 // SHA-256 persisted ID and a query, which must hash to that ID.
 func (o *OperationKit) persistedQueryHashMustMatchQuery() bool {
-	return o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() &&
+	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
+	return pq.HasHash() &&
 		o.parsedOperation.Request.Query != "" &&
-		o.operationProcessor.persistedOperationIDsAreQueryHashes()
+		(o.operationProcessor.persistedOperationIDsAreQueryHashes() || pqlmanifest.IsSHA256ID(pq.Sha256Hash))
 }
 
 func (o *OperationKit) computeVariablesHash() {
