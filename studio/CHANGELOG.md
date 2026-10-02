@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.182.2](https://github.com/wundergraph/cosmo/compare/studio@0.182.1...studio@0.182.2) (2026-10-02)
+
+### Bug Fixes
+
+* **studio:** read namespace from querystring on top-level pages ([#3315](https://github.com/wundergraph/cosmo/issues/3315)) ([d485c08](https://github.com/wundergraph/cosmo/commit/d485c089e2992a86fa327823d40d7a66c2c558d1)) (@gausie)
+
 ## [0.182.1](https://github.com/wundergraph/cosmo/compare/studio@0.182.0...studio@0.182.1) (2026-09-28)
 
 **Note:** Version bump only for package studio
