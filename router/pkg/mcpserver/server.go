@@ -849,6 +849,13 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			}
 		}
 
+		var toolTitle string
+		if s.omitToolNamePrefix {
+			toolTitle = op.Name
+		} else {
+			toolTitle = fmt.Sprintf("Execute operation %s", op.Name)
+		}
+
 		openWorld := true
 		tool := &mcp.Tool{
 			Name:         toolName,
@@ -857,7 +864,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			OutputSchema: outputSchema,
 			Annotations: &mcp.ToolAnnotations{
 				IdempotentHint: op.OperationType != "mutation",
-				Title:          fmt.Sprintf("Execute operation %s", op.Name),
+				Title:          toolTitle,
 				ReadOnlyHint:   op.OperationType == "query",
 				OpenWorldHint:  &openWorld,
 			},
