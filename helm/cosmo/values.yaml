@@ -447,8 +447,12 @@ clickhouse:
   zookeeper:
     enabled: false
   resources:
-    memory: 2Gi
-    cpu: 1
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+    requests:
+      cpu: "1"
+      memory: "2Gi"
   persistence:
     # 2Gi for development
     size: 2Gi
