@@ -121,7 +121,16 @@ export class PromptToQueryService {
         await this.client.resolve({ schemaId, prompt: parsed.data.prompt }, { signal }),
       );
     } catch (e) {
-      this.logger.error(e, 'Failed to execute Prompt to Query due an unexpected error');
+      if (e instanceof StillIndexingError) {
+        return create(GenerateQueryResponseSchema, {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'Schema is being indexed',
+          },
+        });
+      } else {
+        this.logger.error(e, 'Failed to execute Prompt to Query due an unexpected error');
+      }
     }
 
     // Catchall
@@ -175,9 +184,9 @@ export class PromptToQueryService {
           return schemaResp.schema?.schemaId;
         },
         {
-          attempts: 180,
-          baseInterval: 1000,
-          maxInterval: 1000,
+          attempts: 5,
+          baseInterval: 500,
+          maxInterval: 5000,
           jitter: true,
           signal,
           shouldRetry: PromptToQueryService.isRetryableError,
@@ -189,14 +198,11 @@ export class PromptToQueryService {
   }
 
   private static isRetryableError(error: unknown) {
-    if (error instanceof StillIndexingError) {
-      return true;
-    }
     if (error instanceof ConnectError) {
-      return error.code === Code.Unknown;
+      return error.code === Code.Unknown || error.code === Code.Unavailable;
     }
 
-    return false;
+    return !(error instanceof StillIndexingError);
   }
 
   private static getOperationType(type: OperationType): SatisfiedOperationType {
