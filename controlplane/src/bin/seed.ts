@@ -18,6 +18,7 @@ const {
   clientId,
   apiUrl,
   apiKey,
+  apiKeyWasGenerated,
   userEmail,
   userPassword,
   userFirstName,
@@ -131,7 +132,11 @@ try {
     timeout: 1,
   });
 
-  console.log(`API Key: ${apiKey}`);
+  if (apiKeyWasGenerated) {
+    console.log(`API Key: ${apiKey}`);
+  } else {
+    console.log('API Key: using the value provided via the API_KEY environment variable');
+  }
   console.log('Done');
 
   // eslint-disable-next-line unicorn/no-process-exit
