@@ -161,13 +161,17 @@ All metrics are tracked along different dimensions. A dimension is an attribute 
 
 * `wg.operation.protocol`: The used protocol `http` , `ws`
 
-* `wg.operation.name`: The name of the operation
+* `wg.operation.name`: The name of the operation. Left out unless the router exports to Cosmo Cloud or the attribute is enabled with the `operation_name` context field, see [Metrics Only Attributes](/router/open-telemetry/custom-attributes#metrics-only-attributes).
 
 * `wg.operation.type`: The type of the operation e.g. `query`
 
 * `wg.client.name`: The client name
 
 * `wg.client.version`: The client version
+
+#### Router specific
+
+* `wg.operation.response_cache.status`: Whether the response was answered by the [response cache](/router/response-cache): `hit`, `partial_hit` or `miss`. Only present on the metrics of the router request, while the response cache is enabled.
 
 **Error identification**
 
@@ -188,6 +192,8 @@ You have two ways to query for errors. Both metrics can be quite useful dependin
 * `wg.subgraph.name`: The name of the subgraph
 
 * `wg.subgraph.id`: The ID of the subgraph
+
+* `wg.response_cache.status`: Whether the fetch was answered by the [response cache](/router/response-cache): `hit`, `partial_hit`, `miss` or `not_cacheable`. Only present while the response cache is enabled.
 
 ### Resource attributes
 
