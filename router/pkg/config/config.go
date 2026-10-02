@@ -1136,8 +1136,7 @@ type SubgraphExtensionPropagationConfiguration struct {
 
 // ResponseCacheConfiguration configures caching of subgraph responses.
 type ResponseCacheConfiguration struct {
-	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
@@ -1145,7 +1144,19 @@ type ResponseCacheConfiguration struct {
 	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
 	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
-	PrivateID    string                          `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
+	// All is what every subgraph gets unless Subgraphs names it.
+	All ResponseCacheSubgraphConfiguration `yaml:"all" envPrefix:"ALL_"`
+	// Subgraphs replaces All whole for the named subgraph; nothing is inherited.
+	// An entry is explicit: only yaml reaches it, so the env defaults All gets
+	// do not apply, and an omitted enabled is false. Keys are subgraph names.
+	Subgraphs map[string]ResponseCacheSubgraphConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+// ResponseCacheSubgraphConfiguration is what the cache does for a subgraph.
+type ResponseCacheSubgraphConfiguration struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	PrivateID   string        `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
 }
 
 type ResponseCacheTagHeaderConfig struct {

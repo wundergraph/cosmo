@@ -49,7 +49,7 @@ func privateMoodConfig(t *testing.T, mutate func(cfg *config.ResponseCacheConfig
 	t.Helper()
 
 	cfg := responseCacheConfig(t, time.Minute)
-	cfg.PrivateID = privateUserExpression
+	cfg.All.PrivateID = privateUserExpression
 	if mutate != nil {
 		mutate(cfg)
 	}
@@ -256,7 +256,7 @@ func TestResponseCachePrivate(t *testing.T) {
 		require.NoError(t, err)
 
 		cfg, opts := privateMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
-			cfg.PrivateID = "request.auth.claims.sub"
+			cfg.All.PrivateID = "request.auth.claims.sub"
 		})
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: append(opts, core.WithAccessController(accessController)),
