@@ -40,6 +40,7 @@ import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { traced } from '../tracing.js';
+import { PromptToQueryService } from '../services/PromptToQueryService.js';
 import {
   composeGraphsInWorker,
   DeserializedComposedGraph,
@@ -451,6 +452,7 @@ export class Composer {
     routerExecutionConfig,
     featureFlagId,
     splitConfigEnabled,
+    promptToQueryService,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedById: string;
@@ -459,6 +461,7 @@ export class Composer {
     routerExecutionConfig?: RouterConfig;
     featureFlagId: string;
     splitConfigEnabled: boolean;
+    promptToQueryService: PromptToQueryService | undefined;
   }): Promise<CompositionDeployResult> {
     // For a feature-flag composition the baseline is the previous composition of the same feature flag (not the base
     // graph's latest valid version, which would produce a meaningless base-vs-feature-flag diff). Computed before
@@ -512,6 +515,10 @@ export class Composer {
         composedGraph.composedSchema || '',
         updatedFederatedGraph.routerCompatibilityVersion,
       );
+    }
+
+    if (promptToQueryService) {
+      await promptToQueryService.indexSchema(composedGraph.composedSchema);
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
