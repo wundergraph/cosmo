@@ -7,7 +7,7 @@ icon: 'wrench'
 The MCP server gives AI models a set of tools they can discover and execute. It exposes two kinds:
 
 - **Built-in tools** provided by the server itself, for discovering your API and, optionally, running arbitrary GraphQL.
-- **Tools you create**, each defined by a GraphQL operation in a `.graphql` file. The operation determines the tool's name, description, input schema, and the data it returns.
+- **Tools you create**, each defined by a GraphQL operation in an [operation manifest](#operation-manifest) or a `.graphql` file. The operation determines the tool's description, input schema, and the data it returns.
 
 ## Built-in Tools
 
@@ -26,7 +26,41 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
 
 ## Creating Tools
 
-Create a directory for your tools (as specified in your [storage provider configuration](/router/mcp/configuration#storage-providers)) and add `.graphql` or `.gql` files containing GraphQL operations.
+You can define tools in an operation manifest or in a directory of `.graphql` files. Directory mode is deprecated.
+
+The MCP server marks mutation tools as non-read-only and non-idempotent through [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations), signaling to AI clients that the tool has side effects.
+
+<Warning>
+  To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
+  until you've validated your mutation tools thoroughly.
+</Warning>
+
+### Operation Manifest
+
+An operation manifest is one JSON file that holds all operations. Set [`storage.object_path`](/router/mcp/configuration#operation-manifest) to its path in the storage provider:
+
+```json
+{
+  "version": 1,
+  "revision": "2026-01-15-1",
+  "generatedAt": "2026-01-15T10:00:00Z",
+  "operations": {
+    "get_users": "query GetUsers { users { id name email } }",
+    "create_user": "mutation CreateUser($name: String!, $email: String!) { createUser(input: { name: $name, email: $email }) { id name email } }"
+  }
+}
+```
+
+- `version` must be `1`.
+- `revision` identifies the content. Change it on every edit, or the router ignores the edit.
+- `generatedAt` is an ISO 8601 timestamp. It is for information only.
+- `operations` maps each key to one operation body. The key is the tool name (see [Tool Naming](#tool-naming)).
+
+Because the key names the operation, operations in a manifest can be anonymous. For how the router polls the manifest, see [Operation Manifest](/router/mcp/configuration#operation-manifest).
+
+### Operation Directory (deprecated)
+
+Create a directory for your tools (as specified in your [storage provider configuration](/router/mcp/configuration#operation-directory-deprecated)) and add `.graphql` or `.gql` files containing GraphQL operations.
 
 Each file defines a **single tool** through a single operation. Named operations are recommended, but if an operation is unnamed, the filename (without extension) is used as the operation name.
 
@@ -54,14 +88,7 @@ mutation CreateUser($name: String!, $email: String!) {
 
 Each file becomes a tool that AI models can call. The tool's name is derived from the operation name (see [Tool Naming](#tool-naming)), its description from the operation's description string (see [Tool Descriptions](#tool-descriptions)), and its input schema from the operation's variables (see [Tool Schema](#tool-schema)).
 
-The MCP server marks mutation tools as non-read-only and non-idempotent through [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations), signaling to AI clients that the tool has side effects.
-
-<Warning>
-  To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
-  until you've validated your mutation tools thoroughly.
-</Warning>
-
-### Directory Structure
+#### Directory Structure
 
 Use this directory structure:
 
@@ -90,7 +117,9 @@ Operations are validated against your GraphQL schema at load time. Invalid opera
 
 ## Tool Naming
 
-Each tool's name is derived from its operation name:
+In an [operation manifest](#operation-manifest), the key is the tool name. The router uses the key as it is and does not change its case. The name in the operation body is not used. The `execute_operation_` prefix still applies (see [Omitting the Tool Name Prefix](#omitting-the-tool-name-prefix)). For example, the key `get_users` becomes `execute_operation_get_users`. A full tool name can be at most 128 characters long. The router skips longer names and logs an error.
+
+In directory mode, each tool's name is derived from its operation name:
 
 | Operation Name | Tool Name                          |
 | -------------- | ---------------------------------- |

@@ -334,7 +334,9 @@ The Model Context Protocol (MCP) server allows AI models to discover and interac
 | MCP_ENABLED                     | mcp.enabled                     | <Icon icon="square" /> | Enable or disable the MCP server                                                                                                                             | false          |
 | MCP_SERVER_LISTEN_ADDR          | mcp.server.listen_addr          | <Icon icon="square" /> | The address and port where the MCP server will listen for requests                                                                                           | localhost:5025 |
 | MCP_ROUTER_URL                  | mcp.router_url                  | <Icon icon="square" /> | Custom URL to use for the router GraphQL endpoint in MCP. Use this when your router is behind a proxy; used in MCP responses to provide the real router URL. | -              |
-| MCP_STORAGE_PROVIDER_ID         | mcp.storage.provider_id         | <Icon icon="square" /> | The ID of a storage provider to use for loading GraphQL operations. Only file_system providers are supported.                                                | -              |
+| MCP_STORAGE_PROVIDER_ID         | mcp.storage.provider_id         | <Icon icon="square" /> | The ID of a storage provider to use for loading GraphQL operations. With mcp.storage.object_path, file_system and s3 providers are supported. Without it, only file_system providers are supported. | -              |
+| MCP_STORAGE_OBJECT_PATH         | mcp.storage.object_path         | <Icon icon="square" /> | The path of an operation manifest in the storage provider. When set, the router loads operations from the manifest and polls it for a new revision. | -              |
+| MCP_STORAGE_POLL_INTERVAL       | mcp.storage.poll_interval       | <Icon icon="square" /> | How often the router polls the operation manifest for a new revision. The minimum is 1s.                                                                     | 10s            |
 | MCP_SESSION_STATELESS           | mcp.session.stateless           | <Icon icon="square" /> | Whether the MCP server should operate in stateless mode. When true, no server-side session state is maintained between requests.                             | true           |
 | MCP_GRAPH_NAME                  | mcp.graph_name                  | <Icon icon="square" /> | The name of the graph this router exposes via MCP. Used to build the MCP server name (wundergraph-cosmo-$graph_name) and for logging; it does not select a different graph.  | mygraph        |
 | MCP_EXCLUDE_MUTATIONS           | mcp.exclude_mutations           | <Icon icon="square" /> | Whether to exclude mutation operations from being exposed                                                                                                    | false          |
@@ -354,6 +356,8 @@ mcp:
   router_url: "https://your-public-router-url.example.com/graphql" # Optional: Used in MCP responses when your router is behind a proxy.
   storage:
     provider_id: "mcp" # References a file_system provider defined below
+    object_path: "manifest.json" # Optional: Load operations from an operation manifest
+    poll_interval: 10s # Optional: How often to poll the manifest for a new revision
   session:
     stateless: true # Optional: When true, no server-side session state is kept
   graph_name: "my-graph"
