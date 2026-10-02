@@ -101,6 +101,9 @@ func (c *Client) PersistedOperationWithManifest(
 	// A loaded manifest takes precedence over cached storage-provider responses.
 	if manifest != nil {
 		if body, found := manifest.Operations[sha256Hash]; found {
+			if !OperationIDMatchesBody(sha256Hash, body) {
+				return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
+			}
 			return []byte(body), false, nil
 		}
 		// Manifest is authoritative — operation not found
@@ -125,7 +128,7 @@ func (c *Client) PersistedOperationWithManifest(
 	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if err == nil && !pqlmanifest.OperationIDMatchesBody(sha256Hash, string(content)) {
+	if err == nil && !OperationIDMatchesBody(sha256Hash, string(content)) {
 		return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
 	}
 	if errors.As(err, &poNotFound) && c.APQEnabled() {

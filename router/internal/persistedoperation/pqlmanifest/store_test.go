@@ -1,17 +1,13 @@
 package pqlmanifest
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -350,34 +346,5 @@ func TestLoadFromFile(t *testing.T) {
 		store := NewStore(zap.NewNop())
 		err := store.LoadFromFile("/nonexistent/path/manifest.json")
 		require.ErrorContains(t, err, "failed to read manifest file")
-	})
-}
-
-func TestParseManifestRejectsMismatchedSHA256IDs(t *testing.T) {
-	t.Parallel()
-
-	const body = `query Employees { employees { id } }`
-	sum := sha256.Sum256([]byte(body))
-	hashID := hex.EncodeToString(sum[:])
-	parse := func(operations map[string]string) (*Manifest, error) {
-		return ParseManifest(mustMarshalManifest(&Manifest{Version: 1, Revision: "rev-1", Operations: operations}))
-	}
-
-	t.Run("hash, custom and uppercase IDs are accepted", func(t *testing.T) {
-		t.Parallel()
-		manifest, err := parse(map[string]string{
-			hashID:                  body,
-			"get_employees":         body,
-			strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
-		})
-		require.NoError(t, err)
-		assert.Len(t, manifest.Operations, 3)
-	})
-
-	t.Run("other SHA256 is rejected", func(t *testing.T) {
-		t.Parallel()
-		mismatchedID := strings.Repeat("a", 64)
-		_, err := parse(map[string]string{hashID: body, mismatchedID: body})
-		assert.ErrorContains(t, err, mismatchedID)
 	})
 }

@@ -1,13 +1,9 @@
 package pqlmanifest
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -138,17 +134,6 @@ func validateManifest(m *Manifest) error {
 	if m.Operations == nil {
 		return fmt.Errorf("manifest operations field is required")
 	}
-	var mismatchedIDs []string
-	for id, body := range m.Operations {
-		if !OperationIDMatchesBody(id, body) {
-			mismatchedIDs = append(mismatchedIDs, id)
-		}
-	}
-	if len(mismatchedIDs) > 0 {
-		slices.Sort(mismatchedIDs)
-		return fmt.Errorf("operation IDs that look like SHA256 hashes must be the SHA256 of their body: %s",
-			strings.Join(mismatchedIDs, ", "))
-	}
 	return nil
 }
 
@@ -183,33 +168,4 @@ func (s *Store) AllOperations() map[string]string {
 		return nil
 	}
 	return m.Operations
-}
-
-// OperationIDMatchesBody reports whether a persisted operation ID is consistent
-// with its body. The router looks up query-only requests by the SHA256 of their
-// query, so an ID that looks like a SHA256 hash (64 lowercase hex characters)
-// must be the hash of its body. Other IDs are custom IDs and always match.
-func OperationIDMatchesBody(id, body string) bool {
-	if !IsSHA256ID(id) {
-		return true
-	}
-	sum := sha256.Sum256([]byte(body))
-	return hex.EncodeToString(sum[:]) == id
-}
-
-// IsSHA256ID reports whether id looks like a SHA256 hash: 64 lowercase hex characters.
-func IsSHA256ID(id string) bool {
-	if len(id) != sha256.Size*2 {
-		return false
-	}
-	for i := 0; i < len(id); i++ {
-		if !isLowerHex(id[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func isLowerHex(c byte) bool {
-	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f'
 }

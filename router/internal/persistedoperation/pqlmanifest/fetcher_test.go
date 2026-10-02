@@ -7,10 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -208,18 +206,4 @@ func TestFetch_UsesGETMethod(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "GET", receivedMethod)
-}
-
-func TestFetch_RejectsManifestWithMismatchedSHA256ID(t *testing.T) {
-	t.Parallel()
-	mismatchedID := strings.Repeat("a", 64)
-	server := httptest.NewServer(newETagCDNHandler(&Manifest{
-		Version:    1,
-		Revision:   "rev-1",
-		Operations: map[string]string{mismatchedID: "query { hello }"},
-	}))
-	defer server.Close()
-
-	_, _, err := newTestFetcher(server.URL).Fetch(t.Context(), "")
-	assert.ErrorContains(t, err, mismatchedID)
 }

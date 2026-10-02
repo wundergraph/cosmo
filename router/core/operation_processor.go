@@ -451,7 +451,7 @@ func (o *OperationKit) hasCustomPersistedOperationID() bool {
 	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
 	return pq.HasHash() &&
 		!o.operationProcessor.persistedOperationIDsAreQueryHashes() &&
-		!pqlmanifest.IsSHA256ID(pq.Sha256Hash)
+		!persistedoperation.IsSHA256ID(pq.Sha256Hash)
 }
 
 // persistedQueryHashMustMatchQuery reports whether the request supplies both a
@@ -460,7 +460,7 @@ func (o *OperationKit) persistedQueryHashMustMatchQuery() bool {
 	pq := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery
 	return pq.HasHash() &&
 		o.parsedOperation.Request.Query != "" &&
-		(o.operationProcessor.persistedOperationIDsAreQueryHashes() || pqlmanifest.IsSHA256ID(pq.Sha256Hash))
+		(o.operationProcessor.persistedOperationIDsAreQueryHashes() || persistedoperation.IsSHA256ID(pq.Sha256Hash))
 }
 
 func (o *OperationKit) computeVariablesHash() {

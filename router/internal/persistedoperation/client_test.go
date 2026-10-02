@@ -107,3 +107,37 @@ func TestStorageOperationsWithMismatchedSHA256IDs(t *testing.T) {
 		assert.Equal(t, 2, provider.calls)
 	})
 }
+
+func TestManifestOperationsWithMismatchedSHA256IDs(t *testing.T) {
+	t.Parallel()
+
+	const body = `query Employees { employees { id } }`
+	sum := sha256.Sum256([]byte(body))
+	hashID := hex.EncodeToString(sum[:])
+	mismatchedID := strings.Repeat("a", 64)
+
+	store := pqlmanifest.NewStore(zap.NewNop())
+	t.Cleanup(store.Close)
+	client, err := NewClient(&Options{PQLStore: store})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{
+		hashID:                  body,
+		"get_employees":         body,
+		strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
+		mismatchedID:            body,
+	}})
+
+	for _, id := range []string{hashID, "get_employees", strings.ToUpper(hashID)} {
+		content, _, err := client.PersistedOperation(t.Context(), "web", id)
+		assert.NoError(t, err)
+		assert.Equal(t, body, string(content))
+	}
+
+	content, _, err := client.PersistedOperation(t.Context(), "web", mismatchedID)
+	var mismatch *OperationIDMismatchError
+	if assert.ErrorAs(t, err, &mismatch) {
+		assert.Equal(t, mismatchedID, mismatch.Sha256Hash)
+	}
+	assert.Nil(t, content)
+}
