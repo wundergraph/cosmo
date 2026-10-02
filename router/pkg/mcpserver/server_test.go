@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -251,6 +252,118 @@ query CountEmployees {
 			names = append(names, tool.Name)
 		}
 		require.ElementsMatch(t, []string{"get_schema", "list_employees", "count_employees", "get_operation_info"}, names)
+	})
+}
+
+func TestManifestOperations(t *testing.T) {
+	t.Parallel()
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	manifest := map[string]string{
+		"FindEmployee":       findEmployeeOp,
+		"get_operation_info": listEmployeesOp,
+		"list-employees_v2":  listEmployeesOp,
+	}
+
+	t.Run("registers manifest keys verbatim as tool names with the prefix", func(t *testing.T) {
+		t.Parallel()
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		require.Equal(t, []string{
+			"get_schema",
+			"execute_operation_FindEmployee",
+			"execute_operation_get_operation_info",
+			"execute_operation_list-employees_v2",
+			"get_operation_info",
+		}, srv.registeredTools)
+	})
+
+	t.Run("registers manifest keys verbatim as tool names without the prefix and skips reserved names", func(t *testing.T) {
+		t.Parallel()
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		require.Equal(t, []string{"get_schema", "FindEmployee", "list-employees_v2", "get_operation_info"}, srv.registeredTools)
+	})
+
+	t.Run("skips tools whose name is longer than 128 characters", func(t *testing.T) {
+		t.Parallel()
+
+		// "execute_operation_" is 18 characters, so these keys make tool names of 128 and 129 characters.
+		longestKey := strings.Repeat("a", 110)
+		tooLongKey := strings.Repeat("b", 111)
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string {
+				return map[string]string{longestKey: listEmployeesOp, tooLongKey: listEmployeesOp}
+			}),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		require.Equal(t, []string{"get_schema", "execute_operation_" + longestKey, "get_operation_info"}, srv.registeredTools)
+	})
+}
+
+func TestManifestUpdated(t *testing.T) {
+	t.Parallel()
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	t.Run("swaps tools to the operations of the new manifest", func(t *testing.T) {
+		t.Parallel()
+
+		manifest := map[string]string{"find": findEmployeeOp, "list": listEmployeesOp}
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+		require.Equal(t, []string{"get_schema", "find", "list", "get_operation_info"}, srv.registeredTools)
+
+		manifest = map[string]string{"list": listEmployeesOp, "list_again": listEmployeesOp}
+		srv.ManifestUpdated()
+
+		require.Equal(t, []string{"get_schema", "list", "list_again", "get_operation_info"}, srv.registeredTools)
+	})
+
+	t.Run("does nothing before the first reload", func(t *testing.T) {
+		t.Parallel()
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return map[string]string{"list": listEmployeesOp} }),
+		)
+		require.NoError(t, err)
+
+		srv.ManifestUpdated()
+
+		require.Empty(t, srv.registeredTools)
 	})
 }
 

@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"go.uber.org/zap"
@@ -74,75 +76,26 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
-		// Parse the operation
-		operationString := string(content)
-		opDoc, err := parseOperation(path, operationString)
-		if err != nil {
-			l.Logger.Error("Failed to parse MCP operation", zap.String("file", path), zap.Error(err))
-			return nil
-		}
-
-		// If the operation carries September-2025-spec executable descriptions
-		// (operation/variable/fragment), re-print without them so the string
-		// forwarded to upstream GraphQL servers stays valid for servers that
-		// don't yet support the new spec. Otherwise reuse the raw file content.
-		if HasExecutableDescriptions(&opDoc) {
-			operationString, err = PrintOperationWithoutDescriptions(&opDoc)
-			if err != nil {
-				l.Logger.Error("Failed to print MCP operation", zap.String("file", path), zap.Error(err))
-				return nil
-			}
-		}
-
-		// Extract the operation name and type
-		opName, opType, err := GetOperationNameAndType(&opDoc)
-		if err != nil {
-			l.Logger.Error("Failed to extract MCP operation name and type", zap.String("operation", opName), zap.String("file", path), zap.Error(err))
-			return nil
-		}
-
-		// Check if the operation type is supported
-		if opType == "subscription" {
-			l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("operation", opName), zap.String("file", path))
-			return nil
-		}
-
-		// Validate operation against schema
-		validationReport := operationreport.Report{}
-		validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
-		if validationState == astvalidation.Invalid {
-			l.Logger.Error("Invalid MCP operation",
-				zap.String("operation", opName),
-				zap.String("file", path),
-				zap.String("errors", validationReport.Error()))
+		op, ok := l.loadOperation(validator, string(content), zap.String("file", path))
+		if !ok {
 			return nil
 		}
 
 		// if not the operation name, use the file name without the extension
-		if opName == "" {
-			opName = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
+		if op.Name == "" {
+			op.Name = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
 		}
 
 		// Check if the operation name is unique
-		for _, op := range operations {
-			if op.Name == opName {
-				l.Logger.Error("MCP operation already exists", zap.String("operation", opName), zap.String("file", path))
+		for _, existing := range operations {
+			if existing.Name == op.Name {
+				l.Logger.Error("MCP operation already exists", zap.String("operation", op.Name), zap.String("file", path))
 				return nil
 			}
 		}
 
-		// Extract description from operation definition
-		opDescription := extractOperationDescription(&opDoc)
-
-		// Add to our list of operations
-		operations = append(operations, Operation{
-			Name:            opName,
-			FilePath:        path,
-			Document:        opDoc,
-			OperationString: operationString,
-			OperationType:   opType,
-			Description:     opDescription,
-		})
+		op.FilePath = path
+		operations = append(operations, op)
 
 		return nil
 	})
@@ -154,6 +107,80 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 	return operations, nil
 }
 
+// LoadOperationsFromManifest loads the operations of a manifest, sorted by key. The key
+// of each operation is its name, regardless of the name in the operation body.
+func (l *OperationLoader) LoadOperationsFromManifest(manifestOperations map[string]string) []Operation {
+	validator := astvalidation.DefaultOperationValidator()
+
+	operations := make([]Operation, 0, len(manifestOperations))
+	for _, key := range slices.Sorted(maps.Keys(manifestOperations)) {
+		op, ok := l.loadOperation(validator, manifestOperations[key], zap.String("manifest_key", key))
+		if !ok {
+			continue
+		}
+		op.Name = key
+		operations = append(operations, op)
+	}
+
+	return operations
+}
+
+// loadOperation parses an operation, strips executable descriptions, and validates it
+// against the schema. It logs and reports false for operations that cannot be served.
+// The returned name is empty for anonymous operations.
+func (l *OperationLoader) loadOperation(validator *astvalidation.OperationValidator, operationString string, source zap.Field) (Operation, bool) {
+	// Parse the operation
+	opDoc, err := parseOperation(operationString)
+	if err != nil {
+		l.Logger.Error("Failed to parse MCP operation", source, zap.Error(err))
+		return Operation{}, false
+	}
+
+	// If the operation carries September-2025-spec executable descriptions
+	// (operation/variable/fragment), re-print without them so the string
+	// forwarded to upstream GraphQL servers stays valid for servers that
+	// don't yet support the new spec. Otherwise reuse the raw content.
+	if HasExecutableDescriptions(&opDoc) {
+		operationString, err = PrintOperationWithoutDescriptions(&opDoc)
+		if err != nil {
+			l.Logger.Error("Failed to print MCP operation", source, zap.Error(err))
+			return Operation{}, false
+		}
+	}
+
+	// Extract the operation name and type
+	opName, opType, err := GetOperationNameAndType(&opDoc)
+	if err != nil {
+		l.Logger.Error("Failed to extract MCP operation name and type", zap.String("operation", opName), source, zap.Error(err))
+		return Operation{}, false
+	}
+
+	// Check if the operation type is supported
+	if opType == "subscription" {
+		l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("operation", opName), source)
+		return Operation{}, false
+	}
+
+	// Validate operation against schema
+	validationReport := operationreport.Report{}
+	validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
+	if validationState == astvalidation.Invalid {
+		l.Logger.Error("Invalid MCP operation",
+			zap.String("operation", opName),
+			source,
+			zap.String("errors", validationReport.Error()))
+		return Operation{}, false
+	}
+
+	return Operation{
+		Name:            opName,
+		Document:        opDoc,
+		OperationString: operationString,
+		OperationType:   opType,
+		Description:     extractOperationDescription(&opDoc),
+	}, true
+}
+
 // isGraphQLFile checks if a file is a GraphQL file based on its extension
 func isGraphQLFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
@@ -161,7 +188,7 @@ func isGraphQLFile(path string) bool {
 }
 
 // parseOperation parses a GraphQL operation string into an AST document
-func parseOperation(path string, operation string) (ast.Document, error) {
+func parseOperation(operation string) (ast.Document, error) {
 	opDoc, report := astparser.ParseGraphqlDocumentString(operation)
 	if report.HasErrors() {
 		return ast.Document{}, fmt.Errorf("parsing errors: %s", report.Error())
@@ -169,7 +196,7 @@ func parseOperation(path string, operation string) (ast.Document, error) {
 
 	operationCount := len(opDoc.OperationDefinitions)
 	if operationCount != 1 {
-		return ast.Document{}, fmt.Errorf("expected exactly one operation definition in file %s, got %d", path, operationCount)
+		return ast.Document{}, fmt.Errorf("expected exactly one operation definition, got %d", operationCount)
 	}
 
 	return opDoc, nil

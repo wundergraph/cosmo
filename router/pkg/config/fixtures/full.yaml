@@ -118,6 +118,8 @@ mcp:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+    object_path: mcp/manifest.json
+    poll_interval: 30s
   output_schema:
     enabled: true
 

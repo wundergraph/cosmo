@@ -33,6 +33,9 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
 
+// maxToolNameLength is the longest tool name the MCP SDK accepts.
+const maxToolNameLength = 128
+
 // reservedToolNames contains tool names that are internally registered by the MCP server
 // and must not be used by operations when omitToolNamePrefix is enabled.
 var reservedToolNames = []string{
@@ -87,6 +90,9 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// ManifestOperations returns the current operations of a manifest by key. When set,
+	// operations are loaded from it instead of OperationsDir.
+	ManifestOperations func() map[string]string
 	// OutputSchemaEnabled declares an output schema on each operation tool and
 	// adds structured content to successful tool results (MCP structured tool
 	// output). Increases tools/list and result payload sizes.
@@ -124,6 +130,7 @@ type GraphQLSchemaServer struct {
 	server                    *mcp.Server
 	graphName                 string
 	operationsDir             string
+	manifestOperations        func() map[string]string
 	listenAddr                string
 	logger                    *zap.Logger
 	httpClient                *http.Client
@@ -399,6 +406,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
+		manifestOperations:        options.ManifestOperations,
 		listenAddr:                options.ListenAddr,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
@@ -467,6 +475,13 @@ func WithGraphName(graphName string) func(*Options) {
 func WithOperationsDir(operationsDir string) func(*Options) {
 	return func(o *Options) {
 		o.OperationsDir = operationsDir
+	}
+}
+
+// WithManifestOperations sets the function that returns the current manifest operations
+func WithManifestOperations(manifestOperations func() map[string]string) func(*Options) {
+	return func(o *Options) {
+		o.ManifestOperations = manifestOperations
 	}
 }
 
@@ -668,7 +683,11 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 func (s *GraphQLSchemaServer) rebuild() error {
 	operationsManager := NewOperationsManager(s.schema, s.logger, s.excludeMutations)
 
-	if s.operationsDir != "" {
+	if s.manifestOperations != nil {
+		if err := operationsManager.LoadOperationsFromManifest(s.manifestOperations()); err != nil {
+			return fmt.Errorf("failed to load operations: %w", err)
+		}
+	} else if s.operationsDir != "" {
 		if err := operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
 			return fmt.Errorf("failed to load operations: %w", err)
 		}
@@ -692,6 +711,22 @@ func (s *GraphQLSchemaServer) rebuild() error {
 	}
 
 	return nil
+}
+
+// ManifestUpdated rebuilds the tools from the current manifest operations. It only logs
+// errors, so a bad manifest does not affect graph reloads.
+func (s *GraphQLSchemaServer) ManifestUpdated() {
+	s.rebuildMu.Lock()
+	defer s.rebuildMu.Unlock()
+
+	// The first Reload loads the manifest.
+	if s.schema == nil {
+		return
+	}
+
+	if err := s.rebuild(); err != nil {
+		s.logger.Error("Failed to rebuild MCP tools after manifest update", zap.Error(err))
+	}
 }
 
 // Stop gracefully shuts down the MCP server
@@ -835,8 +870,12 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			compiledSchema: compiledSchema,
 		}
 
-		// Convert the operation name to snake_case for consistent tool naming
-		operationToolName := strcase.ToSnake(op.Name)
+		// In manifest mode the key is the tool name. Otherwise convert the operation name
+		// to snake_case for consistent tool naming.
+		operationToolName := op.Name
+		if s.manifestOperations == nil {
+			operationToolName = strcase.ToSnake(op.Name)
+		}
 
 		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
@@ -853,6 +892,14 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
 				zap.String("conflicting_tool", operationToolName),
+			)
+			continue
+		}
+		// The SDK only logs tool names that are too long, so skip them here.
+		if s.manifestOperations != nil && len(toolName) > maxToolNameLength {
+			s.logger.Error("Skipping operation because its tool name is too long",
+				zap.String("operation", op.Name),
+				zap.Int("max_length", maxToolNameLength),
 			)
 			continue
 		}

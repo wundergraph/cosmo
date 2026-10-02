@@ -661,11 +661,15 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 	return nil
 }
 
-// startPQLPoller starts the PQL manifest poller in a background goroutine if configured.
-// Must be called after newServer so that SetOnUpdate has been registered on the store.
-func (r *Router) startPQLPoller(ctx context.Context) {
+// startManifestPollers starts the PQL and MCP manifest pollers in background goroutines
+// if configured. Must be called after newServer so that SetOnUpdate has been registered
+// on the PQL store.
+func (r *Router) startManifestPollers(ctx context.Context) {
 	if r.pqlPoller != nil {
 		go r.pqlPoller.Poll(ctx)
+	}
+	if r.mcpManifestPoller != nil {
+		go r.mcpManifestPoller.Poll(ctx)
 	}
 }
 
@@ -1359,8 +1363,12 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 
 	var operationsDir string
 
-	// If storage provider ID is set, resolve it to a directory path
-	if r.mcp.Storage.ProviderID != "" {
+	if r.mcp.Storage.ObjectPath != "" {
+		if err := r.buildMCPManifestStore(ctx); err != nil {
+			return err
+		}
+	} else if r.mcp.Storage.ProviderID != "" {
+		// If storage provider ID is set, resolve it to a directory path
 		r.logger.Debug("Resolving storage provider for MCP operations",
 			zap.String("provider_id", r.mcp.Storage.ProviderID))
 
@@ -1394,6 +1402,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
 		mcpserver.WithServerTitle(r.mcp.Server.Title),
 		mcpserver.WithServerDescription(r.mcp.Server.Description),
+	}
+
+	if r.mcpManifestStore != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithManifestOperations(r.mcpManifestStore.AllOperations))
 	}
 
 	if r.corsOptions != nil {
@@ -1435,7 +1447,55 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
 
+	if r.mcpManifestStore != nil {
+		r.mcpManifestStore.SetOnUpdate(mcpss.ManifestUpdated)
+	}
+
 	r.mcpServer = mcpss
+	return nil
+}
+
+// buildMCPManifestStore fetches the MCP operation manifest from its storage provider and
+// sets up the poller that reloads it.
+func (r *Router) buildMCPManifestStore(ctx context.Context) error {
+	cfg := r.mcp.Storage
+
+	var loader operationmanifest.Loader
+	var err error
+	if provider, ok := r.providerRegistry.FileSystem(cfg.ProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, cfg.ObjectPath)
+	} else if provider, ok := r.providerRegistry.S3(cfg.ProviderID); ok {
+		loader, err = operationmanifest.NewS3Loader(provider, cfg.ObjectPath)
+	} else {
+		return fmt.Errorf("storage provider %q for mcp manifest not found or not a file_system or s3 provider", cfg.ProviderID)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create mcp manifest loader: %w", err)
+	}
+
+	store := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
+		loader,
+		store,
+		cfg.PollInterval,
+		cfg.PollInterval/2,
+		r.logger,
+	)
+
+	if err := poller.FetchInitial(ctx); err != nil {
+		return fmt.Errorf("failed to fetch initial mcp manifest from storage provider %q: %w", cfg.ProviderID, err)
+	}
+
+	r.logger.Info(
+		"Loaded MCP manifest from storage provider",
+		zap.String("provider_id", cfg.ProviderID),
+		zap.String("object_path", cfg.ObjectPath),
+		zap.String("revision", store.Revision()),
+		zap.Int("operation_count", store.OperationCount()),
+	)
+
+	r.mcpManifestStore = store
+	r.mcpManifestPoller = poller
 	return nil
 }
 
@@ -1745,7 +1805,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	if r.playgroundConfig.Enabled {
 		r.logger.Info(
@@ -1813,7 +1873,7 @@ func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	var (
 		w          watcher.WatcherFunc
@@ -2145,6 +2205,10 @@ func (r *Router) Shutdown(ctx context.Context) error {
 
 	if r.pqlStore != nil {
 		r.pqlStore.Close()
+	}
+
+	if r.mcpManifestStore != nil {
+		r.mcpManifestStore.Close()
 	}
 
 	r.usage.Close()

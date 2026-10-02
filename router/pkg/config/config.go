@@ -1554,6 +1554,10 @@ type MCPSessionConfig struct {
 
 type MCPStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+	// ObjectPath is the path of an operation manifest in the storage provider. When set, the
+	// operations are loaded from the manifest and reloaded when its revision changes.
+	ObjectPath   string        `yaml:"object_path,omitempty" env:"MCP_STORAGE_OBJECT_PATH"`
+	PollInterval time.Duration `yaml:"poll_interval,omitempty" envDefault:"10s" env:"MCP_STORAGE_POLL_INTERVAL"`
 }
 
 type MCPServer struct {
