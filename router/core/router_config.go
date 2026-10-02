@@ -110,6 +110,8 @@ type Config struct {
 	persistedOperationClient        *persistedoperation.Client
 	pqlStore                        *operationmanifest.Store
 	pqlPoller                       *operationmanifest.Poller
+	mcpManifestStore                *operationmanifest.Store
+	mcpManifestPoller               *operationmanifest.Poller
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags

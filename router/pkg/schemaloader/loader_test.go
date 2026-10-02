@@ -318,3 +318,63 @@ func TestLoadOperationsFromEmptyDirectory(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, operations, 0, "Empty directory should return no operations")
 }
+
+func TestLoadOperationsFromManifest(t *testing.T) {
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(`
+schema {
+	query: Query
+	subscription: Subscription
+}
+
+type Query {
+	employees: [Employee!]!
+}
+
+type Subscription {
+	employeeUpdated: Employee!
+}
+
+type Employee {
+	id: ID!
+}
+`)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	type loadedOperation struct {
+		Name            string
+		OperationType   string
+		OperationString string
+	}
+
+	t.Run("names operations by their key sorted by key", func(t *testing.T) {
+		const namedOp = `query ListEmployees { employees { id } }`
+		const anonymousOp = `{ employees { id } }`
+
+		loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+		operations := loader.LoadOperationsFromManifest(map[string]string{
+			"b-named":     namedOp,
+			"a_anonymous": anonymousOp,
+		})
+
+		loaded := make([]loadedOperation, 0, len(operations))
+		for _, op := range operations {
+			loaded = append(loaded, loadedOperation{Name: op.Name, OperationType: op.OperationType, OperationString: op.OperationString})
+		}
+		require.Equal(t, []loadedOperation{
+			{Name: "a_anonymous", OperationType: "query", OperationString: anonymousOp},
+			{Name: "b-named", OperationType: "query", OperationString: namedOp},
+		}, loaded)
+	})
+
+	t.Run("skips invalid and subscription operations", func(t *testing.T) {
+		loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+		operations := loader.LoadOperationsFromManifest(map[string]string{
+			"invalid":      `query Invalid { unknownField }`,
+			"unparsable":   `query {`,
+			"subscription": `subscription Updates { employeeUpdated { id } }`,
+		})
+
+		require.Empty(t, operations)
+	})
+}
