@@ -59,6 +59,8 @@ type engineLoaderHooks struct {
 	// responseCacheEnabled gates the cache status attribute: without a cache
 	// every fetch would read as a miss, which is noise rather than a signal.
 	responseCacheEnabled bool
+	// responseCacheMetrics is nil while the response cache metrics are not enabled.
+	responseCacheMetrics metric.ResponseCacheMetricStore
 }
 
 // Values of the wg.response_cache.status attribute on subgraph metrics and spans.
@@ -109,6 +111,7 @@ func NewEngineRequestHooks(
 	storeSubgraphResponseBody bool,
 	headerPropagation *HeaderPropagation,
 	responseCacheEnabled bool,
+	responseCacheMetrics metric.ResponseCacheMetricStore,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -133,6 +136,7 @@ func NewEngineRequestHooks(
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 		headerPropagation:             headerPropagation,
 		responseCacheEnabled:          responseCacheEnabled,
+		responseCacheMetrics:          responseCacheMetrics,
 	}
 }
 
@@ -250,6 +254,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		storeDecision = responseInfo.ResponseCache.StoreDecision.String()
 		typeNames = fetchTypeNames(responseInfo.RootFields)
 		reqContext.responseCache.record(cacheStatus)
+
+		if f.responseCacheMetrics != nil {
+			f.responseCacheMetrics.MeasureFetch(ctx, ds.Name, typeNames, cacheStatus, storeDecision)
+		}
 	}
 
 	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)

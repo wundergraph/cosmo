@@ -1795,6 +1795,7 @@ func (s *graphServer) buildGraphMux(
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
 		s.responseCache != nil,
+		s.responseCacheMetrics,
 	)
 
 	handlerOpts := HandlerOptions{
@@ -1815,6 +1816,7 @@ func (s *graphServer) buildGraphMux(
 
 	if s.responseCache != nil {
 		handlerOpts.ResponseCache = s.responseCache
+		handlerOpts.ResponseCacheMetrics = s.responseCacheMetrics
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 

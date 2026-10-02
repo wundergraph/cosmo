@@ -60,6 +60,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
 	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching/invalidation"
@@ -1234,6 +1235,15 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return err
 	}
 
+	// Before the invalidation server, which is to be measured as well.
+	if err = r.instrumentResponseCache(); err != nil {
+		if closeErr := r.responseCache.Close(); closeErr != nil {
+			r.logger.Error("failed to close response cache after metrics setup failed", zap.Error(closeErr))
+		}
+		r.responseCache = nil
+		return err
+	}
+
 	if err = r.startResponseCacheInvalidationServer(ctx); err != nil {
 		if closeErr := r.responseCache.Close(); closeErr != nil {
 			r.logger.Error("failed to close response cache after invalidation server setup failed", zap.Error(closeErr))
@@ -1241,6 +1251,39 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		r.responseCache = nil
 		return err
 	}
+
+	return nil
+}
+
+func (r *Router) responseCacheMetricsEnabled() bool {
+	return r.metricConfig != nil && (r.metricConfig.OpenTelemetry.ResponseCache || r.metricConfig.Prometheus.ResponseCache)
+}
+
+// instrumentResponseCache measures the calls to the response cache when its metrics are enabled.
+func (r *Router) instrumentResponseCache() error {
+	if !r.responseCacheMetricsEnabled() {
+		return nil
+	}
+
+	provider := r.responseCacheConfig.Storage.Provider
+	if provider == "" {
+		provider = config.ResponseCacheStorageProviderRedis
+	}
+
+	store, err := rmetric.NewResponseCacheMetricStore(
+		r.logger,
+		nil,
+		r.otlpMeterProvider,
+		r.promMeterProvider,
+		r.metricConfig,
+		string(provider),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create response cache metrics: %w", err)
+	}
+
+	r.responseCacheMetrics = store
+	r.responseCache = responsecaching.NewInstrumentedStore(r.responseCache, store)
 
 	return nil
 }
@@ -3096,6 +3139,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.OTLP.ExemplarFilter),
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ResponseCache:   cfg.Metrics.OTLP.ResponseCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			NetworkStats:    cfg.Metrics.OTLP.Network.Enabled,
 			ResolverStats:   cfg.Metrics.OTLP.Resolver.Enabled,
@@ -3120,6 +3164,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ResponseCache:   cfg.Metrics.Prometheus.ResponseCache,
 			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
 			NetworkStats:    cfg.Metrics.Prometheus.Network.Enabled,
 			ResolverStats:   cfg.Metrics.Prometheus.Resolver.Enabled,

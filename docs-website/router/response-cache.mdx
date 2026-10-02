@@ -466,7 +466,7 @@ Cache failures never fail a request. When a read or a write fails, the router se
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage. With the metrics of [cache health](#cache-health) enabled, every failure is counted there.
 
 ### Metrics and traces
 
@@ -593,6 +593,89 @@ access_logs:
 #### Notes
 
 The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, next to `storeDecision`, `lookupDuration` and `entityType`, which puts them within reach of custom attributes and the subgraph access log. No request is sent for a hit, so its access log line has no `method`, `path`, `url` or request header fields.
+
+### Cache health
+
+The metrics of the store itself are off by default:
+
+```yaml
+telemetry:
+  metrics:
+    otlp:
+      response_cache: true
+    prometheus:
+      response_cache: true
+```
+
+They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). Apart from `router.response_cache.fetches` they describe the cache as a whole and are not split by subgraph or operation.
+
+A lookup asks for every entity under its shared key and, when the request carries a user id for [private responses](#private-responses), under that user's key as well. At most one of the two is found, so the keys counted as `missing` are no measure of the hit rate. Use the [status of the fetches](#per-fetch) for that.
+
+Failed calls, by operation and cause. A `canceled` call is a client that went away, not a cache that is degrading:
+
+```promql
+sum by (wg_response_cache_operation, wg_error_type) (
+  rate(router_response_cache_operations_total{wg_error_type!="", wg_error_type!="canceled"}[5m])
+)
+```
+
+Entries that were not written. A `partial_write` counts the entries the store confirmed as `stored` and the rest as `failed`:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="failed"}[5m]))
+```
+
+What the cache costs per call, to set against what a hit saves:
+
+```promql
+histogram_quantile(0.95,
+  sum by (wg_response_cache_operation, le) (
+    rate(router_response_cache_operation_duration_seconds_bucket[5m])
+  )
+)
+```
+
+Churn, as entries written per entry served. A value near or above one means entries are replaced about as often as they are used, because they expire early, are invalidated or are evicted:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="stored"}[5m]))
+/
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="lookup", wg_response_cache_result="found"}[5m]))
+```
+
+The lifetime entries are written with, which is what the subgraphs ask for in `Cache-Control`:
+
+```promql
+histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_seconds_bucket[15m])))
+```
+
+#### Cache-hostile types
+
+`router.response_cache.fetches` counts every subgraph fetch by subgraph, by the type it resolves and by its [store decision](#store-decision). It tells which types are never answered from the cache, and why:
+
+```promql
+topk(10,
+  sum by (wg_subgraph_name, wg_entity_type, wg_response_cache_store_decision) (
+    rate(router_response_cache_fetches_total{wg_response_cache_status="miss"}[15m])
+  )
+)
+```
+
+The decision is taken before the write. A write that then fails is counted with the failed calls above.
+
+#### Evictions
+
+It is Redis that evicts, under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):
+
+```promql
+rate(redis_evicted_keys_total[5m])
+rate(redis_expired_keys_total[5m])
+redis_memory_used_bytes / (redis_memory_max_bytes > 0)
+```
+
+The last one needs Redis to have a `maxmemory`. Without one Redis reports a maximum of zero, evicts nothing, and the query returns no value.
+
+These count for the whole Redis instance, including what else is stored on it.
 
 ## Related
 
