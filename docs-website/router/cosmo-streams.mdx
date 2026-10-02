@@ -513,15 +513,11 @@ The Cosmo Router deduplicates Subscriptions internally to save resources. If mul
 
 With Cosmo Streams, the Router connects directly to the Event Source but doesn't require any stateful connections, e.g. WebSocket, to the Subgraphs. This makes the Subgraphs much simpler to reason about and easier to deploy. Serverless deployment options usually have limitations on request length. With an Event Broker in the middle, Subgraphs can be stateless without having to give up on Subscriptions.
 
-### Efficiency, CPU & Memory Consumption (Epoll/Kqueue)
+### Connection handling
 
-Cosmo Streams is built on top of Event-Driven principles, which means that the implementation is non-blocking, as CPU efficient as possible, and has a very low memory footprint.
+The Router reads each client WebSocket connection on its own goroutine. Go's runtime manages network readiness using mechanisms such as epoll on Linux and kqueue on macOS.
 
-We're using Epoll and Kqueue on Systems that support it (Linux, Darwin, etc.) to be as efficient as possible.
-
-To give you some numbers, 10.000 clients connected to one Router consume ~150-200MB of Memory and have 0% CPU usage when idle (not publishing any messages). In addition, these 10k clients when idle require ~40 goroutines, e.g. for thread pools, etc...
-
-The Router supports multi-core out of the box and is capable of scaling up to a multitude of 10k events per second published.
+Memory usage grows with the number of connections and active subscriptions. Measure resource usage with your workload when sizing Router instances.
 
 ### Publish Events from any System, not just Subgraphs
 

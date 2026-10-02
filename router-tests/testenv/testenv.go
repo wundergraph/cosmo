@@ -1385,7 +1385,6 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:                     true,
 		EnableSingleFlight:                true,
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
@@ -1399,11 +1398,9 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			PrintQueryPlans:            false,
 			EnableCacheResponseHeaders: true,
 		},
-		WebSocketServerPollTimeout:    300 * time.Millisecond,
-		WebSocketServerConnBufferSize: 1,
-		WebSocketServerReadTimeout:    1 * time.Second,
-		WebSocketServerWriteTimeout:   2 * time.Second,
-		WebSocketClientWriteTimeout:   2 * time.Second,
+		WebSocketServerReadTimeout:  1 * time.Second,
+		WebSocketServerWriteTimeout: 2 * time.Second,
+		WebSocketClientWriteTimeout: 2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
 		MaxConcurrentResolvers:         32,

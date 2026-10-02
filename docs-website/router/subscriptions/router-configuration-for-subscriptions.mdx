@@ -105,14 +105,14 @@ These options apply to the router's own WebSocket endpoint (the one clients conn
 
 | Option | Env var | Default | Purpose |
 |-|-|-|-|
-| `websocket_server_read_timeout` | `ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT` | `5s` | Read timeout for the server-side WebSocket handler. |
+| `websocket_server_read_timeout` | `ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT` | `5s` | Read timeout for the server-side WebSocket handler. A timeout during an incomplete message closes the connection. Idle connections remain open after initialization. Set to `0s` to disable the timeout. |
 | `websocket_server_write_timeout` | `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT` | `10s` | Write timeout for the server-side WebSocket handler. |
-| `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | `1s` | Timeout for the poll loop of the server-side WebSocket handler. |
-| `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. |
-| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `true` | Enables the more efficient poll implementation for the server-side WebSocket handler. Linux and macOS only. Has no effect on upstream subgraph connections. |
+| `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | | Deprecated. Accepted for compatibility; has no effect. |
+| `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | | Deprecated. Accepted for compatibility; has no effect. |
+| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | | Deprecated. Accepted for compatibility; has no effect. |
 
 <Warning>
-  **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
+  The manual WebSocket poller has been removed. `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` are deprecated and have no effect. Remove them from your configuration. Explicitly configuring these options logs a startup warning.
 </Warning>
 
 <Note>

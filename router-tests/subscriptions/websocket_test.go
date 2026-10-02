@@ -593,7 +593,7 @@ func TestWebSockets(t *testing.T) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and netPoll", func(t *testing.T) {
+	t.Run("subscription with multiple reconnects", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1718,12 +1718,11 @@ func TestWebSockets(t *testing.T) {
 
 	// times out on GitHub Actions
 
-	t.Run("shutdown with netPoll", func(t *testing.T) {
+	t.Run("shutdown sends going away", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = true
 				cfg.WebSocketServerReadTimeout = time.Millisecond * 500
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1749,36 +1748,6 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("shutdown without netPoll", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = false
-				cfg.WebSocketServerReadTimeout = time.Millisecond * 500
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
-			})
-			require.NoError(t, err)
-			// Discard the first message
-			var msg testenv.WebSocketMessage
-			err = testenv.WSReadJSON(t, conn, &msg)
-			require.NoError(t, err)
-			xEnv.Shutdown()
-			_, _, err = conn.NextReader()
-			// The server sends a clean 1001 Going Away close frame on shutdown
-			var closeError *websocket.CloseError
-			if assert.ErrorAs(t, err, &closeError) {
-				assert.Equal(t, websocket.CloseGoingAway, closeError.Code)
-				assert.Equal(t, "Going away", closeError.Text)
-			}
-		})
-	})
 	t.Run("single connection with initial payload", func(t *testing.T) {
 		t.Parallel()
 
@@ -2694,18 +2663,6 @@ func TestWebSockets(t *testing.T) {
 }
 
 func TestFlakyWebSockets(t *testing.T) {
-	t.Run("subscription with multiple reconnects and netPoll disabled", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableNetPoll = false
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			expectConnectAndReadCurrentTime(t, xEnv)
-			expectConnectAndReadCurrentTime(t, xEnv)
-		})
-	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
 		t.Parallel()
 

@@ -51,14 +51,9 @@ Several `websocket_client_*` options were named as if they tuned the router's up
   The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` router configuration options are no longer available, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option - `websocket_client_write_timeout` - keeps its name but now applies to a different side of the router. Review each section below before upgrading.
 </Warning>
 
-### Renamed: server-side options
+### Deprecated: poller options
 
-These were always server-side despite the `websocket_client_*` name. They are renamed, and the old names are removed entirely.
-
-| Old YAML / env var | New YAML / env var |
-|-|-|
-| `engine.websocket_client_poll_timeout` / `ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT` | `engine.websocket_server_poll_timeout` / `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` |
-| `engine.websocket_client_conn_buffer_size` / `ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE` | `engine.websocket_server_conn_buffer_size` / `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` |
+The overhaul renamed `websocket_client_poll_timeout` and `websocket_client_conn_buffer_size` to `websocket_server_poll_timeout` and `websocket_server_conn_buffer_size`. The manual server-side poller has since been removed. Remove these options and `enable_net_poll` from your configuration. The server-side names are accepted for compatibility and log a startup warning.
 
 ### Split: `websocket_client_read_timeout`
 
@@ -94,10 +89,9 @@ These keep both their name and their scope:
 
 - `engine.websocket_client_ping_interval`
 - `engine.websocket_client_ping_timeout`
-- `engine.enable_net_poll` (applies to the server-side WebSocket handler only; has no effect on upstream subgraph connections)
 
 <Warning>
-  **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
+  The manual WebSocket poller has been removed. `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` are deprecated and have no effect. Remove them from your configuration. Explicitly configuring these options logs a startup warning.
 </Warning>
 
 ### Before / after
@@ -116,12 +110,9 @@ engine:
 
 # After
 engine:
-  enable_net_poll: true
   # Server-side WebSocket handler (router accepting clients)
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s   # previously the misnamed websocket_client_write_timeout
-  websocket_server_poll_timeout: 1s
-  websocket_server_conn_buffer_size: 128
   # Upstream subscription client (router connecting to subgraphs)
   websocket_client_write_timeout: 10s   # same name, now actually upstream-only
   websocket_client_ping_interval: 15s
