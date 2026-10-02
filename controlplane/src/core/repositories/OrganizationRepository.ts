@@ -1,10 +1,5 @@
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import {
-  Integration,
-  IntegrationConfig,
-  IntegrationType,
-  WebhookDelivery,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Integration, IntegrationType, WebhookDelivery } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -99,6 +94,8 @@ export class OrganizationRepository {
         plan: this.defaultBillingPlanId,
       };
     }
+
+    await this.updateFeature({ organizationId: org.id, id: 'split-config-loading', enabled: true });
 
     return org;
   }
