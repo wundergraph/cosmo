@@ -77,6 +77,7 @@ import {
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
+import { type IncompatibleSharedEnumErrorParams } from '../../errors/types/params';
 import { type ExecutionMultiResult } from '../../types/results';
 import {
   type ChildTagData,
@@ -231,6 +232,7 @@ import {
   kindToNodeType,
 } from '../../utils/utils';
 import type {
+  EnumUsageData,
   GraphFieldData,
   ImplementationErrors,
   InvalidEntityInterface,
@@ -250,6 +252,7 @@ import {
 } from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import {
+  type AddEnumUsageCoordsParams,
   type ExtractFederatedDirectivesParams,
   type FederateSubgraphsContractV1Params,
   type FederateSubgraphsWithContractsV1Params,
@@ -275,6 +278,7 @@ export class FederationFactory {
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<TypeName, Set<SubgraphName>>>();
   entityDataByTypeName: Map<TypeName, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
+  enumUsageDataByTypeName = new Map<TypeName, EnumUsageData>();
   executableDirectiveDatasByName: Map<DirectiveName, Array<DirectiveDefinitionData>>;
   errors: Array<Error> = [];
   federatedDirectiveDataByName: Map<DirectiveName, DirectiveDefinitionData>;
@@ -619,6 +623,60 @@ export class FederationFactory {
     }
   }
 
+  /* The coordinates are only used to provide context should an Enum that is used as both an input and an output be
+   * inconsistently defined. Consequently, named types that are known not to be Enums are not recorded.
+   * Directive argument named type kinds are only resolved for base scalars (otherwise Kind.NULL).
+   * */
+  addEnumUsageCoords({ coords, data, isInput }: AddEnumUsageCoordsParams) {
+    if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION && data.namedTypeKind !== Kind.NULL) {
+      return;
+    }
+    const usageData = getValueOrDefault(this.enumUsageDataByTypeName, data.namedTypeName, () => ({
+      inputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
+      outputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
+    }));
+    const coordsBySubgraphName = isInput ? usageData.inputCoordsBySubgraphName : usageData.outputCoordsBySubgraphName;
+    for (const subgraphName of data.subgraphNames) {
+      getValueOrDefault(coordsBySubgraphName, subgraphName, () => new Set<string>()).add(coords);
+    }
+  }
+
+  getIncompatibleSharedEnumErrorParams(
+    enumData: EnumDefinitionData,
+    inconsistentValueDatas: Array<EnumValueData>,
+  ): IncompatibleSharedEnumErrorParams {
+    const usageData = this.enumUsageDataByTypeName.get(enumData.name);
+    const inputCoordsBySubgraphName = new Map<SubgraphName, Array<string>>();
+    const missingValueNamesBySubgraphName = new Map<SubgraphName, Array<string>>();
+    const outputCoordsBySubgraphName = new Map<SubgraphName, Array<string>>();
+    // Iterating the Enum subgraph names orders each map consistently.
+    for (const subgraphName of enumData.subgraphNames) {
+      const missingValueNames: Array<string> = [];
+      for (const valueData of inconsistentValueDatas) {
+        if (!valueData.subgraphNames.has(subgraphName)) {
+          missingValueNames.push(valueData.name);
+        }
+      }
+      if (missingValueNames.length > 0) {
+        missingValueNamesBySubgraphName.set(subgraphName, missingValueNames);
+      }
+      const inputCoords = usageData?.inputCoordsBySubgraphName.get(subgraphName);
+      if (inputCoords) {
+        inputCoordsBySubgraphName.set(subgraphName, Array.from(inputCoords));
+      }
+      const outputCoords = usageData?.outputCoordsBySubgraphName.get(subgraphName);
+      if (outputCoords) {
+        outputCoordsBySubgraphName.set(subgraphName, Array.from(outputCoords));
+      }
+    }
+    return {
+      inputCoordsBySubgraphName,
+      missingValueNamesBySubgraphName,
+      outputCoordsBySubgraphName,
+      typeName: enumData.name,
+    };
+  }
+
   getEnumValueMergeMethod(enumTypeName: string): MergeMethod {
     if (this.namedInputValueTypeNames.has(enumTypeName)) {
       if (this.namedOutputTypeNames.has(enumTypeName)) {
@@ -774,6 +832,7 @@ export class FederationFactory {
     getValueOrDefault(this.coordsByNamedTypeName, targetData.namedTypeName, () => new Set<string>()).add(
       targetData.federatedCoords,
     );
+    this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: incomingData, isInput: true });
     if (!existingData) {
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
       inputValueDataByValueName.set(targetData.name, targetData);
@@ -962,6 +1021,7 @@ export class FederationFactory {
       targetData.federatedCoords,
     );
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
+    this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: incomingData, isInput: false });
     this.handleSubscriptionFilterDirective(incomingData, targetData);
     this.extractFederatedDirectives({
       data: targetData.federatedDirectivesData,
@@ -1183,6 +1243,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
+      this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: sourceData, isInput: true });
       this.recordTagNamesByCoords(targetData, `${parentCoords}.${sourceData.name}`);
       inputValueDataByInputValueName.set(inputValueName, targetData);
     }
@@ -1254,6 +1315,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedOutputTypeNames.add(targetData.namedTypeName);
+      this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: sourceData, isInput: false });
       this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
       if (isFieldInaccessible) {
         this.inaccessibleCoords.add(targetData.federatedCoords);
@@ -1682,6 +1744,18 @@ export class FederationFactory {
   }
   upsertExecutableDirectiveDatas() {
     for (const [directiveName, definitionDatas] of this.executableDirectiveDatasByName) {
+      /* The usages are recorded upfront because the remaining definitions are not upserted should the executable
+       * locations fail to intersect.
+       * */
+      for (const data of definitionDatas) {
+        for (const argumentData of data.argumentDataByName.values()) {
+          this.addEnumUsageCoords({
+            coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
+            data: argumentData,
+            isInput: true,
+          });
+        }
+      }
       for (const data of definitionDatas) {
         const existingData = this.federatedDirectiveDataByName.get(directiveName);
         if (!existingData) {
@@ -2060,6 +2134,7 @@ export class FederationFactory {
           const enumValueNodes: Array<MutableEnumValueNode> = [];
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
+          const inconsistentValueDatas: Array<EnumValueData> = [];
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
           for (const enumValueData of parentDefinitionData.enumValueDataByName.values()) {
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
@@ -2080,7 +2155,7 @@ export class FederationFactory {
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
                 if (!isValueInaccessible && parentDefinitionData.appearances > enumValueData.appearances) {
-                  this.errors.push(incompatibleSharedEnumError(parentTypeName));
+                  inconsistentValueDatas.push(enumValueData);
                 }
                 enumValueNodes.push(enumValueNodeResult.node);
                 if (!isValueInaccessible) {
@@ -2102,6 +2177,14 @@ export class FederationFactory {
                 }
                 break;
             }
+          }
+          // A single error is returned for each Enum regardless of the number of inconsistent Enum Values.
+          if (inconsistentValueDatas.length > 0) {
+            this.errors.push(
+              incompatibleSharedEnumError(
+                this.getIncompatibleSharedEnumErrorParams(parentDefinitionData, inconsistentValueDatas),
+              ),
+            );
           }
           parentDefinitionData.node.values = enumValueNodes;
           const nodeResult = routerSchemaNodeFromData<EnumDefinitionData>({

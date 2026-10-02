@@ -8,6 +8,28 @@ sidebarTitle: "Composition errors"
 
 When you receive an error like `Enum X was used as both an input and output but was inconsistently defined across inclusive subgraphs` it means you are publishing a change to an enum that is used as both an input and an output.
 
+The error lists:
+- each subgraph that defines the enum but does not define every enum value, with the missing values
+- each subgraph that uses the enum as an input, with the coordinates of the arguments, input fields, and directive arguments
+- each subgraph that uses the enum as an output, with the coordinates of the fields
+
+For example:
+
+```text
+Enum "Enum" was used as both an input and output but was inconsistently defined across inclusive subgraphs.
+ The following subgraphs do not define every Enum Value:
+  Subgraph "subgraph-a": "C"
+  Subgraph "subgraph-b": "B"
+ The Enum is used as an input in the following subgraph:
+  Subgraph "subgraph-a": "Query.a(enum: ...)"
+ The Enum is used as an output in the following subgraphs:
+  Subgraph "subgraph-a": "Query.a"
+  Subgraph "subgraph-b": "Query.b"
+To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive in the origin subgraph. ...
+```
+
+Enum values declared with _@inaccessible_ in any subgraph are not listed as missing.
+
 When publishing a new enum value to a subgraph, depending on whether that enum is used as an input, output, or both, incompatibilities and run-time issues could arise.
 For example, imagine _Subgraph A_ defines an enum with value _A_, and it is used as an input.
 However, _Subgraph B_ defines the same enum with values _A_ and _B_, and it is used as an output.
@@ -16,8 +38,8 @@ Similarly, composition also cannot remove value _B_ from the federated graph bec
 In such an instance, the only way to prevent errors is to define the enum consistently across all subgraphs in which the enum appears.
 
 To solve this issue you should proceed as follows:
-- in the origin graph, add _@inaccessible_ to _Enum.NewValue_
-- in each other subgraph that define the enum, define _Enum.NewValue_(no directive)
+- in the origin subgraph, add _@inaccessible_ to _Enum.NewValue_
+- in each other subgraph that defines the enum, define _Enum.NewValue_ (no directive)
 - after you have published the change to all subgraphs that define that enum, remove _@inaccessible_ from the origin subgraph and publish the change
 
 This migration approach, while cumbersome, ensures that the federated contract is respected at all times, keeping your router safe from any run-time errors.

@@ -43,6 +43,13 @@ export type IncompatibleParentTypeMergeErrorParams = {
   incomingNodeType?: string;
 };
 
+export type IncompatibleSharedEnumErrorParams = {
+  inputCoordsBySubgraphName: Map<SubgraphName, Array<string>>;
+  missingValueNamesBySubgraphName: Map<SubgraphName, Array<string>>;
+  outputCoordsBySubgraphName: Map<SubgraphName, Array<string>>;
+  typeName: TypeName;
+};
+
 export type IncompatibleTypeWithProvidesErrorMessageParams = {
   fieldCoords: string;
   responseType: TypeName;
