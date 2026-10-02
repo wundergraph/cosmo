@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -112,6 +114,144 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	collisionLogs := logs.FilterMessage("Skipping operation due to tool name collision")
 	assert.Equal(t, 0, collisionLogs.Len(),
 		"no tool name collision errors should be logged on reload")
+}
+
+func TestReload(t *testing.T) {
+	t.Parallel()
+
+	const countEmployeesOp = `
+query CountEmployees {
+  employees {
+    id
+  }
+}
+`
+
+	t.Run("keeps tools of operations that stay available while tools are swapped", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+		writeOperationFiles(t, tempDir, map[string]string{
+			"FindEmployee.graphql":  findEmployeeOp,
+			"ListEmployees.graphql": listEmployeesOp,
+		})
+
+		schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+		require.False(t, report.HasErrors())
+		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithOperationsDir(tempDir),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		serverTransport, clientTransport := mcp.NewInMemoryTransports()
+		_, err = srv.server.Connect(t.Context(), serverTransport, nil)
+		require.NoError(t, err)
+		session, err := mcp.NewClient(&mcp.Implementation{Name: "test"}, nil).Connect(t.Context(), clientTransport, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = session.Close() })
+
+		// List tools and call get_schema continuously while the operation set alternates
+		// between {FindEmployee, ListEmployees} and {ListEmployees, CountEmployees}.
+		done := make(chan struct{})
+		var wg sync.WaitGroup
+		var missing []string
+		wg.Go(func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+				result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
+				if err != nil {
+					missing = append(missing, err.Error())
+					continue
+				}
+				names := make([]string, 0, len(result.Tools))
+				for _, tool := range result.Tools {
+					names = append(names, tool.Name)
+				}
+				if !slices.Contains(names, "list_employees") {
+					missing = append(missing, "list_employees missing")
+				}
+				if _, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "get_schema"}); err != nil {
+					missing = append(missing, err.Error())
+				}
+			}
+		})
+
+		for i := range 20 {
+			if i%2 == 0 {
+				require.NoError(t, os.Remove(filepath.Join(tempDir, "FindEmployee.graphql")))
+				writeOperationFiles(t, tempDir, map[string]string{"CountEmployees.graphql": countEmployeesOp})
+			} else {
+				require.NoError(t, os.Remove(filepath.Join(tempDir, "CountEmployees.graphql")))
+				writeOperationFiles(t, tempDir, map[string]string{"FindEmployee.graphql": findEmployeeOp})
+			}
+			require.NoError(t, srv.Reload(&schemaDoc, nil))
+		}
+		close(done)
+		wg.Wait()
+
+		require.Empty(t, missing)
+
+		result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
+		require.NoError(t, err)
+		names := make([]string, 0, len(result.Tools))
+		for _, tool := range result.Tools {
+			names = append(names, tool.Name)
+		}
+		require.ElementsMatch(t, []string{"get_schema", "list_employees", "find_employee", "get_operation_info"}, names)
+		require.ElementsMatch(t, names, srv.registeredTools)
+	})
+
+	t.Run("removes tools of operations that disappeared", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+		writeOperationFiles(t, tempDir, map[string]string{
+			"FindEmployee.graphql":  findEmployeeOp,
+			"ListEmployees.graphql": listEmployeesOp,
+		})
+
+		schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+		require.False(t, report.HasErrors())
+		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithOperationsDir(tempDir),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		require.NoError(t, os.Remove(filepath.Join(tempDir, "FindEmployee.graphql")))
+		writeOperationFiles(t, tempDir, map[string]string{"CountEmployees.graphql": countEmployeesOp})
+		require.NoError(t, srv.Reload(&schemaDoc, nil))
+
+		serverTransport, clientTransport := mcp.NewInMemoryTransports()
+		_, err = srv.server.Connect(t.Context(), serverTransport, nil)
+		require.NoError(t, err)
+		session, err := mcp.NewClient(&mcp.Implementation{Name: "test"}, nil).Connect(t.Context(), clientTransport, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = session.Close() })
+
+		result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
+		require.NoError(t, err)
+		names := make([]string, 0, len(result.Tools))
+		for _, tool := range result.Tools {
+			names = append(names, tool.Name)
+		}
+		require.ElementsMatch(t, []string{"get_schema", "list_employees", "count_employees", "get_operation_info"}, names)
+	})
 }
 
 func TestReload_ReservedToolNameCollision(t *testing.T) {
@@ -236,11 +376,10 @@ func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.
 	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
 	require.False(t, report.HasErrors())
 
-	operations := srv.operationsManager.GetOperations()
+	operations := srv.operationsManager.Load().GetOperations()
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	srv.registeredTools = nil
 	require.NoError(t, srv.registerTools())
 
 	assert.Contains(t, srv.registeredTools, "list_employees")
@@ -278,11 +417,10 @@ func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
 	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
 	require.False(t, report.HasErrors())
 
-	operations := srv.operationsManager.GetOperations()
+	operations := srv.operationsManager.Load().GetOperations()
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	srv.registeredTools = nil
 	require.NoError(t, srv.registerTools())
 
 	assert.Contains(t, srv.registeredTools, "list_employees")
