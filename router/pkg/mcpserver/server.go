@@ -849,9 +849,11 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			}
 		}
 
-		toolTitle := fmt.Sprintf("Execute operation %s", op.Name)
+		var toolTitle string
 		if s.omitToolNamePrefix {
 			toolTitle = op.Name
+		} else {
+			toolTitle = fmt.Sprintf("Execute operation %s", op.Name)
 		}
 
 		openWorld := true
