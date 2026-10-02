@@ -8,6 +8,7 @@ import {
 import {
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
+  type IncompatibleSharedEnumErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
   type InvalidCustomDirectiveErrorParams,
@@ -125,9 +126,46 @@ export function incompatibleInputValueDefaultValuesError(
   );
 }
 
-export function incompatibleSharedEnumError(parentName: string): Error {
+function getValuesBySubgraphNameMessage(valuesBySubgraphName: Map<SubgraphName, Array<string>>): string {
+  let message = '';
+  for (const [subgraphName, values] of valuesBySubgraphName) {
+    message += `  Subgraph "${subgraphName}": "` + values.join(QUOTATION_JOIN) + `"\n`;
+  }
+  return message;
+}
+
+export function incompatibleSharedEnumError({
+  inputCoordsBySubgraphName,
+  missingValueNamesBySubgraphName,
+  outputCoordsBySubgraphName,
+  typeName,
+}: IncompatibleSharedEnumErrorParams): Error {
+  let message =
+    `Enum "${typeName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.\n` +
+    ` The following subgraph` +
+    (missingValueNamesBySubgraphName.size > 1 ? `s do` : ` does`) +
+    ` not define every Enum Value:\n` +
+    getValuesBySubgraphNameMessage(missingValueNamesBySubgraphName);
+  if (inputCoordsBySubgraphName.size > 0) {
+    message +=
+      ` The Enum is used as an input in the following subgraph` +
+      (inputCoordsBySubgraphName.size > 1 ? 's' : '') +
+      `:\n` +
+      getValuesBySubgraphNameMessage(inputCoordsBySubgraphName);
+  }
+  if (outputCoordsBySubgraphName.size > 0) {
+    message +=
+      ` The Enum is used as an output in the following subgraph` +
+      (outputCoordsBySubgraphName.size > 1 ? 's' : '') +
+      `:\n` +
+      getValuesBySubgraphNameMessage(outputCoordsBySubgraphName);
+  }
   return new Error(
-    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs. To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from the Enum values in the origin subgraph.`,
+    message +
+      `To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive` +
+      ` in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time` +
+      ` without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from` +
+      ` the Enum values in the origin subgraph.`,
   );
 }
 
