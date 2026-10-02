@@ -26,6 +26,7 @@ const {
   webhookProxyUrl,
   cdnBaseUrl,
   admissionJwtSecret,
+  defaultPlan,
 } = getConfig();
 
 const organizationId = process.env.ORGANIZATION_ID || '';
@@ -128,6 +129,8 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
       undefined,
       webhookProxyUrl,
       true,
+      undefined,
+      defaultPlan,
     );
 
     // Recompose all federated graphs
