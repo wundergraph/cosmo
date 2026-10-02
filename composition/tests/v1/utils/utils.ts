@@ -21,6 +21,8 @@ export const CONTEXT_DIRECTIVE = `
   directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
 `;
 
+export const CONTEXT_FIELD_VALUE_SCALAR = `  scalar ContextFieldValue`;
+
 export const COST_DIRECTIVE = `
   directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
 `;

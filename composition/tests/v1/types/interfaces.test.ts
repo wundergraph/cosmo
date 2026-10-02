@@ -259,6 +259,8 @@ describe('Interface tests', () => {
                     'sounds',
                     {
                       implementedResponseType: '[String]!',
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'species', expectedType: 'String!' },
@@ -287,6 +289,8 @@ describe('Interface tests', () => {
                   [
                     'isDog',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: true,
@@ -297,6 +301,8 @@ describe('Interface tests', () => {
                   [
                     'sounds',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -315,6 +321,8 @@ describe('Interface tests', () => {
                   [
                     'sounds',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -346,6 +354,8 @@ describe('Interface tests', () => {
                   [
                     'sound',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'Int', argumentName: 'a', expectedType: 'String!' },
@@ -375,6 +385,8 @@ describe('Interface tests', () => {
                   [
                     'sound',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(['e']),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -393,6 +405,8 @@ describe('Interface tests', () => {
                   [
                     'sound',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(['e']),
                       invalidImplementedArguments: [],
                       isInaccessible: false,
@@ -705,6 +719,8 @@ describe('Interface tests', () => {
                   [
                     'sounds',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
@@ -726,6 +742,8 @@ describe('Interface tests', () => {
                   [
                     'sounds',
                     {
+                      implementationContextCoords: new Set<string>(),
+                      interfaceContextCoords: new Set<string>(),
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },

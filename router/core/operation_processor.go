@@ -1432,7 +1432,7 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
 		Depth:       globalComplexity.Depth,
-		TotalFields: globalComplexity.NodeCount,
+		TotalFields: globalComplexity.FieldCount,
 	}
 	for _, entry := range rootFieldStats {
 		if entry.Alias == "" {
@@ -1741,10 +1741,4 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 // limit.
 func (p *OperationProcessor) NewKit() (*OperationKit, error) {
 	return NewOperationKit(p), nil
-}
-
-// NewIndependentKit creates a new OperationKit which will not be pooled.
-// This is useful, e.g. for warming up the caches
-func (p *OperationProcessor) NewIndependentKit() (*OperationKit, error) {
-	return NewIndependentOperationKit(p), nil
 }
