@@ -923,18 +923,24 @@ export class FederatedGraphRepository {
     return { sdl: version[0].schemaSDL, clientSchema: version[0].clientSchema };
   }
 
-  public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
-    return this.db
-      .insert(schemaVersionChangeAction)
-      .values(
-        data.changes.map((change) => ({
-          schemaVersionId: data.schemaVersionID,
-          changeType: change.changeType,
-          changeMessage: change.message,
-          path: change.path,
-        })),
-      )
-      .execute();
+  public async createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
+    const CHANGELOG_INSERT_CHUNK_SIZE = 5000;
+
+    // Do it in chunks to avoid exceeding Postgres statement parameter limit
+    for (let i = 0; i < data.changes.length; i += CHANGELOG_INSERT_CHUNK_SIZE) {
+      const chunk = data.changes.slice(i, i + CHANGELOG_INSERT_CHUNK_SIZE);
+      await this.db
+        .insert(schemaVersionChangeAction)
+        .values(
+          chunk.map((change) => ({
+            schemaVersionId: data.schemaVersionID,
+            changeType: change.changeType,
+            changeMessage: change.message,
+            path: change.path,
+          })),
+        )
+        .execute();
+    }
   }
 
   public fetchFederatedGraphChangelog(
