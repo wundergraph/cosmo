@@ -1,5 +1,6 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { useParams } from 'next/navigation';
+import { useQueryState } from 'nuqs';
 import { create } from '@bufbuild/protobuf';
 import { getWorkspace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,8 +30,11 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
 
   // Initialize the namespace
   const { namespace: namespaceParam } = useParams<{ namespace: string }>();
+  const [namespaceQuery] = useQueryState('namespace');
+  // Graph and subgraph pages use route params, top-level pages use the querystring
+  const namespaceSlug = namespaceParam || namespaceQuery;
   const [storedNamespace, setStoredNamespace] = useLocalStorage('wg-namespace', DEFAULT_NAMESPACE_NAME);
-  const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
+  const [namespace, setNamespace] = useState(namespaceSlug || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
 
   // Correct namespace
@@ -39,7 +43,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
       return;
     }
 
-    const actualNamespace = namespaceParam || namespace;
+    const actualNamespace = namespaceSlug || namespace;
     const currentNamespaces = data.namespaces.map((wns) => wns.name);
     if (!currentNamespaces.some((ns) => ns.toLowerCase() === actualNamespace.toLowerCase())) {
       // The authenticated user doesn't have access to the namespace, pick between the `default` or the
@@ -59,7 +63,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     }
 
     setNamespaces(currentNamespaces);
-  }, [applyParams, data?.response?.code, data?.namespaces, namespace, namespaceParam, setStoredNamespace]);
+  }, [applyParams, data?.response?.code, data?.namespaces, namespace, namespaceSlug, setStoredNamespace]);
 
   // Memoize context components
   const currentNamespace = useMemo(

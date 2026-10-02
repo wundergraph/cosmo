@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -324,6 +325,20 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	err = k.unmarshalOperation()
 	if err != nil {
 		return nil, err
+	}
+
+	// A custom ID doesn't identify its body, so a queued body may belong to an older
+	// manifest revision. APQ IDs are query hashes, so their bodies can't be stale.
+	if k.persistedOperationManifest != nil && k.hasCustomPersistedOperationID() {
+		hash := k.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		body, found := k.persistedOperationManifest.Operations[hash]
+		if !found {
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: item.Client.Name,
+				Sha256Hash: hash,
+			}
+		}
+		k.parsedOperation.Request.Query = body
 	}
 
 	err = k.ComputeOperationSha256()
