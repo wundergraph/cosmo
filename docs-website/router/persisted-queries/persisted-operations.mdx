@@ -192,6 +192,25 @@ persisted_operations:
 
 You can load persisted operations from your own S3-compatible storage instead of the Cosmo CDN. First, [define a storage provider](/router/storage-providers), then reference it in your persisted operations configuration.
 
+The PQL manifest can also be loaded from a local directory with a `file_system` provider. The router reads `<path>/<object_prefix>/<file_name>` and polls the file for new revisions.
+
+```yaml
+storage_providers:
+  file_system:
+    - id: local
+      path: ./persisted-operations
+
+persisted_operations:
+  storage:
+    provider_id: local
+    object_prefix: operations
+  manifest:
+    enabled: true
+    file_name: manifest.json
+```
+
+Change the `revision` field when you update the file. The router ignores a file with the same revision.
+
 ## Disallowing non-persisted Operations
 
 If you're going all in on Security, you'd want to only allow Persisted Operations in your Production Environment.

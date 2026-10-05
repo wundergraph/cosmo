@@ -1610,10 +1610,6 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 
 	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 
-	if registry.IsFileSystem(storageProviderID) {
-		return nil, fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
-	}
-
 	objectPath := path.Join(r.persistedOperationsConfig.Storage.ObjectPrefix, r.persistedOperationsConfig.Manifest.FileName)
 
 	// With no storage provider, fetch the manifest from the Cosmo CDN.
@@ -1628,6 +1624,8 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		loader, err = operationmanifest.NewCDNLoader(provider.URL, r.graphApiToken, "operations/manifest.json", r.logger)
 	} else if provider, ok := registry.S3(storageProviderID); ok {
 		loader, err = operationmanifest.NewS3Loader(provider, objectPath)
+	} else if provider, ok := registry.FileSystem(storageProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, objectPath)
 	} else {
 		return nil, fmt.Errorf("unknown storage provider id %q for PQL manifest", storageProviderID)
 	}

@@ -51,10 +51,10 @@ storage_providers:
 ## Behavior
 
 - The manifest is loaded at startup and **polled periodically** for updates. The router sends `If-None-Match` with the ETag of the last response, so S3 answers an unchanged manifest with `304 Not Modified`. The router also compares the `revision` field to detect content changes.
-- The manifest is **authoritative** for hash-only lookups against S3/CDN storage -- when enabled, individual per-request operation fetches from S3 are disabled. If an operation hash is not in the manifest, the request is rejected immediately. Exceptions: if **APQ** (Automatic Persisted Queries) is enabled, unmatched hashes are delegated to the APQ layer instead of being rejected; if `log_unknown` is enabled and the request includes a full query body, the unknown operation is logged and execution continues (hash-only requests without a body are still rejected).
+- The manifest is **authoritative** for hash-only lookups -- when enabled, individual per-request operation fetches from the storage provider are disabled. If an operation hash is not in the manifest, the request is rejected immediately. Exceptions: if **APQ** (Automatic Persisted Queries) is enabled, unmatched hashes are delegated to the APQ layer instead of being rejected; if `log_unknown` is enabled and the request includes a full query body, the unknown operation is logged and execution continues (hash-only requests without a body are still rejected).
 - When warmup is enabled, new or changed operations are planned in the background after each manifest update, so that the first request for each operation is served from the plan cache.
 - **Compression is supported**: if `manifest.file_name` ends with `.gz` or `.zst` (e.g. `manifest.json.gz`), the router decompresses the content transparently (gzip or Zstandard).
-- **Filesystem providers are not supported** for the manifest. Only S3 and CDN providers can be used.
+- The manifest can also be loaded from a CDN or file system provider. Decompression works only with S3.
 
 ## Manifest Schema
 
