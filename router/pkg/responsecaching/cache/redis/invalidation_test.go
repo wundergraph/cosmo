@@ -44,9 +44,9 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.True(t, mr.Exists(entryKey("v1:c")))
 	})
 
-	t.Run("the tag keeps naming the entries it took until they expire", func(t *testing.T) {
+	t.Run("the tag marks the entries it took and sweeps them a minute later", func(t *testing.T) {
 		// Removing a member while its entry might be SET again would leave
-		// that entry unreachable; the prune drops it once past its score.
+		// that entry unreachable; a mark keeps it findable until it's safe.
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
@@ -56,15 +56,14 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 
 		_, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
-		members, err := mr.ZMembers(tagIndexKey("declared:accounts:users"))
+		score, err := mr.ZScore(tagIndexKey("declared:accounts:users"), "v1:a")
 		require.NoError(t, err)
-		require.Equal(t, []string{"v1:a"}, members)
+		require.Negative(t, score, "marked")
 
-		advance(c, time.Minute+tagIndexPruneGrace+time.Second)
-		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:b", "declared:accounts:users")}))
-		members, err = mr.ZMembers(tagIndexKey("declared:accounts:users"))
+		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		_, err = c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
-		require.Equal(t, []string{"v1:b"}, members, "pruned by the next write")
+		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "swept")
 	})
 
 	t.Run("a tag naming nothing is not an error", func(t *testing.T) {

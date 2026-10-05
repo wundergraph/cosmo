@@ -31,6 +31,9 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
+	// writeGrace bounds a write's first round trip for its entry to be
+	// extended; a walk's sweep relies on it. Only tests change it.
+	writeGrace time.Duration
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -46,6 +49,13 @@ const tagIndexPruneGrace = 5 * time.Minute
 // writeLease is how long a tagged entry lives until its index is confirmed.
 // It bounds how long a writer dying mid-write can leave an entry unreachable.
 const writeLease = 10 * time.Second
+
+// defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
+const defaultWriteGrace = 5 * time.Second
+
+// markSkewMargin is how far apart router clocks may be: a mark is swept once
+// older than writeGrace plus this, by the sweeping router's clock.
+const markSkewMargin = time.Minute
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -64,7 +74,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
+	return &RedisCache{client: client, prefix: prefix, now: time.Now, writeGrace: defaultWriteGrace}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -139,10 +149,11 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // SetMany implements caching.SetMany.
 //
 // One round trip indexes and SETs tagged entries with a short lease; a second
-// extends them, once indexed, to expire at their member's score. Walks never
-// remove members and the prune only drops those past their score, so an
-// extended entry is always reachable. A writer dying in between leaves at
-// most a lease-long entry.
+// extends them to expire at their member's score, only if indexed and the
+// first was answered within writeGrace. A walk marks members rather than
+// removing them, and sweeps a mark only once older than writeGrace plus the
+// clock margin, deleting its entry first: any extended entry it raced has
+// landed by then. A writer dying in between leaves at most a lease-long entry.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -178,7 +189,8 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 			tagKey := c.tagKey(tag)
 			if _, done := pruned[tagKey]; !done {
 				pruned[tagKey] = struct{}{}
-				pipe.ZRemRangeByScore(ctx, tagKey, "-inf", pruneBefore)
+				// From 0: marks are negative, the sweep's to remove.
+				pipe.ZRemRangeByScore(ctx, tagKey, "0", pruneBefore)
 			}
 		}
 	}
@@ -191,7 +203,10 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), leased(item))
 	}
 
+	// Monotonic: only the duration matters.
+	sent := time.Now()
 	_, err := pipe.Exec(ctx)
+	inGrace := time.Since(sent) < c.writeGrace
 
 	// An error no command carries means nothing was sent.
 	if err != nil && !anyErr(index) && !slices.ContainsFunc(sets, func(cmd *redis.StatusCmd) bool { return cmd.Err() != nil }) {
@@ -203,7 +218,8 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 
 	// An entry whose index isn't confirmed is removed, not left unreachable.
 	// A confirmed one expires at its member's score, so it never outlives the
-	// member; PEXPIREAT is a no-op on one a walk has deleted since.
+	// member; PEXPIREAT is a no-op on one a walk has deleted since. Past the
+	// grace it keeps its lease.
 	unindexed := make(map[int]struct{})
 	var queued bool
 	pipe = c.client.Pipeline()
@@ -216,7 +232,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 			unindexed[i] = struct{}{}
 			pipe.Unlink(finishCtx, c.entryKey(item.Key))
 			queued = true
-		case leased(item) < item.TTL && sets[i].Err() == nil:
+		case leased(item) < item.TTL && sets[i].Err() == nil && inGrace:
 			pipe.PExpireAt(finishCtx, c.entryKey(item.Key), expiresAt(now, item.TTL))
 			queued = true
 		}

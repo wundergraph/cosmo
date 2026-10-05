@@ -238,7 +238,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
-	t.Run("a walk leaves members in the index", func(t *testing.T) {
+	t.Run("a walk marks members rather than removing them", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
@@ -248,7 +248,149 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey(item.Key)))
-		require.Equal(t, []string{item.Key}, zmembers(t, mr, tagIndexKey(tag)), "dropped by the prune once past its score")
+		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+		require.Negative(t, score)
+		require.InDelta(t, -float64(c.now().UnixMilli()), score, float64(time.Second.Milliseconds()), "marked with the walk's time")
+	})
+
+	t.Run("a mark younger than the sweep age stays, but its entry is still deleted", func(t *testing.T) {
+		// A late save landing after the first walk is taken by the next one.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
+		advance(c, 30*time.Second)
+		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "too young to sweep")
+	})
+
+	t.Run("an old mark is swept after its entry is deleted again", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
+		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
+	})
+
+	t.Run("a sweep keeps a mark whose entry it failed to delete", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
+		advance(broken, defaultWriteGrace+markSkewMargin+time.Second)
+		_, err = broken.InvalidateByTags(t.Context(), []string{tag})
+		require.ErrorIs(t, err, errInjected)
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
+	})
+
+	t.Run("a sweep leaves a member a write unmarked", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		interposer := &afterStep{names: []string{"unlink"}}
+		walker := newTestRedisCacheOn(t, mr, interposer)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		// Between the sweep's delete and its removal, the key is cached again.
+		advance(walker, defaultWriteGrace+markSkewMargin+time.Second)
+		advance(writer, defaultWriteGrace+markSkewMargin+time.Second)
+		interposer.fn = func() {
+			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{item}))
+		}
+		_, err = walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		interposer.requireFired(t)
+
+		requireNoDangling(t, mr, item)
+		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+		require.Positive(t, score, "unmarked by the write, so not swept")
+	})
+
+	t.Run("a late save after the mark is deleted before its mark is swept", func(t *testing.T) {
+		// The walk lands between the writer's index write and its SET; the SET
+		// is extended. A sweep a minute on deletes it before removing the name.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+		writer := newTestRedisCacheOn(t, mr, split)
+		walker := newTestRedisCacheOn(t, mr)
+		split.fn = func() {
+			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+			require.NoError(t, err)
+		}
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		split.requireFired(t)
+		require.True(t, mr.Exists(entryKey(item.Key)), "the late save")
+		requireNoDangling(t, mr, item)
+
+		advance(walker, defaultWriteGrace+markSkewMargin+time.Second)
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
+	})
+
+	t.Run("a first round trip slower than the grace isn't extended", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr, &slowPipeline{pipeline: 0, delay: 30 * time.Millisecond})
+		writer.writeGrace = 10 * time.Millisecond
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "keeps its lease")
+		requireNoDangling(t, mr, item)
+	})
+
+	t.Run("the prune leaves marks alone", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{tag}}
+		advance(c, time.Hour)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{other}))
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "marks are the sweep's to remove")
+	})
+
+	t.Run("a list of only marks is still swept", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		_, err = c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(tagIndexKey(tag)))
 	})
 
 	t.Run("an extended entry expires at its member's score", func(t *testing.T) {
@@ -555,6 +697,31 @@ func (s *splitPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redi
 			err = errors.Join(err, next(ctx, cmds[cut:]))
 		}
 		return err
+	}
+}
+
+// slowPipeline delays pipeline number pipeline before sending it.
+type slowPipeline struct {
+	pipeline int
+	delay    time.Duration
+	mu       sync.Mutex
+	seen     int
+}
+
+func (s *slowPipeline) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (s *slowPipeline) ProcessHook(next redis.ProcessHook) redis.ProcessHook { return next }
+
+func (s *slowPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		s.mu.Lock()
+		n := s.seen
+		s.seen++
+		s.mu.Unlock()
+		if n == s.pipeline {
+			time.Sleep(s.delay)
+		}
+		return next(ctx, cmds)
 	}
 }
 
