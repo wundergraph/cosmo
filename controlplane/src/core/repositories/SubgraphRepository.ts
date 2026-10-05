@@ -1159,7 +1159,13 @@ export class SubgraphRepository {
     published?: boolean;
     includeSubgraphs?: string[];
     rbac?: RBACEvaluator;
+    promiseCache?: Map<string, Promise<SubgraphDTO[]>>;
   }): Promise<SubgraphDTO[]> {
+    const cachedPromise = data.promiseCache?.get(data.federatedGraphTargetId);
+    if (cachedPromise) {
+      return cachedPromise;
+    }
+
     const target = await this.db.query.targets.findFirst({
       where: and(
         eq(schema.targets.id, data.federatedGraphTargetId),
@@ -1189,12 +1195,18 @@ export class SubgraphRepository {
       return [];
     }
 
-    return this.getSubgraphsMatching({
+    const matchingSubgraphs = this.getSubgraphsMatching({
       conditions,
       published: data.published,
       enforceFederatedGraph: true,
       includeSubgraphs: data.includeSubgraphs,
     });
+
+    if (data.promiseCache) {
+      data.promiseCache.set(target.federatedGraph.id, matchingSubgraphs);
+    }
+
+    return matchingSubgraphs;
   }
 
   public async getSubgraphsByNames(names: string[], namespaceId: string): Promise<SubgraphDTO[]> {

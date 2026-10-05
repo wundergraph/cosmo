@@ -508,21 +508,6 @@ export class CompositionService {
     return result;
   }
 
-  private listSubgraphsByFederatedGraph(
-    subgraphRepo: SubgraphRepository,
-    federatedGraphTargetId: string,
-    cache?: Map<string, Promise<SubgraphDTO[]>>,
-  ): Promise<SubgraphDTO[]> {
-    const cached = cache?.get(federatedGraphTargetId);
-    if (cached) {
-      return cached;
-    }
-
-    const subgraphs = subgraphRepo.listByFederatedGraph({ federatedGraphTargetId, published: true });
-    cache?.set(federatedGraphTargetId, subgraphs);
-    return subgraphs;
-  }
-
   /**
    * Compose (no writes) a single affected base federated graph. Mirrors the composition step of
    * {@link composeAndDeployFederatedGraph}; the deploy is handled separately by {@link persistAndUploadBatch}.
@@ -532,11 +517,12 @@ export class CompositionService {
     compositionOptions: CompositionOptions,
     subgraphsByGraphTargetId?: Map<string, Promise<SubgraphDTO[]>>,
   ): Promise<FederatedGraphAndCompositionResults> {
-    const subgraphs = await this.listSubgraphsByFederatedGraph(
-      new SubgraphRepository(this.logger, this.db, this.organizationId),
-      federatedGraph.targetId,
-      subgraphsByGraphTargetId,
-    );
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const subgraphs = await subgraphRepo.listByFederatedGraph({
+      federatedGraphTargetId: federatedGraph.targetId,
+      published: true,
+      promiseCache: subgraphsByGraphTargetId,
+    });
 
     let tagOptionsByContractName: SerializedContractTagOptions[];
     if (federatedGraph.contract) {
@@ -596,11 +582,11 @@ export class CompositionService {
     return Promise.all(
       federatedGraphs.map((graph) =>
         limit(async () => {
-          const subgraphs = await this.listSubgraphsByFederatedGraph(
-            subgraphRepo,
-            graph.targetId,
-            subgraphsByGraphTargetId,
-          );
+          const subgraphs = await subgraphRepo.listByFederatedGraph({
+            federatedGraphTargetId: graph.targetId,
+            published: true,
+            promiseCache: subgraphsByGraphTargetId,
+          });
 
           const baseCompositionSubgraphs = subgraphs.map((s) => ({
             name: s.name,
