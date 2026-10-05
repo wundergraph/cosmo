@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zstd"
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/wundergraph/cosmo/router/internal/s3client"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -28,28 +28,7 @@ type S3Loader struct {
 }
 
 func NewS3Loader(provider config.S3StorageProvider, objectPath string) (*S3Loader, error) {
-	// ponytail: copy of the credentials chain in operationstorage/s3.NewClient.
-	// Share it when a third S3 client shows up.
-	providers := []credentials.Provider{
-		&credentials.Static{
-			Value: credentials.Value{
-				AccessKeyID:     provider.AccessKey,
-				SecretAccessKey: provider.SecretKey,
-				SignerType:      credentials.SignatureV4,
-			},
-		},
-		&credentials.IAM{
-			Client: &http.Client{
-				Transport: http.DefaultTransport,
-			},
-		},
-	}
-
-	client, err := minio.New(provider.Endpoint, &minio.Options{
-		Creds:  credentials.NewChainCredentials(providers),
-		Region: provider.Region,
-		Secure: provider.Secure,
-	})
+	client, err := s3client.New(provider.Endpoint, provider.AccessKey, provider.SecretKey, provider.Region, provider.Secure)
 	if err != nil {
 		return nil, err
 	}

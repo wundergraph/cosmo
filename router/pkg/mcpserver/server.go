@@ -896,7 +896,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			continue
 		}
 		// The SDK only logs tool names that are too long, so skip them here.
-		if s.manifestOperations != nil && len(toolName) > maxToolNameLength {
+		if len(toolName) > maxToolNameLength {
 			s.logger.Error("Skipping operation because its tool name is too long",
 				zap.String("operation", op.Name),
 				zap.Int("max_length", maxToolNameLength),

@@ -158,7 +158,7 @@ persisted_operations:
     enabled: true
 ```
 
-The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval` and `poll_jitter`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
+The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
 
 <Note>
   When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.

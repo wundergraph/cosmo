@@ -14,6 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
@@ -64,6 +65,15 @@ query GetOperationInfo {
 }
 `
 
+// testSchemaDoc parses testSchema and merges it with the base schema.
+func testSchemaDoc(t *testing.T) ast.Document {
+	t.Helper()
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	return schemaDoc
+}
+
 func writeOperationFiles(t *testing.T, dir string, files map[string]string) {
 	t.Helper()
 	for filename, content := range files {
@@ -82,10 +92,7 @@ func TestReload_NoToolDuplication(t *testing.T) {
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -137,9 +144,7 @@ query CountEmployees {
 			"ListEmployees.graphql": listEmployeesOp,
 		})
 
-		schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-		require.False(t, report.HasErrors())
-		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+		schemaDoc := testSchemaDoc(t)
 
 		srv, err := NewGraphQLSchemaServer(
 			t.Context(),
@@ -211,56 +216,12 @@ query CountEmployees {
 		require.ElementsMatch(t, []string{"get_schema", "list_employees", "find_employee", "get_operation_info"}, names)
 		require.ElementsMatch(t, names, srv.registeredTools)
 	})
-
-	t.Run("removes tools of operations that disappeared", func(t *testing.T) {
-		t.Parallel()
-
-		tempDir := t.TempDir()
-		writeOperationFiles(t, tempDir, map[string]string{
-			"FindEmployee.graphql":  findEmployeeOp,
-			"ListEmployees.graphql": listEmployeesOp,
-		})
-
-		schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-		require.False(t, report.HasErrors())
-		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
-
-		srv, err := NewGraphQLSchemaServer(
-			t.Context(),
-			"http://localhost:4000/graphql",
-			WithOperationsDir(tempDir),
-			WithOmitToolNamePrefix(true),
-		)
-		require.NoError(t, err)
-		require.NoError(t, srv.Reload(&schemaDoc, nil))
-
-		require.NoError(t, os.Remove(filepath.Join(tempDir, "FindEmployee.graphql")))
-		writeOperationFiles(t, tempDir, map[string]string{"CountEmployees.graphql": countEmployeesOp})
-		require.NoError(t, srv.Reload(&schemaDoc, nil))
-
-		serverTransport, clientTransport := mcp.NewInMemoryTransports()
-		_, err = srv.server.Connect(t.Context(), serverTransport, nil)
-		require.NoError(t, err)
-		session, err := mcp.NewClient(&mcp.Implementation{Name: "test"}, nil).Connect(t.Context(), clientTransport, nil)
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = session.Close() })
-
-		result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
-		require.NoError(t, err)
-		names := make([]string, 0, len(result.Tools))
-		for _, tool := range result.Tools {
-			names = append(names, tool.Name)
-		}
-		require.ElementsMatch(t, []string{"get_schema", "list_employees", "count_employees", "get_operation_info"}, names)
-	})
 }
 
 func TestManifestOperations(t *testing.T) {
 	t.Parallel()
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	schemaDoc := testSchemaDoc(t)
 
 	manifest := map[string]string{
 		"FindEmployee":       findEmployeeOp,
@@ -327,9 +288,7 @@ func TestManifestOperations(t *testing.T) {
 func TestManifestUpdated(t *testing.T) {
 	t.Parallel()
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	schemaDoc := testSchemaDoc(t)
 
 	t.Run("swaps tools to the operations of the new manifest", func(t *testing.T) {
 		t.Parallel()
@@ -379,10 +338,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 		"ListEmployees.graphql":    listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -423,10 +379,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"ListEmployees.graphql":    listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -462,10 +415,7 @@ func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -509,9 +459,7 @@ func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),

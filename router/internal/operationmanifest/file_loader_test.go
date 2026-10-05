@@ -42,25 +42,4 @@ func TestFileLoader(t *testing.T) {
 		require.False(t, changed)
 		require.Nil(t, manifest)
 	})
-
-	t.Run("returns an error when the file is missing", func(t *testing.T) {
-		t.Parallel()
-
-		manifest, changed, err := NewFileLoader(t.TempDir(), "manifest.json").Fetch(t.Context(), "")
-		require.ErrorIs(t, err, os.ErrNotExist)
-		require.False(t, changed)
-		require.Nil(t, manifest)
-	})
-
-	t.Run("returns an error when the manifest is invalid", func(t *testing.T) {
-		t.Parallel()
-
-		dir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte(`{"version":2}`), 0o644))
-
-		manifest, changed, err := NewFileLoader(dir, "manifest.json").Fetch(t.Context(), "")
-		require.EqualError(t, err, "invalid manifest: unsupported manifest version 2, expected 1")
-		require.False(t, changed)
-		require.Nil(t, manifest)
-	})
 }

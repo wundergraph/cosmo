@@ -2382,28 +2382,6 @@ persisted_operations:
 		require.Equal(t, []string{"persisted_operations", "manifest", "poll_interval"}, js.Causes[0].InstanceLocation)
 		require.Equal(t, "at '/persisted_operations/manifest/poll_interval': duration must be greater or equal than 10s", js.Causes[0].Error())
 	})
-
-	t.Run("poll_jitter below minimum rejected", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-graph:
-  token: "token"
-
-persisted_operations:
-  manifest:
-    enabled: true
-    poll_jitter: 500ms
-`)
-		_, err := LoadConfig([]string{f})
-
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, []string{"persisted_operations", "manifest", "poll_jitter"}, js.Causes[0].InstanceLocation)
-		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
-	})
 }
 
 func TestMCPServerConfig(t *testing.T) {

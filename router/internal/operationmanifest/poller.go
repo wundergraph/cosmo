@@ -2,7 +2,6 @@ package operationmanifest
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	"go.uber.org/zap"
@@ -16,15 +15,11 @@ type Loader interface {
 type Poller struct {
 	loader       Loader
 	pollInterval time.Duration
-	pollJitter   time.Duration
 	logger       *zap.Logger
 	store        *Store
 }
 
-func NewPoller(loader Loader, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
-	if pollJitter <= 0 {
-		pollJitter = 5 * time.Second
-	}
+func NewPoller(loader Loader, store *Store, pollInterval time.Duration, logger *zap.Logger) *Poller {
 	if pollInterval <= 0 {
 		pollInterval = 10 * time.Second
 	}
@@ -35,7 +30,6 @@ func NewPoller(loader Loader, store *Store, pollInterval, pollJitter time.Durati
 		loader:       loader,
 		store:        store,
 		pollInterval: pollInterval,
-		pollJitter:   pollJitter,
 		logger:       logger,
 	}
 }
@@ -55,17 +49,14 @@ func (p *Poller) FetchInitial(ctx context.Context) error {
 }
 
 // Poll runs a background goroutine loop that periodically fetches the manifest.
-// It sleeps for pollInterval + random jitter, fetches, and if changed updates the store.
+// It sleeps for pollInterval, fetches, and if changed updates the store.
 // It exits when ctx is cancelled.
 func (p *Poller) Poll(ctx context.Context) {
 	for {
-		jitter := time.Duration(rand.Int63n(int64(p.pollJitter + 1)))
-		sleepDuration := p.pollInterval + jitter
-
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(sleepDuration):
+		case <-time.After(p.pollInterval):
 		}
 
 		currentRevision := p.store.Revision()
