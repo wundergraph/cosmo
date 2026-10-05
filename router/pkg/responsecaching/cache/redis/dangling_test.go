@@ -240,6 +240,65 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Equal(t, 1, removed)
 	})
 
+	t.Run("a writer dying before re-indexing leaves at most a lease-long entry", func(t *testing.T) {
+		// A walk lands between the writer's index write and its SET, then the
+		// writer dies: nothing after its first pipeline reaches redis.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+		writer := newTestRedisCacheOn(t, mr, &failCommands{pipelines: []int{1, 2}}, split)
+		walker := newTestRedisCacheOn(t, mr)
+
+		split.fn = func() {
+			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+			require.NoError(t, err)
+		}
+		_ = writer.SetMany(t.Context(), []enginecache.Item{item})
+		split.requireFired(t)
+
+		require.True(t, mr.Exists(entryKey(item.Key)), "unreachable for now")
+		require.Positive(t, mr.TTL(entryKey(item.Key)))
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "but only for the lease")
+
+		mr.FastForward(writeLease)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+	})
+
+	t.Run("a confirmed write gets its full TTL", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		require.Equal(t, item.TTL, mr.TTL(entryKey(item.Key)))
+	})
+
+	t.Run("an item living no longer than the lease skips it", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		recorder := &recordCommands{}
+		writer := newTestRedisCacheOn(t, mr, recorder)
+		short := item
+		short.TTL = writeLease / 2
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{short}))
+		require.Equal(t, short.TTL, mr.TTL(entryKey(item.Key)))
+		for _, cmd := range recorder.commands() {
+			require.NotEqual(t, "pexpire", cmd.name)
+		}
+	})
+
+	t.Run("a failed lease extension leaves an indexed entry that expires early", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "pexpire"})
+
+		err := writer.SetMany(t.Context(), []enginecache.Item{item})
+		require.ErrorIs(t, err, errInjected)
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+		requireNoDangling(t, mr, item)
+	})
+
 	t.Run("a failed index write leaves no unindexed entry", func(t *testing.T) {
 		// E: in a cluster the tag and entry keys sit on different nodes, so
 		// one can fail while the other lands.
@@ -416,8 +475,9 @@ func (s *splitPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redi
 	}
 }
 
-// failCommands fails every command named name without sending it, in the
-// listed pipelines (all when empty), the way a node that is down answers.
+// failCommands fails every command named name (every command when empty)
+// without sending it, in the listed pipelines (all when empty), the way a
+// node that is down answers.
 type failCommands struct {
 	name      string
 	pipelines []int
@@ -425,11 +485,15 @@ type failCommands struct {
 	seen      int
 }
 
+func (f *failCommands) matches(cmd redis.Cmder) bool {
+	return f.name == "" || cmd.Name() == f.name
+}
+
 func (f *failCommands) DialHook(next redis.DialHook) redis.DialHook { return next }
 
 func (f *failCommands) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	return func(ctx context.Context, cmd redis.Cmder) error {
-		if cmd.Name() == f.name && f.pipelines == nil {
+		if f.matches(cmd) && f.pipelines == nil {
 			cmd.SetErr(errInjected)
 			return errInjected
 		}
@@ -450,7 +514,7 @@ func (f *failCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 		send := make([]redis.Cmder, 0, len(cmds))
 		var failed bool
 		for _, cmd := range cmds {
-			if cmd.Name() == f.name {
+			if f.matches(cmd) {
 				cmd.SetErr(errInjected)
 				failed = true
 				continue

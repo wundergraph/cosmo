@@ -42,6 +42,10 @@ const (
 
 const tagIndexPruneGrace = 5 * time.Minute
 
+// writeLease is how long a tagged entry lives until its index is confirmed.
+// It bounds how long a writer dying mid-write can leave an entry unreachable.
+const writeLease = 10 * time.Second
+
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
 
@@ -136,6 +140,8 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // Index, SET, then index again once the SET is answered. A walk removes a
 // member before its entry, so an entry it misses was SET after its UNLINK and
 // the second index write lands after its ZREM: no entry is left unindexed.
+// Tagged entries are SET with a short lease and extended to their TTL once
+// re-indexed, so a writer dying in between leaves at most a lease-long one.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -180,7 +186,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// two orders still agreeing.
 	sets := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
-		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), item.TTL)
+		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), leased(item))
 	}
 
 	// First-pass index errors are repaired by the second pass.
@@ -217,17 +223,25 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		}
 		return sentNothing
 	}
+	// Confirmed entries get their full TTL back; PEXPIRE is a no-op on one
+	// a walk has deleted since.
 	unindexed := make(map[int]struct{})
+	var queued bool
 	pipe = c.client.Pipeline()
 	for _, i := range tagged {
-		if unconfirmed(i) {
+		switch {
+		case unconfirmed(i):
 			unindexed[i] = struct{}{}
 			pipe.Unlink(finishCtx, c.entryKey(items[i].Key))
+			queued = true
+		case leased(items[i]) < items[i].TTL && sets[i].Err() == nil:
+			pipe.PExpire(finishCtx, c.entryKey(items[i].Key), items[i].TTL)
+			queued = true
 		}
 	}
-	if len(unindexed) > 0 {
-		if _, unlinkErr := pipe.Exec(finishCtx); unlinkErr != nil {
-			err = errors.Join(err, fmt.Errorf("redis adapter: entries left unindexed: %w", unlinkErr))
+	if queued {
+		if _, finishErr := pipe.Exec(finishCtx); finishErr != nil {
+			err = errors.Join(err, fmt.Errorf("redis adapter: finishing write: %w", finishErr))
 		}
 	}
 
@@ -250,6 +264,15 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	}
 
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
+}
+
+// leased is the TTL item is first SET with: the write lease for tagged items
+// that outlive it, else its own.
+func leased(item caching.Item) time.Duration {
+	if len(item.Tags) == 0 {
+		return item.TTL
+	}
+	return min(item.TTL, writeLease)
 }
 
 // anyErr reports whether any queued command carries an error.
