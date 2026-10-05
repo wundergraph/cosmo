@@ -2039,6 +2039,14 @@ func (e *concSafeErrorJoiner) ErrOrNil() error {
 	return errors.Join(e.errs...)
 }
 
+// StartDraining makes the router's HTTP server answer every response with "Connection: close".
+// It is a no-op when the HTTP server is not running.
+func (r *Router) StartDraining() {
+	if r.httpServer != nil {
+		r.httpServer.StartDraining()
+	}
+}
+
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) error {
