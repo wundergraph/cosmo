@@ -28,7 +28,7 @@ func TestPoller_FetchInitial(t *testing.T) {
 	f := newTestFetcher(server.URL)
 	l := zap.NewNop()
 	s := NewStore(l)
-	poller := NewPoller(f, s, 10*time.Second, 1*time.Second, zap.NewNop())
+	poller := NewPoller(f, s, 10*time.Second, zap.NewNop())
 
 	err := poller.FetchInitial(context.Background())
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestPoller_FetchInitialError(t *testing.T) {
 
 	f := newTestFetcher(server.URL)
 	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 10*time.Second, 1*time.Second, zap.NewNop())
+	poller := NewPoller(f, s, 10*time.Second, zap.NewNop())
 
 	err := poller.FetchInitial(context.Background())
 	require.Error(t, err)
@@ -89,7 +89,7 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 
 	f := newTestFetcher(server.URL)
 	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
 
 	// Initial fetch
 	err := poller.FetchInitial(context.Background())
@@ -139,7 +139,7 @@ func TestPoller_PollStopsOnContextCancel(t *testing.T) {
 
 	f := newTestFetcher(server.URL)
 	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go poller.Poll(ctx)
@@ -179,7 +179,7 @@ func TestPoller_PollContinuesOnFetchError(t *testing.T) {
 
 	f := newTestFetcher(server.URL)
 	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
