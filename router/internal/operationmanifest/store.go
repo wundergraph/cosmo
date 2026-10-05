@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"encoding/json"
@@ -63,7 +63,7 @@ func (s *Store) Load(manifest *Manifest) {
 	select {
 	case s.updateCh <- struct{}{}:
 	default:
-		s.logger.Debug("Skipping PQL manifest update signal, worker is busy")
+		s.logger.Debug("Skipping manifest update signal, worker is busy")
 	}
 }
 

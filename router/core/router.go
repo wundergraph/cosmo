@@ -39,12 +39,12 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -1490,7 +1490,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 // buildPersistedOpsClient creates the storage client for persisted operations.
 // It also returns a manifestReader function when the underlying storage supports
 // manifest fetching (S3 or CDN), which is passed to buildManifestStore.
-func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, pqlmanifest.ManifestReaderFunc, error) {
+func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, operationmanifest.ManifestReaderFunc, error) {
 	if r.persistedOperationsConfig.Disabled {
 		return nil, nil, nil
 	}
@@ -1608,7 +1608,7 @@ func (r *Router) buildAPQStore(registry *ProviderRegistry) (apq.Store, error) {
 // buildManifestStore sets up the PQL manifest store and its background poller.
 // manifestReader is obtained from buildPersistedOpsClient and may be nil when the
 // configured storage provider does not support manifest fetching (e.g. filesystem).
-func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry, manifestReader pqlmanifest.ManifestReaderFunc) (*pqlmanifest.Store, error) {
+func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry, manifestReader operationmanifest.ManifestReaderFunc) (*operationmanifest.Store, error) {
 	if !r.persistedOperationsConfig.Manifest.Enabled || r.persistedOperationsConfig.Disabled {
 		return nil, nil
 	}
@@ -1629,10 +1629,10 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 			objectPath = path.Join(objectPrefix, manifestFileName)
 		}
 
-		storageFetcher := pqlmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
+		storageFetcher := operationmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
 
-		pqlStore := pqlmanifest.NewStore(r.logger)
-		poller := pqlmanifest.NewPoller(
+		pqlStore := operationmanifest.NewStore(r.logger)
+		poller := operationmanifest.NewPoller(
 			storageFetcher,
 			pqlStore,
 			r.persistedOperationsConfig.Manifest.PollInterval,
@@ -1663,13 +1663,13 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		return nil, errors.New("graph token is required for PQL manifest")
 	}
 
-	fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+	fetcher, err := operationmanifest.NewCDNLoader(r.cdnConfig.URL, r.graphApiToken, "operations/manifest.json", r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
 	}
 
-	pqlStore := pqlmanifest.NewStore(r.logger)
-	poller := pqlmanifest.NewPoller(
+	pqlStore := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
 		fetcher,
 		pqlStore,
 		r.persistedOperationsConfig.Manifest.PollInterval,

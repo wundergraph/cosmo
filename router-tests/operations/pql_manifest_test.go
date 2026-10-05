@@ -969,7 +969,7 @@ func TestPQLManifest(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "PQL manifest not found on CDN")
+			require.ErrorContains(t, err, "manifest not found on CDN")
 		})
 	})
 }

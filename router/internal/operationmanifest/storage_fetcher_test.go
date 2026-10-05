@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"context"

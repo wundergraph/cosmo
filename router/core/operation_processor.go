@@ -25,8 +25,8 @@ import (
 
 	fastjson "github.com/wundergraph/astjson"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -217,7 +217,7 @@ type OperationKit struct {
 	// background, and custom IDs can keep their ID while their body changes, so
 	// every persisted operation lookup, cache key and variable metadata check in
 	// this request must read this snapshot instead of the live store.
-	persistedOperationManifest *pqlmanifest.Manifest
+	persistedOperationManifest *operationmanifest.Manifest
 }
 
 type GraphQLRequest struct {

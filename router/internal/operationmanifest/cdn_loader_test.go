@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"context"
@@ -13,11 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func newTestFetcher(serverURL string) *Fetcher {
+func newTestFetcher(serverURL string) *CDNLoader {
 	u, _ := url.Parse(serverURL)
-	return &Fetcher{
+	return &CDNLoader{
 		cdnURL:              u,
 		authenticationToken: "test-token",
+		objectPath:          "operations/manifest.json",
 		federatedGraphID:    "graph-id",
 		organizationID:      "org-id",
 		httpClient:          &http.Client{},
@@ -104,7 +105,7 @@ func TestFetch_NoIfNoneMatchOnFirstRequest(t *testing.T) {
 	f := newTestFetcher(server.URL)
 
 	// Wrap to capture headers
-	var origHandler = server.Config.Handler
+	var origHandler http.Handler = server.Config.Handler
 	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedHeaders = r.Header
 		origHandler.ServeHTTP(w, r)

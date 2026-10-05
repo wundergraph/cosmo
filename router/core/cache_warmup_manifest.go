@@ -4,18 +4,18 @@ import (
 	"context"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
 var _ CacheWarmupSource = (*ManifestWarmupSource)(nil)
 
 type ManifestWarmupSource struct {
-	store *pqlmanifest.Store
+	store *operationmanifest.Store
 }
 
-func NewManifestWarmupSource(store *pqlmanifest.Store) *ManifestWarmupSource {
+func NewManifestWarmupSource(store *operationmanifest.Store) *ManifestWarmupSource {
 	return &ManifestWarmupSource{
 		store: store,
 	}

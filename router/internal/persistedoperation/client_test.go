@@ -9,14 +9,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"go.uber.org/zap"
 )
 
 func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
 	t.Parallel()
 
-	store := pqlmanifest.NewStore(zap.NewNop())
+	store := operationmanifest.NewStore(zap.NewNop())
 	t.Cleanup(store.Close)
 	client, err := NewClient(&Options{PQLStore: store, CacheSize: 1024 * 1024})
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
 	client.cache.Cache.Wait()
 	beforeLoad := client.ManifestSnapshot()
 	require.Nil(t, beforeLoad)
-	store.Load(&pqlmanifest.Manifest{
+	store.Load(&operationmanifest.Manifest{
 		Version:    1,
 		Revision:   "one",
 		Operations: map[string]string{"operation": "manifest body"},
@@ -37,7 +37,7 @@ func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "manifest body", string(body))
 
-	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "two", Operations: map[string]string{}})
+	store.Load(&operationmanifest.Manifest{Version: 1, Revision: "two", Operations: map[string]string{}})
 	_, _, err = client.PersistedOperation(t.Context(), "web", "operation")
 	var notFound *PersistentOperationNotFoundError
 	assert.ErrorAs(t, err, &notFound)
@@ -116,12 +116,12 @@ func TestManifestOperationsWithMismatchedSHA256IDs(t *testing.T) {
 	hashID := hex.EncodeToString(sum[:])
 	mismatchedID := strings.Repeat("a", 64)
 
-	store := pqlmanifest.NewStore(zap.NewNop())
+	store := operationmanifest.NewStore(zap.NewNop())
 	t.Cleanup(store.Close)
 	client, err := NewClient(&Options{PQLStore: store})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
-	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{
+	store.Load(&operationmanifest.Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{
 		hashID:                  body,
 		"get_employees":         body,
 		strings.ToUpper(hashID): body, // Not lowercase hex, so it's a custom ID.
