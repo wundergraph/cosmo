@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -30,6 +31,10 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
+	// writeGrace bounds a write's first round trip for its entry to be
+	// extended, and how long a walk keeps moved members pending. Same value on
+	// every router; only tests change it.
+	writeGrace time.Duration
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -45,6 +50,9 @@ const tagIndexPruneGrace = 5 * time.Minute
 // writeLease is how long a tagged entry lives until its index is confirmed.
 // It bounds how long a writer dying mid-write can leave an entry unreachable.
 const writeLease = 10 * time.Second
+
+// defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
+const defaultWriteGrace = 5 * time.Second
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -63,7 +71,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
+	return &RedisCache{client: client, prefix: prefix, now: time.Now, writeGrace: defaultWriteGrace}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -137,11 +145,11 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 
 // SetMany implements caching.SetMany.
 //
-// Index, SET, then index again once the SET is answered. A walk removes a
-// member before its entry, so an entry it misses was SET after its UNLINK and
-// the second index write lands after its ZREM: no entry is left unindexed.
-// Tagged entries are SET with a short lease and extended to their TTL once
-// re-indexed, so a writer dying in between leaves at most a lease-long one.
+// One round trip indexes and SETs tagged entries with a short lease; a second
+// extends them to their TTL, only if the first was answered within
+// writeGrace. A walk keeps moved members pending for at least writeGrace and
+// UNLINKs before clearing them, so any extended entry it raced was SET before
+// that UNLINK. A writer dying in between leaves at most a lease-long entry.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -170,8 +178,9 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 
 	pipe := c.client.Pipeline()
 
-	for _, item := range items {
-		c.queueIndex(ctx, pipe, item, now)
+	index := make(map[int][]redis.Cmder)
+	for i, item := range items {
+		index[i] = c.queueIndex(ctx, pipe, item.Key, item.Tags, item.TTL, now)
 		for _, tag := range item.Tags {
 			tagKey := c.tagKey(tag)
 			if _, done := pruned[tagKey]; !done {
@@ -189,53 +198,54 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), leased(item))
 	}
 
-	// First-pass index errors are repaired by the second pass.
+	// Monotonic: only the duration matters.
+	sent := time.Now()
 	_, err := pipe.Exec(ctx)
+	inGrace := time.Since(sent) < c.writeGrace
+
+	// An error no command carries means nothing was sent.
+	if err != nil && !anyErr(index) && !slices.ContainsFunc(sets, func(cmd *redis.StatusCmd) bool { return cmd.Err() != nil }) {
+		return err
+	}
 
 	// Entries may be written now, so finish even if the caller gives up.
 	finishCtx := context.WithoutCancel(ctx)
 
-	// Every tagged item, SET answered or not: a lost reply may still have landed.
-	var tagged []int
-	pipe = c.client.Pipeline()
+	// Tags with no pending set fall back to re-indexing after the SET.
 	reindex := make(map[int][]redis.Cmder)
+	pipe = c.client.Pipeline()
+	for i, item := range items {
+		if fallback := c.fallbackTags(item.Tags); len(fallback) > 0 {
+			reindex[i] = c.queueIndex(finishCtx, pipe, item.Key, fallback, item.TTL, now)
+		}
+	}
+	if len(reindex) > 0 {
+		_, reindexErr := pipe.Exec(finishCtx)
+		err = errors.Join(err, reindexErr)
+		if reindexErr != nil && !anyErr(reindex) {
+			for i := range reindex {
+				reindex[i] = append(reindex[i], failedCmd(finishCtx, reindexErr))
+			}
+		}
+	}
+
+	// An entry whose index isn't confirmed is removed, not left unreachable.
+	// A confirmed one gets its full TTL; PEXPIRE is a no-op on one a walk has
+	// deleted since. Past the grace it keeps its lease.
+	unindexed := make(map[int]struct{})
+	var queued bool
+	pipe = c.client.Pipeline()
 	for i, item := range items {
 		if len(item.Tags) == 0 {
 			continue
 		}
-		tagged = append(tagged, i)
-		reindex[i] = c.queueIndex(finishCtx, pipe, item, now)
-	}
-	var reindexErr error
-	if len(tagged) > 0 {
-		_, reindexErr = pipe.Exec(finishCtx)
-		err = errors.Join(err, reindexErr)
-	}
-
-	// An entry whose index can't be confirmed is removed, not left unreachable.
-	// An error no command carries means nothing was sent.
-	sentNothing := reindexErr != nil && !anyErr(reindex)
-	unconfirmed := func(i int) bool {
-		for _, cmd := range reindex[i] {
-			if cmd.Err() != nil {
-				return true
-			}
-		}
-		return sentNothing
-	}
-	// Confirmed entries get their full TTL back; PEXPIRE is a no-op on one
-	// a walk has deleted since.
-	unindexed := make(map[int]struct{})
-	var queued bool
-	pipe = c.client.Pipeline()
-	for _, i := range tagged {
 		switch {
-		case unconfirmed(i):
+		case anyCmdErr(index[i]) || anyCmdErr(reindex[i]):
 			unindexed[i] = struct{}{}
-			pipe.Unlink(finishCtx, c.entryKey(items[i].Key))
+			pipe.Unlink(finishCtx, c.entryKey(item.Key))
 			queued = true
-		case leased(items[i]) < items[i].TTL && sets[i].Err() == nil:
-			pipe.PExpire(finishCtx, c.entryKey(items[i].Key), items[i].TTL)
+		case leased(item) < item.TTL && sets[i].Err() == nil && inGrace:
+			pipe.PExpire(finishCtx, c.entryKey(item.Key), item.TTL)
 			queued = true
 		}
 	}
@@ -266,6 +276,28 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
 
+// fallbackTags are the tags whose pending key can't share their slot.
+func (c *RedisCache) fallbackTags(tags []string) []string {
+	var fallback []string
+	for _, tag := range tags {
+		if _, ok := c.pendingKey(tag); !ok {
+			fallback = append(fallback, tag)
+		}
+	}
+	return fallback
+}
+
+// failedCmd stands for commands an Exec never sent.
+func failedCmd(ctx context.Context, err error) redis.Cmder {
+	cmd := redis.NewStatusCmd(ctx)
+	cmd.SetErr(err)
+	return cmd
+}
+
+func anyCmdErr(cmds []redis.Cmder) bool {
+	return slices.ContainsFunc(cmds, func(cmd redis.Cmder) bool { return cmd.Err() != nil })
+}
+
 // leased is the TTL item is first SET with: the write lease for tagged items
 // that outlive it, else its own.
 func leased(item caching.Item) time.Duration {
@@ -287,17 +319,16 @@ func anyErr(cmds map[int][]redis.Cmder) bool {
 	return false
 }
 
-// queueIndex queues item's member and tag TTL updates for every tag it names.
-func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item, now time.Time) []redis.Cmder {
-	expireAt := now.Add(item.TTL)
-	member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
-	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
-	for _, tag := range item.Tags {
+// queueIndex queues key's member and tag TTL updates for each of tags.
+func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, key string, tags []string, ttl time.Duration, now time.Time) []redis.Cmder {
+	member := redis.Z{Score: float64(now.Add(ttl).UnixMilli()), Member: key}
+	cmds := make([]redis.Cmder, 0, len(tags)*3)
+	for _, tag := range tags {
 		tagKey := c.tagKey(tag)
 		cmds = append(cmds,
 			pipe.ZAdd(ctx, tagKey, member),
-			pipe.ExpireNX(ctx, tagKey, item.TTL),
-			pipe.ExpireGT(ctx, tagKey, item.TTL),
+			pipe.ExpireNX(ctx, tagKey, ttl),
+			pipe.ExpireGT(ctx, tagKey, ttl),
 		)
 	}
 	return cmds

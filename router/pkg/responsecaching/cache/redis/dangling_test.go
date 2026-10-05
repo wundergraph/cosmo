@@ -202,6 +202,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
+		writer.writeGrace = 20 * time.Millisecond
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 
@@ -217,7 +218,83 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey(item.Key)))
+
+		// Cleared only once pending longer than the grace.
+		time.Sleep(2 * writer.writeGrace)
+		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
 		require.False(t, mr.Exists(pending))
+	})
+
+	t.Run("a SET landing after the walk's UNLINK stays pending until a later drain deletes it", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+		writer := newTestRedisCacheOn(t, mr, split)
+		walker := newTestRedisCacheOn(t, mr)
+		walker.writeGrace = 20 * time.Millisecond
+
+		split.fn = func() {
+			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+			require.NoError(t, err)
+		}
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		split.requireFired(t)
+
+		pending, _ := pendingIndexKey(tag)
+		require.True(t, mr.Exists(entryKey(item.Key)))
+		require.Equal(t, item.TTL, mr.TTL(entryKey(item.Key)), "extended: first round trip was in grace")
+		require.Contains(t, zmembers(t, mr, pending), item.Key, "still reachable")
+
+		// A drain inside the grace deletes it but keeps the member.
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.Contains(t, zmembers(t, mr, pending), item.Key)
+
+		time.Sleep(2 * walker.writeGrace)
+		_, err = walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(pending))
+	})
+
+	t.Run("a slow first round trip skips the extension", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr, &slowPipeline{pipeline: 0, delay: 30 * time.Millisecond})
+		writer.writeGrace = 10 * time.Millisecond
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "keeps its lease")
+		requireNoDangling(t, mr, item)
+	})
+
+	t.Run("a tagged write takes two round trips", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		counter := &countPipelines{}
+		writer := newTestRedisCacheOn(t, mr, counter)
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		require.Equal(t, 2, counter.count())
+	})
+
+	t.Run("a fallback tag re-indexes after the SET", func(t *testing.T) {
+		t.Parallel()
+		odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
+		mr := miniredis.RunT(t)
+		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+		writer := newTestRedisCacheOn(t, mr, split)
+		walker := newTestRedisCacheOn(t, mr)
+
+		split.fn = func() {
+			_, err := walker.InvalidateByTags(context.Background(), odd.Tags)
+			require.NoError(t, err)
+		}
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{odd}))
+		split.requireFired(t)
+
+		requireNoDangling(t, mr, odd)
 	})
 
 	t.Run("a tag whose pending key can't share its slot falls back to restoring", func(t *testing.T) {
@@ -472,6 +549,56 @@ func (s *splitPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redi
 			err = errors.Join(err, next(ctx, cmds[cut:]))
 		}
 		return err
+	}
+}
+
+// slowPipeline delays pipeline number pipeline before sending it.
+type slowPipeline struct {
+	pipeline int
+	delay    time.Duration
+	mu       sync.Mutex
+	seen     int
+}
+
+func (s *slowPipeline) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (s *slowPipeline) ProcessHook(next redis.ProcessHook) redis.ProcessHook { return next }
+
+func (s *slowPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		s.mu.Lock()
+		n := s.seen
+		s.seen++
+		s.mu.Unlock()
+		if n == s.pipeline {
+			time.Sleep(s.delay)
+		}
+		return next(ctx, cmds)
+	}
+}
+
+// countPipelines counts round trips sent as pipelines.
+type countPipelines struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (c *countPipelines) count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.n
+}
+
+func (c *countPipelines) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (c *countPipelines) ProcessHook(next redis.ProcessHook) redis.ProcessHook { return next }
+
+func (c *countPipelines) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		c.mu.Lock()
+		c.n++
+		c.mu.Unlock()
+		return next(ctx, cmds)
 	}
 }
 

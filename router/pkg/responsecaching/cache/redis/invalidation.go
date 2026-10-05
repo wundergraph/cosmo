@@ -129,16 +129,18 @@ func hashTag(key string) string {
 }
 
 // moveToPending atomically moves members still in the index to the pending
-// set, keeping their scores. The pending set lives until its last member's
-// entry would have expired, plus the prune grace.
-// KEYS: index, pending. ARGV: grace ms, members.
+// set, scored with when they moved by this node's clock. The pending set lives
+// until its last member's entry would have expired, plus the prune grace.
+// KEYS: index, pending. ARGV: prune grace ms, members.
 var moveToPending = redis.NewScript(`
+local t = redis.call('TIME')
+local moved = t[1] * 1000 + math.floor(t[2] / 1000)
 local latest
 for i = 2, #ARGV do
   local score = redis.call('ZSCORE', KEYS[1], ARGV[i])
   if score then
     redis.call('ZREM', KEYS[1], ARGV[i])
-    redis.call('ZADD', KEYS[2], score, ARGV[i])
+    redis.call('ZADD', KEYS[2], moved, ARGV[i])
     score = tonumber(score)
     if not latest or score > latest then latest = score end
   end
@@ -151,11 +153,26 @@ end
 return 0
 `)
 
+// agedPending returns the members moved to the pending set more than the
+// write grace ago, by this node's clock.
+// KEYS: pending. ARGV: write grace ms, members.
+var agedPending = redis.NewScript(`
+local t = redis.call('TIME')
+local before = t[1] * 1000 + math.floor(t[2] / 1000) - tonumber(ARGV[1])
+local aged = {}
+for i = 2, #ARGV do
+  local moved = redis.call('ZSCORE', KEYS[1], ARGV[i])
+  if moved and tonumber(moved) < before then
+    aged[#aged + 1] = ARGV[i]
+  end
+end
+return aged
+`)
+
 // removeViaPending moves members out of the index into the pending set, then
-// deletes their entries. Out of the index first: a write SET after the UNLINK
-// re-indexes after its SET (see SetMany), so it lands after the move. Until
-// its UNLINK is answered a member stays pending, so a walk that fails or dies
-// here is finished by the next one.
+// deletes their entries. Members stay pending: a write that indexed before the
+// move may still SET after this UNLINK, and only a drain past writeGrace,
+// which UNLINKs again first, may clear them (see SetMany).
 func (c *RedisCache) removeViaPending(ctx context.Context, tagKey, pendingKey string, members []string) (int, error) {
 	args := make([]any, 0, len(members)+1)
 	args = append(args, tagIndexPruneGrace.Milliseconds())
@@ -165,10 +182,19 @@ func (c *RedisCache) removeViaPending(ctx context.Context, tagKey, pendingKey st
 	if err := moveToPending.Run(ctx, c.client, []string{tagKey, pendingKey}, args...).Err(); err != nil {
 		return 0, err
 	}
-	return c.unlinkPending(ctx, pendingKey, members)
+
+	cmds, err := c.unlink(ctx, members)
+	var removed int
+	for _, cmd := range cmds {
+		if cmd.Err() == nil && cmd.Val() == 1 {
+			removed++
+		}
+	}
+	return removed, err
 }
 
-// drainPending finishes deletes left in the pending set.
+// drainPending deletes the entries of every pending member, then clears the
+// members that had been pending longer than writeGrace before that UNLINK.
 func (c *RedisCache) drainPending(ctx context.Context, pendingKey string) (int, error) {
 	var removed int
 	var cursor uint64
@@ -182,7 +208,7 @@ func (c *RedisCache) drainPending(ctx context.Context, pendingKey string) (int, 
 			members = append(members, pairs[i])
 		}
 		if len(members) > 0 {
-			count, err := c.unlinkPending(ctx, pendingKey, members)
+			count, err := c.drainPage(ctx, pendingKey, members)
 			removed += count
 			if err != nil {
 				return removed, err
@@ -195,28 +221,43 @@ func (c *RedisCache) drainPending(ctx context.Context, pendingKey string) (int, 
 	}
 }
 
-// unlinkPending deletes members' entries, then clears from the pending set
-// only those whose UNLINK was answered.
-func (c *RedisCache) unlinkPending(ctx context.Context, pendingKey string, members []string) (int, error) {
-	cmds, unlinkErr := c.unlink(ctx, members)
+func (c *RedisCache) drainPage(ctx context.Context, pendingKey string, members []string) (int, error) {
+	// Aged before the UNLINK, so a late SET can't slip in after it.
+	args := make([]any, 0, len(members)+1)
+	args = append(args, c.writeGrace.Milliseconds())
+	for _, member := range members {
+		args = append(args, member)
+	}
+	aged, err := agedPending.Run(ctx, c.client, []string{pendingKey}, args...).StringSlice()
+	if err != nil {
+		return 0, err
+	}
 
+	cmds, unlinkErr := c.unlink(ctx, members)
+	answered := make(map[string]bool, len(members))
 	var removed int
-	done := make([]string, 0, len(members))
 	for i, cmd := range cmds {
 		if cmd.Err() != nil {
 			continue
 		}
-		done = append(done, members[i])
+		answered[members[i]] = true
 		if cmd.Val() == 1 {
 			removed++
 		}
 	}
 	// An error no command carries means nothing was sent.
-	if unlinkErr != nil && len(done) == len(members) {
+	if unlinkErr != nil && len(answered) == len(members) {
 		return removed, unlinkErr
 	}
-	if len(done) > 0 {
-		if err := c.client.ZRem(ctx, pendingKey, done).Err(); err != nil {
+
+	clear := make([]string, 0, len(aged))
+	for _, member := range aged {
+		if answered[member] {
+			clear = append(clear, member)
+		}
+	}
+	if len(clear) > 0 {
+		if err := c.client.ZRem(ctx, pendingKey, clear).Err(); err != nil {
 			return removed, errors.Join(unlinkErr, err)
 		}
 	}
