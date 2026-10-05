@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -33,8 +34,8 @@ func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
 }
 
 // newTestRedisCacheWithHook is newTestRedisCache with hooks installed on the
-// client in order, for the cases that have to bend a reply the server would
-// never send on its own.
+// client in order, for the cases that have to bend a reply the server would never send
+// on its own.
 func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
@@ -48,6 +49,10 @@ func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.H
 	t.Helper()
 
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	// Faithful ZSCAN paging unless the test brings its own pager.
+	if !slices.ContainsFunc(hooks, func(h redis.Hook) bool { _, ok := h.(*pagedZScan); return ok }) {
+		hooks = append([]redis.Hook{&pagedZScan{size: invalidationPageSize}}, hooks...)
+	}
 	for _, hook := range hooks {
 		client.AddHook(hook)
 	}

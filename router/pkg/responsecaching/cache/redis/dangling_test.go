@@ -36,11 +36,20 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 			advance(writer, 2*time.Minute)
 			advance(walker, 2*time.Minute)
 		},
+		"entry still landing": func(t *testing.T, mr *miniredis.Miniredis, writer, walker *RedisCache) {
+			expireAt := float64(writer.now().Add(time.Minute).UnixMilli())
+			for _, tag := range item.Tags {
+				_, err := mr.ZAdd(tagIndexKey(tag), expireAt, item.Key)
+				require.NoError(t, err)
+			}
+		},
+		"nothing": func(t *testing.T, mr *miniredis.Miniredis, writer, walker *RedisCache) {},
 	}
 
-	// A and B: the same key is written again between the walk's UNLINK and its
-	// ZREM, which then drops the member of the entry just written.
-	for _, step := range []string{"unlink"} {
+	// A and B: the same key is written again between two steps of the walk.
+	// Rank paging UNLINKed then ZREMed, dropping the member of an entry just
+	// written. A step the code lacks is skipped.
+	for _, step := range []string{"zrevrange", "zscan", "zrem", "unlink"} {
 		for name, setup := range setups {
 			t.Run(fmt.Sprintf("write after walk's %s, %s", step, name), func(t *testing.T) {
 				t.Parallel()
@@ -64,8 +73,8 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 	// C: a walk lands between the writer's steps, from a router whose clock
 	// runs ahead of the writer's by more than the TTL.
-	for _, skew := range []time.Duration{2 * time.Minute} {
-		for _, at := range []splitAt{{pipeline: 0, before: "set"}} {
+	for _, skew := range []time.Duration{0, 2 * time.Minute} {
+		for _, at := range []splitAt{{pipeline: 0, before: "set"}, {pipeline: 1}} {
 			t.Run(fmt.Sprintf("walk inside write at pipeline %d before %q, skew %s", at.pipeline, at.before, skew), func(t *testing.T) {
 				t.Parallel()
 				mr := miniredis.RunT(t)
@@ -103,6 +112,15 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 				require.NoError(t, err)
 			}
 		},
+		// Rank paging re-read pages here; a full page of them ended it early.
+		"overtaken by a page of shorter TTL writes": func(t *testing.T, mr *miniredis.Miniredis, key string, read []string) {
+			score, err := mr.ZScore(key, read[0])
+			require.NoError(t, err)
+			for i := range invalidationPageSize {
+				_, err := mr.ZAdd(key, score-1, fmt.Sprintf("v0:new:%d", i))
+				require.NoError(t, err)
+			}
+		},
 	}
 	for name, change := range midWalk {
 		t.Run("no unread entry is missed when members already read are "+name, func(t *testing.T) {
@@ -132,7 +150,9 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 			interposer.fn = func() { change(t, mr, key, read) }
 
-			removed, err := c.InvalidateByTags(t.Context(), []string{tag})
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			removed, err := c.InvalidateByTags(ctx, []string{tag})
 			require.NoError(t, err)
 			interposer.requireFired(t)
 			require.Equal(t, count, removed)
@@ -156,6 +176,22 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
 		require.True(t, mr.Exists(entryKey(item.Key)))
+
+		requireNoDangling(t, mr, item)
+	})
+
+	t.Run("a walk cancelled after its ZREM still finishes", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		interposer := &afterStep{names: []string{"zrem"}}
+		walker := newTestRedisCacheOn(t, mr, interposer)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+
+		ctx, cancel := context.WithCancel(t.Context())
+		interposer.fn = cancel
+		_, _ = walker.InvalidateByTags(ctx, []string{tag})
+		interposer.requireFired(t)
 
 		requireNoDangling(t, mr, item)
 	})
