@@ -129,3 +129,30 @@ func TestDecompressAndRead(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+// TestPersistedOperationIDRoundTrip checks the object key after the S3 SDK's
+// URL encoding, including percent sequences that must remain literal.
+func TestPersistedOperationIDRoundTrip(t *testing.T) {
+	t.Parallel()
+	for _, id := range []string{"get_employee-1.2.3", " !\"#$%&'()*+,-.:;<=>?@[]^_{}|~ ", "%2F", "%252F", ".", "..", strings.Repeat(".", 250)} {
+		t.Run(id, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/operations/prefix/"+id+".json", r.URL.Path)
+				assert.Equal(t, "", r.URL.RawQuery)
+				w.Header().Set("Last-Modified", "Mon, 05 Oct 2026 12:00:00 GMT")
+				assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{"version": 1, "body": "query { a }"}))
+			}))
+			defer server.Close()
+			provider := sdktrace.NewTracerProvider()
+			defer provider.Shutdown(t.Context())
+			client, err := NewClient(strings.TrimPrefix(server.URL, "http://"), &Options{
+				AccessKeyID: "access-key", SecretAccessKey: "secret-key",
+				Region: "us-east-1", BucketName: "operations", ObjectPathPrefix: "prefix", TraceProvider: provider,
+			})
+			require.NoError(t, err)
+			body, err := client.PersistedOperation(t.Context(), "web", id)
+			require.NoError(t, err)
+			assert.Equal(t, "query { a }", string(body))
+		})
+	}
+}

@@ -431,7 +431,7 @@ func (o *OperationKit) validatePersistedOperationID(pq *GraphQLRequestExtensions
 	}
 	for _, c := range []byte(pq.Sha256Hash) {
 		if !isCustomPersistedOperationIDChar(c) {
-			return &httpGraphqlError{message: "persistedQuery id may only contain [A-Za-z0-9_-]", statusCode: http.StatusBadRequest}
+			return &httpGraphqlError{message: "persistedQuery id must contain printable ASCII characters excluding forward slash and backslash", statusCode: http.StatusBadRequest}
 		}
 	}
 	return nil
@@ -1671,7 +1671,9 @@ func appendLengthPrefixed(dst []byte, s string) []byte {
 }
 
 func isCustomPersistedOperationIDChar(c byte) bool {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-'
+	// IDs become <id>.json filenames. Exclude separators without normalizing
+	// otherwise valid printable ASCII, including spaces and periods.
+	return c >= 0x20 && c <= 0x7e && c != '/' && c != '\\'
 }
 
 type parseKitOptions struct {

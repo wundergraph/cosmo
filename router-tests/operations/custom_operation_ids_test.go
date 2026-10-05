@@ -31,7 +31,7 @@ func TestCustomOperationIDs(t *testing.T) {
 		"mobile": mobileQuery,
 	}
 	// Lowercase 64-hex IDs must be the SHA256 of their body; uppercase ones are custom IDs.
-	ids := []string{"get_employee_v1", strings.Repeat("A", 64)}
+	ids := []string{"get_employee_v1", strings.Repeat("A", 64), "get_employee-1.2.3", " employee %#?+& ", "%2F", ".", ".."}
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, path, _ := strings.Cut(r.URL.Path, "/operations/")
 		client, id, _ := strings.Cut(path, "/")
@@ -171,7 +171,7 @@ func TestCustomOperationIDManifestWarmup(t *testing.T) {
 func TestCustomOperationIDManifestReload(t *testing.T) {
 	t.Parallel()
 
-	const operationID = "employee_v1"
+	const operationID = " employee-1.2.3 %2F?# "
 	var manifest atomic.Value
 	setManifest := func(revision, query string) {
 		operations := map[string]string{}
