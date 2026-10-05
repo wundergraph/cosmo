@@ -221,11 +221,17 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// A confirmed one expires at its member's score, so it never outlives the
 	// member; PEXPIREAT is a no-op on one a walk has deleted since. Past the
 	// grace it keeps its lease.
+	// A key's last occurrence is the one whose SET won: only it decides.
+	last := make(map[string]int, len(items))
+	for i, item := range items {
+		last[item.Key] = i
+	}
+
 	unindexed := make(map[int]struct{})
 	var queued bool
 	pipe = c.client.Pipeline()
 	for i, item := range items {
-		if len(item.Tags) == 0 {
+		if len(item.Tags) == 0 || last[item.Key] != i {
 			continue
 		}
 		switch {
@@ -250,6 +256,9 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// rather than claiming a key that might not be there.
 	var stored []string
 	for i, cmd := range sets {
+		if last[items[i].Key] != i {
+			continue
+		}
 		if _, bad := unindexed[i]; cmd.Err() == nil && !bad {
 			stored = append(stored, items[i].Key)
 		}
