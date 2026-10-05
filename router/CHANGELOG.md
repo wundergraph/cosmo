@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.355.0](https://github.com/wundergraph/cosmo/compare/router@0.354.0...router@0.355.0) (2026-10-02)
+
+### Features
+
+* **router:** honor Cache-Control request directives: no-cache, no-store ([#3267](https://github.com/wundergraph/cosmo/issues/3267)) ([eedc06c](https://github.com/wundergraph/cosmo/commit/eedc06cadd87d03193b1bc06da19fa066bd07c4b)) (@ysmolski)
+* **router:** support custom persisted operation IDs ([#3282](https://github.com/wundergraph/cosmo/issues/3282)) ([8998414](https://github.com/wundergraph/cosmo/commit/89984146174eaff55ddba1ffe575e70948e0091b)) (@fiam)
+
+### Bug Fixes
+
+* **router:** return not-found for missing S3 persisted operations ([#3306](https://github.com/wundergraph/cosmo/issues/3306)) ([01953b5](https://github.com/wundergraph/cosmo/commit/01953b5608ee514edc42666c90fffa679b78042d)) (@fiam)
+
 ## [0.354.0](https://github.com/wundergraph/cosmo/compare/router@0.353.0...router@0.354.0) (2026-09-28)
 
 ### Features
