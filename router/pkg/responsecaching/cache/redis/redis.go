@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -32,59 +31,27 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
-	// writeGrace bounds a write's first round trip for its entry to be
-	// extended, and how long a walk keeps moved members pending. Same value on
-	// every router; only tests change it.
-	writeGrace time.Duration
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
 
 const (
-	entryNamespace   = "e:"
-	tagNamespace     = "t:"
-	pendingNamespace = "p:"
+	entryNamespace = "e:"
+	tagNamespace   = "t:"
 )
 
-// tagEscaper removes braces from tags so they can't form a hash tag, and
-// escapes % so distinct tags stay distinct.
-var tagEscaper = strings.NewReplacer("%", "%25", "{", "%7B", "}", "%7D")
-
+// tagIndexPruneGrace is how long past its score a member stays in a tag index.
 const tagIndexPruneGrace = 5 * time.Minute
 
 // writeLease is how long a tagged entry lives until its index is confirmed.
 // It bounds how long a writer dying mid-write can leave an entry unreachable.
 const writeLease = 10 * time.Second
 
-// defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
-const defaultWriteGrace = 5 * time.Second
-
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
 
-// tagKey is where the set of entries carrying tag lives. The tag is escaped,
-// so only the prefix can put a hash tag in it.
-func (c *RedisCache) tagKey(tag string) string {
-	return c.prefix + tagNamespace + tagEscaper.Replace(tag)
-}
-
-// pendingKey is where a tag's owed deletes wait. Wrapping the tag key in a
-// hash tag puts both in one cluster slot, so one script can move members
-// between them.
-func (c *RedisCache) pendingKey(tag string) string {
-	return c.prefix + pendingNamespace + "{" + c.tagKey(tag) + "}"
-}
-
-// hashTag is the part of key Redis Cluster hashes: the first non-empty {…},
-// else the whole key.
-func hashTag(key string) string {
-	if s := strings.IndexByte(key, '{'); s >= 0 {
-		if e := strings.IndexByte(key[s+1:], '}'); e > 0 {
-			return key[s+1 : s+1+e]
-		}
-	}
-	return key
-}
+// tagKey is where the set of entries carrying tag lives.
+func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace + tag }
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
 // prefix. On success the cache takes ownership of client and closes it in
@@ -93,16 +60,11 @@ func hashTag(key string) string {
 // rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
 // rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
-	// Unbalanced braces in the prefix would split a tag's keys across slots.
-	if probe := (&RedisCache{prefix: prefix}); hashTag(probe.tagKey("tag")) != hashTag(probe.pendingKey("tag")) {
-		return nil, fmt.Errorf("redis key prefix %q has unbalanced braces: a tag's index and pending set can't share a cluster slot", prefix)
-	}
-
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now, writeGrace: defaultWriteGrace}, nil
+	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -177,10 +139,10 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // SetMany implements caching.SetMany.
 //
 // One round trip indexes and SETs tagged entries with a short lease; a second
-// extends them to their TTL, only if the first was answered within
-// writeGrace. A walk keeps moved members pending for at least writeGrace and
-// UNLINKs before clearing them, so any extended entry it raced was SET before
-// that UNLINK. A writer dying in between leaves at most a lease-long entry.
+// extends them, once indexed, to expire at their member's score. Walks never
+// remove members and the prune only drops those past their score, so an
+// extended entry is always reachable. A writer dying in between leaves at
+// most a lease-long entry.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -229,10 +191,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), leased(item))
 	}
 
-	// Monotonic: only the duration matters.
-	sent := time.Now()
 	_, err := pipe.Exec(ctx)
-	inGrace := time.Since(sent) < c.writeGrace
 
 	// An error no command carries means nothing was sent.
 	if err != nil && !anyErr(index) && !slices.ContainsFunc(sets, func(cmd *redis.StatusCmd) bool { return cmd.Err() != nil }) {
@@ -243,8 +202,8 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	finishCtx := context.WithoutCancel(ctx)
 
 	// An entry whose index isn't confirmed is removed, not left unreachable.
-	// A confirmed one gets its full TTL; PEXPIRE is a no-op on one a walk has
-	// deleted since. Past the grace it keeps its lease.
+	// A confirmed one expires at its member's score, so it never outlives the
+	// member; PEXPIREAT is a no-op on one a walk has deleted since.
 	unindexed := make(map[int]struct{})
 	var queued bool
 	pipe = c.client.Pipeline()
@@ -257,8 +216,8 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 			unindexed[i] = struct{}{}
 			pipe.Unlink(finishCtx, c.entryKey(item.Key))
 			queued = true
-		case leased(item) < item.TTL && sets[i].Err() == nil && inGrace:
-			pipe.PExpire(finishCtx, c.entryKey(item.Key), item.TTL)
+		case leased(item) < item.TTL && sets[i].Err() == nil:
+			pipe.PExpireAt(finishCtx, c.entryKey(item.Key), expiresAt(now, item.TTL))
 			queued = true
 		}
 	}
@@ -314,14 +273,22 @@ func anyErr(cmds map[int][]redis.Cmder) bool {
 	return false
 }
 
-// queueIndex queues key's member and tag TTL updates for each of tags.
+// expiresAt is when an entry written at now with ttl expires, and its
+// member's score, to the millisecond.
+func expiresAt(now time.Time, ttl time.Duration) time.Time {
+	return time.UnixMilli(now.Add(ttl).UnixMilli())
+}
+
+// queueIndex queues key's member and tag TTL updates for each of tags. GT:
+// a write landing out of order never lowers a member's score, which would let
+// the prune drop it while a newer entry is alive.
 func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, key string, tags []string, ttl time.Duration, now time.Time) []redis.Cmder {
-	member := redis.Z{Score: float64(now.Add(ttl).UnixMilli()), Member: key}
+	member := redis.Z{Score: float64(expiresAt(now, ttl).UnixMilli()), Member: key}
 	cmds := make([]redis.Cmder, 0, len(tags)*3)
 	for _, tag := range tags {
 		tagKey := c.tagKey(tag)
 		cmds = append(cmds,
-			pipe.ZAdd(ctx, tagKey, member),
+			pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: []redis.Z{member}}),
 			pipe.ExpireNX(ctx, tagKey, ttl),
 			pipe.ExpireGT(ctx, tagKey, ttl),
 		)

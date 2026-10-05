@@ -217,6 +217,11 @@ func TestRedisCache(t *testing.T) {
 
 			results, err := c.GetMany(ctx, []string{"a", "a+v"})
 			require.NoError(t, err)
+			// Tagged: expires at its member's score, to the millisecond.
+			record := results["a"]
+			require.InDelta(t, time.Hour, record.TTL, float64(time.Second))
+			record.TTL = time.Hour
+			results["a"] = record
 			require.Equal(t, map[string]enginecache.Item{
 				"a":   {Key: "a", TTL: time.Hour, Vary: vary},
 				"a+v": {Key: "a+v", Value: []byte("value"), TTL: time.Hour},

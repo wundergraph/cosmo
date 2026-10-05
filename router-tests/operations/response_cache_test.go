@@ -1028,7 +1028,9 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 9, "the other nine are untouched")
-			require.NotContains(t, tags, "declared:mood:employee-1", "the tag goes with the entry")
+			// The tag keeps naming the deleted entry until it expires; a later
+			// invalidation of it finds nothing to delete.
+			require.Len(t, tags["declared:mood:employee-1"], 1)
 		})
 	})
 
@@ -1294,12 +1296,11 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 	return []core.Option{responseCacheStorageProviders(), core.WithResponseCache(responseCacheConfig(t, ttl))}
 }
 
-// The segments the redis adapter keeps entries, tag indexes and pending
-// deletes in, under the configured key prefix.
+// The segments the redis adapter keeps entries and tag indexes in, under the
+// configured key prefix.
 const (
-	responseCacheEntryNamespace   = "e:"
-	responseCacheTagNamespace     = "t:"
-	responseCachePendingNamespace = "p:"
+	responseCacheEntryNamespace = "e:"
+	responseCacheTagNamespace   = "t:"
 )
 
 // responseCacheStored reads back what a test wrote, split into the entries
@@ -1327,11 +1328,6 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 			seen[key] = struct{}{}
 
 			name := strings.TrimPrefix(key, prefix)
-
-			// Owed deletes, not entries.
-			if strings.HasPrefix(name, responseCachePendingNamespace) {
-				continue
-			}
 
 			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
 				members, err := client.ZRange(ctx, key, 0, -1).Result()

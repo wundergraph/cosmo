@@ -44,19 +44,27 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.True(t, mr.Exists(entryKey("v1:c")))
 	})
 
-	t.Run("the tag itself goes with the entries it named", func(t *testing.T) {
+	t.Run("the tag keeps naming the entries it took until they expire", func(t *testing.T) {
+		// Removing a member while its entry might be SET again would leave
+		// that entry unreachable; the prune drops it once past its score.
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			item("v1:a", "declared:accounts:users"),
 		}))
-		require.True(t, mr.Exists(tagIndexKey("declared:accounts:users")))
 
 		_, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
+		members, err := mr.ZMembers(tagIndexKey("declared:accounts:users"))
+		require.NoError(t, err)
+		require.Equal(t, []string{"v1:a"}, members)
 
-		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")))
+		advance(c, time.Minute+tagIndexPruneGrace+time.Second)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:b", "declared:accounts:users")}))
+		members, err = mr.ZMembers(tagIndexKey("declared:accounts:users"))
+		require.NoError(t, err)
+		require.Equal(t, []string{"v1:b"}, members, "pruned by the next write")
 	})
 
 	t.Run("a tag naming nothing is not an error", func(t *testing.T) {
@@ -104,11 +112,9 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"v1:a"}, members, "still named by the tag that did not take it")
 
-		// Entry already gone: the member goes, nothing counted.
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Zero(t, removed, "counted from what redis removed, and the entry was already gone")
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
 	t.Run("an entry gone on its own TTL is not counted as removed", func(t *testing.T) {
@@ -124,11 +130,9 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
 		require.Zero(t, removed)
-		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "expired member is dropped with nothing to wait for")
 	})
 
-	t.Run("a member whose entry has not landed yet is re-indexed when it does", func(t *testing.T) {
-		// The walk drops the member; the write re-indexes after its SET.
+	t.Run("a member whose entry has not landed yet is still named when it does", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
@@ -139,7 +143,6 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Zero(t, removed)
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 
 		// The entry lands.
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
@@ -151,7 +154,6 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey("v1:a")))
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
 	t.Run("missing entries do not stop the walk reaching later pages", func(t *testing.T) {
@@ -173,8 +175,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Equal(t, count/2, removed)
-		require.Equal(t, 4, pager.pages(), "one for the empty pending set, three for the index")
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
+		require.Equal(t, 3, pager.pages())
 		for i := range count {
 			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))
 		}
@@ -200,7 +201,6 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		for i := range count {
 			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))
 		}
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
 	t.Run("a tag naming exactly one page is not walked twice", func(t *testing.T) {
@@ -216,7 +216,9 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Equal(t, invalidationPageSize, removed)
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
+		for i := range invalidationPageSize {
+			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))
+		}
 	})
 
 	t.Run("an entry written during invalidation is left for the next one", func(t *testing.T) {
@@ -242,14 +244,13 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 
 		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
 		require.NoError(t, err)
-		require.Equal(t, []string{"v1:b"}, members, "still indexed, so the next call takes it")
+		require.Contains(t, members, "v1:b", "still indexed, so the next call takes it")
 
 		interposer.fn = nil
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey("v1:b")))
-		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
 	t.Run("no tags removes nothing", func(t *testing.T) {

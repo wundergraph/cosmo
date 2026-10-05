@@ -132,7 +132,8 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, mr.TTL(entryKey("v1:a")), mr.TTL(tagIndexKey("declared:users")))
+		// The entry expires at its member's score, to the millisecond.
+		require.InDelta(t, mr.TTL(tagIndexKey("declared:users")), mr.TTL(entryKey("v1:a")), float64(time.Second))
 	})
 
 	t.Run("a short lived entry does not shorten a tag holding longer lived ones", func(t *testing.T) {

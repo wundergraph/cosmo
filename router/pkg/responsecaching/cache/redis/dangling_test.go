@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -50,7 +49,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	// A and B: the same key is written again between two steps of the walk.
 	// Rank paging UNLINKed then ZREMed, dropping the member of an entry just
 	// written. A step the code lacks is skipped.
-	for _, step := range []string{"zrevrange", "zscan", "eval", "zrem", "unlink"} {
+	for _, step := range []string{"zrevrange", "zscan", "unlink"} {
 		for name, setup := range setups {
 			t.Run(fmt.Sprintf("write after walk's %s, %s", step, name), func(t *testing.T) {
 				t.Parallel()
@@ -181,11 +180,11 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		requireNoDangling(t, mr, item)
 	})
 
-	t.Run("a walk cancelled after removing members leaves them reachable", func(t *testing.T) {
+	t.Run("a walk cancelled midway leaves its entries reachable", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
-		interposer := &afterStep{names: []string{"zrem", "evalsha", "eval"}}
+		interposer := &afterStep{names: []string{"zscan"}}
 		walker := newTestRedisCacheOn(t, mr, interposer)
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 
@@ -197,41 +196,31 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		requireNoDangling(t, mr, item)
 	})
 
-	t.Run("a walk that fails after moving members is finished by the next one", func(t *testing.T) {
-		// Stands in for a router dying between the move and the UNLINK.
+	t.Run("a walk that fails is finished by a retry", func(t *testing.T) {
+		// Stands in for a router dying, or losing redis, mid-walk.
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
-		writer.writeGrace = 20 * time.Millisecond
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 
 		_, err := broken.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
-		pending := pendingIndexKey(tag)
-		require.Equal(t, []string{item.Key}, zmembers(t, mr, pending), "owed a delete")
-		require.Positive(t, mr.TTL(pending), "expires with its entries")
-		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
+		require.True(t, mr.Exists(entryKey(item.Key)))
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "still named")
 
 		removed, err := writer.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey(item.Key)))
-
-		// Cleared only once pending longer than the grace.
-		time.Sleep(2 * writer.writeGrace)
-		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.False(t, mr.Exists(pending))
 	})
 
-	t.Run("a SET landing after the walk's UNLINK stays pending until a later drain deletes it", func(t *testing.T) {
+	t.Run("a SET landing after the walk's UNLINK is still named for the next walk", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
 		writer := newTestRedisCacheOn(t, mr, split)
 		walker := newTestRedisCacheOn(t, mr)
-		walker.writeGrace = 20 * time.Millisecond
 
 		split.fn = func() {
 			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
@@ -240,32 +229,57 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 		split.requireFired(t)
 
-		pending := pendingIndexKey(tag)
 		require.True(t, mr.Exists(entryKey(item.Key)))
-		require.Equal(t, item.TTL, mr.TTL(entryKey(item.Key)), "extended: first round trip was in grace")
-		require.Contains(t, zmembers(t, mr, pending), item.Key, "still reachable")
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
 
-		// A drain inside the grace deletes it but keeps the member.
-		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		removed, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
+		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey(item.Key)))
-		require.Contains(t, zmembers(t, mr, pending), item.Key)
-
-		time.Sleep(2 * walker.writeGrace)
-		_, err = walker.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.False(t, mr.Exists(pending))
 	})
 
-	t.Run("a slow first round trip skips the extension", func(t *testing.T) {
+	t.Run("a walk leaves members in the index", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &slowPipeline{pipeline: 0, delay: 30 * time.Millisecond})
-		writer.writeGrace = 10 * time.Millisecond
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+
+		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.Equal(t, []string{item.Key}, zmembers(t, mr, tagIndexKey(tag)), "dropped by the prune once past its score")
+	})
+
+	t.Run("an extended entry expires at its member's score", func(t *testing.T) {
+		// Not TTL from the extension: then a write slow enough could outlive
+		// its member, which the prune drops once past its score.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		advance(writer, -30*time.Second)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "keeps its lease")
-		requireNoDangling(t, mr, item)
+		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+		require.InDelta(t, time.Until(time.UnixMilli(int64(score))), mr.TTL(entryKey(item.Key)), float64(time.Second))
+		require.Less(t, mr.TTL(entryKey(item.Key)), item.TTL-20*time.Second)
+	})
+
+	t.Run("an out of order write doesn't lower a member's score", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		longer := item
+		longer.TTL = time.Hour
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{longer}))
+		high, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+		require.Equal(t, high, score)
 	})
 
 	t.Run("a tagged write takes two round trips", func(t *testing.T) {
@@ -278,7 +292,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Equal(t, 2, counter.count())
 	})
 
-	// A tag with stray braces is escaped like any other.
+	// Braces in a tag mean nothing special.
 	odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
 
 	t.Run("a tag with stray braces survives a SET after the walk's UNLINK", func(t *testing.T) {
@@ -296,10 +310,9 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		split.requireFired(t)
 
 		requireNoDangling(t, mr, odd)
-		require.Contains(t, zmembers(t, mr, pendingIndexKey(odd.Tags[0])), odd.Key)
 	})
 
-	t.Run("a tag with stray braces is finished by the next walk after a failure", func(t *testing.T) {
+	t.Run("a tag with stray braces is finished by a retry", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
@@ -309,7 +322,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 		_, err := broken.InvalidateByTags(t.Context(), odd.Tags)
 		require.ErrorIs(t, err, errInjected)
-		require.Equal(t, []string{odd.Key}, zmembers(t, mr, pendingIndexKey(odd.Tags[0])), "owed a delete")
+		require.Contains(t, zmembers(t, mr, tagIndexKey(odd.Tags[0])), odd.Key, "still named")
 
 		removed, err := writer.InvalidateByTags(t.Context(), odd.Tags)
 		require.NoError(t, err)
@@ -347,7 +360,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		writer := newTestRedisCacheOn(t, mr)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		require.Equal(t, item.TTL, mr.TTL(entryKey(item.Key)))
+		require.InDelta(t, item.TTL, mr.TTL(entryKey(item.Key)), float64(time.Second))
 	})
 
 	t.Run("an item living no longer than the lease skips it", func(t *testing.T) {
@@ -361,14 +374,14 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{short}))
 		require.Equal(t, short.TTL, mr.TTL(entryKey(item.Key)))
 		for _, cmd := range recorder.commands() {
-			require.NotEqual(t, "pexpire", cmd.name)
+			require.NotEqual(t, "pexpireat", cmd.name)
 		}
 	})
 
 	t.Run("a failed lease extension leaves an indexed entry that expires early", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "pexpire"})
+		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "pexpireat"})
 
 		err := writer.SetMany(t.Context(), []enginecache.Item{item})
 		require.ErrorIs(t, err, errInjected)
@@ -405,8 +418,8 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	})
 }
 
-// requireNoDangling fails if item's entry is live but neither in a tag's index
-// nor owed a delete in its pending set.
+// requireNoDangling fails if item's entry is live but missing from one of its
+// tag indexes.
 func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.Item) {
 	t.Helper()
 
@@ -415,7 +428,6 @@ func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.I
 	}
 	for _, tag := range item.Tags {
 		members := zmembers(t, mr, tagIndexKey(tag))
-		members = append(members, zmembers(t, mr, pendingIndexKey(tag))...)
 		require.Contains(t, members, item.Key, "entry is live but tag %q can't reach it", tag)
 	}
 }
@@ -428,10 +440,6 @@ func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	members, err := mr.ZMembers(key)
 	require.NoError(t, err)
 	return members
-}
-
-func pendingIndexKey(tag string) string {
-	return (&RedisCache{prefix: testPrefix}).pendingKey(tag)
 }
 
 var errInjected = errors.New("injected failure")
@@ -550,31 +558,6 @@ func (s *splitPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redi
 	}
 }
 
-// slowPipeline delays pipeline number pipeline before sending it.
-type slowPipeline struct {
-	pipeline int
-	delay    time.Duration
-	mu       sync.Mutex
-	seen     int
-}
-
-func (s *slowPipeline) DialHook(next redis.DialHook) redis.DialHook { return next }
-
-func (s *slowPipeline) ProcessHook(next redis.ProcessHook) redis.ProcessHook { return next }
-
-func (s *slowPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
-	return func(ctx context.Context, cmds []redis.Cmder) error {
-		s.mu.Lock()
-		n := s.seen
-		s.seen++
-		s.mu.Unlock()
-		if n == s.pipeline {
-			time.Sleep(s.delay)
-		}
-		return next(ctx, cmds)
-	}
-}
-
 // countPipelines counts round trips sent as pipelines.
 type countPipelines struct {
 	mu sync.Mutex
@@ -655,65 +638,4 @@ func (f *failCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 		}
 		return err
 	}
-}
-
-// A pending key must hash to its tag key's cluster slot, or the script moving
-// members between them fails CROSSSLOT. Holds for every tag under any prefix
-// the constructor accepts.
-func TestPendingKeySharesTagKeySlot(t *testing.T) {
-	t.Parallel()
-
-	tags := []string{"subgraph:accounts", "type:accounts:User", `User:{"id":"1"}`, "{x}", "a{b", "odd}tag", "}", "{", "{}", "x{}y", "%7D", "odd%7Dtag"}
-	for _, prefix := range []string{"", "entity:", "{cache}:", "{c}x}:", "a{b}c{"} {
-		c := &RedisCache{prefix: prefix}
-		seen := map[string]string{}
-		for _, tag := range tags {
-			tagKey, pending := c.tagKey(tag), c.pendingKey(tag)
-			require.Equal(t, clusterSlot(tagKey), clusterSlot(pending), "prefix %q tag %q: %q vs %q", prefix, tag, tagKey, pending)
-			for _, key := range []string{tagKey, pending} {
-				other, dup := seen[key]
-				require.False(t, dup, "prefix %q: tags %q and %q share key %q", prefix, other, tag, key)
-				seen[key] = tag
-			}
-		}
-	}
-
-	c := &RedisCache{prefix: "entity:"}
-	require.Equal(t, "entity:t:subgraph:accounts", c.tagKey("subgraph:accounts"))
-	require.Equal(t, `entity:t:User:%7B"id":"1"%7D`, c.tagKey(`User:{"id":"1"}`))
-	require.Equal(t, "entity:p:{entity:t:odd%7Dtag}", c.pendingKey("odd}tag"))
-}
-
-func TestNewRedisCacheRejectsUnbalancedPrefix(t *testing.T) {
-	t.Parallel()
-	mr := miniredis.RunT(t)
-
-	for _, prefix := range []string{"a{b", "a}b", "x{}y:"} {
-		client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-		_, err := NewRedisCache(t.Context(), client, prefix)
-		require.ErrorContains(t, err, "unbalanced braces", "prefix %q", prefix)
-		require.NoError(t, client.Close())
-	}
-}
-
-// clusterSlot is Redis Cluster's key slot: CRC16 (XMODEM) of the hash tag, or
-// of the whole key without one, mod 16384.
-func clusterSlot(key string) int {
-	if s := strings.IndexByte(key, '{'); s >= 0 {
-		if e := strings.IndexByte(key[s+1:], '}'); e > 0 {
-			key = key[s+1 : s+1+e]
-		}
-	}
-	var crc uint16
-	for i := 0; i < len(key); i++ {
-		crc ^= uint16(key[i]) << 8
-		for range 8 {
-			if crc&0x8000 != 0 {
-				crc = crc<<1 ^ 0x1021
-			} else {
-				crc <<= 1
-			}
-		}
-	}
-	return int(crc) % 16384
 }
