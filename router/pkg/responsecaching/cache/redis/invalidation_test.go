@@ -44,7 +44,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.True(t, mr.Exists(entryKey("v1:c")))
 	})
 
-	t.Run("the tag marks the entries it took and sweeps them a minute later", func(t *testing.T) {
+	t.Run("the tag marks the entries it took and sweeps them seconds later", func(t *testing.T) {
 		// Removing a member while its entry might be SET again would leave
 		// that entry unreachable; a mark keeps it findable until it's safe.
 		t.Parallel()
@@ -60,7 +60,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Negative(t, score, "marked")
 
-		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		_, err = c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "swept")

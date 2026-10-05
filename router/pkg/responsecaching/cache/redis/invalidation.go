@@ -31,7 +31,8 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 // invalidateTag deletes the entries one tag names. Members aren't removed
 // outright: one whose entry might still be SET, by a write landing late or a
 // walk failing midway, would be left unreachable. Each is marked instead, its
-// score set to minus the mark time in ms, and swept by a later walk.
+// score set to minus the mark time in ms by the tag key's node clock, and
+// swept by a later walk.
 //
 // Scores: >= 0 an expiry, < 0 a mark. A write's ZADD GT beats any mark, so a
 // rewrite unmarks its member.
@@ -51,11 +52,15 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 	// only marks are left.
 	cutoff := topElement[0].Score
 
-	now := c.now()
-	mark := -float64(now.UnixMilli())
-	// Marks above this are older than writeGrace + the clock margin: any write
-	// extended past its lease has landed, so a delete then a sweep is safe.
-	sweepAbove := -float64(now.Add(-(c.writeGrace + markSkewMargin)).UnixMilli())
+	// The node's clock, as marks were stamped. Read before the walk, so marks
+	// only ever look younger than they are.
+	nodeMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
+	if err != nil {
+		return 0, err
+	}
+	// Marks above this are older than writeGrace + margin: any write extended
+	// past its lease has landed, so a delete then a sweep is safe.
+	sweepAbove := -float64(nodeMs - (c.writeGrace + sweepMargin).Milliseconds())
 
 	// Marks whose every entry was deleted this walk; only those are swept.
 	sweepable := make(map[float64]bool)
@@ -88,7 +93,7 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 		}
 
 		if len(live) > 0 {
-			count, err := c.unlinkAndMark(ctx, tagKey, live, mark)
+			count, err := c.unlinkAndMark(ctx, tagKey, live)
 			removed += count
 			if err != nil {
 				return removed, err
@@ -138,26 +143,44 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 	return removed, nil
 }
 
+// nodeTime returns the clock of the node holding KEYS[1], in ms.
+var nodeTime = redis.NewScript(`
+local t = redis.call('TIME')
+return t[1] * 1000 + math.floor(t[2] / 1000)
+`)
+
+// markMembers sets each ARGV member still in KEYS[1] to minus the node's
+// time in ms. Stamped at marking, not passed in, so a mark is never older
+// than it looks.
+var markMembers = redis.NewScript(`
+local t = redis.call('TIME')
+local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
+for i = 1, #ARGV do
+  redis.call('ZADD', KEYS[1], 'XX', mark, ARGV[i])
+end
+return 0
+`)
+
 // unlinkAndMark deletes members' entries, then marks those whose delete was
 // answered. XX: never re-adds a member swept meanwhile. A failed delete stays
 // unmarked, for a retry.
-func (c *RedisCache) unlinkAndMark(ctx context.Context, tagKey string, members []string, mark float64) (int, error) {
+func (c *RedisCache) unlinkAndMark(ctx context.Context, tagKey string, members []string) (int, error) {
 	cmds, unlinkErr := c.unlink(ctx, members)
 	ok := answered(cmds, unlinkErr)
 
 	var removed int
-	toMark := make([]redis.Z, 0, len(members))
+	toMark := make([]any, 0, len(members))
 	for i, cmd := range cmds {
 		if !ok[i] {
 			continue
 		}
-		toMark = append(toMark, redis.Z{Score: mark, Member: members[i]})
+		toMark = append(toMark, members[i])
 		if cmd.Val() == 1 {
 			removed++
 		}
 	}
 	if len(toMark) > 0 {
-		if err := c.client.ZAddArgs(ctx, tagKey, redis.ZAddArgs{XX: true, Members: toMark}).Err(); err != nil {
+		if err := markMembers.Run(ctx, c.client, []string{tagKey}, toMark...).Err(); err != nil {
 			return removed, errors.Join(unlinkErr, err)
 		}
 	}

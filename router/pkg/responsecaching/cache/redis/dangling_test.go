@@ -254,6 +254,22 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.InDelta(t, -float64(c.now().UnixMilli()), score, float64(time.Second.Milliseconds()), "marked with the walk's time")
 	})
 
+	t.Run("marks age by redis's clock, not the router's", func(t *testing.T) {
+		// A router clock far ahead can't make a mark look old.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		ahead := newTestRedisCacheOn(t, mr)
+		advance(ahead, 2*time.Hour)
+		_, err = ahead.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "not swept")
+	})
+
 	t.Run("a mark younger than the sweep age stays, but its entry is still deleted", func(t *testing.T) {
 		// A late save landing after the first walk is taken by the next one.
 		t.Parallel()
@@ -264,7 +280,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
-		advance(c, 30*time.Second)
+		mr.SetTime(time.Now().Add(defaultWriteGrace / 2))
 		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
@@ -281,7 +297,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
-		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
@@ -298,7 +314,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
-		advance(broken, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		_, err = broken.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
@@ -315,8 +331,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		// Between the sweep's delete and its removal, the key is cached again.
-		advance(walker, defaultWriteGrace+markSkewMargin+time.Second)
-		advance(writer, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		interposer.fn = func() {
 			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{item}))
 		}
@@ -347,7 +362,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.True(t, mr.Exists(entryKey(item.Key)), "the late save")
 		requireNoDangling(t, mr, item)
 
-		advance(walker, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(entryKey(item.Key)))
@@ -387,7 +402,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		_, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 
-		advance(c, defaultWriteGrace+markSkewMargin+time.Second)
+		ageMarks(mr)
 		_, err = c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(tagIndexKey(tag)))
@@ -558,6 +573,11 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		requireNoDangling(t, mr, item)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
+}
+
+// ageMarks moves redis's clock past the sweep age.
+func ageMarks(mr *miniredis.Miniredis) {
+	mr.SetTime(time.Now().Add(defaultWriteGrace + sweepMargin + time.Second))
 }
 
 // requireNoDangling fails if item's entry is live but missing from one of its

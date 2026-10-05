@@ -53,9 +53,10 @@ const writeLease = 10 * time.Second
 // defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
 const defaultWriteGrace = 5 * time.Second
 
-// markSkewMargin is how far apart router clocks may be: a mark is swept once
-// older than writeGrace plus this, by the sweeping router's clock.
-const markSkewMargin = time.Minute
+// sweepMargin is added to writeGrace before a mark is swept. Marks and their
+// ages use the tag key's node clock, so it only absorbs clock rate and a
+// failover's new clock.
+const sweepMargin = time.Second
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -151,9 +152,9 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // One round trip indexes and SETs tagged entries with a short lease; a second
 // extends them to expire at their member's score, only if indexed and the
 // first was answered within writeGrace. A walk marks members rather than
-// removing them, and sweeps a mark only once older than writeGrace plus the
-// clock margin, deleting its entry first: any extended entry it raced has
-// landed by then. A writer dying in between leaves at most a lease-long entry.
+// removing them, and sweeps a mark only once older than writeGrace plus a
+// margin by redis's clock, deleting its entry first: any extended entry it
+// raced has landed by then. A writer dying in between leaves at most a lease-long entry.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
