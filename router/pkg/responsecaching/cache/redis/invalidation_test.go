@@ -173,7 +173,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Equal(t, count/2, removed)
-		require.Equal(t, 3, pager.pages())
+		require.Equal(t, 4, pager.pages(), "one for the empty pending set, three for the index")
 		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 		for i := range count {
 			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))

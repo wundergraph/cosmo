@@ -35,8 +35,9 @@ type RedisCache struct {
 var _ caching.Cache = (*RedisCache)(nil)
 
 const (
-	entryNamespace = "e:"
-	tagNamespace   = "t:"
+	entryNamespace   = "e:"
+	tagNamespace     = "t:"
+	pendingNamespace = "p:"
 )
 
 const tagIndexPruneGrace = 5 * time.Minute
