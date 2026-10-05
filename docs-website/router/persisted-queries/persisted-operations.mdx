@@ -101,7 +101,7 @@ Additionally, check the [Using Persisted Operation with Federated GraphQL](/tuto
 
 ### Operation IDs
 
-With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 printable ASCII characters (space through tilde), excluding forward slash and backslash. Periods are supported, so IDs can include semantic versions such as `get_employee-1.2.3`. IDs are case-sensitive and are not trimmed or normalized. Control characters, DEL, and non-ASCII characters are rejected. For custom IDs, the router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
+With APQ disabled, `extensions.persistedQuery.sha256Hash` accepts published IDs containing 1–250 printable ASCII characters (space through tilde), excluding forward slash and backslash. IDs are case-sensitive and are not trimmed or normalized. Control characters, DEL, and non-ASCII characters are rejected. For custom IDs, the router executes the published operation, even when a query body is also supplied. Unknown IDs return `PersistedQueryNotFound`.
 
 Filesystem storage uses `<id>.json` filenames. The 250-character limit leaves room for the `.json` suffix within a 255-byte filename component. Some accepted IDs are incompatible with Windows filesystem storage, including reserved device names and characters such as `:`, `*`, and `?`.
 
