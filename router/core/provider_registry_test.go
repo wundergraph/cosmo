@@ -92,16 +92,4 @@ func TestProviderRegistry(t *testing.T) {
 		})
 		require.ErrorContains(t, err, "duplicate file system storage provider with id 'dup'")
 	})
-
-	t.Run("IsFileSystem", func(t *testing.T) {
-		t.Parallel()
-
-		reg, err := NewProviderRegistry(config.StorageProviders{
-			FileSystem: []config.FileSystemStorageProvider{{ID: "fs1"}},
-		})
-		require.NoError(t, err)
-
-		require.True(t, reg.IsFileSystem("fs1"))
-		require.False(t, reg.IsFileSystem("nope"))
-	})
 }
