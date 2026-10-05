@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -80,7 +81,7 @@ func TestPQLManifest(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -120,7 +121,7 @@ func TestPQLManifest(t *testing.T) {
 			for i := 0; i < 3; i++ {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)
@@ -147,7 +148,7 @@ func TestPQLManifest(t *testing.T) {
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -294,7 +295,7 @@ func TestPQLManifest(t *testing.T) {
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -439,7 +440,7 @@ func TestPQLManifest(t *testing.T) {
 	t.Run("manifest reload preserves cache hits", func(t *testing.T) {
 		t.Parallel()
 
-		employeesHash := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+		employeesHash := "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"
 		employeesQuery := "query Employees {\n  employees {\n    id\n    }\n}"
 
 		manifestV1, _ := json.Marshal(map[string]interface{}{
@@ -531,16 +532,16 @@ func TestPQLManifest(t *testing.T) {
 				return manifestFetchCount.Load() >= 2
 			}, 5*time.Second, 50*time.Millisecond)
 
-			// 4. After manifest reload, the operation should still be a cache HIT
-			// because the SHA is the same — no revision in the cache key.
-			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
-				Header:        header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, expectedEmployeesBody, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			// 4. The new revision has its own cache entry, populated asynchronously.
+			assert.Eventually(t, func() bool {
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+					Header:        header,
+				})
+				return err == nil && res.Body == expectedEmployeesBody &&
+					res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
+			}, 5*time.Second, 10*time.Millisecond)
 		})
 	})
 
@@ -561,7 +562,7 @@ func TestPQLManifest(t *testing.T) {
 			// pre-processed all operations through the full pipeline at startup.
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -589,7 +590,7 @@ func TestPQLManifest(t *testing.T) {
 
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)
@@ -717,7 +718,7 @@ func TestPQLManifest(t *testing.T) {
 			// from the manifest, but all processing caches should be cold.
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -764,7 +765,7 @@ func TestPQLManifest(t *testing.T) {
 			// With custom warmup config, all caches should still be warm on the first request.
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -823,7 +824,7 @@ func TestPQLManifest(t *testing.T) {
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)

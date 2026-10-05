@@ -16,11 +16,17 @@ global:
     organizationSlug: 'wundergraph'
 
   studio:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     port: 3000
     webUrl: 'http://studio.wundergraph.local'
 
   router:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     # -- Disabled by default because we don't have a token yet
     enabled: false
     webUrl: 'http://router.wundergraph.local'
@@ -36,6 +42,9 @@ global:
     enabled: true
 
   controlplane:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     port: 3001
     webUrl: 'http://controlplane.wundergraph.local'
@@ -45,16 +54,25 @@ global:
     admissionJwtSecret: 'uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW'
 
   otelcollector:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     port: 4318
     webUrl: 'http://otelcollector.wundergraph.local'
 
   graphqlmetrics:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     port: 4005
     webUrl: 'http://graphqlmetrics.wundergraph.local'
 
   keycloak:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     # Shared configuration e.g. seed, controlplane
     realm: 'cosmo'
@@ -98,6 +116,9 @@ global:
     enabled: true
 
   cdn:
+    ingress:
+      # -- Include this component in the shared Cosmo Ingress when the component is enabled. Independent of the subchart ingress settings.
+      enabled: true
     enabled: true
     webUrl: 'http://cdn.wundergraph.local'
     port: 8787
