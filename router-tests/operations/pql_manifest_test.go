@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -531,16 +532,16 @@ func TestPQLManifest(t *testing.T) {
 				return manifestFetchCount.Load() >= 2
 			}, 5*time.Second, 50*time.Millisecond)
 
-			// 4. After manifest reload, the operation should still be a cache HIT
-			// because the SHA is the same — no revision in the cache key.
-			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
-				Header:        header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, expectedEmployeesBody, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			// 4. The new revision has its own cache entry, populated asynchronously.
+			assert.Eventually(t, func() bool {
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+					Header:        header,
+				})
+				return err == nil && res.Body == expectedEmployeesBody &&
+					res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
+			}, 5*time.Second, 10*time.Millisecond)
 		})
 	})
 
