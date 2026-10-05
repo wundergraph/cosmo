@@ -3,10 +3,8 @@ package redis
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
@@ -30,7 +28,14 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 	return removed, err
 }
 
-// invalidateTag removes the entries one tag names and then the tag itself.
+// invalidateTag deletes the entries one tag names. Members aren't removed
+// outright: one whose entry might still be SET, by a write landing late or a
+// walk failing midway, would be left unreachable. Each is marked instead, its
+// score set to minus the mark time in ms by the tag key's node clock, and
+// swept by a later walk.
+//
+// Scores: >= 0 an expiry, < 0 a mark. A write's ZADD GT beats any mark, so a
+// rewrite unmarks its member.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
@@ -43,8 +48,22 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 		return 0, nil
 	}
 
-	// Members scored past this were written after the call started.
+	// Members scored past this were written after the call started. Negative:
+	// only marks are left.
 	cutoff := topElement[0].Score
+
+	// The node's clock, as marks were stamped. Read before the walk, so marks
+	// only ever look younger than they are.
+	nodeMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
+	if err != nil {
+		return 0, err
+	}
+	// Marks above this are older than writeGrace + margin: any write extended
+	// past its lease has landed, so a delete then a sweep is safe.
+	sweepAbove := -float64(nodeMs - (c.writeGrace + sweepMargin).Milliseconds())
+
+	// Marks whose every entry was deleted this walk; only those are swept.
+	sweepable := make(map[float64]bool)
 
 	// ZSCAN cursor, not rank offset: concurrent writes can't shift it.
 	// Members present throughout are returned at least once; repeats harmless.
@@ -56,83 +75,137 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 			return removed, err
 		}
 
-		members := make([]string, 0, len(pairs)/2)
-		scores := make([]float64, 0, len(pairs)/2)
+		var live, marked []string
+		var marks []float64
 		for i := 0; i+1 < len(pairs); i += 2 {
 			score, err := strconv.ParseFloat(pairs[i+1], 64)
 			if err != nil {
 				return removed, err
 			}
-			if score > cutoff {
-				continue
+			switch {
+			case score >= 0 && score <= cutoff:
+				live = append(live, pairs[i])
+			case score < 0:
+				// Deleted again: a late save may have landed since.
+				marked = append(marked, pairs[i])
+				marks = append(marks, score)
 			}
-			members = append(members, pairs[i])
-			scores = append(scores, score)
 		}
 
-		if len(members) > 0 {
-			count, err := c.removeEntries(ctx, tagKey, members, scores)
+		if len(live) > 0 {
+			count, err := c.unlinkAndMark(ctx, tagKey, live)
 			removed += count
 			if err != nil {
 				return removed, err
 			}
 		}
 
+		if len(marked) > 0 {
+			cmds, err := c.unlink(ctx, marked)
+			ok := answered(cmds, err)
+			for i, cmd := range cmds {
+				if ok[i] && cmd.Val() == 1 {
+					removed++
+				}
+				if marks[i] > sweepAbove {
+					prev, seen := sweepable[marks[i]]
+					sweepable[marks[i]] = ok[i] && (prev || !seen)
+				}
+			}
+			if err != nil {
+				return removed, err
+			}
+		}
+
 		if next == 0 {
-			return removed, nil
+			break
 		}
 		cursor = next
 	}
+
+	// By exact score: only members still carrying that mark go, so one a
+	// write unmarked meanwhile stays. Every member with an old mark was there
+	// for the whole scan, so all of them were deleted above.
+	pipe := c.client.Pipeline()
+	var queued bool
+	for m, ok := range sweepable {
+		if ok {
+			score := strconv.FormatFloat(m, 'f', -1, 64)
+			pipe.ZRemRangeByScore(ctx, tagKey, score, score)
+			queued = true
+		}
+	}
+	if queued {
+		if _, err := pipe.Exec(ctx); err != nil {
+			return removed, err
+		}
+	}
+	return removed, nil
 }
 
-// removeEntries drops members from the index, then their entries. Member
-// first: a write SET after the UNLINK re-indexes after its SET (see SetMany),
-// so it lands after this ZREM. Redis drops the set once its last member goes.
-func (c *RedisCache) removeEntries(ctx context.Context, tagKey string, members []string, scores []float64) (int, error) {
-	if err := c.client.ZRem(ctx, tagKey, members).Err(); err != nil {
-		return 0, err
+// nodeTime returns the clock of the node holding KEYS[1], in ms.
+var nodeTime = redis.NewScript(`
+local t = redis.call('TIME')
+return t[1] * 1000 + math.floor(t[2] / 1000)
+`)
+
+// markMembers sets each ARGV member still in KEYS[1] to minus the node's
+// time in ms. Stamped at marking, not passed in, so a mark is never older
+// than it looks.
+var markMembers = redis.NewScript(`
+local t = redis.call('TIME')
+local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
+for i = 1, #ARGV do
+  redis.call('ZADD', KEYS[1], 'XX', mark, ARGV[i])
+end
+return 0
+`)
+
+// unlinkAndMark deletes members' entries, then marks those whose delete was
+// answered. XX: never re-adds a member swept meanwhile. A failed delete stays
+// unmarked, for a retry.
+func (c *RedisCache) unlinkAndMark(ctx context.Context, tagKey string, members []string) (int, error) {
+	cmds, unlinkErr := c.unlink(ctx, members)
+	ok := answered(cmds, unlinkErr)
+
+	var removed int
+	toMark := make([]any, 0, len(members))
+	for i, cmd := range cmds {
+		if !ok[i] {
+			continue
+		}
+		toMark = append(toMark, members[i])
+		if cmd.Val() == 1 {
+			removed++
+		}
 	}
+	if len(toMark) > 0 {
+		if err := markMembers.Run(ctx, c.client, []string{tagKey}, toMark...).Err(); err != nil {
+			return removed, errors.Join(unlinkErr, err)
+		}
+	}
+	return removed, unlinkErr
+}
 
-	// Members are gone now, so finish even if the caller gives up.
-	ctx = context.WithoutCancel(ctx)
+// answered reports which commands Redis answered. An error no command
+// carries means nothing was sent.
+func answered(cmds []*redis.IntCmd, err error) []bool {
+	sent := err == nil || slices.ContainsFunc(cmds, func(cmd *redis.IntCmd) bool { return cmd.Err() != nil })
+	ok := make([]bool, len(cmds))
+	for i, cmd := range cmds {
+		ok[i] = sent && cmd.Err() == nil
+	}
+	return ok
+}
 
-	// Single key UNLINKs: a multi key one fails CROSSSLOT in a cluster.
+// unlink sends one UNLINK per member's entry: a multi key one fails CROSSSLOT
+// in a cluster.
+func (c *RedisCache) unlink(ctx context.Context, members []string) ([]*redis.IntCmd, error) {
 	pipe := c.client.Pipeline()
 	cmds := make([]*redis.IntCmd, len(members))
 	for i, member := range members {
 		cmds[i] = pipe.Unlink(ctx, c.entryKey(member))
 	}
-	_, unlinkErr := pipe.Exec(ctx)
-
-	// An error no command carries means nothing was sent.
-	sentNothing := unlinkErr != nil && !slices.ContainsFunc(cmds, func(cmd *redis.IntCmd) bool { return cmd.Err() != nil })
-
-	var removed int
-	var restore []redis.Z
-	var latest float64
-	for i, cmd := range cmds {
-		switch {
-		case cmd.Err() != nil || sentNothing:
-			// Entry may still be there; keep it reachable.
-			restore = append(restore, redis.Z{Score: scores[i], Member: members[i]})
-			latest = max(latest, scores[i])
-		case cmd.Val() == 1:
-			removed++
-		}
-	}
-	if len(restore) == 0 {
-		return removed, unlinkErr
-	}
-
-	// GT: never lower a score a concurrent write just raised.
-	pipe = c.client.Pipeline()
-	pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: restore})
-	if ttl := time.UnixMilli(int64(latest)).Sub(c.now()) + tagIndexPruneGrace; ttl > 0 {
-		pipe.ExpireNX(ctx, tagKey, ttl)
-		pipe.ExpireGT(ctx, tagKey, ttl)
-	}
-	if _, err := pipe.Exec(ctx); err != nil {
-		return removed, errors.Join(unlinkErr, fmt.Errorf("redis adapter: entries left unindexed: %w", err))
-	}
-	return removed, unlinkErr
+	_, err := pipe.Exec(ctx)
+	return cmds, err
 }

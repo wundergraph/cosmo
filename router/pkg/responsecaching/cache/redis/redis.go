@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -30,6 +31,9 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
+	// writeGrace bounds a write's first round trip for its entry to be
+	// extended; a walk's sweep relies on it. Only tests change it.
+	writeGrace time.Duration
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -39,7 +43,20 @@ const (
 	tagNamespace   = "t:"
 )
 
+// tagIndexPruneGrace is how long past its score a member stays in a tag index.
 const tagIndexPruneGrace = 5 * time.Minute
+
+// writeLease is how long a tagged entry lives until its index is confirmed.
+// It bounds how long a writer dying mid-write can leave an entry unreachable.
+const writeLease = 10 * time.Second
+
+// defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
+const defaultWriteGrace = 5 * time.Second
+
+// sweepMargin is added to writeGrace before a mark is swept. Marks and their
+// ages use the tag key's node clock, so it only absorbs clock rate and a
+// failover's new clock.
+const sweepMargin = time.Second
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -58,7 +75,7 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
+	return &RedisCache{client: client, prefix: prefix, now: time.Now, writeGrace: defaultWriteGrace}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -132,9 +149,12 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 
 // SetMany implements caching.SetMany.
 //
-// Index, SET, then index again once the SET is answered. A walk removes a
-// member before its entry, so an entry it misses was SET after its UNLINK and
-// the second index write lands after its ZREM: no entry is left unindexed.
+// One round trip indexes and SETs tagged entries with a short lease; a second
+// extends them to expire at their member's score, only if indexed and the
+// first was answered within writeGrace. A walk marks members rather than
+// removing them, and sweeps a mark only once older than writeGrace plus a
+// margin by redis's clock, deleting its entry first: any extended entry it
+// raced has landed by then. A writer dying in between leaves at most a lease-long entry.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -163,13 +183,15 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 
 	pipe := c.client.Pipeline()
 
-	for _, item := range items {
-		c.queueIndex(ctx, pipe, item, now)
+	index := make(map[int][]redis.Cmder)
+	for i, item := range items {
+		index[i] = c.queueIndex(ctx, pipe, item.Key, item.Tags, item.TTL, now)
 		for _, tag := range item.Tags {
 			tagKey := c.tagKey(tag)
 			if _, done := pruned[tagKey]; !done {
 				pruned[tagKey] = struct{}{}
-				pipe.ZRemRangeByScore(ctx, tagKey, "-inf", pruneBefore)
+				// From 0: marks are negative, the sweep's to remove.
+				pipe.ZRemRangeByScore(ctx, tagKey, "0", pruneBefore)
 			}
 		}
 	}
@@ -179,54 +201,46 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// two orders still agreeing.
 	sets := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
-		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), item.TTL)
+		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), leased(item))
 	}
 
-	// First-pass index errors are repaired by the second pass.
+	// Monotonic: only the duration matters.
+	sent := time.Now()
 	_, err := pipe.Exec(ctx)
+	inGrace := time.Since(sent) < c.writeGrace
+
+	// An error no command carries means nothing was sent.
+	if err != nil && !anyErr(index) && !slices.ContainsFunc(sets, func(cmd *redis.StatusCmd) bool { return cmd.Err() != nil }) {
+		return err
+	}
 
 	// Entries may be written now, so finish even if the caller gives up.
 	finishCtx := context.WithoutCancel(ctx)
 
-	// Every tagged item, SET answered or not: a lost reply may still have landed.
-	var tagged []int
+	// An entry whose index isn't confirmed is removed, not left unreachable.
+	// A confirmed one expires at its member's score, so it never outlives the
+	// member; PEXPIREAT is a no-op on one a walk has deleted since. Past the
+	// grace it keeps its lease.
+	unindexed := make(map[int]struct{})
+	var queued bool
 	pipe = c.client.Pipeline()
-	reindex := make(map[int][]redis.Cmder)
 	for i, item := range items {
 		if len(item.Tags) == 0 {
 			continue
 		}
-		tagged = append(tagged, i)
-		reindex[i] = c.queueIndex(finishCtx, pipe, item, now)
-	}
-	var reindexErr error
-	if len(tagged) > 0 {
-		_, reindexErr = pipe.Exec(finishCtx)
-		err = errors.Join(err, reindexErr)
-	}
-
-	// An entry whose index can't be confirmed is removed, not left unreachable.
-	// An error no command carries means nothing was sent.
-	sentNothing := reindexErr != nil && !anyErr(reindex)
-	unconfirmed := func(i int) bool {
-		for _, cmd := range reindex[i] {
-			if cmd.Err() != nil {
-				return true
-			}
-		}
-		return sentNothing
-	}
-	unindexed := make(map[int]struct{})
-	pipe = c.client.Pipeline()
-	for _, i := range tagged {
-		if unconfirmed(i) {
+		switch {
+		case anyCmdErr(index[i]):
 			unindexed[i] = struct{}{}
-			pipe.Unlink(finishCtx, c.entryKey(items[i].Key))
+			pipe.Unlink(finishCtx, c.entryKey(item.Key))
+			queued = true
+		case leased(item) < item.TTL && sets[i].Err() == nil && inGrace:
+			pipe.PExpireAt(finishCtx, c.entryKey(item.Key), expiresAt(now, item.TTL))
+			queued = true
 		}
 	}
-	if len(unindexed) > 0 {
-		if _, unlinkErr := pipe.Exec(finishCtx); unlinkErr != nil {
-			err = errors.Join(err, fmt.Errorf("redis adapter: entries left unindexed: %w", unlinkErr))
+	if queued {
+		if _, finishErr := pipe.Exec(finishCtx); finishErr != nil {
+			err = errors.Join(err, fmt.Errorf("redis adapter: finishing write: %w", finishErr))
 		}
 	}
 
@@ -251,6 +265,19 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
 
+func anyCmdErr(cmds []redis.Cmder) bool {
+	return slices.ContainsFunc(cmds, func(cmd redis.Cmder) bool { return cmd.Err() != nil })
+}
+
+// leased is the TTL item is first SET with: the write lease for tagged items
+// that outlive it, else its own.
+func leased(item caching.Item) time.Duration {
+	if len(item.Tags) == 0 {
+		return item.TTL
+	}
+	return min(item.TTL, writeLease)
+}
+
 // anyErr reports whether any queued command carries an error.
 func anyErr(cmds map[int][]redis.Cmder) bool {
 	for _, list := range cmds {
@@ -263,17 +290,26 @@ func anyErr(cmds map[int][]redis.Cmder) bool {
 	return false
 }
 
-// queueIndex queues item's member and tag TTL updates for every tag it names.
-func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item, now time.Time) []redis.Cmder {
-	expireAt := now.Add(item.TTL)
-	member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
-	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
-	for _, tag := range item.Tags {
+// expiresAt is when an entry written at now with ttl expires, and its
+// member's score, to the millisecond.
+func expiresAt(now time.Time, ttl time.Duration) time.Time {
+	return time.UnixMilli(now.Add(ttl).UnixMilli())
+}
+
+// queueIndex queues key's member and tag TTL updates for each of tags. GT:
+// a write landing out of order never lowers a member's score, which would let
+// the prune drop it while a newer entry is alive.
+func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, key string, tags []string, ttl time.Duration, now time.Time) []redis.Cmder {
+	member := redis.Z{Score: float64(expiresAt(now, ttl).UnixMilli()), Member: key}
+	cmds := make([]redis.Cmder, 0, len(tags)*3)
+	for _, tag := range tags {
 		tagKey := c.tagKey(tag)
+		// Outlives its entries by the prune grace: entries expire at their
+		// score by this router's clock, the key by redis's.
 		cmds = append(cmds,
-			pipe.ZAdd(ctx, tagKey, member),
-			pipe.ExpireNX(ctx, tagKey, item.TTL),
-			pipe.ExpireGT(ctx, tagKey, item.TTL),
+			pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: []redis.Z{member}}),
+			pipe.ExpireNX(ctx, tagKey, ttl+tagIndexPruneGrace),
+			pipe.ExpireGT(ctx, tagKey, ttl+tagIndexPruneGrace),
 		)
 	}
 	return cmds

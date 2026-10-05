@@ -18,7 +18,7 @@ const testPrefix = "entity:"
 // entryKey and tagIndexKey mirror the namespacing the cache applies, so tests
 // name raw redis keys the same way it does.
 func entryKey(key string) string    { return testPrefix + entryNamespace + key }
-func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
+func tagIndexKey(tag string) string { return (&RedisCache{prefix: testPrefix}).tagKey(tag) }
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {
@@ -217,6 +217,11 @@ func TestRedisCache(t *testing.T) {
 
 			results, err := c.GetMany(ctx, []string{"a", "a+v"})
 			require.NoError(t, err)
+			// Tagged: expires at its member's score, to the millisecond.
+			record := results["a"]
+			require.InDelta(t, time.Hour, record.TTL, float64(time.Second))
+			record.TTL = time.Hour
+			results["a"] = record
 			require.Equal(t, map[string]enginecache.Item{
 				"a":   {Key: "a", TTL: time.Hour, Vary: vary},
 				"a+v": {Key: "a+v", Value: []byte("value"), TTL: time.Hour},
