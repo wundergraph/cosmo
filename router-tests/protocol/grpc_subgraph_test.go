@@ -749,7 +749,8 @@ func TestGRPCSubgraph(t *testing.T) {
 
 				// ensure content-type is present with the correct value
 				// even if the request headers have a different value
-				require.Equal(t, []string{"application/grpc"}, captured.Get("content-type"))
+				// We use our own codec to marshal the request, therefore the content-type contains a subtype (+proto).
+				require.Equal(t, []string{"application/grpc+proto"}, captured.Get("content-type"))
 
 				// host is handled by the HTTP stack and never forwarded
 				require.Empty(t, captured.Get("host"))
