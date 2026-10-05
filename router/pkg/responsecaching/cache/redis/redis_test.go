@@ -18,7 +18,7 @@ const testPrefix = "entity:"
 // entryKey and tagIndexKey mirror the namespacing the cache applies, so tests
 // name raw redis keys the same way it does.
 func entryKey(key string) string    { return testPrefix + entryNamespace + key }
-func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
+func tagIndexKey(tag string) string { return (&RedisCache{prefix: testPrefix}).tagKey(tag) }
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {

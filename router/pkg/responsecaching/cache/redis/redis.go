@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,7 +44,14 @@ const (
 	entryNamespace   = "e:"
 	tagNamespace     = "t:"
 	pendingNamespace = "p:"
+	// Escaped tags: those whose t: key can't share a slot with a pending set.
+	escapedTagNamespace     = "te:"
+	escapedPendingNamespace = "pe:"
 )
+
+// tagEscaper removes braces from a tag so they can't form a hash tag. Also
+// escapes % so distinct tags stay distinct.
+var tagEscaper = strings.NewReplacer("%", "%25", "{", "%7B", "}", "%7D")
 
 const tagIndexPruneGrace = 5 * time.Minute
 
@@ -58,7 +66,56 @@ const defaultWriteGrace = 5 * time.Second
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
 
 // tagKey is where the set of entries carrying tag lives.
-func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace + tag }
+func (c *RedisCache) tagKey(tag string) string {
+	tagKey, _ := c.tagKeys(tag)
+	return tagKey
+}
+
+// pendingKey is where a tag's owed deletes wait, in its tag key's slot.
+func (c *RedisCache) pendingKey(tag string) string {
+	_, pendingKey := c.tagKeys(tag)
+	return pendingKey
+}
+
+// tagKeys names a tag's index and pending set so both hash to one cluster
+// slot, letting one script move members between them. Tags that can't as
+// spelled, from stray braces, are escaped into their own namespace.
+func (c *RedisCache) tagKeys(tag string) (tagKey, pendingKey string) {
+	if pending, ok := c.colocated(tagNamespace, pendingNamespace, tag); ok {
+		return c.prefix + tagNamespace + tag, pending
+	}
+	escaped := tagEscaper.Replace(tag)
+	// Brace-free, so always colocated once NewRedisCache accepted the prefix.
+	pending, _ := c.colocated(escapedTagNamespace, escapedPendingNamespace, escaped)
+	return c.prefix + escapedTagNamespace + escaped, pending
+}
+
+// colocated finds a pending key hashing like the tag key: reusing a hash tag
+// in it, or wrapping the whole tag key in one.
+func (c *RedisCache) colocated(tagNS, pendingNS, name string) (string, bool) {
+	tagKey := c.prefix + tagNS + name
+	want := hashTag(tagKey)
+	for _, candidate := range []string{
+		c.prefix + pendingNS + name,
+		c.prefix + pendingNS + "{" + tagKey + "}",
+	} {
+		if hashTag(candidate) == want {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+// hashTag is the part of key Redis Cluster hashes: the first non-empty {…},
+// else the whole key.
+func hashTag(key string) string {
+	if s := strings.IndexByte(key, '{'); s >= 0 {
+		if e := strings.IndexByte(key[s+1:], '}'); e > 0 {
+			return key[s+1 : s+1+e]
+		}
+	}
+	return key
+}
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
 // prefix. On success the cache takes ownership of client and closes it in
@@ -67,6 +124,11 @@ func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace 
 // rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
 // rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
+	// A brace-free tag must colocate under this prefix, or escaping can't help.
+	if _, ok := (&RedisCache{prefix: prefix}).colocated(escapedTagNamespace, escapedPendingNamespace, "tag"); !ok {
+		return nil, fmt.Errorf("redis key prefix %q has unbalanced braces: a tag's index and pending set can't share a cluster slot", prefix)
+	}
+
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
@@ -211,24 +273,6 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// Entries may be written now, so finish even if the caller gives up.
 	finishCtx := context.WithoutCancel(ctx)
 
-	// Tags with no pending set fall back to re-indexing after the SET.
-	reindex := make(map[int][]redis.Cmder)
-	pipe = c.client.Pipeline()
-	for i, item := range items {
-		if fallback := c.fallbackTags(item.Tags); len(fallback) > 0 {
-			reindex[i] = c.queueIndex(finishCtx, pipe, item.Key, fallback, item.TTL, now)
-		}
-	}
-	if len(reindex) > 0 {
-		_, reindexErr := pipe.Exec(finishCtx)
-		err = errors.Join(err, reindexErr)
-		if reindexErr != nil && !anyErr(reindex) {
-			for i := range reindex {
-				reindex[i] = append(reindex[i], failedCmd(finishCtx, reindexErr))
-			}
-		}
-	}
-
 	// An entry whose index isn't confirmed is removed, not left unreachable.
 	// A confirmed one gets its full TTL; PEXPIRE is a no-op on one a walk has
 	// deleted since. Past the grace it keeps its lease.
@@ -240,7 +284,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 			continue
 		}
 		switch {
-		case anyCmdErr(index[i]) || anyCmdErr(reindex[i]):
+		case anyCmdErr(index[i]):
 			unindexed[i] = struct{}{}
 			pipe.Unlink(finishCtx, c.entryKey(item.Key))
 			queued = true
@@ -274,24 +318,6 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	}
 
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
-}
-
-// fallbackTags are the tags whose pending key can't share their slot.
-func (c *RedisCache) fallbackTags(tags []string) []string {
-	var fallback []string
-	for _, tag := range tags {
-		if _, ok := c.pendingKey(tag); !ok {
-			fallback = append(fallback, tag)
-		}
-	}
-	return fallback
-}
-
-// failedCmd stands for commands an Exec never sent.
-func failedCmd(ctx context.Context, err error) redis.Cmder {
-	cmd := redis.NewStatusCmd(ctx)
-	cmd.SetErr(err)
-	return cmd
 }
 
 func anyCmdErr(cmds []redis.Cmder) bool {

@@ -208,8 +208,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 		_, err := broken.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
-		pending, ok := pendingIndexKey(tag)
-		require.True(t, ok)
+		pending := pendingIndexKey(tag)
 		require.Equal(t, []string{item.Key}, zmembers(t, mr, pending), "owed a delete")
 		require.Positive(t, mr.TTL(pending), "expires with its entries")
 		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
@@ -241,7 +240,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 		split.requireFired(t)
 
-		pending, _ := pendingIndexKey(tag)
+		pending := pendingIndexKey(tag)
 		require.True(t, mr.Exists(entryKey(item.Key)))
 		require.Equal(t, item.TTL, mr.TTL(entryKey(item.Key)), "extended: first round trip was in grace")
 		require.Contains(t, zmembers(t, mr, pending), item.Key, "still reachable")
@@ -279,9 +278,12 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Equal(t, 2, counter.count())
 	})
 
-	t.Run("a fallback tag re-indexes after the SET", func(t *testing.T) {
+	// A tag with stray braces is escaped into its own namespace, so it gets a
+	// pending set like any other.
+	odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
+
+	t.Run("a tag with stray braces survives a SET after the walk's UNLINK", func(t *testing.T) {
 		t.Parallel()
-		odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
 		writer := newTestRedisCacheOn(t, mr, split)
@@ -295,26 +297,25 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		split.requireFired(t)
 
 		requireNoDangling(t, mr, odd)
+		require.Contains(t, zmembers(t, mr, pendingIndexKey(odd.Tags[0])), odd.Key)
 	})
 
-	t.Run("a tag whose pending key can't share its slot falls back to restoring", func(t *testing.T) {
+	t.Run("a tag with stray braces is finished by the next walk after a failure", func(t *testing.T) {
 		t.Parallel()
-		odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
-		_, ok := pendingIndexKey(odd.Tags[0])
-		require.False(t, ok)
-
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{odd}))
+		require.Equal(t, []string{odd.Key}, zmembers(t, mr, tagIndexKey(odd.Tags[0])))
 
 		_, err := broken.InvalidateByTags(t.Context(), odd.Tags)
 		require.ErrorIs(t, err, errInjected)
-		requireNoDangling(t, mr, odd)
+		require.Equal(t, []string{odd.Key}, zmembers(t, mr, pendingIndexKey(odd.Tags[0])), "owed a delete")
 
 		removed, err := writer.InvalidateByTags(t.Context(), odd.Tags)
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
+		require.False(t, mr.Exists(entryKey(odd.Key)))
 	})
 
 	t.Run("a writer dying before re-indexing leaves at most a lease-long entry", func(t *testing.T) {
@@ -415,9 +416,7 @@ func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.I
 	}
 	for _, tag := range item.Tags {
 		members := zmembers(t, mr, tagIndexKey(tag))
-		if pending, ok := pendingIndexKey(tag); ok {
-			members = append(members, zmembers(t, mr, pending)...)
-		}
+		members = append(members, zmembers(t, mr, pendingIndexKey(tag))...)
 		require.Contains(t, members, item.Key, "entry is live but tag %q can't reach it", tag)
 	}
 }
@@ -432,7 +431,7 @@ func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	return members
 }
 
-func pendingIndexKey(tag string) (string, bool) {
+func pendingIndexKey(tag string) string {
 	return (&RedisCache{prefix: testPrefix}).pendingKey(tag)
 }
 
@@ -660,31 +659,47 @@ func (f *failCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 }
 
 // A pending key must hash to its tag key's cluster slot, or the script moving
-// members between them fails CROSSSLOT.
+// members between them fails CROSSSLOT. Every tag gets one under any prefix
+// the constructor accepts.
 func TestPendingKeySharesTagKeySlot(t *testing.T) {
 	t.Parallel()
 
-	var found int
-	for _, prefix := range []string{"", "entity:", "{cache}:", "a{b", "a}b"} {
+	tags := []string{"subgraph:accounts", "type:accounts:User", `User:{"id":"1"}`, "{x}", "a{b", "odd}tag", "}", "{", "{}", "x{}y", "%7D", "odd%7Dtag"}
+	for _, prefix := range []string{"", "entity:", "{cache}:", "{c}x}:", "a{b}c{"} {
 		c := &RedisCache{prefix: prefix}
-		for _, tag := range []string{"subgraph:accounts", `User:{"id":"1"}`, "{x}", "a{b", "odd}tag", "{}", "x{}y"} {
-			pending, ok := c.pendingKey(tag)
-			if !ok {
-				continue
+		_, ok := c.colocated(escapedTagNamespace, escapedPendingNamespace, "tag")
+		require.True(t, ok, "prefix %q should be accepted", prefix)
+
+		seen := map[string]string{}
+		for _, tag := range tags {
+			tagKey, pending := c.tagKeys(tag)
+			require.NotEmpty(t, pending, "prefix %q tag %q", prefix, tag)
+			require.Equal(t, clusterSlot(tagKey), clusterSlot(pending), "prefix %q tag %q: %q vs %q", prefix, tag, tagKey, pending)
+			require.NotEqual(t, tagKey, pending)
+			for _, key := range []string{tagKey, pending} {
+				other, dup := seen[key]
+				require.False(t, dup, "prefix %q: tags %q and %q share key %q", prefix, other, tag, key)
+				seen[key] = tag
 			}
-			found++
-			require.Equal(t, clusterSlot(c.tagKey(tag)), clusterSlot(pending), "prefix %q tag %q pending %q", prefix, tag, pending)
-			require.NotEqual(t, c.tagKey(tag), pending)
 		}
 	}
-	require.NotZero(t, found)
 
-	// Realistic prefixes and tags always get one.
-	for _, prefix := range []string{"", "entity:", "{cache}:"} {
-		for _, tag := range []string{"subgraph:accounts", "type:accounts:User", `User:{"id":"1"}`} {
-			_, ok := (&RedisCache{prefix: prefix}).pendingKey(tag)
-			require.True(t, ok, "prefix %q tag %q", prefix, tag)
-		}
+	// Tags that colocate as spelled keep their released key.
+	c := &RedisCache{prefix: "entity:"}
+	require.Equal(t, "entity:t:subgraph:accounts", c.tagKey("subgraph:accounts"))
+	require.Equal(t, `entity:t:User:{"id":"1"}`, c.tagKey(`User:{"id":"1"}`))
+	require.Equal(t, "entity:te:odd%7Dtag", c.tagKey("odd}tag"))
+}
+
+func TestNewRedisCacheRejectsUnbalancedPrefix(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+
+	for _, prefix := range []string{"a{b", "a}b", "x{}y:"} {
+		client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		_, err := NewRedisCache(t.Context(), client, prefix)
+		require.ErrorContains(t, err, "unbalanced braces", "prefix %q", prefix)
+		require.NoError(t, client.Close())
 	}
 }
 

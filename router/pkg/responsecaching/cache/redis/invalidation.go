@@ -3,11 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
@@ -33,17 +29,12 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 
 // invalidateTag removes the entries one tag names and then the tag itself.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
-	tagKey := c.tagKey(tag)
-	pendingKey, hasPending := c.pendingKey(tag)
+	tagKey, pendingKey := c.tagKeys(tag)
 
 	// Deletes owed by earlier walks that didn't finish.
-	var removed int
-	if hasPending {
-		count, err := c.drainPending(ctx, pendingKey)
-		removed += count
-		if err != nil {
-			return removed, err
-		}
+	removed, err := c.drainPending(ctx, pendingKey)
+	if err != nil {
+		return removed, err
 	}
 
 	// Get only the top element
@@ -68,7 +59,6 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 		}
 
 		members := make([]string, 0, len(pairs)/2)
-		scores := make([]float64, 0, len(pairs)/2)
 		for i := 0; i+1 < len(pairs); i += 2 {
 			score, err := strconv.ParseFloat(pairs[i+1], 64)
 			if err != nil {
@@ -78,16 +68,10 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 				continue
 			}
 			members = append(members, pairs[i])
-			scores = append(scores, score)
 		}
 
 		if len(members) > 0 {
-			var count int
-			if hasPending {
-				count, err = c.removeViaPending(ctx, tagKey, pendingKey, members)
-			} else {
-				count, err = c.removeEntries(ctx, tagKey, members, scores)
-			}
+			count, err := c.removeViaPending(ctx, tagKey, pendingKey, members)
 			removed += count
 			if err != nil {
 				return removed, err
@@ -99,33 +83,6 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 		}
 		cursor = next
 	}
-}
-
-// pendingKey is where a tag's owed deletes wait. It must hash to the tag key's
-// slot so one script can move members between them; false if no candidate does.
-func (c *RedisCache) pendingKey(tag string) (string, bool) {
-	tagKey := c.tagKey(tag)
-	want := hashTag(tagKey)
-	for _, candidate := range []string{
-		c.prefix + pendingNamespace + tag,                // reuses a hash tag in tagKey
-		c.prefix + pendingNamespace + "{" + tagKey + "}", // tagKey as the hash tag
-	} {
-		if hashTag(candidate) == want {
-			return candidate, true
-		}
-	}
-	return "", false
-}
-
-// hashTag is the part of key Redis Cluster hashes: the first non-empty {…},
-// else the whole key.
-func hashTag(key string) string {
-	if s := strings.IndexByte(key, '{'); s >= 0 {
-		if e := strings.IndexByte(key[s+1:], '}'); e > 0 {
-			return key[s+1 : s+1+e]
-		}
-	}
-	return key
 }
 
 // moveToPending atomically moves members still in the index to the pending
@@ -274,50 +231,4 @@ func (c *RedisCache) unlink(ctx context.Context, members []string) ([]*redis.Int
 	}
 	_, err := pipe.Exec(ctx)
 	return cmds, err
-}
-
-// removeEntries is the fallback for tags whose pending key can't share the
-// tag key's slot: drop members from the index, then their entries, restoring
-// members whose UNLINK failed. A walk that dies between the two leaves those
-// entries unreachable.
-func (c *RedisCache) removeEntries(ctx context.Context, tagKey string, members []string, scores []float64) (int, error) {
-	if err := c.client.ZRem(ctx, tagKey, members).Err(); err != nil {
-		return 0, err
-	}
-
-	// Members are gone now, so finish even if the caller gives up.
-	ctx = context.WithoutCancel(ctx)
-	cmds, unlinkErr := c.unlink(ctx, members)
-
-	// An error no command carries means nothing was sent.
-	sentNothing := unlinkErr != nil && !slices.ContainsFunc(cmds, func(cmd *redis.IntCmd) bool { return cmd.Err() != nil })
-
-	var removed int
-	var restore []redis.Z
-	var latest float64
-	for i, cmd := range cmds {
-		switch {
-		case cmd.Err() != nil || sentNothing:
-			// Entry may still be there; keep it reachable.
-			restore = append(restore, redis.Z{Score: scores[i], Member: members[i]})
-			latest = max(latest, scores[i])
-		case cmd.Val() == 1:
-			removed++
-		}
-	}
-	if len(restore) == 0 {
-		return removed, unlinkErr
-	}
-
-	// GT: never lower a score a concurrent write just raised.
-	pipe := c.client.Pipeline()
-	pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: restore})
-	if ttl := time.UnixMilli(int64(latest)).Sub(c.now()) + tagIndexPruneGrace; ttl > 0 {
-		pipe.ExpireNX(ctx, tagKey, ttl)
-		pipe.ExpireGT(ctx, tagKey, ttl)
-	}
-	if _, err := pipe.Exec(ctx); err != nil {
-		return removed, errors.Join(unlinkErr, fmt.Errorf("redis adapter: entries left unindexed: %w", err))
-	}
-	return removed, unlinkErr
 }
