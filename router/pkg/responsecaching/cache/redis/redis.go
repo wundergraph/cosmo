@@ -131,6 +131,10 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 }
 
 // SetMany implements caching.SetMany.
+//
+// Index, SET, then index again once the SET is answered. A walk removes a
+// member before its entry, so an entry it misses was SET after its UNLINK and
+// the second index write lands after its ZREM: no entry is left unindexed.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -140,6 +144,11 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		if item.TTL <= 0 {
 			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
+	}
+
+	// Nothing sent yet, so nothing to finish.
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	// One clock reading for the batch. Scoring two items written together as if
@@ -155,35 +164,70 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	pipe := c.client.Pipeline()
 
 	for _, item := range items {
-		if len(item.Tags) == 0 {
-			continue
-		}
-
-		expireAt := now.Add(item.TTL)
-		member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
+		c.queueIndex(ctx, pipe, item, now)
 		for _, tag := range item.Tags {
 			tagKey := c.tagKey(tag)
-			pipe.ZAdd(ctx, tagKey, member)
 			if _, done := pruned[tagKey]; !done {
 				pruned[tagKey] = struct{}{}
 				pipe.ZRemRangeByScore(ctx, tagKey, "-inf", pruneBefore)
 			}
-			pipe.ExpireNX(ctx, tagKey, item.TTL)
-			pipe.ExpireGT(ctx, tagKey, item.TTL)
 		}
 	}
 
 	// Each command is kept alongside the item that queued it, rather than read
 	// back off Exec, so which key a reply belongs to is not a question of the
 	// two orders still agreeing.
-	cmds := make([]*redis.StatusCmd, len(items))
+	sets := make([]*redis.StatusCmd, len(items))
 	for i, item := range items {
-		cmds[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), item.TTL)
+		sets[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), item.TTL)
 	}
 
+	// First-pass index errors are repaired by the second pass.
 	_, err := pipe.Exec(ctx)
-	if err == nil {
-		return nil
+
+	// Entries may be written now, so finish even if the caller gives up.
+	finishCtx := context.WithoutCancel(ctx)
+
+	// Every tagged item, SET answered or not: a lost reply may still have landed.
+	var tagged []int
+	pipe = c.client.Pipeline()
+	reindex := make(map[int][]redis.Cmder)
+	for i, item := range items {
+		if len(item.Tags) == 0 {
+			continue
+		}
+		tagged = append(tagged, i)
+		reindex[i] = c.queueIndex(finishCtx, pipe, item, now)
+	}
+	var reindexErr error
+	if len(tagged) > 0 {
+		_, reindexErr = pipe.Exec(finishCtx)
+		err = errors.Join(err, reindexErr)
+	}
+
+	// An entry whose index can't be confirmed is removed, not left unreachable.
+	// An error no command carries means nothing was sent.
+	sentNothing := reindexErr != nil && !anyErr(reindex)
+	unconfirmed := func(i int) bool {
+		for _, cmd := range reindex[i] {
+			if cmd.Err() != nil {
+				return true
+			}
+		}
+		return sentNothing
+	}
+	unindexed := make(map[int]struct{})
+	pipe = c.client.Pipeline()
+	for _, i := range tagged {
+		if unconfirmed(i) {
+			unindexed[i] = struct{}{}
+			pipe.Unlink(finishCtx, c.entryKey(items[i].Key))
+		}
+	}
+	if len(unindexed) > 0 {
+		if _, unlinkErr := pipe.Exec(finishCtx); unlinkErr != nil {
+			err = errors.Join(err, fmt.Errorf("redis adapter: entries left unindexed: %w", unlinkErr))
+		}
 	}
 
 	// A command is only counted once redis has answered it. Anything still
@@ -191,17 +235,48 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	// and lost its reply on the way back, so this understates what was written
 	// rather than claiming a key that might not be there.
 	var stored []string
-	for i, cmd := range cmds {
-		if cmd.Err() == nil {
+	for i, cmd := range sets {
+		if _, bad := unindexed[i]; cmd.Err() == nil && !bad {
 			stored = append(stored, items[i].Key)
 		}
 	}
 
+	if err == nil {
+		return nil
+	}
 	if len(stored) == 0 {
 		return err
 	}
 
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
+}
+
+// anyErr reports whether any queued command carries an error.
+func anyErr(cmds map[int][]redis.Cmder) bool {
+	for _, list := range cmds {
+		for _, cmd := range list {
+			if cmd.Err() != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// queueIndex queues item's member and tag TTL updates for every tag it names.
+func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item, now time.Time) []redis.Cmder {
+	expireAt := now.Add(item.TTL)
+	member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
+	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
+	for _, tag := range item.Tags {
+		tagKey := c.tagKey(tag)
+		cmds = append(cmds,
+			pipe.ZAdd(ctx, tagKey, member),
+			pipe.ExpireNX(ctx, tagKey, item.TTL),
+			pipe.ExpireGT(ctx, tagKey, item.TTL),
+		)
+	}
+	return cmds
 }
 
 // Close releases the redis client the cache was built with. The Once is not for

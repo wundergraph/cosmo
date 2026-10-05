@@ -3,11 +3,14 @@ package redis
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -102,19 +105,10 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"v1:a"}, members, "still named by the tag that did not take it")
 
-		// Missing entry, expiry still ahead: indistinguishable from a write in
-		// flight, so it is left until its expiry passes.
+		// Entry already gone: the member goes, nothing counted.
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Zero(t, removed, "counted from what redis removed, and the entry was already gone")
-		members, err = mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
-		require.Equal(t, []string{"v1:a"}, members)
-
-		advance(c, 2*time.Minute)
-		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
-		require.NoError(t, err)
-		require.Zero(t, removed)
 		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
@@ -134,10 +128,8 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "expired member is dropped with nothing to wait for")
 	})
 
-	t.Run("a member whose entry has not landed yet is left for the next call", func(t *testing.T) {
-		// SetMany writes the index ahead of the entry and the two are not
-		// atomic. Dropping the member here would leave the entry, once it
-		// lands, where no invalidation could find it.
+	t.Run("a member whose entry has not landed yet is re-indexed when it does", func(t *testing.T) {
+		// The walk drops the member; the write re-indexes after its SET.
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
@@ -148,12 +140,13 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Zero(t, removed)
+		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
+
+		// The entry lands.
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
 		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
 		require.NoError(t, err)
-		require.Equal(t, []string{"v1:a"}, members, "kept: nothing to remove yet, and something may be coming")
-
-		// The entry lands. Its ZADD is a no-op on the member already there.
-		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
+		require.Equal(t, []string{"v1:a"}, members)
 
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
@@ -162,11 +155,10 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 	})
 
-	t.Run("members left in place do not stop the walk reaching later pages", func(t *testing.T) {
-		// Kept members sort ahead of what is unread, so paging has to step
-		// past them or it would read the same page forever.
+	t.Run("missing entries do not stop the walk reaching later pages", func(t *testing.T) {
 		t.Parallel()
-		c, mr := newTestRedisCache(t)
+		pager := &pagedZScan{size: invalidationPageSize}
+		c, mr := newTestRedisCacheWithHook(t, pager)
 
 		const count = invalidationPageSize*2 + 1
 		items := make([]enginecache.Item, 0, count)
@@ -175,7 +167,6 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		}
 		require.NoError(t, c.SetMany(t.Context(), items))
 
-		// Entries gone but members not: indistinguishable from writes in flight.
 		for i := 0; i < count; i += 2 {
 			mr.Del(entryKey(fmt.Sprintf("v1:%d", i)))
 		}
@@ -183,56 +174,80 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
 		require.NoError(t, err)
 		require.Equal(t, count/2, removed)
-
-		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
-		require.Len(t, members, count-count/2)
+		require.Equal(t, 3, pager.pages())
+		require.False(t, mr.Exists(tagIndexKey("subgraph:accounts")))
 		for i := range count {
 			require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%d", i))))
 		}
 	})
 
-	t.Run("a page of only kept members ends the walk instead of repeating it", func(t *testing.T) {
-		// The offset is how many members were kept. Writes with shorter TTLs
-		// landing mid-walk sort ahead of those, so the next page can be the kept
-		// members again. Without a progress guard that page is read forever.
-		t.Parallel()
-		interposer := &afterCommand{name: "zrangebyscore"}
-		c, mr := newTestRedisCacheWithHook(t, interposer)
-
-		// A full page of members whose entries have not landed, so all are kept.
-		later := float64(c.now().Add(time.Minute).UnixMilli())
-		for i := range invalidationPageSize {
-			_, err := mr.ZAdd(tagIndexKey("subgraph:accounts"), later, fmt.Sprintf("v1:kept:%d", i))
-			require.NoError(t, err)
-		}
-
-		// Once the first page is read, a full page with shorter TTLs lands ahead of it.
-		sooner := float64(c.now().Add(30 * time.Second).UnixMilli())
-		var landed bool
-		interposer.fn = func() {
-			if landed {
-				return
-			}
-			landed = true
-			for i := range invalidationPageSize {
-				_, err := mr.ZAdd(tagIndexKey("subgraph:accounts"), sooner, fmt.Sprintf("v1:new:%d", i))
+	// Rank paging skipped an unread member whenever one ahead of the offset
+	// was removed or moved. Each case changes members already read after the
+	// first page, then checks nothing unread was missed.
+	midWalk := map[string]func(t *testing.T, mr *miniredis.Miniredis, key string, read []string){
+		"members already read pruned": func(t *testing.T, mr *miniredis.Miniredis, key string, read []string) {
+			for _, member := range read {
+				_, err := mr.ZRem(key, member)
 				require.NoError(t, err)
 			}
-		}
+		},
+		"members already read re-written with a later expiry": func(t *testing.T, mr *miniredis.Miniredis, key string, read []string) {
+			for _, member := range read {
+				score, err := mr.ZScore(key, member)
+				require.NoError(t, err)
+				_, err = mr.ZAdd(key, score+float64(time.Hour.Milliseconds()), member)
+				require.NoError(t, err)
+			}
+		},
+		"shorter TTL writes landing ahead": func(t *testing.T, mr *miniredis.Miniredis, key string, read []string) {
+			score, err := mr.ZScore(key, read[0])
+			require.NoError(t, err)
+			for i := range invalidationPageSize {
+				_, err := mr.ZAdd(key, score-1, fmt.Sprintf("v0:new:%d", i))
+				require.NoError(t, err)
+			}
+		},
+	}
+	for name, change := range midWalk {
+		t.Run("no unread member is missed when "+name, func(t *testing.T) {
+			t.Parallel()
+			pager := &pagedZScan{size: invalidationPageSize}
+			interposer := &afterCommand{name: "zscan"}
+			c, mr := newTestRedisCacheWithHook(t, pager, interposer)
+			key := tagIndexKey("subgraph:accounts")
 
-		// A regression spins on the same page; the deadline turns that into a failure.
-		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-		defer cancel()
-		removed, err := c.InvalidateByTags(ctx, []string{"subgraph:accounts"})
-		require.NoError(t, err)
-		require.Zero(t, removed)
-		require.True(t, landed)
+			// Entry-less members sort first by name, so page one reads them.
+			soon := float64(c.now().Add(30 * time.Second).UnixMilli())
+			read := make([]string, 0, 16)
+			for i := range 16 {
+				member := fmt.Sprintf("v0:read:%02d", i)
+				_, err := mr.ZAdd(key, soon, member)
+				require.NoError(t, err)
+				read = append(read, member)
+			}
 
-		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
-		require.Len(t, members, invalidationPageSize*2, "nothing dropped: all may still be landing")
-	})
+			const count = invalidationPageSize * 2
+			items := make([]enginecache.Item, 0, count)
+			for i := range count {
+				items = append(items, item(fmt.Sprintf("v1:%04d", i), "subgraph:accounts"))
+			}
+			require.NoError(t, c.SetMany(t.Context(), items))
+
+			interposer.fn = func() {
+				interposer.fn = nil
+				change(t, mr, key, read)
+			}
+
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			removed, err := c.InvalidateByTags(ctx, []string{"subgraph:accounts"})
+			require.NoError(t, err)
+			require.Equal(t, count, removed)
+			for i := range count {
+				require.False(t, mr.Exists(entryKey(fmt.Sprintf("v1:%04d", i))))
+			}
+		})
+	}
 
 	t.Run("a tag naming more entries than one page still takes all of them", func(t *testing.T) {
 		// The index is walked in pages, so the boundary is where an off by one
@@ -395,6 +410,76 @@ func (r *recordCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 		r.note(cmds...)
 		return next(ctx, cmds)
 	}
+}
+
+// pagedZScan pages ZSCAN like a real server: by position in the data (member
+// order here), reading live members each page. miniredis pages by index into
+// the sorted set, which skips members after a ZREM, so it is asked for all.
+type pagedZScan struct {
+	size   int
+	mu     sync.Mutex
+	last   string
+	served int
+}
+
+func (p *pagedZScan) pages() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.served
+}
+
+func (p *pagedZScan) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (p *pagedZScan) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		scan, ok := cmd.(*redis.ScanCmd)
+		if !ok || cmd.Name() != "zscan" {
+			return next(ctx, cmd)
+		}
+		args := cmd.Args()
+		cursor, _ := args[2].(uint64)
+		args[2] = uint64(0)
+		args[len(args)-1] = math.MaxInt32
+		if err := next(ctx, cmd); err != nil {
+			return err
+		}
+		pairs, _ := scan.Val()
+		order := make([]int, 0, len(pairs)/2)
+		for i := 0; i+1 < len(pairs); i += 2 {
+			order = append(order, i)
+		}
+		slices.SortFunc(order, func(a, b int) int { return strings.Compare(pairs[a], pairs[b]) })
+
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if cursor == 0 {
+			p.last = ""
+		}
+		p.served++
+		page := make([]string, 0, p.size*2)
+		var more bool
+		for _, i := range order {
+			if pairs[i] <= p.last && p.last != "" {
+				continue
+			}
+			if len(page) == p.size*2 {
+				more = true
+				break
+			}
+			page = append(page, pairs[i], pairs[i+1])
+		}
+		var nextCursor uint64
+		if more {
+			p.last = page[len(page)-2]
+			nextCursor = uint64(p.served)
+		}
+		scan.SetVal(page, nextCursor)
+		return nil
+	}
+}
+
+func (p *pagedZScan) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return next
 }
 
 // afterCommand runs fn once the named command has been answered, for the
