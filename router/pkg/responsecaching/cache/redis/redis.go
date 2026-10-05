@@ -287,10 +287,12 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, key s
 	cmds := make([]redis.Cmder, 0, len(tags)*3)
 	for _, tag := range tags {
 		tagKey := c.tagKey(tag)
+		// Outlives its entries by the prune grace: entries expire at their
+		// score by this router's clock, the key by redis's.
 		cmds = append(cmds,
 			pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: []redis.Z{member}}),
-			pipe.ExpireNX(ctx, tagKey, ttl),
-			pipe.ExpireGT(ctx, tagKey, ttl),
+			pipe.ExpireNX(ctx, tagKey, ttl+tagIndexPruneGrace),
+			pipe.ExpireGT(ctx, tagKey, ttl+tagIndexPruneGrace),
 		)
 	}
 	return cmds
