@@ -3,7 +3,6 @@ package operationmanifest
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 
@@ -105,16 +104,6 @@ func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	return []byte(op), true
 }
 
-// LoadFromFile reads a manifest JSON file from disk and loads it into the store.
-func (s *Store) LoadFromFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("failed to read manifest file: %w", err)
-	}
-
-	return s.LoadFromData(data)
-}
-
 // ParseManifest parses and validates manifest JSON data.
 func ParseManifest(data []byte) (*Manifest, error) {
 	var manifest Manifest
@@ -125,16 +114,6 @@ func ParseManifest(data []byte) (*Manifest, error) {
 		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
 	return &manifest, nil
-}
-
-// LoadFromData parses and validates manifest JSON data and loads it into the store.
-func (s *Store) LoadFromData(data []byte) error {
-	manifest, err := ParseManifest(data)
-	if err != nil {
-		return err
-	}
-	s.Load(manifest)
-	return nil
 }
 
 func validateManifest(m *Manifest) error {
