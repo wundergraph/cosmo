@@ -20,6 +20,7 @@ type Manifest struct {
 type Store struct {
 	manifest  atomic.Pointer[Manifest]
 	updateCh  chan struct{}
+	done      chan struct{}
 	onUpdate  atomic.Value // stores func()
 	startOnce sync.Once
 	logger    *zap.Logger
@@ -29,6 +30,7 @@ func NewStore(logger *zap.Logger) *Store {
 	return &Store{
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
+		done:     make(chan struct{}),
 	}
 }
 
@@ -41,9 +43,14 @@ func (s *Store) SetOnUpdate(fn func()) {
 	s.onUpdate.Store(fn)
 	s.startOnce.Do(func() {
 		go func() {
-			for range s.updateCh {
-				if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
-					f()
+			for {
+				select {
+				case <-s.done:
+					return
+				case <-s.updateCh:
+					if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
+						f()
+					}
 				}
 			}
 		}()
@@ -61,15 +68,21 @@ func (s *Store) Load(manifest *Manifest) {
 	}
 
 	select {
+	case <-s.done:
+		return
+	default:
+	}
+
+	select {
 	case s.updateCh <- struct{}{}:
 	default:
 		s.logger.Debug("Skipping manifest update signal, worker is busy")
 	}
 }
 
-// Close stops the update worker goroutine.
+// Close stops the update worker. Load still swaps the manifest after Close but does not signal the worker.
 func (s *Store) Close() {
-	close(s.updateCh)
+	close(s.done)
 }
 
 // Snapshot returns the current manifest. Published manifests must not be modified.

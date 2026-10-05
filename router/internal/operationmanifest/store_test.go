@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -273,6 +274,22 @@ func TestStore(t *testing.T) {
 
 		// First callback should not have been called again
 		require.Equal(t, firstCountBefore, firstCalls.Load())
+	})
+
+	t.Run("Load does not panic and the worker exits after Close", func(t *testing.T) {
+		ignore := goleak.IgnoreCurrent()
+		store := NewStore(zap.NewNop())
+
+		var calls atomic.Int32
+		store.SetOnUpdate(func() {
+			calls.Add(1)
+		})
+		store.Close()
+
+		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
+		require.Equal(t, "rev-1", store.Revision())
+		goleak.VerifyNone(t, ignore)
+		require.Equal(t, int32(0), calls.Load())
 	})
 }
 
