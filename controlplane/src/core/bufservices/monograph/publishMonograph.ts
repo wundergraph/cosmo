@@ -140,33 +140,32 @@ export function publishMonograph(
       authContext,
     });
 
-    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          false,
-        );
+    // The transaction is managed by `SubgraphRepository.update`
+    // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      false,
+    );
 
-        return subgraphRepo.update(
-          {
-            targetId: subgraphs[0].targetId,
-            labels: [],
-            unsetLabels: false,
-            schemaSDL: subgraphSchemaSDL,
-            updatedBy: authContext.userId,
-            namespaceId: namespace.id,
-            isV2Graph,
-          },
-          compositionService,
-        );
-      });
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await new SubgraphRepository(logger, opts.db, authContext.organizationId).update(
+        {
+          targetId: subgraphs[0].targetId,
+          labels: [],
+          unsetLabels: false,
+          schemaSDL: subgraphSchemaSDL,
+          updatedBy: authContext.userId,
+          namespaceId: namespace.id,
+          isV2Graph,
+        },
+        compositionService,
+      );
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
