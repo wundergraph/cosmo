@@ -380,6 +380,26 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		requireNoDangling(t, mr, item)
 	})
 
+	t.Run("a key written twice in one batch takes the last write's lifetime", func(t *testing.T) {
+		// The second SET wins; extending to the first item's expiry would keep
+		// its value an hour past its own TTL.
+		t.Parallel()
+		long := enginecache.Item{Key: "v1:dup", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		for name, second := range map[string]enginecache.Item{
+			"short lived": {Key: "v1:dup", Value: []byte(`{"v":2}`), TTL: 5 * time.Second, Tags: []string{tag}},
+			"untagged":    {Key: "v1:dup", Value: []byte(`{"v":2}`), TTL: time.Minute},
+		} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				mr := miniredis.RunT(t)
+				c := newTestRedisCacheOn(t, mr)
+
+				require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{long, second}))
+				require.LessOrEqual(t, mr.TTL(entryKey("v1:dup")), second.TTL)
+			})
+		}
+	})
+
 	t.Run("the prune leaves marks alone", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
