@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"context"
@@ -99,7 +99,8 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 	require.Equal(t, len(manifestV1.Operations), s.OperationCount())
 
 	// Start polling
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go poller.Poll(ctx)
 
 	// Wait a few poll cycles — manifest should stay at rev-1 (304s)
@@ -180,7 +181,8 @@ func TestPoller_PollContinuesOnFetchError(t *testing.T) {
 	s := NewStore(zap.NewNop())
 	poller := NewPoller(f, s, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
 
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go poller.Poll(ctx)
 
 	require.Eventually(t, func() bool {

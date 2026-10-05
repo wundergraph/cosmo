@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"compress/gzip"
@@ -15,9 +15,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type Fetcher struct {
+type CDNLoader struct {
 	cdnURL              *url.URL
 	authenticationToken string
+	// objectPath is the manifest path below /{organizationID}/{federatedGraphID}/
+	objectPath string
 	// federatedGraphID is the ID of the federated graph that was obtained
 	// from the token, already url-escaped
 	federatedGraphID string
@@ -28,9 +30,9 @@ type Fetcher struct {
 	logger         *zap.Logger
 }
 
-// NewFetcher creates a new manifest fetcher. It reuses JWT extraction and HTTP client
-// setup patterns from the CDN persisted operations client.
-func NewFetcher(endpoint, token string, logger *zap.Logger) (*Fetcher, error) {
+// NewCDNLoader creates a new manifest loader for the Cosmo CDN. It reuses JWT extraction
+// and HTTP client setup patterns from the CDN persisted operations client.
+func NewCDNLoader(endpoint, token, objectPath string, logger *zap.Logger) (*CDNLoader, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -46,13 +48,14 @@ func NewFetcher(endpoint, token string, logger *zap.Logger) (*Fetcher, error) {
 	}
 
 	logger = logger.With(
-		zap.String("component", "pql_manifest_fetcher"),
+		zap.String("component", "manifest_cdn_loader"),
 		zap.String("url", endpoint),
 	)
 
-	return &Fetcher{
+	return &CDNLoader{
 		cdnURL:              u,
 		authenticationToken: token,
+		objectPath:          objectPath,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
@@ -60,11 +63,11 @@ func NewFetcher(endpoint, token string, logger *zap.Logger) (*Fetcher, error) {
 	}, nil
 }
 
-// Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/operations/manifest.json
+// Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/{objectPath}
 // with Bearer auth, using If-None-Match for conditional requests. The CDN returns 304 Not Modified
 // when the ETag matches, avoiding a full download. Returns (manifest, changed, err).
-func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
-	manifestPath := fmt.Sprintf("/%s/%s/operations/manifest.json", f.organizationID, f.federatedGraphID)
+func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
+	manifestPath := fmt.Sprintf("/%s/%s/%s", f.organizationID, f.federatedGraphID, f.objectPath)
 	manifestURL := f.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
 	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
@@ -92,7 +95,7 @@ func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest,
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, false, errors.New("PQL manifest not found on CDN")
+			return nil, false, errors.New("manifest not found on CDN")
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, false, errors.New("could not authenticate against CDN")
@@ -100,7 +103,7 @@ func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest,
 		if resp.StatusCode == http.StatusBadRequest {
 			return nil, false, errors.New("bad request")
 		}
-		return nil, false, fmt.Errorf("unexpected status code when loading PQL manifest, statusCode: %d", resp.StatusCode)
+		return nil, false, fmt.Errorf("unexpected status code when loading manifest, statusCode: %d", resp.StatusCode)
 	}
 
 	var reader io.Reader = resp.Body
@@ -127,11 +130,11 @@ func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest,
 
 	var manifest Manifest
 	if err := json.Unmarshal(body, &manifest); err != nil {
-		return nil, false, fmt.Errorf("could not unmarshal PQL manifest: %w", err)
+		return nil, false, fmt.Errorf("could not unmarshal manifest: %w", err)
 	}
 
 	if err := validateManifest(&manifest); err != nil {
-		return nil, false, fmt.Errorf("invalid PQL manifest: %w", err)
+		return nil, false, fmt.Errorf("invalid manifest: %w", err)
 	}
 
 	return &manifest, true, nil

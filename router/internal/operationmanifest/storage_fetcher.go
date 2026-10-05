@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"context"
@@ -7,14 +7,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// ManifestReaderFunc reads and parses a PQL manifest from storage at the given path.
+// ManifestReaderFunc reads and parses a manifest from storage at the given path.
 // When modifiedSince is non-zero, the implementation may skip the download if the
 // object has not been modified (returning nil, nil). A zero modifiedSince means
 // "fetch unconditionally".
 type ManifestReaderFunc func(ctx context.Context, objectPath string, modifiedSince time.Time) (*Manifest, error)
 
 // StorageFetcher adapts a ManifestReaderFunc (e.g. from an S3 or CDN
-// storage client) to the ManifestFetcher interface used by the Poller.
+// storage client) to the Loader interface used by the Poller.
 // It uses If-Modified-Since for conditional requests when the underlying
 // storage supports it, and falls back to revision comparison otherwise.
 type StorageFetcher struct {
@@ -35,7 +35,7 @@ func NewStorageFetcher(
 	return &StorageFetcher{
 		readManifest: readManifest,
 		objectPath:   objectPath,
-		logger:       logger.With(zap.String("component", "pql_storage_fetcher")),
+		logger:       logger.With(zap.String("component", "manifest_storage_fetcher")),
 	}
 }
 

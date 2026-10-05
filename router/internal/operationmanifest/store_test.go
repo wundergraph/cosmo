@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"fmt"
@@ -150,7 +150,7 @@ func TestStore(t *testing.T) {
 
 		// Fire multiple updates; channel coalescing means not all will be processed,
 		// but those that are must run sequentially (max concurrency = 1).
-		for i := range 5 {
+		for i := 0; i < 5; i++ {
 			store.Load(&Manifest{
 				Version:    1,
 				Revision:   fmt.Sprintf("rev-%d", i),
@@ -194,7 +194,7 @@ func TestStore(t *testing.T) {
 		store.Load(&Manifest{Version: 1, Revision: "rev-4", Operations: map[string]string{"a": "q"}})
 
 		// Verify drop messages were logged
-		dropCount := logs.FilterMessage("Skipping PQL manifest update signal, worker is busy").Len()
+		dropCount := logs.FilterMessage("Skipping manifest update signal, worker is busy").Len()
 		require.GreaterOrEqual(t, dropCount, 2, "at least 2 signals should have been dropped")
 
 		// Let the first callback finish
