@@ -15,8 +15,8 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -125,7 +125,7 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 // ReadManifest fetches and parses a PQL manifest from S3 at the given object path.
 // If the object path ends with .gz or .zst, the content is decompressed automatically.
 // When modifiedSince is non-zero and the object has not been modified, returns (nil, nil).
-func (c Client) ReadManifest(ctx context.Context, objectPath string, modifiedSince time.Time) (*pqlmanifest.Manifest, error) {
+func (c Client) ReadManifest(ctx context.Context, objectPath string, modifiedSince time.Time) (*operationmanifest.Manifest, error) {
 	opts := minio.GetObjectOptions{}
 	if !modifiedSince.IsZero() {
 		if err := opts.SetModified(modifiedSince); err != nil {
@@ -152,7 +152,7 @@ func (c Client) ReadManifest(ctx context.Context, objectPath string, modifiedSin
 		return nil, fmt.Errorf("failed to read manifest from S3: %w", err)
 	}
 
-	return pqlmanifest.ParseManifest(data)
+	return operationmanifest.ParseManifest(data)
 }
 
 // decompressAndRead reads the full content from a reader, decompressing
