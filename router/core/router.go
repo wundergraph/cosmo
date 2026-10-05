@@ -1488,8 +1488,8 @@ func (r *Router) buildClients(ctx context.Context) error {
 }
 
 // buildPersistedOpsClient creates the storage client for persisted operations.
-// It also returns a manifestReader function when the underlying storage supports
-// manifest fetching (S3 or CDN), which is passed to buildManifestStore.
+// It also returns a manifestReader function when the underlying storage is a CDN,
+// which is passed to buildManifestStore.
 func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, operationmanifest.ManifestReaderFunc, error) {
 	if r.persistedOperationsConfig.Disabled {
 		return nil, nil, nil
@@ -1534,7 +1534,7 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 			"Use S3 as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil, nil
 	}
 
 	if provider, ok := registry.FileSystem(providerID); ok {
@@ -1629,11 +1629,18 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 			objectPath = path.Join(objectPrefix, manifestFileName)
 		}
 
-		storageFetcher := operationmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
+		var loader operationmanifest.Loader = operationmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
+		if provider, ok := registry.S3(storageProviderID); ok {
+			s3Loader, err := operationmanifest.NewS3Loader(provider, objectPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create PQL manifest loader: %w", err)
+			}
+			loader = s3Loader
+		}
 
 		pqlStore := operationmanifest.NewStore(r.logger)
 		poller := operationmanifest.NewPoller(
-			storageFetcher,
+			loader,
 			pqlStore,
 			r.persistedOperationsConfig.Manifest.PollInterval,
 			r.persistedOperationsConfig.Manifest.PollJitter,
