@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/s3client"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -44,29 +43,7 @@ func NewClient(endpoint string, options *Options) (*Client, error) {
 		),
 	}
 
-	// The providers credential chain is used to allow multiple authentication methods.
-	providers := []credentials.Provider{
-		// Static credentials allow setting the access key and secret access key directly.
-		&credentials.Static{
-			Value: credentials.Value{
-				AccessKeyID:     options.AccessKeyID,
-				SecretAccessKey: options.SecretAccessKey,
-				SignerType:      credentials.SignatureV4,
-			},
-		},
-		// IAM credentials are retrieved from the EC2 nodes assumed role.
-		&credentials.IAM{
-			Client: &http.Client{
-				Transport: http.DefaultTransport,
-			},
-		},
-	}
-
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewChainCredentials(providers),
-		Region: options.Region,
-		Secure: options.UseSSL,
-	})
+	minioClient, err := s3client.New(endpoint, options.AccessKeyID, options.SecretAccessKey, options.Region, options.UseSSL)
 	if err != nil {
 		return nil, err
 	}

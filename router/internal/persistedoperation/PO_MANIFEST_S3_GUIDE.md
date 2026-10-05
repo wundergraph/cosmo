@@ -25,8 +25,6 @@ persisted_operations:
     file_name: manifest.json
     # How often to poll S3 for manifest updates (default: 10s)
     poll_interval: 10s
-    # Random jitter added to the poll interval (default: 5s)
-    poll_jitter: 5s
     warmup:
       # Pre-plan all manifest operations so the first request is served from cache
       enabled: true
