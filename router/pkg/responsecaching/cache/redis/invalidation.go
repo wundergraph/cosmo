@@ -29,7 +29,7 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 
 // invalidateTag removes the entries one tag names and then the tag itself.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
-	tagKey, pendingKey := c.tagKeys(tag)
+	tagKey, pendingKey := c.tagKey(tag), c.pendingKey(tag)
 
 	// Deletes owed by earlier walks that didn't finish.
 	removed, err := c.drainPending(ctx, pendingKey)

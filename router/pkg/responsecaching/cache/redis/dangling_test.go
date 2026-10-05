@@ -278,8 +278,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Equal(t, 2, counter.count())
 	})
 
-	// A tag with stray braces is escaped into its own namespace, so it gets a
-	// pending set like any other.
+	// A tag with stray braces is escaped like any other.
 	odd := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"odd}tag"}}
 
 	t.Run("a tag with stray braces survives a SET after the walk's UNLINK", func(t *testing.T) {
@@ -659,7 +658,7 @@ func (f *failCommands) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 }
 
 // A pending key must hash to its tag key's cluster slot, or the script moving
-// members between them fails CROSSSLOT. Every tag gets one under any prefix
+// members between them fails CROSSSLOT. Holds for every tag under any prefix
 // the constructor accepts.
 func TestPendingKeySharesTagKeySlot(t *testing.T) {
 	t.Parallel()
@@ -667,15 +666,10 @@ func TestPendingKeySharesTagKeySlot(t *testing.T) {
 	tags := []string{"subgraph:accounts", "type:accounts:User", `User:{"id":"1"}`, "{x}", "a{b", "odd}tag", "}", "{", "{}", "x{}y", "%7D", "odd%7Dtag"}
 	for _, prefix := range []string{"", "entity:", "{cache}:", "{c}x}:", "a{b}c{"} {
 		c := &RedisCache{prefix: prefix}
-		_, ok := c.colocated(escapedTagNamespace, escapedPendingNamespace, "tag")
-		require.True(t, ok, "prefix %q should be accepted", prefix)
-
 		seen := map[string]string{}
 		for _, tag := range tags {
-			tagKey, pending := c.tagKeys(tag)
-			require.NotEmpty(t, pending, "prefix %q tag %q", prefix, tag)
+			tagKey, pending := c.tagKey(tag), c.pendingKey(tag)
 			require.Equal(t, clusterSlot(tagKey), clusterSlot(pending), "prefix %q tag %q: %q vs %q", prefix, tag, tagKey, pending)
-			require.NotEqual(t, tagKey, pending)
 			for _, key := range []string{tagKey, pending} {
 				other, dup := seen[key]
 				require.False(t, dup, "prefix %q: tags %q and %q share key %q", prefix, other, tag, key)
@@ -684,11 +678,10 @@ func TestPendingKeySharesTagKeySlot(t *testing.T) {
 		}
 	}
 
-	// Tags that colocate as spelled keep their released key.
 	c := &RedisCache{prefix: "entity:"}
 	require.Equal(t, "entity:t:subgraph:accounts", c.tagKey("subgraph:accounts"))
-	require.Equal(t, `entity:t:User:{"id":"1"}`, c.tagKey(`User:{"id":"1"}`))
-	require.Equal(t, "entity:te:odd%7Dtag", c.tagKey("odd}tag"))
+	require.Equal(t, `entity:t:User:%7B"id":"1"%7D`, c.tagKey(`User:{"id":"1"}`))
+	require.Equal(t, "entity:p:{entity:t:odd%7Dtag}", c.pendingKey("odd}tag"))
 }
 
 func TestNewRedisCacheRejectsUnbalancedPrefix(t *testing.T) {

@@ -44,12 +44,9 @@ const (
 	entryNamespace   = "e:"
 	tagNamespace     = "t:"
 	pendingNamespace = "p:"
-	// Escaped tags: those whose t: key can't share a slot with a pending set.
-	escapedTagNamespace     = "te:"
-	escapedPendingNamespace = "pe:"
 )
 
-// tagEscaper removes braces from a tag so they can't form a hash tag. Also
+// tagEscaper removes braces from tags so they can't form a hash tag, and
 // escapes % so distinct tags stay distinct.
 var tagEscaper = strings.NewReplacer("%", "%25", "{", "%7B", "}", "%7D")
 
@@ -65,45 +62,17 @@ const defaultWriteGrace = 5 * time.Second
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
 
-// tagKey is where the set of entries carrying tag lives.
+// tagKey is where the set of entries carrying tag lives. The tag is escaped,
+// so only the prefix can put a hash tag in it.
 func (c *RedisCache) tagKey(tag string) string {
-	tagKey, _ := c.tagKeys(tag)
-	return tagKey
+	return c.prefix + tagNamespace + tagEscaper.Replace(tag)
 }
 
-// pendingKey is where a tag's owed deletes wait, in its tag key's slot.
+// pendingKey is where a tag's owed deletes wait. Wrapping the tag key in a
+// hash tag puts both in one cluster slot, so one script can move members
+// between them.
 func (c *RedisCache) pendingKey(tag string) string {
-	_, pendingKey := c.tagKeys(tag)
-	return pendingKey
-}
-
-// tagKeys names a tag's index and pending set so both hash to one cluster
-// slot, letting one script move members between them. Tags that can't as
-// spelled, from stray braces, are escaped into their own namespace.
-func (c *RedisCache) tagKeys(tag string) (tagKey, pendingKey string) {
-	if pending, ok := c.colocated(tagNamespace, pendingNamespace, tag); ok {
-		return c.prefix + tagNamespace + tag, pending
-	}
-	escaped := tagEscaper.Replace(tag)
-	// Brace-free, so always colocated once NewRedisCache accepted the prefix.
-	pending, _ := c.colocated(escapedTagNamespace, escapedPendingNamespace, escaped)
-	return c.prefix + escapedTagNamespace + escaped, pending
-}
-
-// colocated finds a pending key hashing like the tag key: reusing a hash tag
-// in it, or wrapping the whole tag key in one.
-func (c *RedisCache) colocated(tagNS, pendingNS, name string) (string, bool) {
-	tagKey := c.prefix + tagNS + name
-	want := hashTag(tagKey)
-	for _, candidate := range []string{
-		c.prefix + pendingNS + name,
-		c.prefix + pendingNS + "{" + tagKey + "}",
-	} {
-		if hashTag(candidate) == want {
-			return candidate, true
-		}
-	}
-	return "", false
+	return c.prefix + pendingNamespace + "{" + c.tagKey(tag) + "}"
 }
 
 // hashTag is the part of key Redis Cluster hashes: the first non-empty {…},
@@ -124,8 +93,8 @@ func hashTag(key string) string {
 // rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
 // rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
-	// A brace-free tag must colocate under this prefix, or escaping can't help.
-	if _, ok := (&RedisCache{prefix: prefix}).colocated(escapedTagNamespace, escapedPendingNamespace, "tag"); !ok {
+	// Unbalanced braces in the prefix would split a tag's keys across slots.
+	if probe := (&RedisCache{prefix: prefix}); hashTag(probe.tagKey("tag")) != hashTag(probe.pendingKey("tag")) {
 		return nil, fmt.Errorf("redis key prefix %q has unbalanced braces: a tag's index and pending set can't share a cluster slot", prefix)
 	}
 
