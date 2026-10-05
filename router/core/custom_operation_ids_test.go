@@ -37,7 +37,7 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 	const (
 		invalidHash   = "persistedQuery does not have a valid sha256 hash"
 		invalidLength = "persistedQuery id must be 1-250 characters long"
-		invalidChars  = "persistedQuery id must contain printable ASCII characters excluding forward slash and backslash"
+		invalidChars  = `persistedQuery id may only contain [ -~] except / and \`
 	)
 	tests := []struct {
 		name string

@@ -431,7 +431,7 @@ func (o *OperationKit) validatePersistedOperationID(pq *GraphQLRequestExtensions
 	}
 	for _, c := range []byte(pq.Sha256Hash) {
 		if !isCustomPersistedOperationIDChar(c) {
-			return &httpGraphqlError{message: "persistedQuery id must contain printable ASCII characters excluding forward slash and backslash", statusCode: http.StatusBadRequest}
+			return &httpGraphqlError{message: `persistedQuery id may only contain [ -~] except / and \`, statusCode: http.StatusBadRequest}
 		}
 	}
 	return nil
