@@ -29,19 +29,26 @@ func rawEntry(value string) string {
 func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
-	return newTestRedisCacheWithHook(t, nil)
+	return newTestRedisCacheWithHook(t)
 }
 
-// newTestRedisCacheWithHook is newTestRedisCache with hook installed on the
-// client, for the cases that have to bend a reply the server would never send
-// on its own.
-func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *miniredis.Miniredis) {
+// newTestRedisCacheWithHook is newTestRedisCache with hooks installed on the
+// client in order, for the cases that have to bend a reply the server would
+// never send on its own.
+func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
 	mr := miniredis.RunT(t)
+	return newTestRedisCacheOn(t, mr, hooks...), mr
+}
+
+// newTestRedisCacheOn builds a cache on its own client against mr, so tests can
+// run two routers on one server.
+func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.Hook) *RedisCache {
+	t.Helper()
 
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	if hook != nil {
+	for _, hook := range hooks {
 		client.AddHook(hook)
 	}
 	c, err := NewRedisCache(t.Context(), client, testPrefix)
@@ -56,7 +63,7 @@ func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *min
 		require.NoError(t, c.Close())
 	})
 
-	return c, mr
+	return c
 }
 
 // expirePTTL rewrites every PTTL reply to the -2 redis sends for a key that is
