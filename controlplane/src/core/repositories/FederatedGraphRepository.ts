@@ -947,17 +947,6 @@ export class FederatedGraphRepository {
           ),
         ),
       );
-      await this.db
-        .insert(schemaVersionChangeAction)
-        .values(
-          chunk.map((change) => ({
-            schemaVersionId: data.schemaVersionID,
-            changeType: change.changeType,
-            changeMessage: change.message,
-            path: change.path,
-          })),
-        )
-        .execute();
     }
   }
 
