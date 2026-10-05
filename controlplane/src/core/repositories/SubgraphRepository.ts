@@ -1203,7 +1203,7 @@ export class SubgraphRepository {
     });
 
     if (data.promiseCache) {
-      data.promiseCache.set(target.federatedGraph.id, matchingSubgraphs);
+      data.promiseCache.set(data.federatedGraphTargetId, matchingSubgraphs);
     }
 
     return matchingSubgraphs;
