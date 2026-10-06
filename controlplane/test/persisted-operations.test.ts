@@ -104,10 +104,17 @@ describe('Persisted operations', (ctx) => {
       expect(blobStorage.keys().sort()).toEqual(initialKeys);
       expect((await client.getClients({ fedGraphName, namespace: 'default' })).clients).toEqual([]);
 
-      const ids = ['a', ' Get.Hello-v1 ', 'a'.repeat(250)];
+      const ids = ['a', ' Get.Hello-v1 ', 'a'.repeat(250), '__proto__'];
       const result = await publish(ids);
       expect(result.response?.code).toBe(EnumStatusCode.OK);
       expect(result.operations.map((operation) => operation.id)).toEqual(ids);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      const operations = Object.fromEntries(ids.toSorted().map((id) => [id, 'query { hello }']));
+      expect(manifest).toMatchObject({
+        operations,
+        revision: crypto.createHash('sha256').update(JSON.stringify(operations)).digest('hex'),
+      });
     });
 
     test('Should be able to publish persisted operations', async (testContext) => {
