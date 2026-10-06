@@ -221,12 +221,13 @@ func setupLargeFieldsBenchmark(b *testing.B, fieldCount int) (plan.Plan, *ast.Do
 	schemaBuilder.WriteString("\n\t\t}")
 
 	// Generate query selecting all fields
-	queryBuilder := "query GetUser($id: ID!) {\n\t\tuser(id: $id) {\n\t\t\tid\n\t\t\tname\n"
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString("query GetUser($id: ID!) {\n\t\tuser(id: $id) {\n\t\t\tid\n\t\t\tname\n")
 	for i := range fieldCount {
 		fieldName := fmt.Sprintf("field%d", i)
-		queryBuilder += "\t\t\t" + fieldName + "\n"
+		queryBuilder.WriteString("\t\t\t" + fieldName + "\n")
 	}
-	queryBuilder += "\t\t}\n\t}"
+	queryBuilder.WriteString("\t\t}\n\t}")
 
 	variables := `{"id":"123"}`
 
@@ -235,7 +236,7 @@ func setupLargeFieldsBenchmark(b *testing.B, fieldCount int) (plan.Plan, *ast.Do
 	require.False(b, rep.HasErrors())
 
 	// Parse operation
-	op, rep := astparser.ParseGraphqlDocumentString(queryBuilder)
+	op, rep := astparser.ParseGraphqlDocumentString(queryBuilder.String())
 	require.False(b, rep.HasErrors())
 
 	// Merge and normalize
