@@ -64,11 +64,12 @@ export function publishPersistedOperations(
     }
 
     for (const operation of req.operations) {
-      if (operation.id.length === 0 || operation.id.length > 250 || /[^\w-]/.test(operation.id)) {
+      if (operation.id.length === 0 || operation.id.length > 250 || /[^\u0020-\u007E]|[/\\]/.test(operation.id)) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: 'Operation ID must contain 1–250 ASCII letters, digits, underscores, or hyphens',
+            details:
+              'Operation ID must contain 1–250 printable ASCII characters, excluding forward slash and backslash',
           },
           operations: [],
         };

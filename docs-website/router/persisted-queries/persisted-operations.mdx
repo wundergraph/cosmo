@@ -133,7 +133,7 @@ Both `persisted_operation_sha256` and `operation_sha256` record the ID from the 
 
 ## Control-plane publication and conflicts
 
-IDs published through the control plane are case-sensitive and must contain 1–250 ASCII letters, digits, underscores, or hyphens (`[A-Za-z0-9_-]{1,250}`). The control plane rejects a publish request containing an invalid ID before registering any operations in that request. The CLI sends operations in batches of up to 100; earlier successful batches are not rolled back if a later batch fails.
+IDs published through the control plane must contain 1–250 printable ASCII characters (space through tilde), excluding forward slash and backslash. IDs are case-sensitive and are not trimmed or normalized. Control characters, DEL, and non-ASCII characters are rejected. The control plane rejects a publish request containing an invalid ID before registering any operations in that request. The CLI sends operations in batches of up to 100; earlier successful batches are not rolled back if a later batch fails.
 
 Apollo JSON manifests preserve each operation's `id`. Relay JSON query maps preserve their supplied IDs. Plain `.graphql` and `.gql` files use the SHA256 hash of their contents as the ID. Publishing an ID does not enable support for that ID format in the router.
 

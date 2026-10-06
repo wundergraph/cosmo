@@ -349,7 +349,20 @@ describe('Persisted operations', (ctx) => {
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
       const initialKeys = [...blobStorage.keys()].sort();
-      for (const id of ['', 'a'.repeat(251), 'query/name', 'query.name', 'query name', 'café', 'query\n']) {
+      const invalidIds = [
+        '',
+        'a'.repeat(251),
+        'query/name',
+        'query\\name',
+        '../operation',
+        'café',
+        'query\u0080',
+        'query\u00A0',
+        'query😀',
+        ...Array.from({ length: 32 }, (_, code) => `query${String.fromCodePoint(code)}`),
+        'query\u007F',
+      ];
+      for (const id of invalidIds) {
         const result = await client.publishPersistedOperations({
           fedGraphName,
           namespace: 'default',
@@ -361,7 +374,7 @@ describe('Persisted operations', (ctx) => {
         });
         expect(result.response?.code).toBe(EnumStatusCode.ERR);
         expect(result.response?.details).toBe(
-          'Operation ID must contain 1–250 ASCII letters, digits, underscores, or hyphens',
+          'Operation ID must contain 1–250 printable ASCII characters, excluding forward slash and backslash',
         );
         expect(result.operations).toEqual([]);
         expect([...blobStorage.keys()].sort()).toEqual(initialKeys);
@@ -376,7 +389,23 @@ describe('Persisted operations', (ctx) => {
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
       const contents = 'query { hello }';
-      const ids = ['a', 'Get-Typename_V1', 'a'.repeat(250), crypto.createHash('sha256').update(contents).digest('hex')];
+      const printableAscii = Array.from({ length: 95 }, (_, index) => String.fromCodePoint(0x20 + index))
+        .filter((character) => character !== '/' && character !== '\\')
+        .join('');
+      const ids = [
+        'a',
+        'A',
+        'Get-Typename_V1',
+        'get_employee-1.2.3',
+        ' a b ',
+        ' ',
+        '.',
+        '..',
+        '%2F',
+        printableAscii,
+        '~'.repeat(250),
+        crypto.createHash('sha256').update(contents).digest('hex'),
+      ];
       const result = await client.publishPersistedOperations({
         fedGraphName,
         namespace: 'default',
