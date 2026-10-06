@@ -1,9 +1,8 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 
@@ -20,6 +19,7 @@ type Manifest struct {
 type Store struct {
 	manifest  atomic.Pointer[Manifest]
 	updateCh  chan struct{}
+	done      chan struct{}
 	onUpdate  atomic.Value // stores func()
 	startOnce sync.Once
 	logger    *zap.Logger
@@ -29,6 +29,7 @@ func NewStore(logger *zap.Logger) *Store {
 	return &Store{
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
+		done:     make(chan struct{}),
 	}
 }
 
@@ -41,9 +42,14 @@ func (s *Store) SetOnUpdate(fn func()) {
 	s.onUpdate.Store(fn)
 	s.startOnce.Do(func() {
 		go func() {
-			for range s.updateCh {
-				if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
-					f()
+			for {
+				select {
+				case <-s.done:
+					return
+				case <-s.updateCh:
+					if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
+						f()
+					}
 				}
 			}
 		}()
@@ -61,15 +67,21 @@ func (s *Store) Load(manifest *Manifest) {
 	}
 
 	select {
+	case <-s.done:
+		return
+	default:
+	}
+
+	select {
 	case s.updateCh <- struct{}{}:
 	default:
-		s.logger.Debug("Skipping PQL manifest update signal, worker is busy")
+		s.logger.Debug("Skipping manifest update signal, worker is busy")
 	}
 }
 
-// Close stops the update worker goroutine.
+// Close stops the update worker. Load still swaps the manifest after Close but does not signal the worker.
 func (s *Store) Close() {
-	close(s.updateCh)
+	close(s.done)
 }
 
 // Snapshot returns the current manifest. Published manifests must not be modified.
@@ -92,16 +104,6 @@ func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	return []byte(op), true
 }
 
-// LoadFromFile reads a manifest JSON file from disk and loads it into the store.
-func (s *Store) LoadFromFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("failed to read manifest file: %w", err)
-	}
-
-	return s.LoadFromData(data)
-}
-
 // ParseManifest parses and validates manifest JSON data.
 func ParseManifest(data []byte) (*Manifest, error) {
 	var manifest Manifest
@@ -112,16 +114,6 @@ func ParseManifest(data []byte) (*Manifest, error) {
 		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
 	return &manifest, nil
-}
-
-// LoadFromData parses and validates manifest JSON data and loads it into the store.
-func (s *Store) LoadFromData(data []byte) error {
-	manifest, err := ParseManifest(data)
-	if err != nil {
-		return err
-	}
-	s.Load(manifest)
-	return nil
 }
 
 func validateManifest(m *Manifest) error {

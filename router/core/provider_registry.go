@@ -78,9 +78,3 @@ func (r *ProviderRegistry) FileSystem(id string) (config.FileSystemStorageProvid
 	p, ok := r.fileSystem[id]
 	return p, ok
 }
-
-// IsFileSystem returns true if the given ID matches a filesystem provider.
-func (r *ProviderRegistry) IsFileSystem(id string) bool {
-	_, ok := r.fileSystem[id]
-	return ok
-}

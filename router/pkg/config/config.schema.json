@@ -221,11 +221,10 @@
             "poll_jitter": {
               "type": "string",
               "format": "go-duration",
-              "description": "The maximum random jitter added to each poll interval. The period is specified as a string with a number and a unit, e.g. 1s, 5s, 10s. Minimum is 1s.",
+              "description": "Deprecated. The router no longer adds jitter to the poll interval. The value is accepted and ignored.",
               "default": "5s",
-              "duration": {
-                "minimum": "1s"
-              }
+              "deprecated": true,
+              "deprecationMessage": "poll_jitter is deprecated and ignored. The router polls the manifest at poll_interval without jitter."
             },
             "warmup": {
               "type": "object",
@@ -2732,7 +2731,20 @@
           "properties": {
             "provider_id": {
               "type": "string",
-              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+              "description": "The ID of the storage provider to use for loading GraphQL operations. The provider must be configured in the storage_providers section. Without object_path, only storage providers of type 'file_system' are supported, and the router loads the operation files in its directory. With object_path, storage providers of type 'file_system' and 's3' are supported."
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path of an operation manifest in the storage provider. When set, the router loads the MCP operations from the manifest and polls it for a new revision. The key of each operation in the manifest is its tool name."
+            },
+            "poll_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the router polls the operation manifest for a new revision. Only used with object_path. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 1h. Minimum is 1s.",
+              "default": "10s",
+              "duration": {
+                "minimum": "1s"
+              }
             }
           },
           "required": ["provider_id"]

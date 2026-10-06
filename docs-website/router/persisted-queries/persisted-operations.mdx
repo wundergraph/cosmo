@@ -158,7 +158,7 @@ persisted_operations:
     enabled: true
 ```
 
-The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval` and `poll_jitter`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
+The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
 
 <Note>
   When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.
@@ -191,6 +191,25 @@ persisted_operations:
 ## Using a custom storage provider
 
 You can load persisted operations from your own S3-compatible storage instead of the Cosmo CDN. First, [define a storage provider](/router/storage-providers), then reference it in your persisted operations configuration.
+
+The PQL manifest can also be loaded from a local directory with a `file_system` provider. The router reads `<path>/<object_prefix>/<file_name>` and polls the file for new revisions.
+
+```yaml
+storage_providers:
+  file_system:
+    - id: local
+      path: ./persisted-operations
+
+persisted_operations:
+  storage:
+    provider_id: local
+    object_prefix: operations
+  manifest:
+    enabled: true
+    file_name: manifest.json
+```
+
+Change the `revision` field when you update the file. The router ignores a file with the same revision.
 
 ## Disallowing non-persisted Operations
 

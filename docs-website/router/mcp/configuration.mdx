@@ -36,7 +36,9 @@ storage_providers:
 | `server.description`          | A human-readable description of this MCP server, reported in `serverInfo`.                                                                                                                                                                                                   | -                |
 | `server.discover.instructions` | Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the `server/discover` response. See [Server Discovery](#server-discovery).                                                                                           | -                |
 | `router_url`                  | Custom URL to use for the router GraphQL endpoint in MCP responses. Use this when your router is behind a proxy.                                                                                                                                                             | -                |
-| `storage.provider_id`         | The ID of a storage provider to use for loading GraphQL operations. Only `file_system` providers are supported.                                                                                                                                                              | -                |
+| `storage.provider_id`         | The ID of a storage provider to use for loading GraphQL operations. With `storage.object_path`, `file_system` and `s3` providers are supported. Without it, only `file_system` providers are supported. See [Storage Providers](#storage-providers).                        | -                |
+| `storage.object_path`         | The path of an operation manifest in the storage provider. When set, the router loads the operations from the manifest and polls it for a new revision. See [Operation Manifest](/router/mcp/tools#operation-manifest).                                                     | -                |
+| `storage.poll_interval`       | How often the router polls the operation manifest for a new revision. Only used with `storage.object_path`. The minimum is `1s`.                                                                                                                                             | `10s`            |
 | `session.stateless`           | Whether the MCP server should operate in stateless mode. When `true`, no server-side session state is maintained between requests.                                                                                                                                           | `true`           |
 | `graph_name`                  | The name of the graph this router exposes via MCP. Converted to kebab-case and used to build the MCP server name (`wundergraph-cosmo-<kebab-case-name>`) and for logging; it does not select a different graph. For example, `MyGraph` becomes `wundergraph-cosmo-my-graph`. | `mygraph`        |
 | `exclude_mutations`           | Whether to exclude mutation operations from being exposed                                                                                                                                                                                                                    | `false`          |
@@ -62,6 +64,8 @@ All MCP options can also be set via environment variables:
 | `MCP_SERVER_DISCOVER_INSTRUCTIONS` | `mcp.server.discover.instructions` |
 | `MCP_ROUTER_URL`                  | `mcp.router_url`                  |
 | `MCP_STORAGE_PROVIDER_ID`         | `mcp.storage.provider_id`         |
+| `MCP_STORAGE_OBJECT_PATH`         | `mcp.storage.object_path`         |
+| `MCP_STORAGE_POLL_INTERVAL`       | `mcp.storage.poll_interval`       |
 | `MCP_SESSION_STATELESS`           | `mcp.session.stateless`           |
 | `MCP_GRAPH_NAME`                  | `mcp.graph_name`                  |
 | `MCP_EXCLUDE_MUTATIONS`           | `mcp.exclude_mutations`           |
@@ -74,7 +78,58 @@ For OAuth-related environment variables, see [OAuth Configuration Reference](/ro
 
 ## Storage Providers
 
-MCP loads operations from a configured storage provider. Currently, only the `file_system` provider is supported:
+MCP loads operations from a configured storage provider. A storage provider **must** be specified. See [Storage Providers](/router/storage-providers) for more details on configuring storage providers.
+
+### Operation Manifest
+
+Set `storage.object_path` to load the operations from one [operation manifest](/router/mcp/tools#operation-manifest) file. The router polls the file and swaps the tools when its `revision` changes. It does not need a restart. You can use a `file_system` or an `s3` provider. The `cdn` provider is not supported for MCP.
+
+<CodeGroup>
+```yaml File system
+mcp:
+  storage:
+    provider_id: 'mcp'
+    object_path: 'manifest.json'
+    poll_interval: 10s
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations' # The manifest is at operations/manifest.json
+```
+
+```yaml S3
+mcp:
+  storage:
+    provider_id: 's3'
+    object_path: 'mcp/manifest.json'
+    poll_interval: 10s
+
+storage_providers:
+  s3:
+    - id: 's3'
+      endpoint: 's3.amazonaws.com'
+      bucket: 'cosmo'
+      region: 'us-east-1'
+      secure: true
+```
+</CodeGroup>
+
+Keep these points in mind:
+
+- Change the `revision` on every edit. If the revision stays the same, the router ignores the edit.
+- At startup, the router does not start if it cannot read or parse the manifest.
+- If the router cannot read or parse a new manifest, it logs a warning and keeps the previous tools.
+- Stateless MCP sessions see tool changes on their next `tools/list` request.
+- On S3, the router sends `If-None-Match` with the last ETag, so it only downloads a changed manifest. S3-compatible stores that do not support `If-None-Match` still work, but the router then downloads the manifest on every poll.
+
+### Operation Directory (deprecated)
+
+<Warning>
+  Directory mode is deprecated. Use an [operation manifest](#operation-manifest) instead.
+</Warning>
+
+Without `storage.object_path`, the router loads all `.graphql` and `.gql` files in the directory of a `file_system` provider:
 
 ```yaml
 storage_providers:
@@ -90,8 +145,6 @@ mcp:
   storage:
     provider_id: 'mcp'
 ```
-
-A storage provider **must** be specified to load GraphQL operations. See [Storage Providers](/router/storage-providers) for more details on configuring storage providers.
 
 ## Server Discovery
 

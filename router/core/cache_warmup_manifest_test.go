@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +16,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns nil when store has no manifest", func(t *testing.T) {
 		t.Parallel()
-		store := pqlmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(zap.NewNop())
 		source := NewManifestWarmupSource(store)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
@@ -26,8 +26,8 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns nil when manifest has no operations", func(t *testing.T) {
 		t.Parallel()
-		store := pqlmanifest.NewStore(zap.NewNop())
-		store.Load(&pqlmanifest.Manifest{
+		store := operationmanifest.NewStore(zap.NewNop())
+		store.Load(&operationmanifest.Manifest{
 			Version:    1,
 			Revision:   "rev-1",
 			Operations: map[string]string{},
@@ -41,8 +41,8 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns all operations with persisted query extensions", func(t *testing.T) {
 		t.Parallel()
-		store := pqlmanifest.NewStore(zap.NewNop())
-		store.Load(&pqlmanifest.Manifest{
+		store := operationmanifest.NewStore(zap.NewNop())
+		store.Load(&operationmanifest.Manifest{
 			Version:  1,
 			Revision: "rev-1",
 			Operations: map[string]string{
@@ -72,8 +72,8 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("does not include client info", func(t *testing.T) {
 		t.Parallel()
-		store := pqlmanifest.NewStore(zap.NewNop())
-		store.Load(&pqlmanifest.Manifest{
+		store := operationmanifest.NewStore(zap.NewNop())
+		store.Load(&operationmanifest.Manifest{
 			Version:    1,
 			Revision:   "rev-1",
 			Operations: map[string]string{"hash1": "query { a }"},
@@ -88,8 +88,8 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("skips operations whose SHA256 ID does not match their body", func(t *testing.T) {
 		t.Parallel()
-		store := pqlmanifest.NewStore(zap.NewNop())
-		store.Load(&pqlmanifest.Manifest{
+		store := operationmanifest.NewStore(zap.NewNop())
+		store.Load(&operationmanifest.Manifest{
 			Version:  1,
 			Revision: "rev-1",
 			Operations: map[string]string{

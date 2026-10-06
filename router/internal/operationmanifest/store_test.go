@@ -1,14 +1,13 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -194,7 +193,7 @@ func TestStore(t *testing.T) {
 		store.Load(&Manifest{Version: 1, Revision: "rev-4", Operations: map[string]string{"a": "q"}})
 
 		// Verify drop messages were logged
-		dropCount := logs.FilterMessage("Skipping PQL manifest update signal, worker is busy").Len()
+		dropCount := logs.FilterMessage("Skipping manifest update signal, worker is busy").Len()
 		require.GreaterOrEqual(t, dropCount, 2, "at least 2 signals should have been dropped")
 
 		// Let the first callback finish
@@ -274,6 +273,22 @@ func TestStore(t *testing.T) {
 		// First callback should not have been called again
 		require.Equal(t, firstCountBefore, firstCalls.Load())
 	})
+
+	t.Run("Load does not panic and the worker exits after Close", func(t *testing.T) {
+		ignore := goleak.IgnoreCurrent()
+		store := NewStore(zap.NewNop())
+
+		var calls atomic.Int32
+		store.SetOnUpdate(func() {
+			calls.Add(1)
+		})
+		store.Close()
+
+		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
+		require.Equal(t, "rev-1", store.Revision())
+		goleak.VerifyNone(t, ignore)
+		require.Equal(t, int32(0), calls.Load())
+	})
 }
 
 func TestParseManifest(t *testing.T) {
@@ -305,46 +320,5 @@ func TestParseManifest(t *testing.T) {
 	t.Run("nil operations", func(t *testing.T) {
 		_, err := ParseManifest([]byte(`{"version":1,"revision":"r"}`))
 		require.ErrorContains(t, err, "operations field is required")
-	})
-}
-
-func TestLoadFromData(t *testing.T) {
-	t.Run("valid data loads into store", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		data := []byte(`{"version":1,"revision":"rev-1","operations":{"h1":"query { a }"}}`)
-		err := store.LoadFromData(data)
-		require.NoError(t, err)
-		require.True(t, store.IsLoaded())
-		require.Equal(t, "rev-1", store.Revision())
-		body, found := store.LookupByHash("h1")
-		require.True(t, found)
-		require.Equal(t, "query { a }", string(body))
-	})
-
-	t.Run("invalid data returns error", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		err := store.LoadFromData([]byte(`{bad`))
-		require.Error(t, err)
-		require.False(t, store.IsLoaded())
-	})
-}
-
-func TestLoadFromFile(t *testing.T) {
-	t.Run("valid file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "manifest.json")
-		err := os.WriteFile(path, []byte(`{"version":1,"revision":"file-rev","operations":{"fh":"query { f }"}}`), 0644)
-		require.NoError(t, err)
-
-		store := NewStore(zap.NewNop())
-		err = store.LoadFromFile(path)
-		require.NoError(t, err)
-		require.Equal(t, "file-rev", store.Revision())
-	})
-
-	t.Run("missing file", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		err := store.LoadFromFile("/nonexistent/path/manifest.json")
-		require.ErrorContains(t, err, "failed to read manifest file")
 	})
 }

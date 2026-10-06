@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -49,7 +51,6 @@ func TestPQLManifest(t *testing.T) {
 		Manifest: config.PQLManifestConfig{
 			Enabled:      true,
 			PollInterval: 10 * time.Second,
-			PollJitter:   5 * time.Second,
 		},
 	}
 
@@ -57,7 +58,6 @@ func TestPQLManifest(t *testing.T) {
 		Manifest: config.PQLManifestConfig{
 			Enabled:      true,
 			PollInterval: 10 * time.Second,
-			PollJitter:   5 * time.Second,
 			Warmup: config.PQLManifestWarmupConfig{
 				Enabled: true,
 				Workers: 4,
@@ -174,7 +174,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 					Safelist: config.SafelistConfiguration{Enabled: true},
 				}),
@@ -200,7 +199,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 					Safelist: config.SafelistConfiguration{Enabled: true},
 				}),
@@ -226,7 +224,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 				}),
@@ -262,7 +259,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 				}),
@@ -408,7 +404,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 					Safelist:   config.SafelistConfiguration{Enabled: true},
@@ -501,7 +496,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 100 * time.Millisecond,
-						PollJitter:   5 * time.Millisecond,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled: true,
 							Workers: 4,
@@ -635,7 +629,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 				}),
 			},
@@ -659,29 +652,72 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("filesystem provider rejected for manifest", func(t *testing.T) {
+	t.Run("filesystem provider serves the manifest and picks up a new revision", func(t *testing.T) {
 		t.Parallel()
-		testenv.FailsOnStartup(t, &testenv.Config{
+
+		employeesHash := "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"
+		addedHash := "da7b196c305087a40625b93073c796f9182e5693ac764fb72050c24f8c6a6071"
+
+		dir := t.TempDir()
+		require.NoError(t, os.Mkdir(filepath.Join(dir, "operations"), 0o755))
+		manifestPath := filepath.Join(dir, "operations", "manifest.json")
+		// Write to a temporary file and rename it, so the router never reads a partial file.
+		writeManifest := func(manifest string) {
+			require.NoError(t, os.WriteFile(manifestPath+".tmp", []byte(manifest), 0o644))
+			require.NoError(t, os.Rename(manifestPath+".tmp", manifestPath))
+		}
+		writeManifest(`{"version":1,"revision":"rev-v1","generatedAt":"2024-01-01T00:00:00Z","operations":{"` +
+			employeesHash + `":"query Employees {\n  employees {\n    id\n    }\n}"}}`)
+
+		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
-						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
+						FileName:     "manifest.json",
+						PollInterval: 100 * time.Millisecond,
 					},
 					Storage: config.PersistedOperationsStorageConfig{
-						ProviderID: "local",
+						ProviderID:   "local",
+						ObjectPrefix: "operations",
 					},
 				}),
 				core.WithStorageProviders(config.StorageProviders{
 					FileSystem: []config.FileSystemStorageProvider{
-						{ID: "local", Path: "."},
+						{ID: "local", Path: dir},
 					},
 				}),
 			},
-		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "filesystem storage provider")
-			require.ErrorContains(t, err, "not supported for PQL manifest")
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + addedHash + `"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, persistedNotFoundResp, res.Body)
+
+			writeManifest(`{"version":1,"revision":"rev-v2","generatedAt":"2024-01-02T00:00:00Z","operations":{"` +
+				addedHash + `":"query { employees { id } }"}}`)
+
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + addedHash + `"}}`),
+					Header:     header,
+				})
+				require.NoError(c, err)
+				require.Equal(c, expectedEmployeesBody, res.Body)
+			}, 5*time.Second, 50*time.Millisecond)
 		})
 	})
 
@@ -693,7 +729,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled: false,
 						},
@@ -737,7 +772,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled:        true,
 							Workers:        2,
@@ -793,7 +827,6 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled:        true,
 							Workers:        2,
@@ -964,12 +997,11 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
-						PollJitter:   5 * time.Second,
 					},
 				}),
 			},
 		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "PQL manifest not found on CDN")
+			require.ErrorContains(t, err, "manifest not found on CDN")
 		})
 	})
 }

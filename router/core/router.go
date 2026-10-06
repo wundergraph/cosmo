@@ -39,12 +39,12 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -661,11 +661,15 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 	return nil
 }
 
-// startPQLPoller starts the PQL manifest poller in a background goroutine if configured.
-// Must be called after newServer so that SetOnUpdate has been registered on the store.
-func (r *Router) startPQLPoller(ctx context.Context) {
+// startManifestPollers starts the PQL and MCP manifest pollers in background goroutines
+// if configured. Must be called after newServer so that SetOnUpdate has been registered
+// on the PQL store.
+func (r *Router) startManifestPollers(ctx context.Context) {
 	if r.pqlPoller != nil {
 		go r.pqlPoller.Poll(ctx)
+	}
+	if r.mcpManifestPoller != nil {
+		go r.mcpManifestPoller.Poll(ctx)
 	}
 }
 
@@ -1359,8 +1363,12 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 
 	var operationsDir string
 
-	// If storage provider ID is set, resolve it to a directory path
-	if r.mcp.Storage.ProviderID != "" {
+	if r.mcp.Storage.ObjectPath != "" {
+		if err := r.buildMCPManifestStore(ctx); err != nil {
+			return err
+		}
+	} else if r.mcp.Storage.ProviderID != "" {
+		// If storage provider ID is set, resolve it to a directory path
 		r.logger.Debug("Resolving storage provider for MCP operations",
 			zap.String("provider_id", r.mcp.Storage.ProviderID))
 
@@ -1394,6 +1402,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
 		mcpserver.WithServerTitle(r.mcp.Server.Title),
 		mcpserver.WithServerDescription(r.mcp.Server.Description),
+	}
+
+	if r.mcpManifestStore != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithManifestOperations(r.mcpManifestStore.AllOperations))
 	}
 
 	if r.corsOptions != nil {
@@ -1435,7 +1447,54 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
 
+	if r.mcpManifestStore != nil {
+		r.mcpManifestStore.SetOnUpdate(mcpss.ManifestUpdated)
+	}
+
 	r.mcpServer = mcpss
+	return nil
+}
+
+// buildMCPManifestStore fetches the MCP operation manifest from its storage provider and
+// sets up the poller that reloads it.
+func (r *Router) buildMCPManifestStore(ctx context.Context) error {
+	cfg := r.mcp.Storage
+
+	var loader operationmanifest.Loader
+	var err error
+	if provider, ok := r.providerRegistry.FileSystem(cfg.ProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, cfg.ObjectPath)
+	} else if provider, ok := r.providerRegistry.S3(cfg.ProviderID); ok {
+		loader, err = operationmanifest.NewS3Loader(provider, cfg.ObjectPath)
+	} else {
+		return fmt.Errorf("storage provider %q for mcp manifest not found or not a file_system or s3 provider", cfg.ProviderID)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create mcp manifest loader: %w", err)
+	}
+
+	store := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
+		loader,
+		store,
+		cfg.PollInterval,
+		r.logger,
+	)
+
+	if err := poller.FetchInitial(ctx); err != nil {
+		return fmt.Errorf("failed to fetch initial mcp manifest from storage provider %q: %w", cfg.ProviderID, err)
+	}
+
+	r.logger.Info(
+		"Loaded MCP manifest from storage provider",
+		zap.String("provider_id", cfg.ProviderID),
+		zap.String("object_path", cfg.ObjectPath),
+		zap.String("revision", store.Revision()),
+		zap.Int("operation_count", store.OperationCount()),
+	)
+
+	r.mcpManifestStore = store
+	r.mcpManifestPoller = poller
 	return nil
 }
 
@@ -1443,7 +1502,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 func (r *Router) buildClients(ctx context.Context) error {
 	registry := r.providerRegistry
 
-	pClient, manifestReader, err := r.buildPersistedOpsClient(registry)
+	pClient, err := r.buildPersistedOpsClient(registry)
 	if err != nil {
 		return err
 	}
@@ -1453,7 +1512,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		return err
 	}
 
-	pqlStore, err := r.buildManifestStore(ctx, registry, manifestReader)
+	pqlStore, err := r.buildManifestStore(ctx, registry)
 	if err != nil {
 		return err
 	}
@@ -1488,32 +1547,30 @@ func (r *Router) buildClients(ctx context.Context) error {
 }
 
 // buildPersistedOpsClient creates the storage client for persisted operations.
-// It also returns a manifestReader function when the underlying storage supports
-// manifest fetching (S3 or CDN), which is passed to buildManifestStore.
-func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, pqlmanifest.ManifestReaderFunc, error) {
+func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, error) {
 	if r.persistedOperationsConfig.Disabled {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	providerID := r.persistedOperationsConfig.Storage.ProviderID
 
 	if provider, ok := registry.CDN(providerID); ok {
 		if r.graphApiToken == "" {
-			return nil, nil, errors.New("graph token is required to fetch persisted operations from CDN")
+			return nil, errors.New("graph token is required to fetch persisted operations from CDN")
 		}
 
 		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
 			Logger: r.logger,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
+			return nil, fmt.Errorf("failed to create CDN client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use CDN as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
 	if provider, ok := registry.S3(providerID); ok {
@@ -1527,14 +1584,14 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 			TraceProvider:    r.tracerProvider,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create S3 client: %w", err)
+			return nil, fmt.Errorf("failed to create S3 client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use S3 as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
 	if provider, ok := registry.FileSystem(providerID); ok {
@@ -1542,37 +1599,36 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create filesystem client: %w", err)
+			return nil, fmt.Errorf("failed to create filesystem client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use file system as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		// Filesystem does not support manifest fetching.
-		return c, nil, nil
+		return c, nil
 	}
 
 	if r.graphApiToken != "" {
 		if providerID != "" {
-			return nil, nil, fmt.Errorf("unknown storage provider id '%s' for persisted operations", providerID)
+			return nil, fmt.Errorf("unknown storage provider id '%s' for persisted operations", providerID)
 		}
 
 		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
 			Logger: r.logger,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
+			return nil, fmt.Errorf("failed to create CDN client: %w", err)
 		}
 
 		r.logger.Debug(
 			"Default to Cosmo CDN as persisted operations provider",
 			zap.String("url", r.cdnConfig.URL),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil
 }
 
 // buildAPQStore creates the automatic persisted queries store.
@@ -1606,74 +1662,41 @@ func (r *Router) buildAPQStore(registry *ProviderRegistry) (apq.Store, error) {
 }
 
 // buildManifestStore sets up the PQL manifest store and its background poller.
-// manifestReader is obtained from buildPersistedOpsClient and may be nil when the
-// configured storage provider does not support manifest fetching (e.g. filesystem).
-func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry, manifestReader pqlmanifest.ManifestReaderFunc) (*pqlmanifest.Store, error) {
+func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry) (*operationmanifest.Store, error) {
 	if !r.persistedOperationsConfig.Manifest.Enabled || r.persistedOperationsConfig.Disabled {
 		return nil, nil
 	}
 
-	manifestFileName := r.persistedOperationsConfig.Manifest.FileName
-
 	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 
-	if registry.IsFileSystem(storageProviderID) {
-		return nil, fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
-	}
+	objectPath := path.Join(r.persistedOperationsConfig.Storage.ObjectPrefix, r.persistedOperationsConfig.Manifest.FileName)
 
-	if storageProviderID != "" {
-		// An explicit storage provider is configured — fetch the manifest at startup and poll for updates.
-		objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
-		objectPath := manifestFileName
-		if objectPrefix != "" {
-			objectPath = path.Join(objectPrefix, manifestFileName)
+	// With no storage provider, fetch the manifest from the Cosmo CDN.
+	var loader operationmanifest.Loader
+	var err error
+	if storageProviderID == "" {
+		if r.graphApiToken == "" {
+			return nil, errors.New("graph token is required for PQL manifest")
 		}
-
-		storageFetcher := pqlmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
-
-		pqlStore := pqlmanifest.NewStore(r.logger)
-		poller := pqlmanifest.NewPoller(
-			storageFetcher,
-			pqlStore,
-			r.persistedOperationsConfig.Manifest.PollInterval,
-			r.persistedOperationsConfig.Manifest.PollJitter,
-			r.logger,
-		)
-
-		if err := poller.FetchInitial(ctx); err != nil {
-			return nil, fmt.Errorf("failed to fetch initial PQL manifest from storage provider %q: %w",
-				storageProviderID, err)
-		}
-
-		r.logger.Info(
-			"Loaded PQL manifest from storage provider",
-			zap.String("provider_id", storageProviderID),
-			zap.String("object_path", objectPath),
-			zap.String("revision", pqlStore.Revision()),
-			zap.Int("operation_count", pqlStore.OperationCount()),
-		)
-
-		r.pqlPoller = poller
-		r.pqlStore = pqlStore
-		return pqlStore, nil
+		loader, err = operationmanifest.NewCDNLoader(r.cdnConfig.URL, r.graphApiToken, "operations/manifest.json", r.logger)
+	} else if provider, ok := registry.CDN(storageProviderID); ok {
+		loader, err = operationmanifest.NewCDNLoader(provider.URL, r.graphApiToken, "operations/manifest.json", r.logger)
+	} else if provider, ok := registry.S3(storageProviderID); ok {
+		loader, err = operationmanifest.NewS3Loader(provider, objectPath)
+	} else if provider, ok := registry.FileSystem(storageProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, objectPath)
+	} else {
+		return nil, fmt.Errorf("unknown storage provider id %q for PQL manifest", storageProviderID)
 	}
-
-	// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
-	if r.graphApiToken == "" {
-		return nil, errors.New("graph token is required for PQL manifest")
-	}
-
-	fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+		return nil, fmt.Errorf("failed to create PQL manifest loader: %w", err)
 	}
 
-	pqlStore := pqlmanifest.NewStore(r.logger)
-	poller := pqlmanifest.NewPoller(
-		fetcher,
+	pqlStore := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
+		loader,
 		pqlStore,
 		r.persistedOperationsConfig.Manifest.PollInterval,
-		r.persistedOperationsConfig.Manifest.PollJitter,
 		r.logger,
 	)
 
@@ -1682,7 +1705,8 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 	}
 
 	r.logger.Info(
-		"Loaded PQL manifest from Cosmo CDN",
+		"Loaded PQL manifest",
+		zap.String("provider_id", storageProviderID),
 		zap.String("revision", pqlStore.Revision()),
 		zap.Int("operation_count", pqlStore.OperationCount()),
 	)
@@ -1779,7 +1803,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	if r.playgroundConfig.Enabled {
 		r.logger.Info(
@@ -1847,7 +1871,7 @@ func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	var (
 		w          watcher.WatcherFunc
@@ -2179,6 +2203,10 @@ func (r *Router) Shutdown(ctx context.Context) error {
 
 	if r.pqlStore != nil {
 		r.pqlStore.Close()
+	}
+
+	if r.mcpManifestStore != nil {
+		r.mcpManifestStore.Close()
 	}
 
 	r.usage.Close()

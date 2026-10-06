@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	fastjson "github.com/wundergraph/astjson"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 )
 
 func TestPersistedOperationIDValidation(t *testing.T) {
@@ -105,7 +105,7 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 }
 
 type persistedOperationCacheKeyInput struct {
-	manifest      *pqlmanifest.Manifest
+	manifest      *operationmanifest.Manifest
 	id            string
 	clientName    string
 	operationName string
@@ -117,8 +117,8 @@ type persistedOperationCacheKeyInput struct {
 func TestPersistedOperationCacheKey(t *testing.T) {
 	t.Parallel()
 
-	revisionOne := &pqlmanifest.Manifest{Revision: "one"}
-	revisionTwo := &pqlmanifest.Manifest{Revision: "two"}
+	revisionOne := &operationmanifest.Manifest{Revision: "one"}
+	revisionTwo := &operationmanifest.Manifest{Revision: "two"}
 
 	tests := []struct {
 		name  string
@@ -150,8 +150,8 @@ func TestPersistedOperationCacheKey(t *testing.T) {
 		},
 		{
 			name: "manifest revision and ID boundary",
-			a:    persistedOperationCacheKeyInput{manifest: &pqlmanifest.Manifest{Revision: "r1"}, id: "x"},
-			b:    persistedOperationCacheKeyInput{manifest: &pqlmanifest.Manifest{Revision: "r"}, id: "1x"},
+			a:    persistedOperationCacheKeyInput{manifest: &operationmanifest.Manifest{Revision: "r1"}, id: "x"},
+			b:    persistedOperationCacheKeyInput{manifest: &operationmanifest.Manifest{Revision: "r"}, id: "1x"},
 		},
 		// Without a manifest, operations are stored per client.
 		{

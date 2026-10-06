@@ -2382,28 +2382,6 @@ persisted_operations:
 		require.Equal(t, []string{"persisted_operations", "manifest", "poll_interval"}, js.Causes[0].InstanceLocation)
 		require.Equal(t, "at '/persisted_operations/manifest/poll_interval': duration must be greater or equal than 10s", js.Causes[0].Error())
 	})
-
-	t.Run("poll_jitter below minimum rejected", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-graph:
-  token: "token"
-
-persisted_operations:
-  manifest:
-    enabled: true
-    poll_jitter: 500ms
-`)
-		_, err := LoadConfig([]string{f})
-
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, []string{"persisted_operations", "manifest", "poll_jitter"}, js.Causes[0].InstanceLocation)
-		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
-	})
 }
 
 func TestMCPServerConfig(t *testing.T) {
@@ -2504,6 +2482,29 @@ mcp:
 
 		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
 		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+	})
+
+	t.Run("rejects a manifest poll interval below one second", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  storage:
+    provider_id: mcp
+    object_path: manifest.json
+    poll_interval: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/mcp/storage/poll_interval': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
 
