@@ -48,7 +48,7 @@ func newETagCDNHandler(m *Manifest) http.Handler {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", etag)
-		w.Write(data)
+		_, _ = w.Write(data)
 	})
 }
 
@@ -72,7 +72,7 @@ func TestFetch_SendsIfNoneMatchHeader(t *testing.T) {
 		receivedBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", `"rev-123"`)
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -105,7 +105,7 @@ func TestFetch_NoIfNoneMatchOnFirstRequest(t *testing.T) {
 	f := newTestFetcher(server.URL)
 
 	// Wrap to capture headers
-	var origHandler http.Handler = server.Config.Handler
+	var origHandler = server.Config.Handler
 	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedHeaders = r.Header
 		origHandler.ServeHTTP(w, r)
@@ -198,7 +198,7 @@ func TestFetch_UsesGETMethod(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
