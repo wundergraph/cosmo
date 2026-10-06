@@ -119,7 +119,6 @@ func (s *Subgraphs) ListenAndServe(ctx context.Context) error {
 func newServer(name string, enableDebug bool, port int, schema graphql.ExecutableSchema) *http.Server {
 	if port == 0 {
 		panic(fmt.Errorf("port for %s is 0", name))
-		return nil
 	}
 	srv := NewDemoServer(schema)
 	if enableDebug {
