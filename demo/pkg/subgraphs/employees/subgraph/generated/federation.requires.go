@@ -8,7 +8,7 @@ import (
 
 // PopulateConsultancyRequires is the requires populator for the Consultancy entity.
 func (ec *executionContext) PopulateConsultancyRequires(ctx context.Context, entity *model.Consultancy, reps map[string]any) error {
-	if lead, ok := reps["lead"].(map[string]interface{}); ok {
+	if lead, ok := reps["lead"].(map[string]any); ok {
 		if isAvailable, ok := lead["isAvailable"].(bool); ok {
 			entity.IsLeadAvailable = &isAvailable
 		}
@@ -18,7 +18,7 @@ func (ec *executionContext) PopulateConsultancyRequires(ctx context.Context, ent
 
 // PopulateCosmoRequires is the requires populator for the Cosmo entity.
 func (ec *executionContext) PopulateCosmoRequires(ctx context.Context, entity *model.Cosmo, reps map[string]any) error {
-	if lead, ok := reps["lead"].(map[string]interface{}); ok {
+	if lead, ok := reps["lead"].(map[string]any); ok {
 		if isAvailable, ok := lead["isAvailable"].(bool); ok {
 			entity.IsLeadAvailable = &isAvailable
 		}

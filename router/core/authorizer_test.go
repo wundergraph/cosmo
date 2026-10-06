@@ -241,7 +241,7 @@ func TestCosmoAuthorizer_ResponseExtension(t *testing.T) {
 		a := NewCosmoAuthorizer(&CosmoAuthorizerOptions{FieldConfigurations: []*nodev1.FieldConfiguration{cfg}})
 		ctx := WithAuthorizationExtension(resolveContext(true, "read:other"))
 
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			_, err := a.AuthorizeObjectField(ctx, "ds", nil, coordinate("Employee", "name"))
 			require.NoError(t, err)
 		}

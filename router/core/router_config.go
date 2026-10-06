@@ -119,7 +119,7 @@ type Config struct {
 	demoMode                        bool
 	eventsConfig                    config.EventsConfiguration
 	prometheusServer                *http.Server
-	modulesConfig                   map[string]interface{}
+	modulesConfig                   map[string]any
 	executionConfig                 *ExecutionConfig
 	manifestConfig                  *ManifestConfig
 	routerOnRequestHandlers         []func(http.Handler) http.Handler

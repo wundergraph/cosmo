@@ -2329,15 +2329,16 @@ func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) 
 	formValues["operations"] = bytes.NewReader(data)
 
 	if len(request.Files) > 0 {
-		mapStr := `{`
+		var mapStr strings.Builder
+		mapStr.WriteString(`{`)
 		for i := 0; i < len(request.Files); i++ {
 			if i > 0 {
-				mapStr += ", "
+				mapStr.WriteString(", ")
 			}
-			mapStr += fmt.Sprintf(`"%d": ["%s"]`, i, request.Files[i].VariablesPath)
+			fmt.Fprintf(&mapStr, `"%d": ["%s"]`, i, request.Files[i].VariablesPath)
 		}
-		mapStr += `}`
-		formValues["map"] = strings.NewReader(mapStr)
+		mapStr.WriteString(`}`)
+		formValues["map"] = strings.NewReader(mapStr.String())
 		for i := 0; i < len(request.Files); i++ {
 			formValues[fmt.Sprintf("%d", i)] = bytes.NewReader(request.Files[i].FileContent)
 		}
@@ -2526,7 +2527,7 @@ type GraphQLErrorExtensions struct {
 type GraphQLError struct {
 	Message    string                 `json:"message"`
 	Path       []any                  `json:"path,omitempty"`
-	Extensions GraphQLErrorExtensions `json:"extensions,omitempty"`
+	Extensions GraphQLErrorExtensions `json:"extensions"`
 }
 
 const maxSocketRetries = 5
@@ -2654,8 +2655,8 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 			}
 
 			// SSE lines typically start with "event", "data", etc.
-			if strings.HasPrefix(line, "data: ") {
-				data := strings.TrimPrefix(line, "data: ")
+			if after, ok := strings.CutPrefix(line, "data: "); ok {
+				data := after
 				handler(data)
 			}
 		}
@@ -2673,7 +2674,7 @@ func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*webso
 
 	var err error
 
-	for i := 0; i < maxSocketRetries; i++ {
+	for i := range maxSocketRetries {
 		u := e.AbsintheSubscriptionURL()
 
 		conn, resp, err := dialer.Dial(u, header)
@@ -3099,7 +3100,7 @@ func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
 	}
 }
 
-func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func WSReadJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	t.Helper()
 
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
@@ -3187,7 +3188,7 @@ func WSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []
 	return fmt.Errorf("failed to write message to WebSocket: %w", err)
 }
 
-func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func WSWriteJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
