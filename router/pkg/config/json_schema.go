@@ -114,7 +114,7 @@ func goDurationVocab() *jsonschema.Vocabulary {
 func compileDuration(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
 	if val, ok := m["duration"]; ok {
 
-		if mapVal, ok := val.(map[string]interface{}); ok {
+		if mapVal, ok := val.(map[string]any); ok {
 			var minDuration, maxDuration time.Duration
 			var err error
 
@@ -249,7 +249,7 @@ func humanBytesVocab() *jsonschema.Vocabulary {
 func compileHumanBytes(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
 	if val, ok := m["bytes"]; ok {
 
-		if mapVal, ok := val.(map[string]interface{}); ok {
+		if mapVal, ok := val.(map[string]any); ok {
 			var minBytes, maxBytes uint64
 			var err error
 

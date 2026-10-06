@@ -28,7 +28,7 @@ func VerifyEngineDataSourceFactoryImplementation(t *testing.T, pubSub datasource
 	assert.NotEmpty(t, input, "Expected non-empty input")
 
 	// Make sure the input is valid JSON
-	var result interface{}
+	var result any
 	err = json.Unmarshal([]byte(input), &result)
 	assert.NoError(t, err, "Expected valid JSON from GetResolveDataSourceInput")
 

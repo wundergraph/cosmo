@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"time"
 
@@ -94,9 +95,7 @@ func WithHeader(key, value string) ClientOption {
 // WithHeaders adds multiple headers to all requests
 func WithHeaders(headers map[string]string) ClientOption {
 	return func(c *Client) {
-		for key, value := range headers {
-			c.headers[key] = value
-		}
+		maps.Copy(c.headers, headers)
 	}
 }
 
@@ -113,12 +112,12 @@ func (c *Client) Get(ctx context.Context, path string, options ...RequestOption)
 }
 
 // Post sends a POST request and returns the response
-func (c *Client) Post(ctx context.Context, path string, body interface{}, options ...RequestOption) (*Response, error) {
+func (c *Client) Post(ctx context.Context, path string, body any, options ...RequestOption) (*Response, error) {
 	return c.Request(ctx, http.MethodPost, path, body, options...)
 }
 
 // Put sends a PUT request and returns the response
-func (c *Client) Put(ctx context.Context, path string, body interface{}, options ...RequestOption) (*Response, error) {
+func (c *Client) Put(ctx context.Context, path string, body any, options ...RequestOption) (*Response, error) {
 	return c.Request(ctx, http.MethodPut, path, body, options...)
 }
 
@@ -128,12 +127,12 @@ func (c *Client) Delete(ctx context.Context, path string, options ...RequestOpti
 }
 
 // Patch sends a PATCH request and returns the response
-func (c *Client) Patch(ctx context.Context, path string, body interface{}, options ...RequestOption) (*Response, error) {
+func (c *Client) Patch(ctx context.Context, path string, body any, options ...RequestOption) (*Response, error) {
 	return c.Request(ctx, http.MethodPatch, path, body, options...)
 }
 
 // Request sends an HTTP request and returns the response
-func (c *Client) Request(ctx context.Context, method, path string, body interface{}, options ...RequestOption) (*Response, error) {
+func (c *Client) Request(ctx context.Context, method, path string, body any, options ...RequestOption) (*Response, error) {
 	var reqBody io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -167,7 +166,7 @@ func (c *Client) Request(ctx context.Context, method, path string, body interfac
 	return retry, err
 }
 
-func (c *Client) startRequest(ctx context.Context, method string, url string, reqBody io.Reader, body interface{}, options []RequestOption) (*Response, error) {
+func (c *Client) startRequest(ctx context.Context, method string, url string, reqBody io.Reader, body any, options []RequestOption) (*Response, error) {
 	// Use the retryable client if enabled
 	if c.retryOptions.Enabled {
 		return c.doRequestWithRetry(ctx, method, url, reqBody, body != nil, options...)
@@ -338,7 +337,7 @@ func WithRequestHeader(key, value string) RequestOption {
 }
 
 // Unmarshal decodes the response body into the given value
-func (r *Response) Unmarshal(v interface{}) error {
+func (r *Response) Unmarshal(v any) error {
 	return json.Unmarshal(r.Body, v)
 }
 

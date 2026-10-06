@@ -41,6 +41,10 @@ export function updateFeatureSettings(
         featureId = 'scim';
         break;
       }
+      case Feature.promptToQuery: {
+        featureId = 'prompt-to-query';
+        break;
+      }
       default: {
         throw new Error(`Feature doesnt exist`);
       }

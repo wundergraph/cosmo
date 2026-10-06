@@ -3,7 +3,6 @@ package benchmarksubscriptions
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,8 +24,7 @@ func TestSubscriptions(t *testing.T) {
 	messageCount := &atomic.Int64{}
 	subscriberCount := &atomic.Int64{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	prevMessageCount := int64(0)
 	totalMessageCount := int64(0)
@@ -49,8 +47,7 @@ func TestSubscriptions(t *testing.T) {
 		}
 	}()
 
-	for i := 0; i < subscribers; i++ {
-		i := i
+	for i := range subscribers {
 		maxCount := 1000
 		intervalMilliseconds := 3000 + i
 		time.Sleep(time.Millisecond)
@@ -101,14 +98,14 @@ func subscribe(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync
 	err = conn.WriteJSON(&testenv.WebSocketMessage{
 		ID:      "1",
 		Type:    "subscribe",
-		Payload: []byte(fmt.Sprintf(`{"query":"subscription { countEmp(max: %d, intervalMilliseconds: %d) }"}`, maxCount, intervalMilliseconds)),
+		Payload: fmt.Appendf(nil, `{"query":"subscription { countEmp(max: %d, intervalMilliseconds: %d) }"}`, maxCount, intervalMilliseconds),
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	for i := 0; i < maxCount; i++ {
+	for range maxCount {
 		var message WebSocketMessage
 		err = conn.ReadJSON(&message)
 		if err != nil {
@@ -188,8 +185,7 @@ func TestMultipartSubscription(t *testing.T) {
 	messageCount := &atomic.Int64{}
 	subscriberCount := &atomic.Int64{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	prevMessageCount := int64(0)
 	totalMessageCount := int64(0)
@@ -212,8 +208,7 @@ func TestMultipartSubscription(t *testing.T) {
 		}
 	}()
 
-	for i := 0; i < subscribers; i++ {
-		i := i
+	for i := range subscribers {
 		maxCount := 1000
 		intervalMilliseconds := 3000 + i
 		time.Sleep(time.Millisecond)
@@ -227,7 +222,7 @@ func TestMultipartSubscription(t *testing.T) {
 
 func subscribeMultipart(t *testing.T, iteration int, messageCount *atomic.Int64, wg *sync.WaitGroup, maxCount, intervalMilliseconds int) {
 	defer wg.Done()
-	req, err := http.NewRequest("POST", "http://localhost:3011/", bytes.NewReader([]byte(fmt.Sprintf(`{"query":"subscription { countEmp(max: %d, intervalMilliseconds: %d) }"}`, maxCount, intervalMilliseconds))))
+	req, err := http.NewRequest("POST", "http://localhost:3011/", bytes.NewReader(fmt.Appendf(nil, `{"query":"subscription { countEmp(max: %d, intervalMilliseconds: %d) }"}`, maxCount, intervalMilliseconds)))
 	if err != nil {
 		t.Fatal(err)
 	}
