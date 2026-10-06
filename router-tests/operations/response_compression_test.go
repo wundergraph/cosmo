@@ -53,7 +53,6 @@ func TestResponseCompression(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel() // mark the subtest as parallel
 			testenv.Run(t, &testenv.Config{
@@ -80,7 +79,7 @@ func TestResponseCompression(t *testing.T) {
 				}
 
 				query := `query { employees { id } }`
-				data := map[string]interface{}{
+				data := map[string]any{
 					"query": query,
 				}
 				body, err := json.Marshal(data)
@@ -118,7 +117,6 @@ func TestResponseCompressionWithCustomMinSize(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel() // mark the subtest as parallel
 			testenv.Run(t, &testenv.Config{
@@ -148,7 +146,7 @@ func TestResponseCompressionWithCustomMinSize(t *testing.T) {
 					"Accept-Encoding": []string{"gzip"},
 				}
 
-				data := map[string]interface{}{
+				data := map[string]any{
 					"query": `query { employees { id } }`,
 				}
 				body, err := json.Marshal(data)

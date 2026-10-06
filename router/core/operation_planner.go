@@ -189,7 +189,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
-		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
+		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (any, error) {
 			start := time.Now()
 			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.slowPlanCache != nil})
 			if err != nil {

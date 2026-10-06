@@ -155,7 +155,7 @@ func TestBatch(t *testing.T) {
 func randomString(n int, generateRune rune) string {
 	var sb strings.Builder
 
-	for i := 0; i < n; i++ {
+	for range n {
 		sb.WriteRune(generateRune)
 	}
 

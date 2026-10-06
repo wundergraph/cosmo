@@ -194,7 +194,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			ready.Add(n)
 			done.Add(n)
 			trigger := make(chan struct{})
-			for i := 0; i < n; i++ {
+			for i := range n {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -246,7 +246,7 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			ready.Add(n)
 			done.Add(n)
 			trigger := make(chan struct{})
-			for i := 0; i < n; i++ {
+			for i := range n {
 				go func() {
 					ready.Done()
 					defer done.Done()

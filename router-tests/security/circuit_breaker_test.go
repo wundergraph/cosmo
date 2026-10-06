@@ -773,32 +773,32 @@ func TestCircuitBreaker(t *testing.T) {
 
 					expected := []*io_prometheus_client.LabelPair{
 						{
-							Name:  testutils.ToPtr("otel_scope_name"),
-							Value: testutils.ToPtr("cosmo.router.prometheus"),
+							Name:  new("otel_scope_name"),
+							Value: new("cosmo.router.prometheus"),
 						},
 						{
-							Name:  testutils.ToPtr("otel_scope_schema_url"),
-							Value: testutils.ToPtr(""),
+							Name:  new("otel_scope_schema_url"),
+							Value: new(""),
 						},
 						{
-							Name:  testutils.ToPtr("otel_scope_version"),
-							Value: testutils.ToPtr("0.0.1"),
+							Name:  new("otel_scope_version"),
+							Value: new("0.0.1"),
 						},
 						{
-							Name:  testutils.ToPtr("wg_federated_graph_id"),
-							Value: testutils.ToPtr("graph"),
+							Name:  new("wg_federated_graph_id"),
+							Value: new("graph"),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_cluster_name"),
-							Value: testutils.ToPtr(""),
+							Name:  new("wg_router_cluster_name"),
+							Value: new(""),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_config_version"),
-							Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
+							Name:  new("wg_router_config_version"),
+							Value: new(xEnv.RouterConfigVersionMain()),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_version"),
-							Value: testutils.ToPtr("dev"),
+							Name:  new("wg_router_version"),
+							Value: new("dev"),
 						},
 					}
 
@@ -940,36 +940,36 @@ func TestCircuitBreaker(t *testing.T) {
 
 					expected := []*io_prometheus_client.LabelPair{
 						{
-							Name:  testutils.ToPtr("otel_scope_name"),
-							Value: testutils.ToPtr("cosmo.router.prometheus"),
+							Name:  new("otel_scope_name"),
+							Value: new("cosmo.router.prometheus"),
 						},
 						{
-							Name:  testutils.ToPtr("otel_scope_schema_url"),
-							Value: testutils.ToPtr(""),
+							Name:  new("otel_scope_schema_url"),
+							Value: new(""),
 						},
 						{
-							Name:  testutils.ToPtr("otel_scope_version"),
-							Value: testutils.ToPtr("0.0.1"),
+							Name:  new("otel_scope_version"),
+							Value: new("0.0.1"),
 						},
 						{
-							Name:  testutils.ToPtr("wg_federated_graph_id"),
-							Value: testutils.ToPtr("graph"),
+							Name:  new("wg_federated_graph_id"),
+							Value: new("graph"),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_cluster_name"),
-							Value: testutils.ToPtr(""),
+							Name:  new("wg_router_cluster_name"),
+							Value: new(""),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_config_version"),
-							Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
+							Name:  new("wg_router_config_version"),
+							Value: new(xEnv.RouterConfigVersionMain()),
 						},
 						{
-							Name:  testutils.ToPtr("wg_router_version"),
-							Value: testutils.ToPtr("dev"),
+							Name:  new("wg_router_version"),
+							Value: new("dev"),
 						},
 						{
-							Name:  testutils.ToPtr("wg_subgraph_name"),
-							Value: testutils.ToPtr(`["employees"]`),
+							Name:  new("wg_subgraph_name"),
+							Value: new(`["employees"]`),
 						},
 					}
 					require.Equal(t, expected, metricDataPoint.Label)
@@ -1179,14 +1179,14 @@ func TestCircuitBreaker(t *testing.T) {
 						require.Equal(t, float64(ShortCircuitOpened), *metricDataPoint.Gauge.Value)
 
 						expectedOpened := []*io_prometheus_client.LabelPair{
-							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
-							{Name: testutils.ToPtr("otel_scope_schema_url"), Value: testutils.ToPtr("")},
-							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
-							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
-							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
-							{Name: testutils.ToPtr("wg_router_config_version"), Value: testutils.ToPtr(xEnv.RouterConfigVersionMain())},
-							{Name: testutils.ToPtr("wg_router_version"), Value: testutils.ToPtr("dev")},
-							{Name: testutils.ToPtr("wg_subgraph_name"), Value: testutils.ToPtr(`["employees"]`)},
+							{Name: new("otel_scope_name"), Value: new("cosmo.router.prometheus")},
+							{Name: new("otel_scope_schema_url"), Value: new("")},
+							{Name: new("otel_scope_version"), Value: new("0.0.1")},
+							{Name: new("wg_federated_graph_id"), Value: new("graph")},
+							{Name: new("wg_router_cluster_name"), Value: new("")},
+							{Name: new("wg_router_config_version"), Value: new(xEnv.RouterConfigVersionMain())},
+							{Name: new("wg_router_version"), Value: new("dev")},
+							{Name: new("wg_subgraph_name"), Value: new(`["employees"]`)},
 						}
 						require.Equal(t, expectedOpened, metricDataPoint.Label)
 					})
@@ -1212,14 +1212,14 @@ func TestCircuitBreaker(t *testing.T) {
 						closedDataPoint := metrics[0]
 						require.Equal(t, float64(ShortCircuitClosed), *closedDataPoint.Gauge.Value)
 						expectedClosed := []*io_prometheus_client.LabelPair{
-							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
-							{Name: testutils.ToPtr("otel_scope_schema_url"), Value: testutils.ToPtr("")},
-							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
-							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
-							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
-							{Name: testutils.ToPtr("wg_router_config_version"), Value: testutils.ToPtr(xEnv.RouterConfigVersionMain())},
-							{Name: testutils.ToPtr("wg_router_version"), Value: testutils.ToPtr("dev")},
-							{Name: testutils.ToPtr("wg_subgraph_name"), Value: testutils.ToPtr(`["employees"]`)},
+							{Name: new("otel_scope_name"), Value: new("cosmo.router.prometheus")},
+							{Name: new("otel_scope_schema_url"), Value: new("")},
+							{Name: new("otel_scope_version"), Value: new("0.0.1")},
+							{Name: new("wg_federated_graph_id"), Value: new("graph")},
+							{Name: new("wg_router_cluster_name"), Value: new("")},
+							{Name: new("wg_router_config_version"), Value: new(xEnv.RouterConfigVersionMain())},
+							{Name: new("wg_router_version"), Value: new("dev")},
+							{Name: new("wg_subgraph_name"), Value: new(`["employees"]`)},
 						}
 						require.Equal(t, expectedClosed, closedDataPoint.Label)
 					})
@@ -1313,16 +1313,16 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 				Enabled: false,
 			},
 			CircuitBreaker:         breaker,
-			RequestTimeout:         testutils.ToPtr(timeout),
-			DialTimeout:            testutils.ToPtr(timeout),
-			ResponseHeaderTimeout:  testutils.ToPtr(timeout),
-			ExpectContinueTimeout:  testutils.ToPtr(timeout),
-			TLSHandshakeTimeout:    testutils.ToPtr(timeout),
-			KeepAliveIdleTimeout:   testutils.ToPtr(timeout),
-			KeepAliveProbeInterval: testutils.ToPtr(10 * time.Second),
-			MaxConnsPerHost:        testutils.ToPtr(20),
-			MaxIdleConns:           testutils.ToPtr(20),
-			MaxIdleConnsPerHost:    testutils.ToPtr(20),
+			RequestTimeout:         new(timeout),
+			DialTimeout:            new(timeout),
+			ResponseHeaderTimeout:  new(timeout),
+			ExpectContinueTimeout:  new(timeout),
+			TLSHandshakeTimeout:    new(timeout),
+			KeepAliveIdleTimeout:   new(timeout),
+			KeepAliveProbeInterval: new(10 * time.Second),
+			MaxConnsPerHost:        new(20),
+			MaxIdleConns:           new(20),
+			MaxIdleConnsPerHost:    new(20),
 		},
 	}
 	return trafficConfig

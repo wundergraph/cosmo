@@ -249,7 +249,7 @@ func adjustMaxBlocks() (int, error) {
 	}
 
 	logf(INFO, "detected ephemeral port range of [%d, %d]", ephemeralPortMin, ephemeralPortMax)
-	for block := 0; block < maxBlocks; block++ {
+	for block := range maxBlocks {
 		min := lowPort + block*blockSize
 		max := min + blockSize
 		overlap := intervalOverlap(min, max-1, ephemeralPortMin, ephemeralPortMax)
@@ -266,7 +266,7 @@ func adjustMaxBlocks() (int, error) {
 // implemented as a TCP listener which is bound to the firstPort and which will
 // be automatically released when the application terminates.
 func alloc() (int, net.Listener) {
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		block := int(seededRand.Int31n(int32(effectiveMaxBlocks)))
 		firstPort := lowPort + block*blockSize
 		ln, err := net.ListenTCP("tcp", tcpAddr("127.0.0.1", firstPort))
@@ -450,7 +450,7 @@ func intervalOverlap(min1, max1, min2, max2 int) bool {
 	return min1 <= max2 && min2 <= max1
 }
 
-func logf(severity LogLevel, format string, a ...interface{}) {
+func logf(severity LogLevel, format string, a ...any) {
 	if severity >= DISABLED {
 		return
 	}
@@ -468,7 +468,7 @@ func logf(severity LogLevel, format string, a ...interface{}) {
 type TestingT interface {
 	Cleanup(func())
 	Helper()
-	Fatalf(format string, args ...interface{})
+	Fatalf(format string, args ...any)
 	Name() string
 }
 
