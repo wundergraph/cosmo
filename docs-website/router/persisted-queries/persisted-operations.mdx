@@ -131,6 +131,14 @@ Safelisting and `log_unknown` use the query's SHA256 hash to find published oper
 
 Both `persisted_operation_sha256` and `operation_sha256` record the ID from the request. If you send `get_employees_v1`, both fields contain `get_employees_v1`.
 
+## Control-plane publication
+
+### Publication failures
+
+If a storage operation or manifest publication fails, the request returns an error and its database changes are rolled back. Completed storage writes or deletions cannot be rolled back with the database. A failed request can therefore leave stored files out of sync with registrations.
+
+Deploy the updated control plane to all instances that publish or delete persisted operations before relying on graph-wide consistency. These requests serialize per graph through storage and manifest publication. Other graph updates and graph deletion may wait for publication to finish.
+
 ## Deleting persisted operations in Studio
 
 You can delete persisted operations directly in Cosmo Studio after they have been uploaded via `wgc operations push`.

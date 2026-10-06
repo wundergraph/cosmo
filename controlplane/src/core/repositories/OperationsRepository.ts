@@ -5,7 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import { federatedGraphs, federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
 import type { BlobStorage } from '../blobstorage/index.js';
 import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
@@ -47,6 +47,18 @@ export class OperationsRepository {
     private db: PostgresJsDatabase<typeof schema>,
     private federatedGraphId: string,
   ) {}
+
+  // Call inside a transaction and hold through blob writes and manifest upload.
+  // Publishes and deletions for the same graph must observe a single ordering.
+  // NO KEY UPDATE permits concurrent foreign-key checks while excluding other writers.
+  public async lockPersistedOperations() {
+    const [graph] = await this.db
+      .select({ id: federatedGraphs.id })
+      .from(federatedGraphs)
+      .where(eq(federatedGraphs.id, this.federatedGraphId))
+      .for('no key update');
+    return graph !== undefined;
+  }
 
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
