@@ -3,7 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
-	"slices"
+	"iter"
 	"strconv"
 
 	"github.com/redis/go-redis/v9"
@@ -11,137 +11,6 @@ import (
 )
 
 var _ responsecaching.Invalidator = (*RedisCache)(nil)
-
-// invalidationPageSize is the ZSCAN COUNT hint per page.
-const invalidationPageSize = 512
-
-// InvalidateByTags implements responsecaching.Invalidator.
-func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, error) {
-	var removed int
-	var err error
-	for _, tag := range tags {
-		count, tagErr := c.invalidateTag(ctx, tag)
-		removed += count
-		err = errors.Join(err, tagErr)
-	}
-
-	return removed, err
-}
-
-// invalidateTag deletes the entries one tag names. Members aren't removed
-// outright: one whose entry might still be SET, by a write landing late or a
-// walk failing midway, would be left unreachable. Each is marked instead, its
-// score set to minus the mark time in ms by the tag key's node clock, and
-// swept by a later walk.
-//
-// Scores: >= 0 an expiry, < 0 a mark. A write's ZADD GT beats any mark, so a
-// rewrite unmarks its member.
-func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
-	tagKey := c.tagKey(tag)
-
-	// Get only the top element
-	topElement, err := c.client.ZRevRangeWithScores(ctx, tagKey, 0, 0).Result()
-	if err != nil {
-		return 0, err
-	}
-	if len(topElement) == 0 {
-		return 0, nil
-	}
-
-	// Members scored past this were written after the call started. Negative:
-	// only marks are left.
-	cutoff := topElement[0].Score
-
-	// The node's clock, as marks were stamped. Read before the walk, so marks
-	// only ever look younger than they are.
-	nodeMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
-	if err != nil {
-		return 0, err
-	}
-	// Marks above this are older than writeGrace + margin: any write extended
-	// past its lease has landed, so a delete then a sweep is safe.
-	sweepAbove := -float64(nodeMs - (c.writeGrace + sweepMargin).Milliseconds())
-
-	// Marks whose every entry was deleted this walk; only those are swept.
-	sweepable := make(map[float64]bool)
-
-	// ZSCAN cursor, not rank offset: concurrent writes can't shift it.
-	// Members present throughout are returned at least once; repeats harmless.
-	var removed int
-	var cursor uint64
-	for {
-		pairs, next, err := c.client.ZScan(ctx, tagKey, cursor, "", invalidationPageSize).Result()
-		if err != nil {
-			return removed, err
-		}
-
-		var live, marked []string
-		var marks []float64
-		for i := 0; i+1 < len(pairs); i += 2 {
-			score, err := strconv.ParseFloat(pairs[i+1], 64)
-			if err != nil {
-				return removed, err
-			}
-			switch {
-			case score >= 0 && score <= cutoff:
-				live = append(live, pairs[i])
-			case score < 0:
-				// Deleted again: a late save may have landed since.
-				marked = append(marked, pairs[i])
-				marks = append(marks, score)
-			}
-		}
-
-		if len(live) > 0 {
-			count, err := c.unlinkAndMark(ctx, tagKey, live)
-			removed += count
-			if err != nil {
-				return removed, err
-			}
-		}
-
-		if len(marked) > 0 {
-			cmds, err := c.unlink(ctx, marked)
-			ok := answered(cmds, err)
-			for i, cmd := range cmds {
-				if ok[i] && cmd.Val() == 1 {
-					removed++
-				}
-				if marks[i] > sweepAbove {
-					prev, seen := sweepable[marks[i]]
-					sweepable[marks[i]] = ok[i] && (prev || !seen)
-				}
-			}
-			if err != nil {
-				return removed, err
-			}
-		}
-
-		if next == 0 {
-			break
-		}
-		cursor = next
-	}
-
-	// By exact score: only members still carrying that mark go, so one a
-	// write unmarked meanwhile stays. Every member with an old mark was there
-	// for the whole scan, so all of them were deleted above.
-	pipe := c.client.Pipeline()
-	var queued bool
-	for m, ok := range sweepable {
-		if ok {
-			score := strconv.FormatFloat(m, 'f', -1, 64)
-			pipe.ZRemRangeByScore(ctx, tagKey, score, score)
-			queued = true
-		}
-	}
-	if queued {
-		if _, err := pipe.Exec(ctx); err != nil {
-			return removed, err
-		}
-	}
-	return removed, nil
-}
 
 // nodeTime returns the clock of the node holding KEYS[1], in ms.
 var nodeTime = redis.NewScript(`
@@ -161,51 +30,175 @@ end
 return 0
 `)
 
-// unlinkAndMark deletes members' entries, then marks those whose delete was
-// answered. XX: never re-adds a member swept meanwhile. A failed delete stays
-// unmarked, for a retry.
-func (c *RedisCache) unlinkAndMark(ctx context.Context, tagKey string, members []string) (int, error) {
-	cmds, unlinkErr := c.unlink(ctx, members)
-	ok := answered(cmds, unlinkErr)
+// invalidationPageSize is the ZSCAN COUNT hint per page.
+const invalidationPageSize = 512
 
+// InvalidateByTags implements responsecaching.Invalidator.
+func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, error) {
 	var removed int
-	toMark := make([]any, 0, len(members))
-	for i, cmd := range cmds {
-		if !ok[i] {
-			continue
-		}
-		toMark = append(toMark, members[i])
-		if cmd.Val() == 1 {
-			removed++
-		}
+	var err error
+	for _, tag := range tags {
+		count, tagErr := c.invalidateTag(ctx, tag)
+		removed += count
+		err = errors.Join(err, tagErr)
 	}
-	if len(toMark) > 0 {
-		if err := markMembers.Run(ctx, c.client, []string{tagKey}, toMark...).Err(); err != nil {
-			return removed, errors.Join(unlinkErr, err)
-		}
-	}
-	return removed, unlinkErr
+
+	return removed, err
 }
 
-// answered reports which commands Redis answered. An error no command
-// carries means nothing was sent.
-func answered(cmds []*redis.IntCmd, err error) []bool {
-	sent := err == nil || slices.ContainsFunc(cmds, func(cmd *redis.IntCmd) bool { return cmd.Err() != nil })
-	ok := make([]bool, len(cmds))
-	for i, cmd := range cmds {
-		ok[i] = sent && cmd.Err() == nil
+// invalidateTag deletes the entries one tag names.
+//
+// A member's score is its state:
+//
+//	>= 0  live: the entry's expiry, ms
+//	 < 0  marked: minus when its entry was deleted, redis clock, ms
+//
+// Members aren't removed on delete: a late write may still SET the entry.
+// They're marked, and a later walk deletes their entries again and sweeps the
+// mark. A write's ZADD GT beats any mark, so a rewrite unmarks its member.
+func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
+	tagKey := c.tagKey(tag)
+
+	top, err := c.client.ZRevRangeWithScores(ctx, tagKey, 0, 0).Result()
+	if err != nil || len(top) == 0 {
+		return 0, err
 	}
-	return ok
+	// Live members above this were written after the walk started.
+	cutoff := top[0].Score
+
+	// Read before the walk, so marks only ever look younger than they are.
+	nowMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
+	if err != nil {
+		return 0, err
+	}
+	// Marks before this are old enough that any write they raced has landed.
+	sweepBefore := nowMs - (c.writeGrace + sweepMargin).Milliseconds()
+
+	oldMarks := make(map[float64]struct{})
+	var removed int
+	for pairs, err := range c.scanPages(ctx, tagKey) {
+		if err != nil {
+			return removed, err
+		}
+
+		p, err := classify(pairs, cutoff, sweepBefore)
+		if err != nil {
+			return removed, err
+		}
+
+		count, err := c.invalidatePage(ctx, tagKey, p)
+		removed += count
+		// Nothing swept: the next walk retries.
+		if err != nil {
+			return removed, err
+		}
+		for _, mark := range p.oldMarks {
+			oldMarks[mark] = struct{}{}
+		}
+	}
+
+	return removed, c.sweep(ctx, tagKey, oldMarks)
 }
 
-// unlink sends one UNLINK per member's entry: a multi key one fails CROSSSLOT
-// in a cluster.
-func (c *RedisCache) unlink(ctx context.Context, members []string) ([]*redis.IntCmd, error) {
+// scanPages yields the tag set's ZSCAN pages as member, score pairs, stopping
+// after an error. A cursor, not a rank offset: concurrent writes can't shift
+// it. Members present throughout come back at least once; repeats harmless.
+func (c *RedisCache) scanPages(ctx context.Context, tagKey string) iter.Seq2[[]string, error] {
+	return func(yield func([]string, error) bool) {
+		var cursor uint64
+		for {
+			pairs, next, err := c.client.ZScan(ctx, tagKey, cursor, "", invalidationPageSize).Result()
+			if !yield(pairs, err) || err != nil || next == 0 {
+				return
+			}
+			cursor = next
+		}
+	}
+}
+
+// invalidatePage deletes the page's entries, then marks its live members. On a
+// failed delete nothing is marked; members keep their scores for a retry.
+func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) (int, error) {
+	if len(p.unlink) == 0 {
+		return 0, nil
+	}
+	removed, err := c.unlink(ctx, p.unlink)
+	if err != nil || len(p.mark) == 0 {
+		return removed, err
+	}
+	// XX: never re-adds a member swept meanwhile.
+	return removed, markMembers.Run(ctx, c.client, []string{tagKey}, p.mark...).Err()
+}
+
+// sweep removes members still carrying one of marks. Only reached once every
+// page's deletes succeeded. An old mark predates the walk, so each member still
+// carrying it was there throughout and its entry was deleted. By exact score:
+// a member a write unmarked meanwhile stays.
+func (c *RedisCache) sweep(ctx context.Context, tagKey string, marks map[float64]struct{}) error {
+	if len(marks) == 0 {
+		return nil
+	}
+	pipe := c.client.Pipeline()
+	for mark := range marks {
+		score := strconv.FormatFloat(mark, 'f', -1, 64)
+		pipe.ZRemRangeByScore(ctx, tagKey, score, score)
+	}
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+// unlink sends one UNLINK per member's entry, as a multi key one fails
+// CROSSSLOT in a cluster, and counts the entries deleted. A failed command
+// reads as 0.
+func (c *RedisCache) unlink(ctx context.Context, members []string) (int, error) {
 	pipe := c.client.Pipeline()
 	cmds := make([]*redis.IntCmd, len(members))
 	for i, member := range members {
 		cmds[i] = pipe.Unlink(ctx, c.entryKey(member))
 	}
 	_, err := pipe.Exec(ctx)
-	return cmds, err
+
+	var removed int
+	for _, cmd := range cmds {
+		if cmd.Val() == 1 {
+			removed++
+		}
+	}
+	return removed, err
+}
+
+// classify sorts a ZSCAN page's member, score pairs.
+func classify(pairs []string, cutoff float64, sweepBefore int64) (page, error) {
+	var p page
+	for i := 0; i+1 < len(pairs); i += 2 {
+		member := pairs[i]
+		score, err := strconv.ParseFloat(pairs[i+1], 64)
+		if err != nil {
+			return p, err
+		}
+
+		switch {
+		case score < 0:
+			// Deleted again: a late write may have landed since.
+			p.unlink = append(p.unlink, member)
+			if markedAt := int64(-score); markedAt < sweepBefore {
+				p.oldMarks = append(p.oldMarks, score)
+			}
+		case score <= cutoff:
+			p.unlink = append(p.unlink, member)
+			p.mark = append(p.mark, member)
+		}
+		// Otherwise written after the walk started: left for the next one.
+	}
+	return p, nil
+}
+
+// page is what the walk does with one ZSCAN page.
+type page struct {
+	// unlink is every member whose entry is deleted: live and marked.
+	unlink []string
+	// mark is the live members, marked once their entries are deleted.
+	mark []any
+	// oldMarks are marks swept once the walk ends.
+	oldMarks []float64
 }
