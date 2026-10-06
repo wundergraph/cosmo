@@ -55,7 +55,6 @@ export const EXECUTION = 'EXECUTION';
 export const EXTERNAL = 'external';
 export const EXTENDS = 'extends';
 export const EXTENSIONS = 'extensions';
-export const FORMAT = 'format';
 export const FEDERATION_POLICY = 'federation__Policy';
 export const FIELD = 'field';
 export const FIELD_PATH = 'fieldPath';
