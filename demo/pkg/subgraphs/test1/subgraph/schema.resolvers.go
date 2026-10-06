@@ -56,11 +56,11 @@ func (r *queryResolver) BigResponse(ctx context.Context, artificialDelay int, bi
 		time.Sleep(time.Duration(artificialDelay) * time.Millisecond)
 	}
 	big := make([]*model.BigObject, bigObjects)
-	for i := 0; i < bigObjects; i++ {
+	for i := range bigObjects {
 		nested := make([]*model.NestedObject, nestedObjects)
-		for i := 0; i < nestedObjects; i++ {
+		for i := range nestedObjects {
 			deeplyNested := make([]*model.DeeplyNestedObject, deeplyNestedObjects)
-			for i := 0; i < deeplyNestedObjects; i++ {
+			for i := range deeplyNestedObjects {
 				deeplyNested[i] = &deeplyNestedObject
 			}
 			nested[i] = &model.NestedObject{
@@ -92,7 +92,7 @@ func (r *queryResolver) LongResponse(ctx context.Context, artificialDelay int, b
 	}
 
 	b := make([]byte, bytes)
-	for i := 0; i < bytes; i++ {
+	for i := range bytes {
 		b[i] = 'a'
 	}
 
@@ -164,7 +164,7 @@ func (r *queryResolver) SharedThings(ctx context.Context, numOfA int, numOfB int
 		return nil, errors.New("numOfB is out of allowed range")
 	}
 	things := make([]*model.Thing, 0, numOfB)
-	for i := 0; i < numOfB; i++ {
+	for i := range numOfB {
 		thing := &model.Thing{
 			B: fmt.Sprintf("b-%d", i),
 		}

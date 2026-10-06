@@ -118,40 +118,39 @@ export function updateSubgraph(
       throw new UnauthorizedError();
     }
 
-    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          req.disableResolvabilityValidation,
-          opts.promptToQueryClient,
-          opts.billingDefaultPlanId,
-        );
+    // The transaction is managed by `SubgraphRepository.update`
+    // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      req.disableResolvabilityValidation,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
+    );
 
-        return subgraphRepo.update(
-          {
-            targetId: subgraph.targetId,
-            labels: req.labels,
-            unsetLabels: req.unsetLabels ?? false,
-            subscriptionUrl: req.subscriptionUrl,
-            routingUrl: req.routingUrl,
-            subscriptionProtocol:
-              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-            websocketSubprotocol:
-              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-            updatedBy: authContext.userId,
-            readme: req.readme,
-            namespaceId: subgraph.namespaceId,
-          },
-          compositionService,
-        );
-      });
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await new SubgraphRepository(logger, opts.db, authContext.organizationId).update(
+        {
+          targetId: subgraph.targetId,
+          labels: req.labels,
+          unsetLabels: req.unsetLabels ?? false,
+          subscriptionUrl: req.subscriptionUrl,
+          routingUrl: req.routingUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          updatedBy: authContext.userId,
+          readme: req.readme,
+          namespaceId: subgraph.namespaceId,
+        },
+        compositionService,
+      );
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

@@ -62,7 +62,7 @@ func TestBuildCacheTagHeader(t *testing.T) {
 	t.Run("a large set truncates to the tiers that fit", func(t *testing.T) {
 		t.Parallel()
 		many := []string{"subgraph-a"}
-		for i := 0; i < 500; i++ {
+		for i := range 500 {
 			many = append(many, "tag-"+strings.Repeat("x", 20)+string(rune('a'+i%26)))
 		}
 		got := buildCacheTagHeader(many, ",", 64)

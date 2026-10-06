@@ -78,23 +78,23 @@ func (b VersionInfo) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("Router:\n")
-	sb.WriteString(fmt.Sprintf("  Version: %s\n", b.AppVersion))
-	sb.WriteString(fmt.Sprintf("  Go version: %s\n", b.GoVersion))
-	sb.WriteString(fmt.Sprintf("  OS: %s\n", b.OS))
-	sb.WriteString(fmt.Sprintf("  Arch: %s\n", b.Arch))
+	fmt.Fprintf(&sb, "  Version: %s\n", b.AppVersion)
+	fmt.Fprintf(&sb, "  Go version: %s\n", b.GoVersion)
+	fmt.Fprintf(&sb, "  OS: %s\n", b.OS)
+	fmt.Fprintf(&sb, "  Arch: %s\n", b.Arch)
 
 	if !b.BuildDate.IsZero() {
-		sb.WriteString(fmt.Sprintf("  Built: %s\n", b.BuildDate.Format(time.RFC3339)))
+		fmt.Fprintf(&sb, "  Built: %s\n", b.BuildDate.Format(time.RFC3339))
 	}
 
 	if b.VCSRevision != "" {
-		sb.WriteString(fmt.Sprintf("  VCS Revision: %s\n", b.VCSRevision))
+		fmt.Fprintf(&sb, "  VCS Revision: %s\n", b.VCSRevision)
 	}
 
 	if len(b.Dependencies) > 0 {
 		sb.WriteString("  Dependencies:\n")
 		for _, dep := range b.Dependencies {
-			sb.WriteString(fmt.Sprintf("    %s %s\n", dep.Path, dep.Version))
+			fmt.Fprintf(&sb, "    %s %s\n", dep.Path, dep.Version)
 		}
 	}
 

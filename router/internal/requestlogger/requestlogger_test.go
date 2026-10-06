@@ -38,7 +38,7 @@ func TestRequestLogger(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var data map[string]interface{}
+	var data map[string]any
 	err := json.Unmarshal(buffer.Bytes(), &data)
 	assert.Nil(t, err)
 

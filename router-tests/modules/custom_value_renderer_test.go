@@ -21,7 +21,7 @@ func TestCustomValueRenderer(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"routerCustomValueRenderer": customvaluerenderer.RouterCustomValueRendererModule{},
 			},
 		}

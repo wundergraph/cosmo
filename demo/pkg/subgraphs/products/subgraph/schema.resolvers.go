@@ -85,7 +85,7 @@ func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB i
 		return nil, errors.New("numOfA is out of allowed range")
 	}
 	things := make([]*model.Thing, 0, numOfA)
-	for i := 0; i < numOfA; i++ {
+	for i := range numOfA {
 		thing := &model.Thing{
 			A: fmt.Sprintf("a-%d", i),
 		}

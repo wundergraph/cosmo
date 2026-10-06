@@ -146,6 +146,10 @@ export type CheckSubgraph = {
   labels?: Label[];
 };
 
+export function serializeRouterConfig(routerConfig: RouterConfig): Buffer {
+  return Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
+}
+
 @traced
 export class Composer {
   constructor(
@@ -196,6 +200,7 @@ export class Composer {
 
   async uploadRouterConfig({
     routerConfig,
+    serializedRouterConfig,
     blobStorage,
     organizationId,
     federatedGraphId,
@@ -208,6 +213,7 @@ export class Composer {
     pathOverride,
   }: {
     routerConfig: RouterConfig;
+    serializedRouterConfig?: Buffer;
     blobStorage: BlobStorage;
     organizationId: string;
     federatedGraphId: string;
@@ -224,7 +230,8 @@ export class Composer {
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
-    const routerConfigJsonStringBytes = Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
+    // Try to avoid serializing the router config multiple times when not needed
+    const routerConfigJsonStringBytes = serializedRouterConfig ?? serializeRouterConfig(routerConfig);
     const errors: ComposeDeploymentError[] = [];
 
     let s3PathDraft: string;
@@ -379,12 +386,14 @@ export class Composer {
     federatedGraphAdmissionWebhookSecret,
     actorId,
     pathOverride,
+    serializedRouterConfig,
   }: {
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
     baseCompositionRouterExecutionConfig: RouterConfig;
+    serializedRouterConfig?: Buffer;
     baseCompositionSchemaVersionId: string;
     blobStorage: BlobStorage;
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
@@ -424,6 +433,8 @@ export class Composer {
       federatedSchemaVersionId: baseCompositionSchemaVersionId,
       organizationId,
       routerConfig: baseRouterConfig,
+      serializedRouterConfig:
+        featureFlagRouterExecutionConfigByFeatureFlagName.size === 0 ? serializedRouterConfig : undefined,
       admissionWebhookURL: federatedGraphAdmissionWebhookURL,
       admissionWebhookSecret: federatedGraphAdmissionWebhookSecret,
       admissionConfig: {

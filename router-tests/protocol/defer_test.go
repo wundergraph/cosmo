@@ -162,7 +162,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 						// skip because the order of payloads is non-deterministic
 						if !skipQueryWithParallelDefers() {
 							t.Run("raw multipart body", func(t *testing.T) {
-								body := bytes.Replace(body, []byte("\r\n"), []byte("\n"), -1)
+								body := bytes.ReplaceAll(body, []byte("\r\n"), []byte("\n"))
 								gMultipart.Assert(t, name, body)
 							})
 						}
@@ -201,7 +201,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 }
 
 func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
-	var val map[string]interface{}
+	var val map[string]any
 	require.NoError(tb, json.Unmarshal(data, &val))
 
 	out, err := json.MarshalIndent(val, "", "  ")

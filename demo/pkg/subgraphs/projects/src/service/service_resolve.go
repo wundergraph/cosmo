@@ -35,7 +35,7 @@ func (p *ProjectsService) ResolveProjectCriticalDeadline(_ context.Context, req 
 
 		// Find the nearest upcoming deadline that's within the specified days
 		var nearestMilestone *service.Milestone
-		var nearestDays int = withinDays + 1 // Start with value beyond threshold
+		var nearestDays = withinDays + 1 // Start with value beyond threshold
 
 		now := time.Now()
 		for _, milestone := range milestones {
