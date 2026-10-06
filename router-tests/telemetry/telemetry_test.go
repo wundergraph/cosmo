@@ -4451,11 +4451,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: testutils.ToPtr(10 * time.Second),
+							RequestTimeout: new(10 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: testutils.ToPtr(3 * time.Second),
+								RequestTimeout: new(3 * time.Second),
 							},
 						},
 					})),

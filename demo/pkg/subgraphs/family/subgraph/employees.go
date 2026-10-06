@@ -5,11 +5,6 @@ import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/model"
 var engaged = model.MaritalStatusEngaged
 var married = model.MaritalStatusMarried
 
-//go:fix inline
-func String(s string) *string {
-	return new(s)
-}
-
 var employees = []*model.Employee{
 	{
 		ID: 1,

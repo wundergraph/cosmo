@@ -4385,13 +4385,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestTotalMetrics[1].Label, 16)
 
 			require.Contains(t, requestTotalMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			require.Contains(t, requestTotalMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			requestsInFlight := findMetricFamilyByName(mf, "router_http_requests_in_flight")
@@ -4403,13 +4403,13 @@ func TestPrometheus(t *testing.T) {
 
 			// the request toward the subgraph has no authorization header
 			require.NotContains(t, requestsInFlightMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			require.Contains(t, requestsInFlightMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
@@ -4420,13 +4420,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestDurationMetrics[1].Label, 16)
 
 			require.Contains(t, requestDurationMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			require.Contains(t, requestDurationMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			responseContentLength := findMetricFamilyByName(mf, "router_http_response_content_length_total")
@@ -4437,13 +4437,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, responseContentLengthMetrics[1].Label, 16)
 
 			require.Contains(t, responseContentLengthMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 			require.Contains(t, responseContentLengthMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  testutils.ToPtr(claimKey),
-				Value: testutils.ToPtr(claimVal),
+				Name:  new(claimKey),
+				Value: new(claimVal),
 			})
 
 		})
@@ -4941,11 +4941,11 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
+				RequestTimeout: new(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
-					RequestTimeout: testutils.ToPtr(300 * time.Millisecond),
+					RequestTimeout: new(300 * time.Millisecond),
 				},
 			},
 		}

@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
 	"fmt"
 	"net/http"
 	"testing"
@@ -47,11 +45,11 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(500 * time.Millisecond),
+				RequestTimeout: new(500 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"test1": {
-					ResponseHeaderTimeout: testutils.ToPtr(100 * time.Millisecond),
+					ResponseHeaderTimeout: new(100 * time.Millisecond),
 				},
 			},
 		}
@@ -107,7 +105,7 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
+				RequestTimeout: new(200 * time.Millisecond),
 			},
 		}
 		t.Run("no timeout below global timeout value", func(t *testing.T) {
@@ -181,14 +179,14 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
+				RequestTimeout: new(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"hobbies": {
-					RequestTimeout: testutils.ToPtr(300 * time.Millisecond),
+					RequestTimeout: new(300 * time.Millisecond),
 				},
 				"test1": {
-					RequestTimeout: testutils.ToPtr(500 * time.Millisecond),
+					RequestTimeout: new(500 * time.Millisecond),
 				},
 			},
 		}
@@ -297,11 +295,11 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(500 * time.Millisecond),
+				RequestTimeout: new(500 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"hobbies": {
-					ResponseHeaderTimeout: testutils.ToPtr(100 * time.Millisecond),
+					ResponseHeaderTimeout: new(100 * time.Millisecond),
 				},
 			},
 		}

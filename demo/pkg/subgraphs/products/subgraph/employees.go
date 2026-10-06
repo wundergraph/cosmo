@@ -2,11 +2,6 @@ package subgraph
 
 import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
 
-//go:fix inline
-func strPtr(s string) *string {
-	return new(s)
-}
-
 var employees = []*model.Employee{
 	{
 		ID: 1,

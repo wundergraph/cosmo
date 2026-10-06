@@ -459,8 +459,3 @@ func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string
 	}
 	return nil
 }
-
-//go:fix inline
-func PointerOf[T any](t T) *T {
-	return new(t)
-}

@@ -2,11 +2,6 @@ package subgraph
 
 import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries/subgraph/model"
 
-//go:fix inline
-func strToPtr(s string) *string {
-	return new(s)
-}
-
 var countries = []*model.Country{
 	{
 		Key: &model.CountryKey{

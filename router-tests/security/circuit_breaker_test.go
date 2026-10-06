@@ -1319,7 +1319,7 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 			ExpectContinueTimeout:  new(timeout),
 			TLSHandshakeTimeout:    new(timeout),
 			KeepAliveIdleTimeout:   new(timeout),
-			KeepAliveProbeInterval: testutils.ToPtr(10 * time.Second),
+			KeepAliveProbeInterval: new(10 * time.Second),
 			MaxConnsPerHost:        new(20),
 			MaxIdleConns:           new(20),
 			MaxIdleConnsPerHost:    new(20),
