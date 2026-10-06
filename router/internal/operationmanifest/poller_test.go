@@ -83,7 +83,7 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", etag)
 		data, _ := json.Marshal(m)
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -99,8 +99,7 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 	require.Equal(t, len(manifestV1.Operations), s.OperationCount())
 
 	// Start polling
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go poller.Poll(ctx)
 
 	// Wait a few poll cycles — manifest should stay at rev-1 (304s)
@@ -133,7 +132,7 @@ func TestPoller_PollStopsOnContextCancel(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fetchCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -173,7 +172,7 @@ func TestPoller_PollContinuesOnFetchError(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -181,8 +180,7 @@ func TestPoller_PollContinuesOnFetchError(t *testing.T) {
 	s := NewStore(zap.NewNop())
 	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go poller.Poll(ctx)
 
 	require.Eventually(t, func() bool {
