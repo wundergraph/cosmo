@@ -1163,22 +1163,3 @@ export const CACHE_POPULATE_DEFINITION_DATA = newDirectiveDefinitionData({
   node: OPENFED_CACHE_POPULATE_DEFINITION,
   optionalArgumentNames: new Set<ArgumentName>([MAX_AGE]),
 });
-
-export const CACHE_TAG_DEFINITION_DATA = newDirectiveDefinitionData({
-  argumentDataByName: new Map<ArgumentName, DirectiveArgumentData>([
-    [
-      FORMAT,
-      newDirectiveArgumentData({
-        directive: `@${CACHE_TAG}`,
-        name: FORMAT,
-        namedTypeKind: Kind.SCALAR_TYPE_DEFINITION,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      }),
-    ],
-  ]),
-  isRepeatable: true,
-  locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
-  name: CACHE_TAG,
-  node: CACHE_TAG_DEFINITION,
-  requiredArgumentNames: new Set<ArgumentName>([FORMAT]),
-});

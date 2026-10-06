@@ -938,20 +938,6 @@ export const OPENFED_ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-export const CACHE_TAG_DEFINITION: DirectiveDefinitionNode = {
-  arguments: [
-    {
-      kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(FORMAT),
-      type: REQUIRED_STRING_TYPE_NODE,
-    },
-  ],
-  kind: Kind.DIRECTIVE_DEFINITION,
-  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(CACHE_TAG),
-  repeatable: true,
-};
-
 // @openfed__cacheInvalidate on FIELD_DEFINITION
 export const OPENFED_CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
