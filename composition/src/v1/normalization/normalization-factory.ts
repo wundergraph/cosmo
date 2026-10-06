@@ -112,7 +112,6 @@ import {
   invalidInterfaceImplementationError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
   invalidMutationOrSubscriptionFieldCoordsErrorMessage,
-  invalidQueryRootFieldErrorMessage,
   invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
@@ -142,6 +141,7 @@ import {
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
+  nonRootFieldCacheTagErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
@@ -217,6 +217,7 @@ import {
   providesWithInterfaceFieldSelectionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  unsupportedCacheTagLocationWarning,
   unsupportedDirectiveWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
@@ -4492,10 +4493,16 @@ export class NormalizationFactory {
     }
     const { name: fieldName, originalParentTypeName, renamedParentTypeName: typeName } = fieldData;
     const fieldCoords = `${originalParentTypeName}.${fieldName}`;
-    if (this.getOperationTypeNodeForRootTypeName(originalParentTypeName) !== OperationTypeNode.QUERY) {
+    const operationTypeNode = this.getOperationTypeNodeForRootTypeName(originalParentTypeName);
+    if (!operationTypeNode) {
       this.errors.push(
-        invalidDirectiveError(CACHE_TAG, fieldCoords, FIRST_ORDINAL, [invalidQueryRootFieldErrorMessage()]),
+        invalidDirectiveError(CACHE_TAG, fieldCoords, FIRST_ORDINAL, [nonRootFieldCacheTagErrorMessage()]),
       );
+      return;
+    }
+    // Apollo permits @cacheTag upon any root field, so a Mutation or Subscription root field composes.
+    if (operationTypeNode !== OperationTypeNode.QUERY) {
+      this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
       return;
     }
     const configurations: Array<CacheTagConfiguration> = [];
@@ -4781,6 +4788,11 @@ export class NormalizationFactory {
           if (operationTypeNode) {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
+          }
+          if (isObject && parentData.directivesByName.has(CACHE_TAG)) {
+            this.warnings.push(
+              unsupportedCacheTagLocationWarning({ coords: parentTypeName, subgraphName: this.subgraphName }),
+            );
           }
 
           const externalInterfaceFieldNames: Array<string> = [];

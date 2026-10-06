@@ -2228,8 +2228,8 @@ export function invalidCacheTagBraceErrorMessage(format: string): string {
   );
 }
 
-export function invalidQueryRootFieldErrorMessage(): string {
-  return `The directive is valid only upon a Query root field.`;
+export function nonRootFieldCacheTagErrorMessage(): string {
+  return `The directive is valid only upon a root field or an Object.`;
 }
 
 export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string): string {
