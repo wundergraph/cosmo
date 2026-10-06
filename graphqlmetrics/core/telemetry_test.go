@@ -272,52 +272,52 @@ func TestValidateExposedMetrics(t *testing.T) {
 
 		expectedLabels := []*io_prometheus_client.LabelPair{
 			{
-				Name:  PointerOf("host_name"),
-				Value: PointerOf(mainListenAddr),
+				Name:  new("host_name"),
+				Value: new(mainListenAddr),
 			},
 			{
-				Name:  PointerOf("http_request_method"),
-				Value: PointerOf("POST"),
+				Name:  new("http_request_method"),
+				Value: new("POST"),
 			},
 			{
-				Name:  PointerOf("network_protocol_name"),
-				Value: PointerOf("connect"),
+				Name:  new("network_protocol_name"),
+				Value: new("connect"),
 			},
 			{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.graphqlmetrics.prometheus"),
+				Name:  new("otel_scope_name"),
+				Value: new("cosmo.graphqlmetrics.prometheus"),
 			},
 			{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
+				Name:  new("otel_scope_version"),
+				Value: new("0.0.1"),
 			},
 			{
-				Name:  PointerOf("otel_scope_schema_url"),
-				Value: PointerOf(""),
+				Name:  new("otel_scope_schema_url"),
+				Value: new(""),
 			},
 			{
-				Name:  PointerOf("rpc_grpc_status_code"),
-				Value: PointerOf("0"),
+				Name:  new("rpc_grpc_status_code"),
+				Value: new("0"),
 			},
 			{
-				Name:  PointerOf("rpc_method"),
-				Value: PointerOf("PublishGraphQLMetrics"),
+				Name:  new("rpc_method"),
+				Value: new("PublishGraphQLMetrics"),
 			},
 			{
-				Name:  PointerOf("rpc_service"),
-				Value: PointerOf("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
+				Name:  new("rpc_service"),
+				Value: new("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
 			},
 			{
-				Name:  PointerOf("rpc_system"),
-				Value: PointerOf("connect_rpc"),
+				Name:  new("rpc_system"),
+				Value: new("connect_rpc"),
 			},
 			{
-				Name:  PointerOf("wg_federated_graph_id"),
-				Value: PointerOf("fed123"),
+				Name:  new("wg_federated_graph_id"),
+				Value: new("fed123"),
 			},
 			{
-				Name:  PointerOf("wg_organization_id"),
-				Value: PointerOf("org123"),
+				Name:  new("wg_organization_id"),
+				Value: new("org123"),
 			},
 		}
 		require.ElementsMatch(t, expectedLabels, labels)
@@ -399,52 +399,52 @@ func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 
 		expectedLabels := []*io_prometheus_client.LabelPair{
 			{
-				Name:  PointerOf("host_name"),
-				Value: PointerOf(mainListenAddr),
+				Name:  new("host_name"),
+				Value: new(mainListenAddr),
 			},
 			{
-				Name:  PointerOf("http_request_method"),
-				Value: PointerOf("POST"),
+				Name:  new("http_request_method"),
+				Value: new("POST"),
 			},
 			{
-				Name:  PointerOf("network_protocol_name"),
-				Value: PointerOf("connect"),
+				Name:  new("network_protocol_name"),
+				Value: new("connect"),
 			},
 			{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.graphqlmetrics.prometheus"),
+				Name:  new("otel_scope_name"),
+				Value: new("cosmo.graphqlmetrics.prometheus"),
 			},
 			{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
+				Name:  new("otel_scope_version"),
+				Value: new("0.0.1"),
 			},
 			{
-				Name:  PointerOf("rpc_grpc_status_code"),
-				Value: PointerOf("3"),
+				Name:  new("rpc_grpc_status_code"),
+				Value: new("3"),
 			},
 			{
-				Name:  PointerOf("otel_scope_schema_url"),
-				Value: PointerOf(""),
+				Name:  new("otel_scope_schema_url"),
+				Value: new(""),
 			},
 			{
-				Name:  PointerOf("rpc_method"),
-				Value: PointerOf("PublishGraphQLMetrics"),
+				Name:  new("rpc_method"),
+				Value: new("PublishGraphQLMetrics"),
 			},
 			{
-				Name:  PointerOf("rpc_service"),
-				Value: PointerOf("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
+				Name:  new("rpc_service"),
+				Value: new("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService"),
 			},
 			{
-				Name:  PointerOf("rpc_system"),
-				Value: PointerOf("connect_rpc"),
+				Name:  new("rpc_system"),
+				Value: new("connect_rpc"),
 			},
 			{
-				Name:  PointerOf("wg_federated_graph_id"),
-				Value: PointerOf(""),
+				Name:  new("wg_federated_graph_id"),
+				Value: new(""),
 			},
 			{
-				Name:  PointerOf("wg_organization_id"),
-				Value: PointerOf(""),
+				Name:  new("wg_organization_id"),
+				Value: new(""),
 			},
 		}
 		require.ElementsMatch(t, expectedLabels, labels)
@@ -460,6 +460,7 @@ func findMetricFamilyByName(mf []*io_prometheus_client.MetricFamily, name string
 	return nil
 }
 
+//go:fix inline
 func PointerOf[T any](t T) *T {
-	return &t
+	return new(t)
 }
