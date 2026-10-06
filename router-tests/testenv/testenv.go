@@ -2334,7 +2334,7 @@ func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) 
 			if i > 0 {
 				mapStr.WriteString(", ")
 			}
-			mapStr.WriteString(fmt.Sprintf(`"%d": ["%s"]`, i, request.Files[i].VariablesPath))
+			fmt.Fprintf(&mapStr, `"%d": ["%s"]`, i, request.Files[i].VariablesPath)
 		}
 		mapStr.WriteString(`}`)
 		formValues["map"] = strings.NewReader(mapStr.String())

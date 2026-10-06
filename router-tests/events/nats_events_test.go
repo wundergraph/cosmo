@@ -445,13 +445,14 @@ func TestNatsEvents(t *testing.T) {
 					runes := []rune(string(allData))
 
 					for i := 0; i < len(runes); i++ {
-						if runes[i] == '\r' {
+						switch runes[i] {
+						case '\r':
 							// Validate that this is not a stray \r entry
 							if i+1 >= len(runes) || runes[i+1] != '\n' {
 								assert.Fail(t, "Invalid newline detected: '\\r' not followed by '\\n'")
 							}
 							i++
-						} else if runes[i] == '\n' {
+						case '\n':
 							// Validate that this is not a stray \n entry
 							if i == 0 || runes[i-1] != '\r' {
 								assert.Fail(t, "Invalid newline detected: '\\n' not preceded by '\\r'")
