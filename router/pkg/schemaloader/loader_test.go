@@ -318,3 +318,40 @@ func TestLoadOperationsFromEmptyDirectory(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, operations, 0, "Empty directory should return no operations")
 }
+
+// TestLoadOperationsFromDirectorySkipsSkillDirectories tests that skill directories
+// (directories containing a SKILL.md file) are skipped and not processed for
+// operations.
+func TestLoadOperationsFromDirectorySkipsSkillDirectories(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile := func(rel, content string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
+	}
+
+	writeFile("TopLevel.graphql", `query TopLevel { hello }`)
+	writeFile("trip-planning/SKILL.md", "---\nname: trip-planning\ndescription: d\n---\n")
+	writeFile("trip-planning/Example.graphql", `query SkillExample { hello }`)
+	writeFile("nested/Inner.graphql", `query Inner { hello }`)
+
+	schemaStr := `
+type Query {
+	hello: String
+}
+`
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+	ops, err := loader.LoadOperationsFromDirectory(dir)
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(ops))
+	for _, op := range ops {
+		names = append(names, op.Name)
+	}
+	assert.ElementsMatch(t, []string{"TopLevel", "Inner"}, names)
+}
