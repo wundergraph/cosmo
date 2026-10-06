@@ -41,3 +41,8 @@ export type OverrideDirectiveLabelArgumentWarningParams = {
   coords: string;
   subgraphName: SubgraphName;
 };
+
+export type UnsupportedCacheTagLocationWarningParams = {
+  coords: string;
+  subgraphName: SubgraphName;
+};

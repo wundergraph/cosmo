@@ -7,6 +7,7 @@ import type {
   ProvidesWithInterfaceFieldSelectionWarningParams,
   SingleFederatedInputFieldOneOfWarningParams,
   SingleSubgraphInputFieldOneOfWarningParams,
+  UnsupportedCacheTagLocationWarningParams,
   UnsupportedDirectiveWarningParams,
 } from './params';
 import { type SubgraphName } from '../../types/types';
@@ -303,6 +304,20 @@ export function overrideDirectiveLabelArgumentWarning({
       ` The "label" argument is currently unsupported and will be ignored.` +
       ` However, please note the same functionality can be achieved through Feature Flags:` +
       ` https://wundergraph.com/learn/feature-flags-foundations`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function unsupportedCacheTagLocationWarning({
+  coords,
+  subgraphName,
+}: UnsupportedCacheTagLocationWarningParams): Warning {
+  return new Warning({
+    message:
+      `The "@cacheTag" directive defined on coordinates "${coords}" will be ignored.` +
+      ` "@cacheTag" is currently supported only upon a Query root field.`,
     subgraph: {
       name: subgraphName,
     },
