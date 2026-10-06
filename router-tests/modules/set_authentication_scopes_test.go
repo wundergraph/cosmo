@@ -20,7 +20,7 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"setAuthenticationScopesModule": setScopesModule.SetAuthenticationScopesModule{
 					Value:  2,
 					Scopes: []string{"read:employee", "read:private"},
@@ -69,7 +69,7 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"setAuthenticationScopesModule": setScopesModule.SetAuthenticationScopesModule{
 					Value:  2,
 					Scopes: []string{"read:employee", "read:private"},
@@ -120,7 +120,7 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"setAuthenticationScopesModule": setScopesModule.SetAuthenticationScopesModule{
 					Value:  2,
 					Scopes: []string{"read:employee"},
@@ -171,7 +171,7 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"setAuthenticationScopesModule": setScopesModule.SetAuthenticationScopesModule{
 					Value:  2,
 					Scopes: []string{"read:employee", "read:private"},

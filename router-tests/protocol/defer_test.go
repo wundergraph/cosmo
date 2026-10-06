@@ -201,7 +201,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 }
 
 func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
-	var val map[string]interface{}
+	var val map[string]any
 	require.NoError(tb, json.Unmarshal(data, &val))
 
 	out, err := json.MarshalIndent(val, "", "  ")

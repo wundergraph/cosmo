@@ -2027,7 +2027,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := 2; i < 13; i++ {
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename": "Employee"}`, i))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -2108,7 +2108,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := uint32(2); i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename":"Employee"}`, i))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)

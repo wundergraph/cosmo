@@ -59,7 +59,7 @@ func TestFlakyTimeouts(t *testing.T) {
 		bytes := 50000
 
 		b := make([]byte, bytes)
-		for i := 0; i < bytes; i++ {
+		for i := range bytes {
 			b[i] = 'a'
 		}
 
