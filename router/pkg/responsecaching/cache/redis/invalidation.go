@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"iter"
+	"slices"
 	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
@@ -32,6 +34,7 @@ return 0
 
 // invalidationPageSize is the ZSCAN COUNT hint per page.
 const invalidationPageSize = 512
+const sweepTimeout = 30 * time.Second
 
 // InvalidateByTags implements responsecaching.Invalidator.
 func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, error) {
@@ -43,7 +46,28 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 		err = errors.Join(err, tagErr)
 	}
 
+	go c.sweepLater(slices.Clone(tags))
 	return removed, err
+}
+
+// sweepTimeout bounds one background sweep.
+
+// sweepLater sweeps tags once this call's marks are old enough, so its marked
+// members leave the index without waiting for the next invalidation. Best
+// effort: a sweep that fails or never runs leaves its marks to the next walk.
+func (c *RedisCache) sweepLater(tags []string) {
+	select {
+	case <-time.After(c.sweepDelay):
+	case <-c.closing.Done():
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.closing, sweepTimeout)
+	defer cancel()
+	for _, tag := range tags {
+		// A cutoff below every live score leaves live members alone.
+		_, _ = c.walk(ctx, c.tagKey(tag), -1)
+	}
 }
 
 // invalidateTag deletes the entries one tag names.
@@ -55,7 +79,6 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 //
 // Members aren't removed on delete: a late write may still SET the entry.
 // They're marked, and a later walk deletes their entries again and sweeps the
-// mark. A write's ZADD GT beats any mark, so a rewrite unmarks its member.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
@@ -66,6 +89,12 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 	// Live members above this were written after the walk started.
 	cutoff := top[0].Score
 
+	return c.walk(ctx, tagKey, cutoff)
+}
+
+// walk deletes the entries of the tag's marked members and of its live members
+// scored up to cutoff, marks those live members, and sweeps marks old enough.
+func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (int, error) {
 	// Read before the walk, so marks only ever look younger than they are.
 	nowMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
 	if err != nil {

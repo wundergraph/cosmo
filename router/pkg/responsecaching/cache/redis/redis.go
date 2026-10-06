@@ -32,6 +32,12 @@ type RedisCache struct {
 	// writeGrace bounds a write's first round trip for its entry to be
 	// extended; a walk's sweep relies on it. Only tests change it.
 	writeGrace time.Duration
+	// sweepDelay is how long after an invalidation its tags are swept in the
+	// background. Only tests change it.
+	sweepDelay time.Duration
+	// closing is cancelled by Close, ending background sweeps.
+	closing context.Context
+	cancel  context.CancelFunc
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -52,6 +58,10 @@ const defaultWriteGrace = 5 * time.Second
 // failover's new clock.
 const sweepMargin = time.Second
 
+// backgroundSweepDelay is how long after an invalidation its tag is swept.
+// Past writeGrace + sweepMargin, so that walk's marks are old enough.
+const backgroundSweepDelay = defaultWriteGrace + sweepMargin + time.Second
+
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
 
@@ -69,7 +79,16 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now, writeGrace: defaultWriteGrace}, nil
+	closing, cancel := context.WithCancel(context.Background())
+	return &RedisCache{
+		client:     client,
+		prefix:     prefix,
+		now:        time.Now,
+		writeGrace: defaultWriteGrace,
+		sweepDelay: backgroundSweepDelay,
+		closing:    closing,
+		cancel:     cancel,
+	}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -147,6 +166,8 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // go-redis' complaint that the client is already closed.
 func (c *RedisCache) Close() error {
 	c.closeOnce.Do(func() {
+		// Pending sweeps give up; a running one fails fast.
+		c.cancel()
 		c.closeErr = c.client.Close()
 	})
 	return c.closeErr
