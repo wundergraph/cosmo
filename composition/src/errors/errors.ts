@@ -28,18 +28,21 @@ import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
   AND_UPPER,
   ARGUMENT,
+  EXTERNAL,
   FIELD,
   FIELD_PATH,
   FROM_CONTEXT,
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
+  INTERFACE_OBJECT,
   LEVELS,
   LITERAL_NEW_LINE,
   LITERAL_PERIOD,
   NOT_UPPER,
   OBJECT,
   OR_UPPER,
+  POLICY,
   QUOTATION_JOIN,
   SUBSCRIPTION_FIELD_CONDITION,
   SUBSCRIPTION_FILTER,
@@ -2055,6 +2058,21 @@ export function costOnInterfaceFieldErrorMessage(directiveCoords: DirectiveArgum
     ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an Interface type.` +
     ` The cost of an interface field is derived from the costs of the corresponding fields` +
     ` on the concrete types that implement the interface.`
+  );
+}
+
+export function policyOnInterfaceErrorMessage(): string {
+  return (
+    ` The "@${POLICY}" directive is not permitted on an Interface, an Interface field, or an` +
+    ` "@${INTERFACE_OBJECT}" type.` +
+    ` An Interface inherits the requirements of the concrete types that implement it.`
+  );
+}
+
+export function policyOnExternalFieldErrorMessage(): string {
+  return (
+    ` The "@${POLICY}" directive is not permitted on a field that defines "@${EXTERNAL}".` +
+    ` The requirements of a field must be defined by the subgraphs that resolve it.`
   );
 }
 
