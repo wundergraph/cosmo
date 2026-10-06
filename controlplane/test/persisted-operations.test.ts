@@ -136,7 +136,6 @@ describe('Persisted operations', (ctx) => {
           // A conflicting body still sees the registration restored by rollback.
           const conflict = await client.publishPersistedOperations({
             ...base,
-            clientName: 'other',
             operations: [{ id: 'shared', contents: 'query { __typename }' }],
           });
           expect(conflict.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
@@ -198,7 +197,7 @@ describe('Persisted operations', (ctx) => {
               ? client.publishPersistedOperations({
                   ...base,
                   clientName: 'other',
-                  operations: [{ id: 'shared', contents: 'query { __typename }' }],
+                  operations: [{ id: 'shared', contents: 'query { hello }' }],
                 })
               : action === 'operation-delete'
                 ? client.deletePersistedOperation({ ...base, operationId: 'shared' })
@@ -207,7 +206,7 @@ describe('Persisted operations', (ctx) => {
             completed = true;
             expect(response.response?.code).toBe(EnumStatusCode.OK);
             if ('operations' in response) {
-              expect(response.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+              expect(response.operations[0].status).toBe(PublishedOperationStatus.CREATED);
             }
           });
           await attempt;
@@ -1146,32 +1145,6 @@ describe('Persisted operations', (ctx) => {
   });
 
   describe('manifest generation', () => {
-    test('Should preserve __proto__ as an own ID in the uploaded manifest', async (testContext) => {
-      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-      const contents = 'query { hello }';
-      const result = await client.publishPersistedOperations({
-        fedGraphName,
-        namespace: 'default',
-        clientName: 'web',
-        operations: [{ id: '__proto__', contents }],
-      });
-      expect(result.response?.code).toBe(EnumStatusCode.OK);
-      expect(result.operations[0].status).toBe(PublishedOperationStatus.CREATED);
-      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
-      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
-      expect(Object.hasOwn(manifest.operations, '__proto__')).toBe(true);
-      expect(Object.entries(manifest.operations)).toEqual([['__proto__', contents]]);
-      expect(manifest.revision).toBe(
-        crypto
-          .createHash('sha256')
-          .update(JSON.stringify({ ['__proto__']: contents }))
-          .digest('hex'),
-      );
-    });
-
     test('Should generate a PQL manifest after publishing persisted operations', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,

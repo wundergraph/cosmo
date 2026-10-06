@@ -24,7 +24,7 @@ export interface PQLManifest {
   version: 1;
   revision: string;
   generatedAt: string;
-  operations: Record<string, string>; // operation ID -> body
+  operations: Record<string, string>; // sha256 hash -> operation body
 }
 
 type ChangeOverride = IgnoreAllOverride & {
@@ -747,7 +747,7 @@ export class OperationsRepository {
       );
     }
 
-    const operations: Record<string, string> = Object.create(null);
+    const operations: Record<string, string> = {};
     for (const op of allOperations) {
       if (Object.hasOwn(operations, op.operationId) && operations[op.operationId] !== op.operationContent) {
         throw new Error(`Persisted operation ${op.operationId} has conflicting bodies across clients`);
@@ -757,7 +757,7 @@ export class OperationsRepository {
 
     // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
     const sortedKeys = Object.keys(operations).sort();
-    const sortedOperations: Record<string, string> = Object.create(null);
+    const sortedOperations: Record<string, string> = {};
     for (const key of sortedKeys) {
       sortedOperations[key] = operations[key];
     }
