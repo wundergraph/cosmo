@@ -43,7 +43,7 @@ func (p *RouterPlugin) GRPCServer(_ *plugin.GRPCBroker, server *grpc.Server) err
 
 // GRPCClient is the interface that is implemented to serve/connect to
 // a plugin over gRPC.
-func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *grpc.ClientConn) (interface{}, error) {
+func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *grpc.ClientConn) (any, error) {
 	return cc, nil
 }
 
