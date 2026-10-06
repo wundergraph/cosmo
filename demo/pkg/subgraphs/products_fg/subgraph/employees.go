@@ -2,8 +2,9 @@ package subgraph
 
 import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg/subgraph/model"
 
+//go:fix inline
 func strPtr(s string) *string {
-	return &s
+	return new(s)
 }
 
 var employees = []*model.Employee{
@@ -17,7 +18,7 @@ var employees = []*model.Employee{
 			model.ProductNameSdk,
 		},
 		ProductCount: 5,
-		Notes:        strPtr("Jens notes resolved by products"),
+		Notes:        new("Jens notes resolved by products"),
 	},
 	{
 		ID: 2,
@@ -26,7 +27,7 @@ var employees = []*model.Employee{
 			model.ProductNameSdk,
 		},
 		ProductCount: 2,
-		Notes:        strPtr("Dustin notes resolved by products"),
+		Notes:        new("Dustin notes resolved by products"),
 	},
 	{
 		ID: 3,
@@ -35,7 +36,7 @@ var employees = []*model.Employee{
 			model.ProductNameMarketing,
 		},
 		ProductCount: 2,
-		Notes:        strPtr("Stefan notes resolved by products"),
+		Notes:        new("Stefan notes resolved by products"),
 	},
 	{
 		ID: 4,
@@ -45,7 +46,7 @@ var employees = []*model.Employee{
 			model.ProductNameMarketing,
 		},
 		ProductCount: 3,
-		Notes:        strPtr("Björn notes resolved by products"),
+		Notes:        new("Björn notes resolved by products"),
 	},
 	{
 		ID: 5,
@@ -54,7 +55,7 @@ var employees = []*model.Employee{
 			model.ProductNameSdk,
 		},
 		ProductCount: 2,
-		Notes:        strPtr("Sergiy notes resolved by products"),
+		Notes:        new("Sergiy notes resolved by products"),
 	},
 	{
 		ID: 7,
@@ -62,7 +63,7 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: strPtr("Suvij notes resolved by products"),
+		Notes: new("Suvij notes resolved by products"),
 	},
 	{
 		ID: 8,
@@ -71,7 +72,7 @@ var employees = []*model.Employee{
 			model.ProductNameSdk,
 		},
 		ProductCount: 2,
-		Notes:        strPtr("Nithin notes resolved by products"),
+		Notes:        new("Nithin notes resolved by products"),
 	},
 	{
 		ID: 10,
@@ -81,7 +82,7 @@ var employees = []*model.Employee{
 			model.ProductNameSdk,
 		},
 		ProductCount: 3,
-		Notes:        strPtr("Eelco notes resolved by products"),
+		Notes:        new("Eelco notes resolved by products"),
 	},
 	{
 		ID: 11,
@@ -89,7 +90,7 @@ var employees = []*model.Employee{
 			model.ProductNameFinance,
 		},
 		ProductCount: 1,
-		Notes:        strPtr("Alexandra notes resolved by products"),
+		Notes:        new("Alexandra notes resolved by products"),
 	},
 	{
 		ID:           12,
@@ -100,6 +101,6 @@ var employees = []*model.Employee{
 			model.ProductNameEngine,
 			model.ProductNameSdk,
 		},
-		Notes: strPtr("David notes resolved by products"),
+		Notes: new("David notes resolved by products"),
 	},
 }

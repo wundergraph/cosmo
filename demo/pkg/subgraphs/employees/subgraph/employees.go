@@ -6,8 +6,9 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
+//go:fix inline
 func strPtr(s string) *string {
-	return &s
+	return new(s)
 }
 
 var Employees = []*model.Employee{
@@ -48,7 +49,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Founder", "CEO"},
 		},
-		Notes:     strPtr("Jens notes resolved by employees"),
+		Notes:     new("Jens notes resolved by employees"),
 		StartDate: "January 2020",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 		PrimaryWorkItem: model.TechnicalWorkItem{
@@ -119,7 +120,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
-		Notes:     strPtr("Dustin notes resolved by employees"),
+		Notes:     new("Dustin notes resolved by employees"),
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 		PrimaryWorkItem: model.ManagementWorkItem{
@@ -189,7 +190,7 @@ var Employees = []*model.Employee{
 			Departments: []model.Department{model.DepartmentMarketing},
 			Title:       []string{"Co-founder", "Head of Growth"},
 		},
-		Notes:     strPtr("Stefan notes resolved by employees"),
+		Notes:     new("Stefan notes resolved by employees"),
 		StartDate: "June 2021",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -232,7 +233,7 @@ var Employees = []*model.Employee{
 			},
 			Title: []string{"Co-founder", "COO"},
 		},
-		Notes:     strPtr("Björn notes resolved by employees"),
+		Notes:     new("Björn notes resolved by employees"),
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -273,7 +274,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior GO Engineer"},
 		},
-		Notes:     strPtr("Serigy notes resolved by employees"),
+		Notes:     new("Serigy notes resolved by employees"),
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -314,7 +315,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes:     strPtr("Suvij notes resolved by employees"),
+		Notes:     new("Suvij notes resolved by employees"),
 		StartDate: "September 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -355,7 +356,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes:     strPtr("Nithin notes resolved by employees"),
+		Notes:     new("Nithin notes resolved by employees"),
 		StartDate: "September 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -396,7 +397,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFrontend,
 			Title:        []string{"Senior Frontend Engineer"},
 		},
-		Notes:     strPtr("Eelco notes resolved by employees"),
+		Notes:     new("Eelco notes resolved by employees"),
 		StartDate: "November 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -439,7 +440,7 @@ var Employees = []*model.Employee{
 			},
 			Title: []string{"Accounting & Finance"},
 		},
-		Notes:     strPtr("Alexandra notes resolved by employees"),
+		Notes:     new("Alexandra notes resolved by employees"),
 		StartDate: "November 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
@@ -480,7 +481,7 @@ var Employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes:     strPtr("David notes resolved by employees"),
+		Notes:     new("David notes resolved by employees"),
 		StartDate: "December 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},

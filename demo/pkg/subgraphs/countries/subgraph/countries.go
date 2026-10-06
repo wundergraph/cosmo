@@ -2,8 +2,9 @@ package subgraph
 
 import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries/subgraph/model"
 
+//go:fix inline
 func strToPtr(s string) *string {
-	return &s
+	return new(s)
 }
 
 var countries = []*model.Country{
@@ -11,78 +12,78 @@ var countries = []*model.Country{
 		Key: &model.CountryKey{
 			Name: "America",
 		},
-		Language: strToPtr("English"),
+		Language: new("English"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "England",
 		},
-		Language: strToPtr("English"),
+		Language: new("English"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Germany",
 		},
-		Language: strToPtr("German"),
+		Language: new("German"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "India",
 		},
-		Language: strToPtr("Hindi"),
+		Language: new("Hindi"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Netherlands",
 		},
-		Language: strToPtr("Dutch"),
+		Language: new("Dutch"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Portugal",
 		},
-		Language: strToPtr("Portuguese"),
+		Language: new("Portuguese"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Spain",
 		},
-		Language: strToPtr("Spanish"),
+		Language: new("Spanish"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Serbia",
 		},
-		Language: strToPtr("Serbian"),
+		Language: new("Serbian"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Ukraine",
 		},
-		Language: strToPtr("Ukrainian"),
+		Language: new("Ukrainian"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Indonesia",
 		},
-		Language: strToPtr("Indonesian"),
+		Language: new("Indonesian"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Thailand",
 		},
-		Language: strToPtr("Thai"),
+		Language: new("Thai"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Korea",
 		},
-		Language: strToPtr("Korean"),
+		Language: new("Korean"),
 	},
 	{
 		Key: &model.CountryKey{
 			Name: "Taiwan",
 		},
-		Language: strToPtr("Taiwanese"),
+		Language: new("Taiwanese"),
 	},
 }
