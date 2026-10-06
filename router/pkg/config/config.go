@@ -512,6 +512,11 @@ type EngineExecutionConfiguration struct {
 	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
 	// Enabled by default, set to false to fall back to the wave-based organizers.
 	EnableScheduleFetches bool `envDefault:"true" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
+	// EnableGRPCWireEncoding encodes gRPC request messages directly to the protobuf wire format.
+	// This is faster and uses less memory, because the router does not build dynamic protobuf messages.
+	// Enabled by default. Set to false to build request messages with protoreflect.
+	// Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding.
+	EnableGRPCWireEncoding bool `envDefault:"true" env:"ENGINE_ENABLE_GRPC_WIRE_ENCODING" yaml:"enable_grpc_wire_encoding"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`

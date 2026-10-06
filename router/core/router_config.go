@@ -319,6 +319,7 @@ func (c *Config) Usage() map[string]any {
 	usage["engine_execution_configuration_resolver_max_recyclable_parser_size"] = c.engineExecutionConfiguration.ResolverMaxRecyclableParserSize
 	usage["engine_execution_configuration_enable_subgraph_fetch_operation_name"] = c.engineExecutionConfiguration.EnableSubgraphFetchOperationName
 	usage["engine_execution_configuration_disable_variables_remapping"] = c.engineExecutionConfiguration.DisableVariablesRemapping
+	usage["engine_execution_configuration_enable_grpc_wire_encoding"] = c.engineExecutionConfiguration.EnableGRPCWireEncoding
 
 	usage["overrides_subgraphs"] = len(c.overrides.Subgraphs) > 0
 	usage["authorization"] = c.authorization != nil

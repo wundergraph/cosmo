@@ -4172,6 +4172,11 @@
           "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
           "default": true
         },
+        "enable_grpc_wire_encoding": {
+          "type": "boolean",
+          "description": "Encodes gRPC request messages directly to the protobuf wire format. This is faster and uses less memory, because the router does not build dynamic protobuf messages for each request. Set to false to build request messages with protoreflect instead. Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding.",
+          "default": true
+        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",

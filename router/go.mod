@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.26.1-0.20261006102055-d6a274650a62
+	github.com/wundergraph/graphql-go-tools/v2 v2.26.1-0.20261006132542-bfc490796ad3
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.46.0
