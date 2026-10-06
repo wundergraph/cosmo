@@ -22,7 +22,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { createBlobStoragePath } from './utils.js';
+import { createBlobStoragePath, isValidPersistedOperationId } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
@@ -64,7 +64,7 @@ export function publishPersistedOperations(
     }
 
     for (const operation of req.operations) {
-      if (operation.id.length === 0 || operation.id.length > 250 || /[^\u0020-\u007E]|[/\\]/.test(operation.id)) {
+      if (!isValidPersistedOperationId(operation.id)) {
         return {
           response: {
             code: EnumStatusCode.ERR,
