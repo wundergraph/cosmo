@@ -1,6 +1,8 @@
 /* eslint-disable no-labels */
 import { createHash, randomUUID } from 'node:crypto';
 import { JsonObject, fromJson, toJson } from '@bufbuild/protobuf';
+import { Client } from '@connectrpc/connect';
+import { PromptToQueryService as PtQService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigSchema,
@@ -57,11 +59,14 @@ import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
+import { PromptToQueryService } from './PromptToQueryService.js';
 
 const COMPOSITION_DEPLOY_CONCURRENCY = 5;
 
 @traced
 export class CompositionService {
+  readonly #ptqService: PromptToQueryService | undefined;
+
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
@@ -74,7 +79,19 @@ export class CompositionService {
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
-  ) {}
+    promptToQueryClient: Client<typeof PtQService> | undefined,
+    private defaultBillingPlanId: string | undefined,
+  ) {
+    this.#ptqService = promptToQueryClient
+      ? new PromptToQueryService(
+          this.db,
+          this.logger,
+          promptToQueryClient,
+          this.organizationId,
+          this.defaultBillingPlanId,
+        )
+      : undefined;
+  }
 
   public async composeAndDeployFederatedGraph({
     actorId,
@@ -736,6 +753,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled: true,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {
@@ -1282,6 +1300,7 @@ export class CompositionService {
       routerExecutionConfig,
       featureFlagId: compositionResult.featureFlagId,
       splitConfigEnabled,
+      promptToQueryService: this.#ptqService,
     });
 
     if (!compositionResult.base.success || !baseComposition.schemaVersionId) {
@@ -1451,6 +1470,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {
