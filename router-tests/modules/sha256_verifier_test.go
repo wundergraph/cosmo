@@ -21,7 +21,7 @@ func TestSha256VerifierModule(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"sha256VerifierModule": sha256_verifier.Sha256VerifierModule{
 					ForceSha256:     false,
 					ResultContainer: resultContainer,
@@ -53,7 +53,7 @@ func TestSha256VerifierModule(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"sha256VerifierModule": sha256_verifier.Sha256VerifierModule{
 					ForceSha256:     true,
 					ResultContainer: resultContainer,
@@ -86,7 +86,7 @@ func TestSha256VerifierModule(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"sha256VerifierModule": sha256_verifier.Sha256VerifierModule{
 					ForceSha256:     true,
 					ResultContainer: resultContainer,
@@ -127,7 +127,7 @@ func TestSha256VerifierModule(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"sha256VerifierModule": sha256_verifier.Sha256VerifierModule{
 					ForceSha256:     true,
 					ResultContainer: resultContainer,

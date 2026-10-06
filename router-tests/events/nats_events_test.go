@@ -365,13 +365,14 @@ func TestNatsEvents(t *testing.T) {
 					runes := []rune(string(allData))
 
 					for i := 0; i < len(runes); i++ {
-						if runes[i] == '\r' {
+						switch runes[i] {
+						case '\r':
 							// Validate that this is not a stray \r entry
 							if i+1 >= len(runes) || runes[i+1] != '\n' {
 								assert.Fail(t, "Invalid newline detected: '\\r' not followed by '\\n'")
 							}
 							i++
-						} else if runes[i] == '\n' {
+						case '\n':
 							// Validate that this is not a stray \n entry
 							if i == 0 || runes[i-1] != '\r' {
 								assert.Fail(t, "Invalid newline detected: '\\n' not preceded by '\\r'")
@@ -1947,7 +1948,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := 2; i < 13; i++ {
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename": "Employee"}`, i))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -2028,7 +2029,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := uint32(2); i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename":"Employee"}`, i))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)

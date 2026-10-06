@@ -1375,6 +1375,9 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithServerTitle(r.mcp.Server.Title),
 		mcpserver.WithServerDescription(r.mcp.Server.Description),
 	}
+	if r.promptToQueryClient != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithPromptToQueryClient(r.promptToQueryClient))
+	}
 
 	if r.corsOptions != nil {
 		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
@@ -2268,6 +2271,13 @@ func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 	}
 }
 
+// WithPromptToQueryClient sets the control-plane client used by the MCP generate_query tool.
+func WithPromptToQueryClient(client mcpserver.PromptToQueryClient) Option {
+	return func(r *Router) {
+		r.promptToQueryClient = client
+	}
+}
+
 // WithGracePeriod sets the grace period for the router to shutdown.
 func WithGracePeriod(timeout time.Duration) Option {
 	return func(r *Router) {
@@ -2309,7 +2319,7 @@ func WithGraphApiToken(token string) Option {
 	}
 }
 
-func WithModulesConfig(config map[string]interface{}) Option {
+func WithModulesConfig(config map[string]any) Option {
 	return func(r *Router) {
 		r.modulesConfig = config
 	}

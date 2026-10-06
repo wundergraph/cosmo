@@ -271,7 +271,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			data, err := os.ReadFile(fp)
 			require.NoError(t, err)
 
-			var logEntry map[string]interface{}
+			var logEntry map[string]any
 			require.NoError(t, json.Unmarshal(data, &logEntry))
 
 			require.Equal(t, logEntry["level"], "info")
@@ -375,10 +375,10 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				require.NoError(t, err)
 
 				lines := bytes.Split(data, []byte("\n"))
-				var logEntry map[string]interface{}
+				var logEntry map[string]any
 				require.NoError(t, json.Unmarshal(lines[0], &logEntry))
 
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"level":         "info",
 					"msg":           "/graphql",
 					"log_type":      "client/subgraph",
@@ -420,7 +420,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type": "request",
 				"status":   int64(200),
 				"method":   "POST",
@@ -456,7 +456,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type": "request",
 				"status":   int64(200),
 				"method":   "POST",
@@ -554,7 +554,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":         "request",
 				"status":           int64(200),
 				"method":           "POST",
@@ -615,7 +615,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":         "request",
 				"status":           int64(200),
 				"method":           "POST",
@@ -660,7 +660,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type": "request",
 				"status":   int64(200),
 				"method":   "POST",
@@ -774,7 +774,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":      "request",
 				"status":        int64(200),
 				"method":        "POST",
@@ -892,7 +892,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":       "request",
 				"status":         int64(200),
 				"method":         "POST",
@@ -1024,7 +1024,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":       "request",
 				"status":         int64(500),
 				"method":         "POST",
@@ -1160,7 +1160,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":       "request",
 				"status":         int64(500),
 				"method":         "POST",
@@ -1249,7 +1249,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
-			expectedValues := map[string]interface{}{
+			expectedValues := map[string]any{
 				"log_type":      "request",
 				"status":        int64(200),
 				"method":        "POST",
@@ -1257,8 +1257,8 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"query":         "", // http query is empty
 				"ip":            "[REDACTED]",
 				"user_agent":    "Go-http-client/1.1",
-				"error_codes":   []interface{}{"UNAUTHORIZED"},
-				"service_names": []interface{}{"products"},
+				"error_codes":   []any{"UNAUTHORIZED"},
+				"service_names": []any{"products"},
 				"request_error": true,
 			}
 			additionalExpectedKeys := []string{
@@ -1295,7 +1295,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, requestLog.Len(), 2)
 
 				requestContext := requestLog.All()[0].ContextMap()
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":      "client/subgraph",
 					"subgraph_name": "employees",
 					"subgraph_id":   "0",
@@ -1311,7 +1311,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id", "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"log_type": "request",
 					"status":   int64(200),
 					"method":   "POST",
@@ -1345,7 +1345,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":      "client/subgraph",
 					"subgraph_name": "employees",
 					"subgraph_id":   "0",
@@ -1361,7 +1361,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"log_type": "request",
 					"status":   int64(200),
 					"method":   "POST",
@@ -1450,7 +1450,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":      "client/subgraph",
 					"subgraph_name": "employees",
 					"subgraph_id":   "0",
@@ -1466,7 +1466,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
 				requestContext1 := requestLog.All()[1].ContextMap()
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"log_type":         "request",
 					"status":           int64(200),
 					"method":           "POST",
@@ -1537,7 +1537,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":         "client/subgraph",
 					"subgraph_name":    "employees",
 					"subgraph_id":      "0",
@@ -1559,7 +1559,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
 				requestContext1 := requestLog.All()[1].ContextMap()
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"log_type": "request",
 					"status":   int64(200),
 					"method":   "POST",
@@ -1633,7 +1633,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, requestLog.Len(), 3)
 
 				employeeContext := requestLog.All()[0].ContextMap()
-				employeeSubgraphVals := map[string]interface{}{
+				employeeSubgraphVals := map[string]any{
 					"log_type":         "client/subgraph",
 					"subgraph_name":    "employees",
 					"subgraph_id":      "0",
@@ -1654,7 +1654,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, employeeContext, employeeSubgraphVals, additionalExpectedKeys)
 
 				productContext := requestLog.All()[1].ContextMap()
-				productSubgraphVals := map[string]interface{}{
+				productSubgraphVals := map[string]any{
 					"log_type":               "client/subgraph",
 					"subgraph_name":          "products",
 					"subgraph_id":            "3",
@@ -1674,7 +1674,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 
 				graphContext := requestLog.All()[2].ContextMap()
-				graphVals := map[string]interface{}{
+				graphVals := map[string]any{
 					"log_type":      "request",
 					"status":        int64(200),
 					"method":        "POST",
@@ -1815,7 +1815,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":                 "client/subgraph",
 					"subgraph_name":            "employees",
 					"subgraph_id":              "0",
@@ -1837,7 +1837,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
 				requestContext1 := requestLog.All()[1].ContextMap()
-				expectedValues1 := map[string]interface{}{
+				expectedValues1 := map[string]any{
 					"log_type": "request",
 					"status":   int64(200),
 					"method":   "POST",
@@ -1909,7 +1909,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, requestLog.Len(), 3)
 
 				employeeContext := requestLog.All()[0].ContextMap()
-				employeeSubgraphVals := map[string]interface{}{
+				employeeSubgraphVals := map[string]any{
 					"log_type":         "client/subgraph",
 					"subgraph_name":    "employees",
 					"subgraph_id":      "0",
@@ -1930,7 +1930,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, employeeContext, employeeSubgraphVals, additionalExpectedKeys)
 
 				productContext := requestLog.All()[1].ContextMap()
-				productSubgraphVals := map[string]interface{}{
+				productSubgraphVals := map[string]any{
 					"log_type":         "client/subgraph",
 					"subgraph_name":    "products",
 					"subgraph_id":      "3",
@@ -1949,7 +1949,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				checkValues(t, productContext, productSubgraphVals, append(additionalExpectedKeys, "response_error_message"))
 
 				graphContext := requestLog.All()[2].ContextMap()
-				graphVals := map[string]interface{}{
+				graphVals := map[string]any{
 					"log_type":      "request",
 					"status":        int64(200),
 					"method":        "POST",
@@ -2014,7 +2014,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":              "request",
 						"status":                int64(200),
 						"method":                "POST",
@@ -2297,7 +2297,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":              "request",
 						"status":                int64(200),
 						"method":                "POST",
@@ -2361,7 +2361,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":           "request",
 						"status":             int64(200),
 						"method":             "POST",
@@ -2498,7 +2498,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				requestContext := requestLog.All()[0].ContextMap()
 
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":              "request",
 					"status":                int64(200),
 					"method":                "POST",
@@ -2563,7 +2563,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":        "request",
 						"status":          int64(200),
 						"method":          "POST",
@@ -2629,7 +2629,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 				requestContext := requestLogAll[0].ContextMap()
 
-				expectedValues := map[string]interface{}{
+				expectedValues := map[string]any{
 					"log_type":        "request",
 					"status":          int64(200),
 					"method":          "POST",
@@ -2691,7 +2691,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":        "request",
 						"status":          int64(200),
 						"method":          "POST",
@@ -2755,7 +2755,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					expectedValues := map[string]interface{}{
+					expectedValues := map[string]any{
 						"log_type":        "request",
 						"status":          int64(200),
 						"method":          "POST",
@@ -2958,7 +2958,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					actual, ok := requestContext["error_codes"].([]interface{})
+					actual, ok := requestContext["error_codes"].([]any)
 					if !ok {
 						require.Fail(t, "error_codes error when casting")
 					}
@@ -3007,7 +3007,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					actual, ok := requestContext["error_codes"].([]interface{})
+					actual, ok := requestContext["error_codes"].([]any)
 					if !ok {
 						require.Fail(t, "error_codes error when casting")
 					}
@@ -3056,7 +3056,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
 
-					actual, ok := requestContext["error_codes"].([]interface{})
+					actual, ok := requestContext["error_codes"].([]any)
 					if !ok {
 						require.Fail(t, "error_codes error when casting")
 					}
@@ -3105,7 +3105,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Len(t, requestLogAll, len(queries))
 
 				batchedIds := make([]string, 0)
-				for i := 0; i < len(queries); i++ {
+				for i := range queries {
 					if actual, ok := requestLogAll[i].ContextMap()["batched_request_operation_id"].(string); ok {
 						batchedIds = append(batchedIds, actual)
 					}
@@ -4499,7 +4499,7 @@ func TestAccessLogs(t *testing.T) {
 					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
 					require.Len(t, requestLogs, 3)
 
-					assertComplexityFields := func(logContext map[string]interface{}, depth, totalFields, rootFields, rootFieldAliases int64, cacheHit bool) {
+					assertComplexityFields := func(logContext map[string]any, depth, totalFields, rootFields, rootFieldAliases int64, cacheHit bool) {
 						t.Helper()
 						require.Equal(t, depth, logContext["query_depth"])
 						require.Equal(t, totalFields, logContext["query_total_fields"])
@@ -5041,7 +5041,7 @@ func TestAccessLogs(t *testing.T) {
 	})
 }
 
-func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
+func checkValues(t *testing.T, requestContext map[string]any, expectedValues map[string]any, additionalExpectedKeys []string) {
 	t.Helper()
 
 	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")

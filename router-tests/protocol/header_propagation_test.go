@@ -1789,7 +1789,7 @@ func TestHeaderPropagation(t *testing.T) {
 								},
 							},
 						}),
-						core.WithModulesConfig(map[string]interface{}{
+						core.WithModulesConfig(map[string]any{
 							"failingWriterModule": failing_writer.FailingWriterModule{
 								ErrorType: failing_writer.ErrorTypeGeneric,
 							},

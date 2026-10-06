@@ -119,7 +119,7 @@ type Config struct {
 	demoMode                        bool
 	eventsConfig                    config.EventsConfiguration
 	prometheusServer                *http.Server
-	modulesConfig                   map[string]interface{}
+	modulesConfig                   map[string]any
 	executionConfig                 *ExecutionConfig
 	manifestConfig                  *ManifestConfig
 	routerOnRequestHandlers         []func(http.Handler) http.Handler
@@ -155,6 +155,7 @@ type Config struct {
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
+	promptToQueryClient          mcpserver.PromptToQueryClient
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module
