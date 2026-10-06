@@ -170,6 +170,14 @@ export function publishPersistedOperations(
 
       // Check if adding new operations would exceed the manifest limit
       const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
+      // Include legacy registrations without stored contents in conflict checks.
+      const graphIdentities = await operationsRepo.getPersistedOperationIdentitiesForGraph();
+      const identitiesById = new Map<string, Array<{ hash: string; operationNames: string[] }>>();
+      for (const op of graphIdentities) {
+        const identities = identitiesById.get(op.operationId) ?? [];
+        identities.push({ hash: op.hash, operationNames: op.operationNames ?? [] });
+        identitiesById.set(op.operationId, identities);
+      }
       const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
       const newOperationCount = req.operations.filter((op) => {
         const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
@@ -203,20 +211,24 @@ export function publishPersistedOperations(
         const operationId = operation.id;
         const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
         const prev = operationsByOperationId.get(operationId);
-        if (prev !== undefined && prev.hash !== operationHash) {
-          // We're trying to update an operation with the same ID but different hash
+        const conflict = identitiesById.get(operationId)?.find((op) => op.hash !== operationHash);
+        if (conflict) {
+          // Operation IDs identify one body across all clients in the graph.
           return {
             publishedOperation: create(PublishedOperationSchema, {
               id: operationId,
-              hash: prev.hash,
+              hash: conflict.hash,
               status: PublishedOperationStatus.CONFLICT,
-              operationNames: prev.operationNames,
+              operationNames: conflict.operationNames,
             }),
             updatedOp: null,
             error: null,
           };
         }
         const operationNames = extractOperationNames(operation.contents);
+        // Reserve before the first await, so conflicting entries in this batch
+        // cannot race each other through the parallel upload workers.
+        identitiesById.set(operationId, [{ hash: operationHash, operationNames }]);
         const clientName = encodeURIComponent(req.clientName);
         const path = createBlobStoragePath({
           organizationId,
@@ -304,7 +316,9 @@ export function publishPersistedOperations(
         }
       }
 
-      await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+      // Identical duplicates in a batch share one database registration.
+      const uniqueUpdates = [...new Map(updatedOperations.map((op) => [op.operationId, op])).values()];
+      await operationsRepo.updatePersistedOperations(clientId, userId, uniqueUpdates);
 
       try {
         await operationsRepo.generateAndUploadManifest({

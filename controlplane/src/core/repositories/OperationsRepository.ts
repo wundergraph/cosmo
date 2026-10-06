@@ -60,6 +60,17 @@ export class OperationsRepository {
     return graph !== undefined;
   }
 
+  public getPersistedOperationIdentitiesForGraph() {
+    return this.db
+      .select({
+        operationId: federatedGraphPersistedOperations.operationId,
+        hash: federatedGraphPersistedOperations.hash,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+      })
+      .from(federatedGraphPersistedOperations)
+      .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
+  }
+
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
     const inserts: (typeof federatedGraphPersistedOperations.$inferInsert)[] = operations.map((operation) => {
@@ -738,6 +749,9 @@ export class OperationsRepository {
 
     const operations: Record<string, string> = {};
     for (const op of allOperations) {
+      if (Object.hasOwn(operations, op.operationId) && operations[op.operationId] !== op.operationContent) {
+        throw new Error(`Persisted operation ${op.operationId} has conflicting bodies across clients`);
+      }
       operations[op.operationId] = op.operationContent;
     }
 

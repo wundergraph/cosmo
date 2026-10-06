@@ -15,7 +15,7 @@ import {
   onTestFinished,
   type Mock,
 } from 'vitest';
-import { federatedGraphs } from '../src/db/schema.js';
+import { federatedGraphs, federatedGraphPersistedOperations } from '../src/db/schema.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
@@ -1225,6 +1225,203 @@ describe('Persisted operations', (ctx) => {
       const bodies = Object.values(manifest.operations) as string[];
       expect(bodies).toContain(queryA);
       expect(bodies).toContain(queryB);
+    });
+
+    test('Should reject graph-wide conflicts and allow reuse only after all registrations are deleted', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const publish = (clientName: string, contents: string) =>
+        client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName,
+          operations: [{ id: 'shared', contents }],
+        });
+      for (const clientName of ['client-a', 'client-b']) {
+        const response = await publish(clientName, 'query { hello }');
+        expect(response.response?.code).toBe(EnumStatusCode.OK);
+        expect(response.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      }
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const readManifest = async () =>
+        JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      const original = await readManifest();
+      expect(original.operations).toEqual({ shared: 'query { hello }' });
+      expect(original.clients).toBeUndefined();
+      const conflict = await publish('client-c', 'query { __typename }');
+      expect(conflict.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+      expect((await readManifest()).revision).toBe(original.revision);
+      expect(blobStorage.keys().some((key) => key.endsWith('/client-c/shared.json'))).toBe(false);
+      const deleted = await client.deletePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'client-a',
+        operationId: 'shared',
+      });
+      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
+      expect((await readManifest()).operations).toEqual(original.operations);
+      expect((await publish('client-c', 'query { __typename }')).operations[0].status).toBe(
+        PublishedOperationStatus.CONFLICT,
+      );
+      const deletedClient = await client.deleteClient({ fedGraphName, namespace: 'default', clientName: 'client-b' });
+      expect(deletedClient.response?.code).toBe(EnumStatusCode.OK);
+      expect((await readManifest()).operations).toEqual({});
+      expect((await publish('client-c', 'query { __typename }')).operations[0].status).toBe(
+        PublishedOperationStatus.CREATED,
+      );
+      const updated = await readManifest();
+      expect(updated.operations).toEqual({ shared: 'query { __typename }' });
+      expect(updated.revision).not.toBe(original.revision);
+    });
+
+    test('Should check legacy registrations without stored contents for conflicts', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const user = users.adminAliceCompanyA;
+      const graph = await new FederatedGraphRepository(server.log, server.db, user.organizationId).byName(
+        fedGraphName,
+        'default',
+      );
+      const repo = new OperationsRepository(server.db, graph!.id);
+      const clientId = await repo.registerClient('legacy', user.userId);
+      const contents = 'query { hello }';
+      const hash = crypto.createHash('sha256').update(contents).digest('hex');
+      await server.db.insert(federatedGraphPersistedOperations).values({
+        federatedGraphId: graph!.id,
+        clientId,
+        operationId: 'shared',
+        hash,
+        filePath: `${graph!.id}/legacy/shared.json`,
+        createdById: user.userId,
+      });
+      const base = { fedGraphName, namespace: 'default', clientName: 'web' };
+      const conflict = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'shared', contents: 'query { __typename }' }],
+      });
+      expect(conflict.response?.code).toBe(EnumStatusCode.OK);
+      expect(conflict.operations[0]).toMatchObject({ status: PublishedOperationStatus.CONFLICT, hash });
+      expect(blobStorage.keys().some((key) => key.endsWith('/web/shared.json'))).toBe(false);
+      const accepted = await client.publishPersistedOperations({ ...base, operations: [{ id: 'shared', contents }] });
+      expect(accepted.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: contents });
+    });
+
+    test('Should refuse a conflicting legacy manifest without overwriting the published manifest', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const base = { fedGraphName, namespace: 'default', clientName: 'web' };
+      const published = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'shared', contents: 'query { hello }' }],
+      });
+      expect(published.response?.code).toBe(EnumStatusCode.OK);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const readManifest = async () => new Response((await blobStorage.getObject({ key })).stream).text();
+      const originalManifest = await readManifest();
+      const user = users.adminAliceCompanyA;
+      const graph = await new FederatedGraphRepository(server.log, server.db, user.organizationId).byName(
+        fedGraphName,
+        'default',
+      );
+      const repo = new OperationsRepository(server.db, graph!.id);
+      const clientId = await repo.registerClient('legacy', user.userId);
+      const contents = 'query { __typename }';
+      await repo.updatePersistedOperations(clientId, user.userId, [
+        {
+          operationId: 'shared',
+          hash: crypto.createHash('sha256').update(contents).digest('hex'),
+          contents,
+          filePath: `${graph!.id}/legacy/shared.json`,
+          operationNames: [],
+        },
+      ]);
+      const failed = await client.publishPersistedOperations({
+        ...base,
+        operations: [{ id: 'new_id', contents }],
+      });
+      expect(failed.response?.code).toBe(EnumStatusCode.ERR);
+      expect(await repo.getPersistedOperation({ operationId: 'new_id', clientName: 'web' })).toBeUndefined();
+      expect(await readManifest()).toBe(originalManifest);
+      const removed = await client.deletePersistedOperation({ ...base, clientName: 'legacy', operationId: 'shared' });
+      expect(removed.response?.code).toBe(EnumStatusCode.OK);
+      expect(JSON.parse(await readManifest()).operations).toEqual({ shared: 'query { hello }' });
+    });
+
+    test('Should reject conflicting IDs within a batch and accept identical duplicates', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const result = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'batch-client',
+        operations: [
+          { id: 'shared', contents: 'query { hello }' },
+          { id: 'shared', contents: 'query { __typename }' },
+          { id: 'shared', contents: 'query { hello }' },
+        ],
+      });
+      expect(result.response?.code).toBe(EnumStatusCode.OK);
+      expect(result.operations.map((op) => op.status)).toEqual([
+        PublishedOperationStatus.CREATED,
+        PublishedOperationStatus.CONFLICT,
+        PublishedOperationStatus.CREATED,
+      ]);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: 'query { hello }' });
+    });
+
+    test('Should serialize concurrent conflicting publishes across clients', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const bodies = ['query { hello }', 'query { __typename }'];
+      const responses = await Promise.all(
+        bodies.map((contents, i) =>
+          client.publishPersistedOperations({
+            fedGraphName,
+            namespace: 'default',
+            clientName: `client-${i}`,
+            operations: [{ id: 'shared', contents }],
+          }),
+        ),
+      );
+      expect(responses.every((r) => r.response?.code === EnumStatusCode.OK)).toBe(true);
+      expect(responses.filter((r) => r.operations[0].status === PublishedOperationStatus.CREATED)).toHaveLength(1);
+      expect(responses.filter((r) => r.operations[0].status === PublishedOperationStatus.CONFLICT)).toHaveLength(1);
+      const winner = responses.findIndex((r) => r.operations[0].status === PublishedOperationStatus.CREATED);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: bodies[winner] });
+    });
+
+    test('Should allow different graphs to reuse an ID for different bodies', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      for (const contents of ['query { hello }', 'query { __typename }']) {
+        const fedGraphName = genID('fedGraph');
+        await setupFederatedGraph(fedGraphName, client);
+        const response = await client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: [{ id: 'shared', contents }],
+        });
+        expect(response.response?.code).toBe(EnumStatusCode.OK);
+        expect(response.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      }
     });
 
     test('Should regenerate the manifest after deleting a persisted operation', async (testContext) => {
