@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
@@ -82,5 +84,24 @@ func TestManifestWarmupSource(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, items, 1)
 		require.Nil(t, items[0].Client)
+	})
+
+	t.Run("skips operations whose SHA256 ID does not match their body", func(t *testing.T) {
+		t.Parallel()
+		store := pqlmanifest.NewStore(zap.NewNop())
+		store.Load(&pqlmanifest.Manifest{
+			Version:  1,
+			Revision: "rev-1",
+			Operations: map[string]string{
+				"get_employees":         "query Employees { employees { id } }",
+				strings.Repeat("a", 64): "query Employees { employees { id } }",
+			},
+		})
+		source := NewManifestWarmupSource(store)
+
+		items, err := source.LoadItems(context.Background(), zap.NewNop())
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, "get_employees", items[0].Request.Extensions.PersistedQuery.Sha256Hash)
 	})
 }

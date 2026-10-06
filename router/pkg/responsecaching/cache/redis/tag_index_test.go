@@ -124,7 +124,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.Greater(t, second, first, "the longer life must be the one that counts")
 	})
 
-	t.Run("the tag key lives as long as the entries in it", func(t *testing.T) {
+	t.Run("the tag key outlives the entries in it by the prune grace", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
@@ -132,7 +132,9 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, mr.TTL(entryKey("v1:a")), mr.TTL(tagIndexKey("declared:users")))
+		// The entry expires at its member's score by the router's clock, the
+		// key by redis's: the grace absorbs skew between them.
+		require.InDelta(t, mr.TTL(entryKey("v1:a"))+tagIndexPruneGrace, mr.TTL(tagIndexKey("declared:users")), float64(time.Second))
 	})
 
 	t.Run("a short lived entry does not shorten a tag holding longer lived ones", func(t *testing.T) {
@@ -168,7 +170,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:long", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, time.Hour, mr.TTL(tagIndexKey("declared:users")))
+		require.Equal(t, time.Hour+tagIndexPruneGrace, mr.TTL(tagIndexKey("declared:users")))
 	})
 
 	t.Run("an item without a TTL is refused before anything is indexed", func(t *testing.T) {
