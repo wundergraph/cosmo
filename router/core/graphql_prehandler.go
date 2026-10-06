@@ -1395,7 +1395,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
 		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (any, error) {
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {

@@ -362,7 +362,7 @@
           "properties": {
             "storage": {
               "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
-              "required": ["provider_id", "object_path"],
+              "required": ["provider_id"],
               "properties": {
                 "provider_id": {
                   "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -370,18 +370,12 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. Required for S3 providers. Not used by CDN providers."
                 }
               }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
+            },
             "fallback_storage": {
-              "description": "The fallback storage provider for the execution config in case the primary one fails.",
+              "description": "The fallback storage provider for the execution config in case the primary one fails. Can be combined with storage. When storage is omitted, the Cosmo CDN is the primary provider.",
               "required": ["enabled"],
               "properties": {
                 "enabled": {

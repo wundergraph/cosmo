@@ -1067,7 +1067,7 @@ func (s *graphServer) buildGraphMux(
 		cancel:                   graphMuxCancel,
 		metricStore:              rmetric.NewNoopMetrics(),
 		streamMetricStore:        rmetric.NewNoopStreamMetricStore(),
-		skipUnavailableProviders: s.Config.eventsConfig.SkipUnavailableProviders,
+		skipUnavailableProviders: s.eventsConfig.SkipUnavailableProviders,
 		logger:                   s.logger,
 	}
 
