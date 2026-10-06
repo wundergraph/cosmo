@@ -73,7 +73,7 @@ export function deletePersistedOperation(
       const path = createBlobStoragePath({
         organizationId: authContext.organizationId,
         fedGraphId: federatedGraph.id,
-        clientName: encodeURIComponent(operation.clientName),
+        clientName: operation.clientName,
         operationId: operation.operationId,
       });
 

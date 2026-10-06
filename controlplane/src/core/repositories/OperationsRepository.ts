@@ -226,7 +226,7 @@ export class OperationsRepository {
         and(
           eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
           eq(federatedGraphPersistedOperations.operationId, operationId),
-          clientName === undefined ? undefined : eq(federatedGraphClients.name, clientName),
+          clientName ? eq(federatedGraphClients.name, clientName) : undefined,
         ),
       );
 

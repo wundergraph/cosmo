@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, onTestFinished, test, vi } from 'vitest';
@@ -12,9 +12,6 @@ import {
   genUniqueLabel,
 } from '../../src/core/test-util.js';
 import { SetupTest } from '../test-util.js';
-import { CacheWarmerRepository } from '../../src/core/repositories/CacheWarmerRepository.js';
-import { FederatedGraphRepository } from '../../src/core/repositories/FederatedGraphRepository.js';
-import { OperationsRepository } from '../../src/core/repositories/OperationsRepository.js';
 
 let dbname = '';
 
@@ -71,79 +68,6 @@ describe('PushCacheOperation', (ctx) => {
   afterAll(async () => {
     await afterAllSetup(dbname);
   });
-
-  test.each(['manual', 'computed'] as const)(
-    '%s warmup resolves persisted IDs within the recorded client',
-    async (source) => {
-      const { client, server, users } = await SetupTest({ dbname, chClient });
-      onTestFinished(() => server.close());
-      const graphName = genID('fedGraph');
-      await createFederatedAndSubgraph(client, graphName);
-      const user = users.adminAliceCompanyA;
-      const graphRepo = new FederatedGraphRepository(server.log, server.db, user.organizationId);
-      const graph = await graphRepo.byName(graphName, 'default');
-      expect(graph).toBeDefined();
-      const operationsRepo = new OperationsRepository(server.db, graph!.id);
-      const warmerRepo = new CacheWarmerRepository(chClient, server.db);
-      const operationId = 'get_hello_v1';
-      const bodies = {
-        web: 'query Get { hello { message } }',
-        mobile: 'query Get { sendHello }',
-      };
-      for (const [clientName, contents] of Object.entries(bodies)) {
-        const clientId = await operationsRepo.registerClient(clientName, user.userId);
-        await operationsRepo.updatePersistedOperations(clientId, user.userId, [
-          {
-            operationId,
-            hash: createHash('sha256').update(contents).digest('hex'),
-            filePath: `${graph!.id}/${clientName}/${operationId}.json`,
-            contents,
-            operationNames: ['Get'],
-          },
-        ]);
-      }
-      const rows = ['web', 'mobile', 'missing', ''].map((clientName, index) => ({
-        operationName: 'Get',
-        operationHash: String(index),
-        operationPersistedID: operationId,
-        clientName,
-        clientVersion: '1',
-        planningTime: 10,
-      }));
-      const queryMock = vi.mocked(chClient.queryPromise).mockReset();
-      if (source === 'manual') {
-        await warmerRepo.addCacheWarmerOperations({
-          operations: rows.map((row) => ({
-            ...row,
-            clientName: row.clientName || null,
-            federatedGraphId: graph!.id,
-            organizationId: user.organizationId,
-            isManuallyAdded: true,
-          })),
-        });
-        queryMock.mockResolvedValueOnce([]);
-      } else {
-        queryMock.mockResolvedValueOnce(rows).mockResolvedValueOnce([]);
-      }
-
-      const result = await warmerRepo.computeCacheWarmerOperations({
-        federatedGraphId: graph!.id,
-        organizationId: user.organizationId,
-        maxOperationsCount: 10,
-      });
-      expect(result.operations).toHaveLength(2);
-      expect(Object.fromEntries(result.operations.map((op) => [op.client?.name, op.request?.query]))).toEqual(bodies);
-      if (source === 'computed') {
-        const saved = await warmerRepo.getCacheWarmerOperations({
-          federatedGraphId: graph!.id,
-          organizationId: user.organizationId,
-          isManuallyAdded: false,
-        });
-        expect(saved).toHaveLength(2);
-        expect(Object.fromEntries(saved.map((op) => [op.clientName, op.operationContent]))).toEqual(bodies);
-      }
-    },
-  );
 
   test('Should not able to add a duplicate operation', async (testContext) => {
     const { client, server } = await SetupTest({

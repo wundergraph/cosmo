@@ -194,7 +194,6 @@ export class CacheWarmerRepository {
       if (operation.operationPersistedID) {
         const persistedOperation = await operationsRepo.getPersistedOperation({
           operationId: operation.operationPersistedID,
-          clientName: operation.clientName ?? '',
         });
 
         if (!persistedOperation || !persistedOperation.contents) {
@@ -262,7 +261,6 @@ export class CacheWarmerRepository {
       if (operation.operationPersistedID) {
         const persistedOperation = await operationsRepo.getPersistedOperation({
           operationId: operation.operationPersistedID,
-          clientName: operation.clientName ?? '',
         });
 
         if (!persistedOperation || !persistedOperation.contents) {

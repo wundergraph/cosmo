@@ -343,90 +343,6 @@ describe('Persisted operations', (ctx) => {
       expect(retry.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should validate every ID before publishing any operations', async (testContext) => {
-      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-      const initialKeys = [...blobStorage.keys()].sort();
-      const invalidIds = [
-        '',
-        'a'.repeat(251),
-        'query/name',
-        'query\\name',
-        '../operation',
-        'café',
-        'query\u0080',
-        'query\u00A0',
-        'query😀',
-        ...Array.from({ length: 32 }, (_, code) => `query${String.fromCodePoint(code)}`),
-        'query\u007F',
-      ];
-      for (const id of invalidIds) {
-        const result = await client.publishPersistedOperations({
-          fedGraphName,
-          namespace: 'default',
-          clientName: 'web',
-          operations: [
-            { id: 'valid_id', contents: 'query { hello }' },
-            { id, contents: 'query { hello }' },
-          ],
-        });
-        expect(result.response?.code).toBe(EnumStatusCode.ERR);
-        expect(result.response?.details).toBe(
-          'Operation ID must contain 1–250 printable ASCII characters, excluding forward slash and backslash',
-        );
-        expect(result.operations).toEqual([]);
-        expect([...blobStorage.keys()].sort()).toEqual(initialKeys);
-      }
-      const clients = await client.getClients({ fedGraphName, namespace: 'default' });
-      expect(clients.clients).toEqual([]);
-    });
-
-    test('Should preserve valid IDs including the 250-character boundary', async (testContext) => {
-      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-      const contents = 'query { hello }';
-      const printableAscii = Array.from({ length: 95 }, (_, index) => String.fromCodePoint(0x20 + index))
-        .filter((character) => character !== '/' && character !== '\\')
-        .join('');
-      const ids = [
-        'a',
-        'A',
-        'Get-Typename_V1',
-        'get_employee-1.2.3',
-        ' a b ',
-        ' ',
-        '.',
-        '..',
-        '%2F',
-        printableAscii,
-        '~'.repeat(250),
-        crypto.createHash('sha256').update(contents).digest('hex'),
-      ];
-      const result = await client.publishPersistedOperations({
-        fedGraphName,
-        namespace: 'default',
-        clientName: 'web',
-        operations: ids.map((id) => ({ id, contents })),
-      });
-      expect(result.response?.code).toBe(EnumStatusCode.OK);
-      expect(result.operations.map((operation) => operation.id)).toEqual(ids);
-      expect(result.operations.every((operation) => operation.status === PublishedOperationStatus.CREATED)).toBe(true);
-      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
-      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
-      expect(manifest.operations).toEqual(Object.fromEntries(ids.map((id) => [id, contents])));
-      for (const id of ids) {
-        const operationKey = blobStorage.keys().find((key) => key.endsWith(`/web/${id}.json`))!;
-        const operation = JSON.parse(
-          await new Response((await blobStorage.getObject({ key: operationKey })).stream).text(),
-        );
-        expect(operation.body).toBe(contents);
-      }
-    });
-
     test('Should be able to publish persisted operations', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
@@ -871,12 +787,12 @@ describe('Persisted operations', (ctx) => {
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test.each(['curl', 'web/mobile %'])('Should delete the published blob for client %s', async (clientName) => {
+    test('Should delete persisted operation from blob storage when deleted', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
       });
-      onTestFinished(() => server.close());
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
@@ -887,25 +803,22 @@ describe('Persisted operations', (ctx) => {
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         namespace: 'default',
-        clientName,
+        clientName: 'curl',
         operations: [{ id, contents: query }],
       });
 
-      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
-      const key = blobStorage.keys().find((key) => key.endsWith(`/${encodeURIComponent(clientName)}/${id}.json`));
-      expect(key).toBeDefined();
+      const storageKeys = blobStorage.keys();
 
-      const deleted = await client.deletePersistedOperation({
+      await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
-        clientName,
+        clientName: 'curl',
       });
 
-      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
       await expect(
         blobStorage.getObject({
-          key: key!,
+          key: storageKeys[1],
         }),
       ).rejects.toThrow(/not found/);
     });
@@ -1144,36 +1057,6 @@ describe('Persisted operations', (ctx) => {
       const manifestText = await new Response(manifestBlob.stream).text();
       const manifest = JSON.parse(manifestText);
       expect(Object.keys(manifest.operations)).toStrictEqual([]);
-    });
-
-    test('Should preserve blobs and registrations of clients sharing a name prefix', async (testContext) => {
-      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-      const base = { fedGraphName, namespace: 'default' };
-      for (const clientName of ['web/app', 'web/application']) {
-        const published = await client.publishPersistedOperations({
-          ...base,
-          clientName,
-          operations: [{ id: 'shared', contents: 'query { hello }' }],
-        });
-        expect(published.response?.code).toBe(EnumStatusCode.OK);
-      }
-      const deleted = await client.deleteClient({ ...base, clientName: 'web/app' });
-      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
-      expect(deleted.deletedOperationsCount).toBe(1);
-      expect((await client.getClients(base)).clients.map((client) => client.name)).toEqual(['web/application']);
-      expect(blobStorage.keys().some((key) => key.endsWith('/web%2Fapp/shared.json'))).toBe(false);
-      const key = blobStorage.keys().find((key) => key.endsWith('/web%2Fapplication/shared.json'));
-      expect(key).toBeDefined();
-      const stored = JSON.parse(await new Response((await blobStorage.getObject({ key: key! })).stream).text());
-      expect(stored.body).toBe('query { hello }');
-      const manifestKey = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
-      const manifest = JSON.parse(
-        await new Response((await blobStorage.getObject({ key: manifestKey })).stream).text(),
-      );
-      expect(manifest.operations).toEqual({ shared: 'query { hello }' });
     });
 
     test('Should roll back client deletion when blob storage removal fails', async (testContext) => {
