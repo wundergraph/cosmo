@@ -31,7 +31,7 @@ func TestCustomOperationIDs(t *testing.T) {
 		"mobile": mobileQuery,
 	}
 	// Lowercase 64-hex IDs must be the SHA256 of their body; uppercase ones are custom IDs.
-	ids := []string{"get_employee_v1", strings.Repeat("A", 64)}
+	ids := []string{"get_employee_v1", strings.Repeat("A", 64), "get_employee-1.2.3", " employee %#?+& ", "%2F", ".", ".."}
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, path, _ := strings.Cut(r.URL.Path, "/operations/")
 		client, id, _ := strings.Cut(path, "/")
@@ -57,7 +57,7 @@ func TestCustomOperationIDs(t *testing.T) {
 				Query:      body,
 				Variables:  json.RawMessage(variables),
 				Header:     http.Header{"Graphql-Client-Name": {client}},
-				Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id)),
+				Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id),
 			})
 			if !assert.NoError(t, err) {
 				return &testenv.TestResponse{Response: &http.Response{}}
@@ -119,7 +119,7 @@ func TestLogUnknownSHA256OperationIDs(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:      query,
 				Header:     http.Header{"Graphql-Client-Name": {"my-client"}},
-				Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id)),
+				Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id),
 			})
 			require.NoError(t, err)
 			return res
@@ -140,7 +140,7 @@ func TestLogUnknownSHA256OperationIDs(t *testing.T) {
 		require.NoError(t, testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 			ID:      "1",
 			Type:    "subscribe",
-			Payload: []byte(fmt.Sprintf(`{"query":%q,"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`, query, hash)),
+			Payload: fmt.Appendf(nil, `{"query":%q,"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`, query, hash),
 		}))
 		var msg testenv.WebSocketMessage
 		require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
@@ -171,7 +171,7 @@ func TestCustomOperationIDManifestWarmup(t *testing.T) {
 func TestCustomOperationIDManifestReload(t *testing.T) {
 	t.Parallel()
 
-	const operationID = "employee_v1"
+	const operationID = " employee-1.2.3 %2F?# "
 	var manifest atomic.Value
 	setManifest := func(revision, query string) {
 		operations := map[string]string{}
@@ -206,7 +206,7 @@ func TestCustomOperationIDManifestReload(t *testing.T) {
 		},
 	}, func(t *testing.T, e *testenv.Environment) {
 		request := testenv.GraphQLRequest{
-			Extensions: []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, operationID)),
+			Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, operationID),
 		}
 		waitForCachedBody := func(expected string) {
 			t.Helper()

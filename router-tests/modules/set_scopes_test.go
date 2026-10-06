@@ -50,7 +50,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"myModule": module.MyModule{
 					Value: 1,
 				},
@@ -98,7 +98,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"myModule": module.MyModule{
 					Value: 1,
 				},

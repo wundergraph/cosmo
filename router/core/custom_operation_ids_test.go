@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -36,7 +37,7 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 	const (
 		invalidHash   = "persistedQuery does not have a valid sha256 hash"
 		invalidLength = "persistedQuery id must be 1-250 characters long"
-		invalidChars  = "persistedQuery id may only contain [A-Za-z0-9_-]"
+		invalidChars  = `persistedQuery id must use printable ASCII, without / or \`
 	)
 	tests := []struct {
 		name string
@@ -51,7 +52,16 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 		{name: "maximum length", id: strings.Repeat("z", 250), hashErr: invalidHash},
 		{name: "empty", id: "", hashErr: invalidHash, customIDErr: invalidLength},
 		{name: "path traversal", id: "../operation", hashErr: invalidHash, customIDErr: invalidChars},
-		{name: "space", id: "a b", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "space", id: " a b ", hashErr: invalidHash},
+		{name: "semver", id: "get_employee-1.2.3", hashErr: invalidHash},
+		{name: "punctuation", id: " !\"#$%&'()*+,-.:;<=>?@[]^_{}|~", hashErr: invalidHash},
+		{name: "encoded separator", id: "%2F", hashErr: invalidHash},
+		{name: "dot", id: ".", hashErr: invalidHash},
+		{name: "double dot", id: "..", hashErr: invalidHash},
+		{name: "backslash", id: "a\\b", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "DEL", id: "a\u007f", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "control", id: "a\n", hashErr: invalidHash, customIDErr: invalidChars},
+		{name: "NUL", id: "a\x00", hashErr: invalidHash, customIDErr: invalidChars},
 		{name: "non-ASCII", id: "ä", hashErr: invalidHash, customIDErr: invalidChars},
 		{name: "too long", id: strings.Repeat("z", 251), hashErr: invalidHash, customIDErr: invalidLength},
 	}
@@ -72,9 +82,11 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 					require.NoError(t, err)
 					defer kit.Free()
 
+					idJSON, err := json.Marshal(tt.id)
+					require.NoError(t, err)
 					body := fmt.Sprintf(
-						`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":%q}}}`,
-						tt.id,
+						`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":%s}}}`,
+						idJSON,
 					)
 					err = kit.UnmarshalOperationFromBody([]byte(body))
 					wantErr := tt.hashErr

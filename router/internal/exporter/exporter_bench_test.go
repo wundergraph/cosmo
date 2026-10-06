@@ -57,7 +57,7 @@ func BenchmarkExporterBatchBufferAllocation(b *testing.B) {
 		buffer := exporter.getBatchBuffer()
 
 		// Simulate filling the buffer
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			buffer = append(buffer, &graphqlmetrics.SchemaUsageInfo{})
 		}
 

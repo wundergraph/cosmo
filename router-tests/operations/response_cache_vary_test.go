@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -224,9 +225,7 @@ func varyMergedMoodMiddleware(vary string) func(http.Handler) http.Handler {
 			}
 			body := moodValue.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":"`+mood+`"`))
 
-			for name, values := range rec.Header() {
-				w.Header()[name] = values
-			}
+			maps.Copy(w.Header(), rec.Header())
 			w.Header().Del("Content-Length")
 			w.Header().Set("Cache-Control", "public, max-age=60")
 			if vary != "" {

@@ -1546,6 +1546,9 @@ type MCPOAuthScopesConfiguration struct {
 	// GetSchema specifies scopes required to call the get_schema built-in tool.
 	// Additive to tools_call scopes. Only relevant when expose_schema is true.
 	GetSchema []string `yaml:"get_schema,omitempty" env:"GET_SCHEMA"`
+	// GenerateQuery specifies scopes required to call the generate_query built-in tool.
+	// Additive to tools_call scopes. Only relevant when query generation is enabled.
+	GenerateQuery []string `yaml:"generate_query,omitempty" env:"GENERATE_QUERY"`
 }
 
 type MCPSessionConfig struct {
@@ -1630,12 +1633,12 @@ type Config struct {
 	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
 	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
-	Modules        map[string]interface{} `yaml:"modules,omitempty"`
-	Headers        HeaderRules            `yaml:"headers,omitempty"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
-	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
-	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
-	Batching       BatchingConfig         `yaml:"batching,omitempty"`
+	Modules        map[string]any      `yaml:"modules,omitempty"`
+	Headers        HeaderRules         `yaml:"headers,omitempty"`
+	TrafficShaping TrafficShapingRules `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
+	FileUpload     FileUpload          `yaml:"file_upload,omitempty"`
+	AccessLogs     AccessLogsConfig    `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig      `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
