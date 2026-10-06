@@ -10,6 +10,7 @@ export const useApplyParams = () => {
       );
       const params = Object.fromEntries(Object.entries(newParams).filter(([_, value]) => value !== null));
       router.push({
+        pathname: router.pathname,
         query: {
           ...q,
           ...params,
