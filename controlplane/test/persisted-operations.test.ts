@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
@@ -82,6 +83,90 @@ describe('Persisted operations', (ctx) => {
   });
 
   describe('publishing', () => {
+    test('Should validate every ID before publishing any operations', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const initialKeys = [...blobStorage.keys()].sort();
+      const invalidIds = [
+        '',
+        'a'.repeat(251),
+        'query/name',
+        'query\\name',
+        '../operation',
+        'café',
+        'query\u0080',
+        'query\u00A0',
+        'query😀',
+        ...Array.from({ length: 32 }, (_, code) => `query${String.fromCodePoint(code)}`),
+        'query\u007F',
+      ];
+      for (const id of invalidIds) {
+        const result = await client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: [
+            { id: 'valid_id', contents: 'query { hello }' },
+            { id, contents: 'query { hello }' },
+          ],
+        });
+        expect(result.response?.code).toBe(EnumStatusCode.ERR);
+        expect(result.response?.details).toBe(
+          'Operation ID must contain 1–250 printable ASCII characters, excluding forward slash and backslash',
+        );
+        expect(result.operations).toEqual([]);
+        expect([...blobStorage.keys()].sort()).toEqual(initialKeys);
+      }
+      const clients = await client.getClients({ fedGraphName, namespace: 'default' });
+      expect(clients.clients).toEqual([]);
+    });
+
+    test('Should preserve valid IDs including the 250-character boundary', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const contents = 'query { hello }';
+      const printableAscii = Array.from({ length: 95 }, (_, index) => String.fromCodePoint(0x20 + index))
+        .filter((character) => character !== '/' && character !== '\\')
+        .join('');
+      const ids = [
+        'a',
+        'A',
+        'Get-Typename_V1',
+        'get_employee-1.2.3',
+        ' a b ',
+        ' ',
+        '.',
+        '..',
+        '%2F',
+        printableAscii,
+        '~'.repeat(250),
+        crypto.createHash('sha256').update(contents).digest('hex'),
+      ];
+      const result = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'web',
+        operations: ids.map((id) => ({ id, contents })),
+      });
+      expect(result.response?.code).toBe(EnumStatusCode.OK);
+      expect(result.operations.map((operation) => operation.id)).toEqual(ids);
+      expect(result.operations.every((operation) => operation.status === PublishedOperationStatus.CREATED)).toBe(true);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual(Object.fromEntries(ids.map((id) => [id, contents])));
+      for (const id of ids) {
+        const operationKey = blobStorage.keys().find((key) => key.endsWith(`/web/${id}.json`))!;
+        const operation = JSON.parse(
+          await new Response((await blobStorage.getObject({ key: operationKey })).stream).text(),
+        );
+        expect(operation.body).toBe(contents);
+      }
+    });
+
     test('Should be able to publish persisted operations', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
