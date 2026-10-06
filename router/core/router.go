@@ -2329,7 +2329,7 @@ func WithGraphApiToken(token string) Option {
 	}
 }
 
-func WithModulesConfig(config map[string]interface{}) Option {
+func WithModulesConfig(config map[string]any) Option {
 	return func(r *Router) {
 		r.modulesConfig = config
 	}

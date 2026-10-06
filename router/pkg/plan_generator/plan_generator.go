@@ -50,7 +50,7 @@ type QueryPlanResult struct {
 	Plan     string              `json:"plan,omitempty"`
 	Error    string              `json:"error,omitempty"`
 	Warning  string              `json:"warning,omitempty"`
-	Timings  core.OperationTimes `json:"timings,omitempty"`
+	Timings  core.OperationTimes `json:"timings"`
 }
 
 // PlanGenerator reads GraphQL operation files from cfg.SourceDir,

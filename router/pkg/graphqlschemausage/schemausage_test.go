@@ -4216,7 +4216,7 @@ func TestNilVariablesHandling(t *testing.T) {
 	})
 }
 
-func prettyJSON(t *testing.T, v interface{}) string {
+func prettyJSON(t *testing.T, v any) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(t, err)
 	return string(b)

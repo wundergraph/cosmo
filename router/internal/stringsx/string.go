@@ -1,12 +1,9 @@
 package stringsx
 
+import "slices"
+
 func Contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, e)
 }
 
 func RemoveDuplicates(strList []string) []string {

@@ -2,6 +2,7 @@ package invalidation
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -56,10 +57,8 @@ func (r Request) tags(indexes config.ResponseCacheInvalidationConfig) ([]string,
 		if len(r.Subgraphs) == 0 {
 			return nil, fmt.Errorf("a %q request requires at least one subgraph", KindCacheTag)
 		}
-		for _, subgraph := range r.Subgraphs {
-			if subgraph == "" {
-				return nil, fmt.Errorf("a %q request cannot name an empty subgraph", KindCacheTag)
-			}
+		if slices.Contains(r.Subgraphs, "") {
+			return nil, fmt.Errorf("a %q request cannot name an empty subgraph", KindCacheTag)
 		}
 		if r.CacheTag == "" {
 			return nil, fmt.Errorf("a %q request requires a cache_tag", KindCacheTag)
