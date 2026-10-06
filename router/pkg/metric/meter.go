@@ -367,7 +367,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 	// Exclude attributes from metrics
 
 	attributeFilter := func(value attribute.KeyValue) bool {
-		if isKeyInSlice(value.Key, defaultExcludedOtelKeys) {
+		if slices.Contains(defaultExcludedOtelKeys, value.Key) {
 			return false
 		}
 		name := SanitizeName(string(value.Key))
@@ -504,10 +504,6 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		sdkmetric.WithView(view),
 		sdkmetric.WithCardinalityLimit(limit),
 	}, nil
-}
-
-func isKeyInSlice(key attribute.Key, keys []attribute.Key) bool {
-	return slices.Contains(keys, key)
 }
 
 func parseURL(input string) (*url.URL, error) {
