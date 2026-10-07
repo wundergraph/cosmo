@@ -225,3 +225,8 @@ export type CacheTagPlaceholder = {
   namespace: string;
   reference: string;
 };
+
+export type ParsedCacheTagFormat = {
+  canonicalFormat: string;
+  placeholders: Array<CacheTagPlaceholder>;
+};

@@ -70,6 +70,7 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  blankCacheTagFormatErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   directlyProvidedInterfaceFieldError,
@@ -81,7 +82,6 @@ import {
   duplicateImplementedInterfaceError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberDefinitionError,
-  emptyCacheTagFormatErrorMessage,
   entityCacheWithoutKeyErrorMessage,
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
@@ -223,6 +223,7 @@ import {
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
   type AuthorizationData,
+  type CacheTagData,
   type CompositeOutputData,
   type ConditionalFieldData,
   type ConfigureDescriptionData,
@@ -252,6 +253,7 @@ import {
   isInputObjectDefinitionData,
   isInterfaceDefinitionData,
   isInterfaceNode,
+  isLeafKind,
   isNodeExternalOrShareable,
   isOutputNodeKind,
   isParentDataCompositeOutputType,
@@ -1319,6 +1321,7 @@ export class NormalizationFactory {
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
     const fieldData: FieldData = {
       argumentDataByName: argumentDataByName,
+      cacheTagDataBySubgraphName: new Map<SubgraphName, CacheTagData>(),
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       externalFieldDataBySubgraphName: new Map<SubgraphName, ExternalFieldData>([
         [this.subgraphName, newExternalFieldData(isExternal)],
@@ -4506,18 +4509,20 @@ export class NormalizationFactory {
       return;
     }
     const formats = new Set<string>();
+    const references = new Set<string>();
     for (const [index, directiveNode] of directiveNodes.entries()) {
       const ordinal = numberToOrdinal(index + 1);
       const format = this.getCacheTagFormat(directiveNode);
       if (format === undefined) {
         continue;
       }
-      if (format === '') {
-        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [emptyCacheTagFormatErrorMessage()]));
+      if (format.trim() === '') {
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [blankCacheTagFormatErrorMessage()]));
         continue;
       }
       const errorMessages: Array<string> = [];
-      for (const { namespace, reference } of parseCacheTagFormat(format, errorMessages)) {
+      const { canonicalFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
+      for (const { namespace, reference } of placeholders) {
         // Only the "$args" namespace is supported upon a field.
         if (namespace !== ARGS) {
           errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
@@ -4541,11 +4546,15 @@ export class NormalizationFactory {
         this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, errorMessages));
         continue;
       }
-      formats.add(format);
+      formats.add(canonicalFormat);
+      for (const { reference } of placeholders) {
+        references.add(reference);
+      }
     }
     if (formats.size < 1) {
       return;
     }
+    fieldData.cacheTagDataBySubgraphName.set(this.subgraphName, { formats, references });
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(false, typeName),
     );
@@ -4554,7 +4563,7 @@ export class NormalizationFactory {
     );
   }
 
-  isValidCacheTagLeaf({ namedTypeName, type }: FieldData | InputValueData): boolean {
+  isValidCacheTagLeaf({ namedTypeName, type }: InputValueData): boolean {
     if (isTypeNodeListType(type)) {
       return false;
     }
@@ -4565,7 +4574,7 @@ export class NormalizationFactory {
     if (!namedTypeData) {
       return true;
     }
-    return namedTypeData.kind === Kind.SCALAR_TYPE_DEFINITION || namedTypeData.kind === Kind.ENUM_TYPE_DEFINITION;
+    return isLeafKind(namedTypeData.kind);
   }
 
   // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.

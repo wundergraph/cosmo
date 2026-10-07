@@ -140,6 +140,7 @@ export type CachePopulateConfiguration = {
 
 export type CacheTagConfiguration = {
   fieldName: FieldName;
+  // A placeholder contains no whitespace, e.g., "products-{$args.filter.category}".
   format: string;
   typeName: TypeName;
 };
