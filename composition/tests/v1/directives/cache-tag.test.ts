@@ -4,16 +4,20 @@ import {
   type CacheTagConfiguration,
   emptyCacheTagFormatErrorMessage,
   FIRST_ORDINAL,
+  FORMAT,
+  invalidArgumentValueErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
   invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
+  NON_NULLABLE_STRING,
   nonRootFieldCacheTagErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type TypeName,
   invalidCacheTagBraceErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
+  undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
   unsupportedFieldCacheTagNamespaceErrorMessage,
 } from '../../../src';
@@ -27,11 +31,10 @@ import {
 } from '../../utils/utils';
 import { CACHE_TAG_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
-/* @cacheTag is modelled on the Apollo Federation v2.12 directive:
+/* @cacheTag is modeled on the Apollo Federation v2.12 directive:
  *   directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
- * Only a Query root field is supported here (an Object or another root field is ignored with a warning),
- * where the sole supported placeholder is "{$args.<argumentName>}", which interpolates an argument of the field itself. A field of
- * an Input Object argument is referenced by a period-delimited path, e.g. "{$args.filter.category}".
+ *
+ * Only a Query root field is supported here.
  */
 describe('@cacheTag tests', () => {
   describe('format validation tests', () => {
@@ -254,6 +257,22 @@ describe('@cacheTag tests', () => {
       );
     });
 
+    // An Interface field is never a root field; Apollo rejects it as an unexpected directive target.
+    test('that the directive upon an Interface field is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { node: Node }
+          interface Node { id: ID! @cacheTag(format: "node") }
+          type Product implements Node { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Node.id', FIRST_ORDINAL, [nonRootFieldCacheTagErrorMessage()]),
+      );
+    });
+
     test('that an "$args" placeholder referencing an argument is valid', () => {
       expect(
         getCacheTagConfigurations(
@@ -449,6 +468,61 @@ describe('@cacheTag tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [emptyCacheTagFormatErrorMessage()]),
+      );
+    });
+
+    // Generic directive validation reports a missing or non-String format, so no second error is added.
+    test('that a missing format is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products: [Product!]! @cacheTag
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedRequiredArgumentsErrorMessage(CACHE_TAG, [FORMAT], []),
+        ]),
+      );
+    });
+
+    test('that a non-String format is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products: [Product!]! @cacheTag(format: 1)
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('1', `@${CACHE_TAG}`, FORMAT, NON_NULLABLE_STRING),
+        ]),
+      );
+    });
+
+    test('that a null format is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products: [Product!]! @cacheTag(format: null)
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('null', `@${CACHE_TAG}`, FORMAT, NON_NULLABLE_STRING),
+        ]),
       );
     });
   });

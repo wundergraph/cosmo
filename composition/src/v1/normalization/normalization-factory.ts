@@ -4510,6 +4510,9 @@ export class NormalizationFactory {
       const ordinal = numberToOrdinal(index + 1);
       const format = this.getCacheTagFormat(directiveNode);
       if (format === undefined) {
+        continue;
+      }
+      if (format === '') {
         this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [emptyCacheTagFormatErrorMessage()]));
         continue;
       }
@@ -4563,9 +4566,10 @@ export class NormalizationFactory {
     return namedTypeData.kind === Kind.SCALAR_TYPE_DEFINITION || namedTypeData.kind === Kind.ENUM_TYPE_DEFINITION;
   }
 
+  // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.
   getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
     const formatArgument = directiveNode.arguments?.find((argument) => argument.name.value === FORMAT);
-    if (!formatArgument || formatArgument.value.kind !== Kind.STRING || formatArgument.value.value === '') {
+    if (!formatArgument || formatArgument.value.kind !== Kind.STRING) {
       return;
     }
     return formatArgument.value.value;
@@ -4677,8 +4681,6 @@ export class NormalizationFactory {
       const fieldCoords = `${data.originalParentTypeName}.${data.name}`;
       this.errors.push(invalidMutuallyExclusiveCacheDirectivesError(fieldCoords));
     }
-
-    this.extractFieldCacheTagDirectives(data);
   }
 
   normalize(document: DocumentNode): NormalizationResult {
@@ -4790,6 +4792,7 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
           if (isObject && parentData.directivesByName.has(CACHE_TAG)) {
+            // Not yet supported.
             this.warnings.push(
               unsupportedCacheTagLocationWarning({ coords: parentTypeName, subgraphName: this.subgraphName }),
             );
@@ -4797,6 +4800,8 @@ export class NormalizationFactory {
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+            // Interface fields are passed too, so that @cacheTag upon them is rejected as upon a non-root field.
+            this.extractFieldCacheTagDirectives(fieldData);
             if (isObject) {
               this.handleFieldCacheDirectives(fieldData);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
