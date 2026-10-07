@@ -111,16 +111,6 @@ These options apply to the router's own WebSocket endpoint (the one clients conn
 | `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. |
 | `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `true` | Enables the more efficient poll implementation for the server-side WebSocket handler. Linux and macOS only. Has no effect on upstream subgraph connections. |
 
-With `enable_net_poll: false`, the Router reads each connection on its own goroutine.
-Initialized idle connections wait without a read deadline. The
-`websocket_server_read_timeout` bounds initialization and the time to finish a
-message after its first byte arrives. A timeout during an incomplete message
-closes the connection. Set `websocket_server_read_timeout: 0s` to disable these
-timeouts; shutdown still interrupts blocked reads.
-
-The default remains `enable_net_poll: true`. The manual poller remains available
-with its existing read-timeout behavior.
-
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
 </Warning>
