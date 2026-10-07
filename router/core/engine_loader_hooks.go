@@ -227,6 +227,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	var cacheStatusName, storeDecisionName, typeNames string
 	if f.responseCacheEnabled {
 		cacheStatusName = cacheStatus.String()
+		storeDecisionName = "empty"
 		if storeDecision != caching.StoreDecisionNone {
 			storeDecisionName = storeDecision.String()
 		}

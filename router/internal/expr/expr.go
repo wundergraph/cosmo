@@ -178,7 +178,7 @@ type SubgraphResponseCache struct {
 	// Status is "hit", "partial_hit", "miss" or "not_cacheable".
 	Status string `expr:"status"`
 	// StoreDecision is "stored", or the reason the response was not stored.
-	// It is empty for a fetch nothing was decided for.
+	// It is "empty" for a fetch nothing was decided for.
 	StoreDecision string `expr:"storeDecision"`
 	// LookupDuration is the time spent asking the cache.
 	LookupDuration time.Duration `expr:"lookupDuration"`

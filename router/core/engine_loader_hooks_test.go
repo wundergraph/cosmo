@@ -831,13 +831,17 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 
 		zCore, logs := observer.New(zapcore.InfoLevel)
 
-		program, err := expr.CreateNewExprManager().CompileAnyExpression("subgraph.response.cache.status")
+		exprManager := expr.CreateNewExprManager()
+		status, err := exprManager.CompileAnyExpression("subgraph.response.cache.status")
+		require.NoError(t, err)
+		decision, err := exprManager.CompileAnyExpression("subgraph.response.cache.storeDecision")
 		require.NoError(t, err)
 
 		accessLogger := requestlogger.NewSubgraphAccessLogger(zap.New(zCore), requestlogger.SubgraphOptions{
 			FieldsHandler: SubgraphAccessLogsFieldHandler,
 			ExprAttributes: []requestlogger.ExpressionAttribute{
-				{Key: "cache_status", Expr: program},
+				{Key: "cache_status", Expr: status},
+				{Key: "store_decision", Expr: decision},
 			},
 		})
 
@@ -858,6 +862,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		require.Equal(t, 1, logs.Len())
 		fields := logs.All()[0].ContextMap()
 		require.Equal(t, resolve.ResponseCacheStatusHit.String(), fields["cache_status"])
+		require.Equal(t, "empty", fields["store_decision"], "nothing is decided for a hit")
 		require.Equal(t, trace.SpanFromContext(ctx).SpanContext().TraceID().String(), fields["trace_id"])
 		require.Contains(t, fields, "request_id")
 	})
