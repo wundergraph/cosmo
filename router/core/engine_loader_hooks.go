@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/cache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -222,10 +223,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	cacheStatus := responseInfo.ResponseCache.Status
-	var cacheStatusName, storeDecision, typeNames string
+	storeDecision := responseInfo.ResponseCache.StoreDecision
+	var cacheStatusName, storeDecisionName, typeNames string
 	if f.responseCacheEnabled {
 		cacheStatusName = cacheStatus.String()
-		storeDecision = responseInfo.ResponseCache.StoreDecision.String()
+		if storeDecision != caching.StoreDecisionNone {
+			storeDecisionName = storeDecision.String()
+		}
 		typeNames = fetchTypeNames(responseInfo.RootFields)
 		reqContext.responseCache.record(cacheStatus)
 	}
@@ -261,8 +265,8 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		if typeNames != "" {
 			traceAttrs = append(traceAttrs, rotel.WgEntityType.String(typeNames))
 		}
-		if storeDecision != "" {
-			traceAttrs = append(traceAttrs, rotel.WgResponseCacheStoreDecision.String(storeDecision))
+		if storeDecision != caching.StoreDecisionNone {
+			traceAttrs = append(traceAttrs, rotel.WgResponseCacheStoreDecision.String(storeDecisionName))
 		}
 		if cacheStatus != resolve.ResponseCacheStatusNotCacheable {
 			lookup := float64(responseInfo.ResponseCache.LookupDuration) / float64(time.Millisecond)
@@ -282,7 +286,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// header map is safe; http.Header.Get returns an empty string.
 	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
 	exprCtx.Subgraph.Response.Cache.Status = cacheStatusName
-	exprCtx.Subgraph.Response.Cache.StoreDecision = storeDecision
+	exprCtx.Subgraph.Response.Cache.StoreDecision = storeDecisionName
 	exprCtx.Subgraph.Response.Cache.LookupDuration = responseInfo.ResponseCache.LookupDuration
 	exprCtx.Subgraph.Response.Cache.EntityType = typeNames
 

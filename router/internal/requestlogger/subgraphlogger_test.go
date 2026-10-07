@@ -14,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -285,6 +286,28 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		}
 		additionalExpectedKeys := []string{"request_id", "hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+	})
+
+	t.Run("fetches without a request do not share the base fields", func(t *testing.T) {
+		// Spare capacity lets an append write into the shared array.
+		base := make([]zapcore.Field, 1, 4)
+		base[0] = zap.String("service", "router")
+		subgraphLogger := requestlogger.NewSubgraphAccessLogger(zap.NewNop(), requestlogger.SubgraphOptions{
+			Fields: base,
+		})
+
+		tracer := sdktrace.NewTracerProvider().Tracer("test")
+		ctxA, spanA := tracer.Start(context.Background(), "fetch A")
+		defer spanA.End()
+		ctxB, spanB := tracer.Start(context.Background(), "fetch B")
+		defer spanB.End()
+
+		fieldsA := subgraphLogger.RequestFields(ctxA, &resolve.ResponseInfo{StatusCode: 200}, nil)
+		fieldsB := subgraphLogger.RequestFields(ctxB, &resolve.ResponseInfo{StatusCode: 200}, nil)
+
+		require.Contains(t, fieldsA, logging.WithTraceID(spanA.SpanContext().TraceID().String()))
+		require.Contains(t, fieldsB, logging.WithTraceID(spanB.SpanContext().TraceID().String()))
+		require.Len(t, base, 1)
 	})
 }
 
