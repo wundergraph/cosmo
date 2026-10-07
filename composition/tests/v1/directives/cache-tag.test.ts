@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
+  blankCacheTagFormatErrorMessage,
   CACHE_TAG,
   type CacheTagConfiguration,
   type ContractTagOptions,
-  emptyCacheTagFormatErrorMessage,
   FIRST_ORDINAL,
   FORMAT,
   fromContextCacheTagReferenceErrorMessage,
@@ -17,6 +17,7 @@ import {
   invalidDirectiveLocationErrorMessage,
   NON_NULLABLE_STRING,
   nonRootFieldCacheTagErrorMessage,
+  numberToOrdinal,
   partiallyDefinedCacheTagReferenceErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -193,6 +194,26 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
+    test('that formats differing only in the whitespace within a placeholder are configured once', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraphWithDefaultName(`
+            type Query {
+              products(id: ID!): [Product!]!
+                @cacheTag(format: "products-{$args.id}")
+                @cacheTag(format: "products-{ $args . id }")
+            }
+            type Product @key(fields: "id") {
+              id: ID!
+            }
+          `),
+          'Query',
+        ),
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'products-{$args.id}', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
     test('that a renamed Query root type is recognised', () => {
       expect(
         getCacheTagConfigurations(
@@ -334,8 +355,8 @@ describe('@cacheTag tests', () => {
           'Query',
         ),
       ).toStrictEqual([
-        // An Enum argument is a valid reference, and the format is stored verbatim.
-        { fieldName: 'products', format: 'products-{$args.searchKey}-{ $args.region }', typeName: 'Query' },
+        // An Enum argument is a valid reference, and the whitespace within a placeholder is removed.
+        { fieldName: 'products', format: 'products-{$args.searchKey}-{$args.region}', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
     });
 
@@ -401,7 +422,7 @@ describe('@cacheTag tests', () => {
       ).toStrictEqual([
         {
           fieldName: 'products',
-          format: 'products-{$args . searchKey}-{$args.filter\n.\tcategory}',
+          format: 'products-{$args.searchKey}-{$args.filter.category}',
           typeName: 'Query',
         },
       ] satisfies Array<CacheTagConfiguration>);
@@ -573,8 +594,45 @@ describe('@cacheTag tests', () => {
       );
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [emptyCacheTagFormatErrorMessage()]),
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [blankCacheTagFormatErrorMessage()]),
       );
+    });
+
+    test('that a format of only whitespace is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products: [Product!]!
+              @cacheTag(format: "   ")
+              @cacheTag(format: "\\t\\n")
+              @cacheTag(format: "\\u00a0\\u2028\\ufeff")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      // The Unicode whitespace that a placeholder tolerates is whitespace here too.
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [blankCacheTagFormatErrorMessage()]),
+        invalidDirectiveError(CACHE_TAG, 'Query.products', numberToOrdinal(2), [blankCacheTagFormatErrorMessage()]),
+        invalidDirectiveError(CACHE_TAG, 'Query.products', numberToOrdinal(3), [blankCacheTagFormatErrorMessage()]),
+      ]);
+    });
+
+    test('that a format with whitespace around other text is valid', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraphWithDefaultName(`
+            type Query {
+              products: [Product!]! @cacheTag(format: " products ")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `),
+          'Query',
+        ),
+      ).toStrictEqual([
+        { fieldName: 'products', format: ' products ', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
     });
 
     // Generic directive validation reports a missing or non-String format, so no second error is added.
@@ -790,6 +848,17 @@ describe('@cacheTag tests', () => {
         [
           createProductsSubgraph('a', '@shareable @cacheTag(format: "products") @cacheTag(format: "catalogue")'),
           createProductsSubgraph('b', '@shareable @cacheTag(format: "catalogue") @cacheTag(format: "products")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
+
+    test('that formats differing only in the whitespace within a placeholder upon a shared Query field produce no warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph('a', '@shareable @cacheTag(format: "products-{$args.id}")'),
+          createProductsSubgraph('b', '@shareable @cacheTag(format: "products-{ $args . id }")'),
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
