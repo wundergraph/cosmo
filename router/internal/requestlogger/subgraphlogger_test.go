@@ -282,7 +282,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":     "client/subgraph",
 			"cache_status": resolve.ResponseCacheStatusHit.String(),
 			"trace_id":     span.SpanContext().TraceID().String(),
