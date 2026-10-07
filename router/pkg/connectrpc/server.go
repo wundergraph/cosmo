@@ -195,10 +195,6 @@ func (s *Server) Start() error {
 	// Create HTTP server with HTTP/2 support
 	handler := s.createHandler()
 
-	p := &http.Protocols{}
-	p.SetHTTP1(true)
-	p.SetUnencryptedHTTP2(true)
-
 	s.httpServer = &http.Server{
 		Protocols:    s.protocols,
 		Addr:         s.config.ListenAddr,
