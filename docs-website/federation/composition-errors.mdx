@@ -4,9 +4,9 @@ icon: "triangle-exclamation"
 sidebarTitle: "Composition errors"
 ---
 
-## Enum was used as both an input and output but was inconsistently defined across inclusive subgraphs
+## Enum is used as both an input and output but is inconsistently defined across inclusive subgraphs
 
-When you receive an error like `Enum X was used as both an input and output but was inconsistently defined across inclusive subgraphs` it means you are publishing a change to an enum that is used as both an input and an output.
+When you receive an error like `Enum X is used as both an input and output but is inconsistently defined across inclusive subgraphs` it means you are publishing a change to an enum that is used as both an input and an output.
 
 The error lists:
 - each subgraph that defines the enum but does not define every enum value, with the missing values

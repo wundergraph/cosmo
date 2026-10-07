@@ -246,11 +246,11 @@ describe('Enum tests', () => {
           SCHEMA_QUERY_DEFINITION +
             `
         directive @a(enum: Enum!) on FIELD_DEFINITION
-        
+
         enum Enum {
           A
         }
-        
+
         type Query {
           a: ID @a(enum: A)
         }
@@ -267,12 +267,12 @@ describe('Enum tests', () => {
           SCHEMA_QUERY_DEFINITION +
             `
         directive @a(enum: Enum! = A) on FIELD_DEFINITION
-        
+
         enum Enum {
           A
           B
         }
-        
+
         type Query {
           a: ID @a(enum: B)
         }
@@ -291,7 +291,7 @@ describe('Enum tests', () => {
         enum Enum {
           A
         }
-        
+
         type Query {
           a(a: Enum! = A): ID
         }
@@ -310,11 +310,11 @@ describe('Enum tests', () => {
         enum Enum {
           A
         }
-        
+
         input Input {
           a: Enum! = A
         }
-        
+
         type Query {
           a(a: Input!): ID
         }
@@ -501,7 +501,7 @@ describe('Enum tests', () => {
       const { errors } = federateSubgraphsFailure([subgraphAI, subgraphAJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toBe(
-        `Enum "Enum" was used as both an input and output but was inconsistently defined across inclusive subgraphs.\n` +
+        `Enum "Enum" is used as both an input and output but is inconsistently defined across inclusive subgraphs.\n` +
           ` The following subgraphs do not define every Enum Value:\n` +
           `  Subgraph "subgraph-ai": "C", "D"\n` +
           `  Subgraph "subgraph-aj": "B"\n` +
@@ -1012,7 +1012,7 @@ const subgraphO: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum {
       A
     }
@@ -1026,7 +1026,7 @@ const subgraphP: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum {
       A
     }
@@ -1060,7 +1060,7 @@ const subgraphS: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum {
       B
     }
@@ -1074,7 +1074,7 @@ const subgraphT: Subgraph = {
     extend enum Enum {
       B
     }
-    
+
     enum Enum {
       A
     }
@@ -1096,7 +1096,7 @@ const subgraphV: Subgraph = {
   url: '',
   definitions: parse(`
     enum Enum
-    
+
     extend enum Enum {
       A
     }
@@ -1110,7 +1110,7 @@ const subgraphW: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum
   `),
 };
@@ -1120,11 +1120,11 @@ const subgraphX: Subgraph = {
   url: '',
   definitions: parse(`
     enum Enum
-    
+
     extend enum Enum {
       A
     }
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -1136,9 +1136,9 @@ const subgraphY: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -1148,11 +1148,11 @@ const subgraphZ: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     extend enum Enum {
       A
     }
-    
+
     enum Enum
   `),
 };
@@ -1164,7 +1164,7 @@ const subgraphAA: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -1174,7 +1174,7 @@ const subgraphAB: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     enum Enum {
       A
     }
@@ -1198,7 +1198,7 @@ const subgraphAD: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     extend enum Enum {
       A
     }
@@ -1209,11 +1209,11 @@ const subgraphAE = createSubgraph(
   'subgraph-ae',
   `
     directive @a(enum: Enum!) on FIELD_DEFINITION
-    
+
     enum Enum {
       A
     }
-    
+
     type Query {
       a: ID @a(enum: "A")
     }
@@ -1224,12 +1224,12 @@ const subgraphAF = createSubgraph(
   'subgraph-af',
   `
     directive @a(enum: Enum! = "A") on FIELD_DEFINITION
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type Query {
       a: ID @a(enum: "B")
     }
@@ -1242,7 +1242,7 @@ const subgraphAG = createSubgraph(
     enum Enum {
       A
     }
-    
+
     type Query {
       a(a: Enum! = "A"): ID
     }
@@ -1255,11 +1255,11 @@ const subgraphAH = createSubgraph(
     enum Enum {
       A
     }
-    
+
     input Input {
       a: Enum! = "A"
     }
-    
+
     type Query {
       a(a: Input!): ID
     }
@@ -1273,7 +1273,7 @@ const subgraphAI = createSubgraph(
       A
       B
     }
-    
+
     type Query {
       a(enum: Enum!): Enum!
     }
@@ -1288,7 +1288,7 @@ const subgraphAJ = createSubgraph(
       C
       D
     }
-    
+
     type Query {
       b: Enum!
     }
@@ -1302,7 +1302,7 @@ const subgraphAK = createSubgraph(
       A
       B
     }
-    
+
     type Query {
       both(enum: Enum!): Enum!
     }
@@ -1315,7 +1315,7 @@ const subgraphAL = createSubgraph(
     enum Enum {
       A
     }
-    
+
     type Query {
       unused: String!
     }
@@ -1330,11 +1330,11 @@ const subgraphAM = createSubgraph(
       B
       C
     }
-    
+
     input Input {
       enum: Enum!
     }
-    
+
     type Query {
       input(input: Input!): String!
     }
@@ -1347,11 +1347,11 @@ const subgraphAN = createSubgraph(
     enum Enum {
       B
     }
-    
+
     type Object {
       enum: Enum!
     }
-    
+
     type Query {
       output: Object!
     }
@@ -1362,12 +1362,12 @@ const subgraphAO = createSubgraph(
   'subgraph-ao',
   `
     directive @directive(enum: Enum!) on FIELD
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type Query {
       ao: Enum!
     }
@@ -1378,11 +1378,11 @@ const subgraphAP = createSubgraph(
   'subgraph-ap',
   `
     directive @directive(enum: Enum!) on FIELD
-    
+
     enum Enum {
       A
     }
-    
+
     type Query {
       ap: Enum!
     }
@@ -1397,7 +1397,7 @@ const subgraphAQ = createSubgraph(
       B
       C @inaccessible
     }
-    
+
     type Query {
       aq(enum: Enum!): Enum!
     }
@@ -1410,7 +1410,7 @@ const subgraphAR = createSubgraph(
     enum Enum {
       A
     }
-    
+
     type Query {
       ar: Enum!
     }
@@ -1424,12 +1424,12 @@ const subgraphAS = createSubgraph(
       A
       B
     }
-    
+
     enum EnumTwo {
       X
       Y
     }
-    
+
     type Query {
       as(one: EnumOne!): EnumTwo!
     }
@@ -1442,11 +1442,11 @@ const subgraphAT = createSubgraph(
     enum EnumOne {
       A
     }
-    
+
     enum EnumTwo {
       X
     }
-    
+
     type Query {
       at(two: EnumTwo!): EnumOne!
     }
@@ -1460,7 +1460,7 @@ const subgraphAU = createSubgraph(
       A
       B
     }
-    
+
     type Query {
       shared(enum: Enum!): Enum! @shareable
     }
@@ -1473,7 +1473,7 @@ const subgraphAV = createSubgraph(
     enum Enum {
       A
     }
-    
+
     type Query {
       shared(enum: Enum!): Enum! @shareable
     }
@@ -1486,12 +1486,12 @@ const subgraphAW = createSubgraph(
     schema {
       query: MyQuery
     }
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type MyQuery {
       aw(enum: Enum!): Enum!
     }
@@ -1502,12 +1502,12 @@ const subgraphAX = createSubgraph(
   'subgraph-ax',
   `
     directive @directive(enum: Enum!) on FIELD
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type Query {
       ax: Enum!
     }
@@ -1518,12 +1518,12 @@ const subgraphAY = createSubgraph(
   'subgraph-ay',
   `
     directive @directive(enum: Enum!) on QUERY
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type Query {
       ay: String!
     }
@@ -1534,11 +1534,11 @@ const subgraphAZ = createSubgraph(
   'subgraph-az',
   `
     directive @directive(enum: Enum!) on FIELD
-    
+
     enum Enum {
       A
     }
-    
+
     type Query {
       az: String!
     }

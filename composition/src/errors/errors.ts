@@ -141,7 +141,7 @@ export function incompatibleSharedEnumError({
   typeName,
 }: IncompatibleSharedEnumErrorParams): Error {
   let message =
-    `Enum "${typeName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.\n` +
+    `Enum "${typeName}" is used as both an input and output but is inconsistently defined across inclusive subgraphs.\n` +
     ` The following subgraph` +
     (missingValueNamesBySubgraphName.size > 1 ? `s do` : ` does`) +
     ` not define every Enum Value:\n` +
