@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
@@ -18,7 +19,7 @@ type RouterSupervisor struct {
 	routerCancel context.CancelFunc
 
 	// Sending to this channel will trigger a graceful shutdown of the router
-	// Sending true will result in a Reload, false will result in a Shutdown
+	// Sending true will result in a Shutdown, false will result in a Reload
 	// Value means "to kill or not to kill"
 	shutdownChan chan bool
 
@@ -103,19 +104,30 @@ func (rs *RouterSupervisor) startRouter() error {
 	return nil
 }
 
-func (rs *RouterSupervisor) stopRouter() error {
+// stopRouter drains connections only on process shutdown, never on config reload.
+func (rs *RouterSupervisor) stopRouter(shutdown bool) error {
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), rs.resources.Config.ShutdownDelay)
 	defer cancel()
+	defer rs.routerCancel()
 
 	rs.logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", rs.resources.Config.ShutdownDelay.String()))
+
+	if shutdown && rs.resources.Config.DrainPeriod > 0 && rs.router.httpServer != nil {
+		rs.router.httpServer.startDraining()
+		rs.logger.Info("Draining router", zap.Duration("drain_period", rs.resources.Config.DrainPeriod))
+		timer := time.NewTimer(rs.resources.Config.DrainPeriod)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-shutdownCtx.Done():
+		}
+	}
 
 	if err := rs.router.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown router gracefully: %w", err)
 	}
-
-	rs.routerCancel()
 
 	return nil
 }
@@ -162,7 +174,7 @@ func (rs *RouterSupervisor) Start() error {
 			rs.router.reloadPersistentState.OnRouterConfigReload()
 		}
 
-		if err := rs.stopRouter(); err != nil {
+		if err := rs.stopRouter(shutdown); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
 			}

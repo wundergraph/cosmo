@@ -51,10 +51,14 @@ type server struct {
 	healthcheck health.Checker
 	baseURL     string
 	listener    net.Listener // Pre-bound listener for synchronous port check
+
+	drainEnabled bool
+	draining     atomic.Bool
 }
 
 type httpServerOptions struct {
 	addr               string
+	drainEnabled       bool
 	logger             *zap.Logger
 	tlsServerConfig    *tls.Config
 	healthcheck        health.Checker
@@ -90,12 +94,12 @@ func newServer(opts *httpServerOptions) (*server, error) {
 	httpRouter.Get(opts.readinessCheckPath, opts.healthcheck.Readiness())
 
 	n := &server{
-		httpServer:  httpServer,
-		logger:      opts.logger,
-		mu:          sync.RWMutex{},
-		healthcheck: opts.healthcheck,
-		baseURL:     opts.baseURL,
-		listener:    listener, // Store the pre-bound listener
+		httpServer:   httpServer,
+		logger:       opts.logger,
+		healthcheck:  opts.healthcheck,
+		baseURL:      opts.baseURL,
+		listener:     listener, // Store the pre-bound listener
+		drainEnabled: opts.drainEnabled,
 	}
 
 	// Store the initial state with health check mux (graphServer nil until first config)
@@ -104,14 +108,31 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		graphServer: nil,
 	})
 
-	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Lock-free hot path: single atomic load gets both mux and graphServer.
-		// The state is never nil (initialized with health mux, swapped to notReadyState on shutdown).
-		// Direct method call on *chi.Mux avoids interface vtable indirection.
-		n.state.Load().mux.ServeHTTP(w, r)
-	})
+	httpServer.Handler = http.HandlerFunc(n.serveHTTP)
 
 	return n, nil
+}
+
+// serveHTTP dispatches requests through an atomic snapshot of the current graph.
+// With draining disabled, the hot path does not wrap the response writer.
+func (s *server) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	if !s.drainEnabled {
+		s.state.Load().mux.ServeHTTP(w, r)
+		return
+	}
+
+	w, drain := s.drainResponseWriter(w)
+	s.state.Load().mux.ServeHTTP(w, r)
+	// net/http sends an implicit 200 if the handler returns without writing.
+	drain.finish()
+}
+
+// startDraining retires connections through their next response.
+func (s *server) startDraining() {
+	// Do not use SetKeepAlivesEnabled(false): it immediately closes idle
+	// connections and races clients that are about to reuse them.
+	s.draining.Store(true)
+	s.healthcheck.SetReady(false)
 }
 
 func (s *server) HealthChecks() health.Checker {

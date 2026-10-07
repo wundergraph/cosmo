@@ -355,6 +355,7 @@
   "JSONLog": true,
   "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
+  "DrainPeriod": 0,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,

@@ -9,6 +9,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/dustin/go-humanize v1.0.1
+	github.com/felixge/httpsnoop v1.1.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
@@ -108,7 +109,6 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

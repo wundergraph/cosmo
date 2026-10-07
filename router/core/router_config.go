@@ -84,6 +84,7 @@ type Config struct {
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration
+	connectionDraining              bool
 	staticExecutionConfig           *nodev1.RouterConfig
 	awsLambda                       bool
 	shutdown                        atomic.Bool

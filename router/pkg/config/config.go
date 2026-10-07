@@ -1656,6 +1656,7 @@ type Config struct {
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`
 	LogServiceName                string                      `yaml:"log_service_name" envDefault:"@wundergraph/router" env:"LOG_SERVICE_NAME"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
+	DrainPeriod                   time.Duration               `yaml:"drain_period" envDefault:"0s" env:"DRAIN_PERIOD"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
@@ -1833,6 +1834,21 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		err = yaml.Unmarshal(yamlFinalBytes, &cfg.Config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
+		}
+	}
+
+	// Validate the effective values after merging YAML and environment defaults.
+	// Preserve existing budget behavior when connection draining is disabled.
+	if cfg.Config.DrainPeriod < 0 {
+		return nil, errors.New("drain_period must not be negative")
+	}
+	if cfg.Config.DrainPeriod > 0 {
+		if cfg.Config.GracePeriod < 0 {
+			return nil, errors.New("grace_period must not be negative when drain_period is enabled")
+		}
+		// Subtraction after the first comparison avoids duration overflow.
+		if cfg.Config.ShutdownDelay <= cfg.Config.DrainPeriod || cfg.Config.ShutdownDelay-cfg.Config.DrainPeriod < cfg.Config.GracePeriod {
+			return nil, errors.New("shutdown_delay must exceed drain_period and leave at least grace_period for shutdown")
 		}
 	}
 

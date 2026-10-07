@@ -141,6 +141,7 @@ The following sections describe each configuration in detail with all available 
 | LOG_SERVICE_NAME                 | log_service_name                 | <Icon icon="square" />                        | The service name used in the `service` field of log entries.                                                                                                                                       | @wundergraph/router              |
 | SHUTDOWN_DELAY                   | shutdown_delay                   | <Icon icon="square" />                        | Maximum time in seconds the server has to shutdown gracefully. Should be higher than `GRACE_PERIOD`                                                                                                | 60s                              |
 | GRACE_PERIOD                     | grace_period                     | <Icon icon="square" />                        | Maximum time in seconds the server has between schema updates to gracefully clean up all resources. Should be smaller than `SHUTDOWN_DELAY`                                                        | 30s                              |
+| DRAIN_PERIOD | drain_period | <Icon icon="square" /> | Time to retire pooled connections before process shutdown. Disabled on config reload. | 0s |
 | POLL_INTERVAL                    | poll_interval                    | <Icon icon="square" />                        | The interval of how often the router should check for new schema updates                                                                                                                           | 10s                              |
 | POLL_JITTER                      | poll_jitter                      | <Icon icon="square" />                        | The maximum delay added to the poll interval to mitigate thundering herd issues in router fleets scenarios.                                                                                        | 5s                               |
 | HEALTH_CHECK_PATH                | health_check_path                | <Icon icon="square" />                        | Health check path. Returns `200` when the router is alive                                                                                                                                          | /health                          |
@@ -166,14 +167,34 @@ playground_path: "/"
 introspection:
   enabled: true
 json_log: true
-shutdown_delay: 15s
-grace_period: 20s
+shutdown_delay: 60s
+grace_period: 30s
+drain_period: 0s
 poll_interval: 10s
 health_check_path: "/health"
 readiness_check_path: "/health/ready"
 liveness_check_path: "/health/live"
 router_config_path: ""
 ```
+
+## Connection draining on shutdown
+
+Set `drain_period` to retire pooled connections before the router shuts down after SIGTERM or SIGINT. The default `0s` disables draining. Config reloads do not drain connections.
+
+During draining, readiness returns `503`, liveness remains healthy, and the router continues serving requests. HTTP/1.1 responses sent during this window carry `Connection: close`, including responses for requests that started before draining. Go's HTTP/2 server translates this signal to GOAWAY. Successful WebSocket upgrades are preserved; existing subscriptions follow the normal shutdown lifecycle.
+
+Choose a drain period longer than the longest finite idle timeout of the gateway's upstream connection pools and allow time for load balancer endpoint updates. The gateway must stop opening new connections to the terminating router. Connection retirement alone does not remove a router from service.
+
+```yaml
+# Example for a gateway with a 30s upstream idle timeout.
+drain_period: 35s
+grace_period: 30s
+shutdown_delay: 70s
+```
+
+The drain wait counts toward `shutdown_delay`. When draining is enabled, configuration validation requires `shutdown_delay` to exceed `drain_period` and leave at least `grace_period` for cleanup. In Kubernetes, set `terminationGracePeriodSeconds` above the shutdown budget plus any `preStop` duration, with a margin for scheduling delays.
+
+Draining reduces shutdown races; it does not guarantee that every request succeeds. Response headers already sent before draining cannot be changed, and a client with no finite idle timeout can retain an unused connection beyond the drain window. Streaming responses and WebSocket connections still require sufficient shutdown time.
 
 ## Config watcher hot reloading
 

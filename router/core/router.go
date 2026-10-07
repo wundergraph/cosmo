@@ -836,6 +836,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	var err error
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
+		drainEnabled:       r.connectionDraining,
 		logger:             r.logger,
 		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
@@ -1727,6 +1728,7 @@ func (r *Router) Start(ctx context.Context) error {
 	var err error
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
+		drainEnabled:       r.connectionDraining,
 		logger:             r.logger,
 		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
@@ -2295,6 +2297,14 @@ func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 func WithPromptToQueryClient(client mcpserver.PromptToQueryClient) Option {
 	return func(r *Router) {
 		r.promptToQueryClient = client
+	}
+}
+
+// withConnectionDraining installs response hooks from startup. The supervisor
+// owns the drain period and starts draining only on process shutdown.
+func withConnectionDraining(enabled bool) Option {
+	return func(r *Router) {
+		r.connectionDraining = enabled
 	}
 }
 

@@ -2003,6 +2003,12 @@
       "description": "The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
       "default": "60s"
     },
+    "drain_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "Connection drain time on process stop. 0s disables draining. Must leave grace_period within shutdown_delay. See the router shutdown documentation for client idle timeouts and Kubernetes termination budgets.",
+      "default": "0s"
+    },
     "grace_period": {
       "type": "string",
       "format": "go-duration",
