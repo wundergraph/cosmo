@@ -121,3 +121,13 @@ export type InvalidCacheTagArgumentTypeErrorParams = {
   reference: string;
   typeString: string;
 };
+
+export type UnavailableCacheTagReferenceErrorMessageParams = {
+  coords: string;
+  reference: string;
+  subgraphName: SubgraphName;
+};
+
+export type PartiallyDefinedCacheTagReferenceErrorMessageParams = UnavailableCacheTagReferenceErrorMessageParams & {
+  parentCoords: string;
+};
