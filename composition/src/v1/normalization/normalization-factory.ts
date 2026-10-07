@@ -4500,7 +4500,7 @@ export class NormalizationFactory {
       );
       return;
     }
-    // Apollo permits @cacheTag upon any root field, so a Mutation or Subscription root field composes.
+    // The directive upon a Mutation or Subscription root field composes, but it is ignored.
     if (operationTypeNode !== OperationTypeNode.QUERY) {
       this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
       return;
