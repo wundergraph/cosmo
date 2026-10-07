@@ -864,6 +864,14 @@ export function doesArgumentDefineFromContext(data: InputValueData): boolean {
   return data.fromContextSubgraphNames.size > 0;
 }
 
+// An input value omitted by any subgraph that defines its parent is excluded from the router schema.
+export function isInputValueDefinedByEveryParentSubgraph(
+  parentSubgraphNames: Set<SubgraphName>,
+  inputValueData: InputValueData,
+): boolean {
+  return parentSubgraphNames.size === inputValueData.subgraphNames.size;
+}
+
 export function isLeafKind(kind: Kind): boolean {
   return kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.ENUM_TYPE_DEFINITION;
 }
