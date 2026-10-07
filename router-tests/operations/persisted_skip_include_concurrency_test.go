@@ -137,11 +137,11 @@ func TestPersistedOperationSkipIncludeConcurrency(t *testing.T) {
 		var wg sync.WaitGroup
 		errCh := make(chan error, parallelism*iterations)
 
-		for w := 0; w < parallelism; w++ {
+		for w := range parallelism {
 			wg.Add(1)
 			go func(workerID int) {
 				defer wg.Done()
-				for i := 0; i < iterations; i++ {
+				for i := range iterations {
 					v := variants[(workerID+i)%len(variants)]
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						OperationName: []byte(`"Employee"`),
@@ -161,18 +161,16 @@ func TestPersistedOperationSkipIncludeConcurrency(t *testing.T) {
 
 		// Polluters parse polluterQuery (same length as query, $a/$b swapped) to
 		// overwrite the alias bytes in the shared kit buffer.
-		for p := 0; p < polluterParallelism; p++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for i := 0; i < iterations; i++ {
+		for range polluterParallelism {
+			wg.Go(func() {
+				for range iterations {
 					_, _ = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 						Query:     polluterQuery,
 						Variables: []byte(`{"a":true,"b":true}`),
 						Header:    header(),
 					})
 				}
-			}()
+			})
 		}
 
 		wg.Wait()

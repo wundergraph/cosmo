@@ -363,7 +363,7 @@ func TestPlanGenerator(t *testing.T) {
 			name := de.Name()
 			content, err := os.ReadFile(path.Join(tempDir, name))
 			assert.NoError(t, err)
-			var m map[string]interface{}
+			var m map[string]any
 
 			// One of the queries produces a failed result
 			if err := json.Unmarshal(content, &m); err != nil {
@@ -398,7 +398,7 @@ func TestPlanGenerator(t *testing.T) {
 			assert.True(t, strings.HasSuffix(name, ".graphql"))
 			content, err := os.ReadFile(path.Join(tempDir, name))
 			assert.NoError(t, err)
-			var m map[string]interface{}
+			var m map[string]any
 			assert.Error(t, json.Unmarshal(content, &m))
 			// Should be textual query plan or warning
 			s := string(content)

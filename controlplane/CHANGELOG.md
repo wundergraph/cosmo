@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.253.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.1...controlplane@0.253.2) (2026-10-07)
+
+### Bug Fixes
+
+* update tinypool and proxy-addr to resolve critical vulnerabilities ([#3334](https://github.com/wundergraph/cosmo/issues/3334)) ([f6d7d10](https://github.com/wundergraph/cosmo/commit/f6d7d10515c4a5a17ef4f4c3e3d5b4569991c623)) (@gausie)
+
+## [0.253.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.0...controlplane@0.253.1) (2026-10-06)
+
+### Bug Fixes
+
+* correct authorization header format ([#3332](https://github.com/wundergraph/cosmo/issues/3332)) ([7c8a650](https://github.com/wundergraph/cosmo/commit/7c8a650f0ebf1a104dafa4571ec751a57001488e)) (@wilsonrivera)
+
+## [0.253.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.252.1...controlplane@0.253.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+* improve subgraph publish performance ([#3312](https://github.com/wundergraph/cosmo/issues/3312)) ([546ffdd](https://github.com/wundergraph/cosmo/commit/546ffdd222d50f4305bca40e86badbba5d57a3fc)) (@wilsonrivera)
+
 ## [0.252.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.252.0...controlplane@0.252.1) (2026-09-28)
 
 **Note:** Version bump only for package controlplane

@@ -608,11 +608,11 @@ func TestSubgraphMTLS(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: testutils.ToPtr(30 * time.Second),
+							RequestTimeout: new(30 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"employees": {
-								RequestTimeout: testutils.ToPtr(5 * time.Second),
+								RequestTimeout: new(5 * time.Second),
 							},
 						},
 					})),
@@ -639,7 +639,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"employees": {
-								RequestTimeout: testutils.ToPtr(5 * time.Second),
+								RequestTimeout: new(5 * time.Second),
 							},
 						},
 					})),

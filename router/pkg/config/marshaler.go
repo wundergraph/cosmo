@@ -23,9 +23,9 @@ func (b *RegExArray) UnmarshalText(value []byte) error {
 
 	text := string(value)
 
-	regStrings := strings.Split(text, ",")
+	regStrings := strings.SplitSeq(text, ",")
 
-	for _, regString := range regStrings {
+	for regString := range regStrings {
 		reg, err := regexp.Compile(regString)
 		if err != nil {
 			return fmt.Errorf("could not compile regex string: %w", err)
@@ -54,7 +54,7 @@ func (p *JWTOnError) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
-func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (b *RegExArray) UnmarshalYAML(unmarshal func(any) error) error {
 	var s []string
 	if err := unmarshal(&s); err != nil {
 		return err
@@ -62,7 +62,7 @@ func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return b.UnmarshalText([]byte(strings.Join(s, ",")))
 }
 
-func (b RegExArray) MarshalYAML() (interface{}, error) {
+func (b RegExArray) MarshalYAML() (any, error) {
 	var s []string
 	for _, reg := range b {
 		s = append(s, reg.String())
@@ -88,7 +88,7 @@ func (b *BytesString) UnmarshalText(value []byte) error {
 	return nil
 }
 
-func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (b *BytesString) UnmarshalYAML(unmarshal func(any) error) error {
 	var s string
 	if err := unmarshal(&s); err != nil {
 		return err
@@ -96,7 +96,7 @@ func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return b.UnmarshalText([]byte(s))
 }
 
-func (b BytesString) MarshalYAML() (interface{}, error) {
+func (b BytesString) MarshalYAML() (any, error) {
 	return humanize.Bytes(uint64(b)), nil
 }
 
@@ -113,7 +113,7 @@ func (b *FileMode) UnmarshalText(value []byte) error {
 	return nil
 }
 
-func (b *FileMode) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (b *FileMode) UnmarshalYAML(unmarshal func(any) error) error {
 	var s string
 	if err := unmarshal(&s); err != nil {
 		return err

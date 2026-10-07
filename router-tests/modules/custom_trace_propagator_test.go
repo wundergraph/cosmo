@@ -23,7 +23,7 @@ func TestModuleCustomPropagator(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"myModule":     module.MyModule{Value: 1},
 				"custom_trace": custom_trace_propagator.CustomTracePropagatorModule{Value: 2},
 			},
