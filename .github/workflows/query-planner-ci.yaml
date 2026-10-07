@@ -68,12 +68,21 @@ jobs:
             });
             const hasLabel = labels.data.some(label => label.name === 'query-planner-skip');
             core.setOutput('has_label', hasLabel ? 'true' : 'false');
-      - name: Check for changes of engine
+      - name: Check for version bump in graphql-go-tools (engine)
         id: check_engine_changes
         working-directory: router
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           current_engine_version=$(go list -f '{{.Version}}' -m github.com/wundergraph/graphql-go-tools/v2)
-          git show ${{ github.event.pull_request.base.sha }}:router/go.mod > base.go.mod
+          # The checkout is the PR head merged into the base branch tip:
+          # HEAD^2 is the PR head, HEAD^1 is that tip.
+          merged_head=$(git rev-parse --quiet --verify HEAD^2 || true)
+          if [ -z "$PR_HEAD_SHA" ] || [ "$merged_head" != "$PR_HEAD_SHA" ]; then
+            echo "::error::Expected the checkout to be the PR head merged into the base branch tip."
+            exit 1
+          fi
+          git show HEAD^1:router/go.mod > base.go.mod
           previous_engine_version=$(go list -f '{{.Version}}' -modfile base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
           if [ "$current_engine_version" != "$previous_engine_version" ]; then
             echo "engine_changed=true" >> $GITHUB_OUTPUT
@@ -91,7 +100,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Filter Changes
         id: filter
         uses: dorny/paths-filter@v2
@@ -164,6 +172,14 @@ jobs:
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
       build_failed: ${{ steps.builds.outputs.failed }}
     steps:
+      # Without the labels and the engine version it is unknown whether celestial must run,
+      # so the merge stays blocked until a re-run succeeds. The query-planner-skip label still skips it.
+      - name: Check labels and engine changes
+        if: ${{ needs.check-labels-and-engine-changes.result == 'failure' && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
+        run: |
+          echo "::error::Checking the labels or the engine version failed, Query Planner CI was not started."
+          exit 1
+
       # A failed build still outputs the image tag, so celestial would fail later on a missing image.
       - name: Check router and wgc builds
         id: builds

@@ -39,7 +39,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -68,7 +68,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -102,7 +102,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -136,7 +136,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -184,7 +184,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":      "client/subgraph",
 			"method":        "POST",
 			"path":          "/graphql",
@@ -244,7 +244,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":          "client/subgraph",
 			"request-error":     true,
 			"request-error-msg": "my-test-error",
@@ -314,7 +314,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	})
 }
 
-func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
+func checkValues(t *testing.T, requestContext map[string]any, expectedValues map[string]any, additionalExpectedKeys []string) {
 	t.Helper()
 
 	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")

@@ -343,9 +343,9 @@ func findMetricLog(entries []observer.LoggedEntry, metricName string) *observer.
 }
 
 // getDataPointStrings extracts the data_points string slice from a log entry's context map.
-func getDataPointStrings(t *testing.T, cm map[string]interface{}) []string {
+func getDataPointStrings(t *testing.T, cm map[string]any) []string {
 	t.Helper()
-	raw, ok := cm["data_points"].([]interface{})
+	raw, ok := cm["data_points"].([]any)
 	require.True(t, ok, "expected data_points field in log entry")
 	result := make([]string, len(raw))
 	for i, v := range raw {

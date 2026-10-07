@@ -77,9 +77,7 @@ func TestRateLimitRedisURLOptions(t *testing.T) {
 
 		var wg sync.WaitGroup
 		for range concurrent {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for range perWorker {
 					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 						Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
@@ -91,7 +89,7 @@ func TestRateLimitRedisURLOptions(t *testing.T) {
 					}
 					succeeded.Add(1)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 

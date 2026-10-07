@@ -55,7 +55,7 @@ func strip(s string) string {
 
 func canonicalize(tb testing.TB, s string) string {
 	// round-trip to canonicalize formatting
-	var i interface{}
+	var i any
 	require.NoError(tb,
 		yaml.Unmarshal([]byte(strip(s)), &i),
 		"canonicalize: couldn't unmarshal YAML",
@@ -65,8 +65,8 @@ func canonicalize(tb testing.TB, s string) string {
 	return string(bytes.TrimSpace(formatted))
 }
 
-func unmarshal(tb testing.TB, s string) interface{} {
-	var i interface{}
+func unmarshal(tb testing.TB, s string) any {
+	var i any
 	require.NoError(tb, yaml.Unmarshal([]byte(strip(s)), &i), "unmarshaling failed")
 	return i
 }

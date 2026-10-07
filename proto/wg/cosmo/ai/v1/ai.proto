@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package wg.cosmo.ai.v1;
+
+import "wg/cosmo/common/common.proto";
+
+message Response {
+  wg.cosmo.common.EnumStatusCode code = 1;
+  // details is an optional field which can be used to provide more details about the error.
+  optional string details = 2;
+}
+
+message GenerateQueryRequest {
+  // Copied from RouterConfig.version in the active router configuration.
+  string version = 1;
+  string prompt = 2;
+}
+
+message GenerateQueryResponse {
+  Response response = 1;
+  optional SatisfiedQuery query = 2;
+}
+
+enum SatisfiedOperationType {
+  SATISFIED_OPERATION_TYPE_UNSPECIFIED = 0;
+  SATISFIED_OPERATION_TYPE_QUERY = 1;
+  SATISFIED_OPERATION_TYPE_MUTATION = 2;
+  SATISFIED_OPERATION_TYPE_SUBSCRIPTION = 3;
+}
+
+message SatisfiedQuery {
+  string description = 1;
+  string document = 2;
+  string operation_name = 3;
+  SatisfiedOperationType operation_type = 4;
+  string variables_schema = 5;
+}
+
+service AIService {
+  rpc GenerateQuery(GenerateQueryRequest) returns (GenerateQueryResponse) {}
+}

@@ -56,7 +56,8 @@ jobs:
           skip-github-release: false
           skip-github-pull-request: false
 
-      - uses: ./.github/actions/helm-release
+      - name: Publish cosmo chart
+        uses: ./.github/actions/helm-release
         if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
         with:
           working-directory: ./helm
@@ -73,3 +74,27 @@ jobs:
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
           make-target: publish-router-chart
+
+      - name: Authenticate for cosmo-cloud
+        id: cloud-token
+        if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo-cloud
+          permission-contents: write
+
+      - name: Trigger cosmo-cloud deployment PR
+        if: ${{ steps.release.outputs['helm/cosmo--release_created'] }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.cloud-token.outputs.token }}
+          repository: wundergraph/cosmo-cloud
+          event-type: cosmo
+          client-payload: |-
+            {
+              "helm_version": ${{ toJSON(steps.release.outputs['helm/cosmo--version']) }},
+              "triggered_by": ${{ toJSON(format('{0} <{1}+{2}@users.noreply.github.com>', github.actor, github.actor_id, github.actor)) }}
+            }

@@ -87,11 +87,11 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(statusCode)
 				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(map[string]interface{}{
-					"errors": []map[string]interface{}{
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"errors": []map[string]any{
 						{
 							"message": "Unknown access token",
-							"extensions": map[string]interface{}{
+							"extensions": map[string]any{
 								"code": "UNAUTHENTICATED",
 							},
 						},
