@@ -497,7 +497,8 @@ export function parseCacheTagFormat(format: string, errorMessages: Array<string>
       errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
       continue;
     }
-    placeholders.push({ namespace: match[1], reference: match[2] });
+    // The only whitespace a reference can contain surrounds its periods.
+    placeholders.push({ namespace: match[1], reference: match[2].replace(/\s/g, '') });
   }
   // A brace that remains once every placeholder is removed is unpaired.
   if (/[{}]/.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {

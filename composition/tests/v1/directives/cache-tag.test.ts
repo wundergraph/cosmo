@@ -353,6 +353,30 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
+    test('that an "$args" placeholder with whitespace around its periods is valid', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraphWithDefaultName(`
+            input Filter { category: String! }
+            type Query {
+              products(searchKey: String!, filter: Filter!): [Product!]!
+                @cacheTag(format: "products-{$args . searchKey}-{$args.filter\\n.\\tcategory}")
+            }
+            type Product @key(fields: "id") {
+              id: ID!
+            }
+          `),
+          'Query',
+        ),
+      ).toStrictEqual([
+        {
+          fieldName: 'products',
+          format: 'products-{$args . searchKey}-{$args.filter\n.\tcategory}',
+          typeName: 'Query',
+        },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
     test('that an "$args" placeholder referencing an undefined argument is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`

@@ -172,6 +172,6 @@ export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
 export const CACHE_TAG_SEGMENT_REGEXP = /{([^{}]*)}/g;
 
 export const CACHE_TAG_PLACEHOLDER_REGEXP =
-  /^\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\s*$/;
+  /^\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\.\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\.\s*[a-zA-Z_][a-zA-Z0-9_]*)*)\s*$/;
 
 export const MAX_OR_SCOPES = 16;
