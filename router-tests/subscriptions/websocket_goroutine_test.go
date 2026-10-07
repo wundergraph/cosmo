@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -53,7 +54,7 @@ func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 					}
 					closeErr, ok := errors.AsType[*websocket.CloseError](err)
 					require.True(t, ok, "expected WebSocket close error, got %T: %v", err, err)
-					require.Equal(t, websocket.CloseGoingAway, closeErr.Code)
+					assert.Equal(t, websocket.CloseGoingAway, closeErr.Code)
 					break
 				}
 				env.WaitForConnectionCount(0, time.Second)
@@ -135,7 +136,7 @@ func TestWebSocketPipelinedMessages(t *testing.T) {
 				for range 3 {
 					var pong testenv.WebSocketMessage
 					require.NoError(t, testenv.WSReadJSON(t, conn, &pong))
-					require.Equal(t, "pong", pong.Type)
+					assert.Equal(t, "pong", pong.Type)
 				}
 			})
 		})

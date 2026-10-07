@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gobwas/ws"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +42,7 @@ func assertTimeout(t *testing.T, err error) {
 	t.Helper()
 	netErr, ok := errors.AsType[net.Error](err)
 	require.True(t, ok, "expected net.Error, got %T: %v", err, err)
-	require.True(t, netErr.Timeout())
+	assert.True(t, netErr.Timeout())
 }
 
 func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
@@ -75,7 +76,7 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 		}
 		_, err = client.Write(frame[1:])
 		require.NoError(t, err)
-		require.NoError(t, <-result)
+		assert.NoError(t, <-result)
 	})
 }
 
@@ -113,8 +114,8 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 				start := time.Now()
 				var msg json.RawMessage
 				require.Error(t, conn.ReadJSON(&msg))
-				require.Equal(t, timeout, time.Since(start), "frames before connection_init must not extend its deadline")
-				require.NoError(t, <-written)
+				assert.Equal(t, timeout, time.Since(start), "frames before connection_init must not extend its deadline")
+				assert.NoError(t, <-written)
 			})
 		})
 	}
@@ -142,8 +143,8 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 				start := time.Now()
 				var msg json.RawMessage
 				assertTimeout(t, conn.ReadJSON(&msg))
-				require.Equal(t, timeout, time.Since(start))
-				require.NoError(t, <-written)
+				assert.Equal(t, timeout, time.Since(start))
+				assert.NoError(t, <-written)
 			})
 		})
 	}
@@ -163,12 +164,12 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 		require.NoError(t, err)
 		pong, err := ws.ReadFrame(client)
 		require.NoError(t, err)
-		require.Equal(t, ws.OpPong, pong.Header.OpCode)
-		require.Equal(t, "heartbeat", string(pong.Payload))
+		assert.Equal(t, ws.OpPong, pong.Header.OpCode)
+		assert.Equal(t, "heartbeat", string(pong.Payload))
 		_, err = client.Write(clientFrame(ws.OpContinuation, true, `"ping"}`))
 		require.NoError(t, err)
 		require.NoError(t, <-result)
-		require.Equal(t, "ping", msg["type"])
+		assert.Equal(t, "ping", msg["type"])
 	})
 }
 
@@ -187,11 +188,11 @@ func TestWebsocketControlWriteTimeoutStartsAfterPayload(t *testing.T) {
 		require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
 		pong, err := ws.ReadFrame(client)
 		require.NoError(t, err)
-		require.Equal(t, ws.OpPong, pong.Header.OpCode)
-		require.Equal(t, "x", string(pong.Payload))
+		assert.Equal(t, ws.OpPong, pong.Header.OpCode)
+		assert.Equal(t, "x", string(pong.Payload))
 		_, err = client.Write(clientFrame(ws.OpText, true, `{}`))
 		require.NoError(t, err)
-		require.NoError(t, <-result)
+		assert.NoError(t, <-result)
 	})
 }
 
@@ -230,7 +231,7 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 				<-closed
 				t.Fatal("Close blocked behind a writer without a timeout")
 			}
-			require.Error(t, <-result)
+			assert.Error(t, <-result)
 		})
 	}
 }
@@ -262,7 +263,7 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 				if tc.op == ws.OpPing {
 					pong, err := ws.ReadFrame(client)
 					require.NoError(t, err)
-					require.Equal(t, ws.OpPong, pong.Header.OpCode)
+					assert.Equal(t, ws.OpPong, pong.Header.OpCode)
 				}
 				if tc.op == ws.OpText {
 					require.NoError(t, <-result)
@@ -276,7 +277,7 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 				require.Empty(t, result, "previous traffic left an idle read deadline")
 				_, err = client.Write(clientFrame(ws.OpText, true, `{}`))
 				require.NoError(t, err)
-				require.NoError(t, <-result)
+				assert.NoError(t, <-result)
 			})
 		})
 	}
@@ -306,7 +307,7 @@ func TestWebsocketReadAfterCancellation(t *testing.T) {
 				synctest.Wait()
 				select {
 				case err := <-result:
-					require.ErrorIs(t, err, context.Canceled)
+					assert.ErrorIs(t, err, context.Canceled)
 				default:
 					t.Fatal("new read overwrote cancellation and blocked")
 				}
