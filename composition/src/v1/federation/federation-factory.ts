@@ -248,7 +248,7 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
+import { inconsistentCacheTagFormatsWarning, singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import {
   type ExtractFederatedDirectivesParams,
   type FederateSubgraphsContractV1Params,
@@ -2002,6 +2002,34 @@ export class FederationFactory {
     return argumentNodes;
   }
 
+  /* A response carries only the @cacheTag formats of the subgraph that resolves the Query root field,
+   * so formats that differ between the subgraphs resolving that field produce tags that depend on the query plan.
+   */
+  validateCacheTagFormatConsistency(fieldData: FieldData) {
+    const formatsBySubgraphName = new Map<SubgraphName, Set<string>>();
+    // A subgraph from which the field is overridden is absent from isShareableBySubgraphName.
+    for (const subgraphName of fieldData.isShareableBySubgraphName.keys()) {
+      const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(subgraphName);
+      if (externalFieldData && !externalFieldData.isUnconditionallyProvided) {
+        continue;
+      }
+      const configurations =
+        this.internalSubgraphBySubgraphName.get(subgraphName)?.configurationDataByTypeName.get(QUERY)?.entityCaching
+          ?.cacheTagConfigurations ?? [];
+      formatsBySubgraphName.set(
+        subgraphName,
+        new Set(configurations.filter(({ fieldName }) => fieldName === fieldData.name).map(({ format }) => format)),
+      );
+    }
+    const [formats, ...otherFormats] = formatsBySubgraphName.values();
+    if (otherFormats.every((other) => other.size === formats.size && other.isSubsetOf(formats))) {
+      return;
+    }
+    this.warnings.push(
+      inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
+    );
+  }
+
   validateSemanticNonNull(data: FieldData) {
     let comparison: Set<number> | undefined;
     for (const levels of data.nullLevelsBySubgraphName.values()) {
@@ -2236,6 +2264,7 @@ export class FederationFactory {
           const graphFieldDataByFieldName = new Map<FieldName, GraphFieldData>();
           const invalidFieldNames = newInvalidFieldNames();
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
+          const isQuery = isNodeQuery(parentTypeName);
           const authData = this.authorizationDataByParentTypeName.get(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, authData);
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
@@ -2260,6 +2289,10 @@ export class FederationFactory {
             }
             if (isNodeDataInaccessible(fieldData)) {
               continue;
+            }
+            // An inaccessible field, e.g., one excluded from a contract, cannot be queried, so it produces no tags.
+            if (isQuery) {
+              this.validateCacheTagFormatConsistency(fieldData);
             }
             clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
             graphFieldDataByFieldName.set(fieldName, this.fieldDataToGraphFieldData(fieldData));
@@ -2292,7 +2325,6 @@ export class FederationFactory {
           } else {
             this.errors.push(...nodeResult.errors);
           }
-          const isQuery = isNodeQuery(parentTypeName);
           if (isNodeDataInaccessible(parentDefinitionData)) {
             if (isQuery) {
               this.errors.push(inaccessibleQueryRootTypeError);
