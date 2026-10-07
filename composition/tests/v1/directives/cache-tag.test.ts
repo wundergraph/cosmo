@@ -2,9 +2,11 @@ import { describe, expect, test } from 'vitest';
 import {
   CACHE_TAG,
   type CacheTagConfiguration,
+  type ContractTagOptions,
   emptyCacheTagFormatErrorMessage,
   FIRST_ORDINAL,
   FORMAT,
+  inconsistentCacheTagFormatsWarning,
   invalidArgumentValueErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
   invalidCacheTagBraceErrorMessage,
@@ -15,6 +17,7 @@ import {
   nonRootFieldCacheTagErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
+  type SubgraphName,
   type TypeName,
   undefinedCacheTagArgumentErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
@@ -25,6 +28,7 @@ import {
   createSubgraph,
   createSubgraphWithDefaultName,
   federateSubgraphsSuccess,
+  federateSubgraphsWithContractsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
@@ -32,10 +36,9 @@ import {
 } from '../../utils/utils';
 import { CACHE_TAG_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
-/* @cacheTag is modeled on the Apollo Federation v2.12 directive:
- *   directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
+/* directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
  *
- * Only a Query root field is supported here.
+ * Only a Query root field is supported.
  */
 describe('@cacheTag tests', () => {
   describe('format validation tests', () => {
@@ -679,6 +682,135 @@ describe('@cacheTag tests', () => {
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
     });
+
+    test('that differing formats upon a shared Query field produce a warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph('a', '@shareable @cacheTag(format: "products") @cacheTag(format: "catalogue")'),
+          createProductsSubgraph('b', '@shareable @cacheTag(format: "products")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products', 'catalogue'])],
+            ['b', new Set(['products'])],
+          ]),
+        }),
+      ]);
+    });
+
+    // Each contract is a separate federated graph, so it warns only if it retains the field.
+    test('that a contract produces the warning only if it retains the shared Query field', () => {
+      const { federationResultByContractName, warnings } = federateSubgraphsWithContractsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              products(id: ID!): [Product!]! @shareable @tag(name: "internal") @cacheTag(format: "products")
+              product(id: ID!): Product
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createProductsSubgraph('b', '@shareable @tag(name: "internal") @cacheTag(format: "catalogue")'),
+        ],
+        new Map<string, ContractTagOptions>([
+          [
+            'excludesProducts',
+            { tagNamesToExclude: new Set<string>(['internal']), tagNamesToInclude: new Set<string>() },
+          ],
+          ['retainsProducts', { tagNamesToExclude: new Set<string>(['other']), tagNamesToInclude: new Set<string>() }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const expectedWarnings = [
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products'])],
+            ['b', new Set(['catalogue'])],
+          ]),
+        }),
+      ];
+      expect(warnings).toStrictEqual(expectedWarnings);
+      expect(federationResultByContractName.get('retainsProducts')?.warnings).toStrictEqual(expectedWarnings);
+      expect(federationResultByContractName.get('excludesProducts')?.warnings).toStrictEqual([]);
+    });
+
+    test('that an inaccessible shared Query field produces no warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              products(id: ID!): [Product!]! @shareable @inaccessible @cacheTag(format: "products")
+              product(id: ID!): Product
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createProductsSubgraph('b', '@shareable @inaccessible @cacheTag(format: "catalogue")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
+
+    test('that a shared Query field tagged in only one subgraph produces a warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph('a', '@shareable @cacheTag(format: "products")'),
+          createProductsSubgraph('b', '@shareable'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products'])],
+            ['b', new Set()],
+          ]),
+        }),
+      ]);
+    });
+
+    test('that identical formats upon a shared Query field in any order produce no warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph('a', '@shareable @cacheTag(format: "products") @cacheTag(format: "catalogue")'),
+          createProductsSubgraph('b', '@shareable @cacheTag(format: "catalogue") @cacheTag(format: "products")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
+
+    // Only the overriding subgraph resolves the field, so the formats of the overridden subgraph are ignored.
+    test('that the formats of a subgraph whose Query field is overridden produce no warning', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              product(id: ID!): Product
+              products(id: ID!): [Product!]! @cacheTag(format: "catalogue")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createProductsSubgraph('b', '@override(from: "a") @cacheTag(format: "products")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
   });
 
   describe('location tests', () => {
@@ -717,6 +849,19 @@ describe('@cacheTag tests', () => {
     });
   });
 });
+
+// Returns a subgraph that defines the Query field "products" with the given directives.
+function createProductsSubgraph(name: SubgraphName, directives: string): Subgraph {
+  return createSubgraph(
+    name,
+    `
+    type Query {
+      products(id: ID!): [Product!]! ${directives}
+    }
+    type Product @key(fields: "id") { id: ID! }
+  `,
+  );
+}
 
 // Returns the CacheTagConfigurations for a type. Entity-caching config is nested under `.entityCaching`.
 function getCacheTagConfigurations(subgraph: Subgraph, typeName: TypeName): Array<CacheTagConfiguration> | undefined {
