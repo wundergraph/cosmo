@@ -193,12 +193,10 @@ func (s *Server) Start() error {
 	}
 
 	// Create HTTP server with HTTP/2 support
-	handler := s.createHandler()
-
 	s.httpServer = &http.Server{
 		Protocols:    s.protocols,
 		Addr:         s.config.ListenAddr,
-		Handler:      handler,
+		Handler:      s.createHandler(),
 		ReadTimeout:  httpServerReadTimeout,
 		WriteTimeout: httpServerWriteTimeout,
 		IdleTimeout:  httpServerIdleTimeout,
@@ -306,9 +304,7 @@ func (s *Server) Reload() error {
 	}
 	s.transcoder = transcoder
 
-	handler := s.createHandler()
-
-	s.httpServer.Handler = handler
+	s.httpServer.Handler = s.createHandler()
 
 	s.logger.Info("ConnectRPC server reloaded successfully")
 	return nil
