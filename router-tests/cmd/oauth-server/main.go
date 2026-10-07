@@ -45,11 +45,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -310,13 +312,7 @@ func (h *oauthHandler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(c.redirectURIs) > 0 {
-		redirectAllowed := false
-		for _, allowed := range c.redirectURIs {
-			if allowed == redirectURI {
-				redirectAllowed = true
-				break
-			}
-		}
+		redirectAllowed := slices.Contains(c.redirectURIs, redirectURI)
 		if !redirectAllowed {
 			http.Error(w, "unregistered redirect_uri", http.StatusBadRequest)
 			return
@@ -480,9 +476,7 @@ func withDebugLog(next http.Handler) http.Handler {
 			r.Method, r.URL.Path, rec.Code, rec.Header(), rec.Body.String())
 
 		// Copy recorded response to the real writer
-		for k, v := range rec.Header() {
-			w.Header()[k] = v
-		}
+		maps.Copy(w.Header(), rec.Header())
 		w.WriteHeader(rec.Code)
 		_, _ = w.Write(rec.Body.Bytes())
 	})

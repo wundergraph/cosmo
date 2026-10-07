@@ -56,7 +56,9 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 
 // RequestFields returns the fields of a subgraph fetch. ctx is the fetch context,
 // used when no request was sent, e.g. on a response cache hit.
-func (h *SubgraphAccessLogger) RequestFields(ctx context.Context, respInfo *resolve.ResponseInfo, overrideExprCtx *expr.Context) []zap.Field {
+func (h *SubgraphAccessLogger) RequestFields(
+	ctx context.Context, respInfo *resolve.ResponseInfo, overrideExprCtx *expr.Context,
+) []zap.Field {
 	if respInfo == nil {
 		return []zap.Field{}
 	}
@@ -82,7 +84,15 @@ func (h *SubgraphAccessLogger) RequestFields(ctx context.Context, respInfo *reso
 		request = (&http.Request{Header: http.Header{}}).WithContext(ctx)
 	}
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, request, &respInfo.ResponseHeaders, overrideExprCtx)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(
+			h.logger,
+			h.accessLogger.attributes,
+			h.accessLogger.exprAttributes,
+			respInfo.Err,
+			request,
+			&respInfo.ResponseHeaders,
+			overrideExprCtx,
+		)...)
 	}
 
 	return fields

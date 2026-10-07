@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"time"
@@ -47,15 +48,11 @@ func (copyCtx Context) Clone() *Context {
 	copyCtx.Request.Auth.Scopes = scopes
 
 	claims := make(map[string]any, len(copyCtx.Request.Auth.Claims))
-	for k, v := range copyCtx.Request.Auth.Claims {
-		claims[k] = v
-	}
+	maps.Copy(claims, copyCtx.Request.Auth.Claims)
 	copyCtx.Request.Auth.Claims = claims
 
 	query := make(map[string]string, len(copyCtx.Request.URL.Query))
-	for k, v := range copyCtx.Request.URL.Query {
-		query[k] = v
-	}
+	maps.Copy(query, copyCtx.Request.URL.Query)
 	copyCtx.Request.URL.Query = query
 
 	return &copyCtx
@@ -178,7 +175,7 @@ type SubgraphResponseCache struct {
 	// Status is "hit", "partial_hit", "miss" or "not_cacheable".
 	Status string `expr:"status"`
 	// StoreDecision is "stored", or the reason the response was not stored.
-	// It is empty for a fetch nothing was decided for.
+	// It is "empty" for a fetch nothing was decided for.
 	StoreDecision string `expr:"storeDecision"`
 	// LookupDuration is the time spent asking the cache.
 	LookupDuration time.Duration `expr:"lookupDuration"`

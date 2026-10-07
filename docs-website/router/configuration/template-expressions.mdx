@@ -191,7 +191,7 @@ It contains the following properties:
 - `subgraph.response.body` (SubgraphResponseBody)
 - `subgraph.response.header` (ResponseHeaders): The headers of the subgraph response. Values are retrieved with `subgraph.response.header.Get('Header-Name')` (case-insensitive). Rules from [response header propagation](/router/proxy-capabilities/subgraph-response-header-operations) have already been applied. Accessing a missing header returns `""`.
 - `subgraph.response.cache.status` (string): What the [response cache](/router/response-cache) did for the fetch: `hit`, `partial_hit`, `miss` or `not_cacheable`. Empty when the response cache is not enabled.
-- `subgraph.response.cache.storeDecision` (string): What became of the response on its way into the response cache: `stored`, or the [reason](/router/response-cache#store-decision) it was not stored. Empty when nothing was decided.
+- `subgraph.response.cache.storeDecision` (string): What became of the response on its way into the response cache: `stored`, or the [reason](/router/response-cache#store-decision) it was not stored. `empty` when nothing was decided, as for a hit or a fetch that is not cacheable. Empty when the response cache is not enabled.
 - `subgraph.response.cache.lookupDuration` (time.Duration): The time spent asking the response cache.
 - `subgraph.response.cache.entityType` (string): The type the fetch resolves fields of. Empty when the response cache is not enabled.
 
@@ -268,7 +268,7 @@ The `response` object is a read-only entity that provides details about the outg
 **Available Fields**:
 
 - `response.body` (ResponseBody)
-- `response.cache.status` (string): What the [response cache](/router/response-cache) did for the response as a whole: `hit`, `partial_hit` or `miss`. Empty when the response cache is not enabled or no subgraph was fetched. Only known once the response has been resolved, so it is available to router access logs and not to telemetry attributes.
+- `response.cache.status` (string): What the [response cache](/router/response-cache) did for the response as a whole: `hit`, `partial_hit` or `miss`. Empty when the response cache is not enabled, no subgraph was fetched, or the operation is a subscription or mutation. Only known once the response has been resolved, so it is available to router access logs and not to telemetry attributes.
 
 ### ResponseBody Object
 

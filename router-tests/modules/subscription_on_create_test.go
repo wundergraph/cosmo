@@ -41,7 +41,7 @@ func newHookModule(cb func(ctx core.SubscriptionOnCreateHandlerContext) error) *
 func hookRouterOptions(m *subscription_on_create.SubscriptionOnCreateModule) []core.Option {
 	cfg := config.Config{
 		Graph: config.Graph{},
-		Modules: map[string]interface{}{
+		Modules: map[string]any{
 			"subscriptionOnCreateModule": m,
 		},
 	}
@@ -108,7 +108,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			client := graphql.NewSubscriptionClient(surl)
 
 			resultCh := make(chan subResult, 1)
-			_, err := client.Subscribe(&subscription, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
+			_, err := client.Subscribe(&subscription, map[string]any{"id": 1}, func(dataValue []byte, errValue error) error {
 				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
@@ -194,7 +194,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			client := graphql.NewSubscriptionClient(surl)
 
 			resultCh := make(chan subResult, 1)
-			_, err := client.Subscribe(&subscription, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
+			_, err := client.Subscribe(&subscription, map[string]any{"id": 1}, func(dataValue []byte, errValue error) error {
 				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
@@ -253,8 +253,8 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			for i, topic := range conf.Topics {
 				// Replace "employeeUpdated" suffix with "employeeUpdatedTwo".
 				// The topic has a testenv prefix, e.g. "<prefix>employeeUpdated".
-				if strings.HasSuffix(topic, "employeeUpdated") {
-					conf.Topics[i] = strings.TrimSuffix(topic, "employeeUpdated") + "employeeUpdatedTwo"
+				if before, ok0 := strings.CutSuffix(topic, "employeeUpdated"); ok0 {
+					conf.Topics[i] = before + "employeeUpdatedTwo"
 				}
 			}
 			return nil
@@ -282,7 +282,7 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			client := graphql.NewSubscriptionClient(surl)
 
 			resultCh := make(chan subResult, 1)
-			_, err := client.Subscribe(&subscription, map[string]interface{}{"employeeID": 1}, func(dataValue []byte, errValue error) error {
+			_, err := client.Subscribe(&subscription, map[string]any{"employeeID": 1}, func(dataValue []byte, errValue error) error {
 				resultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
@@ -367,14 +367,14 @@ func TestSubscriptionOnCreateHook(t *testing.T) {
 			client := graphql.NewSubscriptionClient(surl)
 
 			sub1ResultCh := make(chan subResult, 1)
-			_, err := client.Subscribe(&sub1, map[string]interface{}{"id": 1}, func(dataValue []byte, errValue error) error {
+			_, err := client.Subscribe(&sub1, map[string]any{"id": 1}, func(dataValue []byte, errValue error) error {
 				sub1ResultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})
 			require.NoError(t, err)
 
 			sub2ResultCh := make(chan subResult, 2)
-			_, err = client.Subscribe(&sub2, map[string]interface{}{"id": 2}, func(dataValue []byte, errValue error) error {
+			_, err = client.Subscribe(&sub2, map[string]any{"id": 2}, func(dataValue []byte, errValue error) error {
 				sub2ResultCh <- subResult{data: dataValue, err: errValue}
 				return nil
 			})

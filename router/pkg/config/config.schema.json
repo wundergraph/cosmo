@@ -362,7 +362,7 @@
           "properties": {
             "storage": {
               "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
-              "required": ["provider_id", "object_path"],
+              "required": ["provider_id"],
               "properties": {
                 "provider_id": {
                   "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -370,18 +370,12 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. Required for S3 providers. Not used by CDN providers."
                 }
               }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
+            },
             "fallback_storage": {
-              "description": "The fallback storage provider for the execution config in case the primary one fails.",
+              "description": "The fallback storage provider for the execution config in case the primary one fails. Can be combined with storage. When storage is omitted, the Cosmo CDN is the primary provider.",
               "required": ["enabled"],
               "properties": {
                 "enabled": {
@@ -2870,6 +2864,11 @@
                   "type": "array",
                   "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
                   "items": { "type": "string" }
+                },
+                "generate_query": {
+                  "type": "array",
+                  "description": "Scopes required to call the generate_query built-in tool. Additive to tools_call scopes. Only relevant when query generation is enabled.",
+                  "items": { "type": "string" }
                 }
               }
             },
@@ -4190,6 +4189,11 @@
         "enable_schedule_fetches": {
           "type": "boolean",
           "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
+          "default": true
+        },
+        "enable_grpc_wire_encoding": {
+          "type": "boolean",
+          "description": "Encodes gRPC request messages directly to the protobuf wire format. This is faster and uses less memory, because the router does not build dynamic protobuf messages for each request. Set to false to build request messages with protoreflect instead. Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding.",
           "default": true
         },
         "websocket_client_write_timeout": {

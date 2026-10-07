@@ -295,38 +295,31 @@ type responseCacheStats struct {
 	partialHits atomic.Int32
 }
 
-func (s *responseCacheStats) record(status string) {
+func (s *responseCacheStats) record(status resolve.ResponseCacheStatus) {
 	s.fetches.Add(1)
 	switch status {
-	case ResponseCacheStatusHit:
+	case resolve.ResponseCacheStatusHit:
 		s.hits.Add(1)
-	case ResponseCacheStatusPartialHit:
+	case resolve.ResponseCacheStatusPartialHit:
 		s.partialHits.Add(1)
 	}
 }
 
-// status is empty when no fetch was recorded.
-func (s *responseCacheStats) status() string {
-	fetches, hits := s.fetches.Load(), s.hits.Load()
+func (c *requestContext) responseCacheStatus() (resolve.ResponseCacheStatus, bool) {
+	if c.operation.opType == OperationTypeSubscription || c.operation.opType == OperationTypeMutation {
+		return resolve.ResponseCacheStatusNotCacheable, false
+	}
+	fetches, hits := c.responseCache.fetches.Load(), c.responseCache.hits.Load()
 	switch {
 	case fetches == 0:
-		return ""
+		return resolve.ResponseCacheStatusNotCacheable, false
 	case hits == fetches:
-		return ResponseCacheStatusHit
-	case hits > 0 || s.partialHits.Load() > 0:
-		return ResponseCacheStatusPartialHit
+		return resolve.ResponseCacheStatusHit, true
+	case hits > 0 || c.responseCache.partialHits.Load() > 0:
+		return resolve.ResponseCacheStatusPartialHit, true
 	default:
-		return ResponseCacheStatusMiss
+		return resolve.ResponseCacheStatusMiss, true
 	}
-}
-
-// responseCacheStatus is what the response cache did for the response as a whole.
-// It is empty for subscriptions, which would add up the fetches of every update.
-func (c *requestContext) responseCacheStatus() string {
-	if c.operation != nil && c.operation.opType == OperationTypeSubscription {
-		return ""
-	}
-	return c.responseCache.status()
 }
 
 type headerBuilder struct {

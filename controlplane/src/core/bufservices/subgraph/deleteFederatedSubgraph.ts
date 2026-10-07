@@ -198,6 +198,8 @@ export function deleteFederatedSubgraph(
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
+          opts.promptToQueryClient,
+          opts.billingDefaultPlanId,
         );
 
         if (subgraph.isFeatureSubgraph) {

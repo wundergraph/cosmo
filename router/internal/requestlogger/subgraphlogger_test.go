@@ -14,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -38,7 +39,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -67,7 +68,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -101,7 +102,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -135,7 +136,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type": "client/subgraph",
 			"method":   "POST",
 			"path":     "/graphql",
@@ -183,7 +184,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":      "client/subgraph",
 			"method":        "POST",
 			"path":          "/graphql",
@@ -231,18 +232,19 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			},
 		})
 
-		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
+		fields := subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        errors.New("my-test-error"),
 			Request:    nil,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil))
+		}, nil)
+		subgraphLogger.Info("subgraph error", fields)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":          "client/subgraph",
 			"request-error":     true,
 			"request-error-msg": "my-test-error",
@@ -261,15 +263,17 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		require.NoError(t, err)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
-			FieldsHandler:  core.SubgraphAccessLogsFieldHandler,
-			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+			FieldsHandler: core.SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{
+				{Key: "cache_status", Expr: program},
+			},
 		})
 
 		ctx, span := sdktrace.NewTracerProvider().Tracer("test").Start(context.Background(), "Engine - Fetch")
 		defer span.End()
 
 		exprCtx := &expr.Context{}
-		exprCtx.Subgraph.Response.Cache.Status = core.ResponseCacheStatusHit
+		exprCtx.Subgraph.Response.Cache.Status = resolve.ResponseCacheStatusHit.String()
 
 		subgraphLogger.Info("", subgraphLogger.RequestFields(ctx, &resolve.ResponseInfo{
 			StatusCode:       200,
@@ -278,17 +282,39 @@ func TestSubgraphAccessLogger(t *testing.T) {
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
-		expectedValues := map[string]interface{}{
+		expectedValues := map[string]any{
 			"log_type":     "client/subgraph",
-			"cache_status": core.ResponseCacheStatusHit,
+			"cache_status": resolve.ResponseCacheStatusHit.String(),
 			"trace_id":     span.SpanContext().TraceID().String(),
 		}
 		additionalExpectedKeys := []string{"request_id", "hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
+
+	t.Run("fetches without a request do not share the base fields", func(t *testing.T) {
+		// Spare capacity lets an append write into the shared array.
+		base := make([]zapcore.Field, 1, 4)
+		base[0] = zap.String("service", "router")
+		subgraphLogger := requestlogger.NewSubgraphAccessLogger(zap.NewNop(), requestlogger.SubgraphOptions{
+			Fields: base,
+		})
+
+		tracer := sdktrace.NewTracerProvider().Tracer("test")
+		ctxA, spanA := tracer.Start(context.Background(), "fetch A")
+		defer spanA.End()
+		ctxB, spanB := tracer.Start(context.Background(), "fetch B")
+		defer spanB.End()
+
+		fieldsA := subgraphLogger.RequestFields(ctxA, &resolve.ResponseInfo{StatusCode: 200}, nil)
+		fieldsB := subgraphLogger.RequestFields(ctxB, &resolve.ResponseInfo{StatusCode: 200}, nil)
+
+		require.Contains(t, fieldsA, logging.WithTraceID(spanA.SpanContext().TraceID().String()))
+		require.Contains(t, fieldsB, logging.WithTraceID(spanB.SpanContext().TraceID().String()))
+		require.Len(t, base, 1)
+	})
 }
 
-func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
+func checkValues(t *testing.T, requestContext map[string]any, expectedValues map[string]any, additionalExpectedKeys []string) {
 	t.Helper()
 
 	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")

@@ -546,7 +546,9 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			applyResponseCacheLifetime(headers, &resolve.ResponseInfo{
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
-				ResponseCache:    resolve.ResponseCacheInfo{Status: cacheStatusOf(tt.hit, tt.partial)},
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: cacheStatusOf(tt.hit, tt.partial),
+				},
 			})
 
 			if tt.want == nil {
@@ -643,7 +645,9 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 				StatusCode:       http.StatusOK,
 				ResponseCacheHit: true,
 				ResponseCacheTTL: 30 * time.Second,
-				ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: resolve.ResponseCacheStatusHit,
+				},
 			})
 
 			require.Equal(t, tt.want, client.header.Get(cacheControlKey))
@@ -710,11 +714,13 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
 	})
 
 	t.Run("a hit with no life left is still a hit", func(t *testing.T) {
@@ -723,11 +729,13 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
 	})
 
 	t.Run("a fetch that went out with cached entries in it is a partial hit", func(t *testing.T) {
@@ -736,11 +744,13 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
 	})
 
 	t.Run("a fetch the cache had nothing for is a miss", func(t *testing.T) {
@@ -760,7 +770,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusMiss, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusMiss.String(), status.AsString())
 
 		decision, ok := attrs.Value(rotel.WgResponseCacheStoreDecision)
 		require.True(t, ok)
@@ -783,7 +793,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusNotCacheable, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusNotCacheable.String(), status.AsString())
 
 		_, ok = attrs.Value(rotel.WgResponseCacheStoreDecision)
 		require.False(t, ok)
@@ -807,11 +817,13 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheTTL: 0,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
 	})
 
 	t.Run("the access log of a hit carries the expression fields", func(t *testing.T) {
@@ -819,12 +831,18 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 
 		zCore, logs := observer.New(zapcore.InfoLevel)
 
-		program, err := expr.CreateNewExprManager().CompileAnyExpression("subgraph.response.cache.status")
+		exprManager := expr.CreateNewExprManager()
+		status, err := exprManager.CompileAnyExpression("subgraph.response.cache.status")
+		require.NoError(t, err)
+		decision, err := exprManager.CompileAnyExpression("subgraph.response.cache.storeDecision")
 		require.NoError(t, err)
 
 		accessLogger := requestlogger.NewSubgraphAccessLogger(zap.New(zCore), requestlogger.SubgraphOptions{
-			FieldsHandler:  SubgraphAccessLogsFieldHandler,
-			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+			FieldsHandler: SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{
+				{Key: "cache_status", Expr: status},
+				{Key: "store_decision", Expr: decision},
+			},
 		})
 
 		tp := sdktrace.NewTracerProvider()
@@ -836,12 +854,15 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 
 		require.Equal(t, 1, logs.Len())
 		fields := logs.All()[0].ContextMap()
-		require.Equal(t, ResponseCacheStatusHit, fields["cache_status"])
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), fields["cache_status"])
+		require.Equal(t, "empty", fields["store_decision"], "nothing is decided for a hit")
 		require.Equal(t, trace.SpanFromContext(ctx).SpanContext().TraceID().String(), fields["trace_id"])
 		require.Contains(t, fields, "request_id")
 	})

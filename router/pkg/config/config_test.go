@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 
@@ -11,8 +12,11 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
@@ -197,7 +201,8 @@ telemetry:
 	cfg, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Attributes, 1)
-	require.Equal(t, "subgraph.response.cache.status", cfg.Config.Telemetry.Metrics.Attributes[0].ValueFrom.Expression)
+	attr := cfg.Config.Telemetry.Metrics.Attributes[0]
+	require.Equal(t, "subgraph.response.cache.status", attr.ValueFrom.Expression)
 }
 
 func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
@@ -731,6 +736,86 @@ execution_config:
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 	})
+
+	t.Run("storage config with fallback storage", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+  fallback_storage:
+    enabled: true
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "cdn", cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.True(t, cfg.Config.ExecutionConfig.FallbackStorage.Enabled)
+		require.Equal(t, "s3", cfg.Config.ExecutionConfig.FallbackStorage.ProviderID)
+	})
+
+	t.Run("cdn storage config without object_path", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "cdn", cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.Empty(t, cfg.Config.ExecutionConfig.Storage.ObjectPath)
+	})
+
+	t.Run("fallback storage without primary storage config", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+execution_config:
+  fallback_storage:
+    enabled: true
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Empty(t, cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.True(t, cfg.Config.ExecutionConfig.FallbackStorage.Enabled)
+		require.Equal(t, "s3", cfg.Config.ExecutionConfig.FallbackStorage.ProviderID)
+	})
 }
 
 func TestS3StorageProviderFromEnv(t *testing.T) {
@@ -855,33 +940,28 @@ version: "1"
 	require.Equal(t, "/data/backups", fsTwo.Path)
 }
 
+// schemaErrors returns the flat list of jsonschema validation errors as
+// "keywordLocation instanceLocation: message" strings. Property lists are
+// sorted because the validator emits them in map order.
+func schemaErrors(t *testing.T, err error) []string {
+	t.Helper()
+
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+
+	printer := message.NewPrinter(language.English)
+	var out []string
+	for _, u := range js.BasicOutput().Errors {
+		if ap, ok := u.Error.Kind.(*kind.AdditionalProperties); ok {
+			slices.Sort(ap.Properties)
+		}
+		out = append(out, fmt.Sprintf("%s %s: %s", u.KeywordLocation, u.InstanceLocation, u.Error.Kind.LocalizedString(printer)))
+	}
+	return out
+}
+
 func TestInvalidExecutionConfig(t *testing.T) {
 	t.Parallel()
-
-	t.Run("no object_path", func(t *testing.T) {
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-storage_providers:
-  s3:
-    - id: "s3"
-      endpoint: "localhost:10000"
-      bucket: "cosmo"
-      access_key: "Pj6opX3288YukriGCzIr"
-      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
-      secure: false
-
-execution_config:
-  storage:
-    provider_id: s3
-    # Missing object_path
-`)
-		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
-	})
 
 	t.Run("too low watch interval", func(t *testing.T) {
 
@@ -896,9 +976,12 @@ execution_config:
 `)
 
 		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, []string{
+			"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+			"/properties/execution_config/oneOf/0/properties/file/properties/watch_interval/duration /execution_config/file/watch_interval: duration must be greater or equal than 100ms",
+			"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+			"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file' not allowed",
+		}, schemaErrors(t, err))
 	})
 
 	t.Run("watch interval with watch disabled", func(t *testing.T) {
@@ -913,9 +996,12 @@ execution_config:
     watch_interval: "1s"
 `)
 		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, []string{
+			"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+			"/properties/execution_config/oneOf/0/properties/file/dependentSchemas/watch_interval/properties/watch/const /execution_config/file/watch: value must be true",
+			"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+			"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file' not allowed",
+		}, schemaErrors(t, err))
 	})
 }
 
@@ -956,15 +1042,12 @@ execution_config:
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
 	_, err := LoadConfig([]string{f})
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.True(t,
-		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
-		js.Causes[0].Error(),
-	)
+	require.Equal(t, []string{
+		"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+		"/properties/execution_config/oneOf/0/additionalProperties /execution_config: additional properties 'storage' not allowed",
+		"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+		"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file', 'storage' not allowed",
+	}, schemaErrors(t, err))
 }
 
 func TestClientHeaderConfig(t *testing.T) {

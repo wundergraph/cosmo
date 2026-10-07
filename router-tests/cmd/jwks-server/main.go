@@ -79,7 +79,7 @@ func main() {
 	flag.Parse()
 
 	var providerList []jwks.Crypto
-	for _, p := range strings.Split(*providers, ",") {
+	for p := range strings.SplitSeq(*providers, ",") {
 		switch crypto(p) {
 		case rsa:
 

@@ -161,6 +161,19 @@ This diagram shows how the router processes GraphQL requests and communicates wi
 **The data loader** batches requests to your gRPC services for optimal performance.
 Responses are translated back from protobuf to GraphQL format and assembled into the final client response.
 
+#### Request Encoding (TODO: Add minimum release version of go-tools)
+
+By default, the router encodes gRPC request messages directly to the protobuf wire format. This is faster and uses less memory than building a dynamic protobuf message for each request.
+
+If a gRPC service or router plugin receives an incorrect request, you can switch back to building request messages with protoreflect:
+
+```yaml config.yaml
+engine:
+  enable_grpc_wire_encoding: false
+```
+
+See the [Router Engine Configuration](/router/configuration#router-engine-configuration) for details.
+
 ### In Short
 
 gRPC integration into GraphQL Federation follows this pattern:
