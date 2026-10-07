@@ -6,6 +6,8 @@ import {
   emptyCacheTagFormatErrorMessage,
   FIRST_ORDINAL,
   FORMAT,
+  fromContextCacheTagReferenceErrorMessage,
+  inaccessibleCacheTagReferenceErrorMessage,
   inconsistentCacheTagFormatsWarning,
   invalidArgumentValueErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
@@ -15,10 +17,12 @@ import {
   invalidDirectiveLocationErrorMessage,
   NON_NULLABLE_STRING,
   nonRootFieldCacheTagErrorMessage,
+  partiallyDefinedCacheTagReferenceErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type SubgraphName,
   type TypeName,
+  unavailableCacheTagReferencesError,
   undefinedCacheTagArgumentErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
@@ -27,6 +31,7 @@ import {
 import {
   createSubgraph,
   createSubgraphWithDefaultName,
+  federateSubgraphsFailure,
   federateSubgraphsSuccess,
   federateSubgraphsWithContractsSuccess,
   normalizeString,
@@ -811,6 +816,405 @@ describe('@cacheTag tests', () => {
       );
       expect(warnings).toStrictEqual([]);
     });
+
+    // A Federation v1 subgraph may declare a Query field "@external", in which case it does not resolve that field.
+    test('that a subgraph whose Query field is external produces no warning', () => {
+      const v1Subgraph = (directives: string) =>
+        createSubgraph(
+          'b',
+          `
+          extend type Query { products(id: ID!): [Product!]! ${directives} other: ID }
+          type Product @key(fields: "id") { id: ID! }
+        `,
+        );
+      const { warnings: resolvingWarnings } = federateSubgraphsSuccess(
+        [createProductsSubgraph('a', '@shareable @cacheTag(format: "products")'), v1Subgraph('')],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(resolvingWarnings).toContainEqual(
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products'])],
+            ['b', new Set()],
+          ]),
+        }),
+      );
+      const { warnings: expectedWarnings } = federateSubgraphsSuccess(
+        [createProductsSubgraph('a', '@shareable'), v1Subgraph('@external')],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const { warnings } = federateSubgraphsSuccess(
+        [createProductsSubgraph('a', '@shareable @cacheTag(format: "products")'), v1Subgraph('@external')],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual(expectedWarnings);
+    });
+  });
+
+  // A reference must be a value that a client request passes to the subgraph.
+  describe('unavailable reference tests', () => {
+    test('that a reference to an inaccessible argument is rejected once', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createProductsSubgraph(
+            'a',
+            '@cacheTag(format: "products-{$args.region}") @cacheTag(format: "{$args.region}-all")',
+            'id: ID!, region: String @inaccessible',
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Query.products(region: ...)',
+            reference: 'region',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a reference to an inaccessible Input Object field is rejected', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createProductsSubgraph(
+            'a',
+            '@cacheTag(format: "products-{$args.filter.category}")',
+            'filter: Filter',
+            'input Filter { category: String @inaccessible brand: String }',
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Filter.category',
+            reference: 'filter.category',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a reference to a @fromContext argument is rejected', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query @context(name: "q") {
+              products(id: ID!, ctx: String @fromContext(field: "$q { x }")): [Product!]!
+                @cacheTag(format: "products-{$args.ctx}")
+              x: String
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          fromContextCacheTagReferenceErrorMessage({
+            coords: 'Query.products(ctx: ...)',
+            reference: 'ctx',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a reference to an argument defined by every subgraph that defines the field is valid', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph(
+            'a',
+            '@shareable @cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String',
+          ),
+          createProductsSubgraph(
+            'b',
+            '@shareable @cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String',
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
+
+    test('that a reference to an argument omitted by a subgraph that defines the field is rejected', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createProductsSubgraph(
+            'a',
+            '@shareable @cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String',
+          ),
+          createProductsSubgraph('b', '@shareable @cacheTag(format: "products-{$args.id}")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          partiallyDefinedCacheTagReferenceErrorMessage({
+            coords: 'Query.products(region: ...)',
+            parentCoords: 'Query.products',
+            reference: 'region',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a reference to an Input Object field omitted by a subgraph that defines the Input Object is rejected', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createProductsSubgraph(
+            'a',
+            '@shareable @cacheTag(format: "products-{$args.filter.brand}")',
+            'filter: Filter',
+            'input Filter { category: String brand: String }',
+          ),
+          createProductsSubgraph('b', '@shareable', 'filter: Filter', 'input Filter { category: String }'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          partiallyDefinedCacheTagReferenceErrorMessage({
+            coords: 'Filter.brand',
+            parentCoords: 'Filter',
+            reference: 'filter.brand',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    // Only the overriding subgraph resolves the field, so the formats of the overridden subgraph are not assessed.
+    test('that a reference within the formats of a subgraph whose Query field is overridden is not assessed', () => {
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              product(id: ID!): Product
+              products(id: ID!, region: String): [Product!]! @cacheTag(format: "products-{$args.region}")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createProductsSubgraph('b', '@override(from: "a")'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+    });
+
+    test('that a contract that excludes a referenced argument is rejected', () => {
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [
+          createProductsSubgraph(
+            'a',
+            '@cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String @tag(name: "internal")',
+          ),
+        ],
+        new Map<string, ContractTagOptions>([
+          [
+            'excludesRegion',
+            { tagNamesToExclude: new Set<string>(['internal']), tagNamesToInclude: new Set<string>() },
+          ],
+          ['retainsRegion', { tagNamesToExclude: new Set<string>(['other']), tagNamesToInclude: new Set<string>() }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
+      expect(federationResultByContractName.get('excludesRegion')?.errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Query.products(region: ...)',
+            reference: 'region',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a contract that excludes a referenced required argument is rejected', () => {
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [
+          createProductsSubgraph(
+            'a',
+            '@cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String! @tag(name: "internal")',
+          ),
+        ],
+        new Map<string, ContractTagOptions>([
+          [
+            'excludesRegion',
+            { tagNamesToExclude: new Set<string>(['internal']), tagNamesToInclude: new Set<string>() },
+          ],
+          ['retainsRegion', { tagNamesToExclude: new Set<string>(['other']), tagNamesToInclude: new Set<string>() }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
+      expect(federationResultByContractName.get('excludesRegion')?.errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Query.products(region: ...)',
+            reference: 'region',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that a contract that excludes a referenced Input Object field is rejected', () => {
+      const { federationResultByContractName } = federateSubgraphsWithContractsSuccess(
+        [
+          createProductsSubgraph(
+            'a',
+            '@cacheTag(format: "products-{$args.filter.category}")',
+            'filter: Filter',
+            'input Filter { category: String @tag(name: "internal") brand: String }',
+          ),
+        ],
+        new Map<string, ContractTagOptions>([
+          [
+            'excludesCategory',
+            { tagNamesToExclude: new Set<string>(['internal']), tagNamesToInclude: new Set<string>() },
+          ],
+          ['retainsCategory', { tagNamesToExclude: new Set<string>(['other']), tagNamesToInclude: new Set<string>() }],
+        ]),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(federationResultByContractName.get('retainsCategory')?.success).toBe(true);
+      expect(federationResultByContractName.get('excludesCategory')?.errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Filter.category',
+            reference: 'filter.category',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
+    /* A conflicting definition, or a required input value that a client cannot provide, is reported by its own error,
+     * so the directive must not change the errors that the same schema produces without it.
+     */
+    test('that a referenced Input Object that conflicts with an Enum produces only the merge error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createSubgraph('b', 'enum Filter { A } type Query { other(f: Filter): ID }'),
+          createProductsSubgraph('a', cacheTag, 'filter: Filter', 'input Filter { category: String }'),
+        ],
+        '@cacheTag(format: "{$args.filter.category}")',
+      );
+    });
+
+    test('that a referenced argument whose type conflicts between subgraphs produces only the merge error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createProductsSubgraph('b', '@shareable', 'filter: String'),
+          createProductsSubgraph('a', `@shareable ${cacheTag}`, 'filter: Filter', 'input Filter { category: String }'),
+        ],
+        '@cacheTag(format: "{$args.filter.category}")',
+      );
+    });
+
+    test('that a referenced argument whose Input Object type conflicts between subgraphs produces only the merge error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createProductsSubgraph('b', '@shareable', 'filter: OtherFilter', 'input OtherFilter { brand: String }'),
+          createProductsSubgraph('a', `@shareable ${cacheTag}`, 'filter: Filter', 'input Filter { category: String }'),
+        ],
+        '@cacheTag(format: "{$args.filter.category}")',
+      );
+    });
+
+    test('that a referenced required argument omitted by a subgraph produces only its own error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createProductsSubgraph('a', `@shareable ${cacheTag}`, 'id: ID!, region: String!'),
+          createProductsSubgraph('b', '@shareable'),
+        ],
+        '@cacheTag(format: "{$args.region}")',
+      );
+    });
+
+    test('that a referenced required Input Object field omitted by a subgraph produces only its own error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createProductsSubgraph(
+            'a',
+            `@shareable ${cacheTag}`,
+            'filter: Filter',
+            'input Filter { category: String brand: String! }',
+          ),
+          createProductsSubgraph('b', '@shareable', 'filter: Filter', 'input Filter { category: String }'),
+        ],
+        '@cacheTag(format: "{$args.filter.brand}")',
+      );
+    });
+
+    test('that a referenced required @fromContext argument produces only its own error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createSubgraph(
+            'a',
+            `
+            type Query @context(name: "q") {
+              products(id: ID!, ctx: String! @fromContext(field: "$q { x }")): [Product!]! ${cacheTag}
+              x: String
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+        ],
+        '@cacheTag(format: "{$args.ctx}")',
+      );
+    });
+
+    test('that a referenced required inaccessible argument produces only its own error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [createProductsSubgraph('a', cacheTag, 'id: ID!, region: String! @inaccessible')],
+        '@cacheTag(format: "{$args.region}")',
+      );
+    });
+
+    /* The argument is optional and inaccessible in "a" but required in "b".
+     * Federated in this order, the required-inaccessible error is not raised, so the reference is reported instead.
+     */
+    test('that a reference to an inaccessible argument that another subgraph requires is rejected', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createProductsSubgraph(
+            'a',
+            '@shareable @cacheTag(format: "products-{$args.region}")',
+            'id: ID!, region: String @inaccessible',
+          ),
+          createProductsSubgraph('b', '@shareable', 'id: ID!, region: String!'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          inaccessibleCacheTagReferenceErrorMessage({
+            coords: 'Query.products(region: ...)',
+            reference: 'region',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
   });
 
   describe('location tests', () => {
@@ -850,17 +1254,30 @@ describe('@cacheTag tests', () => {
   });
 });
 
-// Returns a subgraph that defines the Query field "products" with the given directives.
-function createProductsSubgraph(name: SubgraphName, directives: string): Subgraph {
+// Returns a subgraph that defines the Query field "products" with the given directives, arguments, and definitions.
+function createProductsSubgraph(
+  name: SubgraphName,
+  directives: string,
+  argumentDefinitions = 'id: ID!',
+  definitions = '',
+): Subgraph {
   return createSubgraph(
     name,
     `
     type Query {
-      products(id: ID!): [Product!]! ${directives}
+      products(${argumentDefinitions}): [Product!]! ${directives}
     }
     type Product @key(fields: "id") { id: ID! }
+    ${definitions}
   `,
   );
+}
+
+// Asserts that adding the directive to the subgraphs does not change the errors that federation produces.
+function expectErrorsUnchangedByCacheTag(createSubgraphs: (cacheTag: string) => Array<Subgraph>, cacheTag: string) {
+  const { errors: expectedErrors } = federateSubgraphsFailure(createSubgraphs(''), ROUTER_COMPATIBILITY_VERSION_ONE);
+  const { errors } = federateSubgraphsFailure(createSubgraphs(cacheTag), ROUTER_COMPATIBILITY_VERSION_ONE);
+  expect(errors).toStrictEqual(expectedErrors);
 }
 
 // Returns the CacheTagConfigurations for a type. Entity-caching config is nested under `.entityCaching`.

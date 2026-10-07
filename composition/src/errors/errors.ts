@@ -21,8 +21,10 @@ import {
   type invalidVersionLinkDirectiveUrlErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
+  type PartiallyDefinedCacheTagReferenceErrorMessageParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  type UnavailableCacheTagReferenceErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -2247,5 +2249,41 @@ export function invalidCacheTagArgumentTypeErrorMessage({
   return (
     `The "format" argument references "$args.${reference}", which is of type "${typeString}".` +
     ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable scalar or Enum.`
+  );
+}
+
+export function unavailableCacheTagReferencesError(fieldCoords: string, errorMessages: Array<string>): Error {
+  return new Error(
+    `The "@cacheTag" formats defined on the Query root field "${fieldCoords}"` +
+      ` reference values that never reach the subgraph:\n` +
+      errorMessages.join('\n'),
+  );
+}
+
+export function inaccessibleCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" is inaccessible.`;
+}
+
+export function fromContextCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@fromContext".`;
+}
+
+export function partiallyDefinedCacheTagReferenceErrorMessage({
+  coords,
+  parentCoords,
+  reference,
+  subgraphName,
+}: PartiallyDefinedCacheTagReferenceErrorMessageParams): string {
+  return (
+    ` Subgraph "${subgraphName}" references "$args.${reference}",` +
+    ` but "${coords}" is not defined in every subgraph that defines "${parentCoords}".`
   );
 }
