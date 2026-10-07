@@ -23,6 +23,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // TestResponseCacheMetrics covers the wg.response_cache.status attribute the
@@ -65,13 +66,13 @@ func TestResponseCacheMetrics(t *testing.T) {
 
 			counts := subgraphRequestsByCacheStatus(t, metricReader, "mood")
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss: 1,
-				core.ResponseCacheStatusHit:  1,
+				resolve.ResponseCacheStatusMiss.String(): 1,
+				resolve.ResponseCacheStatusHit.String():  1,
 			}, counts, "the first fetch missed and filled the cache, the second was answered from it")
 
 			counts = subgraphRequestsByCacheStatus(t, metricReader, "employees")
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss: 2,
+				resolve.ResponseCacheStatusMiss.String(): 2,
 			}, counts, "employees answers without Cache-Control, so it is never cached and every fetch is a miss")
 		})
 	})
@@ -109,8 +110,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 				seen[status.AsString()] += dp.Count
 			}
 			require.Equal(t, map[string]uint64{
-				core.ResponseCacheStatusMiss: 1,
-				core.ResponseCacheStatusHit:  1,
+				resolve.ResponseCacheStatusMiss.String(): 1,
+				resolve.ResponseCacheStatusHit.String():  1,
 			}, seen)
 		})
 	})
@@ -128,12 +129,12 @@ func TestResponseCacheMetrics(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
-			require.Equal(t, core.ResponseCacheStatusMiss, fetchSpanCacheStatus(t, exporter, "mood"))
+			require.Equal(t, resolve.ResponseCacheStatusMiss.String(), fetchSpanCacheStatus(t, exporter, "mood"))
 
 			exporter.Reset()
 
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
-			require.Equal(t, core.ResponseCacheStatusHit, fetchSpanCacheStatus(t, exporter, "mood"))
+			require.Equal(t, resolve.ResponseCacheStatusHit.String(), fetchSpanCacheStatus(t, exporter, "mood"))
 		})
 	})
 
@@ -193,7 +194,7 @@ func TestResponseCacheMetrics(t *testing.T) {
 			})
 
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusNotCacheable: 1,
+				resolve.ResponseCacheStatusNotCacheable.String(): 1,
 			}, subgraphRequestsByCacheStatus(t, metricReader, "employees"))
 		})
 	})
@@ -239,8 +240,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 				custom[value.AsString()] += dp.Value
 			}
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss: 1,
-				core.ResponseCacheStatusHit:  1,
+				resolve.ResponseCacheStatusMiss.String(): 1,
+				resolve.ResponseCacheStatusHit.String():  1,
 			}, custom)
 		})
 	})
@@ -288,7 +289,10 @@ func TestResponseCacheMetrics(t *testing.T) {
 				require.NotEmpty(t, fields["request_id"])
 				statuses = append(statuses, fields["cache_status"].(string))
 			}
-			require.Equal(t, []string{core.ResponseCacheStatusMiss, core.ResponseCacheStatusHit}, statuses,
+			require.Equal(t, []string{
+				resolve.ResponseCacheStatusMiss.String(),
+				resolve.ResponseCacheStatusHit.String(),
+			}, statuses,
 				"no request is sent for a hit, its fields must not depend on one")
 		})
 	})
@@ -336,8 +340,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 				byOperation[operation.AsString()+"/"+status.AsString()] += dp.Value
 			}
 			require.Equal(t, map[string]int64{
-				"Moods/" + core.ResponseCacheStatusMiss: 1,
-				"Moods/" + core.ResponseCacheStatusHit:  1,
+				"Moods/" + resolve.ResponseCacheStatusMiss.String(): 1,
+				"Moods/" + resolve.ResponseCacheStatusHit.String():  1,
 			}, byOperation)
 		})
 	})
@@ -356,13 +360,13 @@ func TestResponseCacheMetrics(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss: 1,
+				resolve.ResponseCacheStatusMiss.String(): 1,
 			}, routerRequestsByCacheStatus(t, metricReader))
 
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss:       1,
-				core.ResponseCacheStatusPartialHit: 1,
+				resolve.ResponseCacheStatusMiss.String():       1,
+				resolve.ResponseCacheStatusPartialHit.String(): 1,
 			}, routerRequestsByCacheStatus(t, metricReader), "mood was answered from the cache, employees was not")
 		})
 	})
@@ -402,22 +406,25 @@ func TestResponseCacheMetrics(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
 			require.Equal(t, map[string]int64{
-				core.ResponseCacheStatusMiss: 1,
-				core.ResponseCacheStatusHit:  1,
+				resolve.ResponseCacheStatusMiss.String(): 1,
+				resolve.ResponseCacheStatusHit.String():  1,
 			}, routerRequestsByCacheStatus(t, metricReader))
 
 			for _, name := range []string{"Operation - Execute", "query unnamed"} {
 				attrs := attribute.NewSet(spanByName(t, exporter, name).Attributes()...)
 				status, ok := attrs.Value(otel.WgOperationResponseCacheStatus)
 				require.True(t, ok, "span %q carries no cache status", name)
-				require.Equal(t, core.ResponseCacheStatusHit, status.AsString())
+				require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
 			}
 
 			var statuses []string
 			for _, entry := range xEnv.Observer().FilterField(zap.String("log_type", "request")).All() {
 				statuses = append(statuses, entry.ContextMap()["cache_status"].(string))
 			}
-			require.Equal(t, []string{core.ResponseCacheStatusMiss, core.ResponseCacheStatusHit}, statuses)
+			require.Equal(t, []string{
+				resolve.ResponseCacheStatusMiss.String(),
+				resolve.ResponseCacheStatusHit.String(),
+			}, statuses)
 		})
 	})
 
@@ -518,9 +525,9 @@ func TestResponseCacheMetrics(t *testing.T) {
 			require.Len(t, employees.entityRequests(), 2, "the cold alias sends the merged request out again")
 
 			counts := subgraphRequestsByCacheStatus(t, metricReader, "employees")
-			require.Equal(t, int64(1), counts[core.ResponseCacheStatusPartialHit],
+			require.Equal(t, int64(1), counts[resolve.ResponseCacheStatusPartialHit.String()],
 				"the second merged fetch went out, but the Employee in it was served from the cache")
-			require.Zero(t, counts[core.ResponseCacheStatusHit])
+			require.Zero(t, counts[resolve.ResponseCacheStatusHit.String()])
 		})
 	})
 }

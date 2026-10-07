@@ -269,7 +269,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		defer span.End()
 
 		exprCtx := &expr.Context{}
-		exprCtx.Subgraph.Response.Cache.Status = core.ResponseCacheStatusHit
+		exprCtx.Subgraph.Response.Cache.Status = resolve.ResponseCacheStatusHit.String()
 
 		subgraphLogger.Info("", subgraphLogger.RequestFields(ctx, &resolve.ResponseInfo{
 			StatusCode:       200,
@@ -280,7 +280,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		requestContext := logObserver.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
 			"log_type":     "client/subgraph",
-			"cache_status": core.ResponseCacheStatusHit,
+			"cache_status": resolve.ResponseCacheStatusHit.String(),
 			"trace_id":     span.SpanContext().TraceID().String(),
 		}
 		additionalExpectedKeys := []string{"request_id", "hostname", "pid"}

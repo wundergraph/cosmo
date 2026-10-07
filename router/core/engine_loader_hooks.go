@@ -61,29 +61,6 @@ type engineLoaderHooks struct {
 	responseCacheEnabled bool
 }
 
-// Values of the wg.response_cache.status attribute on subgraph metrics and spans.
-const (
-	ResponseCacheStatusHit        = "hit"
-	ResponseCacheStatusPartialHit = "partial_hit"
-	ResponseCacheStatusMiss       = "miss"
-	// ResponseCacheStatusNotCacheable is a fetch the cache was never asked about.
-	ResponseCacheStatusNotCacheable = "not_cacheable"
-)
-
-// responseCacheStatus reads what the cache did for a fetch.
-func responseCacheStatus(info *resolve.ResponseInfo) string {
-	switch info.ResponseCache.Status {
-	case resolve.ResponseCacheStatusHit:
-		return ResponseCacheStatusHit
-	case resolve.ResponseCacheStatusPartialHit:
-		return ResponseCacheStatusPartialHit
-	case resolve.ResponseCacheStatusMiss:
-		return ResponseCacheStatusMiss
-	default:
-		return ResponseCacheStatusNotCacheable
-	}
-}
-
 // fetchTypeNames names the types a fetch resolves fields of, for an entity
 // fetch the entity type. Several types are sorted and joined with a comma.
 func fetchTypeNames(rootFields []resolve.GraphCoordinate) string {
@@ -244,9 +221,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
-	var cacheStatus, storeDecision, typeNames string
+	cacheStatus := responseInfo.ResponseCache.Status
+	var cacheStatusName, storeDecision, typeNames string
 	if f.responseCacheEnabled {
-		cacheStatus = responseCacheStatus(responseInfo)
+		cacheStatusName = cacheStatus.String()
 		storeDecision = responseInfo.ResponseCache.StoreDecision.String()
 		typeNames = fetchTypeNames(responseInfo.RootFields)
 		reqContext.responseCache.record(cacheStatus)
@@ -269,7 +247,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	if f.responseCacheEnabled {
-		commonAttrs = append(commonAttrs, rotel.WgResponseCacheStatus.String(cacheStatus))
+		commonAttrs = append(commonAttrs, rotel.WgResponseCacheStatus.String(cacheStatusName))
 	}
 
 	traceAttrs := *reqContext.telemetry.AcquireAttributes()
@@ -286,7 +264,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		if storeDecision != "" {
 			traceAttrs = append(traceAttrs, rotel.WgResponseCacheStoreDecision.String(storeDecision))
 		}
-		if cacheStatus != ResponseCacheStatusNotCacheable {
+		if cacheStatus != resolve.ResponseCacheStatusNotCacheable {
 			lookup := float64(responseInfo.ResponseCache.LookupDuration) / float64(time.Millisecond)
 			traceAttrs = append(traceAttrs, rotel.WgResponseCacheLookupDurationMs.Float64(lookup))
 		}
@@ -303,7 +281,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil
 	// header map is safe; http.Header.Get returns an empty string.
 	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
-	exprCtx.Subgraph.Response.Cache.Status = cacheStatus
+	exprCtx.Subgraph.Response.Cache.Status = cacheStatusName
 	exprCtx.Subgraph.Response.Cache.StoreDecision = storeDecision
 	exprCtx.Subgraph.Response.Cache.LookupDuration = responseInfo.ResponseCache.LookupDuration
 	exprCtx.Subgraph.Response.Cache.EntityType = typeNames

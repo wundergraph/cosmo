@@ -264,9 +264,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
-			if cacheStatus := requestContext.responseCacheStatus(); cacheStatus != "" {
-				routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus))
-				requestContext.expressionContext.Response.Cache.Status = cacheStatus
+			if cacheStatus, ok := requestContext.responseCacheStatus(); ok {
+				routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+				requestContext.expressionContext.Response.Cache.Status = cacheStatus.String()
 			}
 
 			// Read the actual status code from the wrapped response w.

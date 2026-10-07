@@ -194,8 +194,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	defer graphqlExecutionSpan.End()
 	defer func() {
-		if cacheStatus := reqCtx.responseCacheStatus(); cacheStatus != "" {
-			graphqlExecutionSpan.SetAttributes(rotel.WgOperationResponseCacheStatus.String(cacheStatus))
+		if cacheStatus, ok := reqCtx.responseCacheStatus(); ok {
+			graphqlExecutionSpan.SetAttributes(rotel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
 		}
 	}()
 

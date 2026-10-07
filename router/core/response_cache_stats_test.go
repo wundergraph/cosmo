@@ -21,34 +21,45 @@ func TestResponseCacheStats(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		statuses []string
-		want     string
+		statuses []resolve.ResponseCacheStatus
+		want     resolve.ResponseCacheStatus
 	}{
-		{name: "no fetch has no status", want: ""},
 		{
-			name:     "every fetch a hit is a hit",
-			statuses: []string{ResponseCacheStatusHit, ResponseCacheStatusHit},
-			want:     ResponseCacheStatusHit,
+			name: "every fetch a hit is a hit",
+			statuses: []resolve.ResponseCacheStatus{
+				resolve.ResponseCacheStatusHit,
+				resolve.ResponseCacheStatusHit,
+			},
+			want: resolve.ResponseCacheStatusHit,
 		},
 		{
-			name:     "a hit next to a miss is a partial hit",
-			statuses: []string{ResponseCacheStatusHit, ResponseCacheStatusMiss},
-			want:     ResponseCacheStatusPartialHit,
+			name: "a hit next to a miss is a partial hit",
+			statuses: []resolve.ResponseCacheStatus{
+				resolve.ResponseCacheStatusHit,
+				resolve.ResponseCacheStatusMiss,
+			},
+			want: resolve.ResponseCacheStatusPartialHit,
 		},
 		{
 			name:     "a partial hit alone is a partial hit",
-			statuses: []string{ResponseCacheStatusPartialHit},
-			want:     ResponseCacheStatusPartialHit,
+			statuses: []resolve.ResponseCacheStatus{resolve.ResponseCacheStatusPartialHit},
+			want:     resolve.ResponseCacheStatusPartialHit,
 		},
 		{
-			name:     "a partial hit next to hits is a partial hit",
-			statuses: []string{ResponseCacheStatusHit, ResponseCacheStatusPartialHit},
-			want:     ResponseCacheStatusPartialHit,
+			name: "a partial hit next to hits is a partial hit",
+			statuses: []resolve.ResponseCacheStatus{
+				resolve.ResponseCacheStatusHit,
+				resolve.ResponseCacheStatusPartialHit,
+			},
+			want: resolve.ResponseCacheStatusPartialHit,
 		},
 		{
-			name:     "only misses is a miss",
-			statuses: []string{ResponseCacheStatusMiss, ResponseCacheStatusMiss},
-			want:     ResponseCacheStatusMiss,
+			name: "only misses is a miss",
+			statuses: []resolve.ResponseCacheStatus{
+				resolve.ResponseCacheStatusMiss,
+				resolve.ResponseCacheStatusMiss,
+			},
+			want: resolve.ResponseCacheStatusMiss,
 		},
 	}
 
@@ -60,9 +71,19 @@ func TestResponseCacheStats(t *testing.T) {
 			for _, status := range tt.statuses {
 				stats.record(status)
 			}
-			require.Equal(t, tt.want, stats.status())
+			status, ok := stats.status()
+			require.True(t, ok)
+			require.Equal(t, tt.want, status)
 		})
 	}
+
+	t.Run("no fetch has no status", func(t *testing.T) {
+		t.Parallel()
+
+		var stats responseCacheStats
+		_, ok := stats.status()
+		require.False(t, ok)
+	})
 
 	t.Run("fetches record concurrently", func(t *testing.T) {
 		t.Parallel()
@@ -71,13 +92,15 @@ func TestResponseCacheStats(t *testing.T) {
 		var wg sync.WaitGroup
 		for range 64 {
 			wg.Go(func() {
-				stats.record(ResponseCacheStatusHit)
+				stats.record(resolve.ResponseCacheStatusHit)
 			})
 		}
 		wg.Wait()
 
 		require.EqualValues(t, 64, stats.fetches.Load())
-		require.Equal(t, ResponseCacheStatusHit, stats.status())
+		status, ok := stats.status()
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusHit, status)
 	})
 
 	t.Run("a subscription has no status", func(t *testing.T) {
@@ -85,9 +108,10 @@ func TestResponseCacheStats(t *testing.T) {
 
 		rc := newTestRequestContext(t)
 		rc.operation.opType = OperationTypeSubscription
-		rc.responseCache.record(ResponseCacheStatusHit)
+		rc.responseCache.record(resolve.ResponseCacheStatusHit)
 
-		require.Empty(t, rc.responseCacheStatus())
+		_, ok := rc.responseCacheStatus()
+		require.False(t, ok)
 	})
 }
 
@@ -122,13 +146,13 @@ func TestFinishResponseCacheStatus(t *testing.T) {
 		t.Parallel()
 
 		rc := newTestRequestContext(t)
-		rc.responseCache.record(ResponseCacheStatusHit)
-		rc.responseCache.record(ResponseCacheStatusMiss)
+		rc.responseCache.record(resolve.ResponseCacheStatusHit)
+		rc.responseCache.record(resolve.ResponseCacheStatusMiss)
 
 		attrs := finish(t, rc)
 		status, ok := attrs.Value(rotel.WgOperationResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
 	})
 
 	t.Run("nothing is attached when no fetch was counted", func(t *testing.T) {
@@ -160,7 +184,9 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		})
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK})
 
-		require.Equal(t, ResponseCacheStatusPartialHit, rc.responseCacheStatus(),
+		status, ok := rc.responseCacheStatus()
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit, status,
 			"a fetch that is not cacheable counts against a hit")
 	})
 
@@ -179,7 +205,9 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 			},
 		})
 
-		require.Equal(t, ResponseCacheStatusHit, rc.responseCacheStatus())
+		status, ok := rc.responseCacheStatus()
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusHit, status)
 	})
 
 	t.Run("nothing is counted while the cache is not enabled", func(t *testing.T) {
@@ -191,6 +219,7 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		ctx, rc := setupTestContext(t, tp)
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK})
 
-		require.Empty(t, rc.responseCacheStatus())
+		_, ok := rc.responseCacheStatus()
+		require.False(t, ok)
 	})
 }

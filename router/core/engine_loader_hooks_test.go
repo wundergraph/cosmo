@@ -714,7 +714,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
 	})
 
 	t.Run("a hit with no life left is still a hit", func(t *testing.T) {
@@ -727,7 +727,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
 	})
 
 	t.Run("a fetch that went out with cached entries in it is a partial hit", func(t *testing.T) {
@@ -740,7 +740,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
 	})
 
 	t.Run("a fetch the cache had nothing for is a miss", func(t *testing.T) {
@@ -760,7 +760,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusMiss, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusMiss.String(), status.AsString())
 
 		decision, ok := attrs.Value(rotel.WgResponseCacheStoreDecision)
 		require.True(t, ok)
@@ -783,7 +783,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusNotCacheable, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusNotCacheable.String(), status.AsString())
 
 		_, ok = attrs.Value(rotel.WgResponseCacheStoreDecision)
 		require.False(t, ok)
@@ -811,7 +811,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
-		require.Equal(t, ResponseCacheStatusPartialHit, status.AsString())
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
 	})
 
 	t.Run("the access log of a hit carries the expression fields", func(t *testing.T) {
@@ -841,7 +841,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 
 		require.Equal(t, 1, logs.Len())
 		fields := logs.All()[0].ContextMap()
-		require.Equal(t, ResponseCacheStatusHit, fields["cache_status"])
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), fields["cache_status"])
 		require.Equal(t, trace.SpanFromContext(ctx).SpanContext().TraceID().String(), fields["trace_id"])
 		require.Contains(t, fields, "request_id")
 	})
