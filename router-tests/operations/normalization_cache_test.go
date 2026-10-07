@@ -47,7 +47,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employee"`),
 					Query:         `query Employee( $id: Int! = 4 $withAligators: Boolean! $withCats: Boolean! $skipDogs:Boolean! $skipMouses:Boolean! ) { employee(id: $id) { details { pets { name __typename ...AlligatorFields @include(if: $withAligators) ...CatFields @include(if: $withCats) ...DogFields @skip(if: $skipDogs) ...MouseFields @skip(if: $skipMouses) ...PonyFields @include(if: false) } } } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`,
-					Variables:     []byte(fmt.Sprintf(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": %t}`, skipMouse)),
+					Variables:     fmt.Appendf(nil, `{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": %t}`, skipMouse),
 				})
 				assertCacheHeaders(t, res, expected)
 				require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)

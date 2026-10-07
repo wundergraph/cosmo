@@ -150,7 +150,7 @@ func TestStore(t *testing.T) {
 
 		// Fire multiple updates; channel coalescing means not all will be processed,
 		// but those that are must run sequentially (max concurrency = 1).
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			store.Load(&Manifest{
 				Version:    1,
 				Revision:   fmt.Sprintf("rev-%d", i),

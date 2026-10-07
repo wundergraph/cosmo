@@ -2,6 +2,7 @@ package graphqlschemausage
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -200,7 +201,8 @@ func setupLargeFieldsBenchmark(b *testing.B, fieldCount int) (plan.Plan, *ast.Do
 	b.Helper()
 
 	// Generate schema with many fields
-	schemaBuilder := `
+	var schemaBuilder strings.Builder
+	schemaBuilder.WriteString(`
 		type Query {
 			user(id: ID!): User
 		}
@@ -208,32 +210,33 @@ func setupLargeFieldsBenchmark(b *testing.B, fieldCount int) (plan.Plan, *ast.Do
 		type User {
 			id: ID!
 			name: String!
-	`
+	`)
 
 	// Add many scalar fields
-	for i := 0; i < fieldCount; i++ {
+	for i := range fieldCount {
 		fieldName := fmt.Sprintf("field%d", i)
-		schemaBuilder += "\n\t\t\t" + fieldName + ": String"
+		schemaBuilder.WriteString("\n\t\t\t" + fieldName + ": String")
 	}
 
-	schemaBuilder += "\n\t\t}"
+	schemaBuilder.WriteString("\n\t\t}")
 
 	// Generate query selecting all fields
-	queryBuilder := "query GetUser($id: ID!) {\n\t\tuser(id: $id) {\n\t\t\tid\n\t\t\tname\n"
-	for i := 0; i < fieldCount; i++ {
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString("query GetUser($id: ID!) {\n\t\tuser(id: $id) {\n\t\t\tid\n\t\t\tname\n")
+	for i := range fieldCount {
 		fieldName := fmt.Sprintf("field%d", i)
-		queryBuilder += "\t\t\t" + fieldName + "\n"
+		queryBuilder.WriteString("\t\t\t" + fieldName + "\n")
 	}
-	queryBuilder += "\t\t}\n\t}"
+	queryBuilder.WriteString("\t\t}\n\t}")
 
 	variables := `{"id":"123"}`
 
 	// Parse schema
-	def, rep := astparser.ParseGraphqlDocumentString(schemaBuilder)
+	def, rep := astparser.ParseGraphqlDocumentString(schemaBuilder.String())
 	require.False(b, rep.HasErrors())
 
 	// Parse operation
-	op, rep := astparser.ParseGraphqlDocumentString(queryBuilder)
+	op, rep := astparser.ParseGraphqlDocumentString(queryBuilder.String())
 	require.False(b, rep.HasErrors())
 
 	// Merge and normalize
@@ -251,7 +254,7 @@ func setupLargeFieldsBenchmark(b *testing.B, fieldCount int) (plan.Plan, *ast.Do
 
 	// Build field names list for metadata
 	fieldNames := []string{"id", "name"}
-	for i := 0; i < fieldCount; i++ {
+	for i := range fieldCount {
 		fieldName := fmt.Sprintf("field%d", i)
 		fieldNames = append(fieldNames, fieldName)
 	}

@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.356.0](https://github.com/wundergraph/cosmo/compare/router@0.355.0...router@0.356.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+* **router:** expose prompt-to-query via MCP ([#3158](https://github.com/wundergraph/cosmo/issues/3158)) ([5edfe1c](https://github.com/wundergraph/cosmo/commit/5edfe1c06fc95a8ff4b8943ecb99fe42712b434b)) (@fiam)
+
+### Bug Fixes
+
+* **router:** allow fallback_storage alongside storage in execution config schema ([#3319](https://github.com/wundergraph/cosmo/issues/3319)) ([26ea216](https://github.com/wundergraph/cosmo/commit/26ea216a639844badd6460cf2d50dd604182f741)) (@endigma)
+* **router:** allow printable ASCII persisted operation IDs ([#3324](https://github.com/wundergraph/cosmo/issues/3324)) ([1b05365](https://github.com/wundergraph/cosmo/commit/1b0536571c410c51d5f845a8b30e034f9c8877c1)) (@fiam)
+* **router:** honor persisted operation cache hits during warmup ([#3291](https://github.com/wundergraph/cosmo/issues/3291)) ([1846be1](https://github.com/wundergraph/cosmo/commit/1846be1846142450b01eb3cb65d8d6e6bd578144)) (@fiam)
+
+## [0.355.0](https://github.com/wundergraph/cosmo/compare/router@0.354.0...router@0.355.0) (2026-10-02)
+
+### Features
+
+* **router:** honor Cache-Control request directives: no-cache, no-store ([#3267](https://github.com/wundergraph/cosmo/issues/3267)) ([eedc06c](https://github.com/wundergraph/cosmo/commit/eedc06cadd87d03193b1bc06da19fa066bd07c4b)) (@ysmolski)
+* **router:** support custom persisted operation IDs ([#3282](https://github.com/wundergraph/cosmo/issues/3282)) ([8998414](https://github.com/wundergraph/cosmo/commit/89984146174eaff55ddba1ffe575e70948e0091b)) (@fiam)
+
+### Bug Fixes
+
+* **router:** return not-found for missing S3 persisted operations ([#3306](https://github.com/wundergraph/cosmo/issues/3306)) ([01953b5](https://github.com/wundergraph/cosmo/commit/01953b5608ee514edc42666c90fffa679b78042d)) (@fiam)
+
 ## [0.354.0](https://github.com/wundergraph/cosmo/compare/router@0.353.0...router@0.354.0) (2026-09-28)
 
 ### Features

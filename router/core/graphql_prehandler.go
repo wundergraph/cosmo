@@ -510,8 +510,8 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, re
 
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
-	// If it has a hash already AND a body, we need to compute the hash again to ensure it matches the persisted hash
-	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+	// APQ requests with a body must match their supplied hash.
+	if operationKit.persistedQueryHashMustMatchQuery() {
 		return true
 	}
 
@@ -581,10 +581,11 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	// Compute the operation sha256 hash as soon as possible for observability reasons
+	// Populate operation telemetry before resolving persisted operations.
 	if h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
-			// No query body to hash; use the client-provided persisted hash for telemetry.
+		if operationKit.hasCustomPersistedOperationID() ||
+			(operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()) {
+			// Preserve the supplied persisted ID in telemetry, including custom IDs.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
 
@@ -615,8 +616,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 	}
 
-	// Ensure if request has both hash and query, that the hash matches the query
-	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
+	// APQ IDs must match the supplied query body.
+	if operationKit.persistedQueryHashMustMatchQuery() {
 		if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
 			return &httpGraphqlError{
 				message:    "persistedQuery sha256 hash does not match query body",
@@ -668,8 +669,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				// persisted operation are logged above. We only allow execution to continue
 				// when the request includes a query body (the ad-hoc query to run) and
 				// safelist is not enforced. Hash-only requests without a body have nothing
-				// to execute, so we always return the not-found error in that case.
-				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" {
+				// to execute, so we always return the not-found error in that case. Custom
+				// IDs don't identify their body, so an unknown custom ID is always rejected.
+				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" && !operationKit.hasCustomPersistedOperationID() {
 					err = nil
 				}
 			}
@@ -687,7 +689,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	// can do it because manifest cache entries are scoped to the captured revision.
+	// Operations outside a manifest must remain immutable within their storage scope.
 	if !skipParse {
 		parseCtx, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
@@ -1392,7 +1395,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
 		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (any, error) {
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {

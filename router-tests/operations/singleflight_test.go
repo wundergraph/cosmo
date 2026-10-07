@@ -37,7 +37,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -76,7 +76,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -108,7 +108,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -140,7 +140,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -189,7 +189,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for i := range numOfOperations {
 				go func(i int64) {
 					ready.Done()
 					defer done.Done()
@@ -241,7 +241,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -295,7 +295,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					defer done.Done()
 
@@ -377,7 +377,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					defer done.Done()
 
@@ -469,7 +469,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					defer done.Done()
 
@@ -569,7 +569,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
-			for i := int64(0); i < numOfOperations; i++ {
+			for i := range numOfOperations {
 				go func(index int64) {
 					defer done.Done()
 
@@ -642,7 +642,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -691,7 +691,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -733,7 +733,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -784,14 +784,14 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for i := range numOfOperations {
 				go func(index int64) {
 					ready.Done()
 					defer done.Done()
 					<-trigger
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query:     `query($id: Int!) { employee(id: $id) { id tag details { forename } } }`,
-						Variables: []byte(fmt.Sprintf(`{"id": %d}`, index)),
+						Variables: fmt.Appendf(nil, `{"id": %d}`, index),
 					})
 					v, err := astjson.Parse(res.Body)
 					require.NoError(t, err)
@@ -845,7 +845,7 @@ func TestSingleFlight(t *testing.T) {
 			ready.Add(int(numOfOperations))
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
-			for i := int64(0); i < numOfOperations; i++ {
+			for i := range numOfOperations {
 				go func(index int64) {
 					ready.Done()
 					defer done.Done()
@@ -889,7 +889,7 @@ func TestSingleFlight(t *testing.T) {
 			for _, id := range variableValues {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
-					Variables: []byte(fmt.Sprintf(`{"id": %d}`, id)),
+					Variables: fmt.Appendf(nil, `{"id": %d}`, id),
 				})
 				v, err := astjson.Parse(res.Body)
 				require.NoError(t, err)
@@ -917,7 +917,7 @@ func TestSingleFlight(t *testing.T) {
 
 			idx := 0
 			for _, id := range variableValues {
-				for j := 0; j < numPerVariable; j++ {
+				for range numPerVariable {
 					slot := idx
 					varVal := id
 					done.Go(func() {
@@ -925,7 +925,7 @@ func TestSingleFlight(t *testing.T) {
 						<-trigger
 						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 							Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
-							Variables: []byte(fmt.Sprintf(`{"id": %d}`, varVal)),
+							Variables: fmt.Appendf(nil, `{"id": %d}`, varVal),
 						})
 						results[slot] = result{body: res.Body, requested: varVal}
 					})
@@ -1330,7 +1330,7 @@ func runConcurrentSingleflightRequests(t *testing.T, xEnv *testenv.Environment, 
 	ready.Add(n)
 	trigger := make(chan struct{})
 	responses := make([]*testenv.TestResponse, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		idx := i
 		done.Go(func() {
 			ready.Done()

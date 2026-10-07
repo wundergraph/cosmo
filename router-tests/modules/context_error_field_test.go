@@ -30,7 +30,7 @@ func TestContextErrorModule(t *testing.T) {
 		require.NoError(t, err)
 
 		cfg := config.Config{
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"contextErrorModule": contexterror.ContextErrorModule{},
 			},
 		}
@@ -63,7 +63,7 @@ func TestContextErrorModule(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"contextErrorModule": contexterror.ContextErrorModule{},
 			},
 		}
@@ -126,7 +126,7 @@ func TestContextErrorModule(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"contextErrorModule": contexterror.ContextErrorModule{},
 			},
 		}

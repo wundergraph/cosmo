@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -277,9 +278,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 					propagation.m.Lock()
 					defer propagation.m.Unlock()
-					for k, v := range headers {
-						propagation.header[k] = v
-					}
+					maps.Copy(propagation.header, headers)
 				},
 			)
 		}
