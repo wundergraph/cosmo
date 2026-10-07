@@ -73,7 +73,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 			counts = subgraphRequestsByCacheStatus(t, metricReader, "employees")
 			require.Equal(t, map[string]int64{
 				resolve.ResponseCacheStatusMiss.String(): 2,
-			}, counts, "employees answers without Cache-Control, so it is never cached and every fetch is a miss")
+			}, counts,
+				"employees answers without Cache-Control, so it is never cached and every fetch is a miss")
 		})
 	})
 
@@ -369,7 +370,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 			require.Equal(t, map[string]int64{
 				resolve.ResponseCacheStatusMiss.String():       1,
 				resolve.ResponseCacheStatusPartialHit.String(): 1,
-			}, routerRequestsByCacheStatus(t, metricReader), "mood was answered from the cache, employees was not")
+			}, routerRequestsByCacheStatus(t, metricReader),
+				"mood was answered from the cache, employees was not")
 		})
 	})
 
@@ -439,7 +441,9 @@ func TestResponseCacheMetrics(t *testing.T) {
 			MetricReader:  metricReader,
 			RouterOptions: memoryCacheOptions(t, nil),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { __schema { queryType { name } } }`})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { __schema { queryType { name } } }`,
+			})
 
 			require.Equal(t, map[string]int64{"": 1}, routerRequestsByCacheStatus(t, metricReader))
 		})
@@ -543,7 +547,9 @@ func collectMetrics(t *testing.T, reader *metric.ManualReader) metricdata.Resour
 
 // subgraphRequestsByCacheStatus sums router.http.requests for one subgraph,
 // keyed by wg.response_cache.status. Fetches without the attribute land under "".
-func subgraphRequestsByCacheStatus(t *testing.T, reader *metric.ManualReader, subgraph string) map[string]int64 {
+func subgraphRequestsByCacheStatus(
+	t *testing.T, reader *metric.ManualReader, subgraph string,
+) map[string]int64 {
 	t.Helper()
 
 	rm := collectMetrics(t, reader)
@@ -602,7 +608,9 @@ func spanByName(t *testing.T, exporter *oteltracetest.InMemoryExporter, name str
 }
 
 // fetchSpanFor is the Engine - Fetch span of one subgraph among the exported spans.
-func fetchSpanFor(t *testing.T, exporter *oteltracetest.InMemoryExporter, subgraph string) sdktrace.ReadOnlySpan {
+func fetchSpanFor(
+	t *testing.T, exporter *oteltracetest.InMemoryExporter, subgraph string,
+) sdktrace.ReadOnlySpan {
 	t.Helper()
 
 	for _, span := range exporter.GetSpans().Snapshots() {

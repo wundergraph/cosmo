@@ -546,7 +546,9 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			applyResponseCacheLifetime(headers, &resolve.ResponseInfo{
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
-				ResponseCache:    resolve.ResponseCacheInfo{Status: cacheStatusOf(tt.hit, tt.partial)},
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: cacheStatusOf(tt.hit, tt.partial),
+				},
 			})
 
 			if tt.want == nil {
@@ -643,7 +645,9 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 				StatusCode:       http.StatusOK,
 				ResponseCacheHit: true,
 				ResponseCacheTTL: 30 * time.Second,
-				ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: resolve.ResponseCacheStatusHit,
+				},
 			})
 
 			require.Equal(t, tt.want, client.header.Get(cacheControlKey))
@@ -710,7 +714,9 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
@@ -723,7 +729,9 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
@@ -736,7 +744,9 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
@@ -807,7 +817,9 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
 			StatusCode:       http.StatusOK,
 			ResponseCacheTTL: 0,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
 		})
 		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
 		require.True(t, ok)
@@ -823,8 +835,10 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		accessLogger := requestlogger.NewSubgraphAccessLogger(zap.New(zCore), requestlogger.SubgraphOptions{
-			FieldsHandler:  SubgraphAccessLogsFieldHandler,
-			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+			FieldsHandler: SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{
+				{Key: "cache_status", Expr: program},
+			},
 		})
 
 		tp := sdktrace.NewTracerProvider()
@@ -836,7 +850,9 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 			StatusCode:       http.StatusOK,
 			ResponseCacheHit: true,
 			ResponseCacheTTL: time.Minute,
-			ResponseCache:    resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit},
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
 		})
 
 		require.Equal(t, 1, logs.Len())

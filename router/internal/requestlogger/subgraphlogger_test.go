@@ -232,14 +232,15 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			},
 		})
 
-		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
+		fields := subgraphLogger.RequestFields(context.Background(), &resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        errors.New("my-test-error"),
 			Request:    nil,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil))
+		}, nil)
+		subgraphLogger.Info("subgraph error", fields)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -262,8 +263,10 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		require.NoError(t, err)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
-			FieldsHandler:  core.SubgraphAccessLogsFieldHandler,
-			ExprAttributes: []requestlogger.ExpressionAttribute{{Key: "cache_status", Expr: program}},
+			FieldsHandler: core.SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{
+				{Key: "cache_status", Expr: program},
+			},
 		})
 
 		ctx, span := sdktrace.NewTracerProvider().Tracer("test").Start(context.Background(), "Engine - Fetch")

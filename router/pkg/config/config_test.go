@@ -197,7 +197,8 @@ telemetry:
 	cfg, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Attributes, 1)
-	require.Equal(t, "subgraph.response.cache.status", cfg.Config.Telemetry.Metrics.Attributes[0].ValueFrom.Expression)
+	attr := cfg.Config.Telemetry.Metrics.Attributes[0]
+	require.Equal(t, "subgraph.response.cache.status", attr.ValueFrom.Expression)
 }
 
 func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
