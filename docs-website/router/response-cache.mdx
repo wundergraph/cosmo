@@ -607,7 +607,7 @@ telemetry:
       response_cache: true
 ```
 
-They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). Apart from `router.response_cache.fetches` they describe the cache as a whole and are not split by subgraph or operation.
+They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). Apart from `router.response_cache.fetches` they describe calls to the store, split by store operation (`lookup`, `write`, `invalidate`), not by GraphQL operation. Only engine failures carry the subgraph, when it is known.
 
 A lookup asks for every entity under its shared key and, when the request carries a user id for [private responses](#private-responses), under that user's key as well. At most one of the two is found, so the keys counted as `missing` are no measure of the hit rate. Use the [status of the fetches](#per-fetch) for that.
 
@@ -643,7 +643,7 @@ sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", w
 sum(rate(router_response_cache_keys_total{wg_response_cache_operation="lookup", wg_response_cache_result="found"}[5m]))
 ```
 
-The lifetime entries are written with, which is what the subgraphs ask for in `Cache-Control`:
+The lifetime entries are written with, which is what the subgraphs ask for in `Cache-Control`. Each write records one value, the shortest TTL among its entries, so this is not the median lifetime of every entry:
 
 ```promql
 histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_seconds_bucket[15m])))
@@ -651,7 +651,7 @@ histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_second
 
 #### Cache-hostile types
 
-`router.response_cache.fetches` counts every subgraph fetch by subgraph, by the type it resolves and by its [store decision](#store-decision). It tells which types are never answered from the cache, and why:
+`router.response_cache.fetches` counts every subgraph fetch by subgraph, by the type it resolves and by its [store decision](#store-decision). The types that miss the cache most often, and why. A busy type can rank high even if most of its fetches hit, so compare against its hits before calling it cache-hostile:
 
 ```promql
 topk(10,
