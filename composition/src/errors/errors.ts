@@ -2210,8 +2210,8 @@ export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<s
   );
 }
 
-export function emptyCacheTagFormatErrorMessage(): string {
-  return `The argument "format" must be provided a non-empty string.`;
+export function blankCacheTagFormatErrorMessage(): string {
+  return `The argument "format" must be provided a string that is neither empty nor only whitespace.`;
 }
 
 export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {

@@ -121,7 +121,7 @@ import {
   type SubscriptionFilterValue,
 } from '../../router-configuration/types';
 import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
-import { FEDERATED_DIRECTIVE_DATAS, isNodeQuery, parseCacheTagFormat } from '../normalization/utils';
+import { FEDERATED_DIRECTIVE_DATAS, isNodeQuery } from '../normalization/utils';
 import {
   type AuthorizationData,
   type ChildData,
@@ -1048,6 +1048,10 @@ export class FederationFactory {
       source: incomingData.nullLevelsBySubgraphName,
       target: targetData.nullLevelsBySubgraphName,
     });
+    addMapEntries({
+      source: incomingData.cacheTagDataBySubgraphName,
+      target: targetData.cacheTagDataBySubgraphName,
+    });
     addIterableToSet({
       source: incomingData.subgraphNames,
       target: targetData.subgraphNames,
@@ -1201,6 +1205,7 @@ export class FederationFactory {
         isInaccessible,
         sourceData.federatedCoords,
       ),
+      cacheTagDataBySubgraphName: new Map(sourceData.cacheTagDataBySubgraphName),
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
       directivesByName: copyArrayValueMap(sourceData.directivesByName),
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
@@ -2012,6 +2017,9 @@ export class FederationFactory {
    * so formats that differ between the subgraphs resolving that field produce tags that depend on the query plan.
    */
   validateCacheTagFormats(fieldData: FieldData) {
+    if (fieldData.cacheTagDataBySubgraphName.size < 1) {
+      return;
+    }
     const formatsBySubgraphName = new Map<SubgraphName, Set<string>>();
     const errorMessages = new Set<string>();
     // A subgraph from which the field is overridden is absent from isShareableBySubgraphName.
@@ -2020,20 +2028,12 @@ export class FederationFactory {
       if (externalFieldData && !externalFieldData.isUnconditionallyProvided) {
         continue;
       }
-      const configurations =
-        this.internalSubgraphBySubgraphName.get(subgraphName)?.configurationDataByTypeName.get(QUERY)?.entityCaching
-          ?.cacheTagConfigurations ?? [];
-      const formats = new Set(
-        configurations.filter(({ fieldName }) => fieldName === fieldData.name).map(({ format }) => format),
-      );
-      formatsBySubgraphName.set(subgraphName, formats);
-      for (const format of formats) {
-        // Normalization has already reported any malformed placeholder.
-        for (const { reference } of parseCacheTagFormat(format, [])) {
-          const errorMessage = this.getUnavailableCacheTagReferenceErrorMessage(fieldData, subgraphName, reference);
-          if (errorMessage) {
-            errorMessages.add(errorMessage);
-          }
+      const cacheTagData = fieldData.cacheTagDataBySubgraphName.get(subgraphName);
+      formatsBySubgraphName.set(subgraphName, cacheTagData?.formats ?? new Set<string>());
+      for (const reference of cacheTagData?.references ?? []) {
+        const errorMessage = this.getUnavailableCacheTagReferenceErrorMessage(fieldData, subgraphName, reference);
+        if (errorMessage) {
+          errorMessages.add(errorMessage);
         }
       }
     }

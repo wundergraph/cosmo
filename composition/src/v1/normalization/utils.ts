@@ -143,7 +143,13 @@ import {
   CACHE_TAG,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { type CacheTagPlaceholder, type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
+import {
+  type CacheTagPlaceholder,
+  type FieldSetData,
+  type KeyFieldSetData,
+  type LinkImportData,
+  type ParsedCacheTagFormat,
+} from './types/types';
 import { type DirectiveName } from '../../types/types';
 import {
   type ExtractImportUrlSegmentsResult,
@@ -486,25 +492,30 @@ export function validateArgumentTemplateReferences(
   }
 }
 
-/* Returns the placeholders of a @cacheTag format and pushes an error message for each malformed one.
+/* Returns the placeholders of a @cacheTag format and its canonical form,
+ * and pushes an error message for each malformed placeholder.
+ * The canonical form removes the whitespace within each placeholder,
+ * so formats that produce the same tags are equal.
  * Whether a placeholder's namespace and reference are valid for the field is checked by the caller.
  */
-export function parseCacheTagFormat(format: string, errorMessages: Array<string>): Array<CacheTagPlaceholder> {
+export function parseCacheTagFormat(format: string, errorMessages: Array<string>): ParsedCacheTagFormat {
   const placeholders: Array<CacheTagPlaceholder> = [];
-  for (const [, body] of format.matchAll(CACHE_TAG_SEGMENT_REGEXP)) {
+  const canonicalFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment: string, body: string) => {
     const match = CACHE_TAG_PLACEHOLDER_REGEXP.exec(body);
     if (!match) {
       errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
-      continue;
+      return segment;
     }
     // The only whitespace a reference can contain surrounds its periods.
-    placeholders.push({ namespace: match[1], reference: match[2].replace(/\s/g, '') });
-  }
+    const placeholder: CacheTagPlaceholder = { namespace: match[1], reference: match[2].replace(/\s/g, '') };
+    placeholders.push(placeholder);
+    return `{$${placeholder.namespace}.${placeholder.reference}}`;
+  });
   // A brace that remains once every placeholder is removed is unpaired.
   if (/[{}]/.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {
     errorMessages.push(invalidCacheTagBraceErrorMessage(format));
   }
-  return placeholders;
+  return { canonicalFormat, placeholders };
 }
 
 export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefinitionData> {
