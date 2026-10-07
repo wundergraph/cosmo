@@ -67,11 +67,11 @@ func TestResponseCacheStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var stats responseCacheStats
+			rc := newTestRequestContext(t)
 			for _, status := range tt.statuses {
-				stats.record(status)
+				rc.responseCache.record(status)
 			}
-			status, ok := stats.status()
+			status, ok := rc.responseCacheStatus()
 			require.True(t, ok)
 			require.Equal(t, tt.want, status)
 		})
@@ -80,39 +80,40 @@ func TestResponseCacheStats(t *testing.T) {
 	t.Run("no fetch has no status", func(t *testing.T) {
 		t.Parallel()
 
-		var stats responseCacheStats
-		_, ok := stats.status()
+		_, ok := newTestRequestContext(t).responseCacheStatus()
 		require.False(t, ok)
 	})
 
 	t.Run("fetches record concurrently", func(t *testing.T) {
 		t.Parallel()
 
-		var stats responseCacheStats
+		rc := newTestRequestContext(t)
 		var wg sync.WaitGroup
 		for range 64 {
 			wg.Go(func() {
-				stats.record(resolve.ResponseCacheStatusHit)
+				rc.responseCache.record(resolve.ResponseCacheStatusHit)
 			})
 		}
 		wg.Wait()
 
-		require.EqualValues(t, 64, stats.fetches.Load())
-		status, ok := stats.status()
+		require.EqualValues(t, 64, rc.responseCache.fetches.Load())
+		status, ok := rc.responseCacheStatus()
 		require.True(t, ok)
 		require.Equal(t, resolve.ResponseCacheStatusHit, status)
 	})
 
-	t.Run("a subscription has no status", func(t *testing.T) {
-		t.Parallel()
+	for _, opType := range []OperationType{OperationTypeSubscription, OperationTypeMutation} {
+		t.Run("a "+opType+" has no status", func(t *testing.T) {
+			t.Parallel()
 
-		rc := newTestRequestContext(t)
-		rc.operation.opType = OperationTypeSubscription
-		rc.responseCache.record(resolve.ResponseCacheStatusHit)
+			rc := newTestRequestContext(t)
+			rc.operation.opType = opType
+			rc.responseCache.record(resolve.ResponseCacheStatusNotCacheable)
 
-		_, ok := rc.responseCacheStatus()
-		require.False(t, ok)
-	})
+			_, ok := rc.responseCacheStatus()
+			require.False(t, ok)
+		})
+	}
 }
 
 // requestCountSpy keeps the attributes the request counter was measured with.

@@ -305,26 +305,21 @@ func (s *responseCacheStats) record(status resolve.ResponseCacheStatus) {
 	}
 }
 
-func (s *responseCacheStats) status() (resolve.ResponseCacheStatus, bool) {
-	fetches, hits := s.fetches.Load(), s.hits.Load()
+func (c *requestContext) responseCacheStatus() (resolve.ResponseCacheStatus, bool) {
+	if c.operation.opType == OperationTypeSubscription || c.operation.opType == OperationTypeMutation {
+		return resolve.ResponseCacheStatusNotCacheable, false
+	}
+	fetches, hits := c.responseCache.fetches.Load(), c.responseCache.hits.Load()
 	switch {
 	case fetches == 0:
 		return resolve.ResponseCacheStatusNotCacheable, false
 	case hits == fetches:
 		return resolve.ResponseCacheStatusHit, true
-	case hits > 0 || s.partialHits.Load() > 0:
+	case hits > 0 || c.responseCache.partialHits.Load() > 0:
 		return resolve.ResponseCacheStatusPartialHit, true
 	default:
 		return resolve.ResponseCacheStatusMiss, true
 	}
-}
-
-// responseCacheStatus is what the response cache did for the response as a whole.
-func (c *requestContext) responseCacheStatus() (resolve.ResponseCacheStatus, bool) {
-	if c.operation != nil && c.operation.opType == OperationTypeSubscription {
-		return resolve.ResponseCacheStatusNotCacheable, false
-	}
-	return c.responseCache.status()
 }
 
 type headerBuilder struct {

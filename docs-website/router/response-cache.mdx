@@ -557,7 +557,7 @@ The router request carries `wg.operation.response_cache.status` on its metrics, 
 | `partial_hit` | At least one fetch was answered from the cache, in whole or in part. |
 | `miss` | No fetch was answered from the cache. |
 
-A fetch that is not answered from the cache counts against a hit, whether it missed or is not cacheable, so a response is a `hit` only when nothing was sent at all. The attribute is left out when no subgraph was fetched, as for introspection or a request that failed before it was executed, and for subscriptions. Operations over WebSocket do not carry it.
+A fetch that is not answered from the cache counts against a hit, whether it missed or is not cacheable, so a response is a `hit` only when nothing was sent at all. The attribute is left out when no subgraph was fetched, as for introspection or a request that failed before it was executed, and for subscriptions and mutations. Operations over WebSocket do not carry it.
 
 The fraction of responses served from the cache:
 

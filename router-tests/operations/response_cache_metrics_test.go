@@ -196,6 +196,8 @@ func TestResponseCacheMetrics(t *testing.T) {
 			require.Equal(t, map[string]int64{
 				resolve.ResponseCacheStatusNotCacheable.String(): 1,
 			}, subgraphRequestsByCacheStatus(t, metricReader, "employees"))
+			require.Equal(t, map[string]int64{"": 1}, routerRequestsByCacheStatus(t, metricReader),
+				"a mutation has no status")
 		})
 	})
 
