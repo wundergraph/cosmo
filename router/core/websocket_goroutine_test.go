@@ -206,9 +206,11 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			server, client := net.Pipe()
-			t.Cleanup(func() { _ = client.Close() })
 			conn := newWSConnectionWrapper(t.Context(), server, 0, 0, tc.useNetPoll)
-			t.Cleanup(func() { _ = conn.Close() })
+			t.Cleanup(func() {
+				_ = conn.Close()
+				_ = client.Close()
+			})
 			result := make(chan error, 1)
 			go func() { result <- conn.WriteText("blocked") }()
 			require.Eventually(t, func() bool {
