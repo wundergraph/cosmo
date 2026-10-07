@@ -308,7 +308,6 @@ func (s *Server) Reload() error {
 
 	handler := s.createHandler()
 
-	s.httpServer.Protocols = s.protocols
 	s.httpServer.Handler = handler
 
 	s.logger.Info("ConnectRPC server reloaded successfully")
