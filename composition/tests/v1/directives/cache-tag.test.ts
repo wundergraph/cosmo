@@ -7,6 +7,7 @@ import {
   FORMAT,
   invalidArgumentValueErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
+  invalidCacheTagBraceErrorMessage,
   invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
@@ -15,7 +16,6 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type TypeName,
-  invalidCacheTagBraceErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
@@ -24,6 +24,7 @@ import {
 import {
   createSubgraph,
   createSubgraphWithDefaultName,
+  federateSubgraphsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
@@ -182,9 +183,6 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
-    /* Apollo permits @cacheTag upon any root field, so a Mutation or Subscription root field composes.
-     * Only a Query root field produces a cached response, so the directive is ignored with a warning.
-     */
     test('that the directive upon a Mutation root field is ignored with a warning', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
         createSubgraph(
@@ -198,6 +196,25 @@ describe('@cacheTag tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       // A repeated directive upon the same field is reported once.
+      expect(warnings).toStrictEqual([
+        unsupportedCacheTagLocationWarning({ coords: 'Mutation.addProduct', subgraphName: 'a' }),
+      ]);
+      expect(configurationDataByTypeName.get('Mutation')?.entityCaching).toBeUndefined();
+    });
+
+    // This directive is ignored here for now, so its format is not validated.
+    test('that a malformed format upon a Mutation root field is ignored with a warning', () => {
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        createSubgraph(
+          'a',
+          `
+          type Query { product(id: ID!): Product }
+          type Mutation { addProduct(id: ID!): Product @cacheTag(format: "products-{$key.id") }
+          type Product @key(fields: "id") { id: ID! }
+        `,
+        ),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(warnings).toStrictEqual([
         unsupportedCacheTagLocationWarning({ coords: 'Mutation.addProduct', subgraphName: 'a' }),
       ]);
@@ -222,7 +239,6 @@ describe('@cacheTag tests', () => {
       expect(configurationDataByTypeName.get('Subscription')?.entityCaching).toBeUndefined();
     });
 
-    // Apollo rejects @cacheTag upon a non-root field (CACHE_TAG_APPLIED_TO_NON_ROOT_FIELD).
     test('that the directive upon a field of a non-root Object is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
@@ -257,7 +273,6 @@ describe('@cacheTag tests', () => {
       );
     });
 
-    // An Interface field is never a root field; Apollo rejects it as an unexpected directive target.
     test('that the directive upon an Interface field is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
@@ -414,6 +429,43 @@ describe('@cacheTag tests', () => {
       );
     });
 
+    test('that an "$args" path that traverses a Scalar is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "products-{$args.id.value}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedCacheTagArgumentErrorMessage('id.value'),
+        ]),
+      );
+    });
+
+    test('that an "$args" path referencing an undefined Input Object field is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          input Filter { category: String! }
+          type Query {
+            products(filter: Filter!): [Product!]! @cacheTag(format: "products-{$args.filter.brand}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedCacheTagArgumentErrorMessage('filter.brand'),
+        ]),
+      );
+    });
+
     test('that a namespace other than "$args" is rejected upon a field', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
@@ -525,6 +577,62 @@ describe('@cacheTag tests', () => {
         ]),
       );
     });
+
+    test('that an invalid instance following a valid one is reported by its own ordinal', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "products") @cacheTag(format: "products-{$args.ids}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(CACHE_TAG, 'Query.products', '2nd', [undefinedCacheTagArgumentErrorMessage('ids')]),
+      );
+    });
+  });
+
+  describe('federation tests', () => {
+    test('that each subgraph retains its own CacheTagConfigurations for a shared Query field', () => {
+      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              products(id: ID!): [Product!]! @shareable @cacheTag(format: "products-{$args.id}")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createSubgraph(
+            'b',
+            `
+            type Query {
+              products(id: ID!): [Product!]! @shareable @cacheTag(format: "catalogue")
+            }
+            type Product @key(fields: "id") { id: ID! name: String }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(
+        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'products-{$args.id}', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+      expect(
+        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
   });
 
   describe('location tests', () => {
@@ -544,9 +652,6 @@ describe('@cacheTag tests', () => {
       );
     });
 
-    /* Apollo permits @cacheTag on FIELD_DEFINITION and OBJECT, but only a Query root field is supported here.
-     * An Object usage is accepted, so that Apollo subgraphs compose, and ignored with a warning.
-     */
     test('that the directive upon an Object is ignored with a warning', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
         createSubgraph(
