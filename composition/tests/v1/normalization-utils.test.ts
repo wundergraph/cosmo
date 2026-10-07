@@ -130,13 +130,43 @@ describe('format parsing tests', () => {
     ]);
   });
 
-  /* Whitespace is tolerated only around a placeholder as a whole; the reference itself must be a
-   * period-delimited path of GraphQL Names, so interior whitespace does not form a placeholder.
-   */
-  test('that whitespace surrounding the period is rejected', () => {
+  test('that whitespace surrounding the period is tolerated', () => {
     const errorMessages: Array<string> = [];
-    expect(parseCacheTagFormat('products-{ $args . name }', errorMessages)).toStrictEqual([]);
-    expect(errorMessages).toStrictEqual([invalidCacheTagPlaceholderErrorMessage(' $args . name ')]);
+    expect(parseCacheTagFormat('products-{ $args . name }', errorMessages)).toStrictEqual([
+      { namespace: 'args', reference: 'name' },
+    ]);
+    expect(errorMessages).toStrictEqual([]);
+  });
+
+  test('that whitespace upon one side of the period is tolerated', () => {
+    const errorMessages: Array<string> = [];
+    expect(parseCacheTagFormat('{$args .a}-{$args. b}', errorMessages)).toStrictEqual([
+      { namespace: 'args', reference: 'a' },
+      { namespace: 'args', reference: 'b' },
+    ]);
+    expect(errorMessages).toStrictEqual([]);
+  });
+
+  test('that a newline or tab surrounding the period is tolerated', () => {
+    const errorMessages: Array<string> = [];
+    expect(parseCacheTagFormat('products-{$args\n.\tname}', errorMessages)).toStrictEqual([
+      { namespace: 'args', reference: 'name' },
+    ]);
+    expect(errorMessages).toStrictEqual([]);
+  });
+
+  test('that whitespace surrounding each period of a path is removed from the reference', () => {
+    const errorMessages: Array<string> = [];
+    expect(parseCacheTagFormat('products-{$args.filter . nested\n.depth}', errorMessages)).toStrictEqual([
+      { namespace: 'args', reference: 'filter.nested.depth' },
+    ]);
+    expect(errorMessages).toStrictEqual([]);
+  });
+
+  test('that a spaced period without a following segment is rejected', () => {
+    const errorMessages: Array<string> = [];
+    expect(parseCacheTagFormat('products-{$args.name . }', errorMessages)).toStrictEqual([]);
+    expect(errorMessages).toStrictEqual([invalidCacheTagPlaceholderErrorMessage('$args.name . ')]);
   });
 
   test('that whitespace between the sigil and the namespace is rejected', () => {
