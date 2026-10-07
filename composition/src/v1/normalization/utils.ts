@@ -17,6 +17,7 @@ import {
   argumentsInKeyFieldSetErrorMessage,
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
+  invalidCacheTagBraceErrorMessage,
   invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidEventSubjectsArgumentErrorMessage,
@@ -33,7 +34,6 @@ import {
   nonIterableLinkDirectiveImportError,
   noPathLinkDirectiveUrlError,
   noVersionLinkDirectiveUrlError,
-  invalidCacheTagBraceErrorMessage,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
@@ -486,24 +486,21 @@ export function validateArgumentTemplateReferences(
   }
 }
 
-/* Splits a @cacheTag `format` string into its placeholders, pushing an error message for each malformed
- * segment. Only the shape of a placeholder is assessed here — whether the namespace is supported, and
- * whether the reference resolves, is decided by the caller, which alone knows the field upon which the
- * directive was defined.
+/* Returns the placeholders of a @cacheTag format and pushes an error message for each malformed one.
+ * Whether a placeholder's namespace and reference are valid for the field is checked by the caller.
  */
 export function parseCacheTagFormat(format: string, errorMessages: Array<string>): Array<CacheTagPlaceholder> {
   const placeholders: Array<CacheTagPlaceholder> = [];
-  let remainder = format;
-  for (const match of format.matchAll(CACHE_TAG_SEGMENT_REGEXP)) {
-    remainder = remainder.replace(match[0], '');
-    const placeholderMatch = CACHE_TAG_PLACEHOLDER_REGEXP.exec(match[1]);
-    if (!placeholderMatch) {
-      errorMessages.push(invalidCacheTagPlaceholderErrorMessage(match[1]));
+  for (const [, body] of format.matchAll(CACHE_TAG_SEGMENT_REGEXP)) {
+    const match = CACHE_TAG_PLACEHOLDER_REGEXP.exec(body);
+    if (!match) {
+      errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
       continue;
     }
-    placeholders.push({ namespace: placeholderMatch[1], reference: placeholderMatch[2] });
+    placeholders.push({ namespace: match[1], reference: match[2] });
   }
-  if (remainder.includes('{') || remainder.includes('}')) {
+  // A brace that remains once every placeholder is removed is unpaired.
+  if (/[{}]/.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {
     errorMessages.push(invalidCacheTagBraceErrorMessage(format));
   }
   return placeholders;

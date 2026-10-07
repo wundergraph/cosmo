@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
   getNormalizedFieldSet,
+  invalidCacheTagBraceErrorMessage,
   invalidCacheTagPlaceholderErrorMessage,
   parse,
   parseCacheTagFormat,
-  invalidCacheTagBraceErrorMessage,
 } from '../../src';
 
 describe('Utils tests', () => {

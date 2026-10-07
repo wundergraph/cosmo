@@ -43,11 +43,11 @@ import {
 import {
   extractLinkArgs,
   getConditionalFieldSetDirectiveName,
-  parseCacheTagFormat,
   getInitialFieldCoordsPath,
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
   isNodeQuery,
+  parseCacheTagFormat,
   validateArgumentTemplateReferences,
   validateKeyFieldSets,
 } from './utils';
@@ -91,6 +91,7 @@ import {
   incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
+  invalidCacheTagArgumentTypeErrorMessage,
   invalidComposeDirectiveNameError,
   invalidDirectiveDefinitionError,
   invalidDirectiveError,
@@ -141,10 +142,6 @@ import {
   listSizeSlicingArgumentSegmentNotFoundErrorMessage,
   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
-  nonRootFieldCacheTagErrorMessage,
-  unsupportedFieldCacheTagNamespaceErrorMessage,
-  undefinedCacheTagArgumentErrorMessage,
-  invalidCacheTagArgumentTypeErrorMessage,
   multipleNamedTypeDefinitionError,
   negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   noBaseScalarDefinitionError,
@@ -158,6 +155,7 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  nonRootFieldCacheTagErrorMessage,
   oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
@@ -168,6 +166,7 @@ import {
   semanticNonNullLevelsNonNullErrorMessage,
   subgraphInvalidSyntaxError,
   typeNameAlreadyProvidedErrorMessage,
+  undefinedCacheTagArgumentErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -182,6 +181,7 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  unsupportedFieldCacheTagNamespaceErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -312,8 +312,8 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELDS,
-  FORMAT,
   FIRST_ORDINAL,
+  FORMAT,
   FROM_CONTEXT,
   HYPHEN_JOIN,
   INACCESSIBLE,
@@ -4518,7 +4518,7 @@ export class NormalizationFactory {
       }
       const errorMessages: Array<string> = [];
       for (const { namespace, reference } of parseCacheTagFormat(format, errorMessages)) {
-        // We only allow `args.*` format
+        // Only the "$args" namespace is supported upon a field.
         if (namespace !== ARGS) {
           errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
           continue;
@@ -4587,7 +4587,7 @@ export class NormalizationFactory {
       if (index === path.length - 1) {
         return inputValueData;
       }
-      // We do not support lists at the moment
+      // A list yields no single value, so a path cannot traverse it.
       if (isTypeNodeListType(inputValueData.type)) {
         return;
       }
