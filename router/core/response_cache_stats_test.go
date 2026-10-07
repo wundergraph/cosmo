@@ -97,7 +97,9 @@ type requestCountSpy struct {
 	attrs attribute.Set
 }
 
-func (m *requestCountSpy) MeasureRequestCount(_ context.Context, _ []attribute.KeyValue, opt otelmetric.AddOption) {
+func (m *requestCountSpy) MeasureRequestCount(
+	_ context.Context, _ []attribute.KeyValue, opt otelmetric.AddOption,
+) {
 	m.attrs = otelmetric.NewAddConfig([]otelmetric.AddOption{opt}).Attributes()
 }
 
@@ -150,20 +152,32 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true)
 
 		ctx, rc := setupTestContext(t, tp)
-		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit}})
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
+		})
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK})
 
-		require.Equal(t, ResponseCacheStatusPartialHit, rc.responseCacheStatus(), "a fetch that is not cacheable counts against a hit")
+		require.Equal(t, ResponseCacheStatusPartialHit, rc.responseCacheStatus(),
+			"a fetch that is not cacheable counts against a hit")
 	})
 
 	t.Run("a fetch without hook context is still counted", func(t *testing.T) {
 		t.Parallel()
 
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, sdktrace.NewTracerProvider(), nil, nil, nil, false, nil, true)
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true)
 
 		rc := newTestRequestContext(t)
 		ctx := withRequestContext(context.Background(), rc)
-		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit}})
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
+		})
 
 		require.Equal(t, ResponseCacheStatusHit, rc.responseCacheStatus())
 	})
