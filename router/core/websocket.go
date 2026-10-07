@@ -601,7 +601,13 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 		handler.Close(true, h.closeKind(terminalErr))
 	}()
 
-	for h.ctx.Err() == nil {
+	for {
+		select {
+		case <-h.ctx.Done():
+			return nil
+		default:
+		}
+
 		msg, err := handler.protocol.ReadMessage()
 		if err != nil {
 			h.logger.Debug("Client closed connection", zap.Error(err))
@@ -614,7 +620,6 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 			}
 		}
 	}
-	return nil
 }
 
 func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnectionHandler) error {
