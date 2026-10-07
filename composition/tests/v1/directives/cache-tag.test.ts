@@ -163,6 +163,28 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
+    test('that an identical format repeated upon a field is configured once', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraphWithDefaultName(`
+            type Query {
+              products: [Product!]!
+                @cacheTag(format: "products")
+                @cacheTag(format: "catalogue")
+                @cacheTag(format: "products")
+            }
+            type Product @key(fields: "id") {
+              id: ID!
+            }
+          `),
+          'Query',
+        ),
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'products', typeName: 'Query' },
+        { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
     test('that a renamed Query root type is recognised', () => {
       expect(
         getCacheTagConfigurations(

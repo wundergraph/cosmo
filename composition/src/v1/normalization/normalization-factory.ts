@@ -4505,7 +4505,7 @@ export class NormalizationFactory {
       this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
       return;
     }
-    const configurations: Array<CacheTagConfiguration> = [];
+    const formats = new Set<string>();
     for (const [index, directiveNode] of directiveNodes.entries()) {
       const ordinal = numberToOrdinal(index + 1);
       const format = this.getCacheTagFormat(directiveNode);
@@ -4541,15 +4541,17 @@ export class NormalizationFactory {
         this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, errorMessages));
         continue;
       }
-      configurations.push({ fieldName, format, typeName });
+      formats.add(format);
     }
-    if (configurations.length < 1) {
+    if (formats.size < 1) {
       return;
     }
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(false, typeName),
     );
-    getOrInitializeEntityCaching(configurationData).cacheTagConfigurations.push(...configurations);
+    getOrInitializeEntityCaching(configurationData).cacheTagConfigurations.push(
+      ...Array.from(formats, (format): CacheTagConfiguration => ({ fieldName, format, typeName })),
+    );
   }
 
   isValidCacheTagLeaf({ namedTypeName, type }: FieldData | InputValueData): boolean {
