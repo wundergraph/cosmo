@@ -134,9 +134,9 @@ func (c *RedisCache) scanPages(ctx context.Context, tagKey string) iter.Seq2[[]s
 }
 
 // invalidatePage deletes the page's entries, marks its live members, then
-// deletes their entries again: a write landing between the first delete and
-// the mark could otherwise outlive a later write unmarking the member. On a
-// failed delete nothing is marked; members keep their scores for a retry.
+// deletes their entries again, so a write landing between the first delete
+// and the mark doesn't wait for the next walk. On a failed delete nothing is
+// marked; members keep their scores for a retry.
 func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) (int, error) {
 	if len(p.unlink) == 0 {
 		return 0, nil
@@ -160,7 +160,7 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 // sweep removes members still carrying one of marks. Only reached once every
 // page's deletes succeeded. A mark read by the walk predates its delete, so
 // each member still carrying it had its entry deleted. By exact score: a
-// member a write unmarked meanwhile stays.
+// later walk's mark on the same member stays.
 func (c *RedisCache) sweep(ctx context.Context, tagKey string, marks map[float64]struct{}) error {
 	if len(marks) == 0 {
 		return nil

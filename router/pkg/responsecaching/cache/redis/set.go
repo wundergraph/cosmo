@@ -23,7 +23,8 @@ const writeLease = 10 * time.Second
 // lifts each live member to the entry's expiry; a third extends the entry to
 // it only once every member is confirmed live, so an extended entry is always
 // listed. A member marked or swept meanwhile leaves the entry on its lease, as
-// does a writer dying in between.
+// does a writer dying in between. A write never unmarks a member: a mark
+// stays until a walk deletes its entry again and removes it.
 //
 // Each entry carries its write's token; finishing only touches an entry still
 // holding it, so never a later write's.
@@ -203,10 +204,8 @@ func expiresAt(now time.Time, ttl time.Duration) time.Time {
 }
 
 // queueIndex queues item's member and tag TTL updates for each of its tags.
-// GT: a write landing out of order never lowers a member's score, which would
-// let the prune drop it while a newer entry is alive.
 func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item, now time.Time) []redis.Cmder {
-	member := redis.Z{Score: float64(expiresAt(now, item.TTL).UnixMilli()), Member: item.Key}
+	score := expiresAt(now, item.TTL).UnixMilli()
 	// Outlives its entries by the prune grace: entries expire at their
 	// score by this router's clock, the key by redis's.
 	tagTTL := item.TTL + tagIndexPruneGrace
@@ -214,13 +213,24 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item 
 	for _, tag := range item.Tags {
 		tagKey := c.tagKey(tag)
 		cmds = append(cmds,
-			pipe.ZAddArgs(ctx, tagKey, redis.ZAddArgs{GT: true, Members: []redis.Z{member}}),
+			addMember.Eval(ctx, pipe, []string{tagKey}, item.Key, score),
 			pipe.ExpireNX(ctx, tagKey, tagTTL),
 			pipe.ExpireGT(ctx, tagKey, tagTTL),
 		)
 	}
 	return cmds
 }
+
+// addMember adds ARGV[1] to KEYS[1] at score ARGV[2], or raises it there. GT:
+// a write landing out of order never lowers a member's score, which would let
+// the prune drop it while a newer entry is alive. A mark stays: only a walk
+// removes it, after deleting its entry, so a write that never lands can't
+// take with it the walk's duty to delete what came before.
+var addMember = redis.NewScript(`
+local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
+if s and tonumber(s) < 0 then return 0 end
+return redis.call('ZADD', KEYS[1], 'GT', ARGV[2], ARGV[1])
+`)
 
 // write is one item of a SetMany batch and the commands it queued.
 type write struct {

@@ -284,7 +284,27 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
 	})
 
-	t.Run("a sweep leaves a member a write unmarked", func(t *testing.T) {
+	t.Run("a write leaves a mark in place", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
+		require.NoError(t, err)
+		require.Negative(t, score, "only a walk removes a mark")
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "so the write keeps its lease")
+
+		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
+	})
+
+	t.Run("a write during a sweep keeps only its lease", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
@@ -302,10 +322,9 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 		interposer.requireFired(t)
 
-		requireNoDangling(t, mr, item)
-		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
-		require.NoError(t, err)
-		require.Positive(t, score, "unmarked by the write, so not swept")
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+		mr.FastForward(writeLease)
+		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
 	t.Run("a write between the walk's delete and its mark is deleted too", func(t *testing.T) {
@@ -323,6 +342,38 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		}
 		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
+		interposer.requireFired(t)
+
+		lost := newTestRedisCacheOn(t, mr, &failCommands{name: "set"})
+		short := long
+		short.TTL = 5 * time.Second
+		_ = lost.SetMany(t.Context(), []enginecache.Item{short})
+
+		later := short.TTL + tagIndexPruneGrace + time.Second
+		mr.FastForward(later)
+		advance(writer, later)
+		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{other}))
+		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(entryKey(long.Key)), "readable but unreachable")
+	})
+
+	t.Run("a walk dying after its mark leaves the member for a retry", func(t *testing.T) {
+		// Its second delete never runs. A later write losing its SET mustn't
+		// take the mark with it, or the entry written in the gap is orphaned.
+		t.Parallel()
+		long := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{long}))
+		interposer := &afterStep{names: []string{"unlink"}}
+		dying := newTestRedisCacheOn(t, mr, interposer, &failCommands{name: "unlink", pipelines: []int{1}})
+		interposer.fn = func() {
+			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{long}))
+		}
+		_, err := dying.InvalidateByTags(t.Context(), []string{tag})
+		require.ErrorIs(t, err, errInjected)
 		interposer.requireFired(t)
 
 		lost := newTestRedisCacheOn(t, mr, &failCommands{name: "set"})
@@ -526,16 +577,14 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	t.Run("an item living no longer than the lease skips it", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		recorder := &recordCommands{}
-		writer := newTestRedisCacheOn(t, mr, recorder)
+		counter := &countPipelines{}
+		writer := newTestRedisCacheOn(t, mr, counter)
 		short := item
 		short.TTL = writeLease / 2
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{short}))
 		require.Equal(t, short.TTL, mr.TTL(entryKey(item.Key)))
-		for _, cmd := range recorder.commands() {
-			require.NotEqual(t, "eval", cmd.name, "nothing to finish")
-		}
+		require.Equal(t, 1, counter.count(), "nothing to finish")
 	})
 
 	t.Run("a failed lease extension leaves an indexed entry that expires early", func(t *testing.T) {
@@ -554,7 +603,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		// one can fail while the other lands.
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "zadd", pipelines: []int{0}})
+		writer := newTestRedisCacheOn(t, mr, &failScript{calls: indexScript, pipelines: []int{0}})
 
 		_ = writer.SetMany(t.Context(), []enginecache.Item{item})
 
@@ -564,7 +613,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	t.Run("an index that cannot be written leaves no entry, and says so", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "zadd"})
+		writer := newTestRedisCacheOn(t, mr, &failScript{calls: indexScript, pipelines: []int{0}})
 
 		err := writer.SetMany(t.Context(), []enginecache.Item{item})
 		require.ErrorIs(t, err, errInjected)

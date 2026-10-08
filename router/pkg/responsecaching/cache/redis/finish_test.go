@@ -78,7 +78,7 @@ func TestRedisCacheFinishOnlyTouchesOwnWrite(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 1}}
-		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "zadd", pipelines: []int{0}}, split)
+		writer := newTestRedisCacheOn(t, mr, &failScript{calls: indexScript, pipelines: []int{0}}, split)
 		other := newTestRedisCacheOn(t, mr)
 		split.fn = func() {
 			require.NoError(t, other.SetMany(context.Background(), []enginecache.Item{short}))
@@ -105,7 +105,7 @@ func TestRedisCacheFinishOnlyTouchesOwnWrite(t *testing.T) {
 }
 
 // A write's SET lands after a walk marked its member and a shorter write
-// unmarked it. Its extension must not outlive that member.
+// followed. Its extension must not outlive that member.
 func TestRedisCacheLateSetAfterShorterRewrite(t *testing.T) {
 	t.Parallel()
 
@@ -235,6 +235,9 @@ func (r *replayPipeline) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 		return next(ctx, cmds)
 	}
 }
+
+// indexScript is a fragment only addMember's source contains.
+const indexScript = "'ZADD', KEYS[1], 'GT'"
 
 // failScript fails every script calling calls without sending it, in the
 // listed pipelines.
