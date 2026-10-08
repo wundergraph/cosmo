@@ -161,7 +161,11 @@ This diagram shows how the router processes GraphQL requests and communicates wi
 **The data loader** batches requests to your gRPC services for optimal performance.
 Responses are translated back from protobuf to GraphQL format and assembled into the final client response.
 
-#### Request Encoding (TODO: Add minimum release version of go-tools)
+#### Request Encoding
+
+<Info>
+  Available since Router [0.357.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.357.0).
+</Info>
 
 By default, the router encodes gRPC request messages directly to the protobuf wire format. This is faster and uses less memory than building a dynamic protobuf message for each request.
 
