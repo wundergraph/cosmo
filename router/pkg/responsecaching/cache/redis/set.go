@@ -118,8 +118,9 @@ func (c *RedisCache) finishWrites(ctx context.Context, writes []write, now time.
 			unlinkOwn.Eval(ctx, pipe, []string{c.entryKey(w.item.Key)}, w.header)
 		case leased(w.item) < w.item.TTL && w.set.Err() == nil:
 			score := expiresAt(now, w.item.TTL).UnixMilli()
+			tagTTL := (w.item.TTL + tagIndexPruneGrace).Milliseconds()
 			for _, tag := range w.item.Tags {
-				lifts[i] = append(lifts[i], liftMember.Eval(ctx, pipe, []string{c.tagKey(tag)}, w.item.Key, score))
+				lifts[i] = append(lifts[i], liftMember.Eval(ctx, pipe, []string{c.tagKey(tag)}, w.item.Key, score, tagTTL))
 			}
 		}
 	}
@@ -171,12 +172,15 @@ if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
 return redis.call('UNLINK', KEYS[1])
 `)
 
-// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2] and
-// returns 1. A marked or missing member is left alone: 0.
+// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2],
+// extends KEYS[1] to live at least ARGV[3] ms, and returns 1. The set may have
+// been emptied and recreated by a shorter write since this one's tag add. A
+// marked or missing member is left alone: 0.
 var liftMember = redis.NewScript(`
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
 if not s or tonumber(s) < 0 then return 0 end
 redis.call('ZADD', KEYS[1], 'XX', 'GT', ARGV[2], ARGV[1])
+redis.call('PEXPIRE', KEYS[1], ARGV[3], 'GT')
 return 1
 `)
 

@@ -211,6 +211,35 @@ func TestRedisCacheExtendsOnlyConfirmedEntries(t *testing.T) {
 	})
 }
 
+// A tag set emptied mid-write is recreated by a shorter write. The lift must
+// keep it alive as long as the entry it confirms.
+func TestRedisCacheLiftKeepsTheTagSetAlive(t *testing.T) {
+	t.Parallel()
+
+	const tag = "subgraph:accounts"
+	long := enginecache.Item{Key: "v1:a", Value: []byte(`{"v":1}`), TTL: time.Hour, Tags: []string{tag}}
+	short := enginecache.Item{Key: "v1:a", Value: []byte(`{"v":2}`), TTL: 5 * time.Second, Tags: []string{tag}}
+
+	mr := miniredis.RunT(t)
+	split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+	writer := newTestRedisCacheOn(t, mr, split)
+	other := newTestRedisCacheOn(t, mr)
+	split.fn = func() {
+		// The second walk sweeps the first's mark, emptying the set.
+		for range 2 {
+			_, err := other.InvalidateByTags(context.Background(), []string{tag})
+			require.NoError(t, err)
+		}
+		require.False(t, mr.Exists(tagIndexKey(tag)))
+		require.NoError(t, other.SetMany(context.Background(), []enginecache.Item{short}))
+	}
+	require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{long}))
+	split.requireFired(t)
+
+	require.Greater(t, mr.TTL(entryKey(long.Key)), writeLease, "extended")
+	require.GreaterOrEqual(t, mr.TTL(tagIndexKey(tag)), mr.TTL(entryKey(long.Key)), "the set outlives the entry")
+}
+
 // replayPipeline sends pipeline number pipeline twice, the way a client
 // retries after a reply is lost.
 type replayPipeline struct {
