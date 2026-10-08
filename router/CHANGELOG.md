@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.357.0](https://github.com/wundergraph/cosmo/compare/router@0.356.0...router@0.357.0) (2026-10-07)
+
+### Features
+
+* support custom codec to construct proto messages ([#3321](https://github.com/wundergraph/cosmo/issues/3321)) ([e829fac](https://github.com/wundergraph/cosmo/commit/e829fac7de65dc422889b19f97f5a3570e63d1c3)) (@Noroth)
+
 ## [0.356.0](https://github.com/wundergraph/cosmo/compare/router@0.355.0...router@0.356.0) (2026-10-06)
 
 ### Features

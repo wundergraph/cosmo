@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.253.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.1...controlplane@0.253.2) (2026-10-07)
+
+### Bug Fixes
+
+* update tinypool and proxy-addr to resolve critical vulnerabilities ([#3334](https://github.com/wundergraph/cosmo/issues/3334)) ([f6d7d10](https://github.com/wundergraph/cosmo/commit/f6d7d10515c4a5a17ef4f4c3e3d5b4569991c623)) (@gausie)
+
 ## [0.253.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.0...controlplane@0.253.1) (2026-10-06)
 
 ### Bug Fixes
