@@ -19,15 +19,14 @@ const writeLease = 10 * time.Second
 
 // SetMany implements caching.SetMany.
 //
-// One round trip indexes and SETs tagged entries with a short lease; a second
-// extends them to expire at their member's score, only if indexed and the
-// first was answered within writeGrace. A walk marks members rather than
-// removing them, and sweeps a mark only once older than writeGrace plus a
-// margin by redis's clock, deleting its entry first: any extended entry it
-// raced has landed by then. A writer dying in between leaves at most a lease-long entry.
+// One round trip indexes and SETs tagged entries with a short lease. A second
+// lifts each live member to the entry's expiry; a third extends the entry to
+// it only once every member is confirmed live, so an extended entry is always
+// listed. A member marked or swept meanwhile leaves the entry on its lease, as
+// does a writer dying in between.
 //
-// Each entry carries its write's token; the second round trip only touches an
-// entry still holding it, so never a later write's.
+// Each entry carries its write's token; finishing only touches an entry still
+// holding it, so never a later write's.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -68,17 +67,14 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		writes[i].set = pipe.Set(ctx, c.entryKey(items[i].Key), encode(writes[i].header, items[i]), leased(items[i]))
 	}
 
-	// Monotonic: only the duration matters.
-	sent := time.Now()
 	cmds, err := pipe.Exec(ctx)
-	inGrace := time.Since(sent) < c.writeGrace
 
 	// An error no command carries means nothing was sent.
 	if err != nil && !anyCmdErr(cmds) {
 		return err
 	}
 
-	err = errors.Join(err, c.finishWrites(ctx, writes, now, inGrace))
+	err = errors.Join(err, c.finishWrites(ctx, writes, now))
 
 	// A command is only counted once redis has answered it. Anything still
 	// carrying the failure is left out, whether it never arrived or was applied
@@ -101,32 +97,29 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
 
-// finishWrites is SetMany's second round trip, touching only entries still
-// holding their write's header. An entry whose index isn't confirmed is
-// removed, not left unreachable. A confirmed one answered within writeGrace
-// expires at its member's score, so it never outlives the member; its members
-// are lifted to that score too, in case a walk's mark was replaced by a
-// shorter write's. Others keep their lease.
-func (c *RedisCache) finishWrites(ctx context.Context, writes []write, now time.Time, inGrace bool) error {
+// finishWrites is SetMany's second and third round trips, touching only
+// entries still holding their write's header. An entry whose index isn't
+// confirmed is removed, not left unreachable. One to extend has its members
+// lifted first, and is extended to expire at their score only if every lift
+// found its member live. Others keep their lease.
+func (c *RedisCache) finishWrites(ctx context.Context, writes []write, now time.Time) error {
 	// Entries may be written now, so finish even if the caller gives up.
 	ctx = context.WithoutCancel(ctx)
 
 	pipe := c.client.Pipeline()
-	lifts := make(map[int][]redis.Cmder)
+	lifts := make(map[int][]*redis.Cmd)
 	for i, w := range writes {
 		if len(w.item.Tags) == 0 || !w.last {
 			continue
 		}
-		entryKey := c.entryKey(w.item.Key)
 		switch {
 		case !w.indexed():
-			unlinkOwn.Eval(ctx, pipe, []string{entryKey}, w.header)
-		case leased(w.item) < w.item.TTL && w.set.Err() == nil && inGrace:
+			unlinkOwn.Eval(ctx, pipe, []string{c.entryKey(w.item.Key)}, w.header)
+		case leased(w.item) < w.item.TTL && w.set.Err() == nil:
 			score := expiresAt(now, w.item.TTL).UnixMilli()
 			for _, tag := range w.item.Tags {
 				lifts[i] = append(lifts[i], liftMember.Eval(ctx, pipe, []string{c.tagKey(tag)}, w.item.Key, score))
 			}
-			extendOwn.Eval(ctx, pipe, []string{entryKey}, w.header, score)
 		}
 	}
 	if pipe.Len() == 0 {
@@ -134,23 +127,34 @@ func (c *RedisCache) finishWrites(ctx context.Context, writes []write, now time.
 	}
 	_, err := pipe.Exec(ctx)
 
-	// A member not known lifted may sit below the extension: drop the entry.
-	// In a cluster the lift and extension land on different nodes, unordered.
-	drop := c.client.Pipeline()
+	// Waits on the lifts: they and the entry may sit on different nodes.
+	extend := c.client.Pipeline()
 	for i, cmds := range lifts {
-		if anyCmdErr(cmds) {
-			writes[i].dropped = true
-			unlinkOwn.Eval(ctx, drop, []string{c.entryKey(writes[i].item.Key)}, writes[i].header)
+		w := &writes[i]
+		if !allLive(cmds) {
+			w.unconfirmed = true
+			continue
 		}
+		extendOwn.Eval(ctx, extend, []string{c.entryKey(w.item.Key)}, w.header, expiresAt(now, w.item.TTL).UnixMilli())
 	}
-	if drop.Len() > 0 {
-		_, dropErr := drop.Exec(ctx)
-		err = errors.Join(err, dropErr)
+	if extend.Len() > 0 {
+		_, extendErr := extend.Exec(ctx)
+		err = errors.Join(err, extendErr)
 	}
 	if err != nil {
 		return fmt.Errorf("redis adapter: finishing write: %w", err)
 	}
 	return nil
+}
+
+// allLive reports whether every lift answered that its member is live.
+func allLive(lifts []*redis.Cmd) bool {
+	for _, lift := range lifts {
+		if live, err := lift.Int(); err != nil || live != 1 {
+			return false
+		}
+	}
+	return true
 }
 
 // extendOwn sets KEYS[1] to expire at ARGV[2], in ms, if it still holds the
@@ -166,14 +170,13 @@ if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
 return redis.call('UNLINK', KEYS[1])
 `)
 
-// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2]. A mark
-// stays: its walk deletes the entry again.
+// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2] and
+// returns 1. A marked or missing member is left alone: 0.
 var liftMember = redis.NewScript(`
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
-if s and tonumber(s) >= 0 then
-  return redis.call('ZADD', KEYS[1], 'XX', 'GT', ARGV[2], ARGV[1])
-end
-return 0
+if not s or tonumber(s) < 0 then return 0 end
+redis.call('ZADD', KEYS[1], 'XX', 'GT', ARGV[2], ARGV[1])
+return 1
 `)
 
 // queuePrunes queues one prune per tag the batch names, dropping members more
@@ -228,15 +231,16 @@ type write struct {
 	last bool
 	// header starts the stored entry and identifies this write.
 	header []byte
-	// dropped is whether finishing deleted the entry.
-	dropped bool
+	// unconfirmed is whether a lift didn't find its member live, so the entry
+	// keeps its lease and may be unlisted.
+	unconfirmed bool
 }
 
 // indexed reports whether every index command for the write was answered.
 func (w write) indexed() bool { return !anyCmdErr(w.index) }
 
 // stored reports whether the write's entry is known stored and reachable.
-func (w write) stored() bool { return w.last && w.set.Err() == nil && w.indexed() && !w.dropped }
+func (w write) stored() bool { return w.last && w.set.Err() == nil && w.indexed() && !w.unconfirmed }
 
 func anyCmdErr[C redis.Cmder](cmds []C) bool {
 	return slices.ContainsFunc(cmds, func(cmd C) bool { return cmd.Err() != nil })

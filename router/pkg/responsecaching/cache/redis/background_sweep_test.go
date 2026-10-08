@@ -26,8 +26,7 @@ func TestRedisCacheBackgroundSweep(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), "v1:a", "marked, not removed, by the call itself")
 
-		// Old enough by the time the sweep runs.
-		ageMarks(mr)
+		// Removed by the background walk.
 		require.Eventually(t, func() bool {
 			return !mr.Exists(tagIndexKey(tag))
 		}, 5*time.Second, 10*time.Millisecond)
@@ -43,7 +42,6 @@ func TestRedisCacheBackgroundSweep(t *testing.T) {
 
 		// Written after the invalidation: live, and not the sweep's to touch.
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:b")}))
-		ageMarks(mr)
 
 		require.Eventually(t, func() bool {
 			members := zmembers(t, mr, tagIndexKey(tag))
@@ -61,7 +59,6 @@ func TestRedisCacheBackgroundSweep(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, c.Close())
-		ageMarks(mr)
 
 		// Past the delay: a sweep that hadn't given up would have run.
 		time.Sleep(300 * time.Millisecond)

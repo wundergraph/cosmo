@@ -254,24 +254,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.InDelta(t, -float64(c.now().UnixMilli()), score, float64(time.Second.Milliseconds()), "marked with the walk's time")
 	})
 
-	t.Run("marks age by redis's clock, not the router's", func(t *testing.T) {
-		// A router clock far ahead can't make a mark look old.
-		t.Parallel()
-		mr := miniredis.RunT(t)
-		c := newTestRedisCacheOn(t, mr)
-		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-
-		ahead := newTestRedisCacheOn(t, mr)
-		advance(ahead, 2*time.Hour)
-		_, err = ahead.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "not swept")
-	})
-
-	t.Run("a mark younger than the sweep age stays, but its entry is still deleted", func(t *testing.T) {
-		// A late save landing after the first walk is taken by the next one.
+	t.Run("a mark is swept after its entry is deleted again", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
@@ -280,24 +263,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
-		mr.SetTime(time.Now().Add(defaultWriteGrace / 2))
-		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.Equal(t, 1, removed)
-		require.False(t, mr.Exists(entryKey(item.Key)))
-		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "too young to sweep")
-	})
-
-	t.Run("an old mark is swept after its entry is deleted again", func(t *testing.T) {
-		t.Parallel()
-		mr := miniredis.RunT(t)
-		c := newTestRedisCacheOn(t, mr)
-		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-
-		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
-		ageMarks(mr)
 		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
@@ -314,7 +279,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
-		ageMarks(mr)
 		_, err = broken.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
@@ -331,7 +295,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 
 		// Between the sweep's delete and its removal, the key is cached again.
-		ageMarks(mr)
 		interposer.fn = func() {
 			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{item}))
 		}
@@ -347,7 +310,8 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 	t.Run("a late save after the mark is deleted before its mark is swept", func(t *testing.T) {
 		// The walk lands between the writer's index write and its SET; the SET
-		// is extended. A sweep a minute on deletes it before removing the name.
+		// finds its member marked, so keeps its lease. The next walk deletes it
+		// before removing the name.
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
@@ -362,22 +326,10 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.True(t, mr.Exists(entryKey(item.Key)), "the late save")
 		requireNoDangling(t, mr, item)
 
-		ageMarks(mr)
 		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
-	})
-
-	t.Run("a first round trip slower than the grace isn't extended", func(t *testing.T) {
-		t.Parallel()
-		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &slowPipeline{pipeline: 0, delay: 30 * time.Millisecond})
-		writer.writeGrace = 10 * time.Millisecond
-
-		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "keeps its lease")
-		requireNoDangling(t, mr, item)
 	})
 
 	t.Run("a key written twice in one batch takes the last write's lifetime", func(t *testing.T) {
@@ -422,7 +374,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		_, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 
-		ageMarks(mr)
 		_, err = c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(tagIndexKey(tag)))
@@ -459,14 +410,14 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Equal(t, high, score)
 	})
 
-	t.Run("a tagged write takes two round trips", func(t *testing.T) {
+	t.Run("a tagged write takes three round trips", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		counter := &countPipelines{}
 		writer := newTestRedisCacheOn(t, mr, counter)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		require.Equal(t, 2, counter.count())
+		require.Equal(t, 3, counter.count())
 	})
 
 	// Braces in a tag mean nothing special.
@@ -558,7 +509,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	t.Run("a failed lease extension leaves an indexed entry that expires early", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &failScript{calls: "PEXPIREAT", pipelines: []int{1}})
+		writer := newTestRedisCacheOn(t, mr, &failScript{calls: "PEXPIREAT", pipelines: []int{2}})
 
 		err := writer.SetMany(t.Context(), []enginecache.Item{item})
 		require.ErrorIs(t, err, errInjected)
@@ -593,11 +544,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		requireNoDangling(t, mr, item)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
-}
-
-// ageMarks moves redis's clock past the sweep age.
-func ageMarks(mr *miniredis.Miniredis) {
-	mr.SetTime(time.Now().Add(defaultWriteGrace + sweepMargin + time.Second))
 }
 
 // requireNoDangling fails if item's entry is live but missing from one of its

@@ -146,11 +146,68 @@ func TestRedisCacheLateSetAfterShorterRewrite(t *testing.T) {
 		require.False(t, mr.Exists(entryKey(long.Key)), "readable but unreachable")
 	})
 
-	t.Run("a member that can't be lifted drops the extended entry", func(t *testing.T) {
+	t.Run("a member that can't be lifted keeps the entry on its lease", func(t *testing.T) {
 		t.Parallel()
 		mr, _, _ := setup(t, &failScript{calls: "ZSCORE", pipelines: []int{1}})
 		requireNoDangling(t, mr, long)
 		require.LessOrEqual(t, mr.TTL(entryKey(long.Key)), writeLease)
+	})
+}
+
+// An entry is extended only once every member is confirmed live, however
+// long its first round trip took.
+func TestRedisCacheExtendsOnlyConfirmedEntries(t *testing.T) {
+	t.Parallel()
+
+	const tag = "subgraph:accounts"
+	item := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+
+	// before runs between the write's tag add and its SET.
+	late := func(t *testing.T, before func(walker *RedisCache)) *miniredis.Miniredis {
+		t.Helper()
+		mr := miniredis.RunT(t)
+		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+		writer := newTestRedisCacheOn(t, mr, split)
+		walker := newTestRedisCacheOn(t, mr)
+		split.fn = func() { before(walker) }
+		_ = writer.SetMany(t.Context(), []enginecache.Item{item})
+		split.requireFired(t)
+		return mr
+	}
+
+	t.Run("a SET landing after its member was marked keeps its lease", func(t *testing.T) {
+		t.Parallel()
+		mr := late(t, func(walker *RedisCache) {
+			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+			require.NoError(t, err)
+		})
+		require.True(t, mr.Exists(entryKey(item.Key)))
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+	})
+
+	t.Run("a SET landing after its member was swept keeps its lease", func(t *testing.T) {
+		t.Parallel()
+		mr := late(t, func(walker *RedisCache) {
+			for range 2 {
+				_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+				require.NoError(t, err)
+			}
+		})
+		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "swept")
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+
+		mr.FastForward(writeLease)
+		require.False(t, mr.Exists(entryKey(item.Key)))
+	})
+
+	t.Run("a slow first round trip is still extended", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr, &slowPipeline{pipeline: 0, delay: 50 * time.Millisecond})
+
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+		require.InDelta(t, item.TTL, mr.TTL(entryKey(item.Key)), float64(time.Second))
+		requireNoDangling(t, mr, item)
 	})
 }
 

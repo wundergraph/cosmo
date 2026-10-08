@@ -14,15 +14,8 @@ import (
 
 var _ responsecaching.Invalidator = (*RedisCache)(nil)
 
-// nodeTime returns the clock of the node holding KEYS[1], in ms.
-var nodeTime = redis.NewScript(`
-local t = redis.call('TIME')
-return t[1] * 1000 + math.floor(t[2] / 1000)
-`)
-
 // markMembers sets each ARGV member still in KEYS[1] to minus the node's
-// time in ms. Stamped at marking, not passed in, so a mark is never older
-// than it looks.
+// time in ms, so each walk's marks are told apart by exact score.
 var markMembers = redis.NewScript(`
 local t = redis.call('TIME')
 local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
@@ -52,9 +45,10 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 
 // sweepTimeout bounds one background sweep.
 
-// sweepLater sweeps tags once this call's marks are old enough, so its marked
-// members leave the index without waiting for the next invalidation. Best
-// effort: a sweep that fails or never runs leaves its marks to the next walk.
+// sweepLater walks tags again shortly after, deleting entries that landed
+// late and removing this call's marks without waiting for the next
+// invalidation. Best effort: a sweep that fails or never runs leaves its marks
+// to the next walk.
 func (c *RedisCache) sweepLater(tags []string) {
 	select {
 	case <-time.After(c.sweepDelay):
@@ -93,16 +87,10 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 }
 
 // walk deletes the entries of the tag's marked members and of its live members
-// scored up to cutoff, marks those live members, and sweeps marks old enough.
+// scored up to cutoff, marks those live members, and sweeps the marks it read.
+// A write never extends an entry whose member is marked or gone, so a mark can
+// go as soon as its entry is deleted again.
 func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (int, error) {
-	// Read before the walk, so marks only ever look younger than they are.
-	nowMs, err := nodeTime.Run(ctx, c.client, []string{tagKey}).Int64()
-	if err != nil {
-		return 0, err
-	}
-	// Marks before this are old enough that any write they raced has landed.
-	sweepBefore := nowMs - (c.writeGrace + sweepMargin).Milliseconds()
-
 	oldMarks := make(map[float64]struct{})
 	var removed int
 	for pairs, err := range c.scanPages(ctx, tagKey) {
@@ -110,7 +98,7 @@ func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (i
 			return removed, err
 		}
 
-		p, err := classify(pairs, cutoff, sweepBefore)
+		p, err := classify(pairs, cutoff)
 		if err != nil {
 			return removed, err
 		}
@@ -121,7 +109,7 @@ func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (i
 		if err != nil {
 			return removed, err
 		}
-		for _, mark := range p.oldMarks {
+		for _, mark := range p.marks {
 			oldMarks[mark] = struct{}{}
 		}
 	}
@@ -160,9 +148,9 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 }
 
 // sweep removes members still carrying one of marks. Only reached once every
-// page's deletes succeeded. An old mark predates the walk, so each member still
-// carrying it was there throughout and its entry was deleted. By exact score:
-// a member a write unmarked meanwhile stays.
+// page's deletes succeeded. A mark read by the walk predates its delete, so
+// each member still carrying it had its entry deleted. By exact score: a
+// member a write unmarked meanwhile stays.
 func (c *RedisCache) sweep(ctx context.Context, tagKey string, marks map[float64]struct{}) error {
 	if len(marks) == 0 {
 		return nil
@@ -197,7 +185,7 @@ func (c *RedisCache) unlink(ctx context.Context, members []string) (int, error) 
 }
 
 // classify sorts a ZSCAN page's member, score pairs.
-func classify(pairs []string, cutoff float64, sweepBefore int64) (page, error) {
+func classify(pairs []string, cutoff float64) (page, error) {
 	var p page
 	for i := 0; i+1 < len(pairs); i += 2 {
 		member := pairs[i]
@@ -210,9 +198,7 @@ func classify(pairs []string, cutoff float64, sweepBefore int64) (page, error) {
 		case score < 0:
 			// Deleted again: a late write may have landed since.
 			p.unlink = append(p.unlink, member)
-			if markedAt := int64(-score); markedAt < sweepBefore {
-				p.oldMarks = append(p.oldMarks, score)
-			}
+			p.marks = append(p.marks, score)
 		case score <= cutoff:
 			p.unlink = append(p.unlink, member)
 			p.mark = append(p.mark, member)
@@ -228,6 +214,6 @@ type page struct {
 	unlink []string
 	// mark is the live members, marked once their entries are deleted.
 	mark []any
-	// oldMarks are marks swept once the walk ends.
-	oldMarks []float64
+	// marks are the page's marks, swept once the walk ends.
+	marks []float64
 }

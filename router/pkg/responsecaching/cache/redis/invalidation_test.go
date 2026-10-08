@@ -60,7 +60,6 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, err)
 		require.Negative(t, score, "marked")
 
-		ageMarks(mr)
 		_, err = c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")), "swept")

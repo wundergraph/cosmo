@@ -29,9 +29,6 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
-	// writeGrace bounds a write's first round trip for its entry to be
-	// extended; a walk's sweep relies on it. Only tests change it.
-	writeGrace time.Duration
 	// sweepDelay is how long after an invalidation its tags are swept in the
 	// background. Only tests change it.
 	sweepDelay time.Duration
@@ -50,17 +47,9 @@ const (
 // tagIndexPruneGrace is how long past its score a member stays in a tag index.
 const tagIndexPruneGrace = 5 * time.Minute
 
-// defaultWriteGrace is writeGrace outside tests. Shorter than writeLease.
-const defaultWriteGrace = 5 * time.Second
-
-// sweepMargin is added to writeGrace before a mark is swept. Marks and their
-// ages use the tag key's node clock, so it only absorbs clock rate and a
-// failover's new clock.
-const sweepMargin = time.Second
-
-// backgroundSweepDelay is how long after an invalidation its tag is swept.
-// Past writeGrace + sweepMargin, so that walk's marks are old enough.
-const backgroundSweepDelay = defaultWriteGrace + sweepMargin + time.Second
+// backgroundSweepDelay is how long after an invalidation its tags are walked
+// again, deleting entries that landed late and removing marks. Cleanup only.
+const backgroundSweepDelay = 3 * time.Second
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -84,7 +73,6 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		client:     client,
 		prefix:     prefix,
 		now:        time.Now,
-		writeGrace: defaultWriteGrace,
 		sweepDelay: backgroundSweepDelay,
 		closing:    closing,
 		cancel:     cancel,
