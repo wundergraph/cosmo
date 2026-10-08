@@ -557,12 +557,13 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 
 	initial, err := p.GetRouterConfig(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, previous, initial.Config)
+	assert.Equal(t, previous, initial.Config)
 	assert.Nil(t, initial.Changes)
-	require.Len(t, observed.All(), 1)
-	assert.Contains(t, observed.All()[0].Message, "missing the base graph")
-	assert.Contains(t, observed.All()[0].Message, "using the last successfully applied execution config")
-	assert.Equal(t, "legacy-v1", observed.All()[0].ContextMap()["fallback_version"])
+	if assert.Len(t, observed.All(), 1) {
+		assert.Contains(t, observed.All()[0].Message, "missing the base graph")
+		assert.Contains(t, observed.All()[0].Message, "using the last successfully applied execution config")
+		assert.Equal(t, "legacy-v1", observed.All()[0].ContextMap()["fallback_version"])
+	}
 
 	// An incomplete mapper must leave the entire previous config intact.
 	for _, mapper := range []map[string]string{{"ff1": "changed-hash"}, {}, nil} {
@@ -605,8 +606,7 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 	assert.Nil(t, recovered.Changes)
 	assert.Equal(t, "split-v1", recovered.Config.Version)
 	flags := recovered.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
-	require.Contains(t, flags, "ff1")
-	assert.Equal(t, "split-ff-v1", flags["ff1"].Version)
+	assert.Equal(t, "split-ff-v1", flags["ff1"].GetVersion())
 	assert.NotContains(t, flags, "legacy-only")
 	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-base"}, recovered.Hashes[""])
 	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-ff1"}, recovered.Hashes["ff1"])

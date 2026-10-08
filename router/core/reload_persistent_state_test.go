@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -27,7 +28,7 @@ func TestReloadPersistentState_LastValidExecutionConfigIsIsolated(t *testing.T) 
 	t.Parallel()
 
 	state := NewReloadPersistentState(zap.NewNop())
-	require.Nil(t, state.previousExecutionConfig(""))
+	assert.Nil(t, state.previousExecutionConfig(""))
 
 	token := testGraphToken(t, "organization-a", "graph-a")
 	accepted := &nodev1.RouterConfig{Version: "accepted-v1"}
@@ -35,11 +36,12 @@ func TestReloadPersistentState_LastValidExecutionConfigIsIsolated(t *testing.T) 
 	accepted.Version = "mutated-candidate"
 
 	firstRead := state.previousExecutionConfig(token)
-	require.Equal(t, "accepted-v1", firstRead.GetVersion())
+	require.NotNil(t, firstRead)
+	assert.Equal(t, "accepted-v1", firstRead.GetVersion())
 	firstRead.Version = "mutated-reader"
 
 	secondRead := state.previousExecutionConfig(token)
-	require.Equal(t, "accepted-v1", secondRead.GetVersion())
+	assert.Equal(t, "accepted-v1", secondRead.GetVersion())
 }
 
 func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing.T) {
@@ -52,12 +54,12 @@ func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing
 	differentGraphToken := testGraphToken(t, "organization-a", "graph-b", "split-config-loading")
 
 	state.acceptExecutionConfig(&nodev1.RouterConfig{Version: "graph-a-v1"}, legacyToken)
-	require.Equal(t, "graph-a-v1", state.previousExecutionConfig(splitToken).GetVersion(),
+	assert.Equal(t, "graph-a-v1", state.previousExecutionConfig(splitToken).GetVersion(),
 		"feature changes in a token must not hide the same graph's accepted config")
-	require.Nil(t, state.previousExecutionConfig(differentOrgToken))
-	require.Nil(t, state.previousExecutionConfig("invalid-token"))
-	require.Nil(t, state.previousExecutionConfig(""))
-	require.Nil(t, state.previousExecutionConfig(differentGraphToken),
+	assert.Nil(t, state.previousExecutionConfig(differentOrgToken))
+	assert.Nil(t, state.previousExecutionConfig("invalid-token"))
+	assert.Nil(t, state.previousExecutionConfig(""))
+	assert.Nil(t, state.previousExecutionConfig(differentGraphToken),
 		"an accepted config must never be reused for a different federated graph")
 }
 

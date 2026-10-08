@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -162,8 +163,8 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	}, 5*time.Second, 10*time.Millisecond, "the replacement router must boot from the fallback and start polling")
 	// The override was removed on reload. Both the poller's input and the saved
 	// fallback must retain the published URLs, not the first router's override.
-	require.True(t, proto.Equal(publishedConfig, previousConfig), "graph construction must not mutate its input")
-	require.True(t, proto.Equal(publishedConfig, persistentState.previousExecutionConfig(graphToken)),
+	assert.True(t, proto.Equal(publishedConfig, previousConfig), "graph construction must not mutate its input")
+	assert.True(t, proto.Equal(publishedConfig, persistentState.previousExecutionConfig(graphToken)),
 		"fallback must not retain a removed router-local override")
 
 	// A mapper with a base entry is not enough: the assembled candidate must
@@ -172,10 +173,10 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 		map[string]string{"": "base-invalid"},
 		map[string]*nodev1.RouterConfig{"": invalidConfig},
 	)
-	require.Eventually(t, func() bool {
+	assert.Eventually(t, func() bool {
 		return fetcher.configCalls.Load() > 0
 	}, 5*time.Second, 10*time.Millisecond, "the invalid candidate must be attempted")
-	require.Never(t, func() bool {
+	assert.Never(t, func() bool {
 		return persistentState.previousExecutionConfig(graphToken).GetVersion() != "legacy-accepted"
 	}, 200*time.Millisecond, 10*time.Millisecond, "an invalid candidate must never become the accepted fallback")
 
@@ -183,12 +184,12 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 		map[string]string{"": "base-valid"},
 		map[string]*nodev1.RouterConfig{"": validConfig},
 	)
-	require.Eventually(t, func() bool {
+	assert.Eventually(t, func() bool {
 		return persistentState.previousExecutionConfig(graphToken).GetVersion() == "split-accepted"
 	}, 5*time.Second, 10*time.Millisecond, "a validated split config must atomically replace the fallback")
 
 	supervisor.Stop()
 	startErr := <-startResult
 	supervisorStopped = true
-	require.NoError(t, startErr)
+	assert.NoError(t, startErr)
 }
