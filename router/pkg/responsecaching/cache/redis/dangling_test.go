@@ -391,6 +391,41 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.False(t, mr.Exists(entryKey(long.Key)), "readable but unreachable")
 	})
 
+	t.Run("a sweep removes only marks it read, even sharing a score", func(t *testing.T) {
+		// Redis's clock is frozen, so two walks mark with the same score. The
+		// first walk read only j's mark; k's is a dying walk's, over an entry
+		// written in its gap, and must stay for a retry.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		mr.SetTime(time.Now())
+		j := enginecache.Item{Key: "v1:j", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		k := enginecache.Item{Key: "v1:k", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		writer := newTestRedisCacheOn(t, mr)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{j}))
+		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+
+		gap := &afterStep{names: []string{"unlink"}}
+		dying := newTestRedisCacheOn(t, mr, gap, &failCommands{name: "unlink", pipelines: []int{1}})
+		gap.fn = func() {
+			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{k}))
+		}
+		scanned := &afterStep{names: []string{"zscan"}}
+		first := newTestRedisCacheOn(t, mr, scanned)
+		scanned.fn = func() {
+			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{k}))
+			_, err := dying.InvalidateByTags(context.Background(), []string{tag})
+			require.ErrorIs(t, err, errInjected)
+		}
+		_, err = first.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		scanned.requireFired(t)
+		gap.requireFired(t)
+
+		require.True(t, mr.Exists(entryKey(k.Key)), "written in the dying walk's gap")
+		requireNoDangling(t, mr, k)
+	})
+
 	t.Run("a late save after the mark is deleted before its mark is swept", func(t *testing.T) {
 		// The walk lands between the writer's index write and its SET; the SET
 		// finds its member marked, so keeps its lease. The next walk deletes it

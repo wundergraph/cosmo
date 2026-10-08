@@ -15,7 +15,8 @@ import (
 var _ responsecaching.Invalidator = (*RedisCache)(nil)
 
 // markMembers sets each ARGV member still in KEYS[1] to minus the node's
-// time in ms, so each walk's marks are told apart by exact score.
+// time in ms. Walks marking in the same millisecond share a score; sweep
+// tells them apart by member.
 var markMembers = redis.NewScript(`
 local t = redis.call('TIME')
 local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
@@ -91,7 +92,7 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 // A write never extends an entry whose member is marked or gone, so a mark can
 // go as soon as its entry is deleted again.
 func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (int, error) {
-	oldMarks := make(map[float64]struct{})
+	var marks []any
 	var removed int
 	for pairs, err := range c.scanPages(ctx, tagKey) {
 		if err != nil {
@@ -109,12 +110,10 @@ func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (i
 		if err != nil {
 			return removed, err
 		}
-		for _, mark := range p.marks {
-			oldMarks[mark] = struct{}{}
-		}
+		marks = append(marks, p.marks...)
 	}
 
-	return removed, c.sweep(ctx, tagKey, oldMarks)
+	return removed, c.sweep(ctx, tagKey, marks)
 }
 
 // scanPages yields the tag set's ZSCAN pages as member, score pairs, stopping
@@ -157,22 +156,34 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 	return removed + again, err
 }
 
-// sweep removes members still carrying one of marks. Only reached once every
-// page's deletes succeeded. A mark read by the walk predates its delete, so
-// each member still carrying it had its entry deleted. By exact score: a
-// later walk's mark on the same member stays.
-func (c *RedisCache) sweep(ctx context.Context, tagKey string, marks map[float64]struct{}) error {
+// sweep removes the marked members the walk read, as member, score pairs, each
+// only if still carrying the mark it read. Only reached once every page's
+// deletes succeeded, so each had its entry deleted after its mark. By member,
+// not score: another walk marking in the same millisecond shares the score,
+// and its members weren't deleted by this walk.
+func (c *RedisCache) sweep(ctx context.Context, tagKey string, marks []any) error {
 	if len(marks) == 0 {
 		return nil
 	}
 	pipe := c.client.Pipeline()
-	for mark := range marks {
-		score := strconv.FormatFloat(mark, 'f', -1, 64)
-		pipe.ZRemRangeByScore(ctx, tagKey, score, score)
+	for chunk := range slices.Chunk(marks, 2*invalidationPageSize) {
+		removeMarks.Eval(ctx, pipe, []string{tagKey}, chunk...)
 	}
 	_, err := pipe.Exec(ctx)
 	return err
 }
+
+// removeMarks removes each ARGV member, score pair from KEYS[1] if the member
+// still has that score.
+var removeMarks = redis.NewScript(`
+for i = 1, #ARGV, 2 do
+  local s = redis.call('ZSCORE', KEYS[1], ARGV[i])
+  if s and tonumber(s) == tonumber(ARGV[i + 1]) then
+    redis.call('ZREM', KEYS[1], ARGV[i])
+  end
+end
+return 0
+`)
 
 // unlink sends one UNLINK per member's entry, as a multi key one fails
 // CROSSSLOT in a cluster, and counts the entries deleted. A failed command
@@ -208,7 +219,7 @@ func classify(pairs []string, cutoff float64) (page, error) {
 		case score < 0:
 			// Deleted again: a late write may have landed since.
 			p.unlink = append(p.unlink, member)
-			p.marks = append(p.marks, score)
+			p.marks = append(p.marks, member, pairs[i+1])
 		case score <= cutoff:
 			p.unlink = append(p.unlink, member)
 			p.mark = append(p.mark, member)
@@ -224,6 +235,7 @@ type page struct {
 	unlink []string
 	// mark is the live members, marked once their entries are deleted.
 	mark []any
-	// marks are the page's marks, swept once the walk ends.
-	marks []float64
+	// marks are the page's marked members and their scores as read, swept
+	// once the walk ends.
+	marks []any
 }
