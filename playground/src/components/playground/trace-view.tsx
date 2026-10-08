@@ -360,7 +360,7 @@ const Trace = ({
       return fetchNode;
     };
     const parseJsonNew = (json: any, parentId?: string) => {
-      return parseFetchNew(json.fetches, parentId);
+      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
     };
 
     try {
