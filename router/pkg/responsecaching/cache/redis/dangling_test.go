@@ -308,6 +308,38 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Positive(t, score, "unmarked by the write, so not swept")
 	})
 
+	t.Run("a write between the walk's delete and its mark is deleted too", func(t *testing.T) {
+		// Left alone, a later write unmarking the member and losing its SET
+		// would leave the extended entry behind a short score.
+		t.Parallel()
+		long := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		mr := miniredis.RunT(t)
+		writer := newTestRedisCacheOn(t, mr)
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{long}))
+		interposer := &afterStep{names: []string{"unlink"}}
+		walker := newTestRedisCacheOn(t, mr, interposer)
+		interposer.fn = func() {
+			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{long}))
+		}
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		interposer.requireFired(t)
+
+		lost := newTestRedisCacheOn(t, mr, &failCommands{name: "set"})
+		short := long
+		short.TTL = 5 * time.Second
+		_ = lost.SetMany(t.Context(), []enginecache.Item{short})
+
+		later := short.TTL + tagIndexPruneGrace + time.Second
+		mr.FastForward(later)
+		advance(writer, later)
+		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{other}))
+		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		require.False(t, mr.Exists(entryKey(long.Key)), "readable but unreachable")
+	})
+
 	t.Run("a late save after the mark is deleted before its mark is swept", func(t *testing.T) {
 		// The walk lands between the writer's index write and its SET; the SET
 		// finds its member marked, so keeps its lease. The next walk deletes it

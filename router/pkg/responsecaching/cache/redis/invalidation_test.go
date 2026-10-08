@@ -288,7 +288,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 				require.Equal(t, 1, cmd.keys, "one key per UNLINK, or a cluster answers CROSSSLOT")
 			}
 		}
-		require.Equal(t, 2, unlinks, "one per entry; the index empties itself")
+		require.Equal(t, 4, unlinks, "one per entry, before and after marking")
 	})
 }
 
