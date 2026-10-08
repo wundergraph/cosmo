@@ -308,7 +308,7 @@ func TestRedisCache(t *testing.T) {
 
 			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
-			value, _, _, err := enginecache.DecodeEntry([]byte(stored))
+			value, _, _, err := enginecache.DecodeEntry(entryBody([]byte(stored)))
 			require.NoError(t, err)
 			require.Equal(t, "1", string(value))
 

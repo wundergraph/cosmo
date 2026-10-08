@@ -551,14 +551,14 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{short}))
 		require.Equal(t, short.TTL, mr.TTL(entryKey(item.Key)))
 		for _, cmd := range recorder.commands() {
-			require.NotEqual(t, "pexpireat", cmd.name)
+			require.NotEqual(t, "eval", cmd.name, "nothing to finish")
 		}
 	})
 
 	t.Run("a failed lease extension leaves an indexed entry that expires early", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
-		writer := newTestRedisCacheOn(t, mr, &failCommands{name: "pexpireat"})
+		writer := newTestRedisCacheOn(t, mr, &failScript{calls: "PEXPIREAT", pipelines: []int{1}})
 
 		err := writer.SetMany(t.Context(), []enginecache.Item{item})
 		require.ErrorIs(t, err, errInjected)

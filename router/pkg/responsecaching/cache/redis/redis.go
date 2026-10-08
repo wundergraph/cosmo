@@ -147,7 +147,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 			continue
 		}
 
-		decoded, surrogateKeys, vary, err := caching.DecodeEntry(value)
+		decoded, surrogateKeys, vary, err := caching.DecodeEntry(entryBody(value))
 		if err != nil {
 			return nil, fmt.Errorf("redis adapter decode %q: %w", key, err)
 		}

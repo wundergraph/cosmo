@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -17,7 +18,8 @@ import (
 
 // Hammers a real server with writers and invalidators on a few hot keys. One
 // tag per key, so only that tag can reach it: after writers stop and every tag
-// is invalidated once more, any live entry is dangling. Opt in with
+// is invalidated once more, any live entry is dangling. TTLs vary, and no
+// entry may outlive the TTL its value was written with. Opt in with
 // RESPONSE_CACHE_REDIS_ADDR.
 func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 	addr := os.Getenv("RESPONSE_CACHE_REDIS_ADDR")
@@ -31,6 +33,7 @@ func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 		walkers     = 8
 		testRunTime = 5 * time.Second
 	)
+	ttls := []time.Duration{3 * time.Second, 30 * time.Second, time.Hour}
 	tags := func(k int) []string { return []string{fmt.Sprintf("tag:%d", k%4)} }
 	key := func(k int) string { return fmt.Sprintf("v1:%d", k) }
 
@@ -56,7 +59,8 @@ func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 				batch := make([]enginecache.Item, 0, 3)
 				for range 1 + rand.IntN(3) {
 					k := rand.IntN(keys)
-					batch = append(batch, enginecache.Item{Key: key(k), Value: []byte(`{}`), TTL: time.Minute, Tags: tags(k)})
+					ttl := ttls[rand.IntN(len(ttls))]
+					batch = append(batch, enginecache.Item{Key: key(k), Value: []byte(strconv.FormatInt(ttl.Milliseconds(), 10)), TTL: ttl, Tags: tags(k)})
 				}
 				if c.SetMany(context.Background(), batch) == nil {
 					writes.Add(1)
@@ -79,14 +83,29 @@ func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 	stopWalks()
 	walkWG.Wait()
 
+	check := redis.NewClient(&redis.Options{Addr: addr})
+	defer func() { _ = check.Close() }()
+	for k := range keys {
+		stored, err := check.Get(t.Context(), prefix+entryNamespace+key(k)).Bytes()
+		if err == redis.Nil {
+			continue
+		}
+		require.NoError(t, err)
+		pttl, err := check.PTTL(t.Context(), prefix+entryNamespace+key(k)).Result()
+		require.NoError(t, err)
+		value, _, _, err := enginecache.DecodeEntry(entryBody(stored))
+		require.NoError(t, err)
+		written, err := strconv.ParseInt(string(value), 10, 64)
+		require.NoError(t, err)
+		require.LessOrEqual(t, pttl.Milliseconds(), written, "%s outlives the TTL it was written with", key(k))
+	}
+
 	sweeper := newCache()
 	for k := range 4 {
 		_, err := sweeper.InvalidateByTags(t.Context(), tags(k))
 		require.NoError(t, err)
 	}
 
-	check := redis.NewClient(&redis.Options{Addr: addr})
-	defer func() { _ = check.Close() }()
 	var live, dangling int
 	for k := range keys {
 		n, err := check.Exists(t.Context(), prefix+entryNamespace+key(k)).Result()
