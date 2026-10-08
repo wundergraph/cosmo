@@ -17,7 +17,9 @@ import {
   invalidDirectiveLocationErrorMessage,
   NON_NULLABLE_STRING,
   nonRootFieldCacheTagErrorMessage,
+  normalizeSubgraph,
   numberToOrdinal,
+  parse,
   partiallyDefinedCacheTagReferenceErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -25,9 +27,11 @@ import {
   type TypeName,
   unavailableCacheTagReferencesError,
   undefinedCacheTagArgumentErrorMessage,
+  undefinedCacheTagInputFieldErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
   unsupportedFieldCacheTagNamespaceErrorMessage,
+  untraversableCacheTagReferenceErrorMessage,
 } from '../../../src';
 import {
   createSubgraph,
@@ -499,9 +503,36 @@ describe('@cacheTag tests', () => {
       // A list of Input Objects yields no single value, so "filters.category" does not resolve.
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          undefinedCacheTagArgumentErrorMessage('filters.category'),
+          untraversableCacheTagReferenceErrorMessage({
+            reference: 'filters.category',
+            typeString: '[Filter!]!',
+            untraversableReference: 'filters',
+          }),
         ]),
       );
+    });
+
+    test('that an "$args" path that traverses a nested list is rejected at that list', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          input Filter { tags: [Tag!] }
+          input Tag { name: String! }
+          type Query {
+            products(filter: Filter!): [Product!]! @cacheTag(format: "products-{$args.filter.tags.name}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          untraversableCacheTagReferenceErrorMessage({
+            reference: 'filter.tags.name',
+            typeString: '[Tag!]',
+            untraversableReference: 'filter.tags',
+          }),
+        ]),
+      ]);
     });
 
     test('that an "$args" path that traverses a Scalar is rejected', () => {
@@ -517,9 +548,47 @@ describe('@cacheTag tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          undefinedCacheTagArgumentErrorMessage('id.value'),
+          untraversableCacheTagReferenceErrorMessage({
+            reference: 'id.value',
+            typeString: 'ID!',
+            untraversableReference: 'id',
+          }),
         ]),
       );
+    });
+
+    test('that an "$args" path that traverses an Enum is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          enum Region { EU US }
+          type Query {
+            products(region: Region): [Product!]! @cacheTag(format: "products-{$args.region.code}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          untraversableCacheTagReferenceErrorMessage({
+            reference: 'region.code',
+            typeString: 'Region',
+            untraversableReference: 'region',
+          }),
+        ]),
+      ]);
+    });
+
+    // Without the directive, an undefined type makes normalization throw rather than return an error.
+    test('that an "$args" path that traverses an argument of an undefined type adds no error', () => {
+      const normalize = (directives: string) => () =>
+        normalizeSubgraph({
+          document: parse(`type Query { products(filter: Undefined): [ID] ${directives} }`),
+          subgraphName: 'a',
+          version: ROUTER_COMPATIBILITY_VERSION_ONE,
+        });
+      expect(normalize('')).toThrow('Unknown type: "Undefined".');
+      expect(normalize('@cacheTag(format: "products-{$args.filter.category}")')).toThrow('Unknown type: "Undefined".');
     });
 
     test('that an "$args" path referencing an undefined Input Object field is rejected', () => {
@@ -536,9 +605,122 @@ describe('@cacheTag tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          undefinedCacheTagArgumentErrorMessage('filter.brand'),
+          undefinedCacheTagInputFieldErrorMessage({
+            fieldName: 'brand',
+            inputObjectName: 'Filter',
+            reference: 'filter.brand',
+          }),
         ]),
       );
+    });
+
+    test('that an "$args" path referencing an undefined nested Input Object field names that Input Object', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          input Filter { nested: NestedFilter }
+          input NestedFilter { depth: Int }
+          type Query {
+            products(filter: Filter!): [Product!]! @cacheTag(format: "products-{$args.filter.nested.width}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedCacheTagInputFieldErrorMessage({
+            fieldName: 'width',
+            inputObjectName: 'NestedFilter',
+            reference: 'filter.nested.width',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that an "$args" path whose first segment is undefined is reported as an undefined argument', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "products-{$args.missing.value}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedCacheTagArgumentErrorMessage('missing.value'),
+        ]),
+      ]);
+    });
+
+    test('that a repeated unsupported namespace is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "{$key.a}-{$key.b}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          unsupportedFieldCacheTagNamespaceErrorMessage('key'),
+        ]),
+      ]);
+    });
+
+    test('that a repeated undefined reference is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "{$args.x}-{ $args.x }")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [undefinedCacheTagArgumentErrorMessage('x')]),
+      ]);
+    });
+
+    test('that a repeated malformed placeholder is reported once', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "{args.x}-{args.x}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          invalidCacheTagPlaceholderErrorMessage('args.x'),
+        ]),
+      ]);
+    });
+
+    test('that distinct invalid references are each reported', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query {
+            products(id: ID!): [Product!]! @cacheTag(format: "{$args.x}-{$args.y}-{$key.a}-{$request.b}")
+          }
+          type Product @key(fields: "id") { id: ID! }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
+          undefinedCacheTagArgumentErrorMessage('x'),
+          undefinedCacheTagArgumentErrorMessage('y'),
+          unsupportedFieldCacheTagNamespaceErrorMessage('key'),
+          unsupportedFieldCacheTagNamespaceErrorMessage('request'),
+        ]),
+      ]);
     });
 
     test('that a namespace other than "$args" is rejected upon a field', () => {

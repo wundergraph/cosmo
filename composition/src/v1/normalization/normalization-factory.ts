@@ -167,6 +167,7 @@ import {
   subgraphInvalidSyntaxError,
   typeNameAlreadyProvidedErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
+  undefinedCacheTagInputFieldErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -182,6 +183,7 @@ import {
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
+  untraversableCacheTagReferenceErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -4528,9 +4530,8 @@ export class NormalizationFactory {
           errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
           continue;
         }
-        const argumentData = this.getCacheTagArgumentData(fieldData, reference);
+        const argumentData = this.getCacheTagArgumentData(fieldData, reference, errorMessages);
         if (!argumentData) {
-          errorMessages.push(undefinedCacheTagArgumentErrorMessage(reference));
           continue;
         }
         if (!this.isValidCacheTagLeaf(argumentData)) {
@@ -4543,7 +4544,8 @@ export class NormalizationFactory {
         }
       }
       if (errorMessages.length > 0) {
-        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, errorMessages));
+        // A repeated placeholder produces the same message.
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [...new Set(errorMessages)]));
         continue;
       }
       formats.add(canonicalFormat);
@@ -4586,25 +4588,50 @@ export class NormalizationFactory {
     return formatArgument.value.value;
   }
 
-  getCacheTagArgumentData(fieldData: FieldData, reference: string): InputValueData | undefined {
+  /* Returns the input value at the end of the path,
+   * or pushes an error message for the segment that does not resolve.
+   */
+  getCacheTagArgumentData(
+    fieldData: FieldData,
+    reference: string,
+    errorMessages: Array<string>,
+  ): InputValueData | undefined {
     const path = reference.split(LITERAL_PERIOD);
-    let inputValueDataByName: Map<string, InputValueData> | undefined = fieldData.argumentDataByName;
+    // The first segment is an argument of the field; each following segment is a field of an Input Object.
+    let inputObjectName: TypeName | undefined;
+    let inputValueDataByName = fieldData.argumentDataByName;
     for (const [index, segment] of path.entries()) {
-      const inputValueData: InputValueData | undefined = inputValueDataByName?.get(segment);
+      const inputValueData = inputValueDataByName.get(segment);
       if (!inputValueData) {
+        errorMessages.push(
+          inputObjectName
+            ? undefinedCacheTagInputFieldErrorMessage({ fieldName: segment, inputObjectName, reference })
+            : undefinedCacheTagArgumentErrorMessage(reference),
+        );
         return;
       }
       // Whether the final segment is an interpolatable leaf value is assessed by the consumer.
       if (index === path.length - 1) {
         return inputValueData;
       }
-      // A list yields no single value, so a path cannot traverse it.
-      if (isTypeNodeListType(inputValueData.type)) {
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(inputValueData.namedTypeName);
+      // An undefined type fails normalization without the directive too.
+      if (!namedTypeData && !BASE_SCALARS.has(inputValueData.namedTypeName)) {
         return;
       }
-      const namedTypeData = this.parentDefinitionDataByTypeName.get(inputValueData.namedTypeName);
-      inputValueDataByName =
-        namedTypeData?.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ? namedTypeData.inputValueDataByName : undefined;
+      // A list yields no single value, and a leaf has no fields.
+      if (isTypeNodeListType(inputValueData.type) || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        errorMessages.push(
+          untraversableCacheTagReferenceErrorMessage({
+            reference,
+            typeString: printTypeNode(inputValueData.type),
+            untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
+          }),
+        );
+        return;
+      }
+      inputObjectName = namedTypeData.name;
+      inputValueDataByName = namedTypeData.inputValueDataByName;
     }
   }
 
