@@ -561,10 +561,6 @@ type SecurityConfiguration struct {
 type ParserLimitsConfiguration struct {
 	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
 	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
-	// IgnorePersistedOperations skips both limits for operations loaded from persisted
-	// operation storage. Automatic persisted queries are registered by clients and stay
-	// subject to the limits.
-	IgnorePersistedOperations bool `yaml:"ignore_persisted_operations,omitempty" envDefault:"false" env:"SECURITY_PARSER_LIMITS_IGNORE_PERSISTED_OPERATIONS"`
 }
 
 type QueryDepthConfiguration struct {

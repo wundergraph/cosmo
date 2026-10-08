@@ -1587,7 +1587,6 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
-		ParserLimitsIgnorePersistedOperations:                  s.securityConfiguration.ParserLimits.IgnorePersistedOperations,
 		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
