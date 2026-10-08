@@ -19,6 +19,8 @@ import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   CacheInvalidateConfigurationSchema,
   CachePopulateConfigurationSchema,
+  CacheTagEntityConfigurationSchema,
+  CacheTagRootFieldConfigurationSchema,
   ConfigurationVariableKind,
   ConfigurationVariableSchema,
   CostConfigurationSchema,
@@ -45,6 +47,8 @@ import type {
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   CachePopulateConfiguration,
+  CacheTagEntityConfiguration,
+  CacheTagRootFieldConfiguration,
   EngineConfiguration,
   EntityCacheConfiguration,
   EntityCachingConfiguration,
@@ -102,6 +106,8 @@ function extractEntityCachingConfiguration(
   const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const cacheTagRootFieldConfigurations: CacheTagRootFieldConfiguration[] = [];
+  const cacheTagEntityConfigurations: CacheTagEntityConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
@@ -140,16 +146,39 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
+
+    for (const config of data.entityCaching?.cacheTagRootFieldConfigurations) {
+      cacheTagRootFieldConfigurations.push(
+        create(CacheTagRootFieldConfigurationSchema, {
+          typeName: config.typeName,
+          fieldName: config.fieldName,
+          format: config.format,
+        }),
+      );
+    }
+
+    for (const config of data.entityCaching?.cacheTagEntityConfigurations) {
+      cacheTagEntityConfigurations.push(
+        create(CacheTagEntityConfigurationSchema, {
+          typeName: config.typeName,
+          format: config.format,
+        }),
+      );
+    }
   }
 
   if (
     entityCacheConfigurations.length > 0 ||
     cacheInvalidateConfigurations.length > 0 ||
-    cachePopulateConfigurations.length > 0
+    cachePopulateConfigurations.length > 0 ||
+    cacheTagRootFieldConfigurations.length > 0 ||
+    cacheTagEntityConfigurations.length > 0
   ) {
     return create(EntityCachingConfigurationSchema, {
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
+      cacheTagEntityConfigurations,
+      cacheTagRootFieldConfigurations,
       entityCacheConfigurations,
     });
   }
