@@ -2055,9 +2055,10 @@ export class FederationFactory {
     subgraphName: SubgraphName,
     reference: string,
   ): string | undefined {
-    // The first segment is an argument of the field; each following segment is a field of an Input Object.
-    // NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
-    // or that traverses a list or a leaf.
+    /* The first segment is an argument of the field; each following segment is a field of an Input Object.
+     * NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
+     * or that traverses a list or a leaf.
+     */
     let parentCoords = fieldData.federatedCoords;
     let parentSubgraphNames = fieldData.subgraphNames;
     let inputValueDataByName = fieldData.argumentDataByName;

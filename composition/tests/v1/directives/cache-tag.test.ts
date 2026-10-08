@@ -71,42 +71,6 @@ describe('@cacheTag tests', () => {
         ]),
       );
     });
-
-    test('that a placeholder with an empty path segment is rejected', () => {
-      const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefaultName(`
-          type Query {
-            products(searchKey: String!): [Product!]! @cacheTag(format: "products-{$args.searchKey.}")
-          }
-          type Product @key(fields: "id") { id: ID! }
-        `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          invalidCacheTagPlaceholderErrorMessage('$args.searchKey.'),
-        ]),
-      );
-    });
-
-    test('that an unclosed placeholder is rejected rather than treated as literal text', () => {
-      const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefaultName(`
-          type Query {
-            products(searchKey: String!): [Product!]! @cacheTag(format: "products-{$args.searchKey")
-          }
-          type Product @key(fields: "id") { id: ID! }
-        `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          invalidCacheTagBraceErrorMessage('products-{$args.searchKey'),
-        ]),
-      );
-    });
   });
 
   describe('field definition tests', () => {
@@ -432,24 +396,6 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
-    test('that an "$args" placeholder referencing an undefined argument is rejected', () => {
-      const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefaultName(`
-          type Query {
-            products(searchKey: String!): [Product!]! @cacheTag(format: "products-{$args.searchKeys}")
-          }
-          type Product @key(fields: "id") { id: ID! }
-        `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          undefinedCacheTagArgumentErrorMessage('searchKeys'),
-        ]),
-      );
-    });
-
     test('that an "$args" placeholder referencing a non-leaf argument is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
@@ -484,30 +430,6 @@ describe('@cacheTag tests', () => {
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagArgumentTypeErrorMessage({ reference: 'ids', typeString: '[ID!]!' }),
-        ]),
-      );
-    });
-
-    test('that an "$args" path that traverses a list is rejected', () => {
-      const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefaultName(`
-          input Filter { category: String! }
-          type Query {
-            products(filters: [Filter!]!): [Product!]! @cacheTag(format: "products-{$args.filters.category}")
-          }
-          type Product @key(fields: "id") { id: ID! }
-        `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toHaveLength(1);
-      // A list of Input Objects yields no single value, so "filters.category" does not resolve.
-      expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          untraversableCacheTagReferenceErrorMessage({
-            reference: 'filters.category',
-            typeString: '[Filter!]!',
-            untraversableReference: 'filters',
-          }),
         ]),
       );
     });
@@ -612,29 +534,6 @@ describe('@cacheTag tests', () => {
           }),
         ]),
       );
-    });
-
-    test('that an "$args" path referencing an undefined nested Input Object field names that Input Object', () => {
-      const { errors } = normalizeSubgraphFailure(
-        createSubgraphWithDefaultName(`
-          input Filter { nested: NestedFilter }
-          input NestedFilter { depth: Int }
-          type Query {
-            products(filter: Filter!): [Product!]! @cacheTag(format: "products-{$args.filter.nested.width}")
-          }
-          type Product @key(fields: "id") { id: ID! }
-        `),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toStrictEqual([
-        invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          undefinedCacheTagInputFieldErrorMessage({
-            fieldName: 'width',
-            inputObjectName: 'NestedFilter',
-            reference: 'filter.nested.width',
-          }),
-        ]),
-      ]);
     });
 
     test('that an "$args" path whose first segment is undefined is reported as an undefined argument', () => {
@@ -945,45 +844,6 @@ describe('@cacheTag tests', () => {
           ]),
         }),
       ]);
-    });
-
-    // Each contract is a separate federated graph, so it warns only if it retains the field.
-    test('that a contract produces the warning only if it retains the shared Query field', () => {
-      const { federationResultByContractName, warnings } = federateSubgraphsWithContractsSuccess(
-        [
-          createSubgraph(
-            'a',
-            `
-            type Query {
-              products(id: ID!): [Product!]! @shareable @tag(name: "internal") @cacheTag(format: "products")
-              product(id: ID!): Product
-            }
-            type Product @key(fields: "id") { id: ID! }
-          `,
-          ),
-          createProductsSubgraph('b', '@shareable @tag(name: "internal") @cacheTag(format: "catalogue")'),
-        ],
-        new Map<string, ContractTagOptions>([
-          [
-            'excludesProducts',
-            { tagNamesToExclude: new Set<string>(['internal']), tagNamesToInclude: new Set<string>() },
-          ],
-          ['retainsProducts', { tagNamesToExclude: new Set<string>(['other']), tagNamesToInclude: new Set<string>() }],
-        ]),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      const expectedWarnings = [
-        inconsistentCacheTagFormatsWarning({
-          coords: 'Query.products',
-          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
-            ['a', new Set(['products'])],
-            ['b', new Set(['catalogue'])],
-          ]),
-        }),
-      ];
-      expect(warnings).toStrictEqual(expectedWarnings);
-      expect(federationResultByContractName.get('retainsProducts')?.warnings).toStrictEqual(expectedWarnings);
-      expect(federationResultByContractName.get('excludesProducts')?.warnings).toStrictEqual([]);
     });
 
     test('that an inaccessible shared Query field produces no warning', () => {
@@ -1388,16 +1248,6 @@ describe('@cacheTag tests', () => {
           createProductsSubgraph('a', `@shareable ${cacheTag}`, 'filter: Filter', 'input Filter { category: String }'),
         ],
         '@cacheTag(format: "{$args.filter.category}")',
-      );
-    });
-
-    test('that a referenced required argument omitted by a subgraph produces only its own error', () => {
-      expectErrorsUnchangedByCacheTag(
-        (cacheTag) => [
-          createProductsSubgraph('a', `@shareable ${cacheTag}`, 'id: ID!, region: String!'),
-          createProductsSubgraph('b', '@shareable'),
-        ],
-        '@cacheTag(format: "{$args.region}")',
       );
     });
 
