@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func testGraphToken(t *testing.T, organizationID, graphID string, features ...string) string {
@@ -47,7 +48,8 @@ func TestReloadPersistentState_LastValidExecutionConfigIsIsolated(t *testing.T) 
 func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing.T) {
 	t.Parallel()
 
-	state := NewReloadPersistentState(zap.NewNop())
+	logCore, logs := observer.New(zap.WarnLevel)
+	state := NewReloadPersistentState(zap.New(logCore))
 	legacyToken := testGraphToken(t, "organization-a", "graph-a")
 	splitToken := testGraphToken(t, "organization-a", "graph-a", "split-config-loading")
 	differentOrgToken := testGraphToken(t, "organization-b", "graph-a", "split-config-loading")
@@ -59,6 +61,9 @@ func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing
 	assert.Nil(t, state.previousExecutionConfig(differentOrgToken))
 	assert.Nil(t, state.previousExecutionConfig("invalid-token"))
 	assert.Nil(t, state.previousExecutionConfig(""))
+	if assert.Len(t, logs.All(), 1) {
+		assert.Contains(t, logs.All()[0].ContextMap(), "error")
+	}
 	assert.Nil(t, state.previousExecutionConfig(differentGraphToken),
 		"an accepted config must never be reused for a different federated graph")
 }
