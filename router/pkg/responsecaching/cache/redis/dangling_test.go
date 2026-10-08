@@ -49,7 +49,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	// A and B: the same key is written again between two steps of the walk.
 	// Rank paging UNLINKed then ZREMed, dropping the member of an entry just
 	// written. A step the code lacks is skipped.
-	for _, step := range []string{"zrevrange", "zscan", "unlink"} {
+	for _, step := range []string{"zscan", "unlink"} {
 		for name, setup := range setups {
 			t.Run(fmt.Sprintf("write after walk's %s, %s", step, name), func(t *testing.T) {
 				t.Parallel()
@@ -213,6 +213,31 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey(item.Key)))
+	})
+
+	t.Run("a member raised mid-walk by a write that never lands is still invalidated", func(t *testing.T) {
+		// The write lists k at a later expiry than anything the walk saw at
+		// its start, then loses its SET: k still holds the old value.
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		old := enginecache.Item{Key: "v1:k", Value: []byte(`"old"`), TTL: 30 * time.Minute, Tags: []string{tag}}
+		other := enginecache.Item{Key: "v1:j", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{old, other}))
+
+		lost := newTestRedisCacheOn(t, mr, &failCommands{name: "set"})
+		started := &afterStep{names: []string{"zrevrange", "zscan"}}
+		walker := newTestRedisCacheOn(t, mr, started)
+		started.fn = func() {
+			raised := old
+			raised.TTL = 2 * time.Hour
+			_ = lost.SetMany(context.Background(), []enginecache.Item{raised})
+		}
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+		require.NoError(t, err)
+		started.requireFired(t)
+
+		require.False(t, mr.Exists(entryKey(old.Key)), "the old value survived its invalidation")
 	})
 
 	t.Run("a SET landing after the walk keeps only its lease", func(t *testing.T) {

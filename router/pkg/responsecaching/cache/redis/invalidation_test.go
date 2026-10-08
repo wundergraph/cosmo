@@ -213,18 +213,16 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		}
 	})
 
-	t.Run("an entry written during invalidation is left for the next one", func(t *testing.T) {
-		// The index is read, then its entries removed, and a write can land in
-		// between. Taking the index whole would drop that write's member while
-		// its entry survives, unreachable by any later invalidation.
+	t.Run("an entry written after its page was read stays listed for the next one", func(t *testing.T) {
+		// A write can land between reading a page and deleting its entries.
+		// Removing it from the index would leave its entry unreachable.
 		t.Parallel()
-		interposer := &afterCommand{name: "zrevrange"}
+		interposer := &afterCommand{name: "zscan"}
 		c, mr := newTestRedisCacheWithHook(t, interposer)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
 
 		interposer.fn = func() {
-			advance(c, time.Second)
 			require.NoError(t, c.SetMany(context.Background(), []enginecache.Item{item("v1:b", "subgraph:accounts")}))
 		}
 

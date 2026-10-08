@@ -29,7 +29,8 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 }
 
 // invalidateTag deletes the entries one tag names, walking its set a page at a
-// time.
+// time. Every member is taken, whatever its score: a write landing mid-walk
+// may be deleted too, which only costs a miss.
 //
 // A member's score is its state:
 //
@@ -42,20 +43,13 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
-	top, err := c.client.ZRevRangeWithScores(ctx, tagKey, 0, 0).Result()
-	if err != nil || len(top) == 0 {
-		return 0, err
-	}
-	// Live members above this were written after the walk started.
-	cutoff := top[0].Score
-
 	var leftover []mark
 	var removed int
 	for pairs, err := range c.scanPages(ctx, tagKey) {
 		if err != nil {
 			return removed, err
 		}
-		p, err := classify(pairs, cutoff)
+		p, err := classify(pairs)
 		if err != nil {
 			return removed, err
 		}
@@ -92,12 +86,12 @@ func (c *RedisCache) scanPages(ctx context.Context, tagKey string) iter.Seq2[[]s
 // invalidatePage invalidates one page in four steps. After a failed step it
 // stops, leaving scores or marks for a retry.
 func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) (int, error) {
-	if len(p.unlink) == 0 {
+	if len(p.members) == 0 {
 		return 0, nil
 	}
 
-	// 1. Delete the entries of the live members taken and of leftover marks.
-	removed, err := c.unlink(ctx, p.unlink)
+	// 1. Delete the entries of every member on the page.
+	removed, err := c.unlink(ctx, p.members)
 	if err != nil || len(p.live) == 0 {
 		return removed, err
 	}
@@ -206,17 +200,17 @@ return 0
 
 // page is what a walk does with one ZSCAN page.
 type page struct {
-	// unlink is every member whose entry is deleted: live and marked.
-	unlink []string
-	// live is the live members taken, marked between two deletes.
+	// members is every member on the page; all their entries are deleted.
+	members []string
+	// live is the live members, marked between two deletes.
 	live []string
 	// marked is the marks left by walks that stopped midway, removed once the
 	// walk ends.
 	marked []mark
 }
 
-// classify sorts a ZSCAN page's member, score pairs.
-func classify(pairs []string, cutoff float64) (page, error) {
+// classify sorts a ZSCAN page's member, score pairs into live and marked.
+func classify(pairs []string) (page, error) {
 	var p page
 	for i := 0; i+1 < len(pairs); i += 2 {
 		member, raw := pairs[i], pairs[i+1]
@@ -225,15 +219,12 @@ func classify(pairs []string, cutoff float64) (page, error) {
 			return p, err
 		}
 
-		switch {
-		case score < 0:
-			p.unlink = append(p.unlink, member)
+		p.members = append(p.members, member)
+		if score < 0 {
 			p.marked = append(p.marked, mark{member: member, score: raw})
-		case score <= cutoff:
-			p.unlink = append(p.unlink, member)
+		} else {
 			p.live = append(p.live, member)
 		}
-		// Otherwise written after the walk started: left for the next one.
 	}
 	return p, nil
 }
