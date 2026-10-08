@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   blankCacheTagFormatErrorMessage,
   CACHE_TAG,
-  type CacheTagConfiguration,
+  type CacheTagRootFieldConfiguration,
   type ContractTagOptions,
   type EntityCacheConfiguration,
   FIRST_ORDINAL,
@@ -101,9 +101,9 @@ describe('@cacheTag tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a static format on a root Query field produces a CacheTagConfiguration', () => {
+    test('that a static format on a root Query field produces a CacheTagRootFieldConfiguration', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             type Query {
               products(searchKey: String!): [Product!]! @cacheTag(format: "products")
@@ -117,12 +117,12 @@ describe('@cacheTag tests', () => {
         // The configuration is attached to the parent type and identifies the field it tags.
       ).toStrictEqual([
         { fieldName: 'products', format: 'products', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that the directive is repeatable upon a field definition', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             type Query {
               products: [Product!]! @cacheTag(format: "products") @cacheTag(format: "catalogue")
@@ -138,12 +138,12 @@ describe('@cacheTag tests', () => {
         { fieldName: 'products', format: 'products', typeName: 'Query' },
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
         { fieldName: 'product', format: 'product', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that an identical format repeated upon a field is configured once', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             type Query {
               products: [Product!]!
@@ -160,12 +160,12 @@ describe('@cacheTag tests', () => {
       ).toStrictEqual([
         { fieldName: 'products', format: 'products', typeName: 'Query' },
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that formats differing only in the whitespace within a placeholder are configured once', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             type Query {
               products(id: ID!): [Product!]!
@@ -180,12 +180,12 @@ describe('@cacheTag tests', () => {
         ),
       ).toStrictEqual([
         { fieldName: 'products', format: 'products-{$args.id}', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that a renamed Query root type is recognised', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             schema { query: Queries }
             type Queries {
@@ -200,7 +200,7 @@ describe('@cacheTag tests', () => {
         ),
       ).toStrictEqual([
         { fieldName: 'products', format: 'products', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that the directive upon a Mutation root field is ignored with a warning', () => {
@@ -310,7 +310,7 @@ describe('@cacheTag tests', () => {
 
     test('that an "$args" placeholder referencing an argument is valid', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             enum Region { EU US }
             type Query {
@@ -326,12 +326,12 @@ describe('@cacheTag tests', () => {
       ).toStrictEqual([
         // An Enum argument is a valid reference, and the whitespace within a placeholder is removed.
         { fieldName: 'products', format: 'products-{$args.searchKey}-{$args.region}', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that an "$args" placeholder referencing a custom Scalar argument is valid', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             scalar DateTime
             type Query {
@@ -345,12 +345,12 @@ describe('@cacheTag tests', () => {
         ),
       ).toStrictEqual([
         { fieldName: 'products', format: 'products-{$args.after}', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that an "$args" placeholder referencing an Input Object field is valid', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             input Filter { category: String! nested: NestedFilter }
             input NestedFilter { depth: Int! }
@@ -370,12 +370,12 @@ describe('@cacheTag tests', () => {
           format: 'products-{$args.filter.category}-{$args.filter.nested.depth}',
           typeName: 'Query',
         },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that an "$args" placeholder with whitespace around its periods is valid', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             input Filter { category: String! }
             type Query {
@@ -394,7 +394,7 @@ describe('@cacheTag tests', () => {
           format: 'products-{$args.searchKey}-{$args.filter.category}',
           typeName: 'Query',
         },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that an "$args" placeholder referencing a non-leaf argument is rejected', () => {
@@ -703,7 +703,7 @@ describe('@cacheTag tests', () => {
 
     test('that a format with whitespace around other text is valid', () => {
       expect(
-        getCacheTagConfigurations(
+        getCacheTagRootFieldConfigurations(
           createSubgraphWithDefaultName(`
             type Query {
               products: [Product!]! @cacheTag(format: " products ")
@@ -714,7 +714,7 @@ describe('@cacheTag tests', () => {
         ),
       ).toStrictEqual([
         { fieldName: 'products', format: ' products ', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     // Generic directive validation reports a missing or non-String format, so no second error is added.
@@ -790,7 +790,7 @@ describe('@cacheTag tests', () => {
   });
 
   describe('federation tests', () => {
-    test('that each subgraph retains its own CacheTagConfigurations for a shared Query field', () => {
+    test('that each subgraph retains its own CacheTagRootFieldConfigurations for a shared Query field', () => {
       const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [
           createSubgraph(
@@ -816,19 +816,19 @@ describe('@cacheTag tests', () => {
       );
       expect(
         subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
+          ?.cacheTagRootFieldConfigurations,
       ).toStrictEqual([
         { fieldName: 'products', format: 'products-{$args.id}', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
       expect(
         subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
+          ?.cacheTagRootFieldConfigurations,
       ).toStrictEqual([
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
-    test('that every CacheTagConfiguration of each overridden Query field is removed from the overridden subgraph', () => {
+    test('that every CacheTagRootFieldConfiguration of each overridden Query field is removed from the overridden subgraph', () => {
       const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [
           createSubgraph(
@@ -857,16 +857,16 @@ describe('@cacheTag tests', () => {
       );
       expect(
         subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
+          ?.cacheTagRootFieldConfigurations,
       ).toStrictEqual([
         { fieldName: 'product', format: 'product-{$args.id}', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
       expect(
         subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
+          ?.cacheTagRootFieldConfigurations,
       ).toStrictEqual([
         { fieldName: 'products', format: 'products', typeName: 'Query' },
-      ] satisfies Array<CacheTagConfiguration>);
+      ] satisfies Array<CacheTagRootFieldConfiguration>);
     });
 
     test('that differing formats upon a shared Query field produce a warning', () => {
@@ -1423,8 +1423,11 @@ function expectErrorsUnchangedByCacheTag(createSubgraphs: (cacheTag: string) => 
   expect(errors).toStrictEqual(expectedErrors);
 }
 
-// Returns the CacheTagConfigurations for a type. Entity-caching config is nested under `.entityCaching`.
-function getCacheTagConfigurations(subgraph: Subgraph, typeName: TypeName): Array<CacheTagConfiguration> | undefined {
+// Returns the CacheTagRootFieldConfigurations for a type. Entity-caching config is nested under `.entityCaching`.
+function getCacheTagRootFieldConfigurations(
+  subgraph: Subgraph,
+  typeName: TypeName,
+): Array<CacheTagRootFieldConfiguration> | undefined {
   const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
     subgraph,
     ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1433,5 +1436,5 @@ function getCacheTagConfigurations(subgraph: Subgraph, typeName: TypeName): Arra
   expect(warnings).toHaveLength(0);
   const configurationData = configurationDataByTypeName.get(typeName);
   expect(configurationData).toBeDefined();
-  return configurationData!.entityCaching?.cacheTagConfigurations;
+  return configurationData!.entityCaching?.cacheTagRootFieldConfigurations;
 }
