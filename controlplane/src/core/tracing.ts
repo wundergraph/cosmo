@@ -127,14 +127,21 @@ export async function withRequestSpans<T>(signal: AbortSignal | undefined, fn: (
     }
   };
 
-  if (!signal || signal.aborted) {
+  if (!signal) {
     return fn();
   }
 
-  signal.addEventListener('abort', endOpenSpans, { once: true });
+  // An already-aborted signal never emits, so that case is handled in the finally below.
+  if (!signal.aborted) {
+    signal.addEventListener('abort', endOpenSpans, { once: true });
+  }
+
   try {
     return await fn();
   } finally {
     signal.removeEventListener('abort', endOpenSpans);
+    if (signal.aborted) {
+      endOpenSpans();
+    }
   }
 }

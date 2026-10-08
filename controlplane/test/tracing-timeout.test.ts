@@ -155,6 +155,21 @@ describe('span export when a request is aborted', () => {
 
     expect(spanNames(await transactionOf(traceId))).toContain('pg.query');
   });
+
+  test('ends spans opened under a signal that was already aborted on entry', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const traceId = await inRequest(async () => {
+      await withRequestSpans(controller.signal, async () => {
+        const hung = withSpan('A.work', () => new Promise(() => {}));
+        expect(hung).toBeInstanceOf(Promise);
+        await new Promise((resolve) => setImmediate(resolve));
+      });
+    });
+
+    expect(spanNames(await transactionOf(traceId))).toContain('A.work');
+  });
 });
 
 describe('requests sharing one distributed trace', () => {
