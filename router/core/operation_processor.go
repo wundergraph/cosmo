@@ -133,7 +133,6 @@ type OperationProcessorOptions struct {
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
-	EnforceParserLimitsAfterNormalization                  bool
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
@@ -142,19 +141,18 @@ type OperationProcessorOptions struct {
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
 // It should be only instantiated once and shared across requests
 type OperationProcessor struct {
-	executor                              *Executor
-	maxOperationSizeInBytes               int64
-	persistedOperationClient              *persistedoperation.Client
-	operationCache                        *OperationCache
-	parseKits                             map[int]*parseKit
-	parseKitSemaphore                     chan int
-	introspectionEnabled                  bool
-	parseKitOptions                       *parseKitOptions
-	complexityLimits                      *config.ComplexityLimits
-	costControl                           *config.CostControl
-	parserTokenizerLimits                 astparser.TokenizerLimits
-	enforceParserLimitsAfterNormalization bool
-	operationNameLengthLimit              int
+	executor                 *Executor
+	maxOperationSizeInBytes  int64
+	persistedOperationClient *persistedoperation.Client
+	operationCache           *OperationCache
+	parseKits                map[int]*parseKit
+	parseKitSemaphore        chan int
+	introspectionEnabled     bool
+	parseKitOptions          *parseKitOptions
+	complexityLimits         *config.ComplexityLimits
+	costControl              *config.CostControl
+	parserTokenizerLimits    astparser.TokenizerLimits
+	operationNameLengthLimit int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -173,8 +171,6 @@ type parseKit struct {
 	variablesRemapper   *astnormalization.VariablesMapper
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
-	limitsTokenizer     *astparser.Tokenizer
-	limitsInput         ast.Input
 	variablesValidator  *variablesvalidation.VariablesValidator
 	operationValidator  *astvalidation.OperationValidator
 
@@ -850,9 +846,6 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed printing operation: %w", err))
 	}
-	if err := o.validateNormalizedOperationLimits(); err != nil {
-		return false, err
-	}
 
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
@@ -975,9 +968,6 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
-	if err := o.validateNormalizedOperationLimits(); err != nil {
-		return false, err
-	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
@@ -1005,45 +995,17 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
-// validateNormalizedOperationLimits checks newly normalized output before it is
-// cached or used. Cache hits reuse the validation performed before insertion.
-// Tokenizing the printed representation avoids changing the document and its refs.
-func (o *OperationKit) validateNormalizedOperationLimits() error {
-	limits := o.operationProcessor.parserTokenizerLimits
-	if !o.operationProcessor.enforceParserLimitsAfterNormalization || (limits.MaxFields <= 0 && limits.MaxDepth <= 0) {
-		return nil
-	}
-	// The previous representation was checked here or before being cached.
-	// Variable normalization and remapping can leave it unchanged.
-	if bytes.Equal(o.kit.normalizedOperation.Bytes(), []byte(o.parsedOperation.NormalizedRepresentation)) {
-		return nil
-	}
-	if o.kit.limitsTokenizer == nil {
-		o.kit.limitsTokenizer = astparser.NewTokenizer()
-	}
-	// Borrow the printed buffer for this check; the tokenizer only updates input positions.
-	o.kit.limitsInput.Reset()
-	o.kit.limitsInput.RawBytes = o.kit.normalizedOperation.Bytes()
-	o.kit.limitsInput.Length = len(o.kit.limitsInput.RawBytes)
-	_, err := o.kit.limitsTokenizer.TokenizeWithLimits(limits, &o.kit.limitsInput)
-	o.kit.limitsInput.RawBytes = nil
-	if err != nil {
-		return &httpGraphqlError{
-			message:    err.Error(),
-			statusCode: http.StatusBadRequest,
-		}
-	}
-	return nil
-}
-
+// restoreCachedOperationDoc rebuilds the AST from a normalized representation that
+// was restored from one of the operation caches. Every cache entry originates from a
+// document that passed the parser limits in Parse. Normalization inlines fragment
+// spreads, so the cached representation can exceed those limits even though the
+// original document did not. Parsing it with the limits again would reject an
+// operation that was accepted on its first request, so the limits are not applied here.
 func (o *OperationKit) restoreCachedOperationDoc() error {
 	o.kit.doc.Reset()
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	report := &operationreport.Report{}
-	// All callers restore normalized output from this graph mux's caches. When
-	// enabled, limits were enforced before insertion; otherwise only the original
-	// document is subject to limits. Rebuild the AST without repeating that check.
 	o.kit.parser.Parse(o.kit.doc, report)
 	if report.HasErrors() {
 		return &reportError{
@@ -1160,9 +1122,6 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	if err != nil {
 		return false, nil, err
 	}
-	if err := o.validateNormalizedOperationLimits(); err != nil {
-		return false, nil, err
-	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
@@ -1252,9 +1211,6 @@ func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
 	o.kit.normalizedOperation.Reset()
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return false, err
-	}
-	if err := o.validateNormalizedOperationLimits(); err != nil {
 		return false, err
 	}
 
@@ -1813,17 +1769,16 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		opts.ParseKitPoolSize = 1
 	}
 	processor := &OperationProcessor{
-		executor:                              opts.Executor,
-		maxOperationSizeInBytes:               opts.MaxOperationSizeInBytes,
-		persistedOperationClient:              opts.PersistedOperationClient,
-		parseKits:                             make(map[int]*parseKit, opts.ParseKitPoolSize),
-		parseKitSemaphore:                     make(chan int, opts.ParseKitPoolSize),
-		introspectionEnabled:                  opts.IntrospectionEnabled,
-		parserTokenizerLimits:                 opts.ParserTokenizerLimits,
-		enforceParserLimitsAfterNormalization: opts.EnforceParserLimitsAfterNormalization,
-		operationNameLengthLimit:              opts.OperationNameLengthLimit,
-		complexityLimits:                      opts.ComplexityLimits,
-		costControl:                           opts.CostControl,
+		executor:                 opts.Executor,
+		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
+		persistedOperationClient: opts.PersistedOperationClient,
+		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
+		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
+		introspectionEnabled:     opts.IntrospectionEnabled,
+		parserTokenizerLimits:    opts.ParserTokenizerLimits,
+		operationNameLengthLimit: opts.OperationNameLengthLimit,
+		complexityLimits:         opts.ComplexityLimits,
+		costControl:              opts.CostControl,
 		parseKitOptions: &parseKitOptions{
 			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
@@ -1871,11 +1826,10 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.normalizedOperation.Reset()
 	// because we're re-using the kit, and we're having a static number of kits based on the number of CPUs
 	// we're resetting the doc, parser, and buffer for the normalized operation if they grow too large (>1MB of query size)
-	if cap(kit.doc.Input.RawBytes) > 1024*1024 || kit.normalizedOperation.Cap() > 1024*1024 {
+	if cap(kit.doc.Input.RawBytes) > 1024*1024 {
 		kit.doc = ast.NewSmallDocument()
 		kit.parser = astparser.NewParser()
 		kit.normalizedOperation = &bytes.Buffer{}
-		kit.limitsTokenizer = nil
 	}
 	p.parseKitSemaphore <- kit.i
 }
