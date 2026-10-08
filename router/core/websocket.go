@@ -1275,7 +1275,13 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
 	reqContext.operation.traceOptions = h.plannerOptions.TraceOptions
 
-	resolveCtx := resolve.NewContext(withRequestContext(h.ctx, reqContext))
+	// The connection context does not carry the authentication of the upgrade request,
+	// and the authorizer reads the authentication from the resolve context.
+	ctx := h.ctx
+	if auth := authentication.FromContext(registration.clientRequest.Context()); auth != nil {
+		ctx = authentication.NewContext(ctx, auth)
+	}
+	resolveCtx := resolve.NewContext(withRequestContext(ctx, reqContext))
 
 	resolveCtx.Variables = operationCtx.Variables()
 	resolveCtx.RemapVariables = operationCtx.remapVariables
