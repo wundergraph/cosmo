@@ -17,7 +17,7 @@ type ReloadPersistentState struct {
 
 	executionConfigMu             sync.RWMutex
 	lastValidExecutionConfig      *nodev1.RouterConfig
-	lastExecutionConfigGraphScope executionConfigGraphScope
+	lastExecutionConfigGraphScope *executionConfigGraphScope
 }
 
 type executionConfigGraphScope struct {
@@ -25,25 +25,25 @@ type executionConfigGraphScope struct {
 	federatedGraphID string
 }
 
-func (s *ReloadPersistentState) graphScopeFromToken(token string) (executionConfigGraphScope, bool) {
+func (s *ReloadPersistentState) graphScopeFromToken(token string) *executionConfigGraphScope {
 	// Static and demo configurations can run without a graph token.
 	if token == "" {
-		return executionConfigGraphScope{}, false
+		return nil
 	}
 
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
 		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
-		return executionConfigGraphScope{}, false
+		return nil
 	}
 	if claims.OrganizationID == "" || claims.FederatedGraphID == "" {
 		s.logger.Warn("Graph token has an empty organization or federated graph ID; execution config fallback is unavailable")
-		return executionConfigGraphScope{}, false
+		return nil
 	}
-	return executionConfigGraphScope{
+	return &executionConfigGraphScope{
 		organizationID:   claims.OrganizationID,
 		federatedGraphID: claims.FederatedGraphID,
-	}, true
+	}
 }
 
 // acceptExecutionConfig records an execution config only after the graph
@@ -53,7 +53,7 @@ func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfi
 	s.executionConfigMu.Lock()
 	defer s.executionConfigMu.Unlock()
 	s.lastValidExecutionConfig = proto.Clone(config).(*nodev1.RouterConfig)
-	s.lastExecutionConfigGraphScope, _ = s.graphScopeFromToken(graphToken)
+	s.lastExecutionConfigGraphScope = s.graphScopeFromToken(graphToken)
 }
 
 // previousExecutionConfig returns an isolated copy of the last execution
@@ -62,8 +62,8 @@ func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *node
 	s.executionConfigMu.RLock()
 	defer s.executionConfigMu.RUnlock()
 
-	scope, ok := s.graphScopeFromToken(graphToken)
-	if !ok || s.lastValidExecutionConfig == nil || s.lastExecutionConfigGraphScope != scope {
+	scope := s.graphScopeFromToken(graphToken)
+	if scope == nil || s.lastExecutionConfigGraphScope == nil || *s.lastExecutionConfigGraphScope != *scope {
 		return nil
 	}
 	return proto.Clone(s.lastValidExecutionConfig).(*nodev1.RouterConfig)
