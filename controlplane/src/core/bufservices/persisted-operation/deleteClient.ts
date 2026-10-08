@@ -68,7 +68,7 @@ export function deleteClient(
     }
 
     if (preview.persistedOperationsCount > 0) {
-      const clientDirectory = `${authContext.organizationId}/${federatedGraph.id}/operations/${encodeURIComponent(req.clientName)}`;
+      const clientDirectory = `${authContext.organizationId}/${federatedGraph.id}/operations/${encodeURIComponent(req.clientName)}/`;
       const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory, {
         storage: opts.blobStorage,
       });
