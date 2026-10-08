@@ -1,7 +1,18 @@
 import crypto from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+  onTestFinished,
+  type Mock,
+} from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
@@ -561,12 +572,12 @@ describe('Persisted operations', (ctx) => {
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should delete persisted operation from blob storage when deleted', async (testContext) => {
+    test.each(['curl', 'web/mobile %'])('Should delete the published blob for client %s', async (clientName) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
       });
-      testContext.onTestFinished(() => server.close());
+      onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
@@ -577,24 +588,57 @@ describe('Persisted operations', (ctx) => {
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         namespace: 'default',
-        clientName: 'curl',
+        clientName,
         operations: [{ id, contents: query }],
       });
 
-      const storageKeys = blobStorage.keys();
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+      const key = blobStorage.keys().find((key) => key.endsWith(`/${encodeURIComponent(clientName)}/${id}.json`));
+      expect(key).toBeDefined();
 
-      await client.deletePersistedOperation({
+      const deleted = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
-        clientName: 'curl',
+        clientName,
       });
 
+      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
       await expect(
         blobStorage.getObject({
-          key: storageKeys[1],
+          key: key!,
         }),
       ).rejects.toThrow(/not found/);
+    });
+
+    test('Should preserve blobs and registrations of clients sharing a name prefix', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const base = { fedGraphName, namespace: 'default' };
+      for (const clientName of ['web/app', 'web/application']) {
+        const published = await client.publishPersistedOperations({
+          ...base,
+          clientName,
+          operations: [{ id: 'shared', contents: 'query { hello }' }],
+        });
+        expect(published.response?.code).toBe(EnumStatusCode.OK);
+      }
+      const deleted = await client.deleteClient({ ...base, clientName: 'web/app' });
+      expect(deleted.response?.code).toBe(EnumStatusCode.OK);
+      expect(deleted.deletedOperationsCount).toBe(1);
+      expect((await client.getClients(base)).clients.map((client) => client.name)).toEqual(['web/application']);
+      expect(blobStorage.keys().some((key) => key.endsWith('/web%2Fapp/shared.json'))).toBe(false);
+      const key = blobStorage.keys().find((key) => key.endsWith('/web%2Fapplication/shared.json'));
+      expect(key).toBeDefined();
+      const stored = JSON.parse(await new Response((await blobStorage.getObject({ key: key! })).stream).text());
+      expect(stored.body).toBe('query { hello }');
+      const manifestKey = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(
+        await new Response((await blobStorage.getObject({ key: manifestKey })).stream).text(),
+      );
+      expect(manifest.operations).toEqual({ shared: 'query { hello }' });
     });
 
     test('Should fail when blob storage errs during deletement of a persisted operation', async (testContext) => {
