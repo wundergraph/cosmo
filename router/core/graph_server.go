@@ -1794,6 +1794,7 @@ func (s *graphServer) buildGraphMux(
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
+		s.responseCache != nil,
 	)
 
 	handlerOpts := HandlerOptions{
