@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/cache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -55,6 +57,20 @@ type engineLoaderHooks struct {
 
 	storeSubgraphResponseBody bool
 	headerPropagation         *HeaderPropagation
+	// responseCacheEnabled gates the cache status attribute: without a cache
+	// every fetch would read as a miss, which is noise rather than a signal.
+	responseCacheEnabled bool
+}
+
+// fetchTypeNames names the types a fetch resolves fields of, for an entity
+// fetch the entity type. Several types are sorted and joined with a comma.
+func fetchTypeNames(rootFields []resolve.GraphCoordinate) string {
+	names := make([]string, 0, len(rootFields))
+	for _, field := range rootFields {
+		names = append(names, field.TypeName)
+	}
+	slices.Sort(names)
+	return strings.Join(slices.Compact(names), ",")
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -70,6 +86,7 @@ func NewEngineRequestHooks(
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
 	headerPropagation *HeaderPropagation,
+	responseCacheEnabled bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -93,6 +110,7 @@ func NewEngineRequestHooks(
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 		headerPropagation:             headerPropagation,
+		responseCacheEnabled:          responseCacheEnabled,
 	}
 }
 
@@ -147,7 +165,9 @@ func ttlToCacheControl(ttl time.Duration, private bool) string {
 // applyResponseCacheLifetime puts the TTL left on the cached entries a fetch was
 // served from into its Cache-Control, where the most restrictive algorithm reads it.
 func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo) {
-	if !info.ResponseCacheHit && info.ResponseCacheTTL <= 0 {
+	switch info.ResponseCache.Status {
+	case resolve.ResponseCacheStatusHit, resolve.ResponseCacheStatusPartialHit:
+	default:
 		return
 	}
 	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
@@ -202,6 +222,19 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
+	cacheStatus := responseInfo.ResponseCache.Status
+	storeDecision := responseInfo.ResponseCache.StoreDecision
+	var cacheStatusName, storeDecisionName, typeNames string
+	if f.responseCacheEnabled {
+		cacheStatusName = cacheStatus.String()
+		storeDecisionName = "empty"
+		if storeDecision != caching.StoreDecisionNone {
+			storeDecisionName = storeDecision.String()
+		}
+		typeNames = fetchTypeNames(responseInfo.RootFields)
+		reqContext.responseCache.record(cacheStatus)
+	}
+
 	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
 	if !ok {
 		return
@@ -218,11 +251,29 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		rotel.WgSubgraphName.String(ds.Name),
 	}
 
+	if f.responseCacheEnabled {
+		commonAttrs = append(commonAttrs, rotel.WgResponseCacheStatus.String(cacheStatusName))
+	}
+
 	traceAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&traceAttrs)
 	traceAttrs = append(traceAttrs, reqContext.telemetry.traceAttrs...)
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
+
+	// On the span only, a metric of every fetch is not split by them.
+	if f.responseCacheEnabled {
+		if typeNames != "" {
+			traceAttrs = append(traceAttrs, rotel.WgEntityType.String(typeNames))
+		}
+		if storeDecision != caching.StoreDecisionNone {
+			traceAttrs = append(traceAttrs, rotel.WgResponseCacheStoreDecision.String(storeDecisionName))
+		}
+		if cacheStatus != resolve.ResponseCacheStatusNotCacheable {
+			lookup := float64(responseInfo.ResponseCache.LookupDuration) / float64(time.Millisecond)
+			traceAttrs = append(traceAttrs, rotel.WgResponseCacheLookupDurationMs.Float64(lookup))
+		}
+	}
 
 	exprCtx := reqContext.expressionContext.Clone()
 	exprCtx.Subgraph.Id = ds.ID
@@ -235,6 +286,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	// so expressions can read them, e.g. subgraph.response.header.Get('X-Custom-Header'). A nil
 	// header map is safe; http.Header.Get returns an empty string.
 	exprCtx.Subgraph.Response.Header = expr.Headers{Header: responseInfo.ResponseHeaders}
+	exprCtx.Subgraph.Response.Cache.Status = cacheStatusName
+	exprCtx.Subgraph.Response.Cache.StoreDecision = storeDecisionName
+	exprCtx.Subgraph.Response.Cache.LookupDuration = responseInfo.ResponseCache.LookupDuration
+	exprCtx.Subgraph.Response.Cache.EntityType = typeNames
 
 	// Get trace results from the context, that were introduced in OnLoad
 	if results := traceclient.ClientTraceResultsFromContext(ctx); results != nil {
@@ -296,12 +351,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.Int("status", responseInfo.StatusCode),
 			zap.Duration("latency", latency),
 		}
+		fields = append(fields, f.accessLogger.RequestFields(ctx, responseInfo, exprCtx)...)
 		path := ds.Name
-		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.RequestFields(responseInfo, exprCtx)...)
-			if responseInfo.Request.URL != nil {
-				path = responseInfo.Request.URL.Path
-			}
+		if responseInfo.Request != nil && responseInfo.Request.URL != nil {
+			path = responseInfo.Request.URL.Path
 		}
 
 		if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {

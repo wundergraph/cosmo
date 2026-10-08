@@ -181,6 +181,30 @@ engine:
 	})
 }
 
+func TestMetricAttributeExpressionConfigLoading(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+telemetry:
+  metrics:
+    attributes:
+      - key: "cache"
+        value_from:
+          expression: "subgraph.response.cache.status"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Len(t, cfg.Config.Telemetry.Metrics.Attributes, 1)
+	attr := cfg.Config.Telemetry.Metrics.Attributes[0]
+	require.Equal(t, "subgraph.response.cache.status", attr.ValueFrom.Expression)
+}
+
 func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
 	t.Run("defaults to true", func(t *testing.T) {
 		t.Parallel()

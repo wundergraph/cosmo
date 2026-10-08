@@ -11,12 +11,19 @@ import (
 
 	"connectrpc.com/vanguard"
 	"github.com/hashicorp/go-retryablehttp"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+	"go.uber.org/zap"
+)
+
+const (
+	defaultRequestTimeout = 30 * time.Second
+
+	httpServerReadTimeout  = 30 * time.Second
+	httpServerWriteTimeout = 30 * time.Second
+	httpServerIdleTimeout  = 60 * time.Second
+
+	serverShutdownTimeout = 5 * time.Second
 )
 
 // ServerConfig holds configuration for the ConnectRPC server
@@ -48,6 +55,8 @@ type Server struct {
 	rpcHandler        *RPCHandler
 	vanguardService   *VanguardService
 	httpClient        *http.Client
+
+	protocols *http.Protocols
 }
 
 // NewServer creates a new ConnectRPC server and loads all services
@@ -66,7 +75,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	}
 
 	if config.RequestTimeout == 0 {
-		config.RequestTimeout = 30 * time.Second
+		config.RequestTimeout = defaultRequestTimeout
 	}
 
 	// Create HTTP client with retry
@@ -75,10 +84,15 @@ func NewServer(config ServerConfig) (*Server, error) {
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = config.RequestTimeout
 
+	p := &http.Protocols{}
+	p.SetHTTP1(true)
+	p.SetUnencryptedHTTP2(true)
+
 	server := &Server{
 		config:     config,
 		logger:     config.Logger,
 		httpClient: httpClient,
+		protocols:  p,
 	}
 
 	startTime := time.Now()
@@ -179,18 +193,16 @@ func (s *Server) Start() error {
 	}
 
 	// Create HTTP server with HTTP/2 support
-	handler := s.createHandler()
-	h2cHandler := h2c.NewHandler(handler, &http2.Server{})
-
 	s.httpServer = &http.Server{
+		Protocols:    s.protocols,
 		Addr:         s.config.ListenAddr,
-		Handler:      h2cHandler,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Handler:      s.createHandler(),
+		ReadTimeout:  httpServerReadTimeout,
+		WriteTimeout: httpServerWriteTimeout,
+		IdleTimeout:  httpServerIdleTimeout,
 	}
 
-	s.logger.Debug("HTTP/2 (h2c) support enabled")
+	s.logger.Debug("HTTP/2 support enabled")
 
 	// Create listener to get actual bound address
 	listener, err := net.Listen("tcp", s.config.ListenAddr)
@@ -220,7 +232,7 @@ func (s *Server) Stop(ctx context.Context) error {
 
 	s.logger.Info("shutting down ConnectRPC server")
 
-	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, serverShutdownTimeout)
 	defer cancel()
 
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
@@ -292,9 +304,7 @@ func (s *Server) Reload() error {
 	}
 	s.transcoder = transcoder
 
-	// Update HTTP server handler with h2c wrapper for gRPC compatibility
-	handler := s.createHandler()
-	s.httpServer.Handler = h2c.NewHandler(handler, &http2.Server{})
+	s.httpServer.Handler = s.createHandler()
 
 	s.logger.Info("ConnectRPC server reloaded successfully")
 	return nil
