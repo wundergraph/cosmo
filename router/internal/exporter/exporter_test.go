@@ -170,7 +170,6 @@ func TestExporterDoesNotRetainExportedItems(t *testing.T) {
 	for i := range items {
 		items[i] = nil
 	}
-	items = nil
 
 	require.Eventuallyf(t, func() bool {
 		runtime.GC()

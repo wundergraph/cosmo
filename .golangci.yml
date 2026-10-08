@@ -1,0 +1,11 @@
+version: "2"
+
+linters:
+  # Start with a small subset of graphql-go-tools' checks and expand incrementally.
+  # go vet and standalone Staticcheck remain in the existing lint commands.
+  default: none
+  enable:
+    - asciicheck
+    - bidichk
+    - gocheckcompilerdirectives
+    - ineffassign

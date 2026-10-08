@@ -64,6 +64,32 @@ use (
 // Here you can add custom replacements
 ```
 
+## Go linting
+
+The shared `.golangci.yml` starts with a small subset of the graphql-go-tools
+checks: `asciicheck`, `bidichk`, `gocheckcompilerdirectives`, and `ineffassign`.
+We add checks incrementally as part of [ROUTER-811](https://linear.app/wundergraph/issue/ROUTER-811).
+Existing vet and Staticcheck commands remain in place, and CI also checks
+formatting and runs `go fix -diff`.
+
+Install the golangci-lint release pinned in `.golangci-lint-version`:
+
+```sh
+make setup-lint-tools
+```
+
+This is also included in `make setup-dev-tools`. With the development tools on
+your `PATH`, run `make lint` from `router`, `router-tests`, `graphqlmetrics`, or
+`aws-lambda-router`, for example:
+
+```sh
+make -C router lint
+```
+
+CI uses the same golangci-lint version and root configuration for these four
+modules. Configure your editor's golangci-lint integration to use that binary
+and configuration. Update `.golangci-lint-version` to change the pinned release.
+
 ## Conventional Commit Standard
 
 We use [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) for changelog generation and more structured commit messages.

@@ -10,6 +10,9 @@ on:
       - 'connect/**/*'
       - 'composition/**/*'
       - 'Makefile'
+      - '.golangci.yml'
+      - '.golangci-lint-version'
+      - '.github/actions/go-linter/**'
       - '.github/workflows/router-ci.yaml'
 
 concurrency:
