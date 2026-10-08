@@ -60,6 +60,8 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
+// eslint-disable-next-line no-control-regex
+const collectionNameControlCharacters = /[\u0000-\u001F\u007F-\u009F]/;
 // Matches studio/src/lib/playground-headers.ts:isValidHeaderName. Keep the two in sync.
 // The character class is kept verbatim (rather than reordered) so the two copies stay diffable.
 // eslint-disable-next-line unicorn/better-regex
@@ -377,6 +379,50 @@ export const isValidGraphName = (name: string): boolean => {
     return false;
   }
   return graphNameRegex.test(name);
+};
+
+/**
+ * The longest a collection or operation name may be.
+ *
+ * Matches the bound `isValidGraphName` uses. These names are returned for every
+ * collection *and* every operation in the list response, so an unbounded label
+ * inflates the payload the playground fetches on page open.
+ */
+export const MAX_COLLECTION_NAME_LENGTH = 100;
+
+/**
+ * Validates a user-supplied collection or saved operation name.
+ *
+ * Unlike `isValidGraphName`, this reports *why* a name was rejected rather than
+ * returning one message for every failure, so `subject` is taken here: the
+ * caller knows whether it is naming a collection or an operation, and the
+ * message is the only thing it ever wants back.
+ *
+ * Returns the trimmed name, so callers store exactly what was validated instead
+ * of trimming separately and letting the two drift apart.
+ */
+export const validateCollectionName = (
+  raw: string,
+  subject: 'Collection' | 'Operation',
+): { ok: true; name: string } | { ok: false; error: string } => {
+  const name = raw.trim();
+
+  if (!name) {
+    return { ok: false, error: `${subject} name cannot be empty` };
+  }
+
+  if (name.length > MAX_COLLECTION_NAME_LENGTH) {
+    return {
+      ok: false,
+      error: `${subject} name cannot be longer than ${MAX_COLLECTION_NAME_LENGTH} characters`,
+    };
+  }
+
+  if (collectionNameControlCharacters.test(name)) {
+    return { ok: false, error: `${subject} name cannot contain line breaks or control characters` };
+  }
+
+  return { ok: true, name };
 };
 
 export const isValidPluginVersion = (version: string): boolean => {
