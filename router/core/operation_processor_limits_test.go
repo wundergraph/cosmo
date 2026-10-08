@@ -176,6 +176,48 @@ func TestOperationProcessorParserLimitsRejectOriginalDocument(t *testing.T) {
 	require.Zero(t, caches.remapping.Metrics.KeysAdded(), "rejected operations must not be cached")
 }
 
+func TestOperationProcessorParserLimitsIgnorePersistedOperations(t *testing.T) {
+	// Five identifiers exceed the limit of four configured below.
+	request := GraphQLRequest{
+		Query:         `query Selected { echo(n: 1) } fragment Unused on Employee { id details { forename } }`,
+		OperationName: "Selected",
+		Variables:     json.RawMessage(`{}`),
+	}
+	body, err := json.Marshal(request)
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		name        string
+		ignore      bool
+		fromStorage bool
+		wantErr     bool
+	}{
+		{name: "checks operations from storage by default", fromStorage: true, wantErr: true},
+		{name: "skips operations from storage when enabled", ignore: true, fromStorage: true},
+		{name: "still checks request bodies when enabled", ignore: true, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			processor, _ := newParserLimitsTestProcessor(t, false, 4, func(opts *OperationProcessorOptions) {
+				opts.ParserLimitsIgnorePersistedOperations = tc.ignore
+			})
+			kit, err := processor.NewKit()
+			require.NoError(t, err)
+			defer kit.Free()
+			require.NoError(t, kit.UnmarshalOperationFromBody(body))
+			// FetchPersistedOperation sets both after loading the body from storage.
+			kit.parsedOperation.IsPersistedOperation = tc.fromStorage
+			kit.persistedOperationFromStorage = tc.fromStorage
+
+			err = kit.Parse()
+			if tc.wantErr {
+				require.EqualError(t, err, "allowed number of fields per GraphQL document of '4' exceeded")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestOperationProcessorParserLimitsPreserveAcceptedOperation(t *testing.T) {
 	requests := []GraphQLRequest{
 		{
@@ -289,7 +331,7 @@ func newParserLimitsTestCache[T any](t *testing.T) *ristretto.Cache[uint64, T] {
 	return cache
 }
 
-func newParserLimitsTestProcessor(t *testing.T, cacheEnabled bool, maxFields int) (*OperationProcessor, *parserLimitsTestCaches) {
+func newParserLimitsTestProcessor(t *testing.T, cacheEnabled bool, maxFields int, modify ...func(*OperationProcessorOptions)) (*OperationProcessor, *parserLimitsTestCaches) {
 	t.Helper()
 	schema, report := astparser.ParseGraphqlDocumentString(parserLimitsTestSchema)
 	require.False(t, report.HasErrors())
@@ -300,7 +342,7 @@ func newParserLimitsTestProcessor(t *testing.T, cacheEnabled bool, maxFields int
 		caches.variables = newParserLimitsTestCache[VariablesNormalizationCacheEntry](t)
 		caches.remapping = newParserLimitsTestCache[RemapVariablesCacheEntry](t)
 	}
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	opts := OperationProcessorOptions{
 		Executor:                    &Executor{ClientSchema: &schema},
 		MaxOperationSizeInBytes:     1 << 20,
 		ParseKitPoolSize:            1,
@@ -308,6 +350,9 @@ func newParserLimitsTestProcessor(t *testing.T, cacheEnabled bool, maxFields int
 		NormalizationCache:          caches.normalization,
 		VariablesNormalizationCache: caches.variables,
 		RemapVariablesCache:         caches.remapping,
-	})
-	return processor, caches
+	}
+	for _, m := range modify {
+		m(&opts)
+	}
+	return NewOperationProcessor(opts), caches
 }

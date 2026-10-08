@@ -133,6 +133,7 @@ type OperationProcessorOptions struct {
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	ParserLimitsIgnorePersistedOperations                  bool
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
@@ -141,18 +142,19 @@ type OperationProcessorOptions struct {
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
 // It should be only instantiated once and shared across requests
 type OperationProcessor struct {
-	executor                 *Executor
-	maxOperationSizeInBytes  int64
-	persistedOperationClient *persistedoperation.Client
-	operationCache           *OperationCache
-	parseKits                map[int]*parseKit
-	parseKitSemaphore        chan int
-	introspectionEnabled     bool
-	parseKitOptions          *parseKitOptions
-	complexityLimits         *config.ComplexityLimits
-	costControl              *config.CostControl
-	parserTokenizerLimits    astparser.TokenizerLimits
-	operationNameLengthLimit int
+	executor                              *Executor
+	maxOperationSizeInBytes               int64
+	persistedOperationClient              *persistedoperation.Client
+	operationCache                        *OperationCache
+	parseKits                             map[int]*parseKit
+	parseKitSemaphore                     chan int
+	introspectionEnabled                  bool
+	parseKitOptions                       *parseKitOptions
+	complexityLimits                      *config.ComplexityLimits
+	costControl                           *config.CostControl
+	parserTokenizerLimits                 astparser.TokenizerLimits
+	parserLimitsIgnorePersistedOperations bool
+	operationNameLengthLimit              int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -218,6 +220,12 @@ type OperationKit struct {
 	// every persisted operation lookup, cache key and variable metadata check in
 	// this request must read this snapshot instead of the live store.
 	persistedOperationManifest *pqlmanifest.Manifest
+
+	// persistedOperationFromStorage is set when the operation body was loaded from
+	// persisted operation storage: a manifest, the CDN or an S3 provider. Bodies
+	// registered through automatic persisted queries or sent with the request are
+	// supplied by clients and therefore never set it.
+	persistedOperationFromStorage bool
 }
 
 type GraphQLRequest struct {
@@ -560,6 +568,9 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			// but it was passed via body instead of hash, we need to mark operation as persisted
 			// to populate persisted operation cache
 			o.parsedOperation.IsPersistedOperation = true
+			// Bodies served from the APQ store were registered by clients, so only
+			// bodies from a manifest or storage provider are exempt from parser limits.
+			o.persistedOperationFromStorage = !isAPQ
 		}
 
 		// If the operation was fetched with APQ, save it again to renew the TTL
@@ -657,6 +668,16 @@ func (o *OperationKit) isOperationNameLengthLimitExceeded(operationName string) 
 	return len(operationName) > o.operationProcessor.operationNameLengthLimit
 }
 
+// parserLimits returns the tokenizer limits that apply to the current operation.
+// Operations loaded from persisted operation storage were registered intentionally
+// and are exempt when security.parser_limits.ignore_persisted_operations is set.
+func (o *OperationKit) parserLimits() astparser.TokenizerLimits {
+	if o.operationProcessor.parserLimitsIgnorePersistedOperations && o.persistedOperationFromStorage {
+		return astparser.TokenizerLimits{}
+	}
+	return o.operationProcessor.parserTokenizerLimits
+}
+
 // Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
@@ -674,7 +695,7 @@ func (o *OperationKit) Parse() error {
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.Request.Query)
-	if _, err := o.kit.parser.ParseWithLimits(o.operationProcessor.parserTokenizerLimits, o.kit.doc, report); err != nil {
+	if _, err := o.kit.parser.ParseWithLimits(o.parserLimits(), o.kit.doc, report); err != nil {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusBadRequest,
@@ -1769,16 +1790,17 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		opts.ParseKitPoolSize = 1
 	}
 	processor := &OperationProcessor{
-		executor:                 opts.Executor,
-		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
-		persistedOperationClient: opts.PersistedOperationClient,
-		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
-		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
-		introspectionEnabled:     opts.IntrospectionEnabled,
-		parserTokenizerLimits:    opts.ParserTokenizerLimits,
-		operationNameLengthLimit: opts.OperationNameLengthLimit,
-		complexityLimits:         opts.ComplexityLimits,
-		costControl:              opts.CostControl,
+		executor:                              opts.Executor,
+		maxOperationSizeInBytes:               opts.MaxOperationSizeInBytes,
+		persistedOperationClient:              opts.PersistedOperationClient,
+		parseKits:                             make(map[int]*parseKit, opts.ParseKitPoolSize),
+		parseKitSemaphore:                     make(chan int, opts.ParseKitPoolSize),
+		introspectionEnabled:                  opts.IntrospectionEnabled,
+		parserTokenizerLimits:                 opts.ParserTokenizerLimits,
+		parserLimitsIgnorePersistedOperations: opts.ParserLimitsIgnorePersistedOperations,
+		operationNameLengthLimit:              opts.OperationNameLengthLimit,
+		complexityLimits:                      opts.ComplexityLimits,
+		costControl:                           opts.CostControl,
 		parseKitOptions: &parseKitOptions{
 			enableDefer:                                            opts.EnableDefer,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,

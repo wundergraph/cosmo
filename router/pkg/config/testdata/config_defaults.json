@@ -504,7 +504,8 @@
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
-      "TotalFieldsLimit": 3500
+      "TotalFieldsLimit": 3500,
+      "IgnorePersistedOperations": false
     },
     "OperationNameLengthLimit": 512
   },

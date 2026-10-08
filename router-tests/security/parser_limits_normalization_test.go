@@ -100,18 +100,7 @@ func TestParserLimitsIgnoreFragmentExpansion(t *testing.T) {
 						// Serve the same document through the persisted-operation path,
 						// including requests that never populate a normalization cache.
 						hash := fmt.Sprintf("%x", sha256.Sum256([]byte(query)))
-						body, err := json.Marshal(map[string]any{"version": 1, "body": query})
-						require.NoError(t, err)
-						cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							if !strings.HasSuffix(r.URL.Path, "/"+hash+".json") {
-								http.NotFound(w, r)
-								return
-							}
-							w.Header().Set("Content-Type", "application/json")
-							_, _ = w.Write(body)
-						}))
-						t.Cleanup(cdn.Close)
-						cfg.CdnSever = cdn
+						cfg.CdnSever = parserLimitsCDN(t, hash, query)
 						request = testenv.GraphQLRequest{
 							OperationName: []byte(`"Employees"`),
 							Extensions:    []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, hash)),
@@ -230,6 +219,119 @@ func TestParserLimitsCheckOriginalDocumentWithCachedPlan(t *testing.T) {
 		require.JSONEq(t, `{"errors":[{"message":"allowed number of fields per GraphQL document of '4' exceeded"}]}`, res.Body)
 		require.Equal(t, before, xEnv.SubgraphRequestCount.Global.Load())
 	})
+}
+
+func TestParserLimitsIgnorePersistedOperations(t *testing.T) {
+	t.Parallel()
+
+	// Five identifiers exceed the limit of four configured below.
+	const query = `query Selected { employee(id: 1) { id } } fragment Unused on Employee { details { forename } }`
+	const successBody = `{"data":{"employee":{"id":1}}}`
+	const errorBody = `{"errors":[{"message":"allowed number of fields per GraphQL document of '4' exceeded"}]}`
+	require.Equal(t, 5, countTokenizerFields(t, query))
+
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(query)))
+	extensions := []byte(fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":%q}}`, hash))
+	// The test environment mutates request headers, so parallel subtests need their own map.
+	header := func() http.Header { return http.Header{"Graphql-Client-Name": {"parser-limits"}} }
+	limits := config.ParserLimitsConfiguration{
+		TotalFieldsLimit:          4,
+		IgnorePersistedOperations: true,
+	}
+
+	t.Run("skips operations loaded from persisted operation storage", func(t *testing.T) {
+		t.Parallel()
+
+		for _, cacheEnabled := range []bool{false, true} {
+			t.Run(fmt.Sprintf("cache=%t", cacheEnabled), func(t *testing.T) {
+				t.Parallel()
+
+				cfg := parserLimitsConfig(limits, cacheEnabled)
+				cfg.CdnSever = parserLimitsCDN(t, hash, query)
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					for attempt := 0; attempt < 3; attempt++ {
+						res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+							OperationName: []byte(`"Selected"`),
+							Extensions:    extensions,
+							Header:        header(),
+						})
+						require.NoError(t, err)
+						require.Equal(t, http.StatusOK, res.Response.StatusCode, "attempt %d: %s", attempt, res.Body)
+						require.JSONEq(t, successBody, res.Body, "attempt %d", attempt)
+						expectedCache := "MISS"
+						if cacheEnabled && attempt > 0 {
+							expectedCache = "HIT"
+						}
+						require.Equal(t, expectedCache, res.Response.Header.Get(core.PersistedOperationCacheHeader), "attempt %d", attempt)
+					}
+
+					// The same document sent as a regular operation is still checked.
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query:         query,
+						OperationName: []byte(`"Selected"`),
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+					require.JSONEq(t, errorBody, res.Body)
+				})
+			})
+		}
+	})
+
+	t.Run("still checks automatic persisted queries", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := parserLimitsConfig(limits, true)
+		// No CDN client, so every persisted query hash resolves through APQ.
+		cfg.RouterOptions = []core.Option{core.WithGraphApiToken("")}
+		cfg.ApqConfig = config.AutomaticPersistedQueriesConfig{
+			Enabled: true,
+			Cache: config.AutomaticPersistedQueriesCacheConfig{
+				Size: 1024 * 1024,
+			},
+		}
+		testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+			// Registering the operation sends its body with the hash.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:         query,
+				OperationName: []byte(`"Selected"`),
+				Extensions:    extensions,
+				Header:        header(),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode, res.Body)
+			require.JSONEq(t, errorBody, res.Body)
+
+			// The body was stored before parsing. Requests by hash load it from the
+			// APQ store and are checked again.
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Selected"`),
+				Extensions:    extensions,
+				Header:        header(),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode, res.Body)
+			require.JSONEq(t, errorBody, res.Body)
+			require.Zero(t, xEnv.SubgraphRequestCount.Employees.Load())
+		})
+	})
+}
+
+// parserLimitsCDN serves one persisted operation the way the Cosmo CDN does.
+func parserLimitsCDN(t *testing.T, hash, query string) *httptest.Server {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{"version": 1, "body": query})
+	require.NoError(t, err)
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/"+hash+".json") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(cdn.Close)
+	return cdn
 }
 
 // countTokenizerFields returns the field count the parser limits are checked against.

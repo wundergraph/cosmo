@@ -2548,6 +2548,7 @@ The configuration for the security. The security is used to configure the securi
 | SECURITY_COMPLEXITY_IGNORE_INTROSPECTION          | complexity_limits.ignore_introspection   | <Icon icon="square" /> | When true, complexity validation is skipped for all introspection queries.                                                        | false         |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
+| SECURITY_PARSER_LIMITS_IGNORE_PERSISTED_OPERATIONS | parser_limits.ignore_persisted_operations | <Icon icon="square" /> | Skip the parser limits for operations loaded from persisted operation storage. Automatic persisted queries are still checked.    | false         |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
 
 
@@ -2591,6 +2592,7 @@ security:
   parser_limits:
     approximate_depth_limit: 300
     total_fields_limit: 700
+    ignore_persisted_operations: false
   operation_name_length_limit: 1024
 ```
 
@@ -2711,6 +2713,8 @@ Fragment spreads are not expanded before the check. The fields of a fragment cou
 
 Operations that pass the check are normalized and cached in memory. Cache hits restore the normalized operation without repeating the check. The caches are rebuilt when the Router restarts, so a changed limit applies to every operation after the restart.
 
+Persisted operations are checked like any other operation. Set `ignore_persisted_operations` to `true` to skip the check for operations loaded from persisted operation storage: a manifest, the CDN or an S3 provider. These operations were registered intentionally. Automatic persisted queries are still checked, because clients supply their bodies. An operation body sent with the request is also checked, even when the request carries a persisted query hash.
+
 To limit the depth or field count of the normalized operation, use `security.complexity_limits`. Complexity limits are calculated after normalization, with fragment spreads inlined.
 
 ```yaml
@@ -2718,6 +2722,7 @@ security:
   parser_limits:
     approximate_depth_limit: 200
     total_fields_limit: 3500
+    ignore_persisted_operations: false
 ```
 
 ## File Upload
