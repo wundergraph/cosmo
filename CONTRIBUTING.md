@@ -67,28 +67,31 @@ use (
 ## Go linting
 
 The shared `.golangci.yml` starts with a small subset of the graphql-go-tools
-checks: `asciicheck`, `bidichk`, `gocheckcompilerdirectives`, and `ineffassign`.
+checks: `asciicheck`, `bidichk`, `gocheckcompilerdirectives`, `govet`, and `ineffassign`.
 We add checks incrementally as part of [ROUTER-811](https://linear.app/wundergraph/issue/ROUTER-811).
-Existing vet and Staticcheck commands remain in place, and CI also checks
-formatting and runs `go fix -diff`.
+Vet runs through golangci-lint, including on generated files. Standalone Staticcheck
+remains in place, and CI also checks formatting and runs `go fix -diff`.
 
-Install the golangci-lint release pinned in `.golangci-lint-version`:
-
-```sh
-make setup-lint-tools
-```
-
-This is also included in `make setup-dev-tools`. With the development tools on
-your `PATH`, run `make lint` from `router`, `router-tests`, `graphqlmetrics`, or
+Run `make lint` from `router`, `router-tests`, `graphqlmetrics`, or
 `aws-lambda-router`, for example:
 
 ```sh
 make -C router lint
 ```
 
-CI uses the same golangci-lint version and root configuration for these four
-modules. Configure your editor's golangci-lint integration to use that binary
-and configuration. Update `.golangci-lint-version` to change the pinned release.
+The command uses `scripts/golangci-lint.sh`, which downloads the release pinned
+in `.golangci-lint-version` into the gitignored `.bin/` directory on first use.
+Later runs reuse that binary, independently of any golangci-lint on your `PATH`.
+Changing the version file selects a separate cached binary automatically.
+Downloading requires `curl`; subsequent runs can use the cached binary offline.
+
+To download ahead of time, run `make setup-lint-tools` (also included in
+`make setup-dev-tools`). The existing standalone Staticcheck command still
+requires the development tools on your `PATH`.
+
+CI reads the same version file and root configuration for these four modules.
+Configure your editor's golangci-lint integration to use the wrapper if it accepts
+an executable path, or the corresponding `.bin/golangci-lint-<version>` binary.
 
 ## Conventional Commit Standard
 

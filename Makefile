@@ -16,7 +16,7 @@ setup-dev-tools: setup-build-tools setup-lint-tools
 
 .PHONY: setup-lint-tools
 setup-lint-tools:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(shell cat .golangci-lint-version)/install.sh | sh -s -- -b "$(shell go env GOPATH)/bin" $(shell cat .golangci-lint-version)
+	./scripts/golangci-lint.sh version
 
 prerequisites: setup-dev-tools
 	go version

@@ -16,8 +16,7 @@ migrate:
 	dbmate -d "./migrations" up
 
 lint:
-	golangci-lint run --timeout=3m
-	go vet ./...
+	../scripts/golangci-lint.sh run --timeout=3m
 	staticcheck ./...
 
 VERSION?=dev

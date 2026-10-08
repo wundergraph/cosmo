@@ -21,7 +21,7 @@ deploy: build-sam
 	sam deploy
 
 lint:
-	golangci-lint run --timeout=3m
+	../scripts/golangci-lint.sh run --timeout=3m
 	staticcheck ./...
 
 test:

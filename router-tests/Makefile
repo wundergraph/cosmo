@@ -34,8 +34,7 @@ test-no-race-fresh: clean-testcache
 	go test $(test_target)
 
 lint:
-	golangci-lint run --timeout=3m
-	go vet ./...
+	../scripts/golangci-lint.sh run --timeout=3m
 	staticcheck ./...
 
 test-stability:

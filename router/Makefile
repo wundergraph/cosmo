@@ -24,8 +24,7 @@ test-coverage:
 test-fresh: clean-testcache test
 
 lint:
-	golangci-lint run --timeout=3m
-	go vet ./...
+	../scripts/golangci-lint.sh run --timeout=3m
 	staticcheck ./...
 
 clean-testcache:

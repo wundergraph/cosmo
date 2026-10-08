@@ -58,6 +58,8 @@ jobs:
         run: go mod download
 
       - uses: ./.github/actions/go-linter
+        env:
+          GOWORK: 'off'
         with:
           working-directory: ./graphqlmetrics
 
