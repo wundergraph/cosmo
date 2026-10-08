@@ -23,8 +23,13 @@ test-coverage:
 
 test-fresh: clean-testcache test
 
+.PHONY: lint lint-fix
 lint:
 	../scripts/golangci-lint.sh run --timeout=3m
+	staticcheck ./...
+
+lint-fix:
+	../scripts/golangci-lint.sh run --timeout=3m --fix
 	staticcheck ./...
 
 clean-testcache:

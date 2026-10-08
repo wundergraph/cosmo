@@ -6,17 +6,13 @@ setup-build-tools:
 	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
 	go install gotest.tools/gotestsum@v1.13.0
 
-setup-dev-tools: setup-build-tools setup-lint-tools
+setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
 	go install honnef.co/go/tools/cmd/staticcheck@2026.2.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 	go install github.com/vektra/mockery/v3@v3.3.1
 	go install github.com/Antonboom/testifylint@v1.6.1
-
-.PHONY: setup-lint-tools
-setup-lint-tools:
-	./scripts/golangci-lint.sh version
 
 prerequisites: setup-dev-tools
 	go version
