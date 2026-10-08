@@ -161,9 +161,13 @@ type wsConnectionWrapper struct {
 	conn         net.Conn
 	mu           sync.Mutex
 	writeTimeout time.Duration
-	readJSON     func(any) error
+	reader       wsReader
+}
 
-	goroutine *wsGoroutineReader
+type wsReader interface {
+	MarkInitialized()
+	ReadJSON(any) error
+	Close() error
 }
 
 type wsNetPollReader struct {
@@ -188,10 +192,9 @@ func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, wri
 		writeTimeout: writeTimeout,
 	}
 	if useNetPoll {
-		reader := &wsNetPollReader{conn: conn, readTimeout: readTimeout}
-		c.readJSON = reader.ReadJSON
+		c.reader = &wsNetPollReader{conn: conn, readTimeout: readTimeout}
 	} else {
-		c.goroutine = &wsGoroutineReader{
+		c.reader = &wsGoroutineReader{
 			conn:               conn,
 			readTimeout:        readTimeout,
 			handleControlFrame: c.handleControlFrame,
@@ -201,13 +204,19 @@ func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, wri
 				_ = conn.SetReadDeadline(time.Now())
 			}),
 		}
-		c.readJSON = c.goroutine.ReadJSON
 	}
 	return c
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
-	return c.readJSON(v)
+	return c.reader.ReadJSON(v)
+}
+
+// Netpoll reads use the same deadline policy before and after initialization.
+func (c *wsNetPollReader) MarkInitialized() {}
+
+func (c *wsNetPollReader) Close() error {
+	return c.conn.Close()
 }
 
 func (c *wsNetPollReader) ReadJSON(v any) error {
@@ -224,6 +233,15 @@ func (c *wsNetPollReader) ReadJSON(v any) error {
 	}
 
 	return json.Unmarshal(text, v)
+}
+
+func (c *wsGoroutineReader) MarkInitialized() {
+	c.initialized = true
+}
+
+func (c *wsGoroutineReader) Close() error {
+	c.stopRead()
+	return c.conn.Close()
 }
 
 func (c *wsGoroutineReader) ReadJSON(v any) error {
@@ -361,12 +379,9 @@ func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string)
 }
 
 func (c *wsConnectionWrapper) Close() error {
-	if c.goroutine != nil {
-		c.goroutine.stopRead()
-	}
 	// Do not wait for the write lock: closing the transport must interrupt
 	// blocked writes even when write timeouts are disabled.
-	return c.conn.Close()
+	return c.reader.Close()
 }
 
 type WebsocketHandler struct {
@@ -570,6 +585,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
+	conn.reader.MarkInitialized()
+
 	// Only when epoll/kqueue is available. On Windows, epoll is not available
 	if h.netPoll != nil {
 		err = h.addConnection(c, handler)
@@ -592,7 +609,6 @@ func (h *WebsocketHandler) closeKind(err error) wsproto.CloseKind {
 }
 
 func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHandler) (terminalErr error) {
-	handler.conn.goroutine.initialized = true
 	h.stats.ConnectionsInc()
 	defer func() {
 		// Close unsubscribes; count the connection as gone first, so it never

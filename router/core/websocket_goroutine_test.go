@@ -50,7 +50,7 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const timeout = 5 * time.Second
 		conn, client := websocketTestConnection(t, t.Context(), timeout)
-		conn.goroutine.initialized = true
+		conn.reader.MarkInitialized()
 		frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
 		result := make(chan error, 1)
 		go func() {
@@ -137,7 +137,7 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				const timeout = 5 * time.Second
 				conn, client := websocketTestConnection(t, t.Context(), timeout)
-				conn.goroutine.initialized = true
+				conn.reader.MarkInitialized()
 				written := make(chan error, 1)
 				go func() { _, err := client.Write(tc.data); written <- err }()
 				start := time.Now()
@@ -154,7 +154,7 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		conn, client := websocketTestConnection(t, t.Context(), time.Second)
-		conn.goroutine.initialized = true
+		conn.reader.MarkInitialized()
 		var msg map[string]string
 		result := make(chan error, 1)
 		go func() { result <- conn.ReadJSON(&msg) }()
@@ -254,7 +254,9 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				const timeout = 5 * time.Second
 				conn, client := websocketTestConnection(t, t.Context(), timeout)
-				conn.goroutine.initialized = !tc.initializing
+				if !tc.initializing {
+					conn.reader.MarkInitialized()
+				}
 				result := make(chan error, 1)
 				read := func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }
 				go read()
@@ -267,7 +269,7 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 				}
 				if tc.op == ws.OpText {
 					require.NoError(t, <-result)
-					conn.goroutine.initialized = true
+					conn.reader.MarkInitialized()
 					go read()
 				}
 				// Both a new ReadJSON call and its control/binary frame loop
@@ -299,7 +301,9 @@ func TestWebsocketReadAfterCancellation(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				defer cancel()
 				conn, _ := websocketTestConnection(t, ctx, 5*time.Second)
-				conn.goroutine.initialized = tc.initialized
+				if tc.initialized {
+					conn.reader.MarkInitialized()
+				}
 				cancel()
 				synctest.Wait() // Let cancellation set its interrupting deadline first.
 				result := make(chan error, 1)
