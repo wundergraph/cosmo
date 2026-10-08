@@ -1412,7 +1412,7 @@ func TestNatsEvents(t *testing.T) {
 			EnableNats:               false,
 			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
 				url := "nats://127.0.0.1:" + strconv.Itoa(listener.Port())
-				natsEventSources := make([]config.NatsEventSource, len(testenv.DemoNatsProviders))
+				natsEventSources := make([]config.NatsEventSource, 0, len(testenv.DemoNatsProviders))
 				for _, sourceName := range testenv.DemoNatsProviders {
 					natsEventSources = append(natsEventSources, config.NatsEventSource{
 						ID:  sourceName,

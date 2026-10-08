@@ -7,9 +7,17 @@ linters:
   enable:
     - asciicheck
     - bidichk
+    - durationcheck
+    - fatcontext
     - gocheckcompilerdirectives
     - govet
     - ineffassign
+    - loggercheck
+    - makezero
+    - nilnesserr
+    - nolintlint
+    - reassign
+    - wastedassign
   exclusions:
     # Preserve the standalone go vet command's coverage of generated files.
     generated: disable

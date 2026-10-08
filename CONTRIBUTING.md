@@ -66,9 +66,29 @@ use (
 
 ## Go linting
 
-The shared `.golangci.yml` starts with a small subset of the graphql-go-tools
-checks: `asciicheck`, `bidichk`, `gocheckcompilerdirectives`, `govet`, and `ineffassign`.
+The shared `.golangci.yml` starts with a subset of the graphql-go-tools checks.
 We add checks incrementally as part of [ROUTER-811](https://linear.app/wundergraph/issue/ROUTER-811).
+
+| Linter | What it checks |
+| --- | --- |
+| [asciicheck](https://golangci-lint.run/docs/linters/configuration/#asciicheck) | Flags non-ASCII identifiers that can be visually confusing. |
+| [bidichk](https://golangci-lint.run/docs/linters/configuration/#bidichk) | Detects Unicode bidirectional controls that can disguise code. |
+| [durationcheck](https://golangci-lint.run/docs/linters/configuration/#durationcheck) | Catches multiplication of two durations, often a unit mistake. |
+| [fatcontext](https://golangci-lint.run/docs/linters/configuration/#fatcontext) | Finds accumulating context nesting in loops and function literals. |
+| [gocheckcompilerdirectives](https://golangci-lint.run/docs/linters/configuration/#gocheckcompilerdirectives) | Validates `//go:` compiler directives. |
+| [govet](https://golangci-lint.run/docs/linters/configuration/#govet) | Reports suspicious constructs, such as mismatched printf arguments. |
+| [ineffassign](https://golangci-lint.run/docs/linters/configuration/#ineffassign) | Finds assignments whose values are never used. |
+| [loggercheck](https://golangci-lint.run/docs/linters/configuration/#loggercheck) | Validates structured logging key/value pairs. |
+| [makezero](https://golangci-lint.run/docs/linters/configuration/#makezero) | Catches appending to slices mistakenly initialized with nonzero length. |
+| [nilnesserr](https://golangci-lint.run/docs/linters/configuration/#nilnesserr) | Detects error paths that mistakenly use a known-nil error. |
+| [nolintlint](https://golangci-lint.run/docs/linters/configuration/#nolintlint) | Flags malformed or unused `//nolint` directives. |
+| [reassign](https://golangci-lint.run/docs/linters/configuration/#reassign) | Guards package error variables matching `EOF` and `Err.*` against reassignment. |
+| [wastedassign](https://golangci-lint.run/docs/linters/configuration/#wastedassign) | Finds redundant assignments, including values overwritten on every branch. |
+
+These checks use their default settings. In particular, `nolintlint` does not
+require explanations or specific linter names, and `reassign` uses its default
+error-variable patterns.
+
 Vet runs through golangci-lint, including on generated files. Standalone Staticcheck
 remains in place, and CI also checks formatting and runs `go fix -diff`.
 
