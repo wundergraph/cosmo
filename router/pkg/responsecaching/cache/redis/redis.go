@@ -29,12 +29,6 @@ type RedisCache struct {
 	// prefix is valid and means the keys are used as they are.
 	prefix string
 	now    func() time.Time
-	// sweepDelay is how long after an invalidation its tags are swept in the
-	// background. Only tests change it.
-	sweepDelay time.Duration
-	// closing is cancelled by Close, ending background sweeps.
-	closing context.Context
-	cancel  context.CancelFunc
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -46,10 +40,6 @@ const (
 
 // tagIndexPruneGrace is how long past its score a member stays in a tag index.
 const tagIndexPruneGrace = 5 * time.Minute
-
-// backgroundSweepDelay is how long after an invalidation its tags are walked
-// again, deleting entries that landed late and removing marks. Cleanup only.
-const backgroundSweepDelay = 3 * time.Second
 
 // entryKey is where an entry's value lives.
 func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamespace + key }
@@ -68,14 +58,10 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	closing, cancel := context.WithCancel(context.Background())
 	return &RedisCache{
-		client:     client,
-		prefix:     prefix,
-		now:        time.Now,
-		sweepDelay: backgroundSweepDelay,
-		closing:    closing,
-		cancel:     cancel,
+		client: client,
+		prefix: prefix,
+		now:    time.Now,
 	}, nil
 }
 
@@ -154,8 +140,6 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 // go-redis' complaint that the client is already closed.
 func (c *RedisCache) Close() error {
 	c.closeOnce.Do(func() {
-		// Pending sweeps give up; a running one fails fast.
-		c.cancel()
 		c.closeErr = c.client.Close()
 	})
 	return c.closeErr

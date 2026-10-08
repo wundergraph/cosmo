@@ -215,7 +215,8 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
-	t.Run("a SET landing after the walk's UNLINK is still named for the next walk", func(t *testing.T) {
+	t.Run("a SET landing after the walk keeps only its lease", func(t *testing.T) {
+		// Its member was removed with the walk's mark, so it's never extended.
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
@@ -230,23 +231,18 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		split.requireFired(t)
 
 		require.True(t, mr.Exists(entryKey(item.Key)))
-		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
-
-		removed, err := walker.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.Equal(t, 1, removed)
+		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+		mr.FastForward(writeLease)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
-	t.Run("a walk marks members rather than removing them", func(t *testing.T) {
+	t.Run("a walk stopping after its mark leaves the mark", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
-		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.Equal(t, 1, removed)
+		leaveMarks(t, mr, tag)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
 		require.NoError(t, err)
@@ -259,8 +255,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		require.NoError(t, mr.Set(entryKey(item.Key), "late"))
 		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
@@ -275,11 +270,10 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		broken := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
-		_, err = broken.InvalidateByTags(t.Context(), []string{tag})
+		_, err := broken.InvalidateByTags(t.Context(), []string{tag})
 		require.ErrorIs(t, err, errInjected)
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
 	})
@@ -289,8 +283,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
@@ -311,14 +304,13 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		interposer := &afterStep{names: []string{"unlink"}}
 		walker := newTestRedisCacheOn(t, mr, interposer)
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		// Between the sweep's delete and its removal, the key is cached again.
 		interposer.fn = func() {
 			require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{item}))
 		}
-		_, err = walker.InvalidateByTags(t.Context(), []string{tag})
+		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		interposer.requireFired(t)
 
@@ -402,8 +394,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		k := enginecache.Item{Key: "v1:k", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 		writer := newTestRedisCacheOn(t, mr)
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{j}))
-		_, err := writer.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		gap := &afterStep{names: []string{"unlink"}}
 		dying := newTestRedisCacheOn(t, mr, gap, &failCommands{name: "unlink", pipelines: []int{1}})
@@ -417,37 +408,13 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 			_, err := dying.InvalidateByTags(context.Background(), []string{tag})
 			require.ErrorIs(t, err, errInjected)
 		}
-		_, err = first.InvalidateByTags(t.Context(), []string{tag})
+		_, err := first.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		scanned.requireFired(t)
 		gap.requireFired(t)
 
 		require.True(t, mr.Exists(entryKey(k.Key)), "written in the dying walk's gap")
 		requireNoDangling(t, mr, k)
-	})
-
-	t.Run("a late save after the mark is deleted before its mark is swept", func(t *testing.T) {
-		// The walk lands between the writer's index write and its SET; the SET
-		// finds its member marked, so keeps its lease. The next walk deletes it
-		// before removing the name.
-		t.Parallel()
-		mr := miniredis.RunT(t)
-		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
-		writer := newTestRedisCacheOn(t, mr, split)
-		walker := newTestRedisCacheOn(t, mr)
-		split.fn = func() {
-			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
-			require.NoError(t, err)
-		}
-		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-		split.requireFired(t)
-		require.True(t, mr.Exists(entryKey(item.Key)), "the late save")
-		requireNoDangling(t, mr, item)
-
-		_, err := walker.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
-		require.False(t, mr.Exists(entryKey(item.Key)))
-		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
 	})
 
 	t.Run("a key written twice in one batch takes the last write's lifetime", func(t *testing.T) {
@@ -475,8 +442,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
 		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{tag}}
 		advance(c, time.Hour)
@@ -489,10 +455,9 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		mr := miniredis.RunT(t)
 		c := newTestRedisCacheOn(t, mr)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		_, err := c.InvalidateByTags(t.Context(), []string{tag})
-		require.NoError(t, err)
+		leaveMarks(t, mr, tag)
 
-		_, err = c.InvalidateByTags(t.Context(), []string{tag})
+		_, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.False(t, mr.Exists(tagIndexKey(tag)))
 	})
@@ -662,17 +627,27 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	})
 }
 
-// requireNoDangling fails if item's entry is live but missing from one of its
-// tag indexes.
+// leaveMarks invalidates tags with a walk that stops after marking, so its
+// marks stay for the next walk.
+func leaveMarks(t *testing.T, mr *miniredis.Miniredis, tags ...string) {
+	t.Helper()
+	stopping := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink", pipelines: []int{1}})
+	_, err := stopping.InvalidateByTags(t.Context(), tags)
+	require.ErrorIs(t, err, errInjected)
+}
+
+// requireNoDangling fails if item's entry is live past its lease but missing
+// from one of its tag indexes. One still on its lease may be unlisted: a write
+// landing during a walk is never extended.
 func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.Item) {
 	t.Helper()
 
-	if !mr.Exists(entryKey(item.Key)) {
+	if !mr.Exists(entryKey(item.Key)) || mr.TTL(entryKey(item.Key)) <= writeLease {
 		return
 	}
 	for _, tag := range item.Tags {
 		members := zmembers(t, mr, tagIndexKey(tag))
-		require.Contains(t, members, item.Key, "entry is live but tag %q can't reach it", tag)
+		require.Contains(t, members, item.Key, "entry is live past its lease but tag %q can't reach it", tag)
 	}
 }
 

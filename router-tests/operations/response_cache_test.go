@@ -1028,9 +1028,8 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 9, "the other nine are untouched")
-			// The tag keeps naming the deleted entry until it expires; a later
-			// invalidation of it finds nothing to delete.
-			require.Len(t, tags["declared:mood:employee-1"], 1)
+			// The walk removes the tag's member once its entry is deleted.
+			require.Empty(t, tags["declared:mood:employee-1"])
 		})
 	})
 

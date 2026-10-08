@@ -6,7 +6,6 @@ import (
 	"iter"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
@@ -15,20 +14,19 @@ import (
 var _ responsecaching.Invalidator = (*RedisCache)(nil)
 
 // markMembers sets each ARGV member still in KEYS[1] to minus the node's
-// time in ms. Walks marking in the same millisecond share a score; sweep
-// tells them apart by member.
+// time in ms, and returns that mark. Walks marking in the same millisecond
+// share a score; marks are removed by member, not score.
 var markMembers = redis.NewScript(`
 local t = redis.call('TIME')
 local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
 for i = 1, #ARGV do
   redis.call('ZADD', KEYS[1], 'XX', mark, ARGV[i])
 end
-return 0
+return mark
 `)
 
 // invalidationPageSize is the ZSCAN COUNT hint per page.
 const invalidationPageSize = 512
-const sweepTimeout = 30 * time.Second
 
 // InvalidateByTags implements responsecaching.Invalidator.
 func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, error) {
@@ -39,30 +37,7 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 		removed += count
 		err = errors.Join(err, tagErr)
 	}
-
-	go c.sweepLater(slices.Clone(tags))
 	return removed, err
-}
-
-// sweepTimeout bounds one background sweep.
-
-// sweepLater walks tags again shortly after, deleting entries that landed
-// late and removing this call's marks without waiting for the next
-// invalidation. Best effort: a sweep that fails or never runs leaves its marks
-// to the next walk.
-func (c *RedisCache) sweepLater(tags []string) {
-	select {
-	case <-time.After(c.sweepDelay):
-	case <-c.closing.Done():
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.closing, sweepTimeout)
-	defer cancel()
-	for _, tag := range tags {
-		// A cutoff below every live score leaves live members alone.
-		_, _ = c.walk(ctx, c.tagKey(tag), -1)
-	}
 }
 
 // invalidateTag deletes the entries one tag names.
@@ -73,7 +48,8 @@ func (c *RedisCache) sweepLater(tags []string) {
 //	 < 0  marked: minus when its entry was deleted, redis clock, ms
 //
 // Members aren't removed on delete: a late write may still SET the entry.
-// They're marked, and a later walk deletes their entries again and sweeps the
+// They're marked, their entries deleted again, then the marks removed. A walk
+// that stops midway leaves its marks for the next one.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
@@ -88,7 +64,8 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 }
 
 // walk deletes the entries of the tag's marked members and of its live members
-// scored up to cutoff, marks those live members, and sweeps the marks it read.
+// scored up to cutoff, and sweeps the marks it read, left by walks that
+// stopped midway.
 // A write never extends an entry whose member is marked or gone, so a mark can
 // go as soon as its entry is deleted again.
 func (c *RedisCache) walk(ctx context.Context, tagKey string, cutoff float64) (int, error) {
@@ -134,8 +111,10 @@ func (c *RedisCache) scanPages(ctx context.Context, tagKey string) iter.Seq2[[]s
 
 // invalidatePage deletes the page's entries, marks its live members, then
 // deletes their entries again, so a write landing between the first delete
-// and the mark doesn't wait for the next walk. On a failed delete nothing is
-// marked; members keep their scores for a retry.
+// and the mark is deleted too, then removes its marks. A write after the mark
+// finds its member marked or gone and never extends, so it keeps its lease.
+// On a failed delete nothing more happens; members keep their scores or marks
+// for a retry.
 func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) (int, error) {
 	if len(p.unlink) == 0 {
 		return 0, nil
@@ -144,16 +123,24 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 	if err != nil || len(p.mark) == 0 {
 		return removed, err
 	}
-	// XX: never re-adds a member swept meanwhile.
-	if err := markMembers.Run(ctx, c.client, []string{tagKey}, p.mark...).Err(); err != nil {
+	// XX: never re-adds a member removed meanwhile.
+	mark, err := markMembers.Run(ctx, c.client, []string{tagKey}, p.mark...).Int64()
+	if err != nil {
 		return removed, err
 	}
 	marked := make([]string, len(p.mark))
+	own := make([]any, 0, 2*len(p.mark))
+	score := strconv.FormatInt(mark, 10)
 	for i, member := range p.mark {
 		marked[i] = member.(string)
+		own = append(own, member, score)
 	}
 	again, err := c.unlink(ctx, marked)
-	return removed + again, err
+	removed += again
+	if err != nil {
+		return removed, err
+	}
+	return removed, removeMarks.Run(ctx, c.client, []string{tagKey}, own...).Err()
 }
 
 // sweep removes the marked members the walk read, as member, score pairs, each
