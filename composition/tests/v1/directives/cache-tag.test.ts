@@ -4,6 +4,7 @@ import {
   CACHE_TAG,
   type CacheTagConfiguration,
   type ContractTagOptions,
+  type EntityCacheConfiguration,
   FIRST_ORDINAL,
   FORMAT,
   fromContextCacheTagReferenceErrorMessage,
@@ -824,6 +825,47 @@ describe('@cacheTag tests', () => {
           ?.cacheTagConfigurations,
       ).toStrictEqual([
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
+    test('that every CacheTagConfiguration of each overridden Query field is removed from the overridden subgraph', () => {
+      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query {
+              product(id: ID!): Product @cacheTag(format: "product-{$args.id}")
+              products(id: ID!): [Product!]! @cacheTag(format: "catalogue") @cacheTag(format: "products-{$args.id}")
+              topProducts: [Product!]! @cacheTag(format: "top")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createSubgraph(
+            'b',
+            `
+            type Query {
+              products(id: ID!): [Product!]! @override(from: "a") @cacheTag(format: "products")
+              topProducts: [Product!]! @override(from: "a")
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(
+        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([
+        { fieldName: 'product', format: 'product-{$args.id}', typeName: 'Query' },
+      ] satisfies Array<CacheTagConfiguration>);
+      expect(
+        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([
+        { fieldName: 'products', format: 'products', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
     });
 
