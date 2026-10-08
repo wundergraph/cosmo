@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.159.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.158.0...@wundergraph/cosmo-connect@0.159.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+
 # [0.158.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.157.2...@wundergraph/cosmo-connect@0.158.0) (2026-09-14)
 
 ### Features

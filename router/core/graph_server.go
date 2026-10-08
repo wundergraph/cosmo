@@ -1067,7 +1067,7 @@ func (s *graphServer) buildGraphMux(
 		cancel:                   graphMuxCancel,
 		metricStore:              rmetric.NewNoopMetrics(),
 		streamMetricStore:        rmetric.NewNoopStreamMetricStore(),
-		skipUnavailableProviders: s.Config.eventsConfig.SkipUnavailableProviders,
+		skipUnavailableProviders: s.eventsConfig.SkipUnavailableProviders,
 		logger:                   s.logger,
 	}
 
@@ -1615,7 +1615,7 @@ func (s *graphServer) buildGraphMux(
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
-		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations); mErr != nil {
+		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations, opts.RouterConfigVersion); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
 	}
@@ -1795,6 +1795,7 @@ func (s *graphServer) buildGraphMux(
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
+		s.responseCache != nil,
 	)
 
 	handlerOpts := HandlerOptions{

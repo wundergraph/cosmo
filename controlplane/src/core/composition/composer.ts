@@ -40,6 +40,7 @@ import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { traced } from '../tracing.js';
+import { PromptToQueryService } from '../services/PromptToQueryService.js';
 import {
   composeGraphsInWorker,
   DeserializedComposedGraph,
@@ -145,6 +146,10 @@ export type CheckSubgraph = {
   labels?: Label[];
 };
 
+export function serializeRouterConfig(routerConfig: RouterConfig): Buffer {
+  return Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
+}
+
 @traced
 export class Composer {
   constructor(
@@ -195,6 +200,7 @@ export class Composer {
 
   async uploadRouterConfig({
     routerConfig,
+    serializedRouterConfig,
     blobStorage,
     organizationId,
     federatedGraphId,
@@ -207,6 +213,7 @@ export class Composer {
     pathOverride,
   }: {
     routerConfig: RouterConfig;
+    serializedRouterConfig?: Buffer;
     blobStorage: BlobStorage;
     organizationId: string;
     federatedGraphId: string;
@@ -223,7 +230,8 @@ export class Composer {
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
-    const routerConfigJsonStringBytes = Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
+    // Try to avoid serializing the router config multiple times when not needed
+    const routerConfigJsonStringBytes = serializedRouterConfig ?? serializeRouterConfig(routerConfig);
     const errors: ComposeDeploymentError[] = [];
 
     let s3PathDraft: string;
@@ -378,12 +386,14 @@ export class Composer {
     federatedGraphAdmissionWebhookSecret,
     actorId,
     pathOverride,
+    serializedRouterConfig,
   }: {
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
     baseCompositionRouterExecutionConfig: RouterConfig;
+    serializedRouterConfig?: Buffer;
     baseCompositionSchemaVersionId: string;
     blobStorage: BlobStorage;
     featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
@@ -423,6 +433,8 @@ export class Composer {
       federatedSchemaVersionId: baseCompositionSchemaVersionId,
       organizationId,
       routerConfig: baseRouterConfig,
+      serializedRouterConfig:
+        featureFlagRouterExecutionConfigByFeatureFlagName.size === 0 ? serializedRouterConfig : undefined,
       admissionWebhookURL: federatedGraphAdmissionWebhookURL,
       admissionWebhookSecret: federatedGraphAdmissionWebhookSecret,
       admissionConfig: {
@@ -451,6 +463,7 @@ export class Composer {
     routerExecutionConfig,
     featureFlagId,
     splitConfigEnabled,
+    promptToQueryService,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedById: string;
@@ -459,6 +472,7 @@ export class Composer {
     routerExecutionConfig?: RouterConfig;
     featureFlagId: string;
     splitConfigEnabled: boolean;
+    promptToQueryService: PromptToQueryService | undefined;
   }): Promise<CompositionDeployResult> {
     // For a feature-flag composition the baseline is the previous composition of the same feature flag (not the base
     // graph's latest valid version, which would produce a meaningless base-vs-feature-flag diff). Computed before
@@ -512,6 +526,10 @@ export class Composer {
         composedGraph.composedSchema || '',
         updatedFederatedGraph.routerCompatibilityVersion,
       );
+    }
+
+    if (promptToQueryService) {
+      await promptToQueryService.indexSchema(composedGraph.composedSchema);
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {

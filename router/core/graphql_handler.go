@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -193,6 +194,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithAttributes(reqCtx.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
+	defer func() {
+		if cacheStatus, ok := reqCtx.responseCacheStatus(); ok {
+			graphqlExecutionSpan.SetAttributes(rotel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+		}
+	}()
 
 	resolveCtx := resolve.NewContext(executionContext)
 	resolveCtx.Variables = reqCtx.operation.variables
@@ -277,9 +283,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 					propagation.m.Lock()
 					defer propagation.m.Unlock()
-					for k, v := range headers {
-						propagation.header[k] = v
-					}
+					maps.Copy(propagation.header, headers)
 				},
 			)
 		}

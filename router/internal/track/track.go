@@ -174,11 +174,11 @@ type hogLog struct {
 	log *zap.Logger
 }
 
-func (p *hogLog) Logf(format string, args ...interface{}) {
+func (p *hogLog) Logf(format string, args ...any) {
 	p.log.Debug(fmt.Sprintf(format, args...))
 }
 
-func (p *hogLog) Errorf(format string, args ...interface{}) {
+func (p *hogLog) Errorf(format string, args ...any) {
 	p.log.Debug(fmt.Sprintf(format, args...))
 }
 

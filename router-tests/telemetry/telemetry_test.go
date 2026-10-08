@@ -998,7 +998,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -1009,7 +1009,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			expected := `{"data":{"employees":[{"details":{"forename":"Jens","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","hasChildren":false,"location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","hasChildren":false,"location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","hasChildren":false,"location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","hasChildren":false,"location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","hasChildren":false,"location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -1019,7 +1019,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			// hit and normalization hit
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -4451,11 +4451,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: testutils.ToPtr(10 * time.Second),
+							RequestTimeout: new(10 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: testutils.ToPtr(3 * time.Second),
+								RequestTimeout: new(3 * time.Second),
 							},
 						},
 					})),
@@ -4900,7 +4900,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			MetricReader:               metricReader,
 			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
+			listArgQuery := "f78a19e2e525a86dfa1beb3a45d1654b74c461e524cdff350721bc4cc1cea6d7"
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -10247,7 +10247,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
 						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 						// Verify Authenticate span has correct span kind
@@ -10259,7 +10259,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 					}
 				}
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.Contains(t, sn[i].Attributes(), attribute.String(headerKey, headerVal))
 				}
 
@@ -10324,7 +10324,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
 				}
 
@@ -10387,7 +10387,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
 				}
 
@@ -10608,7 +10608,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				var authenticateSpanDetected bool
 				require.Len(t, sn, 10)
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					traceAttribute := attribute.String(claimKeyWithAuth, claimValWithAuth)
 					attributes := sn[i].Attributes()
 
@@ -10839,11 +10839,11 @@ func TestFlakyTelemetry(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 				})
 
-				persistedID := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+				persistedID := "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"
 
 				skipSpans := []spanEntry{
 					{
@@ -11229,7 +11229,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 					var engineSpanDetected bool
 
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						subgraphTraceAttribute := attribute.String("custom.subgraph", "employees")
 						attributes := sn[i].Attributes()
 
@@ -11291,7 +11291,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					var engineSpanDetected bool
 
 					subgraphTraceAttribute := attribute.String(key, expectedValue)
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						attributes := sn[i].Attributes()
 
 						if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
@@ -11367,7 +11367,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Len(t, sn, 9)
 
 					subgraphTraceAttribute := attribute.String(key, expectedValue)
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						attributes := sn[i].Attributes()
 						assert.NotContains(t, attributes, subgraphTraceAttribute)
 					}
@@ -11434,7 +11434,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				var attributeDetected bool
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					attributes := sn[i].Attributes()
 
 					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
@@ -11516,7 +11516,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				var attributesDetected int
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					attributes := sn[i].Attributes()
 
 					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {

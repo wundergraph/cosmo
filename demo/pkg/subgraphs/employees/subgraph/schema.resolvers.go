@@ -21,7 +21,7 @@ func (r *employeeResolver) RootFieldThrowsError(ctx context.Context, obj *model.
 	graphql.AddError(ctx, &gqlerror.Error{
 		Path:    graphql.GetPath(ctx),
 		Message: fmt.Sprintf("error resolving RootFieldThrowsError for Employee %d", obj.ID),
-		Extensions: map[string]interface{}{
+		Extensions: map[string]any{
 			"code": "ERROR_CODE",
 			"foo":  "bar",
 		},
@@ -33,7 +33,7 @@ func (r *employeeResolver) RootFieldThrowsError(ctx context.Context, obj *model.
 // RootFieldErrorWrapper is the resolver for the rootFieldErrorWrapper field.
 func (r *employeeResolver) RootFieldErrorWrapper(ctx context.Context, obj *model.Employee) (*model.ErrorWrapper, error) {
 	return &model.ErrorWrapper{
-		OkField: strPtr("ok"),
+		OkField: new("ok"),
 	}, nil
 }
 

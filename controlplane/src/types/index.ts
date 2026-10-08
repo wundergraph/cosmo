@@ -63,7 +63,8 @@ export type FeatureIds =
   | 'sso'
   | 'subgraph-check-extensions'
   | 'support'
-  | 'split-config-loading';
+  | 'split-config-loading'
+  | 'prompt-to-query';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -345,6 +346,12 @@ export interface OrganizationGroupDTO {
     namespaces: string[];
     resources: string[];
   }[];
+}
+
+export interface OrganizationAcceptedFeatureTermDTO {
+  featureId: FeatureIds;
+  lastAcceptedBy?: string;
+  lastAcceptedAt?: Date;
 }
 
 export interface OrganizationMemberDTO {

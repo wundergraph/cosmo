@@ -24,6 +24,8 @@ const getConfig = () => {
     databaseTlsCert: process.env.DB_TLS_CERT,
     databaseTlsKey: process.env.DB_TLS_KEY,
 
+    defaultPlan: process.env.DEFAULT_PLAN,
+
     redis: {
       host: process.env.REDIS_HOST || 'localhost',
       port: process.env.REDIS_PORT || 6379,

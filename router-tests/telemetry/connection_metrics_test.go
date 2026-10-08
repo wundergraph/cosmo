@@ -232,11 +232,11 @@ func TestConnectionMetrics(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
+				RequestTimeout: new(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
-					RequestTimeout: testutils.ToPtr(300 * time.Millisecond),
+					RequestTimeout: new(300 * time.Millisecond),
 				},
 			},
 		}
