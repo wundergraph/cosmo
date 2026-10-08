@@ -45,13 +45,18 @@ type RouterSupervisorOpts struct {
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
 func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) {
+	reloadPersistentState := opts.ReloadPersistentState
+	if reloadPersistentState == nil {
+		reloadPersistentState = NewReloadPersistentState(opts.BaseLogger)
+	}
+
 	rs := &RouterSupervisor{
 		shutdownChan:  make(chan bool),
 		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
 		configFactory: opts.ConfigFactory,
 		resources: &RouterResources{
 			Logger:                opts.BaseLogger,
-			ReloadPersistentState: opts.ReloadPersistentState,
+			ReloadPersistentState: reloadPersistentState,
 		},
 	}
 

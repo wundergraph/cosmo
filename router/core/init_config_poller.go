@@ -213,14 +213,20 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 		ignoredFeatureFlags[featureFlag] = struct{}{}
 	}
 
-	splitPoller := configpoller.NewSplitConfigPoller(
-		fetcher,
+	options := []configpoller.SplitConfigPollerOption{
 		configpoller.WithSplitLogger(r.logger),
 		configpoller.WithSplitPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
 		configpoller.WithConfigRules(configpoller.ConfigRules{
 			SkipMissingFeatureFlags: r.routerConfigPollerConfig.SplitConfigPoller.SkipMissingFeatureFlags,
 			IgnoredFeatureFlags:     ignoredFeatureFlags,
 		}),
-	)
+	}
+	if r.reloadPersistentState != nil {
+		if previousConfig := r.reloadPersistentState.previousExecutionConfig(r.graphApiToken); previousConfig != nil {
+			options = append(options, configpoller.WithPreviousConfigFallback(previousConfig))
+		}
+	}
+
+	splitPoller := configpoller.NewSplitConfigPoller(fetcher, options...)
 	return &splitPoller, nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // mockSplitFetcher is a controllable implementation of SplitConfigFetcher for tests.
@@ -102,6 +103,48 @@ func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
 	assert.Contains(t, err.Error(), "mapper missing base graph entry")
 }
 
+func TestSplitGetRouterConfig_MissingBaseGraphUsesPreviousConfigFallback(t *testing.T) {
+	previousCfg := makeRouterConfig("legacy-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{"ff1": "hash-ff1"},
+	}
+
+	p := newTestPoller(mock)
+	WithPreviousConfigFallback(previousCfg)(p)
+	logs, observed := observer.New(zap.WarnLevel)
+	p.logger = zap.New(logs)
+
+	resp, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, previousCfg, resp.Config)
+	assert.NotSame(t, previousCfg, resp.Config, "the accepted fallback must be isolated from future mutation")
+	assert.Nil(t, resp.Changes)
+	assert.True(t, p.usingFallbackConfig)
+	assert.Same(t, resp.Config, p.currentConfig)
+	assert.Empty(t, p.knownHashes)
+	assert.Empty(t, p.latestVersion)
+	assert.Empty(t, mock.fetchConfigCalls, "incomplete split configs must not be fetched")
+	require.Len(t, observed.All(), 1)
+	assert.Contains(t, observed.All()[0].Message, "missing the base graph")
+	assert.Contains(t, observed.All()[0].Message, "using the last successfully applied execution config")
+	assert.Equal(t, "legacy-v1", observed.All()[0].ContextMap()["fallback_version"])
+}
+
+func TestSplitGetRouterConfig_EmptyMapperUsesPreviousConfigFallback(t *testing.T) {
+	previousCfg := makeRouterConfig("legacy-v1")
+	mock := &mockSplitFetcher{mapperResult: map[string]string{}}
+
+	p := newTestPoller(mock)
+	p.fallback = previousCfg
+
+	resp, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, previousCfg, resp.Config)
+	assert.True(t, p.usingFallbackConfig)
+}
+
 func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	ffCfg := makeRouterConfig("ff-v1")
@@ -151,7 +194,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "empty graph configs")
+	assert.Contains(t, err.Error(), "mapper missing base graph entry")
 }
 
 func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
@@ -539,6 +582,172 @@ func TestSplitSubscribe_NoChanges(t *testing.T) {
 	assert.False(t, handlerCalled, "handler must not be called when nothing changed")
 	// Only FetchMapper should have been called, no FetchConfig calls.
 	assert.Equal(t, 0, len(mock.fetchConfigCalls))
+}
+
+func TestSplitSubscribe_MissingBaseKeepsEntireAcceptedConfig(t *testing.T) {
+	base := makeRouterConfig("split-v1")
+	feature := makeRouterConfig("ff-v1")
+	mock := &mockSplitFetcher{
+		mapperResult:  map[string]string{"": "base-hash", "ff1": "ff-hash"},
+		configResults: map[string]*nodev1.RouterConfig{"": base, "ff1": feature},
+	}
+	p := newTestPoller(mock)
+	initial, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+	version := p.latestVersion
+	mock.fetchConfigCalls = nil
+
+	for _, mapper := range []map[string]string{{"ff1": "changed-ff-hash"}, {}, nil} {
+		mock.mapperResult = mapper
+		pollOnce(p, func(_ *routerconfig.Response) error {
+			t.Error("an incomplete mapper must not trigger an update")
+			return nil
+		})
+		assert.Same(t, initial.Config, p.currentConfig)
+		assert.Equal(t, version, p.latestVersion)
+		assert.Equal(t, map[string]string{"": "base-hash", "ff1": "ff-hash"}, p.knownHashes)
+		assert.Empty(t, mock.fetchConfigCalls)
+	}
+}
+
+func TestSplitSubscribe_PreviousFallbackKeepsConfigWhileMapperIsIncomplete(t *testing.T) {
+	previousCfg := makeRouterConfig("legacy-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{"ff1": "hash-ff1"},
+	}
+	p := newTestPoller(mock)
+	p.fallback = previousCfg
+
+	initial, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, previousCfg, initial.Config)
+
+	handlerCalled := false
+	pollOnce(p, func(_ *routerconfig.Response) error {
+		handlerCalled = true
+		return nil
+	})
+
+	assert.False(t, handlerCalled)
+	assert.True(t, p.usingFallbackConfig)
+	assert.Same(t, initial.Config, p.currentConfig)
+	assert.Empty(t, p.knownHashes)
+	assert.Empty(t, mock.fetchConfigCalls)
+}
+
+func TestSplitSubscribe_CompleteMapperAtomicallyReplacesPreviousConfig(t *testing.T) {
+	previousBase := makeRouterConfig("legacy-v1")
+	previousBase.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{
+		ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{
+			"legacy-only": {
+				Version:      "legacy-ff-v1",
+				EngineConfig: previousBase.EngineConfig,
+			},
+		},
+	}
+	newBase := makeRouterConfig("split-v1")
+	newFF := makeRouterConfig("split-ff-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{"ff1": "hash-ff1"},
+	}
+	p := newTestPoller(mock)
+	p.fallback = previousBase
+
+	_, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+	require.True(t, p.usingFallbackConfig)
+
+	mock.mapperResult = map[string]string{
+		"":    "hash-base",
+		"ff1": "hash-ff1",
+	}
+	mock.configResults = map[string]*nodev1.RouterConfig{
+		"":    newBase,
+		"ff1": newFF,
+	}
+
+	var received *routerconfig.Response
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp
+		return nil
+	})
+
+	require.NotNil(t, received)
+	assert.Nil(t, received.Changes, "the fallback-to-split transition must rebuild every graph mux")
+	assert.Equal(t, "split-v1", received.Config.Version)
+	require.NotNil(t, received.Config.FeatureFlagConfigs)
+	assert.Equal(t, "split-ff-v1", received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName["ff1"].Version)
+	assert.NotContains(t, received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "legacy-only",
+		"feature flags from the monolithic config must not leak into split config")
+	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-base"}, received.Hashes[""])
+	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-ff1"}, received.Hashes["ff1"])
+	assert.False(t, p.usingFallbackConfig)
+	assert.Equal(t, map[string]string{"": "hash-base", "ff1": "hash-ff1"}, p.knownHashes)
+	assert.Equal(t, computeCompositeVersion(p.knownHashes), p.latestVersion)
+	assert.ElementsMatch(t, []string{"", "ff1"}, mock.fetchConfigCalls)
+}
+
+func TestSplitSubscribe_FailedFallbackToSplitTransitionKeepsPreviousConfig(t *testing.T) {
+	previousCfg := makeRouterConfig("legacy-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{"ff1": "hash-ff1"},
+	}
+	p := newTestPoller(mock)
+	p.fallback = previousCfg
+
+	initial, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+
+	mock.mapperResult = map[string]string{"": "hash-base"}
+	mock.configErrors = map[string]error{"": errors.New("base config unavailable")}
+
+	handlerCalled := false
+	pollOnce(p, func(_ *routerconfig.Response) error {
+		handlerCalled = true
+		return nil
+	})
+
+	assert.False(t, handlerCalled)
+	assert.True(t, p.usingFallbackConfig)
+	assert.Same(t, initial.Config, p.currentConfig)
+	assert.Empty(t, p.knownHashes)
+	assert.Empty(t, p.latestVersion)
+}
+
+func TestSplitSubscribe_HandlerErrorDuringFallbackToSplitTransitionKeepsPreviousConfig(t *testing.T) {
+	previousCfg := makeRouterConfig("legacy-v1")
+	newBase := makeRouterConfig("split-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{"ff1": "hash-ff1"},
+	}
+	p := newTestPoller(mock)
+	p.fallback = previousCfg
+
+	initial, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+
+	mock.mapperResult = map[string]string{"": "hash-base"}
+	mock.configResults = map[string]*nodev1.RouterConfig{"": newBase}
+
+	pollOnce(p, func(_ *routerconfig.Response) error {
+		return errors.New("graph server swap failed")
+	})
+
+	assert.True(t, p.usingFallbackConfig)
+	assert.Same(t, initial.Config, p.currentConfig)
+	assert.Empty(t, p.knownHashes)
+	assert.Empty(t, p.latestVersion)
+
+	var recovered *routerconfig.Response
+	pollOnce(p, func(response *routerconfig.Response) error {
+		recovered = response
+		return nil
+	})
+	require.NotNil(t, recovered, "the same mapper must be retried after rejection")
+	assert.Nil(t, recovered.Changes)
+	assert.Equal(t, "split-v1", recovered.Config.Version)
+	assert.False(t, p.usingFallbackConfig)
+	assert.Equal(t, map[string]string{"": "hash-base"}, p.knownHashes)
 }
 
 func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {

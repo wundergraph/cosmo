@@ -3,12 +3,63 @@ package core
 import (
 	"testing"
 
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 )
+
+func testGraphToken(t *testing.T, organizationID, graphID string, features ...string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"organization_id":    organizationID,
+		"federated_graph_id": graphID,
+		"features":           features,
+	})
+	signed, err := token.SignedString([]byte("test-secret"))
+	require.NoError(t, err)
+	return signed
+}
+
+func TestReloadPersistentState_LastValidExecutionConfigIsIsolated(t *testing.T) {
+	t.Parallel()
+
+	state := NewReloadPersistentState(zap.NewNop())
+	require.Nil(t, state.previousExecutionConfig(""))
+
+	token := testGraphToken(t, "organization-a", "graph-a")
+	accepted := &nodev1.RouterConfig{Version: "accepted-v1"}
+	state.acceptExecutionConfig(accepted, token)
+	accepted.Version = "mutated-candidate"
+
+	firstRead := state.previousExecutionConfig(token)
+	require.Equal(t, "accepted-v1", firstRead.GetVersion())
+	firstRead.Version = "mutated-reader"
+
+	secondRead := state.previousExecutionConfig(token)
+	require.Equal(t, "accepted-v1", secondRead.GetVersion())
+}
+
+func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing.T) {
+	t.Parallel()
+
+	state := NewReloadPersistentState(zap.NewNop())
+	legacyToken := testGraphToken(t, "organization-a", "graph-a")
+	splitToken := testGraphToken(t, "organization-a", "graph-a", "split-config-loading")
+	differentOrgToken := testGraphToken(t, "organization-b", "graph-a", "split-config-loading")
+	differentGraphToken := testGraphToken(t, "organization-a", "graph-b", "split-config-loading")
+
+	state.acceptExecutionConfig(&nodev1.RouterConfig{Version: "graph-a-v1"}, legacyToken)
+	require.Equal(t, "graph-a-v1", state.previousExecutionConfig(splitToken).GetVersion(),
+		"feature changes in a token must not hide the same graph's accepted config")
+	require.Nil(t, state.previousExecutionConfig(differentOrgToken))
+	require.Nil(t, state.previousExecutionConfig("invalid-token"))
+	require.Nil(t, state.previousExecutionConfig(""))
+	require.Nil(t, state.previousExecutionConfig(differentGraphToken),
+		"an accepted config must never be reused for a different federated graph")
+}
 
 func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t *testing.T) {
 	t.Parallel()

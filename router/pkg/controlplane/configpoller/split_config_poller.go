@@ -42,12 +42,14 @@ type splitConfigPoller struct {
 	pollInterval time.Duration
 	pollJitter   time.Duration
 	fetcher      SplitConfigFetcher
+	fallback     *nodev1.RouterConfig
 
 	// Internal state – not safe for concurrent access.
-	knownHashes   map[string]string    // name -> hash from last successful mapper fetch ("" = base)
-	currentConfig *nodev1.RouterConfig // last successfully assembled full config
-	latestVersion string               // composite hash used for change detection
-	configRules   ConfigRules          // config rules to apply to the config
+	knownHashes         map[string]string    // name -> hash from last successful mapper fetch ("" = base)
+	currentConfig       *nodev1.RouterConfig // last successfully assembled full config
+	latestVersion       string               // composite hash used for change detection
+	usingFallbackConfig bool                 // true until the first complete split config is applied
+	configRules         ConfigRules          // config rules to apply to the config
 }
 
 // NewSplitConfigPoller creates a ConfigPoller that uses the split-config strategy.
@@ -78,6 +80,18 @@ func WithSplitPolling(interval time.Duration, jitter time.Duration) SplitConfigP
 	return func(p *splitConfigPoller) {
 		p.pollInterval = interval
 		p.pollJitter = jitter
+	}
+}
+
+// WithPreviousConfigFallback sets the last execution config successfully
+// applied by a previous router instance. It is only used when the initial split
+// mapper has no base graph. A cold router instance has no previous config and
+// therefore still fails on an invalid split config.
+func WithPreviousConfigFallback(config *nodev1.RouterConfig) SplitConfigPollerOption {
+	return func(p *splitConfigPoller) {
+		if config != nil {
+			p.fallback = proto.Clone(config).(*nodev1.RouterConfig)
+		}
 	}
 }
 
@@ -161,17 +175,26 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 
 // GetRouterConfig performs the initial fetch: mapper + all individual configs.
 func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
+	// The initial fallback snapshot is no longer needed after this fetch.
+	defer func() { p.fallback = nil }()
 	activeGraphs, err := p.fetcher.FetchMapper(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch mapper: %w", err)
 	}
 
-	if len(activeGraphs) == 0 {
-		return nil, fmt.Errorf("empty graph configs")
-	}
-
 	if _, exists := activeGraphs[""]; !exists {
-		return nil, fmt.Errorf("mapper missing base graph entry")
+		if p.fallback == nil {
+			return nil, errors.New("mapper missing base graph entry")
+		}
+
+		p.currentConfig = proto.Clone(p.fallback).(*nodev1.RouterConfig)
+		p.knownHashes = make(map[string]string)
+		p.latestVersion = ""
+		p.usingFallbackConfig = true
+		p.logger.Warn("Split config mapper is missing the base graph; using the last successfully applied execution config",
+			zap.String("fallback_version", p.currentConfig.GetVersion()),
+		)
+		return &routerconfig.Response{Config: p.currentConfig}, nil
 	}
 
 	config, err := p.fetchAndAssembleAll(ctx, activeGraphs)
@@ -187,6 +210,7 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	p.knownHashes = activeGraphs
 	p.currentConfig = config
 	p.latestVersion = computeCompositeVersion(activeGraphs)
+	p.usingFallbackConfig = false
 
 	response := &routerconfig.Response{
 		Config:  config,
@@ -218,7 +242,48 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 		}
 
 		if _, ok := mapperGraphs[""]; !ok {
-			p.logger.Warn("Mapper missing base graph entry, keeping existing config")
+			p.logger.Warn("Split config mapper is missing the base graph; keeping the last successfully applied execution config",
+				zap.String("fallback_version", p.currentConfig.GetVersion()),
+			)
+			return
+		}
+
+		if p.usingFallbackConfig {
+			assembled, err := p.fetchAndAssembleAll(ctx, mapperGraphs)
+			if err != nil {
+				p.logger.Error("Failed to assemble complete split config, keeping the last successfully applied execution config", zap.Error(err))
+				return
+			}
+
+			newVersion := computeCompositeVersion(mapperGraphs)
+			hashes := make(map[string]routerconfig.HashInfo, len(mapperGraphs))
+			for name, hash := range mapperGraphs {
+				hashes[name] = routerconfig.HashInfo{NewHash: hash}
+			}
+
+			response := &routerconfig.Response{
+				Config:  assembled,
+				Changes: nil, // force a full rebuild when switching from the fallback to split config
+				Hashes:  hashes,
+			}
+
+			handlerStart := time.Now()
+			if err := handler(response); err != nil {
+				p.logger.Error("Error invoking config poll handler", zap.Error(err))
+				return
+			}
+
+			p.logger.Info("Complete split config was validated and applied, replacing the fallback execution config",
+				zap.String("fallback_version", p.currentConfig.GetVersion()),
+				zap.String("new_version", newVersion),
+				zap.String("fetch_time", time.Since(fetchStart).String()),
+				zap.String("swap_time", time.Since(handlerStart).String()),
+			)
+
+			p.knownHashes = mapperGraphs
+			p.currentConfig = assembled
+			p.latestVersion = newVersion
+			p.usingFallbackConfig = false
 			return
 		}
 

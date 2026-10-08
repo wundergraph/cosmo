@@ -4,13 +4,62 @@ import (
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 // ReloadPersistentState This file describes any configuration which should persist or be shared across router restarts
 type ReloadPersistentState struct {
 	inMemoryPlanCacheFallback *InMemoryPlanCacheFallback
+
+	executionConfigMu             sync.RWMutex
+	lastValidExecutionConfig      *nodev1.RouterConfig
+	lastExecutionConfigGraphScope executionConfigGraphScope
+}
+
+type executionConfigGraphScope struct {
+	organizationID   string
+	federatedGraphID string
+}
+
+func graphScopeFromToken(token string) executionConfigGraphScope {
+	claims, err := rjwt.ExtractFederatedGraphTokenClaims(token)
+	if err != nil || claims.OrganizationID == "" || claims.FederatedGraphID == "" {
+		return executionConfigGraphScope{}
+	}
+	return executionConfigGraphScope{
+		organizationID:   claims.OrganizationID,
+		federatedGraphID: claims.FederatedGraphID,
+	}
+}
+
+// acceptExecutionConfig records an execution config only after the graph
+// server has been built and swapped successfully. The clone prevents a later
+// candidate assembly from mutating the accepted fallback in place.
+func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfig, graphToken string) {
+	if config == nil {
+		return
+	}
+
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.lastValidExecutionConfig = proto.Clone(config).(*nodev1.RouterConfig)
+	s.lastExecutionConfigGraphScope = graphScopeFromToken(graphToken)
+}
+
+// previousExecutionConfig returns an isolated copy of the last execution
+// config accepted by any router instance owned by the supervisor.
+func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *nodev1.RouterConfig {
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+
+	scope := graphScopeFromToken(graphToken)
+	if scope == (executionConfigGraphScope{}) || s.lastValidExecutionConfig == nil || s.lastExecutionConfigGraphScope != scope {
+		return nil
+	}
+	return proto.Clone(s.lastValidExecutionConfig).(*nodev1.RouterConfig)
 }
 
 func NewReloadPersistentState(logger *zap.Logger) *ReloadPersistentState {

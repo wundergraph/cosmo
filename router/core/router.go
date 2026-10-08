@@ -655,6 +655,9 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 
 	r.httpServer.SwapGraphServer(ctx, server)
 
+	// Preserve only configs that successfully built and replaced the graph server.
+	r.reloadPersistentState.acceptExecutionConfig(response.Config, r.graphApiToken)
+
 	// Cleanup any unused feature flags in case a feature flag was removed
 	r.reloadPersistentState.CleanupFeatureFlags(response.Config)
 
