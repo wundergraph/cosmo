@@ -25,6 +25,8 @@ import {
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
+  type UndefinedCacheTagInputFieldErrorMessageParams,
+  type UntraversableCacheTagReferenceErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -2240,6 +2242,29 @@ export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string)
 
 export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
   return `The "format" argument references "$args.${reference}", which is not an argument of the field.`;
+}
+
+export function undefinedCacheTagInputFieldErrorMessage({
+  fieldName,
+  inputObjectName,
+  reference,
+}: UndefinedCacheTagInputFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but Input Object "${inputObjectName}" does not define the field "${fieldName}".`
+  );
+}
+
+export function untraversableCacheTagReferenceErrorMessage({
+  reference,
+  typeString,
+  untraversableReference,
+}: UntraversableCacheTagReferenceErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but "$args.${untraversableReference}" is of type "${typeString}".` +
+    ` A period-delimited path can traverse only an Input Object that is not a list.`
+  );
 }
 
 export function invalidCacheTagArgumentTypeErrorMessage({

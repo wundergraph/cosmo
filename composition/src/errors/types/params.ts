@@ -114,6 +114,18 @@ export type InvalidCacheTagArgumentTypeErrorParams = {
   typeString: string;
 };
 
+export type UndefinedCacheTagInputFieldErrorMessageParams = {
+  fieldName: FieldName;
+  inputObjectName: TypeName;
+  reference: string;
+};
+
+export type UntraversableCacheTagReferenceErrorMessageParams = {
+  reference: string;
+  typeString: string;
+  untraversableReference: string;
+};
+
 export type UnavailableCacheTagReferenceErrorMessageParams = {
   coords: string;
   reference: string;
