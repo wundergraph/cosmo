@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -25,7 +25,7 @@ type executionConfigGraphScope struct {
 }
 
 func graphScopeFromToken(token string) executionConfigGraphScope {
-	claims, err := rjwt.ExtractFederatedGraphTokenClaims(token)
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil || claims.OrganizationID == "" || claims.FederatedGraphID == "" {
 		return executionConfigGraphScope{}
 	}

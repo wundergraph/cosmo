@@ -2,8 +2,12 @@ package core
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"maps"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,9 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -26,22 +30,27 @@ type supervisorSplitConfigFetcher struct {
 	configCalls atomic.Int32
 }
 
-func (f *supervisorSplitConfigFetcher) FetchMapper(_ context.Context) (map[string]string, error) {
-	f.mapperCalls.Add(1)
+func (f *supervisorSplitConfigFetcher) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	return maps.Clone(f.mapper), nil
-}
-
-func (f *supervisorSplitConfigFetcher) FetchConfig(_ context.Context, name string) (*nodev1.RouterConfig, error) {
-	f.configCalls.Add(1)
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	config, ok := f.configs[name]
-	if !ok {
-		return nil, errors.New("config not found")
+	var body []byte
+	var err error
+	switch r.URL.Path {
+	case "/organization-a/graph-a/manifest/mapper.json":
+		f.mapperCalls.Add(1)
+		body, err = json.Marshal(f.mapper)
+	case "/organization-a/graph-a/manifest/latest.json":
+		f.configCalls.Add(1)
+		body, err = protojson.Marshal(f.configs[""])
+	default:
+		http.NotFound(w, r)
+		return
 	}
-	return proto.Clone(config).(*nodev1.RouterConfig), nil
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write(body)
 }
 
 func (f *supervisorSplitConfigFetcher) update(mapper map[string]string, configs map[string]*nodev1.RouterConfig) {
@@ -53,9 +62,20 @@ func (f *supervisorSplitConfigFetcher) update(mapper map[string]string, configs 
 
 func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t *testing.T) {
 	logger := zap.NewNop()
+	persistentState := NewReloadPersistentState(logger)
 	graphToken := testGraphToken(t, "organization-a", "graph-a")
-	previousConfig := routerconfig.GetDefaultConfig()
+	splitToken := testGraphToken(t, "organization-a", "graph-a", "split-config-loading")
+	data, err := os.ReadFile("../pkg/plan_generator/testdata/execution_config/base.json")
+	require.NoError(t, err)
+	previousConfig, err := execution_config.UnmarshalConfig(data)
+	require.NoError(t, err)
+	// This test only needs HTTP subgraphs, not the fixture's event providers.
+	previousConfig.EngineConfig.DatasourceConfigurations = slices.DeleteFunc(previousConfig.EngineConfig.DatasourceConfigurations,
+		func(ds *nodev1.DataSourceConfiguration) bool { return ds.Kind != nodev1.DataSourceKind_GRAPHQL })
 	previousConfig.Version = "legacy-accepted"
+	publishedConfig := proto.Clone(previousConfig).(*nodev1.RouterConfig)
+	require.NotEmpty(t, previousConfig.Subgraphs)
+	overriddenSubgraph := previousConfig.Subgraphs[0].Name
 
 	invalidConfig := proto.Clone(previousConfig).(*nodev1.RouterConfig)
 	invalidConfig.Version = "split-invalid"
@@ -70,9 +90,13 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 		configs: map[string]*nodev1.RouterConfig{},
 	}
 
+	cdn := httptest.NewServer(fetcher)
+	t.Cleanup(cdn.Close)
+
 	var routerGeneration atomic.Int32
 	supervisor, err := NewRouterSupervisor(&RouterSupervisorOpts{
-		BaseLogger: logger,
+		BaseLogger:            logger,
+		ReloadPersistentState: persistentState,
 		ConfigFactory: func() (*config.Config, error) {
 			return &config.Config{ShutdownDelay: time.Second}, nil
 		},
@@ -87,24 +111,31 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 				WithReloadPersistentState(resources.ReloadPersistentState),
 			}
 			if generation == 1 {
-				options = append(options, WithStaticExecutionConfig(previousConfig))
-			} else {
-				poller := configpoller.NewSplitConfigPoller(
-					fetcher,
-					configpoller.WithPreviousConfigFallback(resources.ReloadPersistentState.previousExecutionConfig(graphToken)),
-					configpoller.WithSplitPolling(20*time.Millisecond, 0),
+				options = append(options,
+					WithStaticExecutionConfig(previousConfig),
+					WithOverrideRoutingURL(config.OverrideRoutingURLConfiguration{
+						Subgraphs: map[string]string{overriddenSubgraph: "http://removed-override.invalid"},
+					}),
 				)
-				options = append(options, WithConfigPoller(poller))
+			} else {
+				options = append(options,
+					WithGraphApiToken(splitToken),
+					WithCDN(config.CDNConfiguration{URL: cdn.URL}),
+					WithConfigPollerConfig(&RouterConfigPollerConfig{PollInterval: 20 * time.Millisecond}),
+				)
 			}
 			return NewRouter(ctx, options...)
 		},
 	})
 	require.NoError(t, err)
 
-	persistentState := supervisor.resources.ReloadPersistentState
 	startResult := make(chan error, 1)
 	go func() {
-		startResult <- supervisor.Start()
+		err := supervisor.Start()
+		if err != nil {
+			t.Logf("supervisor stopped: %v", err)
+		}
+		startResult <- err
 	}()
 	supervisorStopped := false
 	t.Cleanup(func() {
@@ -129,7 +160,11 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	require.Eventually(t, func() bool {
 		return routerGeneration.Load() >= 2 && fetcher.mapperCalls.Load() >= 2
 	}, 5*time.Second, 10*time.Millisecond, "the replacement router must boot from the fallback and start polling")
-	require.Equal(t, "legacy-accepted", persistentState.previousExecutionConfig(graphToken).GetVersion())
+	// The override was removed on reload. Both the poller's input and the saved
+	// fallback must retain the published URLs, not the first router's override.
+	require.True(t, proto.Equal(publishedConfig, previousConfig), "graph construction must not mutate its input")
+	require.True(t, proto.Equal(publishedConfig, persistentState.previousExecutionConfig(graphToken)),
+		"fallback must not retain a removed router-local override")
 
 	// A mapper with a base entry is not enough: the assembled candidate must
 	// also build a valid graph server before it can replace the fallback.

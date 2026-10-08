@@ -45,11 +45,12 @@ type splitConfigPoller struct {
 	fallback     *nodev1.RouterConfig
 
 	// Internal state – not safe for concurrent access.
-	knownHashes         map[string]string    // name -> hash from last successful mapper fetch ("" = base)
-	currentConfig       *nodev1.RouterConfig // last successfully assembled full config
-	latestVersion       string               // composite hash used for change detection
-	usingFallbackConfig bool                 // true until the first complete split config is applied
-	configRules         ConfigRules          // config rules to apply to the config
+	knownHashes   map[string]string    // name -> hash from last successful mapper fetch ("" = base)
+	currentConfig *nodev1.RouterConfig // last successfully assembled full config
+	latestVersion string               // composite hash used for change detection
+	configRules   ConfigRules          // config rules to apply to the config
+
+	usingFallbackConfig bool // true until the first complete split config is applied
 }
 
 // NewSplitConfigPoller creates a ConfigPoller that uses the split-config strategy.

@@ -30,6 +30,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -647,7 +648,11 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, response *routerconfig.Response) error {
-	server, err := newGraphServer(ctx, r, response, r.proxy)
+	// Graph construction applies router-local overrides in place. Keep the
+	// original execution config intact for polling and fallback across reloads.
+	buildResponse := *response
+	buildResponse.Config = proto.Clone(response.Config).(*nodev1.RouterConfig)
+	server, err := newGraphServer(ctx, r, &buildResponse, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
