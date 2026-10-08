@@ -25,47 +25,30 @@ func testGraphToken(t *testing.T, organizationID, graphID string, features ...st
 	return signed
 }
 
-func TestReloadPersistentState_LastValidExecutionConfigIsIsolated(t *testing.T) {
-	t.Parallel()
-
-	state := NewReloadPersistentState(zap.NewNop())
-	assert.Nil(t, state.previousExecutionConfig(""))
-
-	token := testGraphToken(t, "organization-a", "graph-a")
-	accepted := &nodev1.RouterConfig{Version: "accepted-v1"}
-	state.acceptExecutionConfig(accepted, token)
-	accepted.Version = "mutated-candidate"
-
-	firstRead := state.previousExecutionConfig(token)
-	require.NotNil(t, firstRead)
-	assert.Equal(t, "accepted-v1", firstRead.GetVersion())
-	firstRead.Version = "mutated-reader"
-
-	secondRead := state.previousExecutionConfig(token)
-	assert.Equal(t, "accepted-v1", secondRead.GetVersion())
-}
-
-func TestReloadPersistentState_ExecutionConfigFallbackIsScopedToGraph(t *testing.T) {
+func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
 	t.Parallel()
 
 	logCore, logs := observer.New(zap.WarnLevel)
 	state := NewReloadPersistentState(zap.New(logCore))
-	legacyToken := testGraphToken(t, "organization-a", "graph-a")
-	splitToken := testGraphToken(t, "organization-a", "graph-a", "split-config-loading")
-	differentOrgToken := testGraphToken(t, "organization-b", "graph-a", "split-config-loading")
-	differentGraphToken := testGraphToken(t, "organization-a", "graph-b", "split-config-loading")
+	token := testGraphToken(t, "org", "graph")
+	assert.Nil(t, state.previousExecutionConfig(token))
+	accepted := &nodev1.RouterConfig{Version: "v1"}
+	state.acceptExecutionConfig(accepted, token)
+	accepted.Version = "mutated-input"
 
-	state.acceptExecutionConfig(&nodev1.RouterConfig{Version: "graph-a-v1"}, legacyToken)
-	assert.Equal(t, "graph-a-v1", state.previousExecutionConfig(splitToken).GetVersion(),
-		"feature changes in a token must not hide the same graph's accepted config")
-	assert.Nil(t, state.previousExecutionConfig(differentOrgToken))
-	assert.Nil(t, state.previousExecutionConfig("invalid-token"))
-	assert.Nil(t, state.previousExecutionConfig(""))
+	fallback := state.previousExecutionConfig(testGraphToken(t, "org", "graph", "split-config-loading"))
+	require.NotNil(t, fallback)
+	assert.Equal(t, "v1", fallback.Version)
+	fallback.Version = "mutated-output"
+	assert.Equal(t, "v1", state.previousExecutionConfig(token).GetVersion())
+
+	for _, otherToken := range []string{"", "invalid-token",
+		testGraphToken(t, "other-org", "graph"), testGraphToken(t, "org", "other-graph")} {
+		assert.Nil(t, state.previousExecutionConfig(otherToken))
+	}
 	if assert.Len(t, logs.All(), 1) {
 		assert.Contains(t, logs.All()[0].ContextMap(), "error")
 	}
-	assert.Nil(t, state.previousExecutionConfig(differentGraphToken),
-		"an accepted config must never be reused for a different federated graph")
 }
 
 func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t *testing.T) {

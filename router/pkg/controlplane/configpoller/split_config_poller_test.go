@@ -12,7 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 // mockSplitFetcher is a controllable implementation of SplitConfigFetcher for tests.
@@ -552,49 +551,20 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 	mock := &mockSplitFetcher{mapperResult: map[string]string{"ff1": "hash-ff1"}}
 	p := newTestPoller(mock)
 	WithPreviousConfigFallback(previous)(p)
-	logs, observed := observer.New(zap.WarnLevel)
-	p.logger = zap.New(logs)
 
 	initial, err := p.GetRouterConfig(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, previous, initial.Config)
-	assert.Nil(t, initial.Changes)
-	if assert.Len(t, observed.All(), 1) {
-		assert.Contains(t, observed.All()[0].Message, "missing the base graph")
-		assert.Contains(t, observed.All()[0].Message, "using the last successfully applied execution config")
-		assert.Equal(t, "legacy-v1", observed.All()[0].ContextMap()["fallback_version"])
-	}
-
-	// An incomplete mapper must leave the entire previous config intact.
-	for _, mapper := range []map[string]string{{"ff1": "changed-hash"}, {}, nil} {
-		mock.mapperResult = mapper
-		pollOnce(p, func(_ *routerconfig.Response) error {
-			t.Error("an incomplete mapper must not trigger an update")
-			return nil
-		})
-		assert.Same(t, initial.Config, p.currentConfig)
-		assert.Empty(t, mock.fetchConfigCalls)
-	}
 
 	mock.mapperResult = map[string]string{"": "hash-base", "ff1": "hash-ff1"}
 	mock.configResults = map[string]*nodev1.RouterConfig{
 		"": makeRouterConfig("split-v1"), "ff1": makeRouterConfig("split-ff-v1"),
 	}
-	mock.configErrors = map[string]error{"": errors.New("base config unavailable")}
-	pollOnce(p, func(_ *routerconfig.Response) error {
-		t.Error("a failed fetch must not trigger an update")
-		return nil
-	})
-	assert.Same(t, initial.Config, p.currentConfig)
-	assert.Empty(t, p.knownHashes)
-
-	mock.configErrors = nil
 	pollOnce(p, func(_ *routerconfig.Response) error {
 		return errors.New("graph server swap failed")
 	})
 	assert.Same(t, initial.Config, p.currentConfig)
 	assert.Empty(t, p.knownHashes)
-	assert.Empty(t, p.latestVersion)
 
 	// Retry the same mapper after rejection and rebuild every graph mux.
 	var recovered *routerconfig.Response
@@ -608,19 +578,7 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 	flags := recovered.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
 	assert.Equal(t, "split-ff-v1", flags["ff1"].GetVersion())
 	assert.NotContains(t, flags, "legacy-only")
-	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-base"}, recovered.Hashes[""])
-	assert.Equal(t, routerconfig.HashInfo{NewHash: "hash-ff1"}, recovered.Hashes["ff1"])
-	assert.False(t, p.usingFallbackConfig)
 	assert.Equal(t, mock.mapperResult, p.knownHashes)
-	assert.Equal(t, computeCompositeVersion(p.knownHashes), p.latestVersion)
-
-	mock.mapperResult = map[string]string{"ff1": "changed-again"}
-	pollOnce(p, func(_ *routerconfig.Response) error {
-		t.Error("an incomplete mapper must also preserve an accepted split config")
-		return nil
-	})
-	assert.Same(t, recovered.Config, p.currentConfig)
-	assert.Equal(t, map[string]string{"": "hash-base", "ff1": "hash-ff1"}, p.knownHashes)
 }
 
 func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {

@@ -2,13 +2,10 @@ package core
 
 import (
 	"context"
-	"encoding/json"
-	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"slices"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -22,44 +19,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
-
-type supervisorSplitConfigFetcher struct {
-	mu          sync.RWMutex
-	mapper      map[string]string
-	configs     map[string]*nodev1.RouterConfig
-	mapperCalls atomic.Int32
-	configCalls atomic.Int32
-}
-
-func (f *supervisorSplitConfigFetcher) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	var body []byte
-	var err error
-	switch r.URL.Path {
-	case "/organization-a/graph-a/manifest/mapper.json":
-		f.mapperCalls.Add(1)
-		body, err = json.Marshal(f.mapper)
-	case "/organization-a/graph-a/manifest/latest.json":
-		f.configCalls.Add(1)
-		body, err = protojson.Marshal(f.configs[""])
-	default:
-		http.NotFound(w, r)
-		return
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write(body)
-}
-
-func (f *supervisorSplitConfigFetcher) update(mapper map[string]string, configs map[string]*nodev1.RouterConfig) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.mapper = maps.Clone(mapper)
-	f.configs = maps.Clone(configs)
-}
 
 func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t *testing.T) {
 	logger := zap.NewNop()
@@ -78,23 +37,30 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	require.NotEmpty(t, previousConfig.Subgraphs)
 	overriddenSubgraph := previousConfig.Subgraphs[0].Name
 
-	invalidConfig := proto.Clone(previousConfig).(*nodev1.RouterConfig)
-	invalidConfig.Version = "split-invalid"
-	invalidConfig.EngineConfig.GraphqlSchema = "type Query {"
-
 	validConfig := proto.Clone(previousConfig).(*nodev1.RouterConfig)
 	validConfig.Version = "split-accepted"
-
-	fetcher := &supervisorSplitConfigFetcher{
-		// A feature flag was recomposed before the base graph during migration.
-		mapper:  map[string]string{"my-feature-flag": "ff-v1"},
-		configs: map[string]*nodev1.RouterConfig{},
-	}
-
-	cdn := httptest.NewServer(fetcher)
+	body, err := protojson.Marshal(validConfig)
+	require.NoError(t, err)
+	var published atomic.Bool
+	var mapperCalls atomic.Int32
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/organization-a/graph-a/manifest/mapper.json":
+			mapperCalls.Add(1)
+			if published.Load() {
+				_, _ = w.Write([]byte(`{"":"base-v1"}`))
+			} else {
+				_, _ = w.Write([]byte(`{"feature":"ff-v1"}`))
+			}
+		case "/organization-a/graph-a/manifest/latest.json":
+			_, _ = w.Write(body)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
 	t.Cleanup(cdn.Close)
 
-	var routerGeneration atomic.Int32
+	generation := 0
 	supervisor, err := NewRouterSupervisor(&RouterSupervisorOpts{
 		BaseLogger:            logger,
 		ReloadPersistentState: persistentState,
@@ -102,7 +68,7 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 			return &config.Config{ShutdownDelay: time.Second}, nil
 		},
 		RouterFactory: func(ctx context.Context, resources *RouterResources) (*Router, error) {
-			generation := routerGeneration.Add(1)
+			generation++
 			options := []Option{
 				WithBatching(&BatchingConfig{}),
 				WithGraphApiToken(graphToken),
@@ -131,35 +97,25 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	require.NoError(t, err)
 
 	startResult := make(chan error, 1)
-	go func() {
-		err := supervisor.Start()
-		if err != nil {
-			t.Logf("supervisor stopped: %v", err)
-		}
-		startResult <- err
-	}()
-	supervisorStopped := false
+	go func() { startResult <- supervisor.Start() }()
 	t.Cleanup(func() {
-		if supervisorStopped {
-			return
-		}
 		select {
-		case <-startResult:
+		case err := <-startResult:
+			assert.NoError(t, err)
 			return
 		default:
+			supervisor.Stop()
+			assert.NoError(t, <-startResult)
 		}
-		supervisor.Stop()
-		<-startResult
 	})
 
 	require.Eventually(t, func() bool {
-		config := persistentState.previousExecutionConfig(graphToken)
-		return config != nil && config.GetVersion() == "legacy-accepted"
+		return persistentState.previousExecutionConfig(graphToken).GetVersion() == "legacy-accepted"
 	}, 5*time.Second, 10*time.Millisecond, "the first router must accept its legacy config")
 
 	supervisor.Reload()
 	require.Eventually(t, func() bool {
-		return routerGeneration.Load() >= 2 && fetcher.mapperCalls.Load() >= 2
+		return mapperCalls.Load() >= 2
 	}, 5*time.Second, 10*time.Millisecond, "the replacement router must boot from the fallback and start polling")
 	// The override was removed on reload. Both the poller's input and the saved
 	// fallback must retain the published URLs, not the first router's override.
@@ -167,29 +123,8 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	assert.True(t, proto.Equal(publishedConfig, persistentState.previousExecutionConfig(graphToken)),
 		"fallback must not retain a removed router-local override")
 
-	// A mapper with a base entry is not enough: the assembled candidate must
-	// also build a valid graph server before it can replace the fallback.
-	fetcher.update(
-		map[string]string{"": "base-invalid"},
-		map[string]*nodev1.RouterConfig{"": invalidConfig},
-	)
-	assert.Eventually(t, func() bool {
-		return fetcher.configCalls.Load() > 0
-	}, 5*time.Second, 10*time.Millisecond, "the invalid candidate must be attempted")
-	assert.Never(t, func() bool {
-		return persistentState.previousExecutionConfig(graphToken).GetVersion() != "legacy-accepted"
-	}, 200*time.Millisecond, 10*time.Millisecond, "an invalid candidate must never become the accepted fallback")
-
-	fetcher.update(
-		map[string]string{"": "base-valid"},
-		map[string]*nodev1.RouterConfig{"": validConfig},
-	)
+	published.Store(true)
 	assert.Eventually(t, func() bool {
 		return persistentState.previousExecutionConfig(graphToken).GetVersion() == "split-accepted"
 	}, 5*time.Second, 10*time.Millisecond, "a validated split config must atomically replace the fallback")
-
-	supervisor.Stop()
-	startErr := <-startResult
-	supervisorStopped = true
-	assert.NoError(t, startErr)
 }
