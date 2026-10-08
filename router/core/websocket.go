@@ -177,13 +177,13 @@ type wsNetPollReader struct {
 
 // wsGoroutineReader owns read-ahead, deadlines and cancellation for blocking reads.
 type wsGoroutineReader struct {
-	conn               net.Conn
-	readTimeout        time.Duration
-	handleControlFrame func(ws.Header, io.Reader) error
-	reader             *bufio.Reader
-	ctx                context.Context
-	stopRead           func() bool
-	initialized        bool
+	conn                       net.Conn
+	readTimeout                time.Duration
+	handleControlFrame         func(ws.Header, io.Reader) error
+	reader                     *bufio.Reader
+	ctx                        context.Context
+	unregisterReadCancellation func() bool
+	initialized                bool
 }
 
 func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, writeTimeout time.Duration, useNetPoll bool) *wsConnectionWrapper {
@@ -200,7 +200,7 @@ func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, wri
 			handleControlFrame: c.handleControlFrame,
 			reader:             bufio.NewReaderSize(conn, ws.MaxHeaderSize),
 			ctx:                ctx,
-			stopRead: context.AfterFunc(ctx, func() {
+			unregisterReadCancellation: context.AfterFunc(ctx, func() {
 				_ = conn.SetReadDeadline(time.Now())
 			}),
 		}
@@ -240,7 +240,7 @@ func (c *wsGoroutineReader) MarkInitialized() {
 }
 
 func (c *wsGoroutineReader) Close() error {
-	c.stopRead()
+	c.unregisterReadCancellation()
 	return c.conn.Close()
 }
 
