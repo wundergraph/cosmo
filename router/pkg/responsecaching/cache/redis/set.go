@@ -318,7 +318,7 @@ func tagLifetime(item caching.Item) time.Duration {
 // random token, so separate writes of identical items differ.
 const (
 	headerMarker byte = 0
-	headerLen         = 17
+	headerLen    int  = 17
 )
 
 func newHeader() []byte {
