@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"testing"
 	"testing/synctest"
@@ -52,14 +51,10 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 		conn, client := websocketTestConnection(t, t.Context(), timeout)
 		conn.reader.MarkInitialized()
 		frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
+		var msg map[string]string
 		result := make(chan error, 1)
 		go func() {
-			var msg map[string]string
-			err := conn.ReadJSON(&msg)
-			if err == nil && msg["type"] != "ping" {
-				err = fmt.Errorf("unexpected message: %v", msg)
-			}
-			result <- err
+			result <- conn.ReadJSON(&msg)
 		}()
 
 		// Stay idle across several read timeouts, then start a partial message.
@@ -72,15 +67,12 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 
 		time.Sleep(timeout - time.Second)
 		synctest.Wait()
-		select {
-		case err := <-result:
-			t.Fatalf("read ended before the message completed: %v", err)
-		default:
-		}
+		require.Empty(t, result, "read ended before the message completed")
 
 		_, err = client.Write(frame[1:])
 		require.NoError(t, err)
-		assert.NoError(t, <-result)
+		require.NoError(t, <-result)
+		assert.Equal(t, "ping", msg["type"])
 	})
 }
 
@@ -103,25 +95,25 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				const timeout = 5 * time.Second
 				conn, client := websocketTestConnection(t, t.Context(), timeout)
-				written := make(chan error, 1)
+				result := make(chan error, 1)
+				start := time.Now()
 				go func() {
-					time.Sleep(timeout - time.Second)
-					_, err := client.Write(tc.frames)
-					if err == nil && tc.pong {
-						var pong ws.Frame
-						pong, err = ws.ReadFrame(client)
-						if err == nil && pong.Header.OpCode != ws.OpPong {
-							err = fmt.Errorf("expected pong, got %v", pong.Header.OpCode)
-						}
-					}
-					written <- err
+					var msg json.RawMessage
+					result <- conn.ReadJSON(&msg)
 				}()
 
-				start := time.Now()
-				var msg json.RawMessage
-				require.Error(t, conn.ReadJSON(&msg))
+				time.Sleep(timeout - time.Second)
+				_, err := client.Write(tc.frames)
+				require.NoError(t, err)
+
+				if tc.pong {
+					pong, err := ws.ReadFrame(client)
+					require.NoError(t, err)
+					assert.Equal(t, ws.OpPong, pong.Header.OpCode)
+				}
+
+				assertTimeout(t, <-result)
 				assert.Equal(t, timeout, time.Since(start), "frames before connection_init must not extend its deadline")
-				assert.NoError(t, <-written)
 			})
 		})
 	}
@@ -161,10 +153,10 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 	}
 }
 
-func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
+func TestWebsocketFragmentedMessageWithSlowPing(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		conn, client := websocketTestConnection(t, t.Context(), time.Second)
+		conn, client := websocketTestConnection(t, t.Context(), 5*time.Second)
 		conn.reader.MarkInitialized()
 		var msg map[string]string
 		result := make(chan error, 1)
@@ -175,7 +167,14 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 		_, err := client.Write(clientFrame(ws.OpText, false, `{"type":`))
 		require.NoError(t, err)
 
-		_, err = client.Write(clientFrame(ws.OpPing, true, "heartbeat"))
+		ping := clientFrame(ws.OpPing, true, "heartbeat")
+		_, err = client.Write(ping[:len(ping)-1])
+		require.NoError(t, err)
+
+		// The write timeout must start after the control payload arrives,
+		// even when the ping interrupts a fragmented message.
+		time.Sleep(2 * time.Second) // Longer than the 1s write timeout, within the 5s read timeout.
+		_, err = client.Write(ping[len(ping)-1:])
 		require.NoError(t, err)
 
 		pong, err := ws.ReadFrame(client)
@@ -187,36 +186,6 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, <-result)
 		assert.Equal(t, "ping", msg["type"])
-	})
-}
-
-func TestWebsocketControlWriteTimeoutStartsAfterPayload(t *testing.T) {
-	t.Parallel()
-	synctest.Test(t, func(t *testing.T) {
-		conn, client := websocketTestConnection(t, t.Context(), 5*time.Second)
-		result := make(chan error, 1)
-		go func() {
-			var msg json.RawMessage
-			result <- conn.ReadJSON(&msg)
-		}()
-
-		frame := clientFrame(ws.OpPing, true, "x")
-		_, err := client.Write(frame[:len(frame)-1])
-		require.NoError(t, err)
-
-		time.Sleep(2 * time.Second) // Longer than the 1s write timeout, within the 5s read timeout.
-		_, err = client.Write(frame[len(frame)-1:])
-		require.NoError(t, err)
-		require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
-
-		pong, err := ws.ReadFrame(client)
-		require.NoError(t, err)
-		assert.Equal(t, ws.OpPong, pong.Header.OpCode)
-		assert.Equal(t, "x", string(pong.Payload))
-
-		_, err = client.Write(clientFrame(ws.OpText, true, `{}`))
-		require.NoError(t, err)
-		assert.NoError(t, <-result)
 	})
 }
 
@@ -348,18 +317,11 @@ func TestWebsocketReadAfterCancellation(t *testing.T) {
 				}
 				cancel()
 				synctest.Wait() // Let cancellation set its interrupting deadline first.
-				result := make(chan error, 1)
-				go func() {
-					var msg json.RawMessage
-					result <- conn.ReadJSON(&msg)
-				}()
-				synctest.Wait()
-				select {
-				case err := <-result:
-					assert.ErrorIs(t, err, context.Canceled)
-				default:
-					t.Fatal("new read overwrote cancellation and blocked")
-				}
+
+				start := time.Now()
+				var msg json.RawMessage
+				assert.ErrorIs(t, conn.ReadJSON(&msg), context.Canceled)
+				assert.Equal(t, start, time.Now(), "read after cancellation must return immediately")
 			})
 		})
 	}
