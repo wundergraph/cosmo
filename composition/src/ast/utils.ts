@@ -1,5 +1,6 @@
 import {
   type ArgumentNode,
+  type ConstDirectiveNode,
   type DocumentNode,
   type EnumTypeDefinitionNode,
   type EnumTypeExtensionNode,
@@ -26,6 +27,7 @@ import {
   type UnionTypeExtensionNode,
 } from 'graphql';
 import { type CompositeOutputNode } from '../schema-building/ast';
+import { type ArgumentName } from '../types/types';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
@@ -311,4 +313,13 @@ export type CompositeOutputNodeKind = InterfaceNodeKind | ObjectNodeKind;
 
 export function isValidProvidesParentData(data: ParentDefinitionData): data is ValidProvidesParentData {
   return VALID_PROVIDES_PARENT_KINDS.has(data.kind);
+}
+
+/** Returns the value of a directive argument if it is defined as a String. */
+export function getDirectiveStringArgumentValue(
+  directiveNode: ConstDirectiveNode | undefined,
+  argumentName: ArgumentName,
+): string | undefined {
+  const valueNode = directiveNode?.arguments?.find((argument) => argument.name.value === argumentName)?.value;
+  return valueNode?.kind === Kind.STRING ? valueNode.value : undefined;
 }

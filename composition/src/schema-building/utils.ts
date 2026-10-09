@@ -10,10 +10,13 @@ import {
   type InputValueDefinitionNode,
   type IntValueNode,
   Kind,
+  Lexer,
   type NullValueNode,
   OperationTypeNode,
   print,
+  Source,
   type StringValueNode,
+  TokenKind,
   type TypeNode,
   visit,
 } from 'graphql';
@@ -29,6 +32,7 @@ import {
   type ExternalFieldData,
   type FederatedDirectivesData,
   type FieldData,
+  type FromContextFieldValueData,
   type InputObjectDefinitionData,
   type InputValueData,
   type InterfaceDefinitionData,
@@ -39,6 +43,7 @@ import {
 } from './types/types';
 import { type MutableFieldNode, type MutableInputValueNode } from './ast';
 import {
+  getDirectiveStringArgumentValue,
   type InterfaceTypeNode,
   type ObjectTypeNode,
   type ParentTypeNode,
@@ -55,6 +60,7 @@ import {
   DEPRECATED_DEFAULT_ARGUMENT_VALUE,
   DIRECTIVE_DEFINITION,
   EXTERNAL,
+  FIELD,
   FLOAT_SCALAR,
   FROM_CONTEXT,
   INACCESSIBLE,
@@ -862,6 +868,30 @@ export function isNodeDataInaccessible(data: NodeData): boolean {
 
 export function doesArgumentDefineFromContext(data: InputValueData): boolean {
   return data.fromContextSubgraphNames.size > 0;
+}
+
+/**
+ * A @fromContext field value is a "$"-prefixed context name followed by a selection on the context type.
+ * The value is not validated yet, so undefined is returned if it cannot be parsed.
+ */
+export function getFromContextFieldValue(data: InputValueData): FromContextFieldValueData | undefined {
+  const value = getDirectiveStringArgumentValue(data.directivesByName.get(FROM_CONTEXT)?.[0], FIELD);
+  if (value === undefined) {
+    return;
+  }
+  try {
+    const lexer = new Lexer(new Source(value));
+    if (lexer.advance().kind !== TokenKind.DOLLAR) {
+      return;
+    }
+    const nameToken = lexer.advance();
+    if (nameToken.kind !== TokenKind.NAME) {
+      return;
+    }
+    return { contextName: nameToken.value, selection: value.slice(nameToken.end) };
+  } catch {
+    return;
+  }
 }
 
 export function isLeafKind(kind: Kind): boolean {

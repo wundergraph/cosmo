@@ -16,12 +16,13 @@ import {
   type ObjectDefinitionData,
   type ParentDefinitionData,
 } from '../../../schema-building/types/types';
-import type { ConstDirectiveNode, InputValueDefinitionNode } from 'graphql';
+import type { ConstDirectiveNode, InputValueDefinitionNode, SelectionSetNode } from 'graphql';
 import type { InternalSubgraph, Subgraph } from '../../../subgraph/types';
 import type { ContractTagOptions } from '../../../federation/types/types';
 import type { CompositionOptions } from '../../../types/params';
 import type { Graph } from '../../../resolvability-graph/graph';
 import type { Warning } from '../../../warnings/types';
+import type { ORPolicies, UnsatisfiedPolicyData } from './types';
 import {
   type DirectiveArgumentData,
   type DirectiveDefinitionData,
@@ -37,6 +38,26 @@ export type MergePolicyDirectivesParams = {
   concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   subgraphs: Array<InternalSubgraph>;
+};
+
+export type ValidateTransitivePolicyRequirementsParams = {
+  errors: Array<Error>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  subgraphs: Array<InternalSubgraph>;
+};
+
+export type GetFieldPoliciesIncludingParentParams = {
+  fieldName: FieldName;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  parentTypeName: TypeName;
+};
+
+export type GatherUnsatisfiedPoliciesParams = {
+  data: UnsatisfiedPolicyData;
+  definedPolicies?: ORPolicies;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  parentTypeName: TypeName;
+  selectionSet: SelectionSetNode;
 };
 
 export type ExtractFederatedDirectivesParams = {

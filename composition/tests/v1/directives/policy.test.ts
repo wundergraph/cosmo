@@ -2,17 +2,21 @@ import { describe, expect, test } from 'vitest';
 import {
   FEDERATION_POLICY,
   FIRST_ORDINAL,
+  FROM_CONTEXT,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
+  missingTransitivePolicyRequirementsError,
   POLICIES,
   POLICY,
   policyOnExternalFieldErrorMessage,
   policyOnInterfaceErrorMessage,
+  REQUIRES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   unsupportedDirectiveWarning,
 } from '../../../src';
 import {
   createSubgraph,
+  federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
@@ -1426,6 +1430,739 @@ describe('@policy directive tests', () => {
           ${FEDERATION_POLICY_SCALAR}
         `),
       );
+    });
+  });
+
+  describe('Transitive requirement tests', () => {
+    test('that an error is returned if a field requires a field with policies it does not define', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @requires(fields: "name")
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if the requiring field only satisfies one of the required policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @requires(fields: "name") @policy(policies: [["p"], ["q"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a nested required field defines policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            address: Address @external
+            greeting: String @requires(fields: "address { city }")
+          }
+
+          type Address @key(fields: "id") {
+            id: ID!
+            city: String @external
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            address: Address
+          }
+
+          type Address @key(fields: "id") {
+            id: ID!
+            city: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['Address.city'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that a requiring field whose own and inherited policies satisfy the required policies is valid', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @policy(policies: [["t"]]) {
+            id: ID!
+            name: String @external
+            greeting: String @requires(fields: "name") @policy(policies: [["f"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["t", "f"], ["x"]])
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type Query {
+            user: User
+          }
+
+          type User @policy(policies: [["t"]]) {
+            greeting: String @policy(policies: [["f"]])
+            id: ID!
+            name: String @policy(policies: [["t", "f"], ["x"]])
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that an error is returned if a @fromContext argument accesses a context type with policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") @policy(policies: [["p"]]) {
+            id: ID!
+            name: String
+            child: Child
+          }
+
+          type Child @key(fields: "id") {
+            id: ID!
+            greeting(name: String @fromContext(field: "$userContext { name }")): String
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          argumentCoords: 'Child.greeting(name: ...)',
+          directiveName: FROM_CONTEXT,
+          fieldCoords: 'Child.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: [],
+          unsatisfiedTypeNames: ['User'],
+        }),
+      ]);
+    });
+
+    test('that one error is returned for the unsatisfied policies of every context type', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            organisation: Organisation
+            user: User
+          }
+
+          type User @key(fields: "id") @context(name: "ownerContext") {
+            id: ID!
+            name: String @policy(policies: [["user"]])
+            child: Child
+          }
+
+          type Organisation @key(fields: "id") @context(name: "ownerContext") {
+            id: ID!
+            name: String @policy(policies: [["organisation"]])
+            child: Child
+          }
+
+          type Child @key(fields: "id") {
+            id: ID!
+            greeting(
+              name: String @fromContext(field: "$ownerContext ... on User { name } ... on Organisation { name }")
+            ): String @policy(policies: [["user"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          argumentCoords: 'Child.greeting(name: ...)',
+          directiveName: FROM_CONTEXT,
+          fieldCoords: 'Child.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['Organisation.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that one error is returned with every unsatisfied field and type of a @requires selection set', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            email: String @external
+            address: Address @external
+            greeting: String @requires(fields: "name email address { city }")
+          }
+
+          type Address @key(fields: "id") {
+            id: ID!
+            city: String @external
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["name"]])
+            email: String @policy(policies: [["email"]])
+            address: Address
+          }
+
+          type Address @key(fields: "id") @policy(policies: [["address"]]) {
+            id: ID!
+            city: String @policy(policies: [["city"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['Address.city', 'User.email', 'User.name'],
+          unsatisfiedTypeNames: ['Address'],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a required field returns a type with policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            address: Address @external
+            greeting: String @requires(fields: "address { city }")
+          }
+
+          type Address @key(fields: "id") {
+            id: ID!
+            city: String @external
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            address: Address
+          }
+
+          type Address @key(fields: "id") @policy(policies: [["p"]]) {
+            id: ID!
+            city: String
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: [],
+          unsatisfiedTypeNames: ['Address'],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if an inline fragment type condition defines policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            pet: Pet @external
+            greeting: String @requires(fields: "pet { ... on Dog { id } }")
+          }
+
+          union Pet = Dog
+
+          type Dog @key(fields: "id") {
+            id: ID
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            pet: Pet
+          }
+
+          union Pet = Dog
+
+          type Dog @key(fields: "id") @policy(policies: [["d"]]) {
+            id: ID
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: [],
+          unsatisfiedTypeNames: ['Dog'],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if the requiring field only defines scopes', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @requires(fields: "name") @requiresScopes(scopes: [["p"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that an error is returned for each subgraph that defines the unsatisfied @requires', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @shareable @requires(fields: "name")
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const c = createSubgraph(
+        'c',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @shareable @requires(fields: "name")
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'c',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a @fromContext selection without braces accesses a field with policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+            child: Child
+          }
+
+          type Child @key(fields: "id") {
+            id: ID!
+            greeting(name: String @fromContext(field: "$userContext name")): String
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          argumentCoords: 'Child.greeting(name: ...)',
+          directiveName: FROM_CONTEXT,
+          fieldCoords: 'Child.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that a @fromContext argument whose parent type defines the accessed policies is valid', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+            child: Child
+          }
+
+          type Child @key(fields: "id") @policy(policies: [["p"]]) {
+            id: ID!
+            greeting(name: String @fromContext(field: "$userContext { name }")): String
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type Child @policy(policies: [["p"]]) {
+            greeting: String
+            id: ID!
+          }
+
+          type Query {
+            user: User
+          }
+
+          type User {
+            child: Child
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that a requiring field is valid if its parent type defines the required policies in another subgraph', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @policy(policies: [["p"]]) {
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            name: String @external
+            greeting: String @requires(fields: "name")
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type Query {
+            user: User
+          }
+
+          type User @policy(policies: [["p"]]) {
+            greeting: String
+            id: ID!
+            name: String @policy(policies: [["p"]])
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that an error is returned if a required field returns a scalar with policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            secret: Secret @external
+            greeting: String @requires(fields: "secret")
+          }
+
+          scalar Secret
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            secret: Secret
+          }
+
+          scalar Secret @policy(policies: [["p"]])
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: [],
+          unsatisfiedTypeNames: ['Secret'],
+        }),
+      ]);
+    });
+
+    test('that an error is returned if a required interface field inherits policies from an implementation', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") {
+            id: ID!
+            pet: Pet @external
+            greeting: String @requires(fields: "pet { name }")
+          }
+
+          interface Pet {
+            name: String
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type User @key(fields: "id") {
+            id: ID!
+            pet: Pet
+          }
+
+          interface Pet {
+            name: String
+          }
+
+          type Cat implements Pet {
+            name: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          directiveName: REQUIRES,
+          fieldCoords: 'User.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['Pet.name'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
+    });
+
+    test('that one error is returned for each @fromContext argument that accesses policies', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            user: User
+          }
+
+          type User @key(fields: "id") @context(name: "userContext") {
+            id: ID!
+            name: String @policy(policies: [["n"]])
+            email: String @policy(policies: [["e"]])
+            child: Child
+          }
+
+          type Child @key(fields: "id") {
+            id: ID!
+            greeting(
+              name: String @fromContext(field: "$userContext { name }")
+              email: String @fromContext(field: "$userContext { email }")
+            ): String
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        missingTransitivePolicyRequirementsError({
+          argumentCoords: 'Child.greeting(name: ...)',
+          directiveName: FROM_CONTEXT,
+          fieldCoords: 'Child.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.name'],
+          unsatisfiedTypeNames: [],
+        }),
+        missingTransitivePolicyRequirementsError({
+          argumentCoords: 'Child.greeting(email: ...)',
+          directiveName: FROM_CONTEXT,
+          fieldCoords: 'Child.greeting',
+          subgraphName: 'a',
+          unsatisfiedFieldCoords: ['User.email'],
+          unsatisfiedTypeNames: [],
+        }),
+      ]);
     });
   });
 });

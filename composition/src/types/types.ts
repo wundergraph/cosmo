@@ -2,6 +2,8 @@ export type AbstractTypeName = TypeName;
 
 export type ArgumentName = string;
 
+export type ContextName = string;
+
 export type ContractName = string;
 
 export type Directive = `@${DirectiveName}`;

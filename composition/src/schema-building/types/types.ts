@@ -25,6 +25,7 @@ import { type KeyFieldSetData } from '../../v1/normalization/types/types';
 import { type InputNodeKind, type OutputNodeKind } from '../../utils/types';
 import {
   type ArgumentName,
+  type ContextName,
   type DirectiveName,
   type FieldName,
   type SubgraphName,
@@ -103,6 +104,11 @@ export type FieldData = {
   subgraphNames: Set<SubgraphName>;
   type: MutableTypeNode;
   description?: StringValueNode;
+};
+
+export type FromContextFieldValueData = {
+  contextName: ContextName;
+  selection: string;
 };
 
 export type InputObjectDefinitionData = {

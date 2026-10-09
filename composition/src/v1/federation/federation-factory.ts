@@ -89,7 +89,7 @@ import {
   type SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
-import { mergePolicyDirectives } from './policy';
+import { mergePolicyDirectives, validateTransitivePolicyRequirements } from './policy';
 import {
   CLIENT_FEDERATED_DIRECTIVE_NAMES,
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -2432,11 +2432,16 @@ export class FederationFactory {
   federateSubgraphData() {
     this.federateInternalSubgraphData();
     this.handleEntityInterfaces();
-    // @policy only needs to be merged if a subgraph defines it
+    // @policy only needs to be merged and validated if a subgraph defines it
     if (this.referencedFederatedDirectiveNames.has(POLICY)) {
       const subgraphs = [...this.internalSubgraphBySubgraphName.values()];
       mergePolicyDirectives({
         concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+        subgraphs,
+      });
+      validateTransitivePolicyRequirements({
+        errors: this.errors,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         subgraphs,
       });

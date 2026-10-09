@@ -23,6 +23,7 @@ import {
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
+  type MissingTransitivePolicyRequirementsErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
@@ -44,6 +45,7 @@ import {
   OR_UPPER,
   POLICY,
   QUOTATION_JOIN,
+  REQUIRES,
   SUBSCRIPTION_FIELD_CONDITION,
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
@@ -646,6 +648,35 @@ export function invalidRequiredInputValueError(
       ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
+}
+
+export function missingTransitivePolicyRequirementsError({
+  argumentCoords,
+  directiveName,
+  fieldCoords,
+  subgraphName,
+  unsatisfiedFieldCoords,
+  unsatisfiedTypeNames,
+}: MissingTransitivePolicyRequirementsErrorParams): Error {
+  const accessor = argumentCoords ? `Its ${ARGUMENT} "${argumentCoords}"` : `It`;
+  let message = `The field "${fieldCoords}" defined in subgraph "${subgraphName}" is invalid because:`;
+  if (unsatisfiedFieldCoords.length > 0) {
+    message +=
+      `\n ${accessor} accesses the following field` +
+      (unsatisfiedFieldCoords.length > 1 ? 's' : '') +
+      ` through "@${directiveName}": "${unsatisfiedFieldCoords.join(QUOTATION_JOIN)}"`;
+  }
+  if (unsatisfiedTypeNames.length > 0) {
+    message +=
+      `\n ${accessor} accesses the following type` +
+      (unsatisfiedTypeNames.length > 1 ? 's' : '') +
+      ` through "@${directiveName}": "${unsatisfiedTypeNames.join(QUOTATION_JOIN)}"`;
+  }
+  return new Error(
+    message +
+      `\n A field that accesses data through "@${REQUIRES}" or "@${FROM_CONTEXT}" must define at least the` +
+      ` "@${POLICY}" requirements of that data.`,
+  );
 }
 
 export function requiredContextArgumentError(

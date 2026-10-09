@@ -2,6 +2,7 @@ import { type FieldData, type InputValueData, type ParentDefinitionData } from '
 import {
   type ArgumentName,
   type DirectiveName,
+  type FieldCoords,
   type FieldName,
   type SubgraphName,
   type TypeName,
@@ -108,4 +109,13 @@ export type InvalidArgumentValueErrorParams = {
 export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
+};
+
+export type MissingTransitivePolicyRequirementsErrorParams = {
+  argumentCoords?: string;
+  directiveName: DirectiveName;
+  fieldCoords: FieldCoords;
+  subgraphName: SubgraphName;
+  unsatisfiedFieldCoords: Array<FieldCoords>;
+  unsatisfiedTypeNames: Array<TypeName>;
 };
