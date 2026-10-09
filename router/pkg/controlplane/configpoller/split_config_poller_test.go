@@ -97,9 +97,8 @@ func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
 
 	p := newTestPoller(mock)
 	resp, err := p.GetRouterConfig(context.Background())
-	require.Error(t, err)
-	require.Nil(t, resp)
-	assert.Contains(t, err.Error(), "mapper missing base graph entry")
+	assert.ErrorIs(t, err, errs.ErrMalformedConfig)
+	assert.Nil(t, resp)
 }
 
 func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
@@ -141,6 +140,7 @@ func TestSplitGetRouterConfig_MapperError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
+	assert.NotErrorIs(t, err, errs.ErrMalformedConfig)
 	assert.Contains(t, err.Error(), "network error")
 }
 
@@ -150,7 +150,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	}
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
-	require.Error(t, err)
+	require.ErrorIs(t, err, errs.ErrMalformedConfig)
 	assert.Contains(t, err.Error(), "empty graph configs")
 }
 
@@ -162,6 +162,7 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
+	assert.NotErrorIs(t, err, errs.ErrMalformedConfig)
 	assert.Contains(t, err.Error(), "CDN unavailable")
 }
 
@@ -541,20 +542,11 @@ func TestSplitSubscribe_NoChanges(t *testing.T) {
 	assert.Equal(t, 0, len(mock.fetchConfigCalls))
 }
 
-func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
-	previous := makeRouterConfig("legacy-v1")
-	previous.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{
-		ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{
-			"legacy-only": {Version: "legacy-ff-v1", EngineConfig: previous.EngineConfig},
-		},
-	}
+func TestSplitSubscribe_RecoversFromMissingBaseGraph(t *testing.T) {
 	mock := &mockSplitFetcher{mapperResult: map[string]string{"ff1": "hash-ff1"}}
 	p := newTestPoller(mock)
-	WithPreviousConfigFallback(previous)(p)
-
-	initial, err := p.GetRouterConfig(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, previous, initial.Config)
+	_, err := p.GetRouterConfig(context.Background())
+	assert.ErrorIs(t, err, errs.ErrMalformedConfig)
 
 	mock.mapperResult = map[string]string{"": "hash-base", "ff1": "hash-ff1"}
 	mock.configResults = map[string]*nodev1.RouterConfig{
@@ -563,7 +555,7 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 	pollOnce(p, func(_ *routerconfig.Response) error {
 		return errors.New("graph server swap failed")
 	})
-	assert.Same(t, initial.Config, p.currentConfig)
+	assert.Nil(t, p.currentConfig)
 	assert.Empty(t, p.knownHashes)
 
 	// Retry the same mapper after rejection and rebuild every graph mux.
@@ -577,7 +569,6 @@ func TestSplitSubscribe_PreviousConfigFallbackAndRecovery(t *testing.T) {
 	assert.Equal(t, "split-v1", recovered.Config.Version)
 	flags := recovered.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
 	assert.Equal(t, "split-ff-v1", flags["ff1"].GetVersion())
-	assert.NotContains(t, flags, "legacy-only")
 	assert.Equal(t, mock.mapperResult, p.knownHashes)
 }
 

@@ -1,11 +1,13 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
@@ -213,20 +215,32 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 		ignoredFeatureFlags[featureFlag] = struct{}{}
 	}
 
-	options := []configpoller.SplitConfigPollerOption{
+	splitPoller := configpoller.NewSplitConfigPoller(
+		fetcher,
 		configpoller.WithSplitLogger(r.logger),
 		configpoller.WithSplitPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
 		configpoller.WithConfigRules(configpoller.ConfigRules{
 			SkipMissingFeatureFlags: r.routerConfigPollerConfig.SplitConfigPoller.SkipMissingFeatureFlags,
 			IgnoredFeatureFlags:     ignoredFeatureFlags,
 		}),
-	}
-	if r.reloadPersistentState != nil {
-		if previousConfig := r.reloadPersistentState.previousExecutionConfig(r.graphApiToken); previousConfig != nil {
-			options = append(options, configpoller.WithPreviousConfigFallback(previousConfig))
-		}
+	)
+	return &splitPoller, nil
+}
+
+// getInitialExecutionConfig uses the last accepted config if the fetched config is malformed.
+func (r *Router) getInitialExecutionConfig(ctx context.Context) (*routerconfig.Response, error) {
+	response, err := r.configPoller.GetRouterConfig(ctx)
+	if !errors.Is(err, errs.ErrMalformedConfig) {
+		return response, err
 	}
 
-	splitPoller := configpoller.NewSplitConfigPoller(fetcher, options...)
-	return &splitPoller, nil
+	previous := r.reloadPersistentState.previousExecutionConfig(r.graphApiToken)
+	if previous == nil {
+		return nil, err
+	}
+	r.logger.Warn("Malformed execution config; using the last successfully applied execution config",
+		zap.Error(err),
+		zap.String("fallback_version", previous.GetVersion()),
+	)
+	return &routerconfig.Response{Config: previous}, nil
 }
