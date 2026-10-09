@@ -25,8 +25,8 @@ type executionConfigGraphScope struct {
 	federatedGraphID string
 }
 
-func (s executionConfigGraphScope) IsEmpty() bool {
-	return s.organizationID == "" || s.federatedGraphID == ""
+func (s executionConfigGraphScope) isComplete() bool {
+	return s.organizationID != "" && s.federatedGraphID != ""
 }
 
 // errNoGraphToken reports that the router runs without a graph token, so it has
@@ -45,7 +45,7 @@ func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
 		organizationID:   claims.OrganizationID,
 		federatedGraphID: claims.FederatedGraphID,
 	}
-	if scope.IsEmpty() {
+	if !scope.isComplete() {
 		return executionConfigGraphScope{}, errors.New("graph token has an empty organization or federated graph ID")
 	}
 	return scope, nil
