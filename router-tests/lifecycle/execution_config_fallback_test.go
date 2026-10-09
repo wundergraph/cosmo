@@ -119,7 +119,7 @@ func TestExecutionConfigFallbackOnSplitConfigReload(t *testing.T) {
 	reloaded, ctx, _ := newRouter(splitToken)
 	require.NoError(t, reloaded.Start(ctx))
 	assertServing(reloaded, "legacy")
-	assert.Equal(t, 1, logs.FilterMessage("Malformed execution config; using the last successfully applied execution config").Len())
+	assert.Equal(t, 1, logs.FilterMessage("Execution config is incomplete or invalid; using the last successfully applied execution config").Len())
 	require.Eventually(t, func() bool { return mapperCalls.Load() >= 3 }, 5*time.Second, 20*time.Millisecond,
 		"the replacement must keep polling while the base graph is missing")
 

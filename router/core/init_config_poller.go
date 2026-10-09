@@ -227,7 +227,7 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 	return &splitPoller, nil
 }
 
-// getExecutionConfig uses the last accepted config if the fetched config is malformed.
+// getExecutionConfig uses the last accepted config if the fetched config is incomplete or invalid.
 func (r *Router) getExecutionConfig(ctx context.Context) (*routerconfig.Response, error) {
 	response, err := r.configPoller.GetRouterConfig(ctx)
 	if !errors.Is(err, errs.ErrMalformedExecutionConfig) {
@@ -238,7 +238,7 @@ func (r *Router) getExecutionConfig(ctx context.Context) (*routerconfig.Response
 	if previous == nil {
 		return nil, err
 	}
-	r.logger.Warn("Malformed execution config; using the last successfully applied execution config",
+	r.logger.Warn("Execution config is incomplete or invalid; using the last successfully applied execution config",
 		zap.Error(err),
 		zap.String("fallback_version", previous.GetVersion()),
 	)
