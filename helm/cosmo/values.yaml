@@ -206,6 +206,13 @@ controlplane:
     seedOrganization:
       # -- Adds additional labels to the job (see: .Values.global.seed)
       additionalLabels: {}
+    enableSplitConfigLoading:
+      # -- Enables the job to be run
+      enabled: false
+      # -- Adds additional labels to the job
+      additionalLabels: {}
+      # -- The unique identifier of the organization
+      id: '123'
 
   configuration:
     logLevel: 'debug'
