@@ -11,6 +11,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import routes from './routes.js';
+import { withRequestSpans } from './tracing.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
@@ -696,7 +697,7 @@ export default async function build(opts: BuildConfig) {
           defaultValue: undefined,
         });
         if (parentSpan) {
-          return Sentry.withActiveSpan(parentSpan, () => next(req));
+          return Sentry.withActiveSpan(parentSpan, () => withRequestSpans(req.signal, () => next(req)));
         }
         return next(req);
       },
