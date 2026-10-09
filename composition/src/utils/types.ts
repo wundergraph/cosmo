@@ -25,6 +25,11 @@ export type ImplementationErrors = {
   unimplementedFields: string[];
 };
 
+export type EnumUsageData = {
+  inputCoordsBySubgraphName: Map<SubgraphName, Set<string>>;
+  outputCoordsBySubgraphName: Map<SubgraphName, Set<string>>;
+};
+
 export type GraphFieldData = {
   externalSubgraphNames: Set<SubgraphName>;
   name: string;

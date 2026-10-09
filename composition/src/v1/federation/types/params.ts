@@ -13,6 +13,8 @@ import {
   type EntityInterfaceFederationData,
   type InputObjectDefinitionData,
   type FederatedDirectivesData,
+  type FieldData,
+  type InputValueData,
   type ObjectDefinitionData,
   type ParentDefinitionData,
 } from '../../../schema-building/types/types';
@@ -68,6 +70,12 @@ export type FederationFactoryParams = {
   internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   warnings: Array<Warning>;
   options?: CompositionOptions;
+};
+
+export type AddEnumUsageCoordsParams = {
+  coords: string;
+  data: DirectiveArgumentData | FieldData | InputValueData;
+  isInput: boolean;
 };
 
 export type UpsertDirectiveArgumentDataParams = {
