@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net"
+	"os"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -35,13 +35,6 @@ func websocketTestConnection(t *testing.T, ctx context.Context, timeout time.Dur
 
 func clientFrame(op ws.OpCode, final bool, payload string) []byte {
 	return ws.MustCompileFrame(ws.MaskFrameInPlace(ws.NewFrame(op, final, []byte(payload))))
-}
-
-func assertTimeout(t *testing.T, err error) {
-	t.Helper()
-	netErr, ok := errors.AsType[net.Error](err)
-	require.True(t, ok, "expected net.Error, got %T: %v", err, err)
-	assert.True(t, netErr.Timeout())
 }
 
 func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
@@ -112,7 +105,7 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 					assert.Equal(t, ws.OpPong, pong.Header.OpCode)
 				}
 
-				assertTimeout(t, <-result)
+				assert.ErrorIs(t, <-result, os.ErrDeadlineExceeded)
 				assert.Equal(t, timeout, time.Since(start), "frames before connection_init must not extend its deadline")
 			})
 		})
@@ -145,7 +138,7 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 
 				start := time.Now()
 				var msg json.RawMessage
-				assertTimeout(t, conn.ReadJSON(&msg))
+				assert.ErrorIs(t, conn.ReadJSON(&msg), os.ErrDeadlineExceeded)
 				assert.Equal(t, timeout, time.Since(start))
 				assert.NoError(t, <-written)
 			})
@@ -202,21 +195,19 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 			server, client := net.Pipe()
 			conn := newWSConnectionWrapper(t.Context(), server, 0, 0, tc.useNetPoll)
 			t.Cleanup(func() {
-				_ = conn.Close()
 				_ = client.Close()
+				_ = conn.Close()
 			})
 
 			result := make(chan error, 1)
 			go func() {
 				result <- conn.WriteText("blocked")
 			}()
-			require.Eventually(t, func() bool {
-				if conn.mu.TryLock() {
-					conn.mu.Unlock()
-					return false
-				}
-				return true
-			}, time.Second, time.Millisecond)
+
+			// Consume only the header so the writer stays blocked on its payload.
+			require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
+			_, err := ws.ReadHeader(client)
+			require.NoError(t, err)
 
 			closed := make(chan error, 1)
 			go func() {

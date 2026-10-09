@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -16,6 +15,15 @@ import (
 func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 	t.Parallel()
 
+	newConfig := func() *testenv.Config {
+		return &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableNetPoll = false
+				cfg.WebSocketServerReadTimeout = 0
+			},
+		}
+	}
+
 	assertGoingAway := func(t *testing.T, conn *websocket.Conn) {
 		t.Helper()
 		require.NoError(t, conn.SetReadDeadline(time.Now().Add(2*time.Second)))
@@ -26,21 +34,14 @@ func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 			if err == nil {
 				continue
 			}
-			closeErr, ok := errors.AsType[*websocket.CloseError](err)
-			require.True(t, ok, "expected WebSocket close error, got %T: %v", err, err)
-			assert.Equal(t, websocket.CloseGoingAway, closeErr.Code)
+			assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "expected going-away close, got %v", err)
 			return
 		}
 	}
 
 	t.Run("before initialization", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = false
-				cfg.WebSocketServerReadTimeout = 0
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
+		testenv.Run(t, newConfig(), func(t *testing.T, env *testenv.Environment) {
 			conn, resp, err := env.GraphQLWebsocketDialWithRetry(nil, nil)
 			require.NoError(t, err)
 
@@ -57,12 +58,7 @@ func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 
 	t.Run("idle connection", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = false
-				cfg.WebSocketServerReadTimeout = 0
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
+		testenv.Run(t, newConfig(), func(t *testing.T, env *testenv.Environment) {
 			conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
 			env.WaitForConnectionCount(1, time.Second)
 
@@ -74,12 +70,7 @@ func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 
 	t.Run("partial frame", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = false
-				cfg.WebSocketServerReadTimeout = 0
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
+		testenv.Run(t, newConfig(), func(t *testing.T, env *testenv.Environment) {
 			conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
 			env.WaitForConnectionCount(1, time.Second)
 
@@ -104,8 +95,6 @@ func TestWebSocketGoroutinePartialPongDoesNotStallSharedTrigger(t *testing.T) {
 	}, func(t *testing.T, env *testenv.Environment) {
 		pending := env.InitGraphQLWebSocketConnection(nil, nil, nil)
 		healthy := env.InitGraphQLWebSocketConnection(nil, nil, nil)
-		defer pending.Close()
-		defer healthy.Close()
 		sub := testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"query":"subscription { countEmp(max: 10000, intervalMilliseconds: 20) }"}`)}
 		require.NoError(t, testenv.WSWriteJSON(t, pending, sub))
 		require.NoError(t, testenv.WSWriteJSON(t, healthy, sub))
