@@ -46,6 +46,7 @@ import {
   getInitialFieldCoordsPath,
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
+  doesFieldSetSelectLeafPath,
   isNodeQuery,
   parseCacheTagFormat,
   validateArgumentTemplateReferences,
@@ -129,6 +130,7 @@ import {
   invalidSelectionSetErrorMessage,
   invalidSubscriptionFilterLocationError,
   invalidUnionMemberTypeError,
+  listCacheTagKeyFieldErrorMessage,
   listSizeAssumedSizeSlicingArgDefaultErrorMessage,
   listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage,
   listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
@@ -155,6 +157,7 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  nonResolvableEntityCacheTagErrorMessage,
   nonRootFieldCacheTagErrorMessage,
   oneOfRequiredFieldsError,
   operationDefinitionError,
@@ -168,6 +171,7 @@ import {
   typeNameAlreadyProvidedErrorMessage,
   undefinedCacheTagArgumentErrorMessage,
   undefinedCacheTagInputFieldErrorMessage,
+  undefinedCacheTagKeyFieldErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -182,6 +186,7 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  unsupportedEntityCacheTagNamespaceErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
   untraversableCacheTagReferenceErrorMessage,
 } from '../../errors/errors';
@@ -195,6 +200,7 @@ import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
+  type CacheTagEntityConfiguration,
   type CacheTagRootFieldConfiguration,
   type ConfigurationData,
   type Costs,
@@ -397,6 +403,7 @@ import {
 import {
   type AddInputValueDataByNodeParams,
   type CachePopulateDirectiveNode,
+  type CacheTagPlaceholder,
   type ComposeDirectiveNode,
   type ConditionalFieldSetValidationResult,
   type EntityCacheDirectiveNode,
@@ -4510,49 +4517,11 @@ export class NormalizationFactory {
       this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
       return;
     }
-    const formats = new Set<string>();
-    const references = new Set<string>();
-    for (const [index, directiveNode] of directiveNodes.entries()) {
-      const ordinal = numberToOrdinal(index + 1);
-      const format = this.getCacheTagFormat(directiveNode);
-      if (format === undefined) {
-        continue;
-      }
-      if (format.trim() === '') {
-        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [blankCacheTagFormatErrorMessage()]));
-        continue;
-      }
-      const errorMessages: Array<string> = [];
-      const { canonicalFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
-      for (const { namespace, reference } of placeholders) {
-        // Only the "$args" namespace is supported upon a field.
-        if (namespace !== ARGS) {
-          errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
-          continue;
-        }
-        const argumentData = this.getCacheTagArgumentData(fieldData, reference, errorMessages);
-        if (!argumentData) {
-          continue;
-        }
-        if (!this.isValidCacheTagLeaf(argumentData)) {
-          errorMessages.push(
-            invalidCacheTagArgumentTypeErrorMessage({
-              reference: reference,
-              typeString: printTypeNode(argumentData.type),
-            }),
-          );
-        }
-      }
-      if (errorMessages.length > 0) {
-        // A repeated placeholder produces the same message.
-        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [...new Set(errorMessages)]));
-        continue;
-      }
-      formats.add(canonicalFormat);
-      for (const { reference } of placeholders) {
-        references.add(reference);
-      }
-    }
+    const { formats, references } = this.getValidCacheTagFormats(
+      directiveNodes,
+      fieldCoords,
+      (placeholder, errorMessages) => this.validateFieldCacheTagPlaceholder(fieldData, placeholder, errorMessages),
+    );
     if (formats.size < 1) {
       return;
     }
@@ -4563,6 +4532,149 @@ export class NormalizationFactory {
     getOrInitializeEntityCaching(configurationData).cacheTagRootFieldConfigurations.push(
       ...Array.from(formats, (format): CacheTagRootFieldConfiguration => ({ fieldName, format, typeName })),
     );
+  }
+
+  extractEntityCacheTagDirectives(parentData: ObjectDefinitionData) {
+    /* A placeholder is a path through a key's selection set.
+     * {$key.a.b} is allowed only if the key selects "a { b }", with b having no sub-selection of its own.
+     * With several keys, the path must be in every @key of the type in that subgraph,
+     * including resolvable: false keys. And no field on the path may be a list.
+     */
+    const directiveNodes = parentData.directivesByName.get(CACHE_TAG);
+    if (!directiveNodes || directiveNodes.length < 1) {
+      return;
+    }
+    const typeName = getParentTypeName(parentData);
+    const keyFieldSetDatas = [...(this.keyFieldSetDatasByTypeName.get(parentData.name)?.values() ?? [])];
+    // The router fetches the entity from this subgraph only through a resolvable key.
+    if (keyFieldSetDatas.every(({ isUnresolvable }) => isUnresolvable)) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_TAG, parentData.name, FIRST_ORDINAL, [nonResolvableEntityCacheTagErrorMessage()]),
+      );
+      return;
+    }
+    const { formats } = this.getValidCacheTagFormats(directiveNodes, parentData.name, (placeholder, errorMessages) =>
+      this.validateEntityCacheTagPlaceholder(parentData, keyFieldSetDatas, placeholder, errorMessages),
+    );
+    if (formats.size < 1) {
+      return;
+    }
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(true, typeName),
+    );
+    getOrInitializeEntityCaching(configurationData).cacheTagEntityConfigurations.push(
+      ...Array.from(formats, (format): CacheTagEntityConfiguration => ({ format, typeName })),
+    );
+  }
+
+  /* Returns the canonical form of each valid format and the references of those formats.
+   * An error is pushed for each directive whose format is invalid.
+   * validatePlaceholder pushes an error message for a placeholder that is invalid upon the directive's location.
+   */
+  getValidCacheTagFormats(
+    directiveNodes: Array<ConstDirectiveNode>,
+    directiveCoords: string,
+    validatePlaceholder: (placeholder: CacheTagPlaceholder, errorMessages: Array<string>) => void,
+  ): CacheTagData {
+    const formats = new Set<string>();
+    const references = new Set<string>();
+    for (const [index, directiveNode] of directiveNodes.entries()) {
+      const ordinal = numberToOrdinal(index + 1);
+      const format = this.getCacheTagFormat(directiveNode);
+      if (format === undefined) {
+        continue;
+      }
+      if (format.trim() === '') {
+        this.errors.push(
+          invalidDirectiveError(CACHE_TAG, directiveCoords, ordinal, [blankCacheTagFormatErrorMessage()]),
+        );
+        continue;
+      }
+      const errorMessages: Array<string> = [];
+      const { canonicalFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
+      for (const placeholder of placeholders) {
+        validatePlaceholder(placeholder, errorMessages);
+      }
+      if (errorMessages.length > 0) {
+        // A repeated placeholder produces the same message.
+        this.errors.push(invalidDirectiveError(CACHE_TAG, directiveCoords, ordinal, [...new Set(errorMessages)]));
+        continue;
+      }
+      formats.add(canonicalFormat);
+      for (const { reference } of placeholders) {
+        references.add(reference);
+      }
+    }
+    return { formats, references };
+  }
+
+  validateFieldCacheTagPlaceholder(
+    fieldData: FieldData,
+    { namespace, reference }: CacheTagPlaceholder,
+    errorMessages: Array<string>,
+  ) {
+    // Only the "$args" namespace is supported upon a field.
+    if (namespace !== ARGS) {
+      errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
+      return;
+    }
+    const argumentData = this.getCacheTagArgumentData(fieldData, reference, errorMessages);
+    if (argumentData && !this.isValidCacheTagLeaf(argumentData)) {
+      errorMessages.push(
+        invalidCacheTagArgumentTypeErrorMessage({
+          reference: reference,
+          typeString: printTypeNode(argumentData.type),
+        }),
+      );
+    }
+  }
+
+  validateEntityCacheTagPlaceholder(
+    parentData: ObjectDefinitionData,
+    keyFieldSetDatas: Array<KeyFieldSetData>,
+    { namespace, reference }: CacheTagPlaceholder,
+    errorMessages: Array<string>,
+  ) {
+    // Only the "$key" namespace is supported upon an entity.
+    if (namespace !== KEY) {
+      errorMessages.push(unsupportedEntityCacheTagNamespaceErrorMessage(namespace));
+      return;
+    }
+    const path = reference.split(LITERAL_PERIOD);
+    /* The router fetches the entity from this subgraph through any of its resolvable keys,
+     * so every resolvable key must select the reference.
+     * An invalid key is reported elsewhere; its syntax is assessed all the same.
+     */
+    const fieldSets = keyFieldSetDatas
+      .filter(({ documentNode, isUnresolvable }) => !isUnresolvable && !doesFieldSetSelectLeafPath(documentNode, path))
+      .map(({ rawFieldSet }) => rawFieldSet);
+    if (fieldSets.length > 0) {
+      errorMessages.push(undefinedCacheTagKeyFieldErrorMessage({ fieldSets, reference }));
+      return;
+    }
+    // A key can select a list, which yields no single value.
+    let fieldDataByName = parentData.fieldDataByName;
+    for (const [index, segment] of path.entries()) {
+      const fieldData = fieldDataByName.get(segment);
+      if (!fieldData) {
+        return;
+      }
+      if (isTypeNodeListType(fieldData.type)) {
+        errorMessages.push(
+          listCacheTagKeyFieldErrorMessage({
+            listReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
+            reference,
+            typeString: printTypeNode(fieldData.type),
+          }),
+        );
+        return;
+      }
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName);
+      if (namedTypeData?.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        return;
+      }
+      fieldDataByName = namedTypeData.fieldDataByName;
+    }
   }
 
   isValidCacheTagLeaf({ namedTypeName, type }: InputValueData): boolean {
@@ -4829,13 +4941,9 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
-          if (isObject && parentData.directivesByName.has(CACHE_TAG)) {
-            // Not yet supported.
-            this.warnings.push(
-              unsupportedCacheTagLocationWarning({ coords: parentTypeName, subgraphName: this.subgraphName }),
-            );
+          if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+            this.extractEntityCacheTagDirectives(parentData);
           }
-
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             // Interface fields are passed too, so that @cacheTag upon them is rejected as upon a non-root field.

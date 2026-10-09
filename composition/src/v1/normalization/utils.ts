@@ -5,9 +5,11 @@ import {
   type ConstObjectValueNode,
   type ConstValueNode,
   type DocumentNode,
+  type FieldNode,
   Kind,
   OperationTypeNode,
   print,
+  type SelectionSetNode,
   visit,
 } from 'graphql';
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
@@ -196,6 +198,28 @@ export function getNormalizedFieldSet(documentNode: DocumentNode): string {
     4. Remove the leading and trailing "{ " and " }", respectively
   */
   return print(lexicographicallySortDocumentNode(documentNode)).replaceAll(/\s+/g, ' ').slice(2, -2);
+}
+
+/* Returns whether the field set selects the path, and the path ends at a field without a selection set.
+ * In a valid field set, such a field is a scalar or an Enum.
+ * A field is matched by its name; an alias is ignored.
+ */
+export function doesFieldSetSelectLeafPath(documentNode: DocumentNode, path: Array<string>): boolean {
+  const definition = documentNode.definitions[0];
+  if (definition?.kind !== Kind.OPERATION_DEFINITION) {
+    return false;
+  }
+  let selectionSet: SelectionSetNode | undefined = definition.selectionSet;
+  for (const fieldName of path) {
+    const fieldNode: FieldNode | undefined = selectionSet?.selections.find(
+      (selection): selection is FieldNode => selection.kind === Kind.FIELD && selection.name.value === fieldName,
+    );
+    if (!fieldNode) {
+      return false;
+    }
+    selectionSet = fieldNode.selectionSet;
+  }
+  return !selectionSet;
 }
 
 export function getInitialFieldCoordsPath(isProvides: boolean, directiveCoords: string): Array<string> {
