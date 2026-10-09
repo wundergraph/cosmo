@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
@@ -74,7 +76,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 
 		stored, err := mr.Get(entryKey("v1:a"))
 		require.NoError(t, err)
-		value, _, _, err := enginecache.DecodeEntry([]byte(stored))
+		value, _, _, err := enginecache.DecodeEntry(entryBody([]byte(stored)))
 		require.NoError(t, err)
 		require.JSONEq(t, `{"real":true}`, string(value))
 
@@ -124,7 +126,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.Greater(t, second, first, "the longer life must be the one that counts")
 	})
 
-	t.Run("the tag key lives as long as the entries in it", func(t *testing.T) {
+	t.Run("the tag key outlives the entries in it by the prune grace", func(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
@@ -132,7 +134,9 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:a", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, mr.TTL(entryKey("v1:a")), mr.TTL(tagIndexKey("declared:users")))
+		// The entry expires at its member's score by the router's clock, the
+		// key by redis's: the grace absorbs skew between them.
+		require.InDelta(t, mr.TTL(entryKey("v1:a"))+tagIndexPruneGrace, mr.TTL(tagIndexKey("declared:users")), float64(time.Second))
 	})
 
 	t.Run("a short lived entry does not shorten a tag holding longer lived ones", func(t *testing.T) {
@@ -168,7 +172,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:long", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{"declared:users"}},
 		}))
 
-		require.Equal(t, time.Hour, mr.TTL(tagIndexKey("declared:users")))
+		require.Equal(t, time.Hour+tagIndexPruneGrace, mr.TTL(tagIndexKey("declared:users")))
 	})
 
 	t.Run("an item without a TTL is refused before anything is indexed", func(t *testing.T) {
@@ -202,11 +206,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		// Both clocks, because a member is only dead once redis has dropped the
-		// entry and this router agrees enough time has passed.
-		elapsed := time.Minute + tagIndexPruneGrace + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -226,11 +226,9 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:recent", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		// Expired by this router's clock but only just: a redis running a minute
-		// behind would still be serving it.
-		elapsed := time.Minute + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		// Expired, but only just: a node whose clock runs behind could still be
+		// serving it.
+		elapse(t, mr, time.Minute+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -249,15 +247,12 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{keeper("declared:users"), item}))
 
 		// Re-cached a second in, which scores the member a second further out.
-		mr.FastForward(time.Second)
-		advance(c, time.Second)
+		elapse(t, mr, time.Second)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
 		// Far enough that the first score is past the cutoff and the second is
 		// not, so only the re-scoring keeps the member.
-		gap := time.Minute + tagIndexPruneGrace + 500*time.Millisecond - time.Second
-		mr.FastForward(gap)
-		advance(c, gap)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+500*time.Millisecond-time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -268,7 +263,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.Contains(t, members, "v1:a")
 
 		// Past the second score too, and it goes.
-		advance(c, time.Second)
+		elapse(t, mr, time.Second)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
@@ -288,9 +283,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users", "declared:untouched"}},
 		}))
 
-		elapsed := time.Minute + tagIndexPruneGrace + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -308,9 +301,19 @@ func TestRedisCacheTagIndex(t *testing.T) {
 	})
 }
 
-// advance moves the clock the cache scores index members from forward by d,
-// leaving redis' own clock to the test.
-func advance(c *RedisCache, d time.Duration) {
-	previous := c.now
-	c.now = func() time.Time { return previous().Add(d) }
+// elapse moves the server's clock and its TTLs forward by d.
+func elapse(t *testing.T, mr *miniredis.Miniredis, d time.Duration) {
+	t.Helper()
+	mr.SetTime(redisNow(t, mr).Add(d))
+	mr.FastForward(d)
+}
+
+// redisNow is the server's clock, which scores and prunes go by.
+func redisNow(t *testing.T, mr *miniredis.Miniredis) time.Time {
+	t.Helper()
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer func() { _ = client.Close() }()
+	now, err := client.Time(t.Context()).Result()
+	require.NoError(t, err)
+	return now
 }

@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ const testPrefix = "entity:"
 // entryKey and tagIndexKey mirror the namespacing the cache applies, so tests
 // name raw redis keys the same way it does.
 func entryKey(key string) string    { return testPrefix + entryNamespace + key }
-func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
+func tagIndexKey(tag string) string { return (&RedisCache{prefix: testPrefix}).tagKey(tag) }
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {
@@ -29,19 +30,30 @@ func rawEntry(value string) string {
 func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
-	return newTestRedisCacheWithHook(t, nil)
+	return newTestRedisCacheWithHook(t)
 }
 
-// newTestRedisCacheWithHook is newTestRedisCache with hook installed on the
-// client, for the cases that have to bend a reply the server would never send
+// newTestRedisCacheWithHook is newTestRedisCache with hooks installed on the
+// client in order, for the cases that have to bend a reply the server would never send
 // on its own.
-func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *miniredis.Miniredis) {
+func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
 	mr := miniredis.RunT(t)
+	return newTestRedisCacheOn(t, mr, hooks...), mr
+}
+
+// newTestRedisCacheOn builds a cache on its own client against mr, so tests can
+// run two routers on one server.
+func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.Hook) *RedisCache {
+	t.Helper()
 
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	if hook != nil {
+	// Faithful ZSCAN paging unless the test brings its own pager.
+	if !slices.ContainsFunc(hooks, func(h redis.Hook) bool { _, ok := h.(*pagedZScan); return ok }) {
+		hooks = append([]redis.Hook{&pagedZScan{size: invalidationPageSize}}, hooks...)
+	}
+	for _, hook := range hooks {
 		client.AddHook(hook)
 	}
 	c, err := NewRedisCache(t.Context(), client, testPrefix)
@@ -56,7 +68,7 @@ func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *min
 		require.NoError(t, c.Close())
 	})
 
-	return c, mr
+	return c
 }
 
 // expirePTTL rewrites every PTTL reply to the -2 redis sends for a key that is
@@ -205,6 +217,11 @@ func TestRedisCache(t *testing.T) {
 
 			results, err := c.GetMany(ctx, []string{"a", "a+v"})
 			require.NoError(t, err)
+			// Tagged: expires at its member's score, to the millisecond.
+			record := results["a"]
+			require.InDelta(t, time.Hour, record.TTL, float64(time.Second))
+			record.TTL = time.Hour
+			results["a"] = record
 			require.Equal(t, map[string]enginecache.Item{
 				"a":   {Key: "a", TTL: time.Hour, Vary: vary},
 				"a+v": {Key: "a+v", Value: []byte("value"), TTL: time.Hour},
@@ -291,7 +308,7 @@ func TestRedisCache(t *testing.T) {
 
 			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
-			value, _, _, err := enginecache.DecodeEntry([]byte(stored))
+			value, _, _, err := enginecache.DecodeEntry(entryBody([]byte(stored)))
 			require.NoError(t, err)
 			require.Equal(t, "1", string(value))
 

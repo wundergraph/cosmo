@@ -23,8 +23,9 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 		return `{"data":{"_entities":[` + strings.Repeat(entity+",", 9) + entity + `]}}`
 	}
 
-	noCache := http.Header{"Cache-Control": []string{"no-cache"}}
-	noStore := http.Header{"Cache-Control": []string{"no-store"}}
+	// Fresh per request: testenv sets headers on the map it is given.
+	noCache := func() http.Header { return http.Header{"Cache-Control": []string{"no-cache"}} }
+	noStore := func() http.Header { return http.Header{"Cache-Control": []string{"no-store"}} }
 
 	t.Run("no-cache fetches past a warm entity entry and refreshes it", func(t *testing.T) {
 		t.Parallel()
@@ -45,7 +46,7 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 			// answer from a fresh one.
 			mood.set(moodBatch("SAD"))
 
-			bypass := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noCache})
+			bypass := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noCache()})
 			require.Contains(t, bypass.Body, `"currentMood":"SAD"`,
 				"a warm entry must not answer a no-cache request")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
@@ -74,7 +75,7 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(),
 				"the root fetch must be cached before the bypass is tried")
 
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query, Header: noCache})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query, Header: noCache()})
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load(),
 				"a warm root entry must not answer a no-cache request")
 
@@ -94,7 +95,7 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 				Mood: testenv.SubgraphConfig{Middleware: mood.middleware},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noStore})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noStore()})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
@@ -104,7 +105,7 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 
 			mood.set(moodBatch("SAD"))
 
-			third := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noStore})
+			third := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noStore()})
 			require.Contains(t, third.Body, `"currentMood":"HAPPY"`,
 				"a warm entry may answer a no-store request")
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
@@ -177,7 +178,7 @@ func TestResponseCacheRequestDirectives(t *testing.T) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			}()
 			time.Sleep(100 * time.Millisecond)
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noCache})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: noCache()})
 			<-leader
 
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(),

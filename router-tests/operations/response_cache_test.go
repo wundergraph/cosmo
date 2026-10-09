@@ -1028,7 +1028,8 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 9, "the other nine are untouched")
-			require.NotContains(t, tags, "declared:mood:employee-1", "the tag goes with the entry")
+			// The walk removes the tag's member once its entry is deleted.
+			require.Empty(t, tags["declared:mood:employee-1"])
 		})
 	})
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -29,7 +28,6 @@ type RedisCache struct {
 	// the way out, so callers only ever see the keys they asked with. An empty
 	// prefix is valid and means the keys are used as they are.
 	prefix string
-	now    func() time.Time
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -39,6 +37,7 @@ const (
 	tagNamespace   = "t:"
 )
 
+// tagIndexPruneGrace is how long past its score a member stays in a tag index.
 const tagIndexPruneGrace = 5 * time.Minute
 
 // entryKey is where an entry's value lives.
@@ -58,7 +57,10 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	return &RedisCache{client: client, prefix: prefix, now: time.Now}, nil
+	return &RedisCache{
+		client: client,
+		prefix: prefix,
+	}, nil
 }
 
 // GetMany implements caching.GetMany.
@@ -117,7 +119,7 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 			continue
 		}
 
-		decoded, surrogateKeys, vary, err := caching.DecodeEntry(value)
+		decoded, surrogateKeys, vary, err := caching.DecodeEntry(entryBody(value))
 		if err != nil {
 			return nil, fmt.Errorf("redis adapter decode %q: %w", key, err)
 		}
@@ -128,80 +130,6 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 	}
 
 	return results, nil
-}
-
-// SetMany implements caching.SetMany.
-func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
-	if len(items) == 0 {
-		return caching.ErrNoItems
-	}
-
-	for _, item := range items {
-		if item.TTL <= 0 {
-			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
-		}
-	}
-
-	// One clock reading for the batch. Scoring two items written together as if
-	// they were written at different moments would be a distinction without a
-	// source.
-	now := c.now()
-	pruneBefore := strconv.FormatInt(now.Add(-tagIndexPruneGrace).UnixMilli(), 10)
-
-	// One prune per tag rather than per member of it: ten entities answered
-	// under one subgraph tag would otherwise queue the same removal ten times.
-	pruned := make(map[string]struct{})
-
-	pipe := c.client.Pipeline()
-
-	for _, item := range items {
-		if len(item.Tags) == 0 {
-			continue
-		}
-
-		expireAt := now.Add(item.TTL)
-		member := redis.Z{Score: float64(expireAt.UnixMilli()), Member: item.Key}
-		for _, tag := range item.Tags {
-			tagKey := c.tagKey(tag)
-			pipe.ZAdd(ctx, tagKey, member)
-			if _, done := pruned[tagKey]; !done {
-				pruned[tagKey] = struct{}{}
-				pipe.ZRemRangeByScore(ctx, tagKey, "-inf", pruneBefore)
-			}
-			pipe.ExpireNX(ctx, tagKey, item.TTL)
-			pipe.ExpireGT(ctx, tagKey, item.TTL)
-		}
-	}
-
-	// Each command is kept alongside the item that queued it, rather than read
-	// back off Exec, so which key a reply belongs to is not a question of the
-	// two orders still agreeing.
-	cmds := make([]*redis.StatusCmd, len(items))
-	for i, item := range items {
-		cmds[i] = pipe.Set(ctx, c.entryKey(item.Key), caching.EncodeItem(item), item.TTL)
-	}
-
-	_, err := pipe.Exec(ctx)
-	if err == nil {
-		return nil
-	}
-
-	// A command is only counted once redis has answered it. Anything still
-	// carrying the failure is left out, whether it never arrived or was applied
-	// and lost its reply on the way back, so this understates what was written
-	// rather than claiming a key that might not be there.
-	var stored []string
-	for i, cmd := range cmds {
-		if cmd.Err() == nil {
-			stored = append(stored, items[i].Key)
-		}
-	}
-
-	if len(stored) == 0 {
-		return err
-	}
-
-	return &caching.SetManyError{KnownStoredKeys: stored, Err: err}
 }
 
 // Close releases the redis client the cache was built with. The Once is not for
