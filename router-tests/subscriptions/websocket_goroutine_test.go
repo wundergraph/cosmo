@@ -44,8 +44,10 @@ func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 			conn, resp, err := env.GraphQLWebsocketDialWithRetry(nil, nil)
 			require.NoError(t, err)
 
-			_ = resp.Body.Close()
-			t.Cleanup(func() { _ = conn.Close() })
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+				_ = conn.Close()
+			})
 
 			env.Shutdown()
 			assertGoingAway(t, conn)
