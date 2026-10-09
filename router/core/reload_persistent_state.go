@@ -1,20 +1,105 @@
 package core
 
 import (
+	"errors"
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 )
 
 // ReloadPersistentState This file describes any configuration which should persist or be shared across router restarts
 type ReloadPersistentState struct {
+	logger                    *zap.Logger
 	inMemoryPlanCacheFallback *InMemoryPlanCacheFallback
+
+	executionConfigMu             sync.RWMutex
+	lastValidExecutionConfig      *nodev1.RouterConfig
+	lastExecutionConfigGraphScope executionConfigGraphScope
+}
+
+type executionConfigGraphScope struct {
+	organizationID   string
+	federatedGraphID string
+}
+
+func (s executionConfigGraphScope) isComplete() bool {
+	return s.organizationID != "" && s.federatedGraphID != ""
+}
+
+// errNoGraphToken reports that the router runs without a graph token, so it has
+// no graph scope and never keeps an execution config fallback.
+var errNoGraphToken = errors.New("no graph token")
+
+func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
+	if token == "" {
+		return executionConfigGraphScope{}, errNoGraphToken
+	}
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
+	if err != nil {
+		return executionConfigGraphScope{}, err
+	}
+	scope := executionConfigGraphScope{
+		organizationID:   claims.OrganizationID,
+		federatedGraphID: claims.FederatedGraphID,
+	}
+	if !scope.isComplete() {
+		return executionConfigGraphScope{}, errors.New("graph token has an empty organization or federated graph ID")
+	}
+	return scope, nil
+}
+
+// graphScope logs scope errors, except for routers that run without a graph token.
+func (s *ReloadPersistentState) graphScope(graphToken string) (executionConfigGraphScope, error) {
+	scope, err := graphScopeFromToken(graphToken)
+	if err != nil && !errors.Is(err, errNoGraphToken) {
+		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
+	}
+	return scope, err
+}
+
+// acceptExecutionConfig records an execution config only after the graph
+// server has been built and swapped successfully. It keeps the config without
+// copying it: newServer builds from a private copy and the pollers never patch
+// a config in place, so the accepted config is not mutated afterwards.
+func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfig, graphToken string) {
+	scope, err := s.graphScope(graphToken)
+
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	if err != nil {
+		// Without a scope the config can never be used as a fallback. Drop any
+		// older one so a later router cannot fall back past this config.
+		s.lastValidExecutionConfig = nil
+		s.lastExecutionConfigGraphScope = executionConfigGraphScope{}
+		return
+	}
+	s.lastValidExecutionConfig = config
+	s.lastExecutionConfigGraphScope = scope
+}
+
+// previousExecutionConfig returns the last execution config accepted by any
+// router instance owned by the supervisor. Callers must not mutate it.
+func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *nodev1.RouterConfig {
+	scope, err := s.graphScope(graphToken)
+	if err != nil {
+		return nil
+	}
+
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+
+	if s.lastExecutionConfigGraphScope != scope {
+		return nil
+	}
+	return s.lastValidExecutionConfig
 }
 
 func NewReloadPersistentState(logger *zap.Logger) *ReloadPersistentState {
 	return &ReloadPersistentState{
+		logger: logger,
 		inMemoryPlanCacheFallback: &InMemoryPlanCacheFallback{
 			logger: logger,
 		},

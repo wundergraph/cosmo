@@ -97,9 +97,8 @@ func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
 
 	p := newTestPoller(mock)
 	resp, err := p.GetRouterConfig(context.Background())
-	require.Error(t, err)
-	require.Nil(t, resp)
-	assert.Contains(t, err.Error(), "mapper missing base graph entry")
+	assert.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
+	assert.Nil(t, resp)
 }
 
 func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
@@ -141,6 +140,7 @@ func TestSplitGetRouterConfig_MapperError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
+	assert.NotErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "network error")
 }
 
@@ -150,7 +150,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	}
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
-	require.Error(t, err)
+	require.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "empty graph configs")
 }
 
@@ -162,6 +162,7 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
+	assert.NotErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "CDN unavailable")
 }
 
@@ -539,6 +540,83 @@ func TestSplitSubscribe_NoChanges(t *testing.T) {
 	assert.False(t, handlerCalled, "handler must not be called when nothing changed")
 	// Only FetchMapper should have been called, no FetchConfig calls.
 	assert.Equal(t, 0, len(mock.fetchConfigCalls))
+}
+
+func TestSplitSubscribe_RecoversFromMissingBaseGraph(t *testing.T) {
+	mock := &mockSplitFetcher{mapperResult: map[string]string{"ff1": "hash-ff1"}}
+	p := newTestPoller(mock)
+	_, err := p.GetRouterConfig(context.Background())
+	assert.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
+
+	mock.mapperResult = map[string]string{"": "hash-base", "ff1": "hash-ff1"}
+	mock.configResults = map[string]*nodev1.RouterConfig{
+		"": makeRouterConfig("split-v1"), "ff1": makeRouterConfig("split-ff-v1"),
+	}
+	pollOnce(p, func(_ *routerconfig.Response) error {
+		return errors.New("graph server swap failed")
+	})
+	assert.Nil(t, p.currentConfig)
+	assert.Empty(t, p.knownHashes)
+
+	// Retry the same mapper after rejection and rebuild every graph mux.
+	var recovered *routerconfig.Response
+	pollOnce(p, func(response *routerconfig.Response) error {
+		recovered = response
+		return nil
+	})
+	require.NotNil(t, recovered)
+	assert.Nil(t, recovered.Changes)
+	assert.Equal(t, "split-v1", recovered.Config.Version)
+	flags := recovered.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
+	assert.Equal(t, "split-ff-v1", flags["ff1"].GetVersion())
+	assert.Equal(t, mock.mapperResult, p.knownHashes)
+}
+
+// A missing base graph config is never skipped like a missing feature flag:
+// the poll must not apply a config without its base graph.
+func TestSplitSubscribe_SkipMissingFeatureFlags_DoesNotSkipBaseGraph(t *testing.T) {
+	t.Run("after startup fallback", func(t *testing.T) {
+		mock := &mockSplitFetcher{
+			mapperResult:  map[string]string{"": "hash-base", "ff1": "hash-ff1"},
+			configResults: map[string]*nodev1.RouterConfig{"ff1": makeRouterConfig("split-ff-v1")},
+			configErrors:  map[string]error{"": errs.ErrFileNotFound},
+		}
+		p := newTestPoller(mock)
+		p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+
+		handlerCalled := false
+		pollOnce(p, func(_ *routerconfig.Response) error {
+			handlerCalled = true
+			return nil
+		})
+		assert.False(t, handlerCalled)
+		assert.Nil(t, p.currentConfig)
+		assert.Empty(t, p.knownHashes)
+		assert.Empty(t, p.latestVersion)
+	})
+
+	t.Run("base graph changed", func(t *testing.T) {
+		mock := &mockSplitFetcher{
+			mapperResult: map[string]string{"": "hash-base-v2"},
+			configErrors: map[string]error{"": errs.ErrFileNotFound},
+		}
+		p := newTestPoller(mock)
+		p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+		p.knownHashes = map[string]string{"": "hash-base-v1"}
+		p.currentConfig = makeRouterConfig("v1")
+		p.latestVersion = computeCompositeVersion(p.knownHashes)
+		latestVersion := p.latestVersion
+
+		handlerCalled := false
+		pollOnce(p, func(_ *routerconfig.Response) error {
+			handlerCalled = true
+			return nil
+		})
+		assert.False(t, handlerCalled)
+		assert.Equal(t, "v1", p.currentConfig.GetVersion())
+		assert.Equal(t, map[string]string{"": "hash-base-v1"}, p.knownHashes)
+		assert.Equal(t, latestVersion, p.latestVersion)
+	})
 }
 
 func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {

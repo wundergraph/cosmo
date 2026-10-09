@@ -167,11 +167,11 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	}
 
 	if len(activeGraphs) == 0 {
-		return nil, fmt.Errorf("empty graph configs")
+		return nil, fmt.Errorf("%w: empty graph configs", errs.ErrMalformedExecutionConfig)
 	}
 
 	if _, exists := activeGraphs[""]; !exists {
-		return nil, fmt.Errorf("mapper missing base graph entry")
+		return nil, fmt.Errorf("%w: mapper missing base graph entry", errs.ErrMalformedExecutionConfig)
 	}
 
 	config, err := p.fetchAndAssembleAll(ctx, activeGraphs)
@@ -253,8 +253,11 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 
-		// Clone the in-use config before mutating.
-		patched := proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
+		// After startup falls back, there is no split config to patch yet.
+		patched := &nodev1.RouterConfig{}
+		if p.currentConfig != nil {
+			patched = proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
+		}
 
 		// Apply changes and additions.
 		toFetch := make(map[string]struct{}, len(changes.ChangedConfigs)+len(changes.AddedConfigs))
@@ -264,7 +267,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 		for name := range toFetch {
 			fetchedConfig, err := p.fetcher.FetchConfig(ctx, name)
 			if err != nil {
-				if p.shouldIgnoreMissingFeatureFlag(err) {
+				if name != "" && p.shouldIgnoreMissingFeatureFlag(err) {
 					p.logger.Warn("Feature flag config not found, skipping fetch", zap.String("feature_flag", name))
 					// Remove the feature flag from the mapper and changes so that it is not included in the new config.
 					// This prevents the graph server from tearing down its old mux when it thinks the flag changed (or was added).
@@ -340,6 +343,9 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			Config:  patched,
 			Changes: &changes,
 			Hashes:  hashes,
+		}
+		if p.currentConfig == nil {
+			response.Changes = nil // Replace the entire fallback config on the first successful poll.
 		}
 
 		handlerStart := time.Now()

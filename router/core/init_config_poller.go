@@ -1,11 +1,13 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
@@ -223,4 +225,22 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 		}),
 	)
 	return &splitPoller, nil
+}
+
+// getExecutionConfig uses the last accepted config if the fetched config is incomplete or invalid.
+func (r *Router) getExecutionConfig(ctx context.Context) (*routerconfig.Response, error) {
+	response, err := r.configPoller.GetRouterConfig(ctx)
+	if !errors.Is(err, errs.ErrMalformedExecutionConfig) {
+		return response, err
+	}
+
+	previous := r.reloadPersistentState.previousExecutionConfig(r.graphApiToken)
+	if previous == nil {
+		return nil, err
+	}
+	r.logger.Warn("Execution config is incomplete or invalid; using the last successfully applied execution config",
+		zap.Error(err),
+		zap.String("fallback_version", previous.GetVersion()),
+	)
+	return &routerconfig.Response{Config: previous}, nil
 }

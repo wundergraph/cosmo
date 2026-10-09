@@ -3,12 +3,60 @@ package core
 import (
 	"testing"
 
+	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
+
+func testGraphToken(t *testing.T, organizationID, graphID string, features ...string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"organization_id":    organizationID,
+		"federated_graph_id": graphID,
+		"features":           features,
+	})
+	signed, err := token.SignedString([]byte("test-secret"))
+	require.NoError(t, err)
+	return signed
+}
+
+func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
+	t.Parallel()
+
+	logCore, logs := observer.New(zap.WarnLevel)
+	state := NewReloadPersistentState(zap.New(logCore))
+	token := testGraphToken(t, "org", "graph")
+	assert.Nil(t, state.previousExecutionConfig(token))
+	accepted := &nodev1.RouterConfig{Version: "v1"}
+	state.acceptExecutionConfig(accepted, token)
+
+	// Feature claims do not change the graph scope.
+	fallback := state.previousExecutionConfig(testGraphToken(t, "org", "graph", "split-config-loading"))
+	assert.Same(t, accepted, fallback)
+
+	otherTokens := []string{
+		"",
+		"invalid-token",
+		testGraphToken(t, "other-org", "graph"),
+		testGraphToken(t, "org", "other-graph"),
+	}
+	for _, otherToken := range otherTokens {
+		assert.Nil(t, state.previousExecutionConfig(otherToken))
+	}
+	// Routers without a graph token are expected, so only the invalid token logs.
+	require.Len(t, logs.All(), 1)
+	assert.Contains(t, logs.All()[0].ContextMap(), "error")
+
+	// A config accepted without a graph scope replaces the older fallback.
+	state.acceptExecutionConfig(&nodev1.RouterConfig{Version: "v2"}, "")
+	assert.Nil(t, state.previousExecutionConfig(token))
+	assert.Len(t, logs.All(), 1)
+}
 
 func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t *testing.T) {
 	t.Parallel()

@@ -30,6 +30,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -648,13 +649,20 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, response *routerconfig.Response) error {
-	server, err := newGraphServer(ctx, r, response, r.proxy)
+	// Graph construction applies router-local overrides in place. Keep the
+	// original execution config intact for polling and fallback across reloads.
+	buildResponse := *response
+	buildResponse.Config = proto.Clone(response.Config).(*nodev1.RouterConfig)
+	server, err := newGraphServer(ctx, r, &buildResponse, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
 	}
 
 	r.httpServer.SwapGraphServer(ctx, server)
+
+	// Preserve only configs that successfully built and replaced the graph server.
+	r.reloadPersistentState.acceptExecutionConfig(response.Config, r.graphApiToken)
 
 	// Cleanup any unused feature flags in case a feature flag was removed
 	r.reloadPersistentState.CleanupFeatureFlags(response.Config)
@@ -869,7 +877,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, errors.New("config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	cfg, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.getExecutionConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
@@ -1809,7 +1817,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("execution config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	cfg, err := r.configPoller.GetRouterConfig(ctx)
+	cfg, err := r.getExecutionConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
