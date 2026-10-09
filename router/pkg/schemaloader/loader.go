@@ -180,7 +180,7 @@ func GetOperationNameAndType(doc *ast.Document) (string, string, error) {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
 			opDef := doc.OperationDefinitions[ref.Ref]
-			opType := ""
+			var opType string
 			switch opDef.OperationType {
 			case ast.OperationTypeQuery:
 				opType = "query"

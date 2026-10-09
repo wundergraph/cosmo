@@ -64,6 +64,10 @@ use (
 // Here you can add custom replacements
 ```
 
+## Go linting
+
+Run `make lint` to lint Go code or `make lint-fix` to apply automatic fixes.
+
 ## Conventional Commit Standard
 
 We use [conventionalcommits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) for changelog generation and more structured commit messages.
