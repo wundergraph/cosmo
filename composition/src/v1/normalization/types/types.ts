@@ -220,3 +220,13 @@ export type LinkImportData = {
   node?: ConstDirectiveNode;
   rename?: DirectiveName;
 };
+
+export type CacheTagPlaceholder = {
+  namespace: string;
+  reference: string;
+};
+
+export type ParsedCacheTagFormat = {
+  canonicalFormat: string;
+  placeholders: Array<CacheTagPlaceholder>;
+};

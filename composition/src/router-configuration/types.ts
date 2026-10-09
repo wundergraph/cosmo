@@ -138,11 +138,20 @@ export type CachePopulateConfiguration = {
   operationType: OperationTypeNode;
 };
 
+export type CacheTagRootFieldConfiguration = {
+  fieldName: FieldName;
+  // A placeholder contains no whitespace, e.g., "products-{$args.filter.category}".
+  format: string;
+  typeName: TypeName;
+};
+
 export type EntityCachingConfiguration = {
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
   cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations: Array<CachePopulateConfiguration>;
+  // Attached to the Query root type's ConfigurationData from @cacheTag.
+  cacheTagRootFieldConfigurations: Array<CacheTagRootFieldConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
 };

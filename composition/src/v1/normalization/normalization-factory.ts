@@ -47,6 +47,7 @@ import {
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
   isNodeQuery,
+  parseCacheTagFormat,
   validateArgumentTemplateReferences,
   validateKeyFieldSets,
 } from './utils';
@@ -69,6 +70,7 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  blankCacheTagFormatErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   directlyProvidedInterfaceFieldError,
@@ -89,6 +91,7 @@ import {
   incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
+  invalidCacheTagArgumentTypeErrorMessage,
   invalidComposeDirectiveNameError,
   invalidDirectiveDefinitionError,
   invalidDirectiveError,
@@ -152,6 +155,7 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  nonRootFieldCacheTagErrorMessage,
   oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
@@ -162,6 +166,8 @@ import {
   semanticNonNullLevelsNonNullErrorMessage,
   subgraphInvalidSyntaxError,
   typeNameAlreadyProvidedErrorMessage,
+  undefinedCacheTagArgumentErrorMessage,
+  undefinedCacheTagInputFieldErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -176,6 +182,8 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  unsupportedFieldCacheTagNamespaceErrorMessage,
+  untraversableCacheTagReferenceErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -187,6 +195,7 @@ import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
+  type CacheTagRootFieldConfiguration,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfiguration,
@@ -210,11 +219,13 @@ import {
   providesWithInterfaceFieldSelectionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  unsupportedCacheTagLocationWarning,
   unsupportedDirectiveWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
   type AuthorizationData,
+  type CacheTagData,
   type CompositeOutputData,
   type ConditionalFieldData,
   type ConfigureDescriptionData,
@@ -244,6 +255,7 @@ import {
   isInputObjectDefinitionData,
   isInterfaceDefinitionData,
   isInterfaceNode,
+  isLeafKind,
   isNodeExternalOrShareable,
   isOutputNodeKind,
   isParentDataCompositeOutputType,
@@ -277,9 +289,11 @@ import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
 import { type Warning } from '../../warnings/types';
 import { type NormalizationResult } from '../../normalization/types';
 import {
+  ARGS,
   ARGUMENT,
   ASSUMED_SIZE,
   AUTHENTICATED,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -303,6 +317,7 @@ import {
   EXTERNAL,
   FIELDS,
   FIRST_ORDINAL,
+  FORMAT,
   FROM_CONTEXT,
   HYPHEN_JOIN,
   INACCESSIBLE,
@@ -1308,6 +1323,7 @@ export class NormalizationFactory {
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
     const fieldData: FieldData = {
       argumentDataByName: argumentDataByName,
+      cacheTagDataBySubgraphName: new Map<SubgraphName, CacheTagData>(),
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       externalFieldDataBySubgraphName: new Map<SubgraphName, ExternalFieldData>([
         [this.subgraphName, newExternalFieldData(isExternal)],
@@ -4475,6 +4491,150 @@ export class NormalizationFactory {
     return true;
   }
 
+  extractFieldCacheTagDirectives(fieldData: FieldData) {
+    const directiveNodes = fieldData.directivesByName.get(CACHE_TAG);
+    if (!directiveNodes || directiveNodes.length < 1) {
+      return;
+    }
+    const { name: fieldName, originalParentTypeName, renamedParentTypeName: typeName } = fieldData;
+    const fieldCoords = `${originalParentTypeName}.${fieldName}`;
+    const operationTypeNode = this.getOperationTypeNodeForRootTypeName(originalParentTypeName);
+    if (!operationTypeNode) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_TAG, fieldCoords, FIRST_ORDINAL, [nonRootFieldCacheTagErrorMessage()]),
+      );
+      return;
+    }
+    // The directive upon a Mutation or Subscription root field composes, but it is ignored.
+    if (operationTypeNode !== OperationTypeNode.QUERY) {
+      this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
+      return;
+    }
+    const formats = new Set<string>();
+    const references = new Set<string>();
+    for (const [index, directiveNode] of directiveNodes.entries()) {
+      const ordinal = numberToOrdinal(index + 1);
+      const format = this.getCacheTagFormat(directiveNode);
+      if (format === undefined) {
+        continue;
+      }
+      if (format.trim() === '') {
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [blankCacheTagFormatErrorMessage()]));
+        continue;
+      }
+      const errorMessages: Array<string> = [];
+      const { canonicalFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
+      for (const { namespace, reference } of placeholders) {
+        // Only the "$args" namespace is supported upon a field.
+        if (namespace !== ARGS) {
+          errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
+          continue;
+        }
+        const argumentData = this.getCacheTagArgumentData(fieldData, reference, errorMessages);
+        if (!argumentData) {
+          continue;
+        }
+        if (!this.isValidCacheTagLeaf(argumentData)) {
+          errorMessages.push(
+            invalidCacheTagArgumentTypeErrorMessage({
+              reference: reference,
+              typeString: printTypeNode(argumentData.type),
+            }),
+          );
+        }
+      }
+      if (errorMessages.length > 0) {
+        // A repeated placeholder produces the same message.
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [...new Set(errorMessages)]));
+        continue;
+      }
+      formats.add(canonicalFormat);
+      for (const { reference } of placeholders) {
+        references.add(reference);
+      }
+    }
+    if (formats.size < 1) {
+      return;
+    }
+    fieldData.cacheTagDataBySubgraphName.set(this.subgraphName, { formats, references });
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(false, typeName),
+    );
+    getOrInitializeEntityCaching(configurationData).cacheTagRootFieldConfigurations.push(
+      ...Array.from(formats, (format): CacheTagRootFieldConfiguration => ({ fieldName, format, typeName })),
+    );
+  }
+
+  isValidCacheTagLeaf({ namedTypeName, type }: InputValueData): boolean {
+    if (isTypeNodeListType(type)) {
+      return false;
+    }
+    if (BASE_SCALARS.has(namedTypeName)) {
+      return true;
+    }
+    const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
+    if (!namedTypeData) {
+      return true;
+    }
+    return isLeafKind(namedTypeData.kind);
+  }
+
+  // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.
+  getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
+    const formatArgument = directiveNode.arguments?.find((argument) => argument.name.value === FORMAT);
+    if (!formatArgument || formatArgument.value.kind !== Kind.STRING) {
+      return;
+    }
+    return formatArgument.value.value;
+  }
+
+  /* Returns the input value at the end of the path,
+   * or pushes an error message for the segment that does not resolve.
+   */
+  getCacheTagArgumentData(
+    fieldData: FieldData,
+    reference: string,
+    errorMessages: Array<string>,
+  ): InputValueData | undefined {
+    const path = reference.split(LITERAL_PERIOD);
+    // The first segment is an argument of the field; each following segment is a field of an Input Object.
+    let inputObjectName: TypeName | undefined;
+    let inputValueDataByName = fieldData.argumentDataByName;
+    for (const [index, segment] of path.entries()) {
+      const inputValueData = inputValueDataByName.get(segment);
+      if (!inputValueData) {
+        errorMessages.push(
+          inputObjectName
+            ? undefinedCacheTagInputFieldErrorMessage({ fieldName: segment, inputObjectName, reference })
+            : undefinedCacheTagArgumentErrorMessage(reference),
+        );
+        return;
+      }
+      // Whether the final segment is an interpolatable leaf value is assessed by the consumer.
+      if (index === path.length - 1) {
+        return inputValueData;
+      }
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(inputValueData.namedTypeName);
+      // An undefined type fails normalization without the directive too.
+      if (!namedTypeData && !BASE_SCALARS.has(inputValueData.namedTypeName)) {
+        return;
+      }
+      // A list yields no single value, and a leaf has no fields.
+      if (isTypeNodeListType(inputValueData.type) || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        errorMessages.push(
+          untraversableCacheTagReferenceErrorMessage({
+            reference,
+            typeString: printTypeNode(inputValueData.type),
+            untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
+          }),
+        );
+        return;
+      }
+      inputObjectName = namedTypeData.name;
+      inputValueDataByName = namedTypeData.inputValueDataByName;
+    }
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4669,9 +4829,17 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+          if (isObject && parentData.directivesByName.has(CACHE_TAG)) {
+            // Not yet supported.
+            this.warnings.push(
+              unsupportedCacheTagLocationWarning({ coords: parentTypeName, subgraphName: this.subgraphName }),
+            );
+          }
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+            // Interface fields are passed too, so that @cacheTag upon them is rejected as upon a non-root field.
+            this.extractFieldCacheTagDirectives(fieldData);
             if (isObject) {
               this.handleFieldCacheDirectives(fieldData);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {

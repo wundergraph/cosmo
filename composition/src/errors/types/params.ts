@@ -6,7 +6,6 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import { directlyProvidedInterfaceFieldError } from '../errors';
 
 export type IncompatibleMergedTypesErrorParams = {
   actualType: string;
@@ -108,4 +107,31 @@ export type InvalidArgumentValueErrorParams = {
 export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
+};
+
+export type InvalidCacheTagArgumentTypeErrorParams = {
+  reference: string;
+  typeString: string;
+};
+
+export type UndefinedCacheTagInputFieldErrorMessageParams = {
+  fieldName: FieldName;
+  inputObjectName: TypeName;
+  reference: string;
+};
+
+export type UntraversableCacheTagReferenceErrorMessageParams = {
+  reference: string;
+  typeString: string;
+  untraversableReference: string;
+};
+
+export type UnavailableCacheTagReferenceErrorMessageParams = {
+  coords: string;
+  reference: string;
+  subgraphName: SubgraphName;
+};
+
+export type PartiallyDefinedCacheTagReferenceErrorMessageParams = UnavailableCacheTagReferenceErrorMessageParams & {
+  parentCoords: string;
 };

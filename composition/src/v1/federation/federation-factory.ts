@@ -27,7 +27,9 @@ import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
   configureDescriptionPropagationError,
+  fromContextCacheTagReferenceErrorMessage,
   requiredContextArgumentError,
+  inaccessibleCacheTagReferenceErrorMessage,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
   incompatibleFederatedFieldNamedTypeError,
@@ -54,6 +56,7 @@ import {
   noQueryRootTypeError,
   oneOfRequiredFieldsError,
   orScopesLimitError,
+  partiallyDefinedCacheTagReferenceErrorMessage,
   semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldError,
@@ -69,6 +72,7 @@ import {
   subscriptionFilterNoAccessibleConcreteTypesError,
   subscriptionFilterUnionMemberInvalidError,
   subscriptionFilterUnsupportedNamedTypeKindError,
+  unavailableCacheTagReferencesError,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   undefinedTypeError,
@@ -147,6 +151,7 @@ import {
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
   doesArgumentDefineFromContext,
+  isInputValueDefinedByEveryParentSubgraph,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -248,7 +253,7 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
+import { inconsistentCacheTagFormatsWarning, singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import {
   type ExtractFederatedDirectivesParams,
   type FederateSubgraphsContractV1Params,
@@ -1043,6 +1048,10 @@ export class FederationFactory {
       source: incomingData.nullLevelsBySubgraphName,
       target: targetData.nullLevelsBySubgraphName,
     });
+    addMapEntries({
+      source: incomingData.cacheTagDataBySubgraphName,
+      target: targetData.cacheTagDataBySubgraphName,
+    });
     addIterableToSet({
       source: incomingData.subgraphNames,
       target: targetData.subgraphNames,
@@ -1196,6 +1205,7 @@ export class FederationFactory {
         isInaccessible,
         sourceData.federatedCoords,
       ),
+      cacheTagDataBySubgraphName: new Map(sourceData.cacheTagDataBySubgraphName),
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
       directivesByName: copyArrayValueMap(sourceData.directivesByName),
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
@@ -1967,7 +1977,7 @@ export class FederationFactory {
         }
         continue;
       }
-      if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
+      if (isInputValueDefinedByEveryParentSubgraph(fieldData.subgraphNames, inputValueData)) {
         argumentNames.push(argumentName);
         const argumentNodeResult = routerSchemaInputValueNodeFromData({
           data: inputValueData,
@@ -2000,6 +2010,90 @@ export class FederationFactory {
       })).argumentNames = argumentNames;
     }
     return argumentNodes;
+  }
+
+  /* Each "$args" reference of a @cacheTag format must be a value that a client request passes to the subgraph.
+   * A response carries only the formats of the subgraph that resolves the Query root field,
+   * so formats that differ between the subgraphs resolving that field produce tags that depend on the query plan.
+   */
+  validateCacheTagFormats(fieldData: FieldData) {
+    if (fieldData.cacheTagDataBySubgraphName.size < 1) {
+      return;
+    }
+    const formatsBySubgraphName = new Map<SubgraphName, Set<string>>();
+    const errorMessages = new Set<string>();
+    // A subgraph from which the field is overridden is absent from isShareableBySubgraphName.
+    for (const subgraphName of fieldData.isShareableBySubgraphName.keys()) {
+      const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(subgraphName);
+      if (externalFieldData && !externalFieldData.isUnconditionallyProvided) {
+        continue;
+      }
+      const cacheTagData = fieldData.cacheTagDataBySubgraphName.get(subgraphName);
+      formatsBySubgraphName.set(subgraphName, cacheTagData?.formats ?? new Set<string>());
+      for (const reference of cacheTagData?.references ?? []) {
+        const errorMessage = this.getUnavailableCacheTagReferenceErrorMessage(fieldData, subgraphName, reference);
+        if (errorMessage) {
+          errorMessages.add(errorMessage);
+        }
+      }
+    }
+    if (errorMessages.size > 0) {
+      this.errors.push(unavailableCacheTagReferencesError(fieldData.federatedCoords, [...errorMessages]));
+    }
+    const [formats, ...otherFormats] = formatsBySubgraphName.values();
+    if (otherFormats.every((other) => other.size === formats.size && other.isSubsetOf(formats))) {
+      return;
+    }
+    this.warnings.push(
+      inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
+    );
+  }
+
+  // Returns an error message if the value of an "$args" reference is absent from the client or router schema.
+  getUnavailableCacheTagReferenceErrorMessage(
+    fieldData: FieldData,
+    subgraphName: SubgraphName,
+    reference: string,
+  ): string | undefined {
+    /* The first segment is an argument of the field; each following segment is a field of an Input Object.
+     * NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
+     * or that traverses a list or a leaf.
+     */
+    let parentCoords = fieldData.federatedCoords;
+    let parentSubgraphNames = fieldData.subgraphNames;
+    let inputValueDataByName = fieldData.argumentDataByName;
+    for (const name of reference.split(LITERAL_PERIOD)) {
+      const data = inputValueDataByName.get(name);
+      // A conflicting definition has already been reported.
+      if (!data) {
+        return;
+      }
+      const params = { coords: data.federatedCoords, reference, subgraphName };
+      // A required argument that defines @fromContext is reported by its own error.
+      if (doesArgumentDefineFromContext(data)) {
+        return isTypeRequired(data.type) ? undefined : fromContextCacheTagReferenceErrorMessage(params);
+      }
+      // A required input value omitted by a subgraph is reported by its own error.
+      if (!isInputValueDefinedByEveryParentSubgraph(parentSubgraphNames, data)) {
+        return isTypeRequired(data.type)
+          ? undefined
+          : partiallyDefinedCacheTagReferenceErrorMessage({ ...params, parentCoords });
+      }
+      // A required input value declared @inaccessible may have been reported by its own error.
+      if (isNodeDataInaccessible(data)) {
+        return this.inaccessibleRequiredInputValueErrorByCoords.has(data.federatedCoords)
+          ? undefined
+          : inaccessibleCacheTagReferenceErrorMessage(params);
+      }
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(data.namedTypeName);
+      // Either the reference ends at this leaf, or a conflicting type has already been reported.
+      if (namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        return;
+      }
+      parentCoords = namedTypeData.name;
+      parentSubgraphNames = namedTypeData.subgraphNames;
+      inputValueDataByName = namedTypeData.inputValueDataByName;
+    }
   }
 
   validateSemanticNonNull(data: FieldData) {
@@ -2149,7 +2243,7 @@ export class FederationFactory {
             if (isTypeRequired(inputValueData.type)) {
               requiredFieldNames.add(inputValueName);
             }
-            if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
+            if (isInputValueDefinedByEveryParentSubgraph(parentDefinitionData.subgraphNames, inputValueData)) {
               const inputValueNodeResult = routerSchemaInputValueNodeFromData({
                 data: inputValueData,
                 description: this.getFederatedGraphNodeDescription(inputValueData),
@@ -2236,6 +2330,7 @@ export class FederationFactory {
           const graphFieldDataByFieldName = new Map<FieldName, GraphFieldData>();
           const invalidFieldNames = newInvalidFieldNames();
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
+          const isQuery = isNodeQuery(parentTypeName);
           const authData = this.authorizationDataByParentTypeName.get(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, authData);
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
@@ -2260,6 +2355,10 @@ export class FederationFactory {
             }
             if (isNodeDataInaccessible(fieldData)) {
               continue;
+            }
+            // An inaccessible field, e.g., one excluded from a contract, cannot be queried, so it produces no tags.
+            if (isQuery) {
+              this.validateCacheTagFormats(fieldData);
             }
             clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
             graphFieldDataByFieldName.set(fieldName, this.fieldDataToGraphFieldData(fieldData));
@@ -2292,7 +2391,6 @@ export class FederationFactory {
           } else {
             this.errors.push(...nodeResult.errors);
           }
-          const isQuery = isNodeQuery(parentTypeName);
           if (isNodeDataInaccessible(parentDefinitionData)) {
             if (isQuery) {
               this.errors.push(inaccessibleQueryRootTypeError);

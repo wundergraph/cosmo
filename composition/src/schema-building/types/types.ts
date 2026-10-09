@@ -82,8 +82,16 @@ export type ExternalFieldData = {
   isUnconditionallyProvided: boolean;
 };
 
+export type CacheTagData = {
+  // The canonical form of each valid format.
+  formats: Set<string>;
+  // The "$args" references of those formats.
+  references: Set<string>;
+};
+
 export type FieldData = {
   argumentDataByName: Map<ArgumentName, InputValueData>;
+  cacheTagDataBySubgraphName: Map<SubgraphName, CacheTagData>;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<SubgraphName, ExternalFieldData>;
