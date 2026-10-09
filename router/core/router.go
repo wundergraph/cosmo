@@ -876,7 +876,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, errors.New("config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	cfg, err := r.getInitialExecutionConfig(ctx)
+	cfg, err := r.getExecutionConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
@@ -1774,7 +1774,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("execution config fetcher not provided. Please provide a static execution config instead")
 	}
 
-	cfg, err := r.getInitialExecutionConfig(ctx)
+	cfg, err := r.getExecutionConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}

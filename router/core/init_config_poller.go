@@ -227,8 +227,8 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 	return &splitPoller, nil
 }
 
-// getInitialExecutionConfig uses the last accepted config if the fetched config is malformed.
-func (r *Router) getInitialExecutionConfig(ctx context.Context) (*routerconfig.Response, error) {
+// getExecutionConfig uses the last accepted config if the fetched config is malformed.
+func (r *Router) getExecutionConfig(ctx context.Context) (*routerconfig.Response, error) {
 	response, err := r.configPoller.GetRouterConfig(ctx)
 	if !errors.Is(err, errs.ErrMalformedExecutionConfig) {
 		return response, err
