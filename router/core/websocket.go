@@ -1,12 +1,14 @@
 package core
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -158,19 +160,66 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 type wsConnectionWrapper struct {
 	conn         net.Conn
 	mu           sync.Mutex
-	readTimeout  time.Duration
 	writeTimeout time.Duration
+	reader       wsReader
 }
 
-func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
-	return &wsConnectionWrapper{
+type wsReader interface {
+	MarkInitialized()
+	ReadJSON(any) error
+	Close() error
+}
+
+type wsNetPollReader struct {
+	conn        net.Conn
+	readTimeout time.Duration
+}
+
+// wsGoroutineReader owns read-ahead, deadlines and cancellation for blocking reads.
+type wsGoroutineReader struct {
+	conn                       net.Conn
+	readTimeout                time.Duration
+	handleControlFrame         func(ws.Header, io.Reader) error
+	reader                     *bufio.Reader
+	ctx                        context.Context
+	unregisterReadCancellation func() bool
+	initialized                bool
+}
+
+func newWSConnectionWrapper(ctx context.Context, conn net.Conn, readTimeout, writeTimeout time.Duration, useNetPoll bool) *wsConnectionWrapper {
+	c := &wsConnectionWrapper{
 		conn:         conn,
-		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 	}
+	if useNetPoll {
+		c.reader = &wsNetPollReader{conn: conn, readTimeout: readTimeout}
+	} else {
+		c.reader = &wsGoroutineReader{
+			conn:               conn,
+			readTimeout:        readTimeout,
+			handleControlFrame: c.handleControlFrame,
+			reader:             bufio.NewReaderSize(conn, ws.MaxHeaderSize),
+			ctx:                ctx,
+			unregisterReadCancellation: context.AfterFunc(ctx, func() {
+				_ = conn.SetReadDeadline(time.Now())
+			}),
+		}
+	}
+	return c
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
+	return c.reader.ReadJSON(v)
+}
+
+// Netpoll reads use the same deadline policy before and after initialization.
+func (c *wsNetPollReader) MarkInitialized() {}
+
+func (c *wsNetPollReader) Close() error {
+	return c.conn.Close()
+}
+
+func (c *wsNetPollReader) ReadJSON(v any) error {
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 		if err != nil {
@@ -184,6 +233,103 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 	}
 
 	return json.Unmarshal(text, v)
+}
+
+func (c *wsGoroutineReader) MarkInitialized() {
+	c.initialized = true
+}
+
+func (c *wsGoroutineReader) Close() error {
+	c.unregisterReadCancellation()
+	return c.conn.Close()
+}
+
+func (c *wsGoroutineReader) ReadJSON(v any) error {
+	// Initialization has one deadline for receiving connection_init, including
+	// any preceding control or binary frames and the entire initial message.
+	var initDeadline time.Time
+	if !c.initialized && c.readTimeout > 0 {
+		initDeadline = time.Now().Add(c.readTimeout)
+	}
+	controlHandler := c.handleControlFrame
+	reader := wsutil.Reader{
+		Source:         c.reader,
+		State:          ws.StateServerSide,
+		CheckUTF8:      true,
+		OnIntermediate: controlHandler,
+	}
+	for {
+		if err := c.setReadDeadline(true, initDeadline); err != nil {
+			return err
+		}
+		if _, err := c.reader.Peek(1); err != nil {
+			return err
+		}
+		// After initialization, time the message from its first byte.
+		if err := c.setReadDeadline(false, initDeadline); err != nil {
+			return err
+		}
+		header, err := reader.NextFrame()
+		if err != nil {
+			return err
+		}
+		if header.OpCode.IsControl() {
+			if err := controlHandler(header, &reader); err != nil {
+				return err
+			}
+			continue
+		}
+		if header.OpCode != ws.OpText {
+			if err := reader.Discard(); err != nil {
+				return err
+			}
+			continue
+		}
+		text, err := io.ReadAll(&reader)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(text, v)
+	}
+}
+
+// Before initialization, all reads share the initial message's deadline.
+func (c *wsGoroutineReader) setReadDeadline(idle bool, initDeadline time.Time) error {
+	if c.readTimeout > 0 {
+		var deadline time.Time
+		if !c.initialized {
+			deadline = initDeadline
+		} else if !idle {
+			deadline = time.Now().Add(c.readTimeout)
+		}
+		if err := c.conn.SetReadDeadline(deadline); err != nil {
+			return err
+		}
+	}
+	// Check after setting the deadline so cancellation cannot be overwritten.
+	return c.ctx.Err()
+}
+
+// Read the bounded control payload before taking the write lock. Holding that
+// lock during a read would stall subscription delivery, including other clients
+// sharing a trigger. The write timeout starts only when the response is ready.
+func (c *wsConnectionWrapper) handleControlFrame(header ws.Header, reader io.Reader) error {
+	var payload [ws.MaxControlFramePayloadSize]byte
+	data := payload[:header.Length] // wsutil.Reader already validated the header.
+	if _, err := io.ReadFull(reader, data); err != nil {
+		return err
+	}
+	if header.OpCode == ws.OpPong {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.writeTimeout > 0 {
+		if err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout)); err != nil {
+			return err
+		}
+	}
+	return wsutil.ControlFrameHandler(c.conn, ws.StateServerSide)(header, bytes.NewReader(data))
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
@@ -233,9 +379,9 @@ func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string)
 }
 
 func (c *wsConnectionWrapper) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.conn.Close()
+	// Do not wait for the write lock: closing the transport must interrupt
+	// blocked writes even when write timeouts are disabled.
+	return c.reader.Close()
 }
 
 type WebsocketHandler struct {
@@ -330,11 +476,11 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout)
+	conn := newWSConnectionWrapper(h.ctx, c, h.readTimeout, h.writeTimeout, h.netPoll != nil)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
-		_ = c.Close()
+		_ = conn.Close()
 		return
 	}
 
@@ -344,7 +490,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	executionOptions, traceOptions, err := h.preHandler.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
-		_ = c.Close()
+		_ = conn.Close()
 		return
 	}
 
@@ -388,7 +534,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
 
-		handler.Close(false, wsproto.CloseKindOf(err))
+		handler.Close(false, h.closeKind(err))
 		return
 	}
 
@@ -439,6 +585,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
+	conn.reader.MarkInitialized()
+
 	// Only when epoll/kqueue is available. On Windows, epoll is not available
 	if h.netPoll != nil {
 		err = h.addConnection(c, handler)
@@ -449,42 +597,40 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Handle messages sync when net poller implementation is not available
-
+	// Handle messages on a goroutine when the manual poller is not available.
 	go h.handleConnectionSync(handler)
 }
 
-func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHandler) {
-	h.stats.ConnectionsInc()
-	defer h.stats.ConnectionsDec()
-	serverDone := h.ctx.Done()
+func (h *WebsocketHandler) closeKind(err error) wsproto.CloseKind {
+	if h.netPoll == nil && h.ctx.Err() != nil {
+		return wsproto.CloseKindGoingAway
+	}
+	return wsproto.CloseKindOf(err)
+}
 
-	for {
-		select {
-		case <-serverDone:
-			handler.Close(true, wsproto.CloseKindGoingAway)
-			return
-		default:
-			msg, err := handler.protocol.ReadMessage()
-			if err != nil {
-				if isReadTimeout(err) {
-					continue
-				}
-				h.logger.Debug("Client closed connection", zap.Error(err))
-				handler.Close(true, wsproto.CloseKindOf(err))
-				return
-			}
-			err = h.HandleMessage(handler, msg)
-			if err != nil {
-				h.logger.Debug("Handling websocket message", zap.Error(err))
-				var closeErr *wsproto.CloseError
-				if errors.As(err, &closeErr) {
-					handler.Close(true, closeErr.Kind)
-					return
-				}
+func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHandler) (terminalErr error) {
+	h.stats.ConnectionsInc()
+	defer func() {
+		// Close unsubscribes; count the connection as gone first, so it never
+		// outlives its subscriptions in the engine statistics.
+		h.stats.ConnectionsDec()
+		handler.Close(true, h.closeKind(terminalErr))
+	}()
+
+	for h.ctx.Err() == nil {
+		msg, err := handler.protocol.ReadMessage()
+		if err != nil {
+			h.logger.Debug("Client closed connection", zap.Error(err))
+			return err
+		}
+		if err := h.HandleMessage(handler, msg); err != nil {
+			h.logger.Debug("Handling websocket message", zap.Error(err))
+			if _, ok := errors.AsType[*wsproto.CloseError](err); ok {
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnectionHandler) error {
