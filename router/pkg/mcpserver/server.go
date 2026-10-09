@@ -84,6 +84,8 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
+	// OmitToolTitlePrefix removes the "Execute operation " prefix from MCP tool titles
+	OmitToolTitlePrefix bool
 	// OutputSchemaEnabled declares an output schema on each operation tool and
 	// adds structured content to successful tool results (MCP structured tool
 	// output). Increases tools/list and result payload sizes.
@@ -131,6 +133,7 @@ type GraphQLSchemaServer struct {
 	enableArbitraryOperations bool
 	exposeSchema              bool
 	omitToolNamePrefix        bool
+	omitToolTitlePrefix       bool
 	outputSchemaEnabled       bool
 	stateless                 bool
 	operationsManager         *OperationsManager
@@ -399,6 +402,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
+		omitToolTitlePrefix:       options.OmitToolTitlePrefix,
 		outputSchemaEnabled:       options.OutputSchemaEnabled,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
@@ -505,6 +509,13 @@ func WithStateless(stateless bool) func(*Options) {
 func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	return func(o *Options) {
 		o.OmitToolNamePrefix = omitToolNamePrefix
+	}
+}
+
+// WithOmitToolTitlePrefix sets the omit tool title prefix option
+func WithOmitToolTitlePrefix(omitToolTitlePrefix bool) func(*Options) {
+	return func(o *Options) {
+		o.OmitToolTitlePrefix = omitToolTitlePrefix
 	}
 }
 
@@ -850,7 +861,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		}
 
 		var toolTitle string
-		if s.omitToolNamePrefix {
+		if s.omitToolTitlePrefix {
 			toolTitle = op.Name
 		} else {
 			toolTitle = fmt.Sprintf("Execute operation %s", op.Name)

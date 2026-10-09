@@ -98,9 +98,9 @@ func TestDiscover(t *testing.T) {
 	})
 }
 
-func TestToolTitle_MirrorsNamePrefixState(t *testing.T) {
-	t.Run("prefixed (default): title keeps the descriptive form", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(false))
+func TestToolTitle_OmitPrefixOption(t *testing.T) {
+	t.Run("default: title and name keep prefix", func(t *testing.T) {
+		cs := newTestSession(t, WithOmitToolNamePrefix(false), WithOmitToolTitlePrefix(false))
 
 		result, err := cs.ListTools(t.Context(), nil)
 		require.NoError(t, err)
@@ -110,8 +110,30 @@ func TestToolTitle_MirrorsNamePrefixState(t *testing.T) {
 		assert.Equal(t, "Execute operation ListEmployees", tool.Annotations.Title)
 	})
 
-	t.Run("omitted: title drops the same words Name drops", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(true))
+	t.Run("omit title prefix only: title has no prefix, name retains prefix", func(t *testing.T) {
+		cs := newTestSession(t, WithOmitToolNamePrefix(false), WithOmitToolTitlePrefix(true))
+
+		result, err := cs.ListTools(t.Context(), nil)
+		require.NoError(t, err)
+
+		tool := findTool(t, result.Tools, "execute_operation_list_employees")
+		require.NotNil(t, tool.Annotations)
+		assert.Equal(t, "ListEmployees", tool.Annotations.Title)
+	})
+
+	t.Run("omit name prefix only: name has no prefix, title retains prefix", func(t *testing.T) {
+		cs := newTestSession(t, WithOmitToolNamePrefix(true), WithOmitToolTitlePrefix(false))
+
+		result, err := cs.ListTools(t.Context(), nil)
+		require.NoError(t, err)
+
+		tool := findTool(t, result.Tools, "list_employees")
+		require.NotNil(t, tool.Annotations)
+		assert.Equal(t, "Execute operation ListEmployees", tool.Annotations.Title)
+	})
+
+	t.Run("both enabled: name and title drop prefix", func(t *testing.T) {
+		cs := newTestSession(t, WithOmitToolNamePrefix(true), WithOmitToolTitlePrefix(true))
 
 		result, err := cs.ListTools(t.Context(), nil)
 		require.NoError(t, err)
