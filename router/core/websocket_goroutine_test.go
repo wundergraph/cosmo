@@ -281,8 +281,10 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 					conn.reader.MarkInitialized()
 				}
 				result := make(chan error, 1)
-				read := func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }
-				go read()
+				go func() {
+					var msg json.RawMessage
+					result <- conn.ReadJSON(&msg)
+				}()
 				_, err := client.Write(clientFrame(tc.op, true, `{}`))
 				require.NoError(t, err)
 
@@ -296,7 +298,10 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 					require.NoError(t, <-result)
 
 					conn.reader.MarkInitialized()
-					go read()
+					go func() {
+						var msg json.RawMessage
+						result <- conn.ReadJSON(&msg)
+					}()
 				}
 
 				// Both a new ReadJSON call and its control/binary frame loop
