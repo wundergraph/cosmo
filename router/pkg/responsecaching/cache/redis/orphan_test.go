@@ -20,85 +20,28 @@ func TestRedisCacheOrphanAttempts(t *testing.T) {
 	const tag = "subgraph:accounts"
 	item := enginecache.Item{Key: "v1:a", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 
-	// B's prune uses B's clock against A's scores.
-	for _, skew := range []time.Duration{tagIndexPruneGrace - time.Second, tagIndexPruneGrace + 2*time.Minute} {
-		t.Run(fmt.Sprintf("another writer %s ahead prunes a live member", skew), func(t *testing.T) {
-			t.Parallel()
-			if skew > tagIndexPruneGrace {
-				t.Skip("known gap: writer clock skew past tagIndexPruneGrace")
-			}
-			mr := miniredis.RunT(t)
-			a := newTestRedisCacheOn(t, mr)
-			b := newTestRedisCacheOn(t, mr)
-			require.NoError(t, a.SetMany(t.Context(), []enginecache.Item{item}))
-
-			// A minute left.
-			elapsed := item.TTL - time.Minute
-			mr.FastForward(elapsed)
-			advance(a, elapsed)
-			advance(b, elapsed+skew)
-			other := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
-			require.NoError(t, b.SetMany(t.Context(), []enginecache.Item{other}))
-
-			requireNoDangling(t, mr, item)
-			requireInvalidated(t, mr, a, item)
-		})
-	}
-
-	// Entry expires at A's absolute time, tag set after a relative TTL.
-	for _, skew := range []time.Duration{tagIndexPruneGrace - time.Minute, tagIndexPruneGrace + time.Minute} {
-		t.Run(fmt.Sprintf("a writer %s ahead outlives its tag set", skew), func(t *testing.T) {
-			t.Parallel()
-			if skew > tagIndexPruneGrace {
-				t.Skip("known gap: writer clock skew past tagIndexPruneGrace")
-			}
-			mr := miniredis.RunT(t)
-			a := newTestRedisCacheOn(t, mr)
-			advance(a, skew)
-			require.NoError(t, a.SetMany(t.Context(), []enginecache.Item{item}))
-
-			mr.FastForward(tagLifetime(item) + time.Second)
-			requireNoDangling(t, mr, item)
-		})
-	}
-
-	// Eviction or a failover drops index state the write confirmed.
-	lost := map[string]func(t *testing.T, mr *miniredis.Miniredis){
-		"tag set": func(t *testing.T, mr *miniredis.Miniredis) {
-			mr.Del(tagIndexKey(tag))
-		},
-		"member": func(t *testing.T, mr *miniredis.Miniredis) {
-			_, err := mr.ZRem(tagIndexKey(tag), item.Key)
-			require.NoError(t, err)
-		},
-	}
-	for name, lose := range lost {
-		t.Run("a confirmed write whose "+name+" is lost", func(t *testing.T) {
-			t.Parallel()
-			t.Skip("known gap: index lost to eviction or failover")
-			mr := miniredis.RunT(t)
-			c := newTestRedisCacheOn(t, mr)
-			require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-
-			lose(t, mr)
-			requireNoDangling(t, mr, item)
-		})
-	}
-
-	t.Run("a member lost between lift and extend", func(t *testing.T) {
+	t.Run("another write's prune keeps a member whose entry is live", func(t *testing.T) {
 		t.Parallel()
-		t.Skip("known gap: index lost to eviction or failover")
 		mr := miniredis.RunT(t)
-		split := &splitPipeline{at: splitAt{pipeline: 2}}
-		c := newTestRedisCacheOn(t, mr, split)
-		split.fn = func() {
-			_, err := mr.ZRem(tagIndexKey(tag), item.Key)
-			require.NoError(t, err)
-		}
+		c := newTestRedisCacheOn(t, mr)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
-		split.requireFired(t)
+
+		// A minute left.
+		elapse(t, mr, item.TTL-time.Minute)
+		other := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{other}))
 
 		requireNoDangling(t, mr, item)
+		requireInvalidated(t, mr, c, item)
+	})
+
+	t.Run("an entry dies before its tag set", func(t *testing.T) {
+		t.Parallel()
+		mr := miniredis.RunT(t)
+		c := newTestRedisCacheOn(t, mr)
+		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+
+		require.Greater(t, mr.TTL(tagIndexKey(tag)), mr.TTL(entryKey(item.Key)))
 	})
 
 	// TTL + grace overflows to a negative tag lifetime.
@@ -129,7 +72,7 @@ func TestRedisCacheOrphanAttempts(t *testing.T) {
 		requireInvalidated(t, mr, c, last)
 	})
 
-	// Random interleavings inside a write, clocks skewed within the grace.
+	// Random interleavings inside a write.
 	for seed := range uint64(200) {
 		t.Run(fmt.Sprintf("interleaving seed %d", seed), func(t *testing.T) {
 			t.Parallel()
@@ -142,8 +85,6 @@ func fuzzInterleaving(t *testing.T, seed uint64) {
 	r := rand.New(rand.NewPCG(seed, seed))
 	tags := []string{"x", "y"}
 	ttls := []time.Duration{5 * time.Second, 30 * time.Second, time.Hour}
-	maxSkew := tagIndexPruneGrace - time.Minute
-	skew := func() time.Duration { return time.Duration(r.Int64N(int64(2*maxSkew))) - maxSkew }
 
 	// Values are unique, so the stored entry names the item it came from.
 	written := map[string]enginecache.Item{}
@@ -170,9 +111,7 @@ func fuzzInterleaving(t *testing.T, seed uint64) {
 	}
 	split := &splitPipeline{at: at}
 	writer := newTestRedisCacheOn(t, mr, split)
-	advance(writer, skew())
 	other := newTestRedisCacheOn(t, mr)
-	advance(other, skew())
 	walker := newTestRedisCacheOn(t, mr)
 
 	ctx := context.Background()

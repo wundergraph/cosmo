@@ -116,8 +116,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			item("v1:a", "declared:accounts:users"),
 		}))
-		mr.FastForward(2 * time.Minute)
-		advance(c, 2*time.Minute)
+		elapse(t, mr, 2*time.Minute)
 
 		removed, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
@@ -128,7 +127,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		t.Parallel()
 		c, mr := newTestRedisCache(t)
 
-		expireAt := float64(c.now().Add(time.Minute).UnixMilli())
+		expireAt := float64(redisNow(t, mr).Add(time.Minute).UnixMilli())
 		_, err := mr.ZAdd(tagIndexKey("subgraph:accounts"), expireAt, "v1:a")
 		require.NoError(t, err)
 

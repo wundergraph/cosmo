@@ -62,10 +62,7 @@ func TestRedisCacheFinishOnlyTouchesOwnWrite(t *testing.T) {
 		})
 
 		// Past short's TTL and the prune grace; a write to the tag prunes it.
-		later := short.TTL + tagIndexPruneGrace + time.Second
-		mr.FastForward(later)
-		advance(writer, later)
-		advance(other, later)
+		elapse(t, mr, short.TTL+tagIndexPruneGrace+time.Second)
 		another := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{another}))
 
@@ -134,10 +131,7 @@ func TestRedisCacheLateSetAfterShorterRewrite(t *testing.T) {
 		mr, writer, other := setup(t)
 		requireNoDangling(t, mr, long)
 
-		later := short.TTL + tagIndexPruneGrace + time.Second
-		mr.FastForward(later)
-		advance(writer, later)
-		advance(other, later)
+		elapse(t, mr, short.TTL+tagIndexPruneGrace+time.Second)
 		another := enginecache.Item{Key: "v1:b", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{another}))
 

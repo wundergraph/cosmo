@@ -33,11 +33,10 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		"expired entry": func(t *testing.T, mr *miniredis.Miniredis, writer, walker *RedisCache) {
 			require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 			mr.Del(entryKey(item.Key))
-			advance(writer, 2*time.Minute)
-			advance(walker, 2*time.Minute)
+			elapse(t, mr, 2*time.Minute)
 		},
 		"entry still landing": func(t *testing.T, mr *miniredis.Miniredis, writer, walker *RedisCache) {
-			expireAt := float64(writer.now().Add(time.Minute).UnixMilli())
+			expireAt := float64(redisNow(t, mr).Add(time.Minute).UnixMilli())
 			for _, tag := range item.Tags {
 				_, err := mr.ZAdd(tagIndexKey(tag), expireAt, item.Key)
 				require.NoError(t, err)
@@ -71,28 +70,24 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		}
 	}
 
-	// C: a walk lands between the writer's steps, from a router whose clock
-	// runs ahead of the writer's by more than the TTL.
-	for _, skew := range []time.Duration{0, 2 * time.Minute} {
-		for _, at := range []splitAt{{pipeline: 0, before: "set"}, {pipeline: 1}} {
-			t.Run(fmt.Sprintf("walk inside write at pipeline %d before %q, skew %s", at.pipeline, at.before, skew), func(t *testing.T) {
-				t.Parallel()
-				mr := miniredis.RunT(t)
-				split := &splitPipeline{at: at}
-				writer := newTestRedisCacheOn(t, mr, split)
-				walker := newTestRedisCacheOn(t, mr)
-				advance(walker, skew)
+	// C: a walk lands between the writer's steps.
+	for _, at := range []splitAt{{pipeline: 0, before: "set"}, {pipeline: 1}} {
+		t.Run(fmt.Sprintf("walk inside write at pipeline %d before %q", at.pipeline, at.before), func(t *testing.T) {
+			t.Parallel()
+			mr := miniredis.RunT(t)
+			split := &splitPipeline{at: at}
+			writer := newTestRedisCacheOn(t, mr, split)
+			walker := newTestRedisCacheOn(t, mr)
 
-				split.fn = func() {
-					_, err := walker.InvalidateByTags(context.Background(), []string{tag})
-					require.NoError(t, err)
-				}
-				require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
-				split.requireFired(t)
+			split.fn = func() {
+				_, err := walker.InvalidateByTags(context.Background(), []string{tag})
+				require.NoError(t, err)
+			}
+			require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
+			split.requireFired(t)
 
-				requireNoDangling(t, mr, item)
-			})
-		}
+			requireNoDangling(t, mr, item)
+		})
 	}
 
 	// Rank paging (LIMIT offset = members left behind) skips one unread member
@@ -132,7 +127,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 			// Entry-less members, sooner expiry and first by name: page one reads
 			// them and, having nothing to unlink, rank paging leaves them in place.
-			soon := float64(c.now().Add(30 * time.Second).UnixMilli())
+			soon := float64(redisNow(t, mr).Add(30 * time.Second).UnixMilli())
 			read := make([]string, 0, 16)
 			for i := range 16 {
 				member := fmt.Sprintf("v0:read:%02d", i)
@@ -163,13 +158,10 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 	}
 
 	t.Run("an UNLINK that fails leaves the entry reachable", func(t *testing.T) {
-		// D: the writer's clock runs behind, so its live entry looks expired to
-		// the walker.
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
 		walker := newTestRedisCacheOn(t, mr, &failCommands{name: "unlink"})
-		advance(walker, 2*time.Minute)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 
@@ -272,7 +264,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
 		require.NoError(t, err)
 		require.Negative(t, score)
-		require.InDelta(t, -float64(c.now().UnixMilli()), score, float64(time.Second.Milliseconds()), "marked with the walk's time")
+		require.InDelta(t, -float64(redisNow(t, mr).UnixMilli()), score, float64(time.Second.Milliseconds()), "marked with the walk's time")
 	})
 
 	t.Run("a mark is swept after its entry is deleted again", func(t *testing.T) {
@@ -366,9 +358,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		short.TTL = 5 * time.Second
 		_ = lost.SetMany(t.Context(), []enginecache.Item{short})
 
-		later := short.TTL + tagIndexPruneGrace + time.Second
-		mr.FastForward(later)
-		advance(writer, later)
+		elapse(t, mr, short.TTL+tagIndexPruneGrace+time.Second)
 		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{other}))
 		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
@@ -398,9 +388,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		short.TTL = 5 * time.Second
 		_ = lost.SetMany(t.Context(), []enginecache.Item{short})
 
-		later := short.TTL + tagIndexPruneGrace + time.Second
-		mr.FastForward(later)
-		advance(writer, later)
+		elapse(t, mr, short.TTL+tagIndexPruneGrace+time.Second)
 		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Hour, Tags: []string{tag}}
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{other}))
 		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
@@ -470,7 +458,6 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		leaveMarks(t, mr, tag)
 
 		other := enginecache.Item{Key: "v1:other", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{tag}}
-		advance(c, time.Hour)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{other}))
 		require.Contains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "marks are the sweep's to remove")
 	})
@@ -493,13 +480,11 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
-		advance(writer, -30*time.Second)
 
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
 		require.NoError(t, err)
-		require.InDelta(t, time.Until(time.UnixMilli(int64(score))), mr.TTL(entryKey(item.Key)), float64(time.Second))
-		require.Less(t, mr.TTL(entryKey(item.Key)), item.TTL-20*time.Second)
+		require.InDelta(t, time.UnixMilli(int64(score)).Sub(redisNow(t, mr)), mr.TTL(entryKey(item.Key)), float64(time.Second))
 	})
 
 	t.Run("an out of order write doesn't lower a member's score", func(t *testing.T) {

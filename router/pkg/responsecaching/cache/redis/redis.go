@@ -28,7 +28,6 @@ type RedisCache struct {
 	// the way out, so callers only ever see the keys they asked with. An empty
 	// prefix is valid and means the keys are used as they are.
 	prefix string
-	now    func() time.Time
 }
 
 var _ caching.Cache = (*RedisCache)(nil)
@@ -61,7 +60,6 @@ func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix str
 	return &RedisCache{
 		client: client,
 		prefix: prefix,
-		now:    time.Now,
 	}, nil
 }
 

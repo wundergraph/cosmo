@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
@@ -204,11 +206,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		// Both clocks, because a member is only dead once redis has dropped the
-		// entry and this router agrees enough time has passed.
-		elapsed := time.Minute + tagIndexPruneGrace + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -228,11 +226,9 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:recent", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		// Expired by this router's clock but only just: a redis running a minute
-		// behind would still be serving it.
-		elapsed := time.Minute + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		// Expired, but only just: a node whose clock runs behind could still be
+		// serving it.
+		elapse(t, mr, time.Minute+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -251,15 +247,12 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{keeper("declared:users"), item}))
 
 		// Re-cached a second in, which scores the member a second further out.
-		mr.FastForward(time.Second)
-		advance(c, time.Second)
+		elapse(t, mr, time.Second)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
 		// Far enough that the first score is past the cutoff and the second is
 		// not, so only the re-scoring keeps the member.
-		gap := time.Minute + tagIndexPruneGrace + 500*time.Millisecond - time.Second
-		mr.FastForward(gap)
-		advance(c, gap)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+500*time.Millisecond-time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -270,7 +263,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.Contains(t, members, "v1:a")
 
 		// Past the second score too, and it goes.
-		advance(c, time.Second)
+		elapse(t, mr, time.Second)
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
@@ -290,9 +283,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:gone", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users", "declared:untouched"}},
 		}))
 
-		elapsed := time.Minute + tagIndexPruneGrace + time.Second
-		mr.FastForward(elapsed)
-		advance(c, elapsed)
+		elapse(t, mr, time.Minute+tagIndexPruneGrace+time.Second)
 
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
@@ -310,9 +301,19 @@ func TestRedisCacheTagIndex(t *testing.T) {
 	})
 }
 
-// advance moves the clock the cache scores index members from forward by d,
-// leaving redis' own clock to the test.
-func advance(c *RedisCache, d time.Duration) {
-	previous := c.now
-	c.now = func() time.Time { return previous().Add(d) }
+// elapse moves the server's clock and its TTLs forward by d.
+func elapse(t *testing.T, mr *miniredis.Miniredis, d time.Duration) {
+	t.Helper()
+	mr.SetTime(redisNow(t, mr).Add(d))
+	mr.FastForward(d)
+}
+
+// redisNow is the server's clock, which scores and prunes go by.
+func redisNow(t *testing.T, mr *miniredis.Miniredis) time.Time {
+	t.Helper()
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer func() { _ = client.Close() }()
+	now, err := client.Time(t.Context()).Result()
+	require.NoError(t, err)
+	return now
 }
