@@ -22,7 +22,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { createBlobStoragePath, isValidPersistedOperationId } from './utils.js';
+import { createBlobStoragePath, formatPersistedOperationIdForError, isValidPersistedOperationId } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
@@ -63,13 +63,12 @@ export function publishPersistedOperations(
       };
     }
 
-    for (const operation of req.operations) {
+    for (const [index, operation] of req.operations.entries()) {
       if (!isValidPersistedOperationId(operation.id)) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details:
-              'Operation ID must contain 1–250 printable ASCII characters, excluding forward slash and backslash',
+            details: `Invalid operation ID ${formatPersistedOperationIdForError(operation.id)} at index ${index}: must contain 1–250 printable ASCII characters, excluding forward slash and backslash`,
           },
           operations: [],
         };

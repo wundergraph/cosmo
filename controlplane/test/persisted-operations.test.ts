@@ -107,9 +107,20 @@ describe('Persisted operations', (ctx) => {
         });
 
       const initialKeys = blobStorage.keys().sort();
-      for (const id of ['', 'a'.repeat(251), '/', '\\', '\n', 'é']) {
-        const result = await publish(['valid', id]);
+      for (const [id, formattedId] of [
+        ['', '""'],
+        ['a'.repeat(251), `"${'a'.repeat(251)}"`],
+        ['a'.repeat(1000), `"${'a'.repeat(251)}"… (1000 characters)`],
+        ['/', '"/"'],
+        ['\\', '"\\\\"'],
+        ['\n', '"\\n"'],
+        ['é', '"é"'],
+      ]) {
+        const result = await publish(['valid', id, 'also/invalid']);
         expect(result.response?.code).toBe(EnumStatusCode.ERR);
+        expect(result.response?.details).toBe(
+          `Invalid operation ID ${formattedId} at index 1: must contain 1–250 printable ASCII characters, excluding forward slash and backslash`,
+        );
         expect(result.operations).toEqual([]);
       }
       expect(blobStorage.keys().sort()).toEqual(initialKeys);
