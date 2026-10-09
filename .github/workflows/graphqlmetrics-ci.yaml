@@ -5,6 +5,7 @@ on:
       - "graphqlmetrics/**/*"
       - ".golangci.yml"
       - ".golangci-lint-version"
+      - "scripts/golangci-lint.sh"
       - ".github/actions/go-linter/**"
       - ".github/workflows/graphqlmetrics-ci.yaml"
 
