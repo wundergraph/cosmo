@@ -65,7 +65,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -95,7 +95,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -122,7 +122,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -635,7 +635,7 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 			require.NoError(t, err)
 
 			tp := sdktrace.NewTracerProvider()
-			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false)
+			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
 
 			ctx, _ := setupTestContext(t, tp)
 			client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
@@ -697,7 +697,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, cacheEnabled)
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, cacheEnabled, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 		hooks.OnFinished(ctx, ds, info)
@@ -846,7 +846,7 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		})
 
 		tp := sdktrace.NewTracerProvider()
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, accessLogger, tp, nil, nil, nil, false, nil, true)
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, accessLogger, tp, nil, nil, nil, false, nil, true, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 		// No request is sent for a hit.
