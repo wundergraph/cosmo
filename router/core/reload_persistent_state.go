@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -25,44 +26,52 @@ type executionConfigGraphScope struct {
 	federatedGraphID string
 }
 
-func (s *ReloadPersistentState) graphScopeFromToken(token string) *executionConfigGraphScope {
+func graphScopeFromToken(token string) (*executionConfigGraphScope, error) {
 	// Static and demo configurations can run without a graph token.
 	if token == "" {
-		return nil
+		return nil, nil
 	}
 
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
-		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
-		return nil
+		return nil, err
 	}
 	if claims.OrganizationID == "" || claims.FederatedGraphID == "" {
-		s.logger.Warn("Graph token has an empty organization or federated graph ID; execution config fallback is unavailable")
-		return nil
+		return nil, errors.New("graph token has an empty organization or federated graph ID")
 	}
 	return &executionConfigGraphScope{
 		organizationID:   claims.OrganizationID,
 		federatedGraphID: claims.FederatedGraphID,
-	}
+	}, nil
 }
 
 // acceptExecutionConfig records an execution config only after the graph
 // server has been built and swapped successfully. The clone prevents a later
 // candidate assembly from mutating the accepted fallback in place.
 func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfig, graphToken string) {
+	scope, err := graphScopeFromToken(graphToken)
+	if err != nil {
+		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
+	}
+
 	s.executionConfigMu.Lock()
 	defer s.executionConfigMu.Unlock()
 	s.lastValidExecutionConfig = proto.Clone(config).(*nodev1.RouterConfig)
-	s.lastExecutionConfigGraphScope = s.graphScopeFromToken(graphToken)
+	s.lastExecutionConfigGraphScope = scope
 }
 
 // previousExecutionConfig returns an isolated copy of the last execution
 // config accepted by any router instance owned by the supervisor.
 func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *nodev1.RouterConfig {
+	scope, err := graphScopeFromToken(graphToken)
+	if err != nil {
+		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
+		return nil
+	}
+
 	s.executionConfigMu.RLock()
 	defer s.executionConfigMu.RUnlock()
 
-	scope := s.graphScopeFromToken(graphToken)
 	if scope == nil || s.lastExecutionConfigGraphScope == nil || *s.lastExecutionConfigGraphScope != *scope {
 		return nil
 	}
