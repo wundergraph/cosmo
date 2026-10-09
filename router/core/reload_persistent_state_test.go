@@ -34,13 +34,10 @@ func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
 	assert.Nil(t, state.previousExecutionConfig(token))
 	accepted := &nodev1.RouterConfig{Version: "v1"}
 	state.acceptExecutionConfig(accepted, token)
-	accepted.Version = "mutated-input"
 
+	// Feature claims do not change the graph scope.
 	fallback := state.previousExecutionConfig(testGraphToken(t, "org", "graph", "split-config-loading"))
-	require.NotNil(t, fallback)
-	assert.Equal(t, "v1", fallback.Version)
-	fallback.Version = "mutated-output"
-	assert.Equal(t, "v1", state.previousExecutionConfig(token).GetVersion())
+	assert.Same(t, accepted, fallback)
 
 	otherTokens := []string{
 		"",

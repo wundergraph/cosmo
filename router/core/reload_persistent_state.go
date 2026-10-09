@@ -8,7 +8,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 )
 
 // ReloadPersistentState This file describes any configuration which should persist or be shared across router restarts
@@ -62,8 +61,9 @@ func (s *ReloadPersistentState) graphScope(graphToken string) (executionConfigGr
 }
 
 // acceptExecutionConfig records an execution config only after the graph
-// server has been built and swapped successfully. The clone prevents a later
-// candidate assembly from mutating the accepted fallback in place.
+// server has been built and swapped successfully. It keeps the config without
+// copying it: newServer builds from a private copy and the pollers never patch
+// a config in place, so the accepted config is not mutated afterwards.
 func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfig, graphToken string) {
 	scope, err := s.graphScope(graphToken)
 
@@ -76,12 +76,12 @@ func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfi
 		s.lastExecutionConfigGraphScope = executionConfigGraphScope{}
 		return
 	}
-	s.lastValidExecutionConfig = proto.Clone(config).(*nodev1.RouterConfig)
+	s.lastValidExecutionConfig = config
 	s.lastExecutionConfigGraphScope = scope
 }
 
-// previousExecutionConfig returns an isolated copy of the last execution
-// config accepted by any router instance owned by the supervisor.
+// previousExecutionConfig returns the last execution config accepted by any
+// router instance owned by the supervisor. Callers must not mutate it.
 func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *nodev1.RouterConfig {
 	scope, err := s.graphScope(graphToken)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *node
 	if s.lastExecutionConfigGraphScope != scope {
 		return nil
 	}
-	return proto.Clone(s.lastValidExecutionConfig).(*nodev1.RouterConfig)
+	return s.lastValidExecutionConfig
 }
 
 func NewReloadPersistentState(logger *zap.Logger) *ReloadPersistentState {
