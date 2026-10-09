@@ -572,6 +572,53 @@ func TestSplitSubscribe_RecoversFromMissingBaseGraph(t *testing.T) {
 	assert.Equal(t, mock.mapperResult, p.knownHashes)
 }
 
+// A missing base graph config is never skipped like a missing feature flag:
+// the poll must not apply a config without its base graph.
+func TestSplitSubscribe_SkipMissingFeatureFlags_DoesNotSkipBaseGraph(t *testing.T) {
+	t.Run("after startup fallback", func(t *testing.T) {
+		mock := &mockSplitFetcher{
+			mapperResult:  map[string]string{"": "hash-base", "ff1": "hash-ff1"},
+			configResults: map[string]*nodev1.RouterConfig{"ff1": makeRouterConfig("split-ff-v1")},
+			configErrors:  map[string]error{"": errs.ErrFileNotFound},
+		}
+		p := newTestPoller(mock)
+		p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+
+		handlerCalled := false
+		pollOnce(p, func(_ *routerconfig.Response) error {
+			handlerCalled = true
+			return nil
+		})
+		assert.False(t, handlerCalled)
+		assert.Nil(t, p.currentConfig)
+		assert.Empty(t, p.knownHashes)
+		assert.Empty(t, p.latestVersion)
+	})
+
+	t.Run("base graph changed", func(t *testing.T) {
+		mock := &mockSplitFetcher{
+			mapperResult: map[string]string{"": "hash-base-v2"},
+			configErrors: map[string]error{"": errs.ErrFileNotFound},
+		}
+		p := newTestPoller(mock)
+		p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+		p.knownHashes = map[string]string{"": "hash-base-v1"}
+		p.currentConfig = makeRouterConfig("v1")
+		p.latestVersion = computeCompositeVersion(p.knownHashes)
+		latestVersion := p.latestVersion
+
+		handlerCalled := false
+		pollOnce(p, func(_ *routerconfig.Response) error {
+			handlerCalled = true
+			return nil
+		})
+		assert.False(t, handlerCalled)
+		assert.Equal(t, "v1", p.currentConfig.GetVersion())
+		assert.Equal(t, map[string]string{"": "hash-base-v1"}, p.knownHashes)
+		assert.Equal(t, latestVersion, p.latestVersion)
+	})
+}
+
 func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {
 	oldBase := makeRouterConfig("v1")
 	newBase := makeRouterConfig("v2")
