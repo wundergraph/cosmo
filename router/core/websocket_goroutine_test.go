@@ -86,7 +86,7 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 
 func TestWebsocketInitializationDeadline(t *testing.T) {
 	t.Parallel()
-	for _, tc := range []struct {
+	cases := []struct {
 		name   string
 		frames []byte
 		pong   bool
@@ -96,7 +96,8 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 		{"binary", clientFrame(ws.OpBinary, true, "ignored"), false},
 		{"fragmented binary", append(clientFrame(ws.OpBinary, false, "ignored"), clientFrame(ws.OpContinuation, true, "ignored")...), false},
 		{"partial initialization", clientFrame(ws.OpText, false, `{"type":"connection_init"`), false},
-	} {
+	}
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
@@ -129,14 +130,15 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 func TestWebsocketPartialMessageTimeout(t *testing.T) {
 	t.Parallel()
 	frame := clientFrame(ws.OpText, true, `{"type":"ping"}`)
-	for _, tc := range []struct {
+	cases := []struct {
 		name string
 		data []byte
 	}{
 		{"header", frame[:1]},
 		{"payload", frame[:len(frame)-1]},
 		{"continuation", clientFrame(ws.OpText, false, `{"type":`)},
-	} {
+	}
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
@@ -255,7 +257,7 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 
 func TestWebsocketIdleAfterTraffic(t *testing.T) {
 	t.Parallel()
-	for _, tc := range []struct {
+	cases := []struct {
 		name         string
 		op           ws.OpCode
 		initializing bool
@@ -265,7 +267,8 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 		{"ping", ws.OpPing, false},
 		{"pong", ws.OpPong, false},
 		{"binary", ws.OpBinary, false},
-	} {
+	}
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
