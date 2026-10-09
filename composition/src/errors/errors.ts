@@ -19,6 +19,7 @@ import {
   type InvalidRepeatedDirectiveErrorParams,
   type InvalidSubValueFieldLinkDirectiveImportErrorParams,
   type invalidVersionLinkDirectiveUrlErrorParams,
+  type ListCacheTagKeyFieldErrorMessageParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type PartiallyDefinedCacheTagReferenceErrorMessageParams,
@@ -26,6 +27,7 @@ import {
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
   type UndefinedCacheTagInputFieldErrorMessageParams,
+  type UndefinedCacheTagKeyFieldErrorMessageParams,
   type UntraversableCacheTagReferenceErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
@@ -2219,8 +2221,8 @@ export function blankCacheTagFormatErrorMessage(): string {
 export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
   return (
     `The "format" argument defines invalid placeholder "{${placeholder}}":` +
-    ` placeholders must be of the form "{$args.<argumentName>}", where a field of an Input Object argument` +
-    ` is referenced by a period-delimited path, e.g. "{$args.filter.category}".`
+    ` placeholders must be of the form "{$args.<path>}" upon a root field or "{$key.<path>}" upon an entity,` +
+    ` where <path> is period-delimited, e.g. "{$args.filter.category}" or "{$key.id}".`
   );
 }
 
@@ -2238,6 +2240,38 @@ export function nonRootFieldCacheTagErrorMessage(): string {
 
 export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string): string {
   return `The "format" argument defines placeholder namespace "$${namespace}", but only "$args" is supported.`;
+}
+
+export function nonResolvableEntityCacheTagErrorMessage(): string {
+  return `The directive upon an Object is valid only if the Object is an entity that defines a resolvable "@key" directive.`;
+}
+
+export function unsupportedEntityCacheTagNamespaceErrorMessage(namespace: string): string {
+  return `The "format" argument defines placeholder namespace "$${namespace}", but only "$key" is supported upon an entity.`;
+}
+
+export function undefinedCacheTagKeyFieldErrorMessage({
+  fieldSets,
+  reference,
+}: UndefinedCacheTagKeyFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$key.${reference}",` +
+    ` but the following resolvable "@key" field set${fieldSets.length > 1 ? 's do' : ' does'}` +
+    ` not select it as a leaf field: "` +
+    fieldSets.join(QUOTATION_JOIN) +
+    `". A "$key" reference must be a leaf field that every resolvable "@key" field set selects.`
+  );
+}
+
+export function listCacheTagKeyFieldErrorMessage({
+  listReference,
+  reference,
+  typeString,
+}: ListCacheTagKeyFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$key.${reference}", but "$key.${listReference}" is of type "${typeString}".` +
+    ` A "$key" reference cannot include a list.`
+  );
 }
 
 export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
