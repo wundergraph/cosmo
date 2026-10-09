@@ -96,6 +96,8 @@ export class OrganizationRepository {
       };
     }
 
+    await this.updateFeature({ organizationId: org.id, id: 'split-config-loading', enabled: true });
+
     return org;
   }
 
