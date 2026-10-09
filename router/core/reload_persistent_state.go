@@ -31,11 +31,6 @@ func (s executionConfigGraphScope) IsEmpty() bool {
 }
 
 func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
-	// Static and demo configurations can run without a graph token.
-	if token == "" {
-		return executionConfigGraphScope{}, nil
-	}
-
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
 		return executionConfigGraphScope{}, err
@@ -77,7 +72,7 @@ func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *node
 	s.executionConfigMu.RLock()
 	defer s.executionConfigMu.RUnlock()
 
-	if scope.IsEmpty() || s.lastExecutionConfigGraphScope != scope {
+	if s.lastExecutionConfigGraphScope != scope {
 		return nil
 	}
 	return proto.Clone(s.lastValidExecutionConfig).(*nodev1.RouterConfig)

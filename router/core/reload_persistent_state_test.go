@@ -51,8 +51,9 @@ func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
 	for _, otherToken := range otherTokens {
 		assert.Nil(t, state.previousExecutionConfig(otherToken))
 	}
-	if assert.Len(t, logs.All(), 1) {
-		assert.Contains(t, logs.All()[0].ContextMap(), "error")
+	assert.Len(t, logs.All(), 2)
+	for _, entry := range logs.All() {
+		assert.Contains(t, entry.ContextMap(), "error")
 	}
 }
 
