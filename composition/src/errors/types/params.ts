@@ -128,6 +128,17 @@ export type UndefinedCacheTagInputFieldErrorMessageParams = {
   reference: string;
 };
 
+export type UndefinedCacheTagKeyFieldErrorMessageParams = {
+  fieldSets: Array<string>;
+  reference: string;
+};
+
+export type ListCacheTagKeyFieldErrorMessageParams = {
+  listReference: string;
+  reference: string;
+  typeString: string;
+};
+
 export type InvalidCacheTagReferenceErrorMessageParams = {
   reference: string;
   typeReference: string;
