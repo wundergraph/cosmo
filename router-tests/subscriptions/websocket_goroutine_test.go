@@ -14,18 +14,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestWebSocketGoroutine(t *testing.T) {
-	cases := []struct {
-		name         string
-		initialized  bool
-		partialFrame bool
-	}{
-		{name: "shutdown closes an uninitialized connection without a read timeout"},
-		{name: "shutdown closes an idle connection without a read timeout", initialized: true},
-		{name: "shutdown closes a connection with an incomplete frame without a read timeout", initialized: true, partialFrame: true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
+	t.Parallel()
+	for _, state := range []string{"initializing", "idle", "partial"} {
+		t.Run(state, func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -34,30 +26,26 @@ func TestWebSocketGoroutine(t *testing.T) {
 				},
 			}, func(t *testing.T, env *testenv.Environment) {
 				var conn *websocket.Conn
-				if !tc.initialized {
+				if state == "initializing" {
 					var (
 						resp *http.Response
 						err  error
 					)
 					conn, resp, err = env.GraphQLWebsocketDialWithRetry(nil, nil)
 					require.NoError(t, err)
-
 					_ = resp.Body.Close()
 					t.Cleanup(func() { _ = conn.Close() })
 				} else {
 					conn = env.InitGraphQLWebSocketConnection(nil, nil, nil)
 					env.WaitForConnectionCount(1, time.Second)
 				}
-
-				if tc.partialFrame {
+				if state == "partial" {
 					require.NoError(t, conn.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
 					_, err := conn.UnderlyingConn().Write([]byte{0x81})
 					require.NoError(t, err)
 				}
-
 				env.Shutdown()
 				require.NoError(t, conn.SetReadDeadline(time.Now().Add(2*time.Second)))
-
 				// Initialization may emit a protocol error before the close frame.
 				for {
 					_, _, err := conn.ReadMessage()
@@ -69,58 +57,52 @@ func TestWebSocketGoroutine(t *testing.T) {
 					assert.Equal(t, websocket.CloseGoingAway, closeErr.Code)
 					break
 				}
-
 				env.WaitForConnectionCount(0, time.Second)
 			})
 		})
 	}
+}
 
-	t.Run("a partial pong does not stall updates to another subscriber sharing the trigger", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableNetPoll = false
-				cfg.WebSocketServerReadTimeout = 0
-				cfg.WebSocketServerWriteTimeout = 100 * time.Millisecond
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
-			pending := env.InitGraphQLWebSocketConnection(nil, nil, nil)
-			healthy := env.InitGraphQLWebSocketConnection(nil, nil, nil)
-			defer pending.Close()
-			defer healthy.Close()
-			sub := testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"query":"subscription { countEmp(max: 10000, intervalMilliseconds: 20) }"}`)}
-			require.NoError(t, testenv.WSWriteJSON(t, pending, sub))
-			require.NoError(t, testenv.WSWriteJSON(t, healthy, sub))
-
-			env.WaitForSubscriptionCount(2, time.Second)
-			env.WaitForTriggerCount(1, time.Second)
-
-			readerDone := make(chan struct{})
-			go func() {
-				defer close(readerDone)
-				// Bound this drain loop directly: closure is expected during cleanup.
-				_ = pending.SetReadDeadline(time.Now().Add(5 * time.Second))
-				for {
-					if _, _, err := pending.ReadMessage(); err != nil {
-						return
-					}
+func TestWebSocketGoroutinePartialPongDoesNotStallSharedTrigger(t *testing.T) {
+	testenv.Run(t, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableNetPoll = false
+			cfg.WebSocketServerReadTimeout = 0
+			cfg.WebSocketServerWriteTimeout = 100 * time.Millisecond
+		},
+	}, func(t *testing.T, env *testenv.Environment) {
+		pending := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		healthy := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		defer pending.Close()
+		defer healthy.Close()
+		sub := testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: []byte(`{"query":"subscription { countEmp(max: 10000, intervalMilliseconds: 20) }"}`)}
+		require.NoError(t, testenv.WSWriteJSON(t, pending, sub))
+		require.NoError(t, testenv.WSWriteJSON(t, healthy, sub))
+		env.WaitForSubscriptionCount(2, time.Second)
+		env.WaitForTriggerCount(1, time.Second)
+		readerDone := make(chan struct{})
+		go func() {
+			defer close(readerDone)
+			// Bound this drain loop directly: closure is expected during cleanup.
+			_ = pending.SetReadDeadline(time.Now().Add(5 * time.Second))
+			for {
+				if _, _, err := pending.ReadMessage(); err != nil {
+					return
 				}
-			}()
-			defer func() { _ = pending.Close(); <-readerDone }()
-
-			// A missing update is the regression under test, so fail on its first timeout.
-			require.NoError(t, healthy.SetReadDeadline(time.Now().Add(time.Second)))
-			_, _, err := healthy.ReadMessage()
-			require.NoError(t, err)
-
-			_, err = pending.UnderlyingConn().Write([]byte{0x8a, 0x81, 0, 0, 0, 0})
-			require.NoError(t, err)
-
-			require.NoError(t, healthy.SetReadDeadline(time.Now().Add(time.Second)))
-			for i := range 10 {
-				_, _, err = healthy.ReadMessage()
-				require.NoError(t, err, "healthy subscriber stalled after %d updates", i)
 			}
-		})
+		}()
+		defer func() { _ = pending.Close(); <-readerDone }()
+		// A missing update is the regression under test, so fail on its first timeout.
+		require.NoError(t, healthy.SetReadDeadline(time.Now().Add(time.Second)))
+		_, _, err := healthy.ReadMessage()
+		require.NoError(t, err)
+		_, err = pending.UnderlyingConn().Write([]byte{0x8a, 0x81, 0, 0, 0, 0})
+		require.NoError(t, err)
+		require.NoError(t, healthy.SetReadDeadline(time.Now().Add(time.Second)))
+		for i := range 10 {
+			_, _, err = healthy.ReadMessage()
+			require.NoError(t, err, "healthy subscriber stalled after %d updates", i)
+		}
 	})
 }
 
@@ -133,8 +115,8 @@ func TestWebSocketPipelinedMessages(t *testing.T) {
 		name    string
 		netpoll bool
 	}{
-		{name: "responds to every pipelined ping with netpoll enabled", netpoll: true},
-		{name: "responds to every pipelined ping with netpoll disabled", netpoll: false},
+		{name: "netpoll", netpoll: true},
+		{name: "goroutine", netpoll: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,7 +133,6 @@ func TestWebSocketPipelinedMessages(t *testing.T) {
 				require.NoError(t, conn.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
 				_, err := conn.UnderlyingConn().Write(frames)
 				require.NoError(t, err)
-
 				for range 3 {
 					var pong testenv.WebSocketMessage
 					require.NoError(t, testenv.WSReadJSON(t, conn, &pong))
