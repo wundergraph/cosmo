@@ -45,7 +45,8 @@ func TestExecutionConfigFallbackOnSplitConfigReload(t *testing.T) {
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/org/graph/routerconfigs/"):
-			// Recovery must use the saved config, never fetch the legacy endpoint.
+			// Only the legacy router fetches here. The split router must fall back to
+			// the saved config instead of fetching the legacy endpoint.
 			assert.Equal(t, "Bearer "+legacyToken, r.Header.Get("Authorization"))
 			_, _ = w.Write(legacyConfig)
 		case r.URL.Path == "/org/graph/manifest/mapper.json":
