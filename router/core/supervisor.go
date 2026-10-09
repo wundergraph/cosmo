@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
@@ -103,13 +104,40 @@ func (rs *RouterSupervisor) startRouter() error {
 	return nil
 }
 
-func (rs *RouterSupervisor) stopRouter() error {
+// shouldDrain reports whether stopRouter drains keep-alive connections before shutting down: only
+// on a real stop (never on a config reload) and with a positive drain period.
+func shouldDrain(shutdown bool, period time.Duration) bool {
+	return shutdown && period > 0
+}
+
+// drainBeforeShutdown makes the router answer every response with "Connection: close" and waits
+// for period, or until ctx is done, so clients retire their pooled connections before the HTTP
+// server shuts down and closes idle ones under their next write.
+func drainBeforeShutdown(ctx context.Context, period time.Duration, startDrain func(), logger *zap.Logger) {
+	startDrain()
+	logger.Info("Draining router", zap.Duration("drain_period", period))
+
+	timer := time.NewTimer(period)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+	case <-ctx.Done():
+	}
+}
+
+// stopRouter shuts the router down. drain is true on a real stop and false on a config reload.
+func (rs *RouterSupervisor) stopRouter(drain bool) error {
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), rs.resources.Config.ShutdownDelay)
 	defer cancel()
 
 	rs.logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", rs.resources.Config.ShutdownDelay.String()))
+
+	if shouldDrain(drain, rs.resources.Config.DrainPeriod) {
+		drainBeforeShutdown(shutdownCtx, rs.resources.Config.DrainPeriod, rs.router.StartDraining, rs.logger)
+	}
 
 	if err := rs.router.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown router gracefully: %w", err)
@@ -162,7 +190,7 @@ func (rs *RouterSupervisor) Start() error {
 			rs.router.reloadPersistentState.OnRouterConfigReload()
 		}
 
-		if err := rs.stopRouter(); err != nil {
+		if err := rs.stopRouter(shutdown); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
 			}

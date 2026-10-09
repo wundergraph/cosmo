@@ -657,6 +657,7 @@
   "LogServiceName": "my-custom-router",
   "ShutdownDelay": 15000000000,
   "GracePeriod": 20000000000,
+  "DrainPeriod": 5000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",

@@ -27,6 +27,7 @@ json_log: true
 log_service_name: 'my-custom-router'
 shutdown_delay: 15s
 grace_period: 20s
+drain_period: 5s
 poll_interval: 10s
 health_check_path: '/health'
 readiness_check_path: '/health/ready'

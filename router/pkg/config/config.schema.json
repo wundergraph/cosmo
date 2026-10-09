@@ -2019,6 +2019,12 @@
       "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
       "default": "20s"
     },
+    "drain_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "How long the router answers every response with 'Connection: close' after a stop signal (never on a config reload), before it shuts the HTTP server down, so clients retire pooled keep-alive connections instead of hitting EOF. Set it above the longest idle timeout of any pooled client in front of the router. The wait runs inside the shutdown_delay, so shutdown_delay must be at least drain_period + grace_period. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. 0s disables the drain.",
+      "default": "0s"
+    },
     "poll_interval": {
       "type": "string",
       "description": "The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",

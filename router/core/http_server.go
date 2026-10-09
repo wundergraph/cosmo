@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+	"golang.org/x/net/http/httpguts"
 
 	"github.com/wundergraph/cosmo/router/pkg/health"
 )
@@ -51,6 +52,9 @@ type server struct {
 	healthcheck health.Checker
 	baseURL     string
 	listener    net.Listener // Pre-bound listener for synchronous port check
+	// draining makes every response carry "Connection: close" so clients retire their
+	// keep-alive connections before the server shuts down. See StartDraining.
+	draining atomic.Bool
 }
 
 type httpServerOptions struct {
@@ -65,6 +69,8 @@ type httpServerOptions struct {
 	healthCheckPath    string
 }
 
+// newServer binds the listener synchronously, so port conflicts surface immediately, and builds
+// the HTTP server with its handler chain.
 func newServer(opts *httpServerOptions) (*server, error) {
 	// Bind the port synchronously to detect port conflicts immediately
 	listener, err := net.Listen("tcp", opts.addr)
@@ -108,10 +114,27 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		// Lock-free hot path: single atomic load gets both mux and graphServer.
 		// The state is never nil (initialized with health mux, swapped to notReadyState on shutdown).
 		// Direct method call on *chi.Mux avoids interface vtable indirection.
+		// While draining, ask clients to retire the connection. Not on upgrade requests:
+		// "Connection: close" on a 101 Switching Protocols response breaks WebSockets.
+		if n.draining.Load() && !httpguts.HeaderValuesContainsToken(r.Header["Connection"], "upgrade") {
+			w.Header().Set("Connection", "close")
+		}
 		n.state.Load().mux.ServeHTTP(w, r)
 	})
 
 	return n, nil
+}
+
+// StartDraining makes every subsequent response carry "Connection: close", so clients close
+// their pooled connections. Unlike http.Server.SetKeepAlivesEnabled(false) it does not close
+// idle connections, which would race the client's next write. It is not reversible.
+func (s *server) StartDraining() {
+	s.draining.Store(true)
+}
+
+// IsDraining reports whether StartDraining was called.
+func (s *server) IsDraining() bool {
+	return s.draining.Load()
 }
 
 func (s *server) HealthChecks() health.Checker {
