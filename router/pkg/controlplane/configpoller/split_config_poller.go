@@ -167,11 +167,11 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	}
 
 	if len(activeGraphs) == 0 {
-		return nil, fmt.Errorf("%w: empty graph configs", errs.ErrMalformedConfig)
+		return nil, fmt.Errorf("%w: empty graph configs", errs.ErrMalformedExecutionConfig)
 	}
 
 	if _, exists := activeGraphs[""]; !exists {
-		return nil, fmt.Errorf("%w: mapper missing base graph entry", errs.ErrMalformedConfig)
+		return nil, fmt.Errorf("%w: mapper missing base graph entry", errs.ErrMalformedExecutionConfig)
 	}
 
 	config, err := p.fetchAndAssembleAll(ctx, activeGraphs)
@@ -222,42 +222,6 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			return
 		}
 
-		// The router may have booted with a previous config after the initial fetch failed.
-		if p.currentConfig == nil {
-			assembled, err := p.fetchAndAssembleAll(ctx, mapperGraphs)
-			if err != nil {
-				p.logger.Error("Failed to assemble complete split config, keeping the last successfully applied execution config", zap.Error(err))
-				return
-			}
-
-			newVersion := computeCompositeVersion(mapperGraphs)
-			hashes := make(map[string]routerconfig.HashInfo, len(mapperGraphs))
-			for name, hash := range mapperGraphs {
-				hashes[name] = routerconfig.HashInfo{NewHash: hash}
-			}
-
-			response := &routerconfig.Response{
-				Config:  assembled,
-				Changes: nil, // the first successful split config requires a full rebuild
-				Hashes:  hashes,
-			}
-
-			if err := handler(response); err != nil {
-				p.logger.Error("Error invoking config poll handler", zap.Error(err))
-				return
-			}
-
-			p.logger.Info("Initial split config was successfully applied",
-				zap.String("new_version", newVersion),
-				zap.String("fetch_time", time.Since(fetchStart).String()),
-			)
-
-			p.knownHashes = mapperGraphs
-			p.currentConfig = assembled
-			p.latestVersion = newVersion
-			return
-		}
-
 		newVersion := computeCompositeVersion(mapperGraphs)
 		if newVersion == p.latestVersion {
 			p.logger.Debug("No changes detected in engine config, keeping existing config")
@@ -289,8 +253,11 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 
-		// Clone the in-use config before mutating.
-		patched := proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
+		// After startup falls back, there is no split config to patch yet.
+		patched := &nodev1.RouterConfig{}
+		if p.currentConfig != nil {
+			patched = proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
+		}
 
 		// Apply changes and additions.
 		toFetch := make(map[string]struct{}, len(changes.ChangedConfigs)+len(changes.AddedConfigs))
@@ -300,7 +267,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 		for name := range toFetch {
 			fetchedConfig, err := p.fetcher.FetchConfig(ctx, name)
 			if err != nil {
-				if p.shouldIgnoreMissingFeatureFlag(err) {
+				if name != "" && p.shouldIgnoreMissingFeatureFlag(err) {
 					p.logger.Warn("Feature flag config not found, skipping fetch", zap.String("feature_flag", name))
 					// Remove the feature flag from the mapper and changes so that it is not included in the new config.
 					// This prevents the graph server from tearing down its old mux when it thinks the flag changed (or was added).
@@ -376,6 +343,9 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			Config:  patched,
 			Changes: &changes,
 			Hashes:  hashes,
+		}
+		if p.currentConfig == nil {
+			response.Changes = nil // Replace the entire fallback config on the first successful poll.
 		}
 
 		handlerStart := time.Now()

@@ -42,8 +42,13 @@ func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
 	fallback.Version = "mutated-output"
 	assert.Equal(t, "v1", state.previousExecutionConfig(token).GetVersion())
 
-	for _, otherToken := range []string{"", "invalid-token",
-		testGraphToken(t, "other-org", "graph"), testGraphToken(t, "org", "other-graph")} {
+	otherTokens := []string{
+		"",
+		"invalid-token",
+		testGraphToken(t, "other-org", "graph"),
+		testGraphToken(t, "org", "other-graph"),
+	}
+	for _, otherToken := range otherTokens {
 		assert.Nil(t, state.previousExecutionConfig(otherToken))
 	}
 	if assert.Len(t, logs.All(), 1) {

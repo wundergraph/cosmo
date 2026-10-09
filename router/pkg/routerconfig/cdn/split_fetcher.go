@@ -135,7 +135,7 @@ func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 		return nil, fmt.Errorf("could not read response body: %w", err)
 	}
 	if len(body) == 0 {
-		return nil, fmt.Errorf("%w: empty response body", errs.ErrMalformedConfig)
+		return nil, fmt.Errorf("%w: empty response body", errs.ErrMalformedExecutionConfig)
 	}
 
 	// Validate HMAC signature when a key is configured.
@@ -191,7 +191,7 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, erro
 	var activeGraphs map[string]string
 
 	if err := json.Unmarshal(body, &activeGraphs); err != nil {
-		return nil, fmt.Errorf("%w: could not unmarshal mapper: %w", errs.ErrMalformedConfig, err)
+		return nil, fmt.Errorf("%w: could not unmarshal mapper: %w", errs.ErrMalformedExecutionConfig, err)
 	}
 
 	return activeGraphs, nil
@@ -223,7 +223,7 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 
 	cfg, err := execution_config.UnmarshalConfig(body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not unmarshal router config for %q: %w", errs.ErrMalformedConfig, featureFlagName, err)
+		return nil, fmt.Errorf("%w: could not unmarshal router config for %q: %w", errs.ErrMalformedExecutionConfig, featureFlagName, err)
 	}
 
 	return cfg, nil

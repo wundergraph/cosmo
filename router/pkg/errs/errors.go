@@ -4,9 +4,9 @@ import "errors"
 
 // config poller errors
 var (
-	ErrMalformedConfig      = errors.New("malformed execution config")
-	ErrConfigNotModified    = errors.New("config not modified")
-	ErrRouterConfigNotFound = errors.New("router config not found")
+	ErrMalformedExecutionConfig = errors.New("malformed execution config")
+	ErrConfigNotModified        = errors.New("config not modified")
+	ErrRouterConfigNotFound     = errors.New("router config not found")
 )
 
 // CDN errors

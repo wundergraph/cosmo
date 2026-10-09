@@ -97,7 +97,7 @@ func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
 
 	p := newTestPoller(mock)
 	resp, err := p.GetRouterConfig(context.Background())
-	assert.ErrorIs(t, err, errs.ErrMalformedConfig)
+	assert.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Nil(t, resp)
 }
 
@@ -140,7 +140,7 @@ func TestSplitGetRouterConfig_MapperError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
-	assert.NotErrorIs(t, err, errs.ErrMalformedConfig)
+	assert.NotErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "network error")
 }
 
@@ -150,7 +150,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	}
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
-	require.ErrorIs(t, err, errs.ErrMalformedConfig)
+	require.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "empty graph configs")
 }
 
@@ -162,7 +162,7 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
-	assert.NotErrorIs(t, err, errs.ErrMalformedConfig)
+	assert.NotErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "CDN unavailable")
 }
 
@@ -546,7 +546,7 @@ func TestSplitSubscribe_RecoversFromMissingBaseGraph(t *testing.T) {
 	mock := &mockSplitFetcher{mapperResult: map[string]string{"ff1": "hash-ff1"}}
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
-	assert.ErrorIs(t, err, errs.ErrMalformedConfig)
+	assert.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 
 	mock.mapperResult = map[string]string{"": "hash-base", "ff1": "hash-ff1"}
 	mock.configResults = map[string]*nodev1.RouterConfig{

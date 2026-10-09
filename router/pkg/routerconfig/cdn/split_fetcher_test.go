@@ -217,7 +217,7 @@ func TestFetchMapper_EmptyBody(t *testing.T) {
 	defer srv.Close()
 
 	_, err := newFetcher(t, srv.URL, nil).FetchMapper(context.Background())
-	require.ErrorIs(t, err, errs.ErrMalformedConfig)
+	require.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "empty response body")
 }
 
@@ -268,7 +268,7 @@ func TestFetchMapper_InvalidJSON(t *testing.T) {
 	defer srv.Close()
 
 	_, err := newFetcher(t, srv.URL, nil).FetchMapper(context.Background())
-	require.ErrorIs(t, err, errs.ErrMalformedConfig)
+	require.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "could not unmarshal mapper")
 }
 
@@ -436,6 +436,6 @@ func TestFetchConfig_InvalidJSON(t *testing.T) {
 	defer srv.Close()
 
 	_, err := newFetcher(t, srv.URL, nil).FetchConfig(context.Background(), "")
-	require.ErrorIs(t, err, errs.ErrMalformedConfig)
+	require.ErrorIs(t, err, errs.ErrMalformedExecutionConfig)
 	assert.Contains(t, err.Error(), "could not unmarshal router config")
 }
