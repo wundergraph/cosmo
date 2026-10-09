@@ -24,7 +24,7 @@ export interface PQLManifest {
   version: 1;
   revision: string;
   generatedAt: string;
-  operations: Record<string, string>; // sha256 hash -> operation body
+  operations: Record<string, string>; // operation ID -> body
 }
 
 type ChangeOverride = IgnoreAllOverride & {
@@ -724,14 +724,14 @@ export class OperationsRepository {
       );
     }
 
-    const operations: Record<string, string> = {};
+    const operations: Record<string, string> = Object.create(null);
     for (const op of allOperations) {
       operations[op.operationId] = op.operationContent;
     }
 
     // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
     const sortedKeys = Object.keys(operations).sort();
-    const sortedOperations: Record<string, string> = {};
+    const sortedOperations: Record<string, string> = Object.create(null);
     for (const key of sortedKeys) {
       sortedOperations[key] = operations[key];
     }

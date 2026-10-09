@@ -93,6 +93,52 @@ describe('Persisted operations', (ctx) => {
   });
 
   describe('publishing', () => {
+    test('Should validate persisted operation IDs before publishing', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const publish = (ids: string[]) =>
+        client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: ids.map((id) => ({ id, contents: 'query { hello }' })),
+        });
+
+      const initialKeys = blobStorage.keys().sort();
+      for (const [id, formattedId] of [
+        ['', '""'],
+        ['a'.repeat(251), `"${'a'.repeat(251)}"`],
+        ['a'.repeat(1000), `"${'a'.repeat(251)}"… (1000 characters)`],
+        ['/', '"/"'],
+        ['\\', '"\\\\"'],
+        ['\n', '"\\n"'],
+        ['é', '"é"'],
+      ]) {
+        const result = await publish(['valid', id, 'also/invalid']);
+        expect(result.response?.code).toBe(EnumStatusCode.ERR);
+        expect(result.response?.details).toBe(
+          `Invalid operation ID ${formattedId} at index 1: must contain 1–250 printable ASCII characters, excluding forward slash and backslash`,
+        );
+        expect(result.operations).toEqual([]);
+      }
+      expect(blobStorage.keys().sort()).toEqual(initialKeys);
+      expect((await client.getClients({ fedGraphName, namespace: 'default' })).clients).toEqual([]);
+
+      const ids = ['a', ' Get.Hello-v1 ', 'a'.repeat(250), '__proto__'];
+      const result = await publish(ids);
+      expect(result.response?.code).toBe(EnumStatusCode.OK);
+      expect(result.operations.map((operation) => operation.id)).toEqual(ids);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      const operations = Object.fromEntries(ids.toSorted().map((id) => [id, 'query { hello }']));
+      expect(manifest).toMatchObject({
+        operations,
+        revision: crypto.createHash('sha256').update(JSON.stringify(operations)).digest('hex'),
+      });
+    });
+
     test('Should be able to publish persisted operations', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
