@@ -30,7 +30,14 @@ func (s executionConfigGraphScope) IsEmpty() bool {
 	return s.organizationID == "" || s.federatedGraphID == ""
 }
 
+// errNoGraphToken reports that the router runs without a graph token, so it has
+// no graph scope and never keeps an execution config fallback.
+var errNoGraphToken = errors.New("no graph token")
+
 func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
+	if token == "" {
+		return executionConfigGraphScope{}, errNoGraphToken
+	}
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
 		return executionConfigGraphScope{}, err
@@ -45,17 +52,30 @@ func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
 	return scope, nil
 }
 
+// graphScope logs scope errors, except for routers that run without a graph token.
+func (s *ReloadPersistentState) graphScope(graphToken string) (executionConfigGraphScope, error) {
+	scope, err := graphScopeFromToken(graphToken)
+	if err != nil && !errors.Is(err, errNoGraphToken) {
+		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
+	}
+	return scope, err
+}
+
 // acceptExecutionConfig records an execution config only after the graph
 // server has been built and swapped successfully. The clone prevents a later
 // candidate assembly from mutating the accepted fallback in place.
 func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfig, graphToken string) {
-	scope, err := graphScopeFromToken(graphToken)
-	if err != nil {
-		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
-	}
+	scope, err := s.graphScope(graphToken)
 
 	s.executionConfigMu.Lock()
 	defer s.executionConfigMu.Unlock()
+	if err != nil {
+		// Without a scope the config can never be used as a fallback. Drop any
+		// older one so a later router cannot fall back past this config.
+		s.lastValidExecutionConfig = nil
+		s.lastExecutionConfigGraphScope = executionConfigGraphScope{}
+		return
+	}
 	s.lastValidExecutionConfig = proto.Clone(config).(*nodev1.RouterConfig)
 	s.lastExecutionConfigGraphScope = scope
 }
@@ -63,9 +83,8 @@ func (s *ReloadPersistentState) acceptExecutionConfig(config *nodev1.RouterConfi
 // previousExecutionConfig returns an isolated copy of the last execution
 // config accepted by any router instance owned by the supervisor.
 func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *nodev1.RouterConfig {
-	scope, err := graphScopeFromToken(graphToken)
+	scope, err := s.graphScope(graphToken)
 	if err != nil {
-		s.logger.Warn("Could not determine graph scope for execution config fallback", zap.Error(err))
 		return nil
 	}
 

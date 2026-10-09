@@ -51,10 +51,14 @@ func TestReloadPersistentState_ExecutionConfigFallback(t *testing.T) {
 	for _, otherToken := range otherTokens {
 		assert.Nil(t, state.previousExecutionConfig(otherToken))
 	}
-	assert.Len(t, logs.All(), 2)
-	for _, entry := range logs.All() {
-		assert.Contains(t, entry.ContextMap(), "error")
-	}
+	// Routers without a graph token are expected, so only the invalid token logs.
+	require.Len(t, logs.All(), 1)
+	assert.Contains(t, logs.All()[0].ContextMap(), "error")
+
+	// A config accepted without a graph scope replaces the older fallback.
+	state.acceptExecutionConfig(&nodev1.RouterConfig{Version: "v2"}, "")
+	assert.Nil(t, state.previousExecutionConfig(token))
+	assert.Len(t, logs.All(), 1)
 }
 
 func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t *testing.T) {
