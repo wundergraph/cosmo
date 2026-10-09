@@ -2,7 +2,6 @@ package integration
 
 import (
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -16,51 +15,81 @@ import (
 
 func TestWebSocketGoroutineShutdownWithoutReadTimeout(t *testing.T) {
 	t.Parallel()
-	for _, state := range []string{"initializing", "idle", "partial"} {
-		t.Run(state, func(t *testing.T) {
-			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.EnableNetPoll = false
-					cfg.WebSocketServerReadTimeout = 0
-				},
-			}, func(t *testing.T, env *testenv.Environment) {
-				var conn *websocket.Conn
-				if state == "initializing" {
-					var (
-						resp *http.Response
-						err  error
-					)
-					conn, resp, err = env.GraphQLWebsocketDialWithRetry(nil, nil)
-					require.NoError(t, err)
-					_ = resp.Body.Close()
-					t.Cleanup(func() { _ = conn.Close() })
-				} else {
-					conn = env.InitGraphQLWebSocketConnection(nil, nil, nil)
-					env.WaitForConnectionCount(1, time.Second)
-				}
-				if state == "partial" {
-					require.NoError(t, conn.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
-					_, err := conn.UnderlyingConn().Write([]byte{0x81})
-					require.NoError(t, err)
-				}
-				env.Shutdown()
-				require.NoError(t, conn.SetReadDeadline(time.Now().Add(2*time.Second)))
-				// Initialization may emit a protocol error before the close frame.
-				for {
-					_, _, err := conn.ReadMessage()
-					if err == nil {
-						continue
-					}
-					closeErr, ok := errors.AsType[*websocket.CloseError](err)
-					require.True(t, ok, "expected WebSocket close error, got %T: %v", err, err)
-					assert.Equal(t, websocket.CloseGoingAway, closeErr.Code)
-					break
-				}
-				env.WaitForConnectionCount(0, time.Second)
-			})
-		})
+
+	assertGoingAway := func(t *testing.T, conn *websocket.Conn) {
+		t.Helper()
+		require.NoError(t, conn.SetReadDeadline(time.Now().Add(2*time.Second)))
+
+		// Initialization may emit a protocol error before the close frame.
+		for {
+			_, _, err := conn.ReadMessage()
+			if err == nil {
+				continue
+			}
+			closeErr, ok := errors.AsType[*websocket.CloseError](err)
+			require.True(t, ok, "expected WebSocket close error, got %T: %v", err, err)
+			assert.Equal(t, websocket.CloseGoingAway, closeErr.Code)
+			return
+		}
 	}
+
+	t.Run("before initialization", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableNetPoll = false
+				cfg.WebSocketServerReadTimeout = 0
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			conn, resp, err := env.GraphQLWebsocketDialWithRetry(nil, nil)
+			require.NoError(t, err)
+
+			_ = resp.Body.Close()
+			t.Cleanup(func() { _ = conn.Close() })
+
+			env.Shutdown()
+			assertGoingAway(t, conn)
+			env.WaitForConnectionCount(0, time.Second)
+		})
+	})
+
+	t.Run("idle connection", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableNetPoll = false
+				cfg.WebSocketServerReadTimeout = 0
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+			env.WaitForConnectionCount(1, time.Second)
+
+			env.Shutdown()
+			assertGoingAway(t, conn)
+			env.WaitForConnectionCount(0, time.Second)
+		})
+	})
+
+	t.Run("partial frame", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableNetPoll = false
+				cfg.WebSocketServerReadTimeout = 0
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+			env.WaitForConnectionCount(1, time.Second)
+
+			require.NoError(t, conn.UnderlyingConn().SetWriteDeadline(time.Now().Add(time.Second)))
+			_, err := conn.UnderlyingConn().Write([]byte{0x81})
+			require.NoError(t, err)
+
+			env.Shutdown()
+			assertGoingAway(t, conn)
+			env.WaitForConnectionCount(0, time.Second)
+		})
+	})
 }
 
 func TestWebSocketGoroutinePartialPongDoesNotStallSharedTrigger(t *testing.T) {
