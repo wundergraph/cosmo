@@ -18,7 +18,7 @@ type ReloadPersistentState struct {
 
 	executionConfigMu             sync.RWMutex
 	lastValidExecutionConfig      *nodev1.RouterConfig
-	lastExecutionConfigGraphScope *executionConfigGraphScope
+	lastExecutionConfigGraphScope executionConfigGraphScope
 }
 
 type executionConfigGraphScope struct {
@@ -26,23 +26,28 @@ type executionConfigGraphScope struct {
 	federatedGraphID string
 }
 
-func graphScopeFromToken(token string) (*executionConfigGraphScope, error) {
+func (s executionConfigGraphScope) IsEmpty() bool {
+	return s.organizationID == "" || s.federatedGraphID == ""
+}
+
+func graphScopeFromToken(token string) (executionConfigGraphScope, error) {
 	// Static and demo configurations can run without a graph token.
 	if token == "" {
-		return nil, nil
+		return executionConfigGraphScope{}, nil
 	}
 
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
-		return nil, err
+		return executionConfigGraphScope{}, err
 	}
-	if claims.OrganizationID == "" || claims.FederatedGraphID == "" {
-		return nil, errors.New("graph token has an empty organization or federated graph ID")
-	}
-	return &executionConfigGraphScope{
+	scope := executionConfigGraphScope{
 		organizationID:   claims.OrganizationID,
 		federatedGraphID: claims.FederatedGraphID,
-	}, nil
+	}
+	if scope.IsEmpty() {
+		return executionConfigGraphScope{}, errors.New("graph token has an empty organization or federated graph ID")
+	}
+	return scope, nil
 }
 
 // acceptExecutionConfig records an execution config only after the graph
@@ -72,7 +77,7 @@ func (s *ReloadPersistentState) previousExecutionConfig(graphToken string) *node
 	s.executionConfigMu.RLock()
 	defer s.executionConfigMu.RUnlock()
 
-	if scope == nil || s.lastExecutionConfigGraphScope == nil || *s.lastExecutionConfigGraphScope != *scope {
+	if scope.IsEmpty() || s.lastExecutionConfigGraphScope != scope {
 		return nil
 	}
 	return proto.Clone(s.lastValidExecutionConfig).(*nodev1.RouterConfig)
