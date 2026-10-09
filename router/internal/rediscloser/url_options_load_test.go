@@ -99,9 +99,7 @@ func TestURLConfiguredPoolUnderSaturation(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for worker := range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			key := fmt.Sprintf("%s%d", keyPrefix, worker)
 			for i := range commandsPerWorker {
@@ -117,7 +115,7 @@ func TestURLConfiguredPoolUnderSaturation(t *testing.T) {
 					maxObserved.Store(total)
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -163,16 +161,14 @@ func TestURLConfiguredMaxActiveConnsFailsFast(t *testing.T) {
 	var exhausted atomic.Int64
 	var wg sync.WaitGroup
 	for range 32 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 50 {
 				if err := client.Ping(ctx).Err(); err != nil {
 					assert.ErrorContains(t, err, "connection pool exhausted")
 					exhausted.Add(1)
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 

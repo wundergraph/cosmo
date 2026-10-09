@@ -252,7 +252,7 @@ type fakeT struct {
 
 func (f *fakeT) Helper() {}
 
-func (f *fakeT) Log(args ...interface{}) {
+func (f *fakeT) Log(args ...any) {
 	f.out = append(f.out, fmt.Sprint(args...))
 }
 

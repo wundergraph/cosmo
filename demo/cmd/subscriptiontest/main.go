@@ -86,7 +86,7 @@ func main() {
 	tick := make(chan struct{})
 	acked := &sync.WaitGroup{}
 	acked.Add(connections)
-	for i := 0; i < connections; i++ {
+	for i := range connections {
 		num := i
 		g.Go(func() error {
 			connect(ctx, num, tick, acked)
@@ -147,7 +147,7 @@ func connect(ctx context.Context, num int, tick chan struct{}, acked *sync.WaitG
 		slog.Error(err.Error())
 		return
 	}
-	err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"id":"%s","type":"subscribe","payload":{"query":"subscription {\n  employeeUpdated(employeeID: 1) {\n    id\n    details {\n      forename\n      location\n      surname\n    }\n    role {\n      title\n    }\n    updatedAt\n    isAvailable\n    currentMood\n  }\n}\n"}}`, id.String())))
+	err = c.WriteMessage(websocket.TextMessage, fmt.Appendf(nil, `{"id":"%s","type":"subscribe","payload":{"query":"subscription {\n  employeeUpdated(employeeID: 1) {\n    id\n    details {\n      forename\n      location\n      surname\n    }\n    role {\n      title\n    }\n    updatedAt\n    isAvailable\n    currentMood\n  }\n}\n"}}`, id.String()))
 	if err != nil {
 		slog.Error(err.Error())
 	}

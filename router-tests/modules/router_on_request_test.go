@@ -23,7 +23,7 @@ func TestRouterOnRequestHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"routerOnRequestModule": router_on_request.RouterOnRequestModule{},
 			},
 		}
@@ -65,7 +65,7 @@ func TestRouterOnRequestHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"routerOnRequestModule": onRequestModule,
 			},
 		}

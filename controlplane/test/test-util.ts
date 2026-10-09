@@ -6,7 +6,6 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -14,6 +13,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
 import { expect } from 'vitest';
+import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import ScimController from '../src/core/controllers/scim.js';
@@ -400,10 +400,12 @@ export const SetupTest = async function ({
 
   const platformClient = createClient(PlatformService, transport);
   const nodeClient = createClient(NodeService, transport);
+  const aiClient = createClient(AIService, transport);
 
   return {
     client: platformClient,
     nodeClient,
+    aiClient,
     server,
     users,
     blobStorage,

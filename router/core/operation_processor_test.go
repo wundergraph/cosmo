@@ -48,7 +48,6 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKit()
 			require.NoError(t, err)
@@ -259,7 +258,6 @@ func TestParseOperationProcessor(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 			kit, err := parser.NewKit()
 			require.NoError(t, err)
@@ -298,7 +296,6 @@ func TestNormalizeVariablesOperationProcessor(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			clientSchema, report := astparser.ParseGraphqlDocumentString(tc.ClientSchema)
 			require.False(t, report.HasErrors(), "failed to parse client schema")
@@ -387,7 +384,6 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	}
 	var inputError HttpError
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
 
 			kit, err := parser.NewKit()
@@ -501,7 +497,6 @@ func TestUnmarshalOperationFromBody(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			kit, err := parser.NewKit()
 			require.NoError(t, err)
@@ -630,7 +625,6 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 
 	var inputError HttpError
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 
 			kit, err := parser.NewKit()

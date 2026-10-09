@@ -11,11 +11,11 @@ Please ensure your PR title follows the Conventional Commits specification, usin
 
 Examples of good PR titles:
 
-- 💥feat!: change implementation in an non-backward compatible way
-- ✨feat(auth): add support for OAuth2 login
-- 🐞fix(router): add support for custom metrics
-- 📚docs(README): update installation instructions
-- 🧹chore(deps): bump dependencies to latest versions
+- feat!: change implementation in an non-backward compatible way
+- feat(auth): add support for OAuth2 login
+- fix(router): add support for custom metrics
+- docs(README): update installation instructions
+- chore(deps): bump dependencies to latest versions
 -->
 
 @coderabbitai summary

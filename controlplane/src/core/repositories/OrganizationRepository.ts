@@ -13,6 +13,7 @@ import {
   OrganizationGroupDTO,
   OrganizationMemberDTO,
   WebhooksConfigDTO,
+  OrganizationAcceptedFeatureTermDTO,
 } from '../../types/index.js';
 import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -1435,6 +1436,7 @@ export class OrganizationRepository {
       support: false,
       'split-config-loading': false,
       'login-method-restrictions': false,
+      'prompt-to-query': false,
     };
 
     for (const feature of features) {
@@ -1722,10 +1724,77 @@ export class OrganizationRepository {
     const orgFeatures = await this.getFeatures({ organizationId });
     for (const feature of orgFeatures) {
       if (feature.enabled && graphTokenFeatures.includes(feature.id)) {
-        features.push('split-config-loading');
+        features.push(feature.id);
       }
     }
 
     return features;
+  }
+
+  async getAcceptedFeatureTerms(organizationId: string): Promise<OrganizationAcceptedFeatureTermDTO[]> {
+    const accepted = await this.db
+      .select({
+        featureId: schema.organizationFeatureTermsAcceptance.feature,
+        lastAcceptedBy: schema.users.email,
+        lastAcceptedAt: schema.organizationFeatureTermsAcceptance.lastAcceptedAt,
+      })
+      .from(schema.organizationFeatureTermsAcceptance)
+      .where(eq(schema.organizationFeatureTermsAcceptance.organizationId, organizationId))
+      .leftJoin(schema.users, eq(schema.users.id, schema.organizationFeatureTermsAcceptance.lastAcceptedBy))
+      .execute();
+
+    return accepted.map((at) => ({
+      featureId: at.featureId as FeatureIds,
+      lastAcceptedBy: at.lastAcceptedBy || undefined,
+      lastAcceptedAt: at.lastAcceptedAt || undefined,
+    }));
+  }
+
+  async isFeatureTermsAccepted(organizationId: string, featureId: FeatureIds): Promise<boolean> {
+    const accepted = await this.db
+      .select({ id: schema.organizationFeatureTermsAcceptance.id })
+      .from(schema.organizationFeatureTermsAcceptance)
+      .where(
+        and(
+          eq(schema.organizationFeatureTermsAcceptance.organizationId, organizationId),
+          eq(schema.organizationFeatureTermsAcceptance.feature, featureId),
+        ),
+      )
+      .limit(1)
+      .execute();
+
+    return accepted.length > 0;
+  }
+
+  async acceptTermsForFeature(input: {
+    actorId: string;
+    organizationId: string;
+    featureIds: FeatureIds[];
+  }): Promise<void> {
+    if (input.featureIds.length === 0) {
+      return;
+    }
+
+    await this.db
+      .insert(schema.organizationFeatureTermsAcceptance)
+      .values(
+        input.featureIds.map((featureId) => ({
+          organizationId: input.organizationId,
+          feature: featureId,
+          lastAcceptedBy: input.actorId,
+          lastAcceptedAt: new Date(),
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          schema.organizationFeatureTermsAcceptance.organizationId,
+          schema.organizationFeatureTermsAcceptance.feature,
+        ],
+        set: {
+          lastAcceptedBy: input.actorId,
+          lastAcceptedAt: new Date(),
+        },
+      })
+      .execute();
   }
 }

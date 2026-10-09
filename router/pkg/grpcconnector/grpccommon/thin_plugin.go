@@ -13,6 +13,6 @@ type ThinPlugin struct {
 }
 
 // GRPCClient implements plugin.GRPCPlugin.
-func (p *ThinPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, conn *grpc.ClientConn) (interface{}, error) {
+func (p *ThinPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, conn *grpc.ClientConn) (any, error) {
 	return conn, nil
 }

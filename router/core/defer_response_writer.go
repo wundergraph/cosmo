@@ -155,7 +155,7 @@ func deferAccept(r *http.Request) (deferAcceptVerdict, string) {
 		wildcard    bool
 		unsupported string
 	)
-	for _, element := range strings.Split(acceptHeader, ",") {
+	for element := range strings.SplitSeq(acceptHeader, ",") {
 		mediaType, params, err := mime.ParseMediaType(element)
 		if err != nil {
 			continue

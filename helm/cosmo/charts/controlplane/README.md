@@ -44,6 +44,10 @@ WunderGraph Cosmo Controlplane
 | configuration.prometheus.host | string | `"127.0.0.1"` | The host to bind to defautls to 127.0.0.1 to avoid opening the metrics endpoint by default. |
 | configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
 | configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
+| configuration.promptToQuery.address | string | `""` |  |
+| configuration.promptToQuery.enabled | bool | `false` |  |
+| configuration.promptToQuery.httpVersion | string | `"2"` |  |
+| configuration.promptToQuery.token | string | `""` |  |
 | configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | configuration.redisPassword | string | `""` |  |
 | configuration.redisPort | int | `6379` |  |

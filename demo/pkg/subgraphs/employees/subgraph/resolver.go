@@ -35,10 +35,10 @@ func isSameType(a, b any) bool {
 	typeOfB := reflect.TypeOf(b)
 
 	// If either type is a pointer, get the type it points to
-	if typeOfA.Kind() == reflect.Ptr {
+	if typeOfA.Kind() == reflect.Pointer {
 		typeOfA = typeOfA.Elem()
 	}
-	if typeOfB.Kind() == reflect.Ptr {
+	if typeOfB.Kind() == reflect.Pointer {
 		typeOfB = typeOfB.Elem()
 	}
 

@@ -363,10 +363,8 @@ func TestAuthentication(t *testing.T) {
 			var wg sync.WaitGroup
 
 			for range waitEntries + 1 {
-				wg.Add(1)
 
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 
 					start := time.Now()
 					res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
@@ -384,7 +382,7 @@ func TestAuthentication(t *testing.T) {
 					data, err := io.ReadAll(res2.Body)
 					require.NoError(t, err)
 					require.JSONEq(t, unauthorizedExpectedData, string(data))
-				}()
+				})
 			}
 
 			wg.Wait()
@@ -1710,7 +1708,6 @@ func TestAuthenticationValuePrefixes(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, prefix := range authenticatorHeaderValuePrefixes {
-				prefix := prefix
 				t.Run("prefix "+prefix, func(t *testing.T) {
 					token, err := authServer.Token(nil)
 					require.NoError(t, err)
@@ -1782,7 +1779,6 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, prefix := range authenticator1HeaderValuePrefixes {
-				prefix := prefix
 				t.Run("prefix "+prefix, func(t *testing.T) {
 					token, err := authServer1.Token(nil)
 					require.NoError(t, err)
@@ -1811,7 +1807,6 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, prefix := range authenticator2HeaderValuePrefixes {
-				prefix := prefix
 				t.Run("prefix "+prefix, func(t *testing.T) {
 					token, err := authServer2.Token(nil)
 					require.NoError(t, err)
