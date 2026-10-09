@@ -180,7 +180,7 @@ func (c *RedisCache) removeMarks(ctx context.Context, tagKey string, marks []mar
 	}
 	pipe := c.client.Pipeline()
 	for chunk := range slices.Chunk(args, 2*invalidationPageSize) {
-		removeMarked.Eval(ctx, pipe, []string{tagKey}, chunk...)
+		pipe.Eval(ctx, removeMarked, []string{tagKey}, chunk...)
 	}
 	_, err := pipe.Exec(ctx)
 	return err
@@ -188,7 +188,7 @@ func (c *RedisCache) removeMarks(ctx context.Context, tagKey string, marks []mar
 
 // removeMarked removes each ARGV member, score pair from KEYS[1] if the member
 // still has that score.
-var removeMarked = redis.NewScript(`
+const removeMarked = `
 for i = 1, #ARGV, 2 do
   local s = redis.call('ZSCORE', KEYS[1], ARGV[i])
   if s and tonumber(s) == tonumber(ARGV[i + 1]) then
@@ -196,7 +196,7 @@ for i = 1, #ARGV, 2 do
   end
 end
 return 0
-`)
+`
 
 // page is what a walk does with one ZSCAN page.
 type page struct {

@@ -17,18 +17,54 @@ import (
 // It bounds how long a writer dying mid-write can leave an entry unreachable.
 const writeLease = 10 * time.Second
 
+// addMember adds ARGV[1] to KEYS[1] at score ARGV[2], or raises it there. GT:
+// a write landing out of order never lowers a member's score, which would let
+// the prune drop it while a newer entry is alive. A mark stays: only a walk
+// removes it, after deleting its entry, so a write that never lands can't
+// take with it the walk's duty to delete what came before.
+const addMember = `
+local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
+if s and tonumber(s) < 0 then return 0 end
+return redis.call('ZADD', KEYS[1], 'GT', ARGV[2], ARGV[1])
+`
+
+// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2],
+// extends KEYS[1] to live at least ARGV[3] ms, and returns 1. The set may have
+// been emptied and recreated by a shorter write since this one's tag add. A
+// marked or missing member is left alone: 0.
+const liftMember = `
+local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
+if not s or tonumber(s) < 0 then return 0 end
+redis.call('ZADD', KEYS[1], 'XX', 'GT', ARGV[2], ARGV[1])
+redis.call('PEXPIRE', KEYS[1], ARGV[3], 'GT')
+return 1
+`
+
+// unlinkOwn deletes KEYS[1] if it still holds the write headed ARGV[1].
+const unlinkOwn = `
+if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
+return redis.call('UNLINK', KEYS[1])
+`
+
+// extendOwn sets KEYS[1] to expire at ARGV[2], in ms, if it still holds the
+// write headed ARGV[1]. 16 is headerLen - 1.
+const extendOwn = `
+if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
+return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
+`
+
 // SetMany implements caching.SetMany.
 //
 // A tagged entry takes up to three round trips:
 //
 //  1. indexAndStore: add it to its tags, then SET it with its token and a
 //     short lease.
-//  2. checkListings: confirm each tag still lists it live, raising the member
+//  2. checkListings: confirm each tag still lists it live, raising the member in the tag set
 //     to the entry's expiry. An entry whose index failed is removed instead.
 //  3. extendConfirmed: extend it to its expiry only if every tag confirmed it.
 //
 // So an extended entry is always listed. Anything unconfirmed, or a writer
-// dying in between, leaves only a lease-long entry. The token keeps each step
+// dying in between, leaves only a lease-long entry (10s). The token keeps each step
 // to this write's own entry, never a later one's.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
@@ -105,24 +141,13 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item 
 	for _, tag := range item.Tags {
 		tagKey := c.tagKey(tag)
 		cmds = append(cmds,
-			addMember.Eval(ctx, pipe, []string{tagKey}, item.Key, score),
+			pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, score),
 			pipe.ExpireNX(ctx, tagKey, tagTTL),
 			pipe.ExpireGT(ctx, tagKey, tagTTL),
 		)
 	}
 	return cmds
 }
-
-// addMember adds ARGV[1] to KEYS[1] at score ARGV[2], or raises it there. GT:
-// a write landing out of order never lowers a member's score, which would let
-// the prune drop it while a newer entry is alive. A mark stays: only a walk
-// removes it, after deleting its entry, so a write that never lands can't
-// take with it the walk's duty to delete what came before.
-var addMember = redis.NewScript(`
-local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
-if s and tonumber(s) < 0 then return 0 end
-return redis.call('ZADD', KEYS[1], 'GT', ARGV[2], ARGV[1])
-`)
 
 // finishWrites is round trips 2 and 3.
 func (c *RedisCache) finishWrites(ctx context.Context, writes []write, now time.Time) error {
@@ -151,12 +176,12 @@ func (c *RedisCache) checkListings(ctx context.Context, writes []write, now time
 		}
 		switch {
 		case !w.indexed():
-			unlinkOwn.Eval(ctx, pipe, []string{c.entryKey(w.item.Key)}, w.header)
+			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.header)
 		case w.extends():
 			score := expiresAt(now, w.item.TTL).UnixMilli()
 			tagTTL := tagLifetime(w.item).Milliseconds()
 			for _, tag := range w.item.Tags {
-				lifts[i] = append(lifts[i], liftMember.Eval(ctx, pipe, []string{c.tagKey(tag)}, w.item.Key, score, tagTTL))
+				lifts[i] = append(lifts[i], pipe.Eval(ctx, liftMember, []string{c.tagKey(tag)}, w.item.Key, score, tagTTL))
 			}
 		}
 	}
@@ -166,24 +191,6 @@ func (c *RedisCache) checkListings(ctx context.Context, writes []write, now time
 	_, err := pipe.Exec(ctx)
 	return lifts, err
 }
-
-// liftMember raises live member ARGV[1] of KEYS[1] to at least ARGV[2],
-// extends KEYS[1] to live at least ARGV[3] ms, and returns 1. The set may have
-// been emptied and recreated by a shorter write since this one's tag add. A
-// marked or missing member is left alone: 0.
-var liftMember = redis.NewScript(`
-local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
-if not s or tonumber(s) < 0 then return 0 end
-redis.call('ZADD', KEYS[1], 'XX', 'GT', ARGV[2], ARGV[1])
-redis.call('PEXPIRE', KEYS[1], ARGV[3], 'GT')
-return 1
-`)
-
-// unlinkOwn deletes KEYS[1] if it still holds the write headed ARGV[1].
-var unlinkOwn = redis.NewScript(`
-if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
-return redis.call('UNLINK', KEYS[1])
-`)
 
 // extendConfirmed is round trip 3: it extends each entry whose every lift
 // found its member live. Others keep their lease. It waits on the lifts as
@@ -196,7 +203,7 @@ func (c *RedisCache) extendConfirmed(ctx context.Context, writes []write, lifts 
 			w.unconfirmed = true
 			continue
 		}
-		extendOwn.Eval(ctx, pipe, []string{c.entryKey(w.item.Key)}, w.header, expiresAt(now, w.item.TTL).UnixMilli())
+		pipe.Eval(ctx, extendOwn, []string{c.entryKey(w.item.Key)}, w.header, expiresAt(now, w.item.TTL).UnixMilli())
 	}
 	if pipe.Len() == 0 {
 		return nil
@@ -214,13 +221,6 @@ func allLive(lifts []*redis.Cmd) bool {
 	}
 	return true
 }
-
-// extendOwn sets KEYS[1] to expire at ARGV[2], in ms, if it still holds the
-// write headed ARGV[1]. 16 is headerLen - 1.
-var extendOwn = redis.NewScript(`
-if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
-return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
-`)
 
 // result is SetMany's answer: err, naming the keys known stored if any.
 //
