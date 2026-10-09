@@ -151,7 +151,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "mapper missing base graph entry")
+	assert.Contains(t, err.Error(), "empty graph configs")
 }
 
 func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
