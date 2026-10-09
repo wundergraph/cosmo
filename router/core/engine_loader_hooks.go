@@ -239,7 +239,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		reqContext.responseCache.record(cacheStatus)
 
 		if f.responseCacheMetrics != nil {
-			f.responseCacheMetrics.MeasureFetch(ctx, ds.Name, typeNames, cacheStatusName, storeDecisionName)
+			// No decision, no attribute, as on the span.
+			var metricDecision string
+			if storeDecision != caching.StoreDecisionNone {
+				metricDecision = storeDecisionName
+			}
+			f.responseCacheMetrics.MeasureFetch(ctx, ds.Name, typeNames, cacheStatusName, metricDecision)
 		}
 	}
 
