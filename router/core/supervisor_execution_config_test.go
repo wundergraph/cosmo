@@ -99,12 +99,12 @@ func TestRouterSupervisor_KeepsLastValidExecutionConfigUntilSplitConfigIsValid(t
 	startResult := make(chan error, 1)
 	go func() { startResult <- supervisor.Start() }()
 	t.Cleanup(func() {
+		// Send the stop signal directly so cleanup cannot block if Start has
+		// already returned and nothing reads the unbuffered channel anymore.
 		select {
 		case err := <-startResult:
 			assert.NoError(t, err)
-			return
-		default:
-			supervisor.Stop()
+		case supervisor.shutdownChan <- true:
 			assert.NoError(t, <-startResult)
 		}
 	})
