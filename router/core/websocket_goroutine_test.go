@@ -146,7 +146,10 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 				conn, client := websocketTestConnection(t, t.Context(), timeout)
 				conn.reader.MarkInitialized()
 				written := make(chan error, 1)
-				go func() { _, err := client.Write(tc.data); written <- err }()
+				go func() {
+					_, err := client.Write(tc.data)
+					written <- err
+				}()
 
 				start := time.Now()
 				var msg json.RawMessage
@@ -165,7 +168,9 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 		conn.reader.MarkInitialized()
 		var msg map[string]string
 		result := make(chan error, 1)
-		go func() { result <- conn.ReadJSON(&msg) }()
+		go func() {
+			result <- conn.ReadJSON(&msg)
+		}()
 
 		_, err := client.Write(clientFrame(ws.OpText, false, `{"type":`))
 		require.NoError(t, err)
@@ -233,7 +238,9 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 			})
 
 			result := make(chan error, 1)
-			go func() { result <- conn.WriteText("blocked") }()
+			go func() {
+				result <- conn.WriteText("blocked")
+			}()
 			require.Eventually(t, func() bool {
 				if conn.mu.TryLock() {
 					conn.mu.Unlock()
@@ -243,7 +250,9 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 			}, time.Second, time.Millisecond)
 
 			closed := make(chan error, 1)
-			go func() { closed <- conn.Close() }()
+			go func() {
+				closed <- conn.Close()
+			}()
 			select {
 			case err := <-closed:
 				require.NoError(t, err)

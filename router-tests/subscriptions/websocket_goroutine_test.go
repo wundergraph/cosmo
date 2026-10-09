@@ -122,7 +122,10 @@ func TestWebSocketGoroutinePartialPongDoesNotStallSharedTrigger(t *testing.T) {
 				}
 			}
 		}()
-		defer func() { _ = pending.Close(); <-readerDone }()
+		defer func() {
+			_ = pending.Close()
+			<-readerDone
+		}()
 		// A missing update is the regression under test, so fail on its first timeout.
 		require.NoError(t, healthy.SetReadDeadline(time.Now().Add(time.Second)))
 		_, _, err := healthy.ReadMessage()
