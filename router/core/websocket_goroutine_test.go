@@ -61,12 +61,15 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 			}
 			result <- err
 		}()
+
 		// Stay idle across several read timeouts, then start a partial message.
 		time.Sleep(10 * timeout)
 		synctest.Wait()
 		require.Empty(t, result, "idle read returned before any data arrived")
+
 		_, err := client.Write(frame[:1])
 		require.NoError(t, err)
+
 		time.Sleep(timeout - time.Second)
 		synctest.Wait()
 		select {
@@ -74,6 +77,7 @@ func TestWebsocketReadTimeoutStartsAtFirstByte(t *testing.T) {
 			t.Fatalf("read ended before the message completed: %v", err)
 		default:
 		}
+
 		_, err = client.Write(frame[1:])
 		require.NoError(t, err)
 		assert.NoError(t, <-result)
@@ -111,6 +115,7 @@ func TestWebsocketInitializationDeadline(t *testing.T) {
 					}
 					written <- err
 				}()
+
 				start := time.Now()
 				var msg json.RawMessage
 				require.Error(t, conn.ReadJSON(&msg))
@@ -140,6 +145,7 @@ func TestWebsocketPartialMessageTimeout(t *testing.T) {
 				conn.reader.MarkInitialized()
 				written := make(chan error, 1)
 				go func() { _, err := client.Write(tc.data); written <- err }()
+
 				start := time.Now()
 				var msg json.RawMessage
 				assertTimeout(t, conn.ReadJSON(&msg))
@@ -158,14 +164,18 @@ func TestWebsocketFragmentedMessageWithPing(t *testing.T) {
 		var msg map[string]string
 		result := make(chan error, 1)
 		go func() { result <- conn.ReadJSON(&msg) }()
+
 		_, err := client.Write(clientFrame(ws.OpText, false, `{"type":`))
 		require.NoError(t, err)
+
 		_, err = client.Write(clientFrame(ws.OpPing, true, "heartbeat"))
 		require.NoError(t, err)
+
 		pong, err := ws.ReadFrame(client)
 		require.NoError(t, err)
 		assert.Equal(t, ws.OpPong, pong.Header.OpCode)
 		assert.Equal(t, "heartbeat", string(pong.Payload))
+
 		_, err = client.Write(clientFrame(ws.OpContinuation, true, `"ping"}`))
 		require.NoError(t, err)
 		require.NoError(t, <-result)
@@ -179,17 +189,21 @@ func TestWebsocketControlWriteTimeoutStartsAfterPayload(t *testing.T) {
 		conn, client := websocketTestConnection(t, t.Context(), 5*time.Second)
 		result := make(chan error, 1)
 		go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
+
 		frame := clientFrame(ws.OpPing, true, "x")
 		_, err := client.Write(frame[:len(frame)-1])
 		require.NoError(t, err)
+
 		time.Sleep(2 * time.Second) // Longer than the 1s write timeout, within the 5s read timeout.
 		_, err = client.Write(frame[len(frame)-1:])
 		require.NoError(t, err)
 		require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
+
 		pong, err := ws.ReadFrame(client)
 		require.NoError(t, err)
 		assert.Equal(t, ws.OpPong, pong.Header.OpCode)
 		assert.Equal(t, "x", string(pong.Payload))
+
 		_, err = client.Write(clientFrame(ws.OpText, true, `{}`))
 		require.NoError(t, err)
 		assert.NoError(t, <-result)
@@ -212,6 +226,7 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 				_ = conn.Close()
 				_ = client.Close()
 			})
+
 			result := make(chan error, 1)
 			go func() { result <- conn.WriteText("blocked") }()
 			require.Eventually(t, func() bool {
@@ -221,6 +236,7 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 				}
 				return true
 			}, time.Second, time.Millisecond)
+
 			closed := make(chan error, 1)
 			go func() { closed <- conn.Close() }()
 			select {
@@ -231,6 +247,7 @@ func TestWebsocketCloseInterruptsWriter(t *testing.T) {
 				<-closed
 				t.Fatal("Close blocked behind a writer without a timeout")
 			}
+
 			assert.Error(t, <-result)
 		})
 	}
@@ -262,21 +279,26 @@ func TestWebsocketIdleAfterTraffic(t *testing.T) {
 				go read()
 				_, err := client.Write(clientFrame(tc.op, true, `{}`))
 				require.NoError(t, err)
+
 				if tc.op == ws.OpPing {
 					pong, err := ws.ReadFrame(client)
 					require.NoError(t, err)
 					assert.Equal(t, ws.OpPong, pong.Header.OpCode)
 				}
+
 				if tc.op == ws.OpText {
 					require.NoError(t, <-result)
+
 					conn.reader.MarkInitialized()
 					go read()
 				}
+
 				// Both a new ReadJSON call and its control/binary frame loop
 				// must clear the previous frame's deadline before waiting idle.
 				time.Sleep(10 * timeout)
 				synctest.Wait()
 				require.Empty(t, result, "previous traffic left an idle read deadline")
+
 				_, err = client.Write(clientFrame(ws.OpText, true, `{}`))
 				require.NoError(t, err)
 				assert.NoError(t, <-result)
