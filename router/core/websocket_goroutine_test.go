@@ -190,7 +190,10 @@ func TestWebsocketControlWriteTimeoutStartsAfterPayload(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		conn, client := websocketTestConnection(t, t.Context(), 5*time.Second)
 		result := make(chan error, 1)
-		go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
+		go func() {
+			var msg json.RawMessage
+			result <- conn.ReadJSON(&msg)
+		}()
 
 		frame := clientFrame(ws.OpPing, true, "x")
 		_, err := client.Write(frame[:len(frame)-1])
@@ -332,7 +335,10 @@ func TestWebsocketReadAfterCancellation(t *testing.T) {
 				cancel()
 				synctest.Wait() // Let cancellation set its interrupting deadline first.
 				result := make(chan error, 1)
-				go func() { var msg json.RawMessage; result <- conn.ReadJSON(&msg) }()
+				go func() {
+					var msg json.RawMessage
+					result <- conn.ReadJSON(&msg)
+				}()
 				synctest.Wait()
 				select {
 				case err := <-result:
