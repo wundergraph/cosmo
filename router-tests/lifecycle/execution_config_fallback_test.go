@@ -18,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -126,4 +127,43 @@ func TestExecutionConfigFallbackOnSplitConfigReload(t *testing.T) {
 
 	published.Store(true)
 	assertServing(reloaded, "split")
+}
+
+func TestExecutionConfigFallbackRejectsColdStart(t *testing.T) {
+	t.Parallel()
+
+	splitToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"organization_id":    "org",
+		"federated_graph_id": "graph",
+		"features":           []string{"split-config-loading"},
+	}).SignedString([]byte("test-secret"))
+	require.NoError(t, err)
+
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/org/graph/manifest/mapper.json" {
+			_, _ = w.Write([]byte(`{"feature":"feature-hash"}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(cdn.Close)
+
+	// A fresh process has no accepted config to fall back to.
+	router, err := core.NewRouter(t.Context(),
+		core.WithLogger(zap.NewNop()),
+		core.WithDisableUsageTracking(),
+		core.WithListenerAddr(fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t))),
+		core.WithGraphApiToken(splitToken),
+		core.WithCDN(config.CDNConfiguration{URL: cdn.URL}),
+		core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{PollInterval: time.Minute}),
+		core.WithReloadPersistentState(core.NewReloadPersistentState(zap.NewNop())),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		assert.NoError(t, router.Shutdown(shutdownCtx))
+	})
+
+	assert.ErrorIs(t, router.Start(t.Context()), errs.ErrMalformedExecutionConfig)
 }
