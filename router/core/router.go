@@ -60,6 +60,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
 	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching/invalidation"
@@ -1088,6 +1089,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 func (r *Router) setupTelemetry(ctx context.Context) error {
+	// Install the shared error handler for either signal, but don't change it in tests.
+	if (r.traceConfig.Enabled || r.metricConfig.OpenTelemetry.Enabled) &&
+		r.traceConfig.TestMemoryExporter == nil && r.metricConfig.OpenTelemetry.TestReader == nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(rtrace.NewOtelErrorHandler(r.logger)))
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
 			Logger:            r.logger,
@@ -1204,14 +1211,12 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return nil
 	}
 
-	// Validate the TTL during startup to avoid additional checks during execution.
-	if r.responseCacheConfig.FallbackTTL <= 0 {
-		return fmt.Errorf("response cache is enabled but its fallback_ttl is %s, which must be greater than zero", r.responseCacheConfig.FallbackTTL)
+	if err := validateResponseCacheSubgraphs(r.responseCacheConfig, r.logger); err != nil {
+		return err
 	}
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
 		return err
 	}
-
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
@@ -1230,6 +1235,15 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		return err
 	}
 
+	// Before the invalidation server, which is to be measured as well.
+	if err = r.instrumentResponseCache(); err != nil {
+		if closeErr := r.responseCache.Close(); closeErr != nil {
+			r.logger.Error("failed to close response cache after metrics setup failed", zap.Error(closeErr))
+		}
+		r.responseCache = nil
+		return err
+	}
+
 	if err = r.startResponseCacheInvalidationServer(ctx); err != nil {
 		if closeErr := r.responseCache.Close(); closeErr != nil {
 			r.logger.Error("failed to close response cache after invalidation server setup failed", zap.Error(closeErr))
@@ -1237,6 +1251,39 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 		r.responseCache = nil
 		return err
 	}
+
+	return nil
+}
+
+func (r *Router) responseCacheMetricsEnabled() bool {
+	return r.metricConfig != nil && (r.metricConfig.OpenTelemetry.ResponseCache || r.metricConfig.Prometheus.ResponseCache)
+}
+
+// instrumentResponseCache measures the calls to the response cache when its metrics are enabled.
+func (r *Router) instrumentResponseCache() error {
+	if !r.responseCacheMetricsEnabled() {
+		return nil
+	}
+
+	provider := r.responseCacheConfig.Storage.Provider
+	if provider == "" {
+		provider = config.ResponseCacheStorageProviderRedis
+	}
+
+	store, err := rmetric.NewResponseCacheMetricStore(
+		r.logger,
+		nil,
+		r.otlpMeterProvider,
+		r.promMeterProvider,
+		r.metricConfig,
+		string(provider),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create response cache metrics: %w", err)
+	}
+
+	r.responseCacheMetrics = store
+	r.responseCache = responsecaching.NewInstrumentedStore(r.responseCache, store)
 
 	return nil
 }
@@ -1285,7 +1332,8 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
 		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
 	)
@@ -1336,7 +1384,8 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.FallbackTTL),
+		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),
@@ -1388,6 +1437,9 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithServerVersion(cmp.Or(r.mcp.Server.Version, Version)),
 		mcpserver.WithServerTitle(r.mcp.Server.Title),
 		mcpserver.WithServerDescription(r.mcp.Server.Description),
+	}
+	if r.promptToQueryClient != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithPromptToQueryClient(r.promptToQueryClient))
 	}
 
 	if r.corsOptions != nil {
@@ -2282,6 +2334,13 @@ func WithSelfRegistration(sr selfregister.SelfRegister) Option {
 	}
 }
 
+// WithPromptToQueryClient sets the control-plane client used by the MCP generate_query tool.
+func WithPromptToQueryClient(client mcpserver.PromptToQueryClient) Option {
+	return func(r *Router) {
+		r.promptToQueryClient = client
+	}
+}
+
 // WithGracePeriod sets the grace period for the router to shutdown.
 func WithGracePeriod(timeout time.Duration) Option {
 	return func(r *Router) {
@@ -2323,7 +2382,7 @@ func WithGraphApiToken(token string) Option {
 	}
 }
 
-func WithModulesConfig(config map[string]interface{}) Option {
+func WithModulesConfig(config map[string]any) Option {
 	return func(r *Router) {
 		r.modulesConfig = config
 	}
@@ -3090,6 +3149,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExemplarFilter:  rmetric.ExemplarFilter(cfg.Metrics.OTLP.ExemplarFilter),
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ResponseCache:   cfg.Metrics.OTLP.ResponseCache,
 			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			NetworkStats:    cfg.Metrics.OTLP.Network.Enabled,
 			ResolverStats:   cfg.Metrics.OTLP.Resolver.Enabled,
@@ -3114,6 +3174,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
 			Path:            cfg.Metrics.Prometheus.Path,
 			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ResponseCache:   cfg.Metrics.Prometheus.ResponseCache,
 			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
 			NetworkStats:    cfg.Metrics.Prometheus.Network.Enabled,
 			ResolverStats:   cfg.Metrics.Prometheus.Resolver.Enabled,

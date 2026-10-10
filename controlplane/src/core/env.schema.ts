@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((val) => (val === '' ? undefined : val), schema.optional());
+
 export const sentryEnvVariables = z.object({
   SENTRY_ENABLED: z
     .string()
@@ -79,6 +82,7 @@ export const envVariables = z
     /**
      * Composition workers
      */
+    COMPOSITION_MIN_THREADS: z.coerce.number().int().min(0).default(0),
     COMPOSITION_MAX_THREADS: z.coerce.number().int().min(0).default(0),
     /**
      * Auth
@@ -230,6 +234,17 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+    /**
+     * Prompt-to-Query
+     */
+    PROMPT_TO_QUERY_SERVICE_ENDPOINT: emptyToUndefined(
+      z
+        .string()
+        .url()
+        .regex(/^https?:\/\//i, 'Must start with http:// or https://'),
+    ),
+    PROMPT_TO_QUERY_HTTP_VERSION: z.union([z.literal('1.1'), z.literal('2')]).optional(),
+    PROMPT_TO_QUERY_TOKEN: emptyToUndefined(z.string().jwt()),
   })
   .merge(sentryEnvVariables)
   .refine((input) => {

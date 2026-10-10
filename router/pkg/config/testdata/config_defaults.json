@@ -40,6 +40,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -71,6 +72,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -223,7 +225,8 @@
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
@@ -368,7 +371,8 @@
       "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
-      "HeaderSources": null
+      "HeaderSources": null,
+      "OnError": "reject"
     },
     "IgnoreIntrospection": false
   },
@@ -441,7 +445,6 @@
   },
   "ResponseCache": {
     "Enabled": false,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "cosmo_response_cache:",
     "Storage": {
       "Provider": "redis",
@@ -464,7 +467,13 @@
       "Name": "Cache-Tag",
       "Delimiter": ",",
       "MaxBytes": 16384
-    }
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": ""
+    },
+    "Subgraphs": null
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -552,6 +561,7 @@
     "EnableDefer": false,
     "EnableMultiFetch": true,
     "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -579,6 +589,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

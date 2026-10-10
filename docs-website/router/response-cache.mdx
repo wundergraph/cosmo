@@ -21,10 +21,11 @@ Response caching is disabled by default.
 A subgraph response is cached only when its `Cache-Control` header asks to be. The rules apply in this order:
 
 1. `no-store` refuses caching.
-2. `no-cache` or `private` refuses caching, in any form. This includes the qualified `no-cache="Set-Cookie"` form.
-3. `s-maxage` sets the lifetime and takes precedence over `max-age`.
-4. `max-age` sets the lifetime when `s-maxage` is absent.
-5. When neither lifetime is present, `fallback_ttl` applies if the header contains `public`, `must-revalidate`, `proxy-revalidate`, `stale-if-error`, or `stale-while-revalidate`. The stale directives require a valid duration, such as `stale-if-error=60`.
+2. `no-cache` refuses caching, in any form. This includes the qualified `no-cache="Set-Cookie"` form.
+3. `private` marks the response as belonging to a private context. It is cached only under a key scoped to that context, and only when `private_id` is configured and resolves for the request. See [Private responses](#private-responses). Without one, `private` refuses caching.
+4. `s-maxage` sets the lifetime and takes precedence over `max-age`.
+5. `max-age` sets the lifetime when `s-maxage` is absent.
+6. When neither lifetime is present, `fallback_ttl` applies if the header contains `public`, `private`, `must-revalidate`, `proxy-revalidate`, `stale-if-error`, or `stale-while-revalidate`. The stale directives require a valid duration, such as `stale-if-error=60`.
 
 `public` is optional. For example, `Cache-Control: max-age=60` and `Cache-Control: s-maxage=60` both allow caching for 60 seconds.
 
@@ -39,6 +40,19 @@ A response carrying GraphQL errors is never cached, whatever its `Cache-Control`
 <Info>
   Configuring the response cache does not make anything cacheable on its own. Subgraphs opt in with a recognized caching directive, such as `Cache-Control: max-age=60` or `Cache-Control: public`. If nothing appears to be cached, check the subgraph response headers first.
 </Info>
+
+## Request directives
+
+A client controls the cache for its own request through the `Cache-Control` request header. Two directives are honored:
+
+- `no-cache` is never answered from the cache. Every fetch of the operation goes to its subgraph, and the responses are stored as they are for any other request, so a `no-cache` request refreshes the entries it bypassed.
+- `no-store` keeps the responses to this request out of the cache. Nothing is stored, but a warm entry still answers the request, as [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111#section-5.2.1.5) allows.
+
+Sent together, `no-cache, no-store` neither reads nor writes the cache. Every other request directive is ignored, including `max-age`, `min-fresh`, `max-stale` and `only-if-cached`, as is the `Pragma` header. A `Cache-Control` request header that does not parse is ignored as a whole.
+
+<Warning>
+  Any client can send these directives, and they cannot be turned off. A client that sends `no-cache` on every request bypasses the cache on every request, and its subgraphs see all of its traffic. A `no-cache` request is not [deduplicated](/router/request-deduplication) with identical requests in flight either.
+</Warning>
 
 ## Enable it
 
@@ -59,11 +73,12 @@ storage_providers:
 
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   key_prefix: 'cosmo_response_cache:'
   storage:
     provider: 'redis'
     provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -77,10 +92,11 @@ Each replica holds its own cache, nothing survives a restart, and no Redis is ne
 ```yaml config.yaml
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   storage:
     provider: 'memory'
     max_entries: 2048
+  all:
+    fallback_ttl: 30s
 ```
 </CodeGroup>
 
@@ -92,14 +108,33 @@ response_cache:
 response_cache:
   # Enable response caching. Default: false.
   enabled: true
-  # Lifetime for a response with a recognized caching directive but no lifetime.
-  # A response naming its own max-age or s-maxage gets that instead.
-  # Minimum 1s. Default: 30s.
-  fallback_ttl: 30s
   # Prepended to every cache key so entries cannot collide with anything else
   # sharing the Redis instance. Redis only, ignored by the memory provider.
   # Default: cosmo_response_cache:
   key_prefix: 'cosmo_response_cache:'
+  # What the cache does for every subgraph without an entry under subgraphs.
+  all:
+    # Cache this subgraph's responses. Set to false to cache only the
+    # subgraphs listed under subgraphs. Default: true.
+    enabled: true
+    # Lifetime for a response with a recognized caching directive but no lifetime.
+    # A response naming its own max-age or s-maxage gets that instead.
+    # Minimum 1s. Default: 30s.
+    fallback_ttl: 30s
+    # Expression yielding the id of the private context a request belongs
+    # to, such as a user or a tenant, so private subgraph responses can be
+    # cached per context. See Private responses.
+    # Default: none, private responses are not cached.
+    private_id: ''
+  # Per-subgraph settings, keyed by subgraph name. An entry replaces all
+  # entirely and is explicit: nothing is inherited and nothing is defaulted.
+  # See Per-subgraph configuration.
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
   storage:
     # redis or memory. Default: redis.
     provider: 'redis'
@@ -143,7 +178,90 @@ response_cache:
 
 `storage` is required when `enabled` is `true`.
 
-Environment variables bypass the config schema validation. A `fallback_ttl` of zero or less fails startup either way.
+Environment variables bypass the config schema validation. In each enabled scope, a `fallback_ttl` of zero or less fails startup, as does a `private_id` that does not compile.
+
+## Per-subgraph configuration
+
+`all` applies to every subgraph. An entry under `subgraphs`, keyed by subgraph name, replaces `all` for that subgraph:
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+  all:
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+```
+
+Here `inventory` is never cached, `products` keeps responses without a lifetime for five minutes, and every other subgraph keeps them for thirty seconds.
+
+An entry is a full override and is explicit. Nothing under `all` reaches a subgraph that has an entry, and no key is defaulted:
+
+* `enabled` must be set. An entry without it does not cache that subgraph. A `fallback_ttl` on its own does not enable anything.
+* An enabled entry must set `fallback_ttl`, or startup fails naming the entry.
+* An entry without `private_id` has none. So `products` above does not cache its `private` responses, although `all` names an id. Repeat the `private_id` in the entry to keep it.
+
+Setting `all.enabled` to `false` turns the cache off for every subgraph without an entry, so only the entries that set `enabled: true` are cached. With no such entry the router starts and logs a warning, and nothing is cached.
+
+An entry naming a subgraph the graph does not have is kept and logged at startup, since a feature flag graph may have it.
+
+The invalidation indexes, the invalidation endpoint, and the cache tag header are not per subgraph.
+
+## Private responses
+
+A subgraph whose answer depends on who is asking marks it `Cache-Control: private`. A shared cache must not serve that answer to anyone else, but the router can still cache it for the context it was produced in, so the same context asking again is served without a subgraph request.
+
+To do that the router needs an id for that context. `private_id` is an [expression](/router/configuration/template-expressions) evaluated once per request that yields it, such as a JWT claim or a request header. The id partitions the cache key: what it names is up to the expression, and it need not be a single user. A tenant, an organisation, or a role are all valid contexts, as long as every request that shares the id may share the response.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+  all:
+    private_id: "request.auth.claims.sub"
+```
+
+Under `all` it applies to every subgraph. Under a `subgraphs` entry it applies to that subgraph alone, and an entry without one has none. See [Per-subgraph configuration](#per-subgraph-configuration).
+
+With a `private_id` in place:
+
+* A `private` response is stored under a key that includes the id, so each context has an entry of its own. A lookup with one id never finds an entry stored under another.
+* A request for which the expression yields nothing, such as an anonymous request whose claim is `nil`, is not cached when the subgraph answers `private`. The subgraph is asked every time. This is not an error.
+* `public` responses are unaffected. They are stored under the shared key and served to every request, whatever the id.
+* With [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control) or a `most_restrictive_cache_control` response header rule in place, a response served from a private entry reaches the client with `Cache-Control: private` and the entry's remaining lifetime, so a browser or CDN in front of the router does not share it either. Without one, the router sends no `Cache-Control` for the hit.
+* Invalidation by subgraph, type, or cache tag drops private entries like any other.
+
+The id is digested with SHA-256 before it becomes part of the key, so raw ids never reach the store. The expression must evaluate to a string. A value of any other type is reported through the response cache warning described under [Observability](#observability) and treated as no id.
+
+<Warning>
+  `private_id` partitions the cache. It does not by itself guarantee that a response is served only to those it was meant for: two requests with the same id share an entry, whatever else differs between them. Propagated headers are not part of the key unless the subgraph names them in `Vary`, so a `private` answer that also depends on a header the id does not account for is served to every request with that id. Name the header in `Vary`, fold it into the expression, or have the subgraph answer `no-store`.
+
+  An expression that yields the same value for different contexts, or one that can be set by the client itself, lets one context be served another's entry. Prefer a verified claim over a plain header.
+
+  A [`set` response header rule](/router/proxy-capabilities/subgraph-response-header-operations) on `Cache-Control` replaces what the subgraph sent, `private` included. A hit served from a private entry is treated the same as the origin response, so such a rule can hand the client a `public` policy for it.
+</Warning>
+
+## Varying responses
+
+A subgraph whose answer depends on a request header, such as `Accept-Language`, names it in a `Vary` response header. The router then keeps one entry per set of values it sent, learned from the first response, the way an HTTP proxy cache does:
+
+* The first request for an operation misses. The names in the response's `Vary` header are stored at the entry's key as a record, and the body is stored under a variant key derived from the values the router sent.
+* A later lookup finds the record, digests the values this request sends the subgraph for those headers, and looks the variant up under the resulting key. A varying response costs two cache round trips per lookup. A response without `Vary` costs one, as before.
+* Values are taken from the request as the subgraph receives it, after header propagation. A header named in `Vary` that the router does not forward counts as empty, so it never splits the cache.
+* `Vary: *` is never cached, and neither is a response naming more than 100 headers.
+* A header whose value differs per caller, such as `Cookie` or `Authorization`, yields one variant per caller. Nobody is served another caller's body, but the entries are rarely reused. A subgraph whose answer is per caller should say `private` instead.
+* A subgraph that changes what it varies on adds the new set of names to the record on its next miss, newest first, rather than replacing it. A lookup tries one variant per set in that order and serves the first it finds, so variants stored under the old names stay reachable until they expire. A record keeps at most 8 sets; past that the oldest are dropped.
+* With `engine.enable_multi_fetch` on, a merged entity fetch carries one `Vary` for the whole response, and the router applies it to every alias in it. An alias whose own answer would have varied on less is stored under the wider set, which splits its entries by headers they do not depend on. That costs extra misses, never a wrong body. A merged fetch follows records the same way a single fetch does, with one second round trip for all of its aliases together. The lever for the cost is on the subgraph side: emit the minimum `Vary` for what was actually resolved rather than a fixed union for the service.
 
 ## Limitations
 
@@ -151,15 +269,17 @@ These apply to the current alpha.
 
 **A batch is served from the cache only when every entity in it is present.** One miss sends the whole batch to the subgraph, including the entities that were already cached. Entities are stored individually, so a later batch made up only of cached entities is a full hit.
 
-**Forwarded request headers are not part of the cache key.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key. Two requests that differ only by a propagated header share one entry, so the first response is served to the second caller. A subgraph whose answer varies by request header must use `private` or `no-store`. Omitting `public` does not prevent caching.
+**Forwarded request headers reach the cache key only through `Vary`.** The key covers the request the router renders for the subgraph, which is the operation text and its variables. Headers added by header propagation are applied after that and never reach the key on their own. Two requests that differ only by a propagated header share one entry unless the subgraph names that header in `Vary`, as described under [Varying responses](#varying-responses). A subgraph that varies by request header without saying so must use `no-store`, or `private` together with a `private_id` whose value accounts for that header. Omitting `public` does not prevent caching.
 
-**Cache hits produce no subgraph telemetry.** A hit skips the subgraph fetch, so no subgraph span or metric is recorded for it. Subgraph request counts fall as the hit rate rises. Use them to confirm the cache is working, not to measure traffic.
+**Cache hits produce no transport telemetry.** A hit skips the subgraph request, so nothing is recorded for the HTTP round trip: no request or response size, no in-flight count, no connection metrics. The fetch itself is still recorded, with its `Engine - Fetch` span and request metrics marked as a hit. See [Metrics and traces](#metrics-and-traces).
 
-**A merged entity fetch is served per alias.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. Each alias is then served all-or-nothing like a batch: a warm alias is left out of the next merged request, a cold one is fetched whole. When some aliases are warm and others are not, the router still sends the request for the cold ones, and the `Cache-Control` it reports for that fetch is capped at the life left on the warm ones. Only a request that finds every alias warm is a cache hit.
+**Merged entity fetches have their own rules.** With `engine.enable_multi_fetch` on, entity fetches to the same subgraph within one parallel wave are merged into a single request with aliased `_entities` fields. The response is taken apart again on the way into the cache, so each alias stores one entry per entity, the same as the unmerged fetch it replaces would have. From there:
 
-**A merged entity fetch keeps no declared cache tags.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to, so the tags a subgraph declares for a merged response are dropped. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
-
-**A failed merged request skips what depends on its warm aliases.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, though, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
+- **Each alias is served all-or-nothing, like a batch.** A warm alias is left out of the next merged request. A cold one is fetched whole.
+- **Only a request that finds every alias warm is a cache hit.** When some aliases are warm and others are not, the router still sends the request for the cold ones.
+- **The reported `Cache-Control` is capped at the warm aliases.** The lifetime reported for a partly warm fetch is the life left on its warm aliases.
+- **Declared cache tags are dropped.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+- **A failed request skips everything that depends on the merged fetch.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
 
 ## Cache tags
 
@@ -187,7 +307,7 @@ The shape depends on what was fetched, because an entity fetch caches one entry 
 
 An outer array whose length does not match the entities answered costs the whole response its tags,
 rather than being zipped as far as the shorter of the two. Either extension is consumed by the router and
-never forwarded to clients. The router does not record tags from a merged entity fetch., see [Limitations](#limitations).
+never forwarded to clients. The router does not record tags from a merged entity fetch. See [Limitations](#limitations).
 
 ## Invalidation
 
@@ -284,6 +404,8 @@ Every cacheable fetch of the request contributes three tiers of tag, coarsest fi
 
 A root query fetch has no single type and contributes no type tag. Declared tags are passed through unchanged. Tags are unique within the header.
 
+The `subgraph-` and `type-` prefixes are not reserved. A declared tag such as `subgraph-products` is indistinguishable in the header from the generated one, and a purge by it removes both. Avoid those prefixes in declared tags so a header tag maps back to one invalidation element.
+
 ```
 Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
 ```
@@ -301,6 +423,8 @@ The header does not depend on the `invalidation` indexes. It is built even when 
 `max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
 
 A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
+
+`max_bytes` caps the whole value, not one tag. Fastly reads at most 1,024 bytes per key and ignores a longer key and every key after it, even when the value fits. Keep each declared tag at or below 1,024 bytes when purging through Fastly.
 
 ### Purge both caches
 
@@ -323,14 +447,16 @@ Startup fails when `name` is not a valid header name or is `Content-Length`, `Co
 The router logs once at startup when the cache is enabled. With the Redis provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "my_redis"}
 ```
 
 With the memory provider:
 
 ```
-INFO  Response cache enabled  {"fallback_ttl": "30s", "storage_provider": "memory", "max_entries": 2048}
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "memory", "max_entries": 2048}
 ```
+
+`fallback_ttl` is the value under `all` and `subgraph_overrides` counts the entries under `subgraphs`.
 
 Nothing is logged when the cache is disabled.
 
@@ -340,7 +466,216 @@ Cache failures never fail a request. When a read or a write fails, the router se
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage.
+That warning is sampled to one line per second. An unreachable cache produces one failure per cacheable fetch of every request in flight, and logging it unsampled would compound the outage. With the metrics of [cache health](#cache-health) enabled, every failure is counted there.
+
+### Metrics and traces
+
+#### Per fetch
+
+While the cache is enabled, every subgraph fetch carries a `wg.response_cache.status` attribute on its metrics and on its `Engine - Fetch` span.
+
+| Value | Meaning |
+| --- | --- |
+| `hit` | The fetch was answered from the cache. Nothing was sent to the subgraph. |
+| `partial_hit` | Part of a merged fetch was answered from the cache and only the rest was sent. This needs `engine.enable_multi_fetch`. |
+| `miss` | The cache was asked and had nothing. The fetch was sent to the subgraph. |
+| `not_cacheable` | The cache was never asked: it is off for the subgraph, or the fetch is not one it stores, such as a mutation. |
+
+A fetch served from the cache still counts as a subgraph request, with a latency close to zero. The attribute sits next to `wg.subgraph.name` on `router.http.requests`, `router.http.request.duration_milliseconds` and `router.http.requests.error`, so a hit rate needs no join:
+
+```promql
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status="hit"}[5m]))
+/
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status=~"hit|partial_hit|miss"}[5m]))
+```
+
+This is the rate among the fetches the cache was asked about. Match on `wg_response_cache_status!=""` instead to measure against every fetch.
+
+The same split on the duration histogram shows what a hit saves. Compare means, not quantiles: the smallest Prometheus bucket is 10 ms, which every hit falls into.
+
+```promql
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_sum{wg_response_cache_status!=""}[5m])
+)
+/
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_count{wg_response_cache_status!=""}[5m])
+)
+```
+
+The duration of a fetch starts after the cache was looked up, for a hit and a miss alike. The time spent in the cache itself is in neither.
+
+To break the hit rate down by operation, add the operation name to the metrics. It is on every span, but left out of metrics unless the router exports to Cosmo Cloud:
+
+```yaml
+telemetry:
+  metrics:
+    attributes:
+      - key: "wg.operation.name"
+        value_from:
+          context_field: operation_name
+```
+
+The attribute is per fetch, not per client response. An operation that fans out to several subgraphs produces one status per fetch. It is not attached while the cache is disabled, and it can be dropped from metrics with `exclude_metric_labels` under `telemetry.metrics.prometheus` or `telemetry.metrics.otlp`.
+
+#### Store decision
+
+The `Engine - Fetch` span also carries what is too detailed for a metric of every fetch:
+
+| Attribute | Meaning |
+| --- | --- |
+| `wg.entity.type` | The type the fetch resolves fields of: the entity type, or `Query` for a root fetch. Several types of a merged fetch are joined with a comma. |
+| `wg.response_cache.store_decision` | What became of the response of a fetch that was sent. |
+| `wg.response_cache.lookup_duration_ms` | The time spent asking the cache, which is not part of the duration of the fetch. |
+
+The store decision tells why a type is never answered from the cache:
+
+| `wg.response_cache.store_decision` | The response was |
+| --- | --- |
+| `stored` | stored. A type that is stored on every miss and never hit has a lifetime too short for its traffic, or a key that never repeats. |
+| `no_store` | sent with `no-store`. |
+| `no_cache` | sent with `no-cache`. |
+| `no_directive` | sent without a caching directive, which opts out of `fallback_ttl`. |
+| `no_lifetime` | sent with a lifetime of zero. |
+| `invalid_cache_control` | sent with a `Cache-Control` that could not be read. |
+| `vary` | sent with `Vary: *`, which matches no request, or with a `Vary` naming more than 100 headers. |
+| `private_without_id` | private, for a request without a user id. |
+| `response_errors` | carrying GraphQL errors. |
+| `fetch_failed` | an error, or none at all. |
+| `invalid_response` | not the shape that was asked for. |
+| `no_entity` | without anything in it to store, as for an entity that does not exist. |
+
+The decision is left out for a fetch nothing was decided for: one answered from the cache, or one that is not cacheable. The `subgraph.response.cache.storeDecision` expression reads `empty` for such a fetch. It is taken before the write, which can still fail.
+
+#### Per response
+
+The router request carries `wg.operation.response_cache.status` on its metrics, on the root span and on the `Operation - Execute` span. It sums up the fetches of one response.
+
+| Value | Meaning |
+| --- | --- |
+| `hit` | Every fetch was answered from the cache. No subgraph was contacted. |
+| `partial_hit` | At least one fetch was answered from the cache, in whole or in part. |
+| `miss` | No fetch was answered from the cache. |
+
+A fetch that is not answered from the cache counts against a hit, whether it missed or is not cacheable, so a response is a `hit` only when nothing was sent at all. The attribute is left out when no subgraph was fetched, as for introspection or a request that failed before it was executed, and for subscriptions and mutations. Operations over WebSocket do not carry it.
+
+The fraction of responses served from the cache:
+
+```promql
+sum(rate(router_http_requests_total{wg_operation_response_cache_status="hit"}[5m]))
+/
+sum(rate(router_http_requests_total{wg_operation_response_cache_status!=""}[5m]))
+```
+
+The latency of the router request includes the time spent in the cache, which makes it the figure to compare a hit and a miss by:
+
+```promql
+sum by (wg_operation_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_sum{wg_operation_response_cache_status!=""}[5m])
+)
+/
+sum by (wg_operation_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_count{wg_operation_response_cache_status!=""}[5m])
+)
+```
+
+Router access logs read the same value from the expression `response.cache.status`:
+
+```yaml
+access_logs:
+  router:
+    fields:
+      - key: "cache_status"
+        value_from:
+          expression: "response.cache.status"
+```
+
+#### Notes
+
+The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, next to `storeDecision`, `lookupDuration` and `entityType`, which puts them within reach of custom attributes and the subgraph access log. No request is sent for a hit, so its access log line has no `method`, `path`, `url` or request header fields.
+
+### Cache health
+
+The metrics of the store itself are off by default:
+
+```yaml
+telemetry:
+  metrics:
+    otlp:
+      response_cache: true
+    prometheus:
+      response_cache: true
+```
+
+They count every lookup, write and invalidation, time them, and tell how they failed. The full list is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics). Apart from `router.response_cache.fetches` they describe calls to the store, split by store operation (`lookup`, `write`, `invalidate`), not by GraphQL operation. Only engine failures carry the subgraph, when it is known.
+
+A lookup asks for every entity under its shared key and, when the request carries a user id for [private responses](#private-responses), under that user's key as well. At most one of the two is found, so the keys counted as `missing` are no measure of the hit rate. Use the [status of the fetches](#per-fetch) for that.
+
+Failed calls, by operation and cause. A `canceled` call is a client that went away, not a cache that is degrading:
+
+```promql
+sum by (wg_response_cache_operation, wg_error_type) (
+  rate(router_response_cache_operations_total{wg_error_type!="", wg_error_type!="canceled"}[5m])
+)
+```
+
+Entries that were not written. A `partial_write` counts the entries the store confirmed as `stored` and the rest as `failed`:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="failed"}[5m]))
+```
+
+What the cache costs per call, to set against what a hit saves:
+
+```promql
+histogram_quantile(0.95,
+  sum by (wg_response_cache_operation, le) (
+    rate(router_response_cache_operation_duration_seconds_bucket[5m])
+  )
+)
+```
+
+Churn, as entries written per entry served. A value near or above one means entries are replaced about as often as they are used, because they expire early, are invalidated or are evicted:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="stored"}[5m]))
+/
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="lookup", wg_response_cache_result="found"}[5m]))
+```
+
+The lifetime entries are written with, which is what the subgraphs ask for in `Cache-Control`. Each write records one value, the shortest TTL among its entries, so this is not the median lifetime of every entry:
+
+```promql
+histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_seconds_bucket[15m])))
+```
+
+#### Cache-hostile types
+
+`router.response_cache.fetches` counts every subgraph fetch by subgraph, by the type it resolves and by its [store decision](#store-decision). The types that miss the cache most often, and why. A busy type can rank high even if most of its fetches hit, so compare against its hits before calling it cache-hostile:
+
+```promql
+topk(10,
+  sum by (wg_subgraph_name, wg_entity_type, wg_response_cache_store_decision) (
+    rate(router_response_cache_fetches_total{wg_response_cache_status="miss"}[15m])
+  )
+)
+```
+
+The decision is taken before the write. A write that then fails is counted with the failed calls above.
+
+#### Evictions
+
+It is Redis that evicts, under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):
+
+```promql
+rate(redis_evicted_keys_total[5m])
+rate(redis_expired_keys_total[5m])
+redis_memory_used_bytes / (redis_memory_max_bytes > 0)
+```
+
+The last one needs Redis to have a `maxmemory`. Without one Redis reports a maximum of zero, evicts nothing, and the query returns no value.
+
+These count for the whole Redis instance, including what else is stored on it.
 
 ## Related
 

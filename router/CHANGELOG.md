@@ -4,6 +4,68 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.357.0](https://github.com/wundergraph/cosmo/compare/router@0.356.0...router@0.357.0) (2026-10-07)
+
+### Features
+
+* support custom codec to construct proto messages ([#3321](https://github.com/wundergraph/cosmo/issues/3321)) ([e829fac](https://github.com/wundergraph/cosmo/commit/e829fac7de65dc422889b19f97f5a3570e63d1c3)) (@Noroth)
+
+## [0.356.0](https://github.com/wundergraph/cosmo/compare/router@0.355.0...router@0.356.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+* **router:** expose prompt-to-query via MCP ([#3158](https://github.com/wundergraph/cosmo/issues/3158)) ([5edfe1c](https://github.com/wundergraph/cosmo/commit/5edfe1c06fc95a8ff4b8943ecb99fe42712b434b)) (@fiam)
+
+### Bug Fixes
+
+* **router:** allow fallback_storage alongside storage in execution config schema ([#3319](https://github.com/wundergraph/cosmo/issues/3319)) ([26ea216](https://github.com/wundergraph/cosmo/commit/26ea216a639844badd6460cf2d50dd604182f741)) (@endigma)
+* **router:** allow printable ASCII persisted operation IDs ([#3324](https://github.com/wundergraph/cosmo/issues/3324)) ([1b05365](https://github.com/wundergraph/cosmo/commit/1b0536571c410c51d5f845a8b30e034f9c8877c1)) (@fiam)
+* **router:** honor persisted operation cache hits during warmup ([#3291](https://github.com/wundergraph/cosmo/issues/3291)) ([1846be1](https://github.com/wundergraph/cosmo/commit/1846be1846142450b01eb3cb65d8d6e6bd578144)) (@fiam)
+
+## [0.355.0](https://github.com/wundergraph/cosmo/compare/router@0.354.0...router@0.355.0) (2026-10-02)
+
+### Features
+
+* **router:** honor Cache-Control request directives: no-cache, no-store ([#3267](https://github.com/wundergraph/cosmo/issues/3267)) ([eedc06c](https://github.com/wundergraph/cosmo/commit/eedc06cadd87d03193b1bc06da19fa066bd07c4b)) (@ysmolski)
+* **router:** support custom persisted operation IDs ([#3282](https://github.com/wundergraph/cosmo/issues/3282)) ([8998414](https://github.com/wundergraph/cosmo/commit/89984146174eaff55ddba1ffe575e70948e0091b)) (@fiam)
+
+### Bug Fixes
+
+* **router:** return not-found for missing S3 persisted operations ([#3306](https://github.com/wundergraph/cosmo/issues/3306)) ([01953b5](https://github.com/wundergraph/cosmo/commit/01953b5608ee514edc42666c90fffa679b78042d)) (@fiam)
+
+## [0.354.0](https://github.com/wundergraph/cosmo/compare/router@0.353.0...router@0.354.0) (2026-09-28)
+
+### Features
+
+* per-subgraph response cache configuration ([#3268](https://github.com/wundergraph/cosmo/issues/3268)) ([4aeb6b3](https://github.com/wundergraph/cosmo/commit/4aeb6b33b5211777ea689cc79e51de792cbd13f9)) (@SkArchon)
+
+# [0.353.0](https://github.com/wundergraph/cosmo/compare/router@0.352.0...router@0.353.0) (2026-09-25)
+
+### Bug Fixes
+
+* **router:** count all selected fields for total_fields limits ([#3249](https://github.com/wundergraph/cosmo/issues/3249)) ([ba4df0e](https://github.com/wundergraph/cosmo/commit/ba4df0e9934f511809a6984f2f058900fb8cbd64)) (@fiam)
+* **router:** log OTEL errors when only metrics are enabled ([#3254](https://github.com/wundergraph/cosmo/issues/3254)) ([48cebe6](https://github.com/wundergraph/cosmo/commit/48cebe616494b76038e46d8b402f6a684aa3f7c8)) (@fiam)
+* **router:** use incrementalSpec=v0.2 in Content-Type header for defer ([#3264](https://github.com/wundergraph/cosmo/issues/3264)) ([3b7b3a3](https://github.com/wundergraph/cosmo/commit/3b7b3a34e9a732a0aacc3911337aa8726682eeda)) (@devsergiy)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
+# [0.352.0](https://github.com/wundergraph/cosmo/compare/router@0.351.0...router@0.352.0) (2026-09-23)
+
+### Features
+
+* private caching ([#3244](https://github.com/wundergraph/cosmo/issues/3244)) ([27cde1e](https://github.com/wundergraph/cosmo/commit/27cde1ed351364efb3b4d7c8115907dde18e84fd)) (@SkArchon)
+* response cache Vary support ([#3256](https://github.com/wundergraph/cosmo/issues/3256)) ([3376562](https://github.com/wundergraph/cosmo/commit/33765624c69c68830866c2f043ebfc2d39fb5c06)) (@SkArchon)
+* **router:** configure authentication error handling ([#3234](https://github.com/wundergraph/cosmo/issues/3234)) ([123c10c](https://github.com/wundergraph/cosmo/commit/123c10c591058e4bfb7cb4e4aebfc0b4aa410b84)) (@fiam)
+
+# [0.351.0](https://github.com/wundergraph/cosmo/compare/router@0.350.0...router@0.351.0) (2026-09-23)
+
+### Features
+
+* **router:** add default websocket subprotocol for clients without a protocol header ([#3271](https://github.com/wundergraph/cosmo/issues/3271)) ([4966f8e](https://github.com/wundergraph/cosmo/commit/4966f8e61554d49f068881569f08d39c82253e8d)) (@endigma)
+
 # [0.350.0](https://github.com/wundergraph/cosmo/compare/router@0.349.0...router@0.350.0) (2026-09-21)
 
 ### Bug Fixes

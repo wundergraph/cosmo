@@ -261,7 +261,7 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 
 	requests := make([]*connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest], 0, count)
 
-	for i := 0; i < count; i++ {
+	for range count {
 		req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 			SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
 				{
@@ -1040,7 +1040,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 	typeMetrics := make([]*graphqlmetricsv1.TypeFieldUsageInfo, 0, numTypeMetrics)
 	inputMetrics := make([]*graphqlmetricsv1.InputUsageInfo, 0, numInputMetrics)
 
-	for i := 0; i < numArgMetrics; i++ {
+	for range numArgMetrics {
 		argMetrics = append(argMetrics, &graphqlmetricsv1.ArgumentUsageInfo{
 			Path:     []string{"hello"},
 			TypeName: "testType",
@@ -1048,7 +1048,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 		})
 	}
 
-	for i := 0; i < numTypeMetrics; i++ {
+	for range numTypeMetrics {
 		typeMetrics = append(typeMetrics, &graphqlmetricsv1.TypeFieldUsageInfo{
 			Path:                   []string{"hello"},
 			TypeNames:              []string{"Query"},
@@ -1058,7 +1058,7 @@ func buildSchemaUsageInfoItem(hash, reqDoc string, numArgMetrics, numTypeMetrics
 		})
 	}
 
-	for i := 0; i < numInputMetrics; i++ {
+	for range numInputMetrics {
 		inputMetrics = append(inputMetrics, &graphqlmetricsv1.InputUsageInfo{
 			Path:       []string{"hello"},
 			TypeName:   "testType",

@@ -131,7 +131,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 func maxAgeOf(t *testing.T, header string) int {
 	t.Helper()
 
-	for _, part := range strings.Split(header, ",") {
+	for part := range strings.SplitSeq(header, ",") {
 		value, ok := strings.CutPrefix(strings.TrimSpace(part), "max-age=")
 		if !ok {
 			continue

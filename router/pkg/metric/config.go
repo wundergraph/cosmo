@@ -48,6 +48,7 @@ type PrometheusConfig struct {
 	ListenAddr      string
 	Path            string
 	GraphqlCache    bool
+	ResponseCache   bool
 	EngineStats     EngineStatsConfig
 	CircuitBreaker  bool
 	CostStats       config.CostStats
@@ -117,6 +118,7 @@ type OpenTelemetry struct {
 	ResolverStats   bool
 	RouterRuntime   bool
 	GraphqlCache    bool
+	ResponseCache   bool
 	CircuitBreaker  bool
 	CostStats       config.CostStats
 	EngineStats     EngineStatsConfig

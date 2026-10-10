@@ -17,12 +17,18 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -59,7 +65,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -89,7 +95,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -116,7 +122,7 @@ func TestOnFinished_ClientDisconnect(t *testing.T) {
 		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
 		store := &spyMetricStore{}
-		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil)
+		hooks := NewEngineRequestHooks(store, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, _ := setupTestContext(t, tp)
 
@@ -446,11 +452,12 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		hit    bool          // served entirely from the cache
-		ttl    time.Duration // life left on the cached entries
-		origin string        // Cache-Control the subgraph sent
-		want   *want         // nil: no header must be set
+		name    string
+		hit     bool          // served entirely from the cache
+		partial bool          // sent without the entries the cache answered
+		ttl     time.Duration // life left on the cached entries
+		origin  string        // Cache-Control the subgraph sent
+		want    *want         // nil: no header must be set
 	}{
 		{
 			name:   "a miss with an origin header leaves it alone",
@@ -472,45 +479,58 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			want: &want{maxAge: -1, noCache: true},
 		},
 		{
-			name:   "a partial hit caps a longer origin max-age",
-			ttl:    30 * time.Second,
-			origin: "public, max-age=120",
-			want:   &want{maxAge: 30, public: true},
+			name:    "a partial hit caps a longer origin max-age",
+			partial: true,
+			ttl:     30 * time.Second,
+			origin:  "public, max-age=120",
+			want:    &want{maxAge: 30, public: true},
 		},
 		{
-			name:   "a partial hit keeps a shorter origin max-age",
-			ttl:    30 * time.Second,
-			origin: "public, max-age=10",
-			want:   &want{maxAge: 10, public: true},
+			name:    "a partial hit keeps a shorter origin max-age",
+			partial: true,
+			ttl:     30 * time.Second,
+			origin:  "public, max-age=10",
+			want:    &want{maxAge: 10, public: true},
 		},
 		{
-			name:   "a partial hit keeps the origin's no-store",
-			ttl:    30 * time.Second,
-			origin: "no-store",
-			want:   &want{maxAge: -1, noStore: true},
+			name:    "a partial hit keeps the origin's no-store",
+			partial: true,
+			ttl:     30 * time.Second,
+			origin:  "no-store",
+			want:    &want{maxAge: -1, noStore: true},
 		},
 		{
-			name:   "a partial hit keeps the origin's private",
-			ttl:    30 * time.Second,
-			origin: "private, max-age=120",
-			want:   &want{maxAge: 30, private: true},
+			name:    "a partial hit keeps the origin's private",
+			partial: true,
+			ttl:     30 * time.Second,
+			origin:  "private, max-age=120",
+			want:    &want{maxAge: 30, private: true},
 		},
 		{
-			name: "a partial hit without an origin header reports its life",
-			ttl:  30 * time.Second,
-			want: &want{maxAge: 30, public: true},
+			name:    "a partial hit without an origin header reports its life",
+			partial: true,
+			ttl:     30 * time.Second,
+			want:    &want{maxAge: 30, public: true},
 		},
 		{
-			name:   "a partial hit with under a second left is no-cache",
-			ttl:    200 * time.Millisecond,
-			origin: "public, max-age=120",
-			want:   &want{maxAge: -1, public: true, noCache: true},
+			name:    "a partial hit with no life left is no-cache",
+			partial: true,
+			origin:  "public, max-age=120",
+			want:    &want{maxAge: -1, public: true, noCache: true},
 		},
 		{
-			name:   "a partial hit leaves an unparsable origin header alone",
-			ttl:    30 * time.Second,
-			origin: "max-age=soon",
-			want:   &want{raw: "max-age=soon"},
+			name:    "a partial hit with under a second left is no-cache",
+			partial: true,
+			ttl:     200 * time.Millisecond,
+			origin:  "public, max-age=120",
+			want:    &want{maxAge: -1, public: true, noCache: true},
+		},
+		{
+			name:    "a partial hit leaves an unparsable origin header alone",
+			partial: true,
+			ttl:     30 * time.Second,
+			origin:  "max-age=soon",
+			want:    &want{raw: "max-age=soon"},
 		},
 	}
 
@@ -526,6 +546,9 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			applyResponseCacheLifetime(headers, &resolve.ResponseInfo{
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: cacheStatusOf(tt.hit, tt.partial),
+				},
 			})
 
 			if tt.want == nil {
@@ -612,7 +635,7 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 			require.NoError(t, err)
 
 			tp := sdktrace.NewTracerProvider()
-			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation)
+			hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
 
 			ctx, _ := setupTestContext(t, tp)
 			client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
@@ -622,9 +645,225 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 				StatusCode:       http.StatusOK,
 				ResponseCacheHit: true,
 				ResponseCacheTTL: 30 * time.Second,
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status: resolve.ResponseCacheStatusHit,
+				},
 			})
 
 			require.Equal(t, tt.want, client.header.Get(cacheControlKey))
 		})
 	}
+}
+
+// cacheStatusOf is the status the engine reports for a fetch.
+func cacheStatusOf(hit, partial bool) resolve.ResponseCacheStatus {
+	switch {
+	case hit:
+		return resolve.ResponseCacheStatusHit
+	case partial:
+		return resolve.ResponseCacheStatusPartialHit
+	default:
+		return resolve.ResponseCacheStatusMiss
+	}
+}
+
+func TestFetchTypeNames(t *testing.T) {
+	t.Parallel()
+
+	require.Empty(t, fetchTypeNames(nil))
+	require.Equal(t, "Employee", fetchTypeNames([]resolve.GraphCoordinate{
+		{TypeName: "Employee", FieldName: "id"},
+		{TypeName: "Employee", FieldName: "notes"},
+	}))
+	require.Equal(t, "Consultancy,Employee", fetchTypeNames([]resolve.GraphCoordinate{
+		{TypeName: "Employee", FieldName: "id"},
+		{TypeName: "Consultancy", FieldName: "lead"},
+		{TypeName: "Employee", FieldName: "notes"},
+	}))
+}
+
+func TestOnFinished_ResponseCacheStatus(t *testing.T) {
+	t.Parallel()
+
+	ds := resolve.DataSourceInfo{
+		ID:   "subgraph-1",
+		Name: "products",
+	}
+
+	// fetchSpanAttributes runs OnFinished once and hands back what the span carries.
+	fetchSpanAttributes := func(t *testing.T, cacheEnabled bool, info *resolve.ResponseInfo) attribute.Set {
+		t.Helper()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, cacheEnabled, nil)
+
+		ctx, _ := setupTestContext(t, tp)
+		hooks.OnFinished(ctx, ds, info)
+
+		spans := exporter.GetSpans().Snapshots()
+		require.Len(t, spans, 1)
+		return attribute.NewSet(spans[0].Attributes()...)
+	}
+
+	t.Run("a fetch answered from the cache is a hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+			ResponseCacheTTL: time.Minute,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
+	})
+
+	t.Run("a hit with no life left is still a hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), status.AsString())
+	})
+
+	t.Run("a fetch that went out with cached entries in it is a partial hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheTTL: time.Minute,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
+	})
+
+	t.Run("a fetch the cache had nothing for is a miss", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status:         resolve.ResponseCacheStatusMiss,
+				StoreDecision:  caching.StoreDecisionNoStore,
+				LookupDuration: 1500 * time.Microsecond,
+			},
+			RootFields: []resolve.GraphCoordinate{
+				{TypeName: "Employee", FieldName: "id"},
+				{TypeName: "Employee", FieldName: "currentMood"},
+			},
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusMiss.String(), status.AsString())
+
+		decision, ok := attrs.Value(rotel.WgResponseCacheStoreDecision)
+		require.True(t, ok)
+		require.Equal(t, "no_store", decision.AsString())
+
+		entityType, ok := attrs.Value(rotel.WgEntityType)
+		require.True(t, ok)
+		require.Equal(t, "Employee", entityType.AsString())
+
+		lookup, ok := attrs.Value(rotel.WgResponseCacheLookupDurationMs)
+		require.True(t, ok)
+		require.InDelta(t, 1.5, lookup.AsFloat64(), 1e-9)
+	})
+
+	t.Run("a fetch the cache was never asked about is not cacheable", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusNotCacheable.String(), status.AsString())
+
+		_, ok = attrs.Value(rotel.WgResponseCacheStoreDecision)
+		require.False(t, ok)
+		_, ok = attrs.Value(rotel.WgResponseCacheLookupDurationMs)
+		require.False(t, ok)
+	})
+
+	t.Run("nothing is attached when the cache is not enabled", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, false, &resolve.ResponseInfo{
+			StatusCode: http.StatusOK,
+		})
+		_, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.False(t, ok, "without a cache every fetch would read as a miss")
+	})
+
+	t.Run("a partial hit with no life left is still a partial hit", func(t *testing.T) {
+		t.Parallel()
+
+		attrs := fetchSpanAttributes(t, true, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheTTL: 0,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusPartialHit,
+			},
+		})
+		status, ok := attrs.Value(rotel.WgResponseCacheStatus)
+		require.True(t, ok)
+		require.Equal(t, resolve.ResponseCacheStatusPartialHit.String(), status.AsString())
+	})
+
+	t.Run("the access log of a hit carries the expression fields", func(t *testing.T) {
+		t.Parallel()
+
+		zCore, logs := observer.New(zapcore.InfoLevel)
+
+		exprManager := expr.CreateNewExprManager()
+		status, err := exprManager.CompileAnyExpression("subgraph.response.cache.status")
+		require.NoError(t, err)
+		decision, err := exprManager.CompileAnyExpression("subgraph.response.cache.storeDecision")
+		require.NoError(t, err)
+
+		accessLogger := requestlogger.NewSubgraphAccessLogger(zap.New(zCore), requestlogger.SubgraphOptions{
+			FieldsHandler: SubgraphAccessLogsFieldHandler,
+			ExprAttributes: []requestlogger.ExpressionAttribute{
+				{Key: "cache_status", Expr: status},
+				{Key: "store_decision", Expr: decision},
+			},
+		})
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, accessLogger, tp, nil, nil, nil, false, nil, true, nil)
+
+		ctx, _ := setupTestContext(t, tp)
+		// No request is sent for a hit.
+		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{
+			StatusCode:       http.StatusOK,
+			ResponseCacheHit: true,
+			ResponseCacheTTL: time.Minute,
+			ResponseCache: resolve.ResponseCacheInfo{
+				Status: resolve.ResponseCacheStatusHit,
+			},
+		})
+
+		require.Equal(t, 1, logs.Len())
+		fields := logs.All()[0].ContextMap()
+		require.Equal(t, resolve.ResponseCacheStatusHit.String(), fields["cache_status"])
+		require.Equal(t, "empty", fields["store_decision"], "nothing is decided for a hit")
+		require.Equal(t, trace.SpanFromContext(ctx).SpanContext().TraceID().String(), fields["trace_id"])
+		require.Contains(t, fields, "request_id")
+	})
 }

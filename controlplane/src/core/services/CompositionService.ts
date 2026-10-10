@@ -1,6 +1,8 @@
 /* eslint-disable no-labels */
 import { createHash, randomUUID } from 'node:crypto';
-import { JsonObject, fromJson, toJson, toJsonString } from '@bufbuild/protobuf';
+import { JsonObject, fromJson, toJson } from '@bufbuild/protobuf';
+import { Client } from '@connectrpc/connect';
+import { PromptToQueryService as PtQService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigSchema,
@@ -29,6 +31,7 @@ import {
   OrganizationFeatures,
   PlainMessage,
   SPLIT_CONFIG_LOADING_FEATURE_ID,
+  SubgraphDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import {
@@ -37,6 +40,7 @@ import {
   ContractBaseCompositionData,
   routerConfigToFeatureFlagExecutionConfig,
   RouterConfigUploadError,
+  serializeRouterConfig,
 } from '../composition/composer.js';
 import {
   composeGraphsInWorker,
@@ -55,11 +59,14 @@ import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
+import { PromptToQueryService } from './PromptToQueryService.js';
 
 const COMPOSITION_DEPLOY_CONCURRENCY = 5;
 
 @traced
 export class CompositionService {
+  readonly #ptqService: PromptToQueryService | undefined;
+
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
@@ -72,16 +79,30 @@ export class CompositionService {
     private chClient: ClickHouseClient | undefined,
     private webhookProxyUrl: string | undefined,
     private disableResolvabilityValidation: boolean | undefined,
-  ) {}
+    promptToQueryClient: Client<typeof PtQService> | undefined,
+    private defaultBillingPlanId: string | undefined,
+  ) {
+    this.#ptqService = promptToQueryClient
+      ? new PromptToQueryService(
+          this.db,
+          this.logger,
+          promptToQueryClient,
+          this.organizationId,
+          this.defaultBillingPlanId,
+        )
+      : undefined;
+  }
 
   public async composeAndDeployFederatedGraph({
     actorId,
     federatedGraph,
+    splitConfigLoading,
   }: {
     actorId: string;
     federatedGraph: FederatedGraphDTO;
+    splitConfigLoading?: boolean;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures(splitConfigLoading);
     const compositionOptions: CompositionOptions = {
       disableResolvabilityValidation: this.disableResolvabilityValidation,
       ignoreExternalKeys: orgFeatures.ignoreExternalKeys,
@@ -156,13 +177,15 @@ export class CompositionService {
     featureFlag,
     isEnabled,
     prevFederatedGraphs,
+    splitConfigLoading,
   }: {
     actorId: string;
     featureFlag: FeatureFlagDTO;
     isEnabled?: boolean;
     prevFederatedGraphs?: FederatedGraphDTO[];
+    splitConfigLoading?: boolean;
   }): Promise<ComposeAndDeployResult> {
-    const orgFeatures = await this.getOrganizationFeatures();
+    const orgFeatures = await this.getOrganizationFeatures(splitConfigLoading);
     const enabled = isEnabled ?? featureFlag.isEnabled;
     if (!orgFeatures.splitConfigLoading) {
       return await this.legacyComposeAndDeployFeatureFlag({
@@ -444,6 +467,7 @@ export class CompositionService {
       this.webhookProxyUrl,
     );
     const touchedGraphIds = new Set<string>();
+    const subgraphsByGraphTargetId = new Map<string, Promise<SubgraphDTO[]>>();
 
     // Process in windows of COMPOSITION_DEPLOY_CONCURRENCY so only one window's composition artifacts are held in
     // memory at a time: compose the window in parallel, persist it to the DB sequentially, upload it in parallel, then
@@ -453,7 +477,9 @@ export class CompositionService {
     for (let i = 0; i < baseGraphs.length; i += COMPOSITION_DEPLOY_CONCURRENCY) {
       const window = baseGraphs.slice(i, i + COMPOSITION_DEPLOY_CONCURRENCY);
       const composed = await Promise.all(
-        window.map((graph) => limit(() => this.composeAffectedBaseGraph(graph, compositionOptions))),
+        window.map((graph) =>
+          limit(() => this.composeAffectedBaseGraph(graph, compositionOptions, subgraphsByGraphTargetId)),
+        ),
       );
       await this.persistAndUploadBatch({
         actorId,
@@ -470,7 +496,9 @@ export class CompositionService {
     for (let i = 0; i < affectedFeatureFlags.length; i += COMPOSITION_DEPLOY_CONCURRENCY) {
       const window = affectedFeatureFlags.slice(i, i + COMPOSITION_DEPLOY_CONCURRENCY);
       const composed = await Promise.all(
-        window.map((featureFlag) => this.composeAffectedFeatureFlag(featureFlag, compositionOptions, limit)),
+        window.map((featureFlag) =>
+          this.composeAffectedFeatureFlag(featureFlag, compositionOptions, limit, subgraphsByGraphTargetId),
+        ),
       );
       await this.persistAndUploadBatch({
         actorId,
@@ -504,11 +532,13 @@ export class CompositionService {
   private async composeAffectedBaseGraph(
     federatedGraph: FederatedGraphDTO,
     compositionOptions: CompositionOptions,
+    subgraphsByGraphTargetId?: Map<string, Promise<SubgraphDTO[]>>,
   ): Promise<FederatedGraphAndCompositionResults> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
     const subgraphs = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: true,
+      promiseCache: subgraphsByGraphTargetId,
     });
 
     let tagOptionsByContractName: SerializedContractTagOptions[];
@@ -551,6 +581,7 @@ export class CompositionService {
     featureFlag: FeatureFlagDTO,
     compositionOptions: CompositionOptions,
     limit: ReturnType<typeof pLimit>,
+    subgraphsByGraphTargetId?: Map<string, Promise<SubgraphDTO[]>>,
   ): Promise<FederatedGraphAndCompositionResults[]> {
     const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
     const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
@@ -571,6 +602,7 @@ export class CompositionService {
           const subgraphs = await subgraphRepo.listByFederatedGraph({
             federatedGraphTargetId: graph.targetId,
             published: true,
+            promiseCache: subgraphsByGraphTargetId,
           });
 
           const baseCompositionSubgraphs = subgraphs.map((s) => ({
@@ -721,6 +753,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled: true,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {
@@ -854,7 +887,8 @@ export class CompositionService {
       return;
     }
 
-    await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig);
+    const serializedRouterConfig = serializeRouterConfig(routerExecutionConfig);
+    await this.saveRouterConfigHash(graph.id, undefined, routerExecutionConfig, serializedRouterConfig);
 
     uploadTasks.push(async () => {
       const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
@@ -863,6 +897,7 @@ export class CompositionService {
           jwtSecret: this.admissionConfig.webhookJWTSecret,
         },
         baseCompositionRouterExecutionConfig: routerExecutionConfig,
+        serializedRouterConfig,
         baseCompositionSchemaVersionId: schemaVersionId,
         blobStorage: this.blobStorage,
         // The router config is split, so feature flags are uploaded separately.
@@ -915,8 +950,10 @@ export class CompositionService {
         compatibilityVersion: graph.routerCompatibilityVersion,
       });
 
+      const serializedRouterConfig = serializeRouterConfig(routerExecutionConfig);
+
       // Hash write stays in the sequential DB phase; only the upload + webhook is deferred to the parallel phase.
-      await this.saveRouterConfigHash(graph.id, featureFlagName, routerExecutionConfig);
+      await this.saveRouterConfigHash(graph.id, featureFlagName, routerExecutionConfig, serializedRouterConfig);
 
       uploadTasks.push(async () => {
         const { errors: uploadErrors } = await composer.composeAndUploadRouterConfig({
@@ -925,6 +962,7 @@ export class CompositionService {
             jwtSecret: this.admissionConfig.webhookJWTSecret,
           },
           baseCompositionRouterExecutionConfig: routerExecutionConfig,
+          serializedRouterConfig,
           baseCompositionSchemaVersionId: '',
           blobStorage: this.blobStorage,
           featureFlagRouterExecutionConfigByFeatureFlagName: new Map(),
@@ -948,12 +986,19 @@ export class CompositionService {
     }
   }
 
-  private async getOrganizationFeatures(): Promise<OrganizationFeatures> {
+  private async getOrganizationFeatures(splitConfigLoading?: boolean): Promise<OrganizationFeatures> {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: this.organizationId,
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
+
+    if (splitConfigLoading !== undefined) {
+      return {
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        splitConfigLoading,
+      };
+    }
 
     const splitConfigFeature = await orgRepo.getFeature({
       organizationId: this.organizationId,
@@ -1255,6 +1300,7 @@ export class CompositionService {
       routerExecutionConfig,
       featureFlagId: compositionResult.featureFlagId,
       splitConfigEnabled,
+      promptToQueryService: this.#ptqService,
     });
 
     if (!compositionResult.base.success || !baseComposition.schemaVersionId) {
@@ -1424,6 +1470,7 @@ export class CompositionService {
             routerExecutionConfig: contractRouterExecutionConfig,
             featureFlagId: compositionResult.featureFlagId,
             splitConfigEnabled,
+            promptToQueryService: this.#ptqService,
           });
 
           if (!artifact.success || !contractComposition.schemaVersionId) {
@@ -1680,8 +1727,11 @@ export class CompositionService {
     federatedGraphId: string,
     featureFlagName: string | undefined,
     routerConfig: RouterConfig,
+    serializedRouterConfig?: Buffer,
   ): Promise<void> {
-    const hash = createHash('sha256').update(toJsonString(RouterConfigSchema, routerConfig)).digest('hex');
+    const hash = createHash('sha256')
+      .update(serializedRouterConfig ?? serializeRouterConfig(routerConfig))
+      .digest('hex');
 
     let featureFlag: { id: string } | undefined;
     if (featureFlagName) {

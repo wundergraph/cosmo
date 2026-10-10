@@ -61,6 +61,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -104,6 +105,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -294,7 +296,8 @@
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
@@ -735,7 +738,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
@@ -869,7 +873,6 @@
   },
   "ResponseCache": {
     "Enabled": true,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "response_cache_test:",
     "Storage": {
       "Provider": "redis",
@@ -892,6 +895,23 @@
       "Name": "Surrogate-Key",
       "Delimiter": " ",
       "MaxBytes": 1024
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": "request.auth.claims.sub"
+    },
+    "Subgraphs": {
+      "inventory": {
+        "Enabled": false,
+        "FallbackTTL": 0,
+        "PrivateID": ""
+      },
+      "products": {
+        "Enabled": true,
+        "FallbackTTL": 300000000000,
+        "PrivateID": "request.header.Get('X-User-Id')"
+      }
     }
   },
   "RouterConfigPath": "latest.json",
@@ -1022,6 +1042,7 @@
     "EnableDefer": false,
     "EnableMultiFetch": true,
     "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -1049,6 +1070,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

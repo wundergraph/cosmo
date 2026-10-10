@@ -2,13 +2,14 @@ import Fastify, { FastifyBaseLogger } from 'fastify';
 import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import * as Sentry from '@sentry/node';
-import { cors, createContextValues } from '@connectrpc/connect';
+import { Client, cors, createContextValues, createClient } from '@connectrpc/connect';
+import { createConnectTransport, compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyCors from '@fastify/cors';
 import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
-import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
+import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics from './plugins/metrics.js';
@@ -73,6 +74,7 @@ import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composit
 export interface BuildConfig {
   logger: LoggerOptions;
   composition?: {
+    minThreads: number;
     maxThreads: number;
   };
   database: {
@@ -165,6 +167,11 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  promptToQuery?: {
+    address: string | undefined;
+    httpVersion?: string;
+    token?: string;
+  };
 }
 
 export interface MetricsOptions {
@@ -187,6 +194,7 @@ const developmentLoggerOpts: LoggerOptions = {
 
 export default async function build(opts: BuildConfig) {
   configureComposeGraphsPool({
+    minThreads: opts.composition?.minThreads ?? 0,
     maxThreads: opts.composition?.maxThreads ?? 0,
   });
 
@@ -578,6 +586,40 @@ export default async function build(opts: BuildConfig) {
     keycloakRealm: opts.keycloak.realm,
   });
 
+  //
+  let promptToQueryClient: Client<typeof PromptToQueryService> | undefined;
+  if (opts.promptToQuery?.address) {
+    let ptqHttpVersion: '1.1' | '2' = '2';
+    if (
+      opts.promptToQuery.httpVersion &&
+      (opts.promptToQuery.httpVersion === '1.1' || opts.promptToQuery.httpVersion === '2')
+    ) {
+      ptqHttpVersion = opts.promptToQuery.httpVersion;
+    }
+
+    promptToQueryClient = createClient(
+      PromptToQueryService,
+      createConnectTransport({
+        httpVersion: ptqHttpVersion,
+        baseUrl: opts.promptToQuery.address,
+        interceptors: [
+          (next) => (req) => {
+            if (opts.promptToQuery?.token) {
+              // Overwrite the request to include the authorization header
+              const modifiedHeaders = new Headers(req.header);
+              modifiedHeaders.set('authorization', `Bearer ${opts.promptToQuery.token}`);
+
+              return next({ ...req, header: modifiedHeaders });
+            }
+
+            // Otherwise, proceed normally
+            return next(req);
+          },
+        ],
+      }),
+    );
+  }
+
   // Capture the active Sentry span in preHandler (where OTEL context is still available)
   // and store it on the request so Connect interceptors can use it as parentSpan.
   fastify.addHook('preHandler', (req, _reply, done) => {
@@ -624,6 +666,7 @@ export default async function build(opts: BuildConfig) {
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
       lockAdapter: fastify.lockAdapter,
+      promptToQueryClient,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(
@@ -640,7 +683,7 @@ export default async function build(opts: BuildConfig) {
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
     compressMinBytes: 1024,
-    maxTimeoutMs: 80_000,
+    maxTimeoutMs: 120_000,
     shutdownTimeoutMs: 30_000,
     // The default limit is the maximum supported value of ~4GiB
     // We go with 32MiB to avoid allocating too much memory for large requests

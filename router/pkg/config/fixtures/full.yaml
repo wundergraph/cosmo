@@ -216,6 +216,7 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      response_cache: true
       connection_stats: true
       network:
         enabled: true
@@ -249,6 +250,7 @@ telemetry:
       path: '/metrics'
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
+      response_cache: true
       connection_stats: true
       network:
         enabled: true
@@ -373,6 +375,7 @@ headers:
 authentication:
   ignore_introspection: false
   jwt:
+    on_error: continue
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
@@ -503,6 +506,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -541,7 +545,6 @@ storage_providers:
 
 response_cache:
   enabled: true
-  fallback_ttl: 30s
   key_prefix: 'response_cache_test:'
   storage:
     provider: 'redis'
@@ -561,6 +564,17 @@ response_cache:
     name: 'Surrogate-Key'
     delimiter: ' '
     max_bytes: 1024
+  all:
+    enabled: true
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+      private_id: "request.header.Get('X-User-Id')"
 
 security:
   complexity_calculation_cache:

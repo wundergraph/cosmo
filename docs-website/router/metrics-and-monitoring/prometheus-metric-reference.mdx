@@ -188,6 +188,42 @@ A generic error type to indicate an error occurred. This is available only for `
 You can find more examples here under [`Streams`](/router/metrics-and-monitoring#example-prometheus-queries)
 
 
+### Response Cache Metrics
+We expose metrics for the store of the [response cache](/router/response-cache): its lookups, writes and invalidations, how long they take and how they fail.
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      response_cache: true
+```
+
+#### Metrics
+
+* `router_response_cache_operations_total`: Counter of calls to the store.
+* `router_response_cache_operation_duration_seconds`: Histogram of the duration of those calls, in seconds.
+* `router_response_cache_keys_total`: Counter of the entries the store was asked for, found, stored or removed.
+* `router_response_cache_write_ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
+* `router_response_cache_fetches_total`: Counter of subgraph fetches, by what the cache did for them.
+
+#### Attributes
+
+* `wg_response_cache_provider`: The storage provider, `redis` or `memory`. On every metric.
+* `wg_response_cache_operation`: `lookup`, `write` or `invalidate`. `engine` counts a failure around the store, such as an entry that could not be read.
+* `wg_response_cache_result`: On `router_response_cache_keys_total`. `found` or `missing` for a lookup, `stored` or `failed` for a write, `removed` for an invalidation.
+* `wg_error_type`: On `router_response_cache_operations_total`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`. For the `engine` operation `invalid_entry` or `invalid_response`, with the `wg_subgraph_name` it happened for.
+
+`router_response_cache_fetches_total` carries its own:
+
+* `wg_subgraph_name`: The name of the subgraph.
+* `wg_entity_type`: The type the fetch resolves fields of.
+* `wg_response_cache_status`: `hit`, `partial_hit`, `miss` or `not_cacheable`.
+* `wg_response_cache_store_decision`: `stored`, or the [reason](/router/response-cache#store-decision) the response was not stored.
+
+#### Examples
+
+You can find examples under [Cache health](/router/response-cache#cache-health).
+
 ### Connection Metrics
 
 These metrics provide lower level metrics which helps track connection and pool metrics. By utilizing these metrics users can figure out when the router's connection pool is full and when connections are misbehaving by for example observing spikes in time to acquire connections.
