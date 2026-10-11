@@ -1211,7 +1211,7 @@
                   },
                   "expression": {
                     "type": "string",
-                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                    "description": "The expression to evaluate for the value. If the evaluation fails, the default value is used."
                   }
                 },
                 "oneOf": [
@@ -1456,6 +1456,10 @@
                           "operation_hash",
                           "router_config_version"
                         ]
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression to evaluate for the value. If the evaluation fails, the default value is used."
                       }
                     }
                   }
@@ -1515,6 +1519,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1701,6 +1710,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
