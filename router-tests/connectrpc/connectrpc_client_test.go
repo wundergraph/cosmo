@@ -2,9 +2,7 @@ package integration
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
-	"net"
 	"net/http"
 	"testing"
 
@@ -13,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	employeev1 "github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1"
 	"github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1/employeev1connect"
-	"golang.org/x/net/http2"
 )
 
 // TestConnectRPC_ClientProtocols tests all three RPC protocols (Connect, gRPC, gRPC-Web)
@@ -66,15 +63,11 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 	t.Run("gRPC protocol", func(t *testing.T) {
 		// Create HTTP client with h2c (HTTP/2 cleartext) support for gRPC without TLS
 		// This mimics what grpcurl does with -plaintext flag
+		p := &http.Protocols{}
+		p.SetUnencryptedHTTP2(true)
 		h2cClient := &http.Client{
-			Transport: &http2.Transport{
-				// Allow HTTP/2 without TLS (h2c)
-				AllowHTTP: true,
-				// Use a custom dialer that doesn't require TLS
-				DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
-					var d net.Dialer
-					return d.DialContext(ctx, network, addr)
-				},
+			Transport: &http.Transport{
+				Protocols: p,
 			},
 		}
 
