@@ -48,7 +48,9 @@ func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, 
 func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.Hook) *RedisCache {
 	t.Helper()
 
-	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	// miniredis interprets every script, so a batch of a thousand items can
+	// take seconds on a loaded CI runner: past go-redis' 3s read timeout.
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr(), ReadTimeout: 30 * time.Second})
 	// Faithful ZSCAN paging unless the test brings its own pager.
 	if !slices.ContainsFunc(hooks, func(h redis.Hook) bool { _, ok := h.(*pagedZScan); return ok }) {
 		hooks = append([]redis.Hook{&pagedZScan{size: invalidationPageSize}}, hooks...)
