@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
@@ -22,6 +23,11 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultConfigFetchAttempts  = 3
+	defaultConfigFetchRetryWait = 500 * time.Millisecond
 )
 
 // SplitFetcher fetches mapper and individual router configs from the CDN
@@ -34,6 +40,11 @@ type SplitFetcher struct {
 	httpClient          *http.Client
 	logger              *zap.Logger
 	hash                hash.Hash // HMAC-SHA256 for signature validation; nil if no key configured
+
+	// configFetchAttempts is how many times a config is fetched before giving up
+	// when its body cannot be unmarshalled; configFetchRetryWait is the linear backoff step.
+	configFetchAttempts  int
+	configFetchRetryWait time.Duration
 }
 
 // NewSplitFetcher creates a SplitFetcher for the given CDN endpoint and router token.
@@ -64,12 +75,14 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	logger := opts.Logger.With(zap.String("component", "split_config_fetcher"))
 
 	f := &SplitFetcher{
-		cdnURL:              u,
-		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              logger,
+		cdnURL:               u,
+		authenticationToken:  token,
+		federatedGraphID:     url.PathEscape(claims.FederatedGraphID),
+		organizationID:       url.PathEscape(claims.OrganizationID),
+		httpClient:           httpclient.NewRetryableHTTPClient(logger),
+		logger:               logger,
+		configFetchAttempts:  defaultConfigFetchAttempts,
+		configFetchRetryWait: defaultConfigFetchRetryWait,
 	}
 
 	if opts.SignatureKey != "" {
@@ -199,6 +212,9 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, erro
 
 // FetchConfig fetches a single router config from CDN.
 // featureFlagName="" returns the base graph; any other value returns the named feature flag config.
+//
+// A config whose body cannot be unmarshalled is fetched again: the CDN occasionally answers
+// with a 200 and a truncated body ("proto: unexpected EOF"), which the HTTP client does not retry.
 func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) (*nodev1.RouterConfig, error) {
 	var (
 		path string
@@ -216,15 +232,39 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
 
-	body, err := f.post(ctx, path)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
+	var unmarshalErr error
+
+	for attempt := 1; attempt <= f.configFetchAttempts; attempt++ {
+		if attempt > 1 {
+			timer := time.NewTimer(f.configFetchRetryWait * time.Duration(attempt-1))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, errors.Join(unmarshalErr, ctx.Err())
+			case <-timer.C:
+			}
+		}
+
+		body, err := f.post(ctx, path)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
+		}
+
+		cfg, err := execution_config.UnmarshalConfig(body)
+		if err == nil {
+			return cfg, nil
+		}
+
+		unmarshalErr = fmt.Errorf("could not unmarshal router config for %q: %w", featureFlagName, err)
+
+		f.logger.Warn("Could not unmarshal router config fetched from CDN",
+			zap.String("feature_flag", featureFlagName),
+			zap.Int("attempt", attempt),
+			zap.Int("max_attempts", f.configFetchAttempts),
+			zap.Int("body_size", len(body)),
+			zap.Error(err),
+		)
 	}
 
-	cfg, err := execution_config.UnmarshalConfig(body)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal router config for %q: %w", featureFlagName, err)
-	}
-
-	return cfg, nil
+	return nil, unmarshalErr
 }

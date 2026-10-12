@@ -11,7 +11,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
@@ -429,13 +431,67 @@ func TestFetchConfig_Success(t *testing.T) {
 }
 
 func TestFetchConfig_InvalidJSON(t *testing.T) {
+	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("not-valid-proto-json"))
 	}))
 	defer srv.Close()
 
-	_, err := newFetcher(t, srv.URL, nil).FetchConfig(context.Background(), "")
+	f := newFetcher(t, srv.URL, nil)
+	cdn.SetConfigFetchRetryWait(f, time.Millisecond)
+
+	_, err := f.FetchConfig(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not unmarshal router config")
+	assert.Equal(t, int32(3), requests.Load())
+}
+
+func TestFetchConfig_TruncatedBodyIsRetried(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{
+		Version:      "v42",
+		EngineConfig: &nodev1.EngineConfiguration{DefaultFlushInterval: 500},
+	})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// The first response is cut in half but still well-framed, as seen from the CDN.
+		if requests.Add(1) == 1 {
+			_, _ = w.Write(body[:len(body)/2])
+			return
+		}
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, nil)
+	cdn.SetConfigFetchRetryWait(f, time.Millisecond)
+
+	result, err := f.FetchConfig(context.Background(), "my-flag")
+	require.NoError(t, err)
+	assert.Equal(t, "v42", result.Version)
+	assert.Equal(t, int32(2), requests.Load())
+}
+
+func TestFetchConfig_TruncatedBodyRetryStopsOnContextCancel(t *testing.T) {
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"version": "v4`))
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, nil)
+	cdn.SetConfigFetchRetryWait(f, time.Hour)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := f.FetchConfig(ctx, "")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Contains(t, err.Error(), "could not unmarshal router config")
+	assert.Equal(t, int32(1), requests.Load())
 }
