@@ -40,6 +40,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -71,6 +72,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -559,6 +561,7 @@
     "EnableDefer": false,
     "EnableMultiFetch": true,
     "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,

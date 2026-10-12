@@ -708,6 +708,7 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables OTEL metrics instrumentation                                                                                                                                       | true          |
 | METRICS_OTLP_ROUTER_RUNTIME        | router_runtime        | <Icon icon="square" />                        | Enable the collection of metrics for the router runtime.                                                                                                                   | true          |
 | METRICS_OTLP_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false         |
+| METRICS_OTLP_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache#cache-health). | false         |
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
@@ -736,7 +737,8 @@ Configured under `telemetry.metrics.otlp.log_exporter`. See [Metrics Log Exporte
 | attributes.default                   | <Icon icon="square" /> | The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used. |                                                                                                              |
 | attributes.value_from                | <Icon icon="square" /> | Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence.                                                       |                                                                                                              |
 | attributes.value_from.request_header | <Icon icon="square" /> | The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used.                                         |                                                                                                              |
-| attributes.value_from.context_field  | <Icon icon="square" /> | The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.                                                  | One of:["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256"] |
+| attributes.value_from.context_field  | <Icon icon="square" /> | The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.                                                  | One of:["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256", "operation_name", "operation_hash", "router_config_version"] |
+| attributes.value_from.expression     | <Icon icon="square" /> | The expression to evaluate for the value. If the evaluation fails, the default value is used. | |
 
 ### Example YAML config:
 
@@ -749,6 +751,7 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      response_cache: false
       connection_stats: false
       # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, request transfer duration, time to first response byte, response transfer duration)
       network:
@@ -786,6 +789,7 @@ telemetry:
 | PROMETHEUS_HTTP_PATH             | path                  | <Icon icon="square" />                        | The HTTP path where metrics are exposed.                                                                                                                                   | "/metrics"       |
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
+| PROMETHEUS_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache#cache-health). | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
 | PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte (request transfer duration), time-to-first-byte, and time-to-last-byte (response transfer duration) histograms.                                                  | false            |
 | PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
@@ -810,6 +814,7 @@ telemetry:
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
+      response_cache: false
       connection_stats: false
       # Per-request subgraph HTTP phase metrics (DNS, TCP connect, TLS handshake, time to first request byte, request transfer duration, time to first response byte, response transfer duration)
       network:
@@ -2222,6 +2227,7 @@ Configure the GraphQL Execution Engine of the Router.
 | ENGINE_ENABLE_DEFER                                           | enable_defer                                           | <Icon icon="square" /> | Enables support for the [`@defer`](/router/defer) directive, allowing clients to defer parts of a query so that the initial response is returned faster and deferred fields are streamed incrementally.                                                                                                                                      | false         |
 | ENGINE_ENABLE_MULTI_FETCH                                     | enable_multi_fetch                                     | <Icon icon="square" /> | Merges entity fetches that target the same subgraph and execute at the same point in the query plan into a single request with aliased `_entities` fields. This reduces the number of requests sent to subgraphs.                                                                                                                           | true          |
 | ENGINE_ENABLE_SCHEDULE_FETCHES                                | enable_schedule_fetches                                | <Icon icon="square" /> | Replaces the wave-based fetch execution with a dependency-aware fetch scheduler. Independent fetch chains progress as soon as their own dependencies complete, instead of waiting for the slowest fetch in each wave.                                                                                                                       | true          |
+| ENGINE_ENABLE_GRPC_WIRE_ENCODING                              | enable_grpc_wire_encoding                              | <Icon icon="square" /> | Encodes request messages for [gRPC services and router plugins](/router/gRPC/concepts) directly to the protobuf wire format. This is faster and uses less memory, because the router does not build a dynamic protobuf message for each request. Set to `false` to build request messages with protoreflect instead. Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding. | true          |
 | ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY | relax_subgraph_operation_field_selection_merging_nullability | <Icon icon="square" /> | Relaxes nullability validation for [field selection merging](/router/relaxed-field-selection-merging-nullability) across union member types.                                                                                                                                                                                    | false         |
 | ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS                        | allow_string_literals_for_enums                        | <Icon icon="square" /> | Accepts a [string literal where an enum value is expected](/router/string-literals-for-enums) if the string content matches one of the enum's values. This is a deviation from the GraphQL specification.                                                                                                                                   | false         |
 
@@ -2272,6 +2278,7 @@ engine:
   subscription_fetch_timeout: 30s
   enable_multi_fetch: true
   enable_schedule_fetches: true
+  enable_grpc_wire_encoding: true
   relax_subgraph_operation_field_selection_merging_nullability: false
   allow_string_literals_for_enums: false
 ```

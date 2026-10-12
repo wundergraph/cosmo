@@ -607,7 +607,7 @@ export default async function build(opts: BuildConfig) {
             if (opts.promptToQuery?.token) {
               // Overwrite the request to include the authorization header
               const modifiedHeaders = new Headers(req.header);
-              modifiedHeaders.set('authorization', `bearer ${opts.promptToQuery.token}`);
+              modifiedHeaders.set('authorization', `Bearer ${opts.promptToQuery.token}`);
 
               return next({ ...req, header: modifiedHeaders });
             }

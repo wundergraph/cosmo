@@ -307,6 +307,8 @@ type MetricOptions struct {
 	EnablePrometheusResolverMetrics       bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
+	EnableOTLPResponseCacheMetrics        bool
+	EnablePrometheusResponseCacheMetrics  bool
 	LogExporter                           MetricsLogExporterOptions
 	OTLPCostStats                         config.CostStats
 	PrometheusCostStats                   config.CostStats
@@ -1393,6 +1395,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		EnableDefer:                       true,
 		EnableMultiFetch:                  true,
 		EnableScheduleFetches:             true,
+		EnableGRPCWireEncoding:            true,
 		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
@@ -1649,6 +1652,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			Path:            "/metrics",
 			TestRegistry:    testConfig.PrometheusRegistry,
 			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ResponseCache:   testConfig.MetricOptions.EnablePrometheusResponseCacheMetrics,
 			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
 			NetworkStats:    testConfig.MetricOptions.EnablePrometheusNetworkMetrics,
 			ResolverStats:   testConfig.MetricOptions.EnablePrometheusResolverMetrics,
@@ -1680,6 +1684,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					ExemplarFilter:  testConfig.MetricOptions.OTLPExemplarFilter,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					ResponseCache:   testConfig.MetricOptions.EnableOTLPResponseCacheMetrics,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
