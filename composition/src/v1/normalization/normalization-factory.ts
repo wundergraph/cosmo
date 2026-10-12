@@ -4941,7 +4941,7 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
-          if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+          if (isObject) {
             this.extractEntityCacheTagDirectives(parentData);
           }
           const externalInterfaceFieldNames: Array<string> = [];
