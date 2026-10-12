@@ -11,7 +11,7 @@ runs:
   steps:
     - name: Read golangci-lint version
       id: golangci-lint-version
-      run: echo "version=$(cut -d ':' -f 1 .golangci-lint-version)" >> "$GITHUB_OUTPUT"
+      run: echo "version=$(cat .golangci-lint-version)" >> "$GITHUB_OUTPUT"
       shell: bash
       working-directory: ${{ github.workspace }}
 
