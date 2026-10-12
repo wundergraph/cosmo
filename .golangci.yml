@@ -17,7 +17,6 @@ linters:
     - nolintlint
     - reassign
     - staticcheck
-    # Standalone Staticcheck also runs U1000; golangci-lint exposes it separately.
     - unused
     - wastedassign
   settings:
