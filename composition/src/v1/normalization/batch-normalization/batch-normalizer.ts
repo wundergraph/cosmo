@@ -194,11 +194,11 @@ export class BatchNormalizer {
           continue;
         }
 
-        if (configurationData.entityCaching) {
-          configurationData.entityCaching.cacheTagConfigurations =
-            configurationData.entityCaching.cacheTagConfigurations.filter(
-              ({ fieldName }) => !fieldNames.has(fieldName),
-            );
+        const { entityCaching } = configurationData;
+        if (entityCaching) {
+          entityCaching.cacheTagConfigurations = entityCaching.cacheTagConfigurations.filter(
+            ({ fieldName }) => !fieldNames.has(fieldName),
+          );
         }
       }
     }

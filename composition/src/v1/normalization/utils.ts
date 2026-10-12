@@ -525,7 +525,7 @@ export function validateArgumentTemplateReferences(
  */
 export function parseCacheTagFormat(format: string, errorMessages: Array<string>): ParsedCacheTagFormat {
   const placeholders: Array<CacheTagPlaceholder> = [];
-  const normalizedFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment: string, body: string) => {
+  const normalizedFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment, body: string) => {
     const match = CACHE_TAG_PLACEHOLDER_REGEXP.exec(body);
     if (!match) {
       errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
