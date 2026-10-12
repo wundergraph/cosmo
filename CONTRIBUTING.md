@@ -66,7 +66,15 @@ use (
 
 ## Go linting
 
-Run `make lint` to lint Go code or `make lint-fix` to apply automatic fixes.
+Run `make lint` or `make lint-fix` in `router`, `router-tests`, `graphqlmetrics`, or
+`aws-lambda-router` to run the shared golangci-lint checks, including vet and
+Staticcheck. `lint-fix` also applies supported automatic fixes.
+
+The first invocation installs the version pinned in `.golangci-lint-version`
+into the gitignored `.bin/` directory using the upstream `install.sh` from the
+same immutable release tag. Later invocations use the cached binary without
+requiring a global golangci-lint or Staticcheck installation. CI uses the same
+version and `.golangci.yml` policy.
 
 ## Conventional Commit Standard
 
