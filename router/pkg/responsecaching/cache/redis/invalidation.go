@@ -37,9 +37,11 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 //	>= 0  live: the entry's expiry, ms
 //	 < 0  marked: minus when a walk deleted its entry, redis clock, ms
 //
-// A live member is marked between two deletes of its entry, then removed. A
-// walk that stops midway leaves its marks for the next one, which deletes
-// their entries again before removing them.
+// A live member is marked between two deletes of its entry, then removed.
+// Once marked, a page is finished even if ctx is cancelled: a mark left
+// behind makes every write of its key delete itself until the next walk. A
+// walk that fails or dies midway leaves its marks for the next one, which
+// deletes their entries again before removing them.
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
@@ -95,6 +97,11 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 	if err != nil || len(p.live) == 0 {
 		return removed, err
 	}
+	// Nothing marked yet, so stopping here leaves nothing behind.
+	if err := ctx.Err(); err != nil {
+		return removed, err
+	}
+	ctx = context.WithoutCancel(ctx)
 
 	// 2. Mark the live members. A write finding its member marked never
 	// extends its entry.
