@@ -99,51 +99,65 @@ func TestDiscover(t *testing.T) {
 }
 
 func TestToolTitle_OmitPrefixOption(t *testing.T) {
-	t.Run("default: title and name keep prefix", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(false), WithOmitToolTitlePrefix(false))
+	tests := []struct {
+		name             string
+		options          []func(*Options)
+		expectedToolName string
+		expectedTitle    string
+	}{
+		{
+			name: "default: title and name keep prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(false),
+				WithOmitToolTitlePrefix(false),
+			},
+			expectedToolName: "execute_operation_list_employees",
+			expectedTitle:    "Execute operation ListEmployees",
+		},
+		{
+			name: "omit title prefix only: title has no prefix, name retains prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(false),
+				WithOmitToolTitlePrefix(true),
+			},
+			expectedToolName: "execute_operation_list_employees",
+			expectedTitle:    "ListEmployees",
+		},
+		{
+			name: "omit name prefix only: name has no prefix, title retains prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(true),
+				WithOmitToolTitlePrefix(false),
+			},
+			expectedToolName: "list_employees",
+			expectedTitle:    "Execute operation ListEmployees",
+		},
+		{
+			name: "both enabled: name and title drop prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(true),
+				WithOmitToolTitlePrefix(true),
+			},
+			expectedToolName: "list_employees",
+			expectedTitle:    "ListEmployees",
+		},
+	}
 
-		result, err := cs.ListTools(t.Context(), nil)
-		require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := newTestSession(t, tt.options...)
 
-		tool := findTool(t, result.Tools, "execute_operation_list_employees")
-		require.NotNil(t, tool.Annotations)
-		assert.Equal(t, "Execute operation ListEmployees", tool.Annotations.Title)
-	})
+			result, err := cs.ListTools(t.Context(), nil)
+			require.NoError(t, err)
 
-	t.Run("omit title prefix only: title has no prefix, name retains prefix", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(false), WithOmitToolTitlePrefix(true))
-
-		result, err := cs.ListTools(t.Context(), nil)
-		require.NoError(t, err)
-
-		tool := findTool(t, result.Tools, "execute_operation_list_employees")
-		require.NotNil(t, tool.Annotations)
-		assert.Equal(t, "ListEmployees", tool.Annotations.Title)
-	})
-
-	t.Run("omit name prefix only: name has no prefix, title retains prefix", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(true), WithOmitToolTitlePrefix(false))
-
-		result, err := cs.ListTools(t.Context(), nil)
-		require.NoError(t, err)
-
-		tool := findTool(t, result.Tools, "list_employees")
-		require.NotNil(t, tool.Annotations)
-		assert.Equal(t, "Execute operation ListEmployees", tool.Annotations.Title)
-	})
-
-	t.Run("both enabled: name and title drop prefix", func(t *testing.T) {
-		cs := newTestSession(t, WithOmitToolNamePrefix(true), WithOmitToolTitlePrefix(true))
-
-		result, err := cs.ListTools(t.Context(), nil)
-		require.NoError(t, err)
-
-		tool := findTool(t, result.Tools, "list_employees")
-		require.NotNil(t, tool.Annotations)
-		assert.Equal(t, "ListEmployees", tool.Annotations.Title)
-	})
+			tool := findTool(t, result.Tools, tt.expectedToolName)
+			require.NotNil(t, tool.Annotations)
+			assert.Equal(t, tt.expectedTitle, tool.Annotations.Title)
+		})
+	}
 }
 
+// findTool returns the tool with the specified name from tools.
 func findTool(t *testing.T, tools []*mcp.Tool, name string) *mcp.Tool {
 	t.Helper()
 	for _, tool := range tools {
@@ -154,4 +168,3 @@ func findTool(t *testing.T, tools []*mcp.Tool, name string) *mcp.Tool {
 	t.Fatalf("tool %q not found in %d returned tools", name, len(tools))
 	return nil
 }
-

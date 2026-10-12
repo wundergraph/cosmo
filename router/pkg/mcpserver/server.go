@@ -84,7 +84,7 @@ type Options struct {
 	ExposeSchema bool
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
 	OmitToolNamePrefix bool
-	// OmitToolTitlePrefix removes the "Execute operation " prefix from MCP tool titles
+	// OmitToolTitlePrefix removes the "Execute operation " prefix from MCP tool titles.
 	OmitToolTitlePrefix bool
 	// OutputSchemaEnabled declares an output schema on each operation tool and
 	// adds structured content to successful tool results (MCP structured tool
@@ -512,7 +512,7 @@ func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
 	}
 }
 
-// WithOmitToolTitlePrefix sets the omit tool title prefix option
+// WithOmitToolTitlePrefix sets the omit tool title prefix option.
 func WithOmitToolTitlePrefix(omitToolTitlePrefix bool) func(*Options) {
 	return func(o *Options) {
 		o.OmitToolTitlePrefix = omitToolTitlePrefix
