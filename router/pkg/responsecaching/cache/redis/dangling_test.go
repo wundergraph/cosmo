@@ -11,6 +11,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
@@ -232,8 +233,8 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.False(t, mr.Exists(entryKey(old.Key)), "the old value survived its invalidation")
 	})
 
-	t.Run("a SET landing after the walk keeps only its lease", func(t *testing.T) {
-		// Its member was removed with the walk's mark, so it's never extended.
+	t.Run("a SET landing after the walk is deleted", func(t *testing.T) {
+		// Its member was removed with the walk's mark, so no tag lists it.
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
@@ -247,11 +248,36 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{item}))
 		split.requireFired(t)
 
-		require.True(t, mr.Exists(entryKey(item.Key)))
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
-		mr.FastForward(writeLease)
-		require.False(t, mr.Exists(entryKey(item.Key)))
+		assert.False(t, mr.Exists(entryKey(item.Key)))
 	})
+
+	// A write landing between the walk's second delete and its unmark, then a
+	// second invalidation: the entry must not survive either.
+	for name, ttl := range map[string]time.Duration{"extended": time.Minute, "within the lease": writeLease / 2} {
+		t.Run("a write before the walk's unmark is deleted, "+name, func(t *testing.T) {
+			t.Parallel()
+			written := item
+			written.TTL = ttl
+			mr := miniredis.RunT(t)
+			writer := newTestRedisCacheOn(t, mr)
+			require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{written}))
+
+			// Walk pipelines: delete, delete again, unmark.
+			split := &splitPipeline{at: splitAt{pipeline: 2}}
+			walker := newTestRedisCacheOn(t, mr, split)
+			split.fn = func() {
+				require.NoError(t, writer.SetMany(context.Background(), []enginecache.Item{written}))
+			}
+			_, err := walker.InvalidateByTags(t.Context(), []string{tag})
+			require.NoError(t, err)
+			require.True(t, split.fired, "no write before the unmark")
+
+			assert.False(t, mr.Exists(entryKey(item.Key)), "unlisted entry left readable")
+			_, err = walker.InvalidateByTags(t.Context(), []string{tag})
+			require.NoError(t, err)
+			assert.False(t, mr.Exists(entryKey(item.Key)), "survived a second invalidation")
+		})
+	}
 
 	t.Run("a walk stopping after its mark leaves the mark", func(t *testing.T) {
 		t.Parallel()
@@ -306,7 +332,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		score, err := mr.ZScore(tagIndexKey(tag), item.Key)
 		require.NoError(t, err)
 		require.Negative(t, score, "only a walk removes a mark")
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "so the write keeps its lease")
+		require.False(t, mr.Exists(entryKey(item.Key)), "so the write deletes its entry")
 
 		_, err = writer.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
@@ -314,7 +340,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key)
 	})
 
-	t.Run("a write during a sweep keeps only its lease", func(t *testing.T) {
+	t.Run("a write during a sweep is deleted", func(t *testing.T) {
 		t.Parallel()
 		mr := miniredis.RunT(t)
 		writer := newTestRedisCacheOn(t, mr)
@@ -331,9 +357,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.NoError(t, err)
 		interposer.requireFired(t)
 
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
-		mr.FastForward(writeLease)
-		require.False(t, mr.Exists(entryKey(item.Key)))
+		assert.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
 	t.Run("a write between the walk's delete and its mark is deleted too", func(t *testing.T) {
@@ -647,8 +671,8 @@ func leaveMarks(t *testing.T, mr *miniredis.Miniredis, tags ...string) {
 }
 
 // requireNoDangling fails if item's entry is live past its lease but missing
-// from one of its tag indexes. One still on its lease may be unlisted: a write
-// landing during a walk is never extended.
+// from one of its tag indexes. One still on its lease may be unlisted: a
+// writer that died or failed to confirm.
 func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.Item) {
 	t.Helper()
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	enginecache "github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
@@ -169,17 +170,16 @@ func TestRedisCacheExtendsOnlyConfirmedEntries(t *testing.T) {
 		return mr
 	}
 
-	t.Run("a SET landing after its member was marked keeps its lease", func(t *testing.T) {
+	t.Run("a SET landing after its member was invalidated is deleted", func(t *testing.T) {
 		t.Parallel()
 		mr := late(t, func(walker *RedisCache) {
 			_, err := walker.InvalidateByTags(context.Background(), []string{tag})
 			require.NoError(t, err)
 		})
-		require.True(t, mr.Exists(entryKey(item.Key)))
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
+		assert.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
-	t.Run("a SET landing after its member was swept keeps its lease", func(t *testing.T) {
+	t.Run("a SET landing after its member was swept is deleted", func(t *testing.T) {
 		t.Parallel()
 		mr := late(t, func(walker *RedisCache) {
 			for range 2 {
@@ -187,11 +187,8 @@ func TestRedisCacheExtendsOnlyConfirmedEntries(t *testing.T) {
 				require.NoError(t, err)
 			}
 		})
-		require.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "swept")
-		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease)
-
-		mr.FastForward(writeLease)
-		require.False(t, mr.Exists(entryKey(item.Key)))
+		assert.NotContains(t, zmembers(t, mr, tagIndexKey(tag)), item.Key, "swept")
+		assert.False(t, mr.Exists(entryKey(item.Key)))
 	})
 
 	t.Run("a slow first round trip is still extended", func(t *testing.T) {

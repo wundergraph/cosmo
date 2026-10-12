@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -100,7 +101,7 @@ func TestResponseCacheNoDanglingEntries(t *testing.T) {
 		})
 	})
 
-	t.Run("invalidations racing writes leave nothing past its lease", func(t *testing.T) {
+	t.Run("invalidations racing writes leave nothing behind", func(t *testing.T) {
 		t.Parallel()
 		cfg, addr := makeCacheAsConfig(t)
 
@@ -129,17 +130,13 @@ func TestResponseCacheNoDanglingEntries(t *testing.T) {
 			require.Nil(t, failure.Load())
 			require.Greater(t, xEnv.SubgraphRequestCount.Mood.Load(), int64(1), "invalidations forced fresh writes")
 
-			// Anything a final invalidation can't reach may only be on its lease.
+			// A write racing a walk deletes its own entry, so a final
+			// invalidation leaves nothing.
 			status, _ := invalidateCacheKey(t, addr, responseCacheSharedKey, `[{"kind":"subgraph","subgraph":"mood"}]`)
 			require.Equal(t, http.StatusAccepted, status)
 
-			client := newResponseCacheRedisClient(t)
 			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
-			for _, entry := range entries {
-				ttl, err := client.PTTL(context.Background(), cfg.KeyPrefix+responseCacheEntryNamespace+entry).Result()
-				require.NoError(t, err)
-				require.LessOrEqual(t, ttl, writeLease, "%s survived invalidating its subgraph with %s left", entry, ttl)
-			}
+			assert.Empty(t, entries, "survived invalidating their subgraph")
 		})
 	})
 }

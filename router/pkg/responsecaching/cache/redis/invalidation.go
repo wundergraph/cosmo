@@ -110,8 +110,8 @@ func (c *RedisCache) invalidatePage(ctx context.Context, tagKey string, p page) 
 		return removed, err
 	}
 
-	// 4. Remove the marks. A write still landing finds its member gone and
-	// keeps its lease.
+	// 4. Remove the marks. A write still landing finds its member marked or
+	// gone and deletes its entry.
 	own := make([]mark, len(p.live))
 	for i, member := range p.live {
 		own[i] = mark{member: member, score: score}

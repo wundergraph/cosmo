@@ -18,7 +18,8 @@ import (
 
 // Hammers a real server with writers and invalidators on a few hot keys. One
 // tag per key, so only that tag can reach it: after writers stop and every tag
-// is invalidated once more, any entry left past its lease is dangling. TTLs
+// is invalidated once more, any entry left with a TTL past the lease is
+// dangling. TTLs
 // vary, and no entry may outlive the TTL its value was written with. Opt in
 // with RESPONSE_CACHE_REDIS_ADDR.
 func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
@@ -106,22 +107,27 @@ func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// An entry the final invalidation couldn't reach may only be one still on
-	// its lease: a write landing during a walk, never extended.
-	var leased, dangling int
+	// An entry the final invalidation couldn't reach may only be one written
+	// with a TTL within the lease: it has no confirm step, so its SET can land
+	// after a walk that dropped its member.
+	var short, dangling int
 	for k := range keys {
-		pttl, err := check.PTTL(t.Context(), prefix+entryNamespace+key(k)).Result()
-		require.NoError(t, err)
-		if pttl <= 0 {
+		stored, err := check.Get(t.Context(), prefix+entryNamespace+key(k)).Bytes()
+		if err == redis.Nil {
 			continue
 		}
-		if pttl <= writeLease {
-			leased++
+		require.NoError(t, err)
+		value, _, _, err := enginecache.DecodeEntry(entryBody(stored))
+		require.NoError(t, err)
+		written, err := strconv.ParseInt(string(value), 10, 64)
+		require.NoError(t, err)
+		if written <= writeLease.Milliseconds() {
+			short++
 			continue
 		}
 		dangling++
-		t.Logf("dangling: %s survived with %s left", key(k), pttl)
+		t.Logf("dangling: %s written with %dms survived", key(k), written)
 	}
-	t.Logf("writes=%d walks=%d leased=%d dangling=%d", writes.Load(), walks.Load(), leased, dangling)
-	require.Zero(t, dangling, "survived a final invalidation of its only tag past its lease")
+	t.Logf("writes=%d walks=%d short=%d dangling=%d", writes.Load(), walks.Load(), short, dangling)
+	require.Zero(t, dangling, "survived a final invalidation of its only tag")
 }

@@ -17,6 +17,9 @@ import (
 // It bounds how long a writer dying mid-write can leave an entry unreachable.
 const writeLease = 10 * time.Second
 
+// sawMark is addMember's answer when the member is marked.
+const sawMark = -1
+
 // Scores and the prune bound are taken from the tag's node clock, never the
 // router's: a router's skew can't drop a live member or outlive a tag set.
 
@@ -32,10 +35,11 @@ return redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - ARGV[1])
 // there. GT: a write landing out of order never lowers a member's score, which
 // would let the prune drop it while a newer entry is alive. A mark stays: only
 // a walk removes it, after deleting its entry, so a write that never lands
-// can't take with it the walk's duty to delete what came before.
+// can't take with it the walk's duty to delete what came before. A marked
+// member returns -1: the walk will drop it, so the write's entry is unlisted.
 const addMember = `
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
-if s and tonumber(s) < 0 then return 0 end
+if s and tonumber(s) < 0 then return -1 end
 local t = redis.call('TIME')
 local at = t[1] * 1000 + math.floor(t[2] / 1000) + ARGV[2]
 return redis.call('ZADD', KEYS[1], 'GT', at, ARGV[1])
@@ -75,13 +79,15 @@ return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
 //  1. indexAndStore: add it to its tags, then SET it with its token and a
 //     short lease.
 //  2. checkListings: confirm each tag still lists it live, raising the member in the tag set
-//     to the entry's expiry. An entry whose index failed is removed instead.
+//     to the entry's expiry. An entry whose index failed or found a mark is
+//     removed instead.
 //  3. extendConfirmed: extend it only if every tag confirmed it, to the
-//     earliest expiry its lifts set.
+//     earliest expiry its lifts set. One a tag no longer lists is removed.
 //
-// So an extended entry is always listed. Anything unconfirmed, or a writer
-// dying in between, leaves only a lease-long entry (10s). The token keeps each step
-// to this write's own entry, never a later one's.
+// So an extended entry is always listed, and a write racing a walk only costs
+// a miss. A failed confirm, or a writer dying in between, leaves only a
+// lease-long entry (10s). The token keeps each step to this write's own entry,
+// never a later one's.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
 		return caching.ErrNoItems
@@ -176,8 +182,8 @@ func (c *RedisCache) finishWrites(ctx context.Context, writes []write) error {
 	return nil
 }
 
-// checkListings is round trip 2. An entry whose index failed is removed, not
-// left unreachable. One to extend has each tag's member lifted to its expiry;
+// checkListings is round trip 2. An entry whose index failed or found a mark
+// is removed, not left unreachable. One to extend has each tag's member lifted to its expiry;
 // the lifts are returned by write.
 func (c *RedisCache) checkListings(ctx context.Context, writes []write) (map[int][]*redis.Cmd, error) {
 	pipe := c.client.Pipeline()
@@ -206,18 +212,23 @@ func (c *RedisCache) checkListings(ctx context.Context, writes []write) (map[int
 
 // extendConfirmed is round trip 3: it extends each entry whose every lift
 // found its member live, to the earliest expiry they set, so it dies before
-// any of its members. Others keep their lease. It waits on the lifts as they
-// and the entry may sit on different nodes.
+// any of its members. One a lift found missing or marked was invalidated
+// mid-write and is removed; one whose lift failed keeps its lease. It waits on
+// the lifts as they and the entry may sit on different nodes.
 func (c *RedisCache) extendConfirmed(ctx context.Context, writes []write, lifts map[int][]*redis.Cmd) error {
 	pipe := c.client.Pipeline()
 	for i, cmds := range lifts {
 		w := &writes[i]
 		at, ok := earliestLift(cmds)
-		if !ok {
+		switch {
+		case ok:
+			pipe.Eval(ctx, extendOwn, []string{c.entryKey(w.item.Key)}, w.header, at)
+		case anyLiftMissed(cmds):
 			w.unconfirmed = true
-			continue
+			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.header)
+		default:
+			w.unconfirmed = true
 		}
-		pipe.Eval(ctx, extendOwn, []string{c.entryKey(w.item.Key)}, w.header, at)
 	}
 	if pipe.Len() == 0 {
 		return nil
@@ -238,6 +249,15 @@ func earliestLift(lifts []*redis.Cmd) (int64, bool) {
 		earliest = min(earliest, at)
 	}
 	return earliest, len(lifts) > 0
+}
+
+// anyLiftMissed reports whether a lift was answered with its member missing
+// or marked.
+func anyLiftMissed(lifts []*redis.Cmd) bool {
+	return slices.ContainsFunc(lifts, func(lift *redis.Cmd) bool {
+		at, err := lift.Int64()
+		return err == nil && at <= 0
+	})
 }
 
 // result is SetMany's answer: err, naming the keys known stored if any.
@@ -273,7 +293,7 @@ type write struct {
 	// header starts the stored entry and identifies this write.
 	header []byte
 	// unconfirmed is whether a lift didn't find its member live, so the entry
-	// keeps its lease and may be unlisted.
+	// was removed or keeps its lease.
 	unconfirmed bool
 }
 
@@ -299,8 +319,21 @@ func (w write) extends() bool {
 	return leased(w.item) < w.item.TTL && w.indexed() && w.set.Err() == nil
 }
 
-// indexed reports whether every index command for the write was answered.
-func (w write) indexed() bool { return !anyCmdErr(w.index) }
+// indexed reports whether every index command for the write was answered and
+// no tag had its member marked.
+func (w write) indexed() bool {
+	return !slices.ContainsFunc(w.index, func(cmd redis.Cmder) bool {
+		if cmd.Err() != nil {
+			return true
+		}
+		add, ok := cmd.(*redis.Cmd)
+		if !ok {
+			return false
+		}
+		n, _ := add.Int64()
+		return n == sawMark
+	})
+}
 
 // stored reports whether the write's entry is known stored and reachable.
 func (w write) stored() bool { return w.last && w.set.Err() == nil && w.indexed() && !w.unconfirmed }
