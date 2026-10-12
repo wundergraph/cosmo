@@ -29,7 +29,7 @@ func TestRedisCacheWalkRemovesOwnMarks(t *testing.T) {
 		removed, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
 		require.Equal(t, 2, removed)
-		require.False(t, mr.Exists(tagIndexKey(tag)), "emptied")
+		require.Empty(t, zmembers(t, mr, tagIndexKey(tag)), "emptied")
 	})
 
 	t.Run("a key cached right after an invalidation gets its full TTL", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRedisCacheWalkRemovesOwnMarks(t *testing.T) {
 
 		_, err = c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
-		require.False(t, mr.Exists(tagIndexKey(tag)))
+		require.Empty(t, zmembers(t, mr, tagIndexKey(tag)))
 	})
 
 	// Cancelled at a step of the walk, e.g. by an invalidation request timing
@@ -81,7 +81,7 @@ func TestRedisCacheWalkRemovesOwnMarks(t *testing.T) {
 			t.Parallel()
 			c, mr := cancelled(t, pipeline)
 			assert.False(t, mr.Exists(entryKey("v1:a")))
-			assert.False(t, mr.Exists(tagIndexKey(tag)), "marks left")
+			assert.Empty(t, zmembers(t, mr, tagIndexKey(tag)), "marks left")
 
 			require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a")}))
 			assert.InDelta(t, time.Hour, mr.TTL(entryKey("v1:a")), float64(time.Second), "capped by a leftover mark")

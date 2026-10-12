@@ -38,6 +38,8 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 //	 < 0  marked: minus when a walk deleted its entry, redis clock, ms
 //
 // A live member is marked between two deletes of its entry, then removed.
+// Marking also counts the walk in walksMember, so a write listed before it
+// can't be confirmed by a later write's listing.
 // Once marked, a page is finished even if ctx is cancelled: a mark left
 // behind makes every write of its key delete itself until the next walk. A
 // walk that fails or dies midway leaves its marks for the next one, which
@@ -152,19 +154,23 @@ func (c *RedisCache) mark(ctx context.Context, tagKey string, members []string) 
 	for i, member := range members {
 		args[i] = member
 	}
+	args = append([]any{walksMember}, args...)
 	score, err := markMembers.Run(ctx, c.client, []string{tagKey}, args...).Int64()
 	return strconv.FormatInt(score, 10), err
 }
 
-// markMembers sets each ARGV member still in KEYS[1] to minus the node's
-// time in ms, and returns that mark. XX: never re-adds a member removed
-// meanwhile. Walks marking in the same millisecond share a score, so marks
-// are removed by member, not score.
+// markMembers sets each ARGV member after the first still in KEYS[1] to minus
+// the node's time in ms, counts the walk in member ARGV[1], and returns the
+// mark. XX: never re-adds a member removed meanwhile. Walks marking in the
+// same millisecond share a score, so marks are removed by member, not score.
 var markMembers = redis.NewScript(`
 local t = redis.call('TIME')
 local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
-for i = 1, #ARGV do
+for i = 2, #ARGV do
   redis.call('ZADD', KEYS[1], 'XX', mark, ARGV[i])
+end
+if redis.call('EXISTS', KEYS[1]) == 1 then
+  redis.call('ZINCRBY', KEYS[1], -1, ARGV[1])
 end
 return mark
 `)
@@ -221,6 +227,9 @@ func classify(pairs []string) (page, error) {
 	var p page
 	for i := 0; i+1 < len(pairs); i += 2 {
 		member, raw := pairs[i], pairs[i+1]
+		if member == walksMember {
+			continue
+		}
 		score, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
 			return p, err

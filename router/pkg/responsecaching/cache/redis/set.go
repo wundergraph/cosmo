@@ -20,6 +20,11 @@ const writeLease = 10 * time.Second
 // sawMark is addMember's answer when the member is marked.
 const sawMark = -1
 
+// walksMember holds, at minus its score, how many walks marked members of the
+// tag set. Negative: the prune leaves it, and the walk skips it. No cache key
+// starts with a NUL byte.
+const walksMember = "\x00walks"
+
 // Scores and the prune bound are taken from the tag's node clock, never the
 // router's: a router's skew can't drop a live member or outlive a tag set.
 
@@ -32,26 +37,34 @@ return redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - ARGV[1])
 `
 
 // addMember adds ARGV[1] to KEYS[1] expiring ARGV[2] ms from now, or raises it
-// there. GT: a write landing out of order never lowers a member's score, which
-// would let the prune drop it while a newer entry is alive. A mark stays: only
-// a walk removes it, after deleting its entry, so a write that never lands
-// can't take with it the walk's duty to delete what came before. A marked
-// member returns -1: the walk will drop it, so the write's entry is unlisted.
+// there, and returns the walk count held by ARGV[3]. GT: a write landing out
+// of order never lowers a member's score, which would let the prune drop it
+// while a newer entry is alive. A mark stays: only a walk removes it, after
+// deleting its entry, so a write that never lands can't take with it the
+// walk's duty to delete what came before. A marked member returns -1: the walk
+// will drop it, so the write's entry is unlisted.
 const addMember = `
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
 if s and tonumber(s) < 0 then return -1 end
 local t = redis.call('TIME')
 local at = t[1] * 1000 + math.floor(t[2] / 1000) + ARGV[2]
-return redis.call('ZADD', KEYS[1], 'GT', at, ARGV[1])
+redis.call('ZADD', KEYS[1], 'GT', at, ARGV[1])
+local walks = redis.call('ZSCORE', KEYS[1], ARGV[3])
+return walks and -tonumber(walks) or 0
 `
 
 // liftMember raises live member ARGV[1] of KEYS[1] to expire at least ARGV[2]
 // ms from now, extends KEYS[1] to live at least ARGV[3] ms, and returns that
 // expiry. The set may have been emptied and recreated by a shorter write since
-// this one's tag add. A marked or missing member is left alone: 0.
+// this one's tag add. A marked or missing member is left alone: 0. So is one
+// whose tag was walked since the add, as the walk count held by ARGV[5] is no
+// longer ARGV[4]: the member may be a later write's, listed after the walk
+// dropped this one's.
 const liftMember = `
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
 if not s or tonumber(s) < 0 then return 0 end
+local walks = redis.call('ZSCORE', KEYS[1], ARGV[5])
+if (walks and -tonumber(walks) or 0) ~= tonumber(ARGV[4]) then return 0 end
 local t = redis.call('TIME')
 local at = t[1] * 1000 + math.floor(t[2] / 1000) + ARGV[2]
 redis.call('ZADD', KEYS[1], 'XX', 'GT', at, ARGV[1])
@@ -78,9 +91,9 @@ return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
 //
 //  1. indexAndStore: add it to its tags, then SET it with its token and a
 //     short lease.
-//  2. checkListings: confirm each tag still lists it live, raising the member in the tag set
-//     to the entry's expiry. An entry whose index failed or found a mark is
-//     removed instead.
+//  2. checkListings: confirm each tag still lists it live and wasn't walked
+//     since, raising the member in the tag set to the entry's expiry. An
+//     entry whose index failed or found a mark is removed instead.
 //  3. extendConfirmed: extend it only if every tag confirmed it, to the
 //     earliest expiry its lifts set. One a tag no longer lists is removed.
 //
@@ -112,15 +125,17 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 }
 
 // indexAndStore is round trip 1: prune each tag, add every item to its tags,
-// then SET each. Index before entry: an entry never exists unindexed. It
-// returns no writes if nothing was sent.
+// then SET each. Index before entry on one node; in a cluster each node's
+// commands are sent concurrently, so a SET can land after a whole walk. The
+// walk count in round trip 2 catches that. It returns no writes if nothing
+// was sent.
 func (c *RedisCache) indexAndStore(ctx context.Context, items []caching.Item) ([]write, error) {
 	pipe := c.client.Pipeline()
 	c.queuePrunes(ctx, pipe, items)
 
 	writes := newWrites(items)
 	for i := range writes {
-		writes[i].index = c.queueIndex(ctx, pipe, writes[i].item)
+		writes[i].adds, writes[i].index = c.queueIndex(ctx, pipe, writes[i].item)
 	}
 	for i := range writes {
 		w := &writes[i]
@@ -151,20 +166,20 @@ func (c *RedisCache) queuePrunes(ctx context.Context, pipe redis.Pipeliner, item
 	}
 }
 
-// queueIndex queues item's member and tag TTL updates for each of its tags.
-func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item) []redis.Cmder {
+// queueIndex queues item's member and tag TTL updates for each of its tags. It
+// returns the adds, by tag, and every command.
+func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item caching.Item) ([]*redis.Cmd, []redis.Cmder) {
 	ttl := item.TTL.Milliseconds()
 	tagTTL := tagLifetime(item)
+	adds := make([]*redis.Cmd, 0, len(item.Tags))
 	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
 	for _, tag := range item.Tags {
 		tagKey := c.tagKey(tag)
-		cmds = append(cmds,
-			pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl),
-			pipe.ExpireNX(ctx, tagKey, tagTTL),
-			pipe.ExpireGT(ctx, tagKey, tagTTL),
-		)
+		add := pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl, walksMember)
+		adds = append(adds, add)
+		cmds = append(cmds, add, pipe.ExpireNX(ctx, tagKey, tagTTL), pipe.ExpireGT(ctx, tagKey, tagTTL))
 	}
-	return cmds
+	return adds, cmds
 }
 
 // finishWrites is round trips 2 and 3.
@@ -198,8 +213,9 @@ func (c *RedisCache) checkListings(ctx context.Context, writes []write) (map[int
 		case w.extends():
 			ttl := w.item.TTL.Milliseconds()
 			tagTTL := tagLifetime(w.item).Milliseconds()
-			for _, tag := range w.item.Tags {
-				lifts[i] = append(lifts[i], pipe.Eval(ctx, liftMember, []string{c.tagKey(tag)}, w.item.Key, ttl, tagTTL))
+			for j, tag := range w.item.Tags {
+				walks, _ := w.adds[j].Int64()
+				lifts[i] = append(lifts[i], pipe.Eval(ctx, liftMember, []string{c.tagKey(tag)}, w.item.Key, ttl, tagTTL, walks, walksMember))
 			}
 		}
 	}
@@ -284,7 +300,9 @@ func result(writes []write, err error) error {
 
 // write is one item of a SetMany batch and the commands it queued.
 type write struct {
-	item  caching.Item
+	item caching.Item
+	// adds is the tag adds, by tag, each answering the tag's walk count.
+	adds  []*redis.Cmd
 	index []redis.Cmder
 	set   *redis.StatusCmd
 	// last is whether this is the batch's final write of its key, the one

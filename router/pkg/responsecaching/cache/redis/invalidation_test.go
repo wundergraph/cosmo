@@ -55,7 +55,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 
 		_, err := c.InvalidateByTags(t.Context(), []string{"declared:accounts:users"})
 		require.NoError(t, err)
-		require.False(t, mr.Exists(tagIndexKey("declared:accounts:users")))
+		require.Empty(t, zmembers(t, mr, tagIndexKey("declared:accounts:users")))
 		require.False(t, mr.Exists(entryKey("v1:a")))
 	})
 
@@ -100,8 +100,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.Equal(t, 1, removed)
 		require.False(t, mr.Exists(entryKey("v1:a")))
 
-		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("subgraph:accounts"))
 		require.Equal(t, []string{"v1:a"}, members, "still named by the tag that did not take it")
 
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
@@ -137,8 +136,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 
 		// The entry lands.
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item("v1:a", "subgraph:accounts")}))
-		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("subgraph:accounts"))
 		require.Equal(t, []string{"v1:a"}, members)
 
 		removed, err = c.InvalidateByTags(t.Context(), []string{"subgraph:accounts"})
@@ -231,8 +229,7 @@ func TestRedisCacheInvalidateByTags(t *testing.T) {
 		require.False(t, mr.Exists(entryKey("v1:a")))
 		require.True(t, mr.Exists(entryKey("v1:b")))
 
-		members, err := mr.ZMembers(tagIndexKey("subgraph:accounts"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("subgraph:accounts"))
 		require.Contains(t, members, "v1:b", "still indexed, so the next call takes it")
 
 		interposer.fn = nil

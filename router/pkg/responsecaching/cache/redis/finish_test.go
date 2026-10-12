@@ -202,33 +202,38 @@ func TestRedisCacheExtendsOnlyConfirmedEntries(t *testing.T) {
 	})
 }
 
-// A tag set emptied mid-write is recreated by a shorter write. The lift must
-// keep it alive as long as the entry it confirms.
-func TestRedisCacheLiftKeepsTheTagSetAlive(t *testing.T) {
+// A write listed before a walk whose SET lands after it, as one node can
+// answer long after another in a cluster. A later write lists the key again:
+// the first must not take that listing as its own.
+func TestRedisCacheWriteCantBorrowALaterListing(t *testing.T) {
 	t.Parallel()
 
 	const tag = "subgraph:accounts"
-	long := enginecache.Item{Key: "v1:a", Value: []byte(`{"v":1}`), TTL: time.Hour, Tags: []string{tag}}
-	short := enginecache.Item{Key: "v1:a", Value: []byte(`{"v":2}`), TTL: 5 * time.Second, Tags: []string{tag}}
+	stale := enginecache.Item{Key: "v1:a", Value: []byte(`"stale"`), TTL: time.Hour, Tags: []string{tag}}
+	fresh := enginecache.Item{Key: "v1:a", Value: []byte(`"fresh"`), TTL: time.Hour, Tags: []string{tag}}
 
-	mr := miniredis.RunT(t)
-	split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
-	writer := newTestRedisCacheOn(t, mr, split)
-	other := newTestRedisCacheOn(t, mr)
-	split.fn = func() {
-		// The second walk sweeps the first's mark, emptying the set.
-		for range 2 {
-			_, err := other.InvalidateByTags(context.Background(), []string{tag})
+	for name, walks := range map[string]int{"one walk": 1, "a walk then a sweep": 2} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			mr := miniredis.RunT(t)
+			split := &splitPipeline{at: splitAt{pipeline: 0, before: "set"}}
+			writer := newTestRedisCacheOn(t, mr, split)
+			other := newTestRedisCacheOn(t, mr)
+			split.fn = func() {
+				for range walks {
+					_, err := other.InvalidateByTags(context.Background(), []string{tag})
+					require.NoError(t, err)
+				}
+				require.NoError(t, other.SetMany(context.Background(), []enginecache.Item{fresh}))
+			}
+			require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{stale}))
+			require.True(t, split.fired, "no walk before the SET")
+
+			got, err := writer.GetMany(t.Context(), []string{stale.Key})
 			require.NoError(t, err)
-		}
-		require.False(t, mr.Exists(tagIndexKey(tag)))
-		require.NoError(t, other.SetMany(context.Background(), []enginecache.Item{short}))
+			assert.NotEqual(t, stale.Value, got[stale.Key].Value, "survived the walk with %s left", got[stale.Key].TTL)
+		})
 	}
-	require.NoError(t, writer.SetMany(t.Context(), []enginecache.Item{long}))
-	split.requireFired(t)
-
-	require.Greater(t, mr.TTL(entryKey(long.Key)), writeLease, "extended")
-	require.GreaterOrEqual(t, mr.TTL(tagIndexKey(tag)), mr.TTL(entryKey(long.Key)), "the set outlives the entry")
 }
 
 // replayPipeline sends pipeline number pipeline twice, the way a client

@@ -495,7 +495,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 
 		_, err := c.InvalidateByTags(t.Context(), []string{tag})
 		require.NoError(t, err)
-		require.False(t, mr.Exists(tagIndexKey(tag)))
+		require.Empty(t, zmembers(t, mr, tagIndexKey(tag)))
 	})
 
 	t.Run("an extended entry expires at its member's score", func(t *testing.T) {
@@ -685,6 +685,7 @@ func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.I
 	}
 }
 
+// zmembers is the cache keys a tag set lists, without its walk count.
 func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	t.Helper()
 	if !mr.Exists(key) {
@@ -692,7 +693,7 @@ func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	}
 	members, err := mr.ZMembers(key)
 	require.NoError(t, err)
-	return members
+	return slices.DeleteFunc(members, func(m string) bool { return m == walksMember })
 }
 
 var errInjected = errors.New("injected failure")

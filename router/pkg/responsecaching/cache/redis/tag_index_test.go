@@ -25,8 +25,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		}))
 
 		for _, tag := range []string{"declared:users", "declared:user-42"} {
-			members, err := mr.ZMembers(tagIndexKey(tag))
-			require.NoError(t, err)
+			members := zmembers(t, mr, tagIndexKey(tag))
 			// The member is the key the caller asked with, not the prefixed key
 			// it was stored under, matching what GetMany hands back.
 			require.Equal(t, []string{"v1:a"}, members)
@@ -43,12 +42,10 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users", "declared:user-7"}},
 		}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.ElementsMatch(t, []string{"v1:a", "v1:b", "v1:c"}, members)
 
-		members, err = mr.ZMembers(tagIndexKey("declared:user-42"))
-		require.NoError(t, err)
+		members = zmembers(t, mr, tagIndexKey("declared:user-42"))
 		require.Equal(t, []string{"v1:a"}, members)
 	})
 
@@ -81,8 +78,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		require.JSONEq(t, `{"real":true}`, string(value))
 
 		for _, tag := range []string{"v1:a", "declared:v1:a"} {
-			members, err := mr.ZMembers(tagIndexKey(tag))
-			require.NoError(t, err)
+			members := zmembers(t, mr, tagIndexKey(tag))
 			require.Equal(t, []string{"v1:a"}, members)
 		}
 	})
@@ -117,8 +113,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		item.TTL = 2 * time.Minute
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.Equal(t, []string{"v1:a"}, members, "a zset holds a member once")
 
 		second, err := mr.ZScore(tagIndexKey("declared:users"), "v1:a")
@@ -156,8 +151,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 
 		require.Equal(t, longTTL, mr.TTL(tagIndexKey("declared:users")))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.ElementsMatch(t, []string{"v1:long", "v1:short"}, members)
 	})
 
@@ -212,8 +206,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:live"}, members)
 	})
 
@@ -234,8 +227,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:recent", "v1:live"}, members)
 	})
 
@@ -258,8 +250,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:b", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.Contains(t, members, "v1:a")
 
 		// Past the second score too, and it goes.
@@ -268,8 +259,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:c", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		members, err = mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members = zmembers(t, mr, tagIndexKey("declared:users"))
 		require.NotContains(t, members, "v1:a")
 	})
 
@@ -289,14 +279,12 @@ func TestRedisCacheTagIndex(t *testing.T) {
 			{Key: "v1:live", Value: []byte(`{}`), TTL: time.Minute, Tags: []string{"declared:users"}},
 		}))
 
-		members, err := mr.ZMembers(tagIndexKey("declared:users"))
-		require.NoError(t, err)
+		members := zmembers(t, mr, tagIndexKey("declared:users"))
 		require.ElementsMatch(t, []string{"v1:keeper:declared:users", "v1:live"}, members)
 
 		// Nothing was written to it, so its dead member is still there and its
 		// own key TTL is what will clear it.
-		members, err = mr.ZMembers(tagIndexKey("declared:untouched"))
-		require.NoError(t, err)
+		members = zmembers(t, mr, tagIndexKey("declared:untouched"))
 		require.ElementsMatch(t, []string{"v1:keeper:declared:untouched", "v1:gone"}, members)
 	})
 }
