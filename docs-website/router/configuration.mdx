@@ -2704,6 +2704,10 @@ Apply the same change to the other affected limits, including `security.depth_li
 
 Existing positive limits, disabled limits, and `measure` mode retain their behavior. Persisted operations remain exempt from a limit when its `ignore_persisted_operations` setting is true. No Control Plane, composition, or execution-configuration version change is required for this migration.
 
+### Parser Limits
+
+Parser limits are checked on the operation document as received, before normalization. Fragments are counted once, where they are defined, no matter how often they are spread. To limit the normalized operation, with fragments inlined, use `complexity_limits`.
+
 ## File Upload
 
 The configuration for file upload. Configure whether it should be enabled along with file size and number of files.
