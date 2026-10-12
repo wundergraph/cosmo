@@ -21,7 +21,6 @@ linters:
     - wastedassign
   settings:
     staticcheck:
-      # Match standalone Staticcheck's defaults; quick-fix checks are opt-in there.
       checks:
         - all
         - -ST1000
@@ -35,12 +34,10 @@ linters:
     # Preserve the standalone go vet command's coverage of generated files.
     generated: disable
     rules:
-      # Preserve the router's existing staticcheck.conf exceptions.
       - path: ^router/
         linters:
           - staticcheck
         text: '^(SA9003|ST1023|SA1019):'
-      # Generated plugin code still uses deprecated protobuf APIs.
       - path: ^router-tests/plugintest/hello/generated/
         linters:
           - staticcheck
