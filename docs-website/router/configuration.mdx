@@ -166,13 +166,12 @@ playground_path: "/"
 introspection:
   enabled: true
 json_log: true
-shutdown_delay: 15s
-grace_period: 20s
+shutdown_delay: 60s
+grace_period: 30s
 poll_interval: 10s
 health_check_path: "/health"
 readiness_check_path: "/health/ready"
 liveness_check_path: "/health/live"
-router_config_path: ""
 ```
 
 ## Config watcher hot reloading

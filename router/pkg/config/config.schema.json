@@ -2017,7 +2017,7 @@
       "type": "string",
       "format": "go-duration",
       "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-      "default": "20s"
+      "default": "30s"
     },
     "poll_interval": {
       "type": "string",
