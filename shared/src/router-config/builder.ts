@@ -126,7 +126,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cacheInvalidateConfigurations) {
+    for (const config of data.entityCaching.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         create(CacheInvalidateConfigurationSchema, {
           entityTypeName: config.entityTypeName,
@@ -136,7 +136,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cachePopulateConfigurations) {
+    for (const config of data.entityCaching.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         create(CachePopulateConfigurationSchema, {
           entityTypeName: config.entityTypeName,
@@ -147,23 +147,12 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cacheTagRootFieldConfigurations) {
-      cacheTagRootFieldConfigurations.push(
-        create(CacheTagRootFieldConfigurationSchema, {
-          typeName: config.typeName,
-          fieldName: config.fieldName,
-          format: config.format,
-        }),
-      );
+    for (const config of data.entityCaching.cacheTagRootFieldConfigurations) {
+      cacheTagRootFieldConfigurations.push(create(CacheTagRootFieldConfigurationSchema, config));
     }
 
-    for (const config of data.entityCaching?.cacheTagEntityConfigurations) {
-      cacheTagEntityConfigurations.push(
-        create(CacheTagEntityConfigurationSchema, {
-          typeName: config.typeName,
-          format: config.format,
-        }),
-      );
+    for (const config of data.entityCaching.cacheTagEntityConfigurations) {
+      cacheTagEntityConfigurations.push(create(CacheTagEntityConfigurationSchema, config));
     }
   }
 
