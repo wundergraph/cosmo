@@ -174,7 +174,7 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		t.Parallel()
 
 		tp := sdktrace.NewTracerProvider()
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true)
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true, nil)
 
 		ctx, rc := setupTestContext(t, tp)
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{
@@ -194,8 +194,7 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 	t.Run("a fetch without hook context is still counted", func(t *testing.T) {
 		t.Parallel()
 
-		tp := sdktrace.NewTracerProvider()
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, true)
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, sdktrace.NewTracerProvider(), nil, nil, nil, false, nil, true, nil)
 
 		rc := newTestRequestContext(t)
 		ctx := withRequestContext(context.Background(), rc)
@@ -215,7 +214,7 @@ func TestOnFinished_RecordsResponseCacheStatus(t *testing.T) {
 		t.Parallel()
 
 		tp := sdktrace.NewTracerProvider()
-		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, false)
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, nil, false, nil)
 
 		ctx, rc := setupTestContext(t, tp)
 		hooks.OnFinished(ctx, ds, &resolve.ResponseInfo{StatusCode: http.StatusOK})
