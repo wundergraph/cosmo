@@ -35,10 +35,10 @@ test-no-race-fresh: clean-testcache
 
 .PHONY: lint lint-fix
 lint:
-	../scripts/golangci-lint.sh run --timeout=3m
+	../scripts/golangci-lint.sh run
 
 lint-fix:
-	../scripts/golangci-lint.sh run --timeout=3m --fix
+	../scripts/golangci-lint.sh run --fix
 
 test-stability:
 	@while $(MAKE) test-fresh; do :; done

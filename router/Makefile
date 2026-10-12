@@ -25,10 +25,10 @@ test-fresh: clean-testcache test
 
 .PHONY: lint lint-fix
 lint:
-	../scripts/golangci-lint.sh run --timeout=3m
+	../scripts/golangci-lint.sh run
 
 lint-fix:
-	../scripts/golangci-lint.sh run --timeout=3m --fix
+	../scripts/golangci-lint.sh run --fix
 
 clean-testcache:
 	go clean -testcache

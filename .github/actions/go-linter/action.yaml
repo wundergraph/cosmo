@@ -20,7 +20,6 @@ runs:
       with:
         version: ${{ steps.golangci-lint-version.outputs.version }}
         working-directory: ${{ inputs.working-directory }}
-        args: --timeout=3m
 
     - name: Check gofmt formatting
       run: |
