@@ -77,7 +77,6 @@ import {
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
-import { type IncompatibleSharedEnumErrorParams } from '../../errors/types/params';
 import { type ExecutionMultiResult } from '../../types/results';
 import {
   type ChildTagData,
@@ -252,14 +251,15 @@ import {
 } from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import {
-  type AddEnumUsageCoordsParams,
   type ExtractFederatedDirectivesParams,
   type FederateSubgraphsContractV1Params,
   type FederateSubgraphsWithContractsV1Params,
   type FederationFactoryParams,
   type FederationParams,
+  type HandleIncompatibleSharedEnumParams,
   type MergeSubscriptionFilterTargetResultParams,
   type UpsertDirectiveArgumentDataParams,
+  type UpsertEnumUsageParams,
   type ValidateOneOfDirectiveParams,
   type ValidateSubscriptionFilterAndGenerateConfigurationParams,
 } from './types/params';
@@ -627,7 +627,7 @@ export class FederationFactory {
    * inconsistently defined. Consequently, named types that are known not to be Enums are not recorded.
    * Directive argument named type kinds are only resolved for base scalars (otherwise Kind.NULL).
    * */
-  addEnumUsageCoords({ coords, data, isInput }: AddEnumUsageCoordsParams) {
+  upsertEnumUsage({ coords, data, isInput }: UpsertEnumUsageParams) {
     if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION && data.namedTypeKind !== Kind.NULL) {
       return;
     }
@@ -641,10 +641,8 @@ export class FederationFactory {
     }
   }
 
-  getIncompatibleSharedEnumErrorParams(
-    enumData: EnumDefinitionData,
-    inconsistentValueDatas: Array<EnumValueData>,
-  ): IncompatibleSharedEnumErrorParams {
+  // A single error is returned for each Enum regardless of the number of inconsistent Enum Values.
+  handleIncompatibleSharedEnum({ enumData, inconsistentValueDatas }: HandleIncompatibleSharedEnumParams) {
     const usageData = this.enumUsageDataByTypeName.get(enumData.name);
     const inputCoordsBySubgraphName = new Map<SubgraphName, Array<string>>();
     const missingValueNamesBySubgraphName = new Map<SubgraphName, Array<string>>();
@@ -669,12 +667,14 @@ export class FederationFactory {
         outputCoordsBySubgraphName.set(subgraphName, Array.from(outputCoords));
       }
     }
-    return {
-      inputCoordsBySubgraphName,
-      missingValueNamesBySubgraphName,
-      outputCoordsBySubgraphName,
-      typeName: enumData.name,
-    };
+    this.errors.push(
+      incompatibleSharedEnumError({
+        inputCoordsBySubgraphName,
+        missingValueNamesBySubgraphName,
+        outputCoordsBySubgraphName,
+        typeName: enumData.name,
+      }),
+    );
   }
 
   getEnumValueMergeMethod(enumTypeName: string): MergeMethod {
@@ -832,7 +832,7 @@ export class FederationFactory {
     getValueOrDefault(this.coordsByNamedTypeName, targetData.namedTypeName, () => new Set<string>()).add(
       targetData.federatedCoords,
     );
-    this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: incomingData, isInput: true });
+    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData, isInput: true });
     if (!existingData) {
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
       inputValueDataByValueName.set(targetData.name, targetData);
@@ -1021,7 +1021,7 @@ export class FederationFactory {
       targetData.federatedCoords,
     );
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
-    this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: incomingData, isInput: false });
+    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData, isInput: false });
     this.handleSubscriptionFilterDirective(incomingData, targetData);
     this.extractFederatedDirectives({
       data: targetData.federatedDirectivesData,
@@ -1243,7 +1243,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
-      this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: sourceData, isInput: true });
+      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData, isInput: true });
       this.recordTagNamesByCoords(targetData, `${parentCoords}.${sourceData.name}`);
       inputValueDataByInputValueName.set(inputValueName, targetData);
     }
@@ -1315,7 +1315,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedOutputTypeNames.add(targetData.namedTypeName);
-      this.addEnumUsageCoords({ coords: targetData.federatedCoords, data: sourceData, isInput: false });
+      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData, isInput: false });
       this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
       if (isFieldInaccessible) {
         this.inaccessibleCoords.add(targetData.federatedCoords);
@@ -1744,18 +1744,6 @@ export class FederationFactory {
   }
   upsertExecutableDirectiveDatas() {
     for (const [directiveName, definitionDatas] of this.executableDirectiveDatasByName) {
-      /* The usages are recorded upfront because the remaining definitions are not upserted should the executable
-       * locations fail to intersect.
-       * */
-      for (const data of definitionDatas) {
-        for (const argumentData of data.argumentDataByName.values()) {
-          this.addEnumUsageCoords({
-            coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
-            data: argumentData,
-            isInput: true,
-          });
-        }
-      }
       for (const data of definitionDatas) {
         const existingData = this.federatedDirectiveDataByName.get(directiveName);
         if (!existingData) {
@@ -1764,6 +1752,11 @@ export class FederationFactory {
             this.upsertDirectiveArgumentData({
               argumentDataByName,
               incomingData: argumentData,
+            });
+            this.upsertEnumUsage({
+              coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
+              data: argumentData,
+              isInput: true,
             });
           }
           // Shared set between locations and executable locations because type-system locations are removed.
@@ -1786,12 +1779,6 @@ export class FederationFactory {
           });
           continue;
         }
-        for (const argumentData of data.argumentDataByName.values()) {
-          this.upsertDirectiveArgumentData({
-            argumentDataByName: existingData.argumentDataByName,
-            incomingData: argumentData,
-          });
-        }
         for (const executableLocation of existingData.executableLocations) {
           if (!data.executableLocations.has(executableLocation)) {
             existingData.executableLocations.delete(executableLocation);
@@ -1800,6 +1787,17 @@ export class FederationFactory {
         if (existingData.executableLocations.size < 1) {
           this.federatedDirectiveDataByName.delete(directiveName);
           break;
+        }
+        for (const argumentData of data.argumentDataByName.values()) {
+          this.upsertDirectiveArgumentData({
+            argumentDataByName: existingData.argumentDataByName,
+            incomingData: argumentData,
+          });
+          this.upsertEnumUsage({
+            coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
+            data: argumentData,
+            isInput: true,
+          });
         }
         setLongestDescription(existingData, data);
         addIterableToSet({ source: data.subgraphNames, target: existingData.subgraphNames });
@@ -2178,13 +2176,8 @@ export class FederationFactory {
                 break;
             }
           }
-          // A single error is returned for each Enum regardless of the number of inconsistent Enum Values.
           if (inconsistentValueDatas.length > 0) {
-            this.errors.push(
-              incompatibleSharedEnumError(
-                this.getIncompatibleSharedEnumErrorParams(parentDefinitionData, inconsistentValueDatas),
-              ),
-            );
+            this.handleIncompatibleSharedEnum({ enumData: parentDefinitionData, inconsistentValueDatas });
           }
           parentDefinitionData.node.values = enumValueNodes;
           const nodeResult = routerSchemaNodeFromData<EnumDefinitionData>({

@@ -11,6 +11,8 @@ import {
   type AuthorizationData,
   type EntityData,
   type EntityInterfaceFederationData,
+  type EnumDefinitionData,
+  type EnumValueData,
   type InputObjectDefinitionData,
   type FederatedDirectivesData,
   type FieldData,
@@ -72,15 +74,20 @@ export type FederationFactoryParams = {
   options?: CompositionOptions;
 };
 
-export type AddEnumUsageCoordsParams = {
-  coords: string;
-  data: DirectiveArgumentData | FieldData | InputValueData;
-  isInput: boolean;
+export type HandleIncompatibleSharedEnumParams = {
+  enumData: EnumDefinitionData;
+  inconsistentValueDatas: Array<EnumValueData>;
 };
 
 export type UpsertDirectiveArgumentDataParams = {
   argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
   incomingData: DirectiveArgumentData;
+};
+
+export type UpsertEnumUsageParams = {
+  coords: string;
+  data: DirectiveArgumentData | FieldData | InputValueData;
+  isInput: boolean;
 };
 
 export type MergeSubscriptionFilterTargetResultParams = {
