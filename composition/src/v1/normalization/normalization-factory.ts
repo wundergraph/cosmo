@@ -41,12 +41,12 @@ import {
   type UnionTypeNode,
 } from '../../ast/utils';
 import {
+  doesFieldSetSelectLeafPath,
   extractLinkArgs,
   getConditionalFieldSetDirectiveName,
   getInitialFieldCoordsPath,
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
-  doesFieldSetSelectLeafPath,
   isNodeQuery,
   parseCacheTagFormat,
   validateArgumentTemplateReferences,
@@ -4504,7 +4504,7 @@ export class NormalizationFactory {
 
   extractFieldCacheTagDirectives(fieldData: FieldData) {
     const directiveNodes = fieldData.directivesByName.get(CACHE_TAG);
-    if (!directiveNodes || directiveNodes.length < 1) {
+    if (!directiveNodes?.length) {
       return;
     }
     const { name: fieldName, originalParentTypeName, renamedParentTypeName: typeName } = fieldData;
@@ -4545,20 +4545,22 @@ export class NormalizationFactory {
      * No field on the path may be a list.
      */
     const directiveNodes = parentData.directivesByName.get(CACHE_TAG);
-    if (!directiveNodes || directiveNodes.length < 1) {
+    if (!directiveNodes?.length) {
       return;
     }
     const typeName = getParentTypeName(parentData);
-    const keyFieldSetDatas = [...(this.keyFieldSetDatasByTypeName.get(parentData.name)?.values() ?? [])];
     // The router fetches the entity from this subgraph only through a resolvable key.
-    if (keyFieldSetDatas.every(({ isUnresolvable }) => isUnresolvable)) {
+    const resolvableKeyFieldSetDatas = [
+      ...(this.keyFieldSetDatasByTypeName.get(parentData.name)?.values() ?? []),
+    ].filter(({ isUnresolvable }) => !isUnresolvable);
+    if (resolvableKeyFieldSetDatas.length < 1) {
       this.errors.push(
         invalidDirectiveError(CACHE_TAG, parentData.name, FIRST_ORDINAL, [nonResolvableEntityCacheTagErrorMessage()]),
       );
       return;
     }
     const { formats } = this.getValidCacheTagFormats(directiveNodes, parentData.name, (placeholder, errorMessages) =>
-      this.validateEntityCacheTagPlaceholder(parentData, keyFieldSetDatas, placeholder, errorMessages),
+      this.validateEntityCacheTagPlaceholder(parentData, resolvableKeyFieldSetDatas, placeholder, errorMessages),
     );
     if (formats.size < 1) {
       return;
@@ -4626,7 +4628,7 @@ export class NormalizationFactory {
     if (argumentData && !this.isValidCacheTagLeaf(argumentData)) {
       errorMessages.push(
         invalidCacheTagArgumentTypeErrorMessage({
-          reference: reference,
+          reference,
           typeString: printTypeNode(argumentData.type),
         }),
       );
@@ -4635,7 +4637,7 @@ export class NormalizationFactory {
 
   validateEntityCacheTagPlaceholder(
     parentData: ObjectDefinitionData,
-    keyFieldSetDatas: Array<KeyFieldSetData>,
+    resolvableKeyFieldSetDatas: Array<KeyFieldSetData>,
     { namespace, reference }: CacheTagPlaceholder,
     errorMessages: Array<string>,
   ) {
@@ -4649,8 +4651,8 @@ export class NormalizationFactory {
      * so every resolvable key must select the reference.
      * An invalid key is reported elsewhere; its syntax is assessed all the same.
      */
-    const fieldSets = keyFieldSetDatas
-      .filter(({ documentNode, isUnresolvable }) => !isUnresolvable && !doesFieldSetSelectLeafPath(documentNode, path))
+    const fieldSets = resolvableKeyFieldSetDatas
+      .filter(({ documentNode }) => !doesFieldSetSelectLeafPath(documentNode, path))
       .map(({ rawFieldSet }) => rawFieldSet);
     if (fieldSets.length > 0) {
       errorMessages.push(undefinedCacheTagKeyFieldErrorMessage({ fieldSets, reference }));
@@ -4697,11 +4699,8 @@ export class NormalizationFactory {
 
   // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.
   getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
-    const formatArgument = directiveNode.arguments?.find((argument) => argument.name.value === FORMAT);
-    if (!formatArgument || formatArgument.value.kind !== Kind.STRING) {
-      return;
-    }
-    return formatArgument.value.value;
+    const value = directiveNode.arguments?.find(({ name }) => name.value === FORMAT)?.value;
+    return value?.kind === Kind.STRING ? value.value : undefined;
   }
 
   /* Returns the input value at the end of the path,

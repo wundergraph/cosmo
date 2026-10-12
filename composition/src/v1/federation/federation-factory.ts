@@ -2111,12 +2111,11 @@ export class FederationFactory {
       this.errors.push(unavailableCacheTagReferencesError(fieldData.federatedCoords, [...errorMessages]));
     }
     const [formats, ...otherFormats] = formatsBySubgraphName.values();
-    if (otherFormats.every((other) => other.size === formats.size && other.isSubsetOf(formats))) {
-      return;
+    if (otherFormats.some((other) => other.size !== formats.size || !other.isSubsetOf(formats))) {
+      this.warnings.push(
+        inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
+      );
     }
-    this.warnings.push(
-      inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
-    );
   }
 
   // Returns an error message if the value of an "$args" reference is absent from the client or router schema.
