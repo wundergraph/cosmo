@@ -4541,8 +4541,8 @@ export class NormalizationFactory {
   extractEntityCacheTagDirectives(parentData: ObjectDefinitionData) {
     /* A placeholder is a path through a key's selection set.
      * {$key.a.b} is allowed only if the key selects "a { b }", with b having no sub-selection of its own.
-     * With several keys, the path must be in every @key of the type in that subgraph,
-     * including resolvable: false keys. And no field on the path may be a list.
+     * With several keys, the path must be in every resolvable @key of the type in that subgraph.
+     * No field on the path may be a list.
      */
     const directiveNodes = parentData.directivesByName.get(CACHE_TAG);
     if (!directiveNodes || directiveNodes.length < 1) {
