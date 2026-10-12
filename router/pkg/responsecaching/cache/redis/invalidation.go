@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"fmt"
 	"iter"
 	"slices"
 	"strconv"
@@ -78,13 +79,49 @@ func (c *RedisCache) scanPages(ctx context.Context, tagKey string) iter.Seq2[[]s
 	return func(yield func([]string, error) bool) {
 		var cursor uint64
 		for {
-			pairs, next, err := c.client.ZScan(ctx, tagKey, cursor, "", invalidationPageSize).Result()
+			reply, err := c.client.Eval(ctx, scanTag, []string{tagKey}, cursor, invalidationPageSize).Slice()
+			var pairs []string
+			var next uint64
+			if err == nil {
+				pairs, next, err = scanReply(reply)
+			}
 			if !yield(pairs, err) || err != nil || next == 0 {
 				return
 			}
 			cursor = next
 		}
 	}
+}
+
+// scanTag is one ZSCAN page of KEYS[1] from cursor ARGV[1], COUNT ARGV[2]. A
+// script, as a cluster client reading from replicas still sends EVAL to the
+// primary: a replica behind it can miss members just listed.
+const scanTag = `return redis.call('ZSCAN', KEYS[1], ARGV[1], 'COUNT', ARGV[2])`
+
+// scanReply is scanTag's reply as member, score pairs and the next cursor.
+func scanReply(reply []any) ([]string, uint64, error) {
+	if len(reply) != 2 {
+		return nil, 0, fmt.Errorf("redis adapter: ZSCAN reply of %d parts", len(reply))
+	}
+	raw, ok := reply[0].(string)
+	if !ok {
+		return nil, 0, fmt.Errorf("redis adapter: ZSCAN cursor %T", reply[0])
+	}
+	next, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil {
+		return nil, 0, err
+	}
+	items, ok := reply[1].([]any)
+	if !ok {
+		return nil, 0, fmt.Errorf("redis adapter: ZSCAN page %T", reply[1])
+	}
+	pairs := make([]string, len(items))
+	for i, item := range items {
+		if pairs[i], ok = item.(string); !ok {
+			return nil, 0, fmt.Errorf("redis adapter: ZSCAN item %T", item)
+		}
+	}
+	return pairs, next, nil
 }
 
 // invalidatePage invalidates one page in four steps. After a failed step it

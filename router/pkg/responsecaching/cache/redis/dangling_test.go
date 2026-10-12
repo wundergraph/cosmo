@@ -709,7 +709,7 @@ type afterStep struct {
 
 func (a *afterStep) fire(cmds ...redis.Cmder) {
 	for _, cmd := range cmds {
-		if slices.Contains(a.names, cmd.Name()) && a.fn != nil {
+		if slices.Contains(a.names, stepName(cmd)) && a.fn != nil {
 			a.once.Do(func() {
 				a.fired = true
 				a.fn()

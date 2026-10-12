@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -350,18 +351,20 @@ func (p *pagedZScan) DialHook(next redis.DialHook) redis.DialHook { return next 
 
 func (p *pagedZScan) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	return func(ctx context.Context, cmd redis.Cmder) error {
-		scan, ok := cmd.(*redis.ScanCmd)
-		if !ok || cmd.Name() != "zscan" {
+		scan, ok := cmd.(*redis.Cmd)
+		if !ok || !runsScan(cmd) {
 			return next(ctx, cmd)
 		}
+		// name, script, key count, key, cursor, count
 		args := cmd.Args()
-		cursor, _ := args[2].(uint64)
-		args[2] = uint64(0)
-		args[len(args)-1] = math.MaxInt32
+		cursor, _ := args[4].(uint64)
+		args[4] = uint64(0)
+		args[5] = math.MaxInt32
 		if err := next(ctx, cmd); err != nil {
 			return err
 		}
-		pairs, _ := scan.Val()
+		reply, _ := scan.Slice()
+		pairs, _, _ := scanReply(reply)
 		order := make([]int, 0, len(pairs)/2)
 		for i := 0; i+1 < len(pairs); i += 2 {
 			order = append(order, i)
@@ -391,13 +394,31 @@ func (p *pagedZScan) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 			p.last = page[len(page)-2]
 			nextCursor = uint64(p.served)
 		}
-		scan.SetVal(page, nextCursor)
+		items := make([]any, len(page))
+		for i, item := range page {
+			items[i] = item
+		}
+		scan.SetVal([]any{strconv.FormatUint(nextCursor, 10), items})
 		return nil
 	}
 }
 
 func (p *pagedZScan) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
 	return next
+}
+
+// runsScan reports whether cmd sends scanTag, the walk's ZSCAN.
+func runsScan(cmd redis.Cmder) bool {
+	args := cmd.Args()
+	return cmd.Name() == "eval" && len(args) > 1 && args[1] == scanTag
+}
+
+// stepName is cmd's name, or zscan for scanTag.
+func stepName(cmd redis.Cmder) string {
+	if runsScan(cmd) {
+		return "zscan"
+	}
+	return cmd.Name()
 }
 
 // afterCommand runs fn once the named command has been answered, for the
@@ -415,7 +436,7 @@ func (a *afterCommand) DialHook(next redis.DialHook) redis.DialHook { return nex
 func (a *afterCommand) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	return func(ctx context.Context, cmd redis.Cmder) error {
 		err := next(ctx, cmd)
-		if cmd.Name() != a.name {
+		if stepName(cmd) != a.name {
 			return err
 		}
 		a.mu.Lock()
