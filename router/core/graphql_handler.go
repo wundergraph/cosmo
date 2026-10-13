@@ -274,7 +274,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Type:     h.responseCacheInvalidation.Type,
 			}
 			if resolveCtx.TracingOptions.Enable {
-				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(resolveCtx)
+				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(resolveCtx, synchronous)
 			}
 			resolveCtx.SetResponseCache(cacheOpts)
 		}

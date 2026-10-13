@@ -386,7 +386,7 @@ func TestNewServerRejectsAnInvalidPath(t *testing.T) {
 func TestNewServerAllowsCORS(t *testing.T) {
 	t.Parallel()
 
-	corsOpts := &cors.Config{Enabled: true, AllowOrigins: []string{"http://localhost:3002"}, AllowMethods: []string{http.MethodGet}}
+	corsOpts := &cors.Config{Enabled: true, AllowOrigins: []string{"http://localhost:3002"}, AllowMethods: []string{http.MethodGet}, AllowCredentials: true}
 	svr, err := NewServer(zap.NewNop(), allIndexes(), &recordingInvalidator{}, corsOpts)
 	require.NoError(t, err)
 
@@ -405,6 +405,7 @@ func TestNewServerAllowsCORS(t *testing.T) {
 	require.Equal(t, "http://localhost:3002", w.Header().Get("Access-Control-Allow-Origin"))
 	require.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), http.MethodPost)
 	require.Contains(t, strings.ToLower(w.Header().Get("Access-Control-Allow-Headers")), "authorization")
+	require.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"), "the key is a header, never a cookie")
 	require.Equal(t, []string{http.MethodGet}, corsOpts.AllowMethods, "router's options are not modified")
 
 	require.Equal(t, http.StatusForbidden, preflight("http://evil.example").Code)
