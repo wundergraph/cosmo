@@ -320,32 +320,3 @@ export const parseTabBindings = (stored: string | null): TabBindings => {
 export const reportFailure = (fallback: string, details?: string) => {
   toast({ description: details || fallback, duration: 3000 });
 };
-
-/**
- * Dev-only tracing for the collections open/save pipeline.
- *
- * Temporary debugging scaffolding: remove once the mis-bind that puts one
- * operation's binding on another operation's tab has been caught in the act.
- *
- * Kept in sessionStorage as well as the console, because the interesting
- * beats happen during the navigation a deep link performs, and the console
- * clears on navigate unless "Preserve log" is enabled.
- */
-const TRACE_KEY = 'collections-trace';
-
-export const trace = (beat: string, data: Record<string, unknown>) => {
-  if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') {
-    return;
-  }
-
-  console.info(`[Collections] ${beat}`, data);
-
-  try {
-    const previous: unknown[] = JSON.parse(window.sessionStorage.getItem(TRACE_KEY) ?? '[]');
-    previous.push({ at: new Date().toISOString().slice(11, 23), beat, ...data });
-    // Bounded: a long session should not fill the quota.
-    window.sessionStorage.setItem(TRACE_KEY, JSON.stringify(previous.slice(-100)));
-  } catch {
-    // Tracing must never be the thing that breaks the page.
-  }
-};

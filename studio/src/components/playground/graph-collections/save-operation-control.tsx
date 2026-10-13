@@ -24,7 +24,7 @@ import { PersistOperationDialog } from '../persist-operation-dialog';
 import { SaveConflictDialog } from './dialogs/save-conflict-dialog';
 import { SaveOperationDialog } from './dialogs/save-operation-dialog';
 import { useGraphCollectionsContext } from './graph-collections-provider';
-import { operationSaveError, reportFailure, suggestOperationName, trace } from '@/lib/graph-collections';
+import { operationSaveError, reportFailure, suggestOperationName } from '@/lib/graph-collections';
 import { useGraphCollections } from '@/hooks/use-graph-collections';
 
 type SaveAsState = { open: boolean; name: string; collectionId: string };
@@ -143,17 +143,6 @@ export const SaveOperationControl = () => {
             reportFailure('Could not save the operation', response?.details);
             return;
           }
-
-          trace('save:bound', {
-            operationId: id,
-            collectionId,
-            // Captured when this component last rendered, then used after the
-            // save round-trip. If these disagree, the binding is going on a
-            // tab the user has since left.
-            boundTabId: activeTabId,
-            liveActiveTabId: tabs[activeTabIndex]?.id,
-            agree: activeTabId === tabs[activeTabIndex]?.id,
-          });
 
           if (activeTabId) {
             bindTabTo(activeTabId, { collectionId, operationId: id, loadedContentHash: contentHash });

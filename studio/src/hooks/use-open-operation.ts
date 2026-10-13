@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getGraphCollectionOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGraphCollectionsContext } from '@/components/playground/graph-collections/graph-collections-provider';
-import { reportFailure, trace } from '@/lib/graph-collections';
+import { reportFailure } from '@/lib/graph-collections';
 import { useGraphCollections } from '@/hooks/use-graph-collections';
 
 /** What we are waiting to place into a freshly opened tab. */
@@ -69,21 +69,6 @@ export const useOpenOperation = ({
     { enabled: !!openingOperation, staleTime: 0, gcTime: 0, refetchOnMount: 'always' },
   );
 
-  // Diagnostic: what each tab *stores*, not what the editor shows. GraphiQL
-  // re-syncs from these records on every tab change.
-  const lastSnapshot = useRef('');
-
-  useEffect(() => {
-    const snapshot = tabs
-      .map((tab) => `${tab.id.slice(0, 8)}=${(tab.query || '').split('\n')[0] || '(empty)'}`)
-      .join('  |  ');
-
-    if (snapshot !== lastSnapshot.current) {
-      lastSnapshot.current = snapshot;
-      trace('tabs:records', { activeTabIndex, snapshot });
-    }
-  }, [tabs, activeTabIndex]);
-
   // `setOpeningOperation(null)` only lands on the next render, so without this
   // a re-run in between calls `addTab()` again and leaves a blank tab behind.
   const openHandled = useRef<string | null>(null);
@@ -110,7 +95,6 @@ export const useOpenOperation = ({
     }
 
     refillAttempted.current.add(active.id);
-    trace('refill:empty-active-tab', { tabId: active.id.slice(0, 8) });
     setOpeningOperation({
       id: binding.operationId,
       collectionId: binding.collectionId,
@@ -136,13 +120,6 @@ export const useOpenOperation = ({
       onOperationMissing();
       return;
     }
-
-    trace('beat2:addTab', {
-      operationId: operation.id,
-      queryFirstLine: operation.query.split('\n')[0],
-      tabIdsBefore: tabs.map((tab) => tab.id.slice(0, 8)),
-      activeTabIdBefore: tabs[activeTabIndex]?.id.slice(0, 8),
-    });
 
     setPendingOpen({
       operationId: operation.id,
@@ -174,16 +151,6 @@ export const useOpenOperation = ({
     // Waits for the editors as well as the tab: on a cold load they mount after
     // the collections query resolves, and writing with `?.` would skip silently
     // and then clear pendingOpen, leaving a tab that never gets its operation.
-    if (pendingOpen) {
-      trace('beat3:enter', {
-        operationId: pendingOpen.operationId,
-        activeTabId: activeTabId?.slice(0, 8),
-        activeTabIndex,
-        hasQueryEditor: !!queryEditor,
-        hasVariableEditor: !!variableEditor,
-      });
-    }
-
     if (!pendingOpen || !activeTabId || !queryEditor || !variableEditor) {
       return;
     }
@@ -218,12 +185,6 @@ export const useOpenOperation = ({
       loadedContentHash: pendingOpen.contentHash,
     });
 
-    trace('beat3:bound', {
-      operationId: pendingOpen.operationId,
-      boundTabId: activeTabId.slice(0, 8),
-      wroteFirstLine: pendingOpen.query.split('\n')[0],
-    });
-
     setPendingOpen(null);
   }, [
     pendingOpen,
@@ -247,19 +208,12 @@ export const useOpenOperation = ({
     (operationId: string, collectionId: string) => {
       const existingTabId = findTabFor(operationId);
 
-      trace('open:requested', {
-        operationId,
-        existingTabId: existingTabId?.slice(0, 8),
-        tabIds: tabs.map((tab) => tab.id.slice(0, 8)),
-      });
-
       if (existingTabId) {
         const index = tabs.findIndex((tab) => tab.id === existingTabId);
         if (index !== -1) {
           // Blanked by the auto-save described above. Without this the binding
           // sends every later open back to that same empty tab, permanently.
           if (!(tabs[index].query ?? '').trim()) {
-            trace('open:refilling', { operationId, tabId: existingTabId.slice(0, 8) });
             changeTab(index);
             setOpeningOperation({ id: operationId, collectionId, intoTabId: existingTabId });
             return;
@@ -295,7 +249,6 @@ export const useOpenOperation = ({
   const openOperation = useCallback(
     (operationId: string, collectionId: string) => {
       if (!queryEditor) {
-        trace('open:deferred', { operationId });
         setDeferredOpen({ operationId, collectionId });
         return;
       }
@@ -310,7 +263,6 @@ export const useOpenOperation = ({
       return;
     }
 
-    trace('open:deferred-resumed', { operationId: deferredOpen.operationId });
     setDeferredOpen(null);
     openOperationNow(deferredOpen.operationId, deferredOpen.collectionId);
   }, [deferredOpen, queryEditor, openOperationNow]);
