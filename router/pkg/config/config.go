@@ -1649,7 +1649,7 @@ type Config struct {
 	LogServiceName                string                      `yaml:"log_service_name" envDefault:"@wundergraph/router" env:"LOG_SERVICE_NAME"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
-	DrainPeriod                   time.Duration               `yaml:"drain_period" envDefault:"0s" env:"DRAIN_PERIOD"`
+	DrainPeriod                   *time.Duration              `yaml:"drain_period,omitempty" env:"DRAIN_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	HealthCheckPath               string                      `yaml:"health_check_path" envDefault:"/health" env:"HEALTH_CHECK_PATH"`
@@ -1727,6 +1727,15 @@ type LoadResult struct {
 // This function loads the configuration files, apply environment variables and validates them with the json schema
 // In case of loading multiple configuration files, we will do the validation step for every configuration
 // and additionally post merging, since validations like oneOf can be bypassed
+// EffectiveDrainPeriod returns how long the router drains keep-alive connections on a real stop.
+// When drain_period is unset, the drain gets the part of shutdown_delay that grace_period leaves.
+func (c *Config) EffectiveDrainPeriod() time.Duration {
+	if c.DrainPeriod != nil {
+		return *c.DrainPeriod
+	}
+	return max(c.ShutdownDelay-c.GracePeriod, 0)
+}
+
 func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
@@ -1827,6 +1836,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
+	}
+
+	// The drain runs inside the shutdown delay, so an explicit drain period must leave the grace period
+	// for the actual shutdown. The derived default always fits.
+	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
+		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
 	}
 
 	// Post-process the config

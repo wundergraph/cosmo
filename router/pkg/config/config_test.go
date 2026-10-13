@@ -28,6 +28,100 @@ router_config_path: "config.json"
 	require.NoError(t, err)
 }
 
+func TestDrainPeriod(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unset drain period is derived from shutdown delay and grace period", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 20s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Nil(t, cfg.Config.DrainPeriod)
+		require.Equal(t, 40*time.Second, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit zero disables the drain", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+drain_period: 0s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.NotNil(t, cfg.Config.DrainPeriod)
+		require.Zero(t, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit drain period that fits the shutdown delay", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 30s
+drain_period: 10s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 10*time.Second, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit drain period that exceeds the shutdown delay", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 30s
+drain_period: 31s
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "drain_period (31s) + grace_period (30s) must not exceed shutdown_delay (1m0s)")
+	})
+
+	t.Run("grace period at or above the shutdown delay leaves no drain", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 15s
+grace_period: 30s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Zero(t, cfg.Config.EffectiveDrainPeriod())
+	})
+}
+
+func TestDrainPeriodFromEnv(t *testing.T) {
+	t.Setenv("DRAIN_PERIOD", "5s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
+}
+
 func TestCustomBytesExtension(t *testing.T) {
 	t.Parallel()
 

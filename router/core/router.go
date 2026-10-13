@@ -2039,11 +2039,12 @@ func (e *concSafeErrorJoiner) ErrOrNil() error {
 	return errors.Join(e.errs...)
 }
 
-// StartDraining makes the router's HTTP server answer every response with "Connection: close".
-// It is a no-op when the HTTP server is not running.
-func (r *Router) StartDraining() {
+// drain makes the router's HTTP server answer every response with "Connection: close" and blocks
+// until its client connections are closed, period has elapsed or ctx is done. It is a no-op when
+// the HTTP server is not running.
+func (r *Router) drain(ctx context.Context, period time.Duration) {
 	if r.httpServer != nil {
-		r.httpServer.StartDraining()
+		r.httpServer.drain(ctx, period)
 	}
 }
 

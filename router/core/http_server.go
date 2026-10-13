@@ -53,8 +53,10 @@ type server struct {
 	baseURL     string
 	listener    net.Listener // Pre-bound listener for synchronous port check
 	// draining makes every response carry "Connection: close" so clients retire their
-	// keep-alive connections before the server shuts down. See StartDraining.
+	// keep-alive connections before the server shuts down. See drain.
 	draining atomic.Bool
+	// openConns counts the client connections the HTTP server still owns (not closed or hijacked).
+	openConns atomic.Int64
 }
 
 type httpServerOptions struct {
@@ -110,6 +112,15 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		graphServer: nil,
 	})
 
+	httpServer.ConnState = func(_ net.Conn, state http.ConnState) {
+		switch state {
+		case http.StateNew:
+			n.openConns.Add(1)
+		case http.StateClosed, http.StateHijacked:
+			n.openConns.Add(-1)
+		}
+	}
+
 	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Lock-free hot path: single atomic load gets both mux and graphServer.
 		// The state is never nil (initialized with health mux, swapped to notReadyState on shutdown).
@@ -125,16 +136,34 @@ func newServer(opts *httpServerOptions) (*server, error) {
 	return n, nil
 }
 
-// StartDraining makes every subsequent response carry "Connection: close", so clients close
-// their pooled connections. Unlike http.Server.SetKeepAlivesEnabled(false) it does not close
-// idle connections, which would race the client's next write. It is not reversible.
-func (s *server) StartDraining() {
-	s.draining.Store(true)
-}
+// drainPollInterval is how often drain checks whether all client connections are closed.
+const drainPollInterval = 100 * time.Millisecond
 
-// IsDraining reports whether StartDraining was called.
-func (s *server) IsDraining() bool {
-	return s.draining.Load()
+// drain marks the server as not ready and makes every subsequent response carry
+// "Connection: close", so clients retire their pooled connections themselves. Unlike
+// http.Server.SetKeepAlivesEnabled(false) it does not close idle connections, which would race
+// the client's next write. It blocks until all client connections are closed, period has elapsed
+// or ctx is done. Draining is not reversible.
+func (s *server) drain(ctx context.Context, period time.Duration) {
+	s.draining.Store(true)
+	s.healthcheck.SetReady(false)
+
+	ctx, cancel := context.WithTimeout(ctx, period)
+	defer cancel()
+
+	ticker := time.NewTicker(drainPollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if s.openConns.Load() == 0 {
+				return
+			}
+		}
+	}
 }
 
 func (s *server) HealthChecks() health.Checker {
