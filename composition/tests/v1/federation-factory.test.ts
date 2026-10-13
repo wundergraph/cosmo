@@ -622,6 +622,71 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that a manually defined federation__Policy scalar is not included in the federated graph', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      scalar federation__Policy
+
+      type Query {
+        a: ID @policy(policies: [["read"]])
+      }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expected = normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      type Query {
+        a: ID
+      }
+    `);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expected);
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expected);
+  });
+
+  test('that a manually defined openfed__Scope scalar is not included in the client schema', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      scalar openfed__Scope
+
+      type Query {
+        a: ID @requiresScopes(scopes: [["read"]])
+      }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [a],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      ${REQUIRES_SCOPES_DIRECTIVE}
+
+      type Query {
+        a: ID @requiresScopes(scopes: [["read"]])
+      }
+
+      ${OPENFED_SCOPE}
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      type Query {
+        a: ID
+      }
+    `),
+    );
+  });
+
   test('that @tag and @inaccessible persist correctly #1.1', () => {
     const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphI, subgraphJ],

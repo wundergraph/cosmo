@@ -1028,7 +1028,8 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 9, "the other nine are untouched")
-			require.NotContains(t, tags, "declared:mood:employee-1", "the tag goes with the entry")
+			// The walk removes the tag's member once its entry is deleted.
+			require.Empty(t, tags["declared:mood:employee-1"])
 		})
 	})
 
@@ -1163,13 +1164,31 @@ func TestResponseCacheInvalidation(t *testing.T) {
 }
 
 func fixedResponseMiddleware(cacheControl, body string) func(http.Handler) http.Handler {
-	return func(http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Cache-Control", cacheControl)
-			_, _ = w.Write([]byte(body))
-		})
-	}
+	return newSwitchableResponse(cacheControl, body).middleware
+}
+
+// switchableResponse is a subgraph answer whose body a test can change between requests.
+type switchableResponse struct {
+	cacheControl string
+	body         atomic.Value
+}
+
+func newSwitchableResponse(cacheControl, body string) *switchableResponse {
+	r := &switchableResponse{cacheControl: cacheControl}
+	r.set(body)
+	return r
+}
+
+func (r *switchableResponse) set(body string) {
+	r.body.Store(body)
+}
+
+func (r *switchableResponse) middleware(http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", r.cacheControl)
+		_, _ = w.Write([]byte(r.body.Load().(string)))
+	})
 }
 
 // responseCacheConfig builds a redis backed response cache namespaced to this
@@ -1183,9 +1202,9 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 	prefix := "response_cache_test:" + uuid.New().String() + ":"
 
 	return &config.ResponseCacheConfiguration{
-		Enabled:     true,
-		FallbackTTL: ttl,
-		KeyPrefix:   prefix,
+		Enabled:   true,
+		All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: ttl},
+		KeyPrefix: prefix,
 		Storage: config.ResponseCacheStorageConfig{
 			Provider:   config.ResponseCacheStorageProviderRedis,
 			ProviderID: responseCacheRedisProviderID,
@@ -1281,6 +1300,8 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 const (
 	responseCacheEntryNamespace = "e:"
 	responseCacheTagNamespace   = "t:"
+	// Mirrors the redis adapter's walksMember, the walk count in a tag set.
+	responseCacheWalksMember = "\x00walks"
 )
 
 // responseCacheStored reads back what a test wrote, split into the entries
@@ -1312,7 +1333,7 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
 				members, err := client.ZRange(ctx, key, 0, -1).Result()
 				require.NoError(t, err)
-				tags[tag] = members
+				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return m == responseCacheWalksMember })
 				continue
 			}
 			entries = append(entries, strings.TrimPrefix(name, responseCacheEntryNamespace))

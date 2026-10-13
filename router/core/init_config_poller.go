@@ -64,6 +64,10 @@ func getConfigClient(r *Router, registry *ProviderRegistry, providerID string, i
 			clientOptions.ObjectPath = r.routerConfigPollerConfig.FallbackStorage.ObjectPath
 		}
 
+		if clientOptions.ObjectPath == "" {
+			return nil, fmt.Errorf("object_path is required for S3 storage provider '%s' for execution config", provider.ID)
+		}
+
 		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions)
 		if err != nil {
 			return nil, err

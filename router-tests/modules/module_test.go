@@ -18,7 +18,7 @@ import (
 func TestModuleSetCustomHeader(t *testing.T) {
 	cfg := config.Config{
 		Graph: config.Graph{},
-		Modules: map[string]interface{}{
+		Modules: map[string]any{
 			"myModule": module.MyModule{
 				Value: 1,
 			},
@@ -46,7 +46,7 @@ func TestModuleSetCustomHeader(t *testing.T) {
 func TestCustomModuleLogs(t *testing.T) {
 	cfg := config.Config{
 		Graph: config.Graph{},
-		Modules: map[string]interface{}{
+		Modules: map[string]any{
 			"myModule": module.MyModule{
 				Value: 1,
 			},

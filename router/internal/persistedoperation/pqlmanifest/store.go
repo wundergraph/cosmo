@@ -72,6 +72,11 @@ func (s *Store) Close() {
 	close(s.updateCh)
 }
 
+// Snapshot returns the current manifest. Published manifests must not be modified.
+func (s *Store) Snapshot() *Manifest {
+	return s.manifest.Load()
+}
+
 // LookupByHash performs an O(1) map lookup by sha256 hash.
 func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	m := s.manifest.Load()

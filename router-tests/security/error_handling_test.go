@@ -494,7 +494,7 @@ func TestAllowedExtensions(t *testing.T) {
 			ready.Add(numOfOperations)
 			done.Add(numOfOperations)
 			trigger := make(chan struct{})
-			for i := 0; i < numOfOperations; i++ {
+			for range numOfOperations {
 				go func() {
 					ready.Done()
 					defer done.Done()
@@ -1946,7 +1946,7 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			RouterOptions: []core.Option{
-				core.WithModulesConfig(map[string]interface{}{
+				core.WithModulesConfig(map[string]any{
 					"failingWriterModule": failing_writer.FailingWriterModule{
 						ErrorType: failing_writer.ErrorTypeBrokenPipe,
 					},
@@ -1988,7 +1988,7 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 				LogLevel: zapcore.ErrorLevel,
 			},
 			RouterOptions: []core.Option{
-				core.WithModulesConfig(map[string]interface{}{
+				core.WithModulesConfig(map[string]any{
 					"failingWriterModule": failing_writer.FailingWriterModule{
 						ErrorType: failing_writer.ErrorTypeGeneric,
 					},
@@ -2034,7 +2034,7 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 				LogLevel: zapcore.WarnLevel,
 			},
 			RouterOptions: []core.Option{
-				core.WithModulesConfig(map[string]interface{}{
+				core.WithModulesConfig(map[string]any{
 					"failingWriterModule": failing_writer.FailingWriterModule{
 						ErrorType: failing_writer.ErrorTypeBrokenPipe,
 					},
@@ -2068,7 +2068,7 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 				LogLevel: zapcore.ErrorLevel,
 			},
 			RouterOptions: []core.Option{
-				core.WithModulesConfig(map[string]interface{}{
+				core.WithModulesConfig(map[string]any{
 					"failingWriterModule": failing_writer.FailingWriterModule{
 						ErrorType: failing_writer.ErrorTypeGeneric,
 					},
@@ -2106,7 +2106,7 @@ func TestMultipartErrorResponseWriteFailures(t *testing.T) {
 				LogLevel: zapcore.ErrorLevel,
 			},
 			RouterOptions: []core.Option{
-				core.WithModulesConfig(map[string]interface{}{
+				core.WithModulesConfig(map[string]any{
 					"failingWriterModule": failing_writer.FailingWriterModule{
 						ErrorType: failing_writer.ErrorTypeBrokenPipe,
 					},

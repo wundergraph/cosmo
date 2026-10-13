@@ -91,7 +91,7 @@ func TestBatchProcessor_CorrectBatches(t *testing.T) {
 	})
 
 	// Push items onto the queue
-	for i := 0; i < dispatchItems; i++ {
+	for i := range dispatchItems {
 		_ = bp.Push(i)
 	}
 
@@ -111,7 +111,7 @@ func TestBatchProcessor_CorrectBatches(t *testing.T) {
 		t.Fatalf("Expected 10 dispatched batches, got %d", len(dispatchedBatches))
 	}
 
-	for i := 0; i < dispatchItems; i++ {
+	for i := range dispatchItems {
 		if i%batchSize == 0 {
 			if len(dispatchedBatches[i/batchSize]) != batchSize {
 				t.Fatalf("Expected batch size 10, got %d", len(dispatchedBatches[i/batchSize]))
@@ -256,16 +256,14 @@ func TestBatchProcessor_BlockingPush(t *testing.T) {
 
 	// Use a wait group to wait for the goroutine to finish
 	var wg sync.WaitGroup
-	wg.Add(1)
 
 	// Push items onto the queue
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		bp.Push(1)
 		bp.Push(2)
 		// This push should block until there is space in the queue
 		bp.Push(3)
-	}()
+	})
 
 	// Wait a moment to ensure the goroutine has started
 	time.Sleep(100 * time.Millisecond)

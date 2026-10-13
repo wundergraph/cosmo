@@ -56,7 +56,14 @@ func TestPersistedOperationInvalidHash(t *testing.T) {
 		"000000000000000000000000000000000000000000000000000000000000000z",
 	}
 	for _, hash := range malformed {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + hash + `"}}`),
 			})
@@ -76,7 +83,7 @@ func TestPersistedOperation(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 			Header:        header,
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
@@ -111,7 +118,7 @@ func TestPersistedOperationPOExtensionNotTransmittedToSubgraph(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 			Header:        header,
 		})
 		require.NoError(t, err)
@@ -186,7 +193,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -198,7 +205,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -210,7 +217,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -223,7 +230,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		header.Add("graphql-client-name", "not-my-client")
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -376,7 +383,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -386,7 +393,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -396,7 +403,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -406,7 +413,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "2267510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ae568d0762d13e0c10fa2a1343fb6233dbb3ff9132c42cb4aede828d57cbaa41"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -416,7 +423,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "3367510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "6b65c52ed847b8bd573927996913a8516a230fe27fe1bbc8239dd2facaba95d0"}}`),
 			Header:        header,
 			Variables:     []byte(`{"id":3,"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -426,7 +433,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "3367510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "6b65c52ed847b8bd573927996913a8516a230fe27fe1bbc8239dd2facaba95d0"}}`),
 			Header:        header,
 			Variables:     []byte(`{"id":4,"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
@@ -436,7 +443,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "3367510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "6b65c52ed847b8bd573927996913a8516a230fe27fe1bbc8239dd2facaba95d0"}}`),
 			Header:        header,
 			Variables:     []byte(`{"id":4,"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false}`),
 		})
@@ -446,7 +453,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "4467510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "79b4aed4b6442e3ffc14e47a648fda7e90c69d020ed50c288152dd3ba25a576c"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false}`),
 		})
@@ -456,7 +463,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "4467510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "79b4aed4b6442e3ffc14e47a648fda7e90c69d020ed50c288152dd3ba25a576c"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false}`),
 		})
@@ -466,7 +473,7 @@ func TestPersistedOperationCacheWithVariables(t *testing.T) {
 
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "4467510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "79b4aed4b6442e3ffc14e47a648fda7e90c69d020ed50c288152dd3ba25a576c"}}`),
 			Header:        header,
 			Variables:     []byte(`{"withCats": true,"skipDogs": false,"skipMouses": true,"withAligators": false,"id":3}`),
 		})
@@ -480,7 +487,7 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		nestedVariableExtraction := "5000000000000000000000000000000000000000000000000000000000000000"
+		nestedVariableExtraction := "ba68efe9c44f415ed5af168f39a01fcb1ac11280e507fff0610c9cc533b461b7"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -517,7 +524,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		skipVariableWithDefault := "4000000000000000000000000000000000000000000000000000000000000000"
+		skipVariableWithDefault := "0e77273273405d787611ff60755c97f9e9de86879723253d6df7b2a03d9d7a26"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -581,7 +588,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
+		listArgQuery := "f78a19e2e525a86dfa1beb3a45d1654b74c461e524cdff350721bc4cc1cea6d7"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -612,7 +619,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
-		listArgQueryWithDefault := "2000000000000000000000000000000000000000000000000000000000000000"
+		listArgQueryWithDefault := "3703ff86bbacb900a2f071604f5705da4486fc4e7fae43aa9cd7a3c34da4c0b8"
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQueryWithDefault + `"}}`),
@@ -650,7 +657,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["c"]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
-		nestedEnum := "3000000000000000000000000000000000000000000000000000000000000000"
+		nestedEnum := "2925ebccfd6a730dad6439d6812d2f3ffff075e6f8618ce0967d6f3bfca45645"
 		// nested list of enums
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
@@ -685,7 +692,7 @@ func BenchmarkPersistedOperationCacheEnabled(b *testing.B) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 			Header:        header,
 		})
 		if err != nil {
@@ -700,7 +707,7 @@ func BenchmarkPersistedOperationCacheEnabled(b *testing.B) {
 				header.Add("graphql-client-name", "my-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 					Header:        header,
 				})
 				if err != nil {
@@ -730,7 +737,7 @@ func BenchmarkPersistedOperationCacheDisabled(b *testing.B) {
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 			Header:        header,
 		})
 		if err != nil {
@@ -745,7 +752,7 @@ func BenchmarkPersistedOperationCacheDisabled(b *testing.B) {
 				header.Add("graphql-client-name", "my-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 					Header:        header,
 				})
 				if err != nil {

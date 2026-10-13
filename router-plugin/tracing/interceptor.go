@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error), error) {
+func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error), error) {
 	if tracingOpts.TracingConfig == nil {
 		return nil, errors.New("nil tracing config not supported")
 	}
@@ -25,7 +25,7 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 
 	tracer := tp.Tracer(fmt.Sprintf("wundergraph/cosmo/router-plugin/%s", tracingOpts.ServiceName))
 
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			// Extract headers from the incoming context
 			carrier := propagation.MapCarrier{}

@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -276,13 +278,7 @@ func (s *OAuthTestServer) handleAuthorize(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if len(c.RedirectURIs) > 0 {
-		redirectAllowed := false
-		for _, allowed := range c.RedirectURIs {
-			if allowed == redirectURI {
-				redirectAllowed = true
-				break
-			}
-		}
+		redirectAllowed := slices.Contains(c.RedirectURIs, redirectURI)
 		if !redirectAllowed {
 			http.Error(w, "unregistered redirect_uri", http.StatusBadRequest)
 			return
@@ -446,9 +442,7 @@ func (s *OAuthTestServer) CreateToken(claims map[string]any) (string, error) {
 		"iat": now.Unix(),
 		"exp": now.Add(1 * time.Hour).Unix(),
 	}
-	for k, v := range claims {
-		tokenClaims[k] = v
-	}
+	maps.Copy(tokenClaims, claims)
 
 	token := jwt.NewWithClaims(s.provider.SigningMethod(), tokenClaims)
 	token.Header[jwkset.HeaderKID] = s.keyID

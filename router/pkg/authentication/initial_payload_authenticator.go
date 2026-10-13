@@ -31,7 +31,7 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 		return nil, errs
 	}
 
-	var initialPayloadMap map[string]interface{}
+	var initialPayloadMap map[string]any
 	err := json.Unmarshal(initialPayload, &initialPayloadMap)
 	if err != nil {
 		errs = errors.Join(errs, fmt.Errorf("error parsing initial payload: %v", err))

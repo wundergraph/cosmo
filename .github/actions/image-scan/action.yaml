@@ -45,7 +45,7 @@ runs:
         # One comment per image, replaced by each new scan result of that image.
         message-id: image-scan-${{ inputs.name }}
         message: |
-          # ${{ inputs.name }} image scan passed
+          ## ${{ inputs.name }} image scan passed
           :white_check_mark: No security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in image:
           
           ```
@@ -57,7 +57,7 @@ runs:
       with:
         message-id: image-scan-${{ inputs.name }}
         message: |
-          # ${{ inputs.name }} image scan failed
+          ## ${{ inputs.name }} image scan failed
           :x: Security vulnerabilities found in image:
           
           ```
