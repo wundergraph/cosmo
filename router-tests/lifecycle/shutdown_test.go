@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -36,13 +35,13 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 				Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 					"employees": {
-						MaxIdleConns: testutils.ToPtr(10),
+						MaxIdleConns: new(10),
 					},
 					"products": {
-						MaxIdleConns: testutils.ToPtr(10),
+						MaxIdleConns: new(10),
 					},
 					"mood": {
-						MaxIdleConns: testutils.ToPtr(10),
+						MaxIdleConns: new(10),
 					},
 				},
 			})),

@@ -34,7 +34,7 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
 # use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
 RUN pnpm --filter=./controlplane --prod deploy --legacy pruned
 
-FROM --platform=${TARGETPLATFORM} node:lts-alpine
+FROM node:lts-alpine
 
 WORKDIR /app
 

@@ -82,10 +82,7 @@ func shouldUseRetryAfter(logger *zap.Logger, resp *http.Response, maxDuration ti
 		return 0, false
 	}
 
-	duration := parseRetryAfterHeader(logger, retryAfter)
-	if duration > maxDuration {
-		duration = maxDuration
-	}
+	duration := min(parseRetryAfterHeader(logger, retryAfter), maxDuration)
 
 	return duration, duration > 0
 }

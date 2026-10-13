@@ -152,6 +152,7 @@ type Prometheus struct {
 	Path                string                     `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
 	ListenAddr          string                     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool                       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ResponseCache       bool                       `yaml:"response_cache" envDefault:"false" env:"PROMETHEUS_RESPONSE_CACHE"`
 	ConnectionStats     bool                       `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	Network             TelemetryCategory          `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
 	Resolver            TelemetryCategory          `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
@@ -170,6 +171,7 @@ type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
+	ResponseCache       bool                  `yaml:"response_cache" envDefault:"false" env:"METRICS_OTLP_RESPONSE_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
 	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
@@ -203,6 +205,7 @@ type Telemetry struct {
 type CORS struct {
 	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`
 	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`
+	MatchOrigins     []string      `yaml:"match_origins" env:"CORS_MATCH_ORIGINS" envSeparator:";"`
 	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`
@@ -500,14 +503,22 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	SSEServerWriteTimeout                            time.Duration `envDefault:"10s" env:"ENGINE_SSE_SERVER_WRITE_TIMEOUT" yaml:"sse_server_write_timeout,omitempty"`
 	EnableDefer                                      bool          `envDefault:"false" env:"ENGINE_ENABLE_DEFER" yaml:"enable_defer"`
 
 	// EnableMultiFetch merges entity fetches to the same subgraph that execute
 	// in the same wave into a single batched request with aliased _entities fields.
-	EnableMultiFetch bool `envDefault:"false" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
+	// Enabled by default, set to false to send one request per entity fetch.
+	EnableMultiFetch bool `envDefault:"true" env:"ENGINE_ENABLE_MULTI_FETCH" yaml:"enable_multi_fetch"`
 	// EnableScheduleFetches replaces the legacy wave-based fetch organizers with the
 	// dependency-aware fetch scheduler (component-split, chain-inlined execution trees).
-	EnableScheduleFetches bool `envDefault:"false" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
+	// Enabled by default, set to false to fall back to the wave-based organizers.
+	EnableScheduleFetches bool `envDefault:"true" env:"ENGINE_ENABLE_SCHEDULE_FETCHES" yaml:"enable_schedule_fetches"`
+	// EnableGRPCWireEncoding encodes gRPC request messages directly to the protobuf wire format.
+	// This is faster and uses less memory, because the router does not build dynamic protobuf messages.
+	// Enabled by default. Set to false to build request messages with protoreflect.
+	// Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding.
+	EnableGRPCWireEncoding bool `envDefault:"true" env:"ENGINE_ENABLE_GRPC_WIRE_ENCODING" yaml:"enable_grpc_wire_encoding"`
 
 	// Server-side WebSocket handler options (router accepting client connections)
 	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
@@ -708,12 +719,23 @@ type HeaderSource struct {
 	ValuePrefixes []string `yaml:"value_prefixes"`
 }
 
+// JWTOnError controls how JWT credential failures are handled.
+type JWTOnError string
+
+const (
+	JWTOnErrorReject   JWTOnError = "reject"
+	JWTOnErrorContinue JWTOnError = "continue"
+)
+
 type JWTAuthenticationConfiguration struct {
 	JWKS              []JWKSConfiguration `yaml:"jwks"`
 	ScopeClaim        string              `yaml:"scope_claim" envDefault:"scope"`
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
+	// OnError controls whether invalid JWT credentials reject the request or are ignored.
+	// Required authentication and field authorization still apply.
+	OnError JWTOnError `yaml:"on_error" envDefault:"reject"`
 }
 
 type AuthenticationConfiguration struct {
@@ -947,6 +969,8 @@ type WebSocketConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_ENABLED"`
 	// AbsintheProtocol configuration for the Absinthe Protocol
 	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
+	// DefaultSubprotocol is used when the client does not send a Sec-WebSocket-Protocol header. Empty rejects the connection.
+	DefaultSubprotocol string `yaml:"default_subprotocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
 	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
@@ -1119,14 +1143,36 @@ type SubgraphExtensionPropagationConfiguration struct {
 
 // ResponseCacheConfiguration configures caching of subgraph responses.
 type ResponseCacheConfiguration struct {
-	Enabled     bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
 	KeyPrefix    string                          `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
 	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
 	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
+	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
+	// All is what every subgraph gets unless Subgraphs names it.
+	All ResponseCacheSubgraphConfiguration `yaml:"all" envPrefix:"ALL_"`
+	// Subgraphs replaces All whole for the named subgraph; nothing is inherited.
+	// An entry is explicit: only yaml reaches it, so the env defaults All gets
+	// do not apply, and an omitted enabled is false. Keys are subgraph names.
+	Subgraphs map[string]ResponseCacheSubgraphConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+// ResponseCacheSubgraphConfiguration is what the cache does for a subgraph.
+type ResponseCacheSubgraphConfiguration struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
+	PrivateID   string        `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
+}
+
+type ResponseCacheTagHeaderConfig struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Name      string `yaml:"name,omitempty" envDefault:"Cache-Tag" env:"NAME"`
+	Delimiter string `yaml:"delimiter,omitempty" envDefault:"," env:"DELIMITER"`
+	// MaxBytes caps the header value; tags are packed coarsest first and the
+	// finest that do not fit are left out.
+	MaxBytes int `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
 }
 
 // ResponseCacheInvalidationConfig selects which secondary indexes are built
@@ -1507,6 +1553,9 @@ type MCPOAuthScopesConfiguration struct {
 	// GetSchema specifies scopes required to call the get_schema built-in tool.
 	// Additive to tools_call scopes. Only relevant when expose_schema is true.
 	GetSchema []string `yaml:"get_schema,omitempty" env:"GET_SCHEMA"`
+	// GenerateQuery specifies scopes required to call the generate_query built-in tool.
+	// Additive to tools_call scopes. Only relevant when query generation is enabled.
+	GenerateQuery []string `yaml:"generate_query,omitempty" env:"GENERATE_QUERY"`
 }
 
 type MCPSessionConfig struct {
@@ -1591,12 +1640,12 @@ type Config struct {
 	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
 	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
-	Modules        map[string]interface{} `yaml:"modules,omitempty"`
-	Headers        HeaderRules            `yaml:"headers,omitempty"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
-	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
-	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
-	Batching       BatchingConfig         `yaml:"batching,omitempty"`
+	Modules        map[string]any      `yaml:"modules,omitempty"`
+	Headers        HeaderRules         `yaml:"headers,omitempty"`
+	TrafficShaping TrafficShapingRules `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
+	FileUpload     FileUpload          `yaml:"file_upload,omitempty"`
+	AccessLogs     AccessLogsConfig    `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig      `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

@@ -4,6 +4,68 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.253.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.2...controlplane@0.253.3) (2026-10-12)
+
+### Bug Fixes
+
+* **controlplane:** isolate persisted operation deletion paths ([#3329](https://github.com/wundergraph/cosmo/issues/3329)) ([1658153](https://github.com/wundergraph/cosmo/commit/1658153f800bd94c4caeebc7382c24fac9bda25e)) (@fiam)
+
+## [0.253.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.1...controlplane@0.253.2) (2026-10-07)
+
+### Bug Fixes
+
+* update tinypool and proxy-addr to resolve critical vulnerabilities ([#3334](https://github.com/wundergraph/cosmo/issues/3334)) ([f6d7d10](https://github.com/wundergraph/cosmo/commit/f6d7d10515c4a5a17ef4f4c3e3d5b4569991c623)) (@gausie)
+
+## [0.253.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.0...controlplane@0.253.1) (2026-10-06)
+
+### Bug Fixes
+
+* correct authorization header format ([#3332](https://github.com/wundergraph/cosmo/issues/3332)) ([7c8a650](https://github.com/wundergraph/cosmo/commit/7c8a650f0ebf1a104dafa4571ec751a57001488e)) (@wilsonrivera)
+
+## [0.253.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.252.1...controlplane@0.253.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+* improve subgraph publish performance ([#3312](https://github.com/wundergraph/cosmo/issues/3312)) ([546ffdd](https://github.com/wundergraph/cosmo/commit/546ffdd222d50f4305bca40e86badbba5d57a3fc)) (@wilsonrivera)
+
+## [0.252.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.252.0...controlplane@0.252.1) (2026-09-28)
+
+**Note:** Version bump only for package controlplane
+
+# [0.252.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.251.1...controlplane@0.252.0) (2026-09-25)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+* implement script for enabling `split-config-loading` ([#3227](https://github.com/wundergraph/cosmo/issues/3227)) ([e7162a7](https://github.com/wundergraph/cosmo/commit/e7162a756430e32d845ad0fe2f4152df59e01a03)) (@wilsonrivera)
+
+## [0.251.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.251.0...controlplane@0.251.1) (2026-09-23)
+
+### Bug Fixes
+
+* increase timeout settings for client, build server, and routes ([#3274](https://github.com/wundergraph/cosmo/issues/3274)) ([1e77927](https://github.com/wundergraph/cosmo/commit/1e779279f0f1b677d164ee3deb55be16418ab415)) (@JivusAyrus)
+
+# [0.251.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.2...controlplane@0.251.0) (2026-09-18)
+
+### Features
+
+* **sentry:** always sample the checks and publishes ([#3253](https://github.com/wundergraph/cosmo/issues/3253)) ([e016228](https://github.com/wundergraph/cosmo/commit/e016228614e3f889961adf89a3aa8ceddaddb9d1)) (@JivusAyrus)
+
+## [0.250.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.1...controlplane@0.250.2) (2026-09-17)
+
+### Bug Fixes
+
+* apply rbac correctly when groups are limited to specific subgraphs ([#3215](https://github.com/wundergraph/cosmo/issues/3215)) ([26545dc](https://github.com/wundergraph/cosmo/commit/26545dc13544a7483280efae680ea4776936ee40)) (@wilsonrivera)
+* remove Slack Connect from Scale plan ([#3255](https://github.com/wundergraph/cosmo/issues/3255)) ([2f2a294](https://github.com/wundergraph/cosmo/commit/2f2a2945ae0f384370466b1bc05747b3cc384257)) (@jvr545)
+
+## [0.250.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.250.0...controlplane@0.250.1) (2026-09-16)
+
+### Bug Fixes
+
+* **controlplane:** upgrade fastify to v5 ([#3193](https://github.com/wundergraph/cosmo/issues/3193)) ([86a355b](https://github.com/wundergraph/cosmo/commit/86a355bcb4ed0fce51747c4d2cedfa31c105dde3)) (@gausie)
+* restore lint autofix ([#3242](https://github.com/wundergraph/cosmo/issues/3242)) ([cd65459](https://github.com/wundergraph/cosmo/commit/cd654597c46d77fcbc0c44b2352fef177f6ccec6)) (@comatory)
+
 # [0.250.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.249.3...controlplane@0.250.0) (2026-09-14)
 
 ### Features

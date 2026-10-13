@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -292,13 +293,12 @@ type CacheWarmupPlanningProcessor struct {
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 
 	var (
-		isAPQ bool
+		skipParse bool
+		isAPQ     bool
+		err       error
 	)
 
-	k, err := c.operationProcessor.NewIndependentKit()
-	if err != nil {
-		return nil, err
-	}
+	k := NewIndependentOperationKit(c.operationProcessor)
 
 	var s []byte
 	if operation.Request.GetExtensions() != nil {
@@ -327,21 +327,36 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
+	// A custom ID doesn't identify its body, so a queued body may belong to an older
+	// manifest revision. APQ IDs are query hashes, so their bodies can't be stale.
+	if k.persistedOperationManifest != nil && k.hasCustomPersistedOperationID() {
+		hash := k.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		body, found := k.persistedOperationManifest.Operations[hash]
+		if !found {
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: item.Client.Name,
+				Sha256Hash: hash,
+			}
+		}
+		k.parsedOperation.Request.Query = body
+	}
+
 	err = k.ComputeOperationSha256()
 	if err != nil {
 		return nil, err
 	}
 
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
-		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
+		skipParse, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = k.Parse()
-	if err != nil {
-		return nil, err
+	if !skipParse {
+		if err := k.Parse(); err != nil {
+			return nil, err
+		}
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)

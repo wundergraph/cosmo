@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -90,7 +91,7 @@ func TestLocalhostFallbackRoundTripper(t *testing.T) {
 		err = json.Unmarshal(data, &response)
 		require.NoError(t, err)
 		assert.Equal(t, "GET", response["method"])
-		assert.Equal(t, fmt.Sprintf("%s:%d", localIP.String(), port), response["host"])
+		assert.Equal(t, net.JoinHostPort(localIP.String(), strconv.Itoa(port)), response["host"])
 		assert.Equal(t, "", response["body"])
 		assert.Equal(t, "/hello", response["path"])
 	})

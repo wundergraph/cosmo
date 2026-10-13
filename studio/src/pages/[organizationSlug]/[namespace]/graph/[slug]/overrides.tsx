@@ -1,6 +1,7 @@
 import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
-import { useApplyParams } from '@/components/analytics/use-apply-params';
-import { ConfigureOverride } from '@/components/checks/override';
+import { ConfigureOverride, overrideParams } from '@/components/checks/override';
+import { useQueryStates } from 'nuqs';
+import { useParams } from 'next/navigation';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
@@ -37,7 +38,7 @@ import { getAllOverrides } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { GetAllOverridesResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext } from 'react';
 import { BiAnalyse } from 'react-icons/bi';
 import { IoBarcodeSharp } from 'react-icons/io5';
@@ -45,15 +46,15 @@ import { buildUrl } from '@/lib/build-url';
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const { organizationSlug, namespace, slug } = useParams<{
+    organizationSlug: string;
+    namespace: string;
+    slug: string;
+  }>();
 
-  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
-  const offset = (pageNumber - 1) * pageSize;
+  const [, setOverride] = useQueryStates(overrideParams);
+  const { pageNumber, pageSize, offset } = usePaginationParams();
 
   const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {
     const filterState = createFilterState({
@@ -87,8 +88,6 @@ const OverridesPage: NextPageWithLayout = () => {
       enabled: !!graphContext?.graph?.name,
     },
   );
-
-  const applyParams = useApplyParams();
 
   const columnHelper = createColumnHelper<GetAllOverridesResponse['overrides'][number]>();
 
@@ -158,10 +157,7 @@ const OverridesPage: NextPageWithLayout = () => {
               size="sm"
               className="table-action"
               onClick={() => {
-                applyParams({
-                  override: hash,
-                  overrideName: name,
-                });
+                setOverride({ override: hash, overrideName: name });
               }}
             >
               Configure
@@ -245,10 +241,7 @@ const OverridesPage: NextPageWithLayout = () => {
                 <TableRow
                   key={row.id}
                   onClick={() => {
-                    applyParams({
-                      override: row.getValue('hash'),
-                      overrideName: row.getValue('name'),
-                    });
+                    setOverride({ override: row.getValue('hash'), overrideName: row.getValue('name') });
                   }}
                   className="group cursor-pointer hover:bg-secondary/30"
                   data-state={row.getIsSelected() && 'selected'}

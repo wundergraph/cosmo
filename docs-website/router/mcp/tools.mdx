@@ -16,6 +16,7 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
 | `get_operation_info` | Returns instructions for executing the operation behind one of your tools directly via HTTP and integrating it into an application. |
 | `get_schema`         | Returns the full GraphQL schema of the API, helping AI models understand the entire API structure.                                  |
 | `execute_graphql`    | Executes an arbitrary GraphQL query or mutation, letting AI models craft operations beyond the tools you have created.              |
+| `generate_query`     | Uses Cosmo Cloud Prompt to Query to generate a GraphQL operation from a natural-language prompt.                                    |
 
 <Warning>
   `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
@@ -23,6 +24,35 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
   [`enable_arbitrary_operations: true`](/router/mcp/configuration) respectively, and only when arbitrary access is
   intended. Prefer creating focused tools.
 </Warning>
+
+### Generate a GraphQL Operation with Cosmo Cloud
+
+The `generate_query` tool sends a natural-language prompt and the router's active schema version to Cosmo Cloud Prompt
+to Query. The generated operation is returned to the MCP client but is not executed.
+
+The tool accepts one required field:
+
+```json
+{
+  "prompt": "List the names and email addresses of the five most recently created users"
+}
+```
+
+A successful response contains the GraphQL document and the metadata needed to use it:
+
+```json
+{
+  "description": "Lists the five most recently created users",
+  "document": "query RecentUsers { users(first: 5, orderBy: CREATED_AT_DESC) { name email } }",
+  "operationName": "RecentUsers",
+  "operationType": "query",
+  "variablesSchema": "{\"type\":\"object\"}"
+}
+```
+
+The tool is registered only when Prompt to Query is enabled for the Cosmo Cloud organization and the router's graph
+token contains the `prompt-to-query` feature. Graph tokens issued before the feature was enabled must be rotated and the
+router updated with the new token. Control Plane or entitlement errors are returned as MCP tool errors.
 
 ## Creating Tools
 

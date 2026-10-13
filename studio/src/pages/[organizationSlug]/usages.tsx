@@ -1,4 +1,5 @@
 import { ChartTooltip } from '@/components/analytics/charts';
+import { useParams } from 'next/navigation';
 import { UserContext } from '@/components/app-provider';
 import { EmptyState } from '@/components/empty-state';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
@@ -16,7 +17,6 @@ import { useQuery } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getOrganizationRequestsCount } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useContext, useEffect } from 'react';
 import { CgDanger } from 'react-icons/cg';
 import { IoWarningOutline } from 'react-icons/io5';
@@ -209,8 +209,7 @@ const UsagesPage: NextPageWithLayout = () => {
 };
 
 const IncreaseLimits = () => {
-  const router = useRouter();
-  const slug = router.query.organizationSlug as string;
+  const { organizationSlug: slug } = useParams<{ organizationSlug: string }>();
 
   return (
     <Button asChild variant="outline">

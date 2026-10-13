@@ -1,0 +1,110 @@
+---
+title: "When to Use @defer"
+description: "Choosing between @defer, separate queries, pagination, and subscriptions."
+icon: "scale-balanced"
+sidebarTitle: When to Use
+---
+
+`@defer` changes when the parts of a response arrive.
+It does not change what the response contains.
+This page helps you decide whether `@defer` fits a given operation.
+
+## Good candidates
+
+**Fields from a slow subgraph next to fields from a fast subgraph.**
+A product page needs the product name immediately, but it can show reviews later.
+If the client defers the reviews, the page renders before the reviews subgraph answers.
+
+**Content outside the visible area.**
+The router can deliver this content after the data that the user sees first.
+
+**Expensive computed fields.**
+A field with a `@requires` chain or an expensive resolver adds latency to the complete response.
+A deferred fragment removes that latency from the initial response.
+
+**Secondary dashboard panels.**
+The primary metrics render first.
+Each secondary panel renders when its fragment arrives.
+
+## @defer compared to split queries
+
+A client can use separate fast and slow queries to deliver the fast data first.
+`@defer` differs in these points:
+
+**One HTTP request.**
+The router plans the deferred fragment with the rest of the operation.
+It executes the operation in one HTTP exchange.
+
+**Shared entity context.**
+Entity keys from the initial response can seed deferred entity fetches.
+Two separate queries can fetch those keys and parent objects twice.
+[Deferred fields from the parent subgraph](/router/defer/how-it-works#subgraph-requests) can still require another root query.
+
+**No client-side join.**
+The router identifies the location of each fragment through `pending.path` and `subPath`.
+With two queries, the client combines the results.
+
+**Predictable ordering.**
+The initial response always arrives before any deferred fragment.
+
+Two queries remain the better choice in two cases.
+The client needs the slow data for a different view.
+The client fetches the slow data only after a user action.
+
+## @defer compared to pagination
+
+Pagination reduces the amount of data in a response.
+`@defer` changes when the data arrives.
+`@defer` does not reduce the data.
+
+Use pagination when a list is large.
+
+Use `@defer` when a list is slow but small enough to send in one part.
+
+Use both when a list is large and slow.
+Paginate the list to limit its size.
+Defer slow fields for the items in the current page.
+
+## @defer compared to subscriptions
+
+Both deliver several payloads over one connection.
+They solve different problems.
+
+**`@defer` produces one response that completes.**
+The router delivers each fragment once.
+The router then ends the response with `hasNext: false`.
+Incremental delivery does not report changes that occur after the request starts.
+
+**A subscription remains open.**
+The router pushes a new payload for each event.
+It continues until the client ends the subscription.
+
+Choose `@defer` when the data is complete after one fetch, and only its arrival time matters.
+Choose [subscriptions](/router/subscriptions) when the data keeps changing and the client needs every change.
+
+## Patterns to avoid
+
+**Do not defer a cheap field from the parent subgraph.**
+This pattern adds another subgraph request without reducing the initial response latency.
+
+**Do not defer fields that the initial view needs.**
+The initial response must contain all data that the client needs for its first render.
+
+**Do not select the same field inside and outside a deferred fragment.**
+The router delivers the field in the initial response.
+The deferred selection has no effect.
+
+**Do not defer many small fragments separately.**
+Each fragment can produce separate subgraph requests and a separate response part.
+Group fields from the same subgraph into one fragment.
+
+## Checklist
+
+Defer a fragment when the answer to each question is yes.
+
+1. Is the rest of the response faster without this fragment?
+2. Can the UI render something useful before the incremental response arrives?
+3. Does the current view need the fragment in this request, and not after a user action?
+4. Do the fields of the fragment come from a different subgraph than the fields outside it?
+5. Do the fields of the fragment have an expensive resolver?
+6. Does the client understand a `multipart/mixed` response with `pending`, `incremental`, and `completed`?

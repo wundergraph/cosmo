@@ -175,6 +175,20 @@ func TestHandlerAuthorization(t *testing.T) {
 		})
 	}
 
+	t.Run("an unset key admits nobody", func(t *testing.T) {
+		// NewServer refuses this config; a handler mounted directly must not
+		// treat an empty key and a missing header as a match.
+		t.Parallel()
+		store := &recordingInvalidator{}
+		cfg := allIndexes()
+		cfg.Endpoint.SharedKey = ""
+
+		w := post(t, cfg, store, "", body)
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+		require.Zero(t, store.calls)
+	})
+
 	t.Run("the key is checked before the body is read", func(t *testing.T) {
 		// Otherwise an unauthorized caller can make the router parse megabytes
 		// on its say so.

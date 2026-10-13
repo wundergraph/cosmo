@@ -108,19 +108,20 @@ By default the query plan format is text based, but you can view the json versio
 
 ### Engine execution settings
 
-Some engine settings change the shape of the generated plans. To reproduce the plans of a router
-running with those settings, enable them on the command as well:
+Some engine settings change the shape of the generated plans. The command uses the same defaults
+as the router, so plans match a router running with the default configuration. To reproduce the
+plans of a router that has one of these settings turned off, turn it off on the command as well:
 
-* `-enable-multi-fetch` matches `engine.enable_multi_fetch`, merging entity fetches to the same subgraph that execute in the same wave into a single batched request.
-* `-enable-schedule-fetches` matches `engine.enable_schedule_fetches`, replacing the wave-based fetch organizers with the dependency-aware fetch scheduler.
+* `-enable-multi-fetch` matches `engine.enable_multi_fetch`, merging entity fetches to the same subgraph that execute in the same wave into a single batched request. Enabled by default.
+* `-enable-schedule-fetches` matches `engine.enable_schedule_fetches`, replacing the wave-based fetch organizers with the dependency-aware fetch scheduler. Enabled by default.
 
 ```bash
 ./router query-plan \
   -execution-config execution-config.json \
   -operations ./operations \
   -plans ./plans \
-  -enable-multi-fetch \
-  -enable-schedule-fetches
+  -enable-multi-fetch=false \
+  -enable-schedule-fetches=false
 ```
 
 ## Other options
@@ -132,9 +133,9 @@ You can see all the options available launching the command without any argument
   -concurrency int
         how many query plan run concurrently
   -enable-multi-fetch
-        plan as if engine.enable_multi_fetch is enabled, merging entity fetches to the same subgraph in the same wave
+        mirrors engine.enable_multi_fetch, merging entity fetches to the same subgraph in the same wave; pass -enable-multi-fetch=false to plan one request per entity fetch (default true)
   -enable-schedule-fetches
-        plan as if engine.enable_schedule_fetches is enabled, using the dependency-aware fetch scheduler
+        mirrors engine.enable_schedule_fetches, using the dependency-aware fetch scheduler; pass -enable-schedule-fetches=false to plan with the wave-based organizers (default true)
   -execution-config string
         required, execution config file location
   -fail-fast

@@ -35,7 +35,6 @@ type AccessController struct {
 }
 
 // NewAccessController creates a new AccessController.
-// It returns an error if the introspection auth mode is invalid.
 func NewAccessController(opts AccessControllerOptions) (*AccessController, error) {
 	return &AccessController{
 		authenticationRequired:   opts.AuthenticationRequired,

@@ -35,7 +35,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -65,7 +65,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"employeeID": 3,
 			}
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, vars, func(dataValue []byte, errValue error) error {
@@ -119,7 +119,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -149,7 +149,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"employeeID": 3,
 			}
 			type kafkaSubscriptionArgs struct {
@@ -207,7 +207,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -237,7 +237,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"employeeID": 3,
 			}
 			type kafkaSubscriptionArgs struct {
@@ -302,7 +302,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -332,10 +332,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"employeeID": 3,
 			}
-			vars2 := map[string]interface{}{
+			vars2 := map[string]any{
 				"employeeID": 1,
 			}
 			type kafkaSubscriptionArgs struct {
@@ -407,7 +407,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -437,7 +437,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"employeeID": 1,
 			}
 			type kafkaSubscriptionArgs struct {
@@ -495,7 +495,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -517,7 +517,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"max":      1,
 				"interval": 200,
 			}
@@ -567,7 +567,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -589,7 +589,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"max":      0,
 				"interval": 500,
 			}
@@ -657,7 +657,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"startSubscriptionModule": customModule,
 			},
 		}
@@ -679,7 +679,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			vars := map[string]interface{}{
+			vars := map[string]any{
 				"max":      0,
 				"interval": 0,
 			}
