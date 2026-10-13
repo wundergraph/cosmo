@@ -275,7 +275,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if resolveCtx.TracingOptions.Enable {
 				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
-				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(resolveCtx, synchronous)
+				// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+					return synchronous && resolveCtx.SubgraphErrors() == nil
+				})
 			}
 			resolveCtx.SetResponseCache(cacheOpts)
 		}

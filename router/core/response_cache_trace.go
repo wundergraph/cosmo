@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // ResponseCacheStatusHeader reports the request's response cache status, with the other cache debug headers.
@@ -49,8 +48,8 @@ type responseCacheInvalidationTrace struct {
 }
 
 // responseCacheTraceDetailsFunc is resolve.ResponseCacheOptions.TraceDetails for one request.
-// writesTagHeader is false for plans whose writer never sets the Cache-Tag header.
-func (h *GraphQLHandler) responseCacheTraceDetailsFunc(resolveCtx *resolve.Context, writesTagHeader bool) func(surrogateKeys []string) any {
+// canEmitTagHeader reports whether this response's writer will set the Cache-Tag header.
+func (h *GraphQLHandler) responseCacheTraceDetailsFunc(canEmitTagHeader func() bool) func(surrogateKeys []string) any {
 	return func(surrogateKeys []string) any {
 		details := responseCacheTraceDetails{
 			Invalidation: responseCacheInvalidationTrace{
@@ -63,7 +62,7 @@ func (h *GraphQLHandler) responseCacheTraceDetailsFunc(resolveCtx *resolve.Conte
 			details.Invalidation.Endpoint = invalidationEndpointURL(endpoint.ListenAddr, endpoint.Path)
 		}
 		if h.responseCacheTagHeader.Enabled {
-			details.TagHeader = describeCacheTagHeader(surrogateKeys, h.responseCacheTagHeader, writesTagHeader && resolveCtx.SubgraphErrors() == nil)
+			details.TagHeader = describeCacheTagHeader(surrogateKeys, h.responseCacheTagHeader, canEmitTagHeader())
 		}
 		return details
 	}
@@ -82,7 +81,7 @@ func describeCacheTagHeader(surrogateKeys []string, cfg config.ResponseCacheTagH
 
 	kept := make(map[string]struct{})
 	if value != "" {
-		for _, key := range strings.Split(value, cfg.Delimiter) {
+		for key := range strings.SplitSeq(value, cfg.Delimiter) {
 			kept[key] = struct{}{}
 		}
 	}
