@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.0](https://github.com/wundergraph/cosmo/compare/studio@0.182.2...studio@0.183.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+
+## [0.182.2](https://github.com/wundergraph/cosmo/compare/studio@0.182.1...studio@0.182.2) (2026-10-02)
+
+### Bug Fixes
+
+* **studio:** read namespace from querystring on top-level pages ([#3315](https://github.com/wundergraph/cosmo/issues/3315)) ([d485c08](https://github.com/wundergraph/cosmo/commit/d485c089e2992a86fa327823d40d7a66c2c558d1)) (@gausie)
+
 ## [0.182.1](https://github.com/wundergraph/cosmo/compare/studio@0.182.0...studio@0.182.1) (2026-09-28)
 
 **Note:** Version bump only for package studio

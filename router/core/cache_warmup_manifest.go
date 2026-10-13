@@ -4,6 +4,7 @@ import (
 	"context"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
@@ -29,6 +30,11 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 
 	items := make([]*nodev1.Operation, 0, len(ops))
 	for sha256Hash, body := range ops {
+		// Requests reject these at lookup, so warming them would let cache hits bypass that.
+		if !persistedoperation.OperationIDMatchesBody(sha256Hash, body) {
+			log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
+			continue
+		}
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{
 				Query: body,

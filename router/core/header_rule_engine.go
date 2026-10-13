@@ -564,7 +564,7 @@ func hashHeaderStable(hdr http.Header) uint64 {
 		_, _ = d.WriteString("\x00")
 		// Iterate values without creating copies to avoid allocations
 		vals := hdr[k]
-		for i := 0; i < len(vals); i++ {
+		for i := range vals {
 			_, _ = d.WriteString(vals[i])
 			_, _ = d.WriteString("\x00")
 		}

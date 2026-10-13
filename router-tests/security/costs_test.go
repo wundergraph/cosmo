@@ -1131,7 +1131,7 @@ func TestOperationCost(t *testing.T) {
 				}
 
 				// Fire the same query 3 times: 1 cache miss + 2 cache hits
-				for i := 0; i < 3; i++ {
+				for range 3 {
 					res := xEnv.MakeGraphQLRequestOK(query)
 					require.Contains(t, res.Body, `"data":`)
 				}

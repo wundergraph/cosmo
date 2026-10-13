@@ -50,6 +50,9 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
+	if cacheStatus, ok := reqContext.responseCacheStatus(); ok {
+		attrs = append(attrs, rotel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+	}
 
 	rm := m.routerMetrics.MetricStore()
 

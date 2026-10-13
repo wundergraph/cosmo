@@ -20,7 +20,7 @@ func TestAuthDenyModule_WriteResponseError(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"authDenyModule": authdeny.AuthDenyModule{},
 			},
 		}
@@ -46,7 +46,7 @@ func TestAuthDenyModule_WriteResponseError(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"authDenyModule": authdeny.AuthDenyModule{},
 			},
 		}

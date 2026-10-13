@@ -54,7 +54,7 @@ func (c *Config) ObservabilityInterceptor() connect.UnaryInterceptorFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			attributes := defaultAttributes(req)
 			// connect.CodeOK does not exist
-			var statusCode int = 0
+			var statusCode = 0
 
 			claims, err := utils.GetClaims(ctx)
 			if err != nil || checkIfClaimsAreSet(claims) {
