@@ -288,9 +288,9 @@ describe('GetGraphFieldUsage', () => {
     expect(Math.abs(end - toUnixSeconds(now))).toBeLessThanOrEqual(60);
   });
 
-  test('Should use the date range when both a range and a date range are given', async (testContext) => {
+  test.each([24, 0, -1])('Should use the date range and ignore a range of %i when both are given', async (range) => {
     const { client, server } = await SetupTest({ dbname, chClient });
-    testContext.onTestFinished(() => server.close());
+    onTestFinished(() => server.close());
 
     const { fedGraphName } = await createGraph(client);
     vi.mocked(chClient.queryPromise).mockResolvedValue([]);
@@ -300,13 +300,33 @@ describe('GetGraphFieldUsage', () => {
     const response = await client.getGraphFieldUsage({
       graphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      range: 24,
+      range,
       dateRange: { start: formatISO(start), end: formatISO(end) },
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(lastWindow()).toEqual({ start: toUnixSeconds(start), end: toUnixSeconds(end) });
     expect(response.dateRange).toMatchObject({ start: start.toISOString(), end: end.toISOString() });
+  });
+
+  test('Should query from the exact start of the date range, not the start of its time bucket', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const { fedGraphName } = await createGraph(client);
+    vi.mocked(chClient.queryPromise).mockResolvedValue([]);
+
+    const end = new Date(toUnixSeconds(new Date()) * 1000);
+    const start = subHours(end, 3);
+    start.setUTCMinutes(2, 0, 0);
+    const response = await client.getGraphFieldUsage({
+      graphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      dateRange: { start: formatISO(start), end: formatISO(end) },
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(lastWindow().start).toBe(toUnixSeconds(start));
   });
 
   test('Should not return the graph of another organization', async (testContext) => {

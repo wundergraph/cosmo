@@ -202,7 +202,7 @@ export class UsageRepository {
     };
   }
 
-  // Same filters as getFieldUsage, so counts match Studio.
+  // Same filters and exact window as getFieldUsage's client totals, so counts match those in Studio.
   // https://cosmo-docs.wundergraph.com/studio/analytics/schema-field-usage
   public async getGraphFieldUsage({
     organizationId,

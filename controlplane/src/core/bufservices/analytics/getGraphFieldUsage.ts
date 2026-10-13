@@ -65,9 +65,9 @@ export function getGraphFieldUsage(
 
     // validateDateRanges accepts unparsable dates and negative ranges, and drops an invalid date range without an error.
     const isInvalid =
-      (req.range !== undefined && req.range < 1) ||
-      (req.dateRange !== undefined &&
-        (!isValid(new Date(req.dateRange.start)) || !isValid(new Date(req.dateRange.end)) || !validatedDateRange));
+      req.dateRange === undefined
+        ? req.range !== undefined && req.range < 1
+        : !isValid(new Date(req.dateRange.start)) || !isValid(new Date(req.dateRange.end)) || !validatedDateRange;
     if (isInvalid) {
       return {
         response: {

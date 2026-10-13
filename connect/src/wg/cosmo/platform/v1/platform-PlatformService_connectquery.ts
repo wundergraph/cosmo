@@ -948,7 +948,7 @@ export const getSubgraphMetricsErrorRate = PlatformService.method.getSubgraphMet
 export const getFieldUsage = PlatformService.method.getFieldUsage;
 
 /**
- * GetGraphFieldUsage returns the request count of every field of a federated graph, as in Studio field usage.
+ * GetGraphFieldUsage returns the request count of every field of a federated graph, equal to the client totals in Studio field usage.
  * A field selected through an interface also counts for every type that implements it.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphFieldUsage
