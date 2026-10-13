@@ -41,6 +41,15 @@ function spanNames(tx: TransactionEvent | undefined): string[] {
   return (tx?.spans ?? []).map((s) => s.description ?? '').sort();
 }
 
+/** A promise plus its resolver, for handing control between the two concurrent requests. */
+function deferred<T = void>() {
+  let settle!: (value: T) => void;
+  const promise = new Promise<T>((resolve) => {
+    settle = resolve;
+  });
+  return { promise, resolve: settle };
+}
+
 /** Runs `fn` inside a root span, and resolves with that span's trace id. */
 async function inRequest(fn: (root: Sentry.Span) => Promise<void>): Promise<string> {
   let traceId = '';
@@ -180,7 +189,12 @@ describe('requests sharing one distributed trace', () => {
     const header = `${incoming}-1111111111111111-1`;
 
     const aborted = new AbortController();
-    let victimStatus: string | undefined;
+    // Hand control between the requests explicitly, so the abort always lands while B.work
+    // is open. Left to event-loop ordering, a flip would let B read its span before the
+    // abort and the assertions would hold for the wrong reason.
+    const bWorkStarted = deferred<Sentry.Span>();
+    const bWorkMayFinish = deferred();
+    let victim: ReturnType<typeof Sentry.spanToJSON> | undefined;
 
     await Promise.all([
       Sentry.continueTrace({ sentryTrace: header, baggage: undefined }, () =>
@@ -188,8 +202,11 @@ describe('requests sharing one distributed trace', () => {
           await withRequestSpans(aborted.signal, async () => {
             const hung = withSpan('A.work', () => new Promise(() => {}));
             expect(hung).toBeInstanceOf(Promise);
-            await new Promise((resolve) => setImmediate(resolve));
+
+            await bWorkStarted.promise;
+            // Dispatches synchronously, so B's span is force-ended here or never.
             aborted.abort();
+            bWorkMayFinish.resolve();
           });
           rootA.end();
         }),
@@ -198,8 +215,9 @@ describe('requests sharing one distributed trace', () => {
         Sentry.startSpanManual({ name: 'http.server B' }, async (rootB) => {
           await withRequestSpans(new AbortController().signal, async () => {
             await Sentry.startSpan({ name: 'B.work' }, async (span) => {
-              await new Promise((resolve) => setTimeout(resolve, 60));
-              victimStatus = Sentry.spanToJSON(span).status;
+              bWorkStarted.resolve(span);
+              await bWorkMayFinish.promise;
+              victim = Sentry.spanToJSON(span);
             });
           });
           rootB.end();
@@ -207,6 +225,9 @@ describe('requests sharing one distributed trace', () => {
       ),
     ]);
 
-    expect(victimStatus).not.toBe('deadline_exceeded');
+    // Untouched by A's abort: still running, unstatused, unstamped.
+    expect(victim?.timestamp).toBe(undefined);
+    expect(victim?.status).toBe(undefined);
+    expect(victim?.data).toEqual({});
   });
 });
