@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.21.0...helm-cosmo@0.22.0) (2026-10-12)
+
+
+### Features
+
+* add `enableSplitConfigLoading` job to helm ([#3344](https://github.com/wundergraph/cosmo/issues/3344)) ([3642dc4](https://github.com/wundergraph/cosmo/commit/3642dc496f892ff773076048334204207537a894))
+
 ## [0.21.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.20.0...helm-cosmo@0.21.0) (2026-10-06)
 
 

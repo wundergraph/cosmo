@@ -332,7 +332,5 @@ jobs:
     enabled: false
     # -- Adds additional labels to the job
     additionalLabels: {}
-    # -- The slug of the organization
-    slug: 'foo'
     # -- The unique identifier of the organization
     id: '123'
