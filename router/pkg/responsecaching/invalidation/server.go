@@ -46,6 +46,8 @@ func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, i
 	r.Use(middleware.Recoverer)
 	if corsOpts != nil && corsOpts.Enabled {
 		opts := *corsOpts
+		// Authorization is a header the caller sets; cookies are never needed.
+		opts.AllowCredentials = false
 		opts.AllowMethods = append(slices.Clone(opts.AllowMethods), http.MethodPost)
 		opts.AllowHeaders = append(slices.Clone(opts.AllowHeaders), "Authorization", "Content-Type")
 		r.Use(cors.New(opts))

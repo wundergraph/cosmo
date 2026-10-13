@@ -332,7 +332,7 @@ response_cache:
 
 The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
 
-The endpoint applies the router's [CORS](/router/configuration#cors) settings, so a browser page on an allowed origin, such as the router playground, can send requests. It still needs the shared key.
+The endpoint applies the router's [CORS](/router/configuration#cors) settings without credentials. It listens on its own port, so a browser page is always cross-origin to it: the router playground can send requests only when the router's own origin is allowed, which the default `allow_origins: "*"` does. Every request still needs the shared key.
 
 ### Send a request
 
