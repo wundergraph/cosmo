@@ -1,0 +1,57 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 06c7c346219a098afe8ddd03bc4003ffc79d5d6b..33332810976f006cb2f0e18c8d7ae9a60643a7d7 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1691,19 +1691,19 @@ function Ge(e, t, n) {
+ }
+ s(Ge, "useSynchronizeOption");
+ function Jt(e, t, n, r, l) {
+-  const { updateActiveTabValues: a } = j({ nonNull: !0, caller: l }), i = ue();
++  const { updateActiveTabValues: a, tabs: __gqlTabs, activeTabIndex: __gqlActiveTabIndex } = j({ nonNull: !0, caller: l }), i = ue();
+   R(() => {
+     if (!e)
+       return;
+     const u = fe(500, (f) => {
+       !i || n === null || i.set(n, f);
+-    }), p = fe(100, (f) => {
+-      a({ [r]: f });
++    }), p = fe(100, (f, __gqlTargetTabId) => {
++      a({ [r]: f, __graphiqlTargetTabId: __gqlTargetTabId });
+     }), h = /* @__PURE__ */ s((f, y) => {
+       if (!y)
+         return;
+       const d = f.getValue();
+-      u(d), p(d), t == null || t(d);
++      u(d), p(d, __gqlTabs[__gqlActiveTabIndex] && __gqlTabs[__gqlActiveTabIndex].id), t == null || t(d);
+     }, "handleChange");
+     return e.on("change", h), () => e.off("change", h);
+   }, [
+@@ -1712,7 +1712,9 @@ function Jt(e, t, n, r, l) {
+     i,
+     n,
+     r,
+-    a
++    a,
++    __gqlTabs,
++    __gqlActiveTabIndex
+   ]);
+ }
+ s(Jt, "useChangeHandler");
+@@ -2395,12 +2397,15 @@ function nn({
+ }
+ s(nn, "createTab");
+ function rn(e, t) {
++  const __gqlTargetTabId = t && t.__graphiqlTargetTabId;
++  const __gqlPatch = { ...t };
++  delete __gqlPatch.__graphiqlTargetTabId;
+   return {
+     ...e,
+     tabs: e.tabs.map((n, r) => {
+-      if (r !== e.activeTabIndex)
++      if (__gqlTargetTabId ? n.id !== __gqlTargetTabId : r !== e.activeTabIndex)
+         return n;
+-      const l = { ...n, ...t };
++      const l = { ...n, ...__gqlPatch };
+       return {
+         ...l,
+         hash: Ie(l),

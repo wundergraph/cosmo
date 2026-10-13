@@ -8,7 +8,8 @@ import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateCollectionName } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { validateCollectionName } from '../../util/graph-collection/validation.js';
 import { resolveCollectionAccess } from '../../util/graph-collection/permissions.js';
 
 export function renameGraphCollectionOperation(

@@ -8,7 +8,8 @@ import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateCollectionName } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { validateCollectionName, validateOperationDocument } from '../../util/graph-collection/validation.js';
 import { resolveCollectionAccess } from '../../util/graph-collection/permissions.js';
 
 export function createGraphCollectionOperation(
@@ -35,11 +36,12 @@ export function createGraphCollectionOperation(
     }
     const name = validated.name;
 
-    if (!req.query.trim()) {
+    const document = validateOperationDocument(req.query, req.variables || undefined);
+    if (!document.ok) {
       return {
         response: {
           code: EnumStatusCode.ERR_BAD_REQUEST,
-          details: 'Operation cannot be empty',
+          details: document.error,
         },
         id: '',
         contentHash: '',

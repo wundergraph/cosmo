@@ -9,6 +9,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { validateOperationDocument } from '../../util/graph-collection/validation.js';
 import { resolveCollectionAccess } from '../../util/graph-collection/permissions.js';
 
 export function updateGraphCollectionOperation(
@@ -22,11 +23,12 @@ export function updateGraphCollectionOperation(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!req.query.trim()) {
+    const document = validateOperationDocument(req.query, req.variables || undefined);
+    if (!document.ok) {
       return {
         response: {
           code: EnumStatusCode.ERR_BAD_REQUEST,
-          details: 'Operation cannot be empty',
+          details: document.error,
         },
         contentHash: '',
       };

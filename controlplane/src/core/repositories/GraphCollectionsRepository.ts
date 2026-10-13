@@ -37,11 +37,8 @@ export type CollectionWithOperations = CollectionRow & { operations: OperationMe
 
 /**
  * Exactly what an RBAC check needs about a graph, and nothing else.
- *
- * `RBACEvaluator` reads only these three fields, so resolving the graph through
- * `FederatedGraphRepository.byId` would run six further queries (latest
- * composition, label matchers, subgraphs, contract) for a permission decision
- * that cannot use any of it.
+ * `FederatedGraphRepository.byId` would run six further queries for a
+ * permission decision that cannot use any of them.
  */
 export interface GraphTarget {
   targetId: string;
@@ -63,11 +60,9 @@ export class GraphCollectionsRepository {
   ) {}
 
   /**
-   * "Mine, or team-scoped."
-   *
-   * Every read goes through this, so a private collection is invisible to
-   * everyone but its owner at the query level rather than by a check a caller
-   * could forget.
+   * "Mine, or team-scoped." Every read goes through this, so a private
+   * collection is invisible at the query level rather than by a check a
+   * caller could forget.
    */
   private visibleTo(userId: string) {
     return or(isNull(graphCollections.privateToUserId), eq(graphCollections.privateToUserId, userId));
@@ -128,9 +123,8 @@ export class GraphCollectionsRepository {
   }
 
   /**
-   * `federatedGraphId` is the graph the caller believes the collection belongs
-   * to. It only ever narrows this query, so a wrong or forged value can hide a
-   * row but never reveal one; the permission decision is still made against
+   * `federatedGraphId` only ever narrows this query, so a forged value can hide
+   * a row but never reveal one. The permission decision is still made against
    * the graph the row actually references.
    */
   public async collectionById(
@@ -167,11 +161,9 @@ export class GraphCollectionsRepository {
   }
 
   /**
-   * A collection together with the graph it belongs to.
-   *
-   * Handlers need both: the collection for its scope and the graph for the
-   * RBAC check. Fetching them here keeps all the data access in the
-   * repository, leaving the permission decision itself free of I/O.
+   * A collection together with the graph it belongs to: the collection for its
+   * scope, the graph for the RBAC check. Fetching both here leaves the
+   * permission decision itself free of I/O.
    */
   public async collectionWithGraph(
     id: string,

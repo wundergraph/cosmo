@@ -2,14 +2,11 @@ import { AuthContext } from '../../../types/index.js';
 import { CollectionRow, GraphTarget } from '../../repositories/GraphCollectionsRepository.js';
 
 /**
- * Whether `userId` may mutate `collection`.
+ * Whether `userId` may mutate `collection`. A private one is the caller's own
+ * scratchpad, so it needs only graph read access plus being its owner. A team
+ * one (private_to_user_id IS NULL) is shared, so mutating it needs graph write.
  *
- * A private collection is the caller's own scratchpad: it needs only graph read
- * access, plus being the user it is private to. A team collection
- * (private_to_user_id IS NULL) is a graph-scoped resource shared with everyone
- * who can see the graph, so mutating it needs graph write access.
- *
- * Callers must have already established graph read access before calling this.
+ * Callers must have already established graph read access.
  */
 export function canMutateCollection(input: {
   collection: Pick<CollectionRow, 'privateToUserId'>;

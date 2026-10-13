@@ -10,7 +10,8 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateCollectionName } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { validateCollectionName } from '../../util/graph-collection/validation.js';
 
 export function createGraphCollection(
   opts: RouterOptions,

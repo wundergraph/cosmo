@@ -95,6 +95,7 @@ overrides:
   eslint-module-utils: 2.8.0
 
 patchedDependencies:
+  '@graphiql/react@0.22.4': patches/@graphiql__react@0.22.4.patch
   graphql@16.9.0: patches/graphql@16.9.0.patch
 
 catalog:
