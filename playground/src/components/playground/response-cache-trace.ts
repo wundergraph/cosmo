@@ -1,4 +1,4 @@
-// Response cache part of ART. Kept identical in studio and playground.
+// Response cache part of ART.
 
 export type ResponseCacheStatus = 'hit' | 'partial_hit' | 'miss' | 'not_cacheable';
 
@@ -137,58 +137,80 @@ export const parseResponseCacheRequestTrace = (raw: any): ResponseCacheRequestTr
   };
 };
 
-export const responseCacheStatusLabel = (status: ResponseCacheStatus): string => {
-  switch (status) {
-    case 'hit':
-      return 'HIT';
-    case 'partial_hit':
-      return 'PARTIAL HIT';
-    case 'miss':
-      return 'MISS';
-    default:
-      return 'NOT CACHEABLE';
-  }
+const statusLabels: Record<ResponseCacheStatus, string> = {
+  hit: 'HIT',
+  partial_hit: 'PARTIAL HIT',
+  miss: 'MISS',
+  not_cacheable: 'NOT CACHEABLE',
 };
 
+export const responseCacheStatusLabel = (status: ResponseCacheStatus) => statusLabels[status] ?? status.toUpperCase();
+
 export type InvalidationRequest = {
-  label: string;
+  // id is the request body, which identifies it.
+  id: string;
+  title: string;
+  description: string;
   body: Record<string, unknown>;
 };
 
-// invalidationRequests are the requests that would drop the entry, finest first, for the maintained indexes.
-export const invalidationRequests = (
+const invalidationRequest = (
+  title: string,
+  description: string,
+  body: Record<string, unknown>,
+): InvalidationRequest => ({
+  id: JSON.stringify(body),
+  title,
+  description,
+  body,
+});
+
+export const subgraphInvalidationId = (subgraph: string) => JSON.stringify({ kind: 'subgraph', subgraph });
+
+// invalidationRequests are the requests that would drop the entry, coarsest first, for the maintained indexes.
+const invalidationRequests = (
   entry: ResponseCacheEntry,
   subgraph: string,
-  invalidation?: ResponseCacheInvalidation,
+  invalidation: ResponseCacheInvalidation,
 ): InvalidationRequest[] => {
-  if (!invalidation) {
-    return [];
-  }
   const requests: InvalidationRequest[] = [];
-  if (invalidation.cacheTag) {
-    for (const tag of entry.declaredTags) {
-      requests.push({ label: `Tag ${tag}`, body: { kind: 'cache_tag', subgraphs: [subgraph], cache_tag: tag } });
-    }
+  if (invalidation.subgraph) {
+    requests.push(
+      invalidationRequest(`Everything from ${subgraph}`, 'Every cached response from this subgraph.', {
+        kind: 'subgraph',
+        subgraph,
+      }),
+    );
   }
   if (invalidation.type && entry.typeName) {
-    requests.push({
-      label: `Type ${entry.typeName}`,
-      body: { kind: 'type', subgraph, type: entry.typeName },
-    });
+    requests.push(
+      invalidationRequest(`${entry.typeName} entities`, `Cached ${entry.typeName} entities resolved by ${subgraph}.`, {
+        kind: 'type',
+        subgraph,
+        type: entry.typeName,
+      }),
+    );
   }
-  if (invalidation.subgraph) {
-    requests.push({ label: `Subgraph ${subgraph}`, body: { kind: 'subgraph', subgraph } });
+  if (invalidation.cacheTag) {
+    for (const tag of entry.declaredTags) {
+      requests.push(
+        invalidationRequest(`Tag ${tag}`, `Entries ${subgraph} tagged ${tag}.`, {
+          kind: 'cache_tag',
+          subgraphs: [subgraph],
+          cache_tag: tag,
+        }),
+      );
+    }
   }
   return requests;
 };
 
-// invalidationCurl never carries the shared key, it reads it from the environment.
 const shellQuote = (s: string) => s.replace(/'/g, "'\\''");
 
+// invalidationCurl never carries the shared key, it reads it from the environment.
 export const invalidationCurl = (endpoint: string, requests: InvalidationRequest[]): string => {
   const body = shellQuote(JSON.stringify(requests.map((r) => r.body)));
-  endpoint = shellQuote(endpoint);
-  return `curl -X POST '${endpoint}' \\\n  -H "Authorization: $INVALIDATION_SHARED_KEY" \\\n  -H 'Content-Type: application/json' \\\n  -d '${body}'`;
+  return `curl -X POST '${shellQuote(endpoint)}' \\\n  -H "Authorization: $INVALIDATION_SHARED_KEY" \\\n  -H 'Content-Type: application/json' \\\n  -d '${body}'`;
 };
 
 // isRootFetch reports a fetch of root fields rather than entities; its one entry has no type.
@@ -257,19 +279,19 @@ export type SubgraphInvalidationRequests = {
   subgraph: string;
   requests: OperationInvalidationRequest[];
   // rootEntries have no type, so only a subgraph or tag request drops them.
-  // Counts are of entries this response left in the cache: found or written.
   rootEntries: number;
 };
 
-// operationInvalidationRequests are every entry's invalidation requests, deduplicated, grouped by subgraph.
+// operationInvalidationRequests are the requests for every entry this response
+// found or wrote, deduplicated and grouped by subgraph, coarsest first.
 export const operationInvalidationRequests = (
   fetches: CachedFetch[],
   invalidation?: ResponseCacheInvalidation,
 ): SubgraphInvalidationRequests[] => {
-  const groups = new Map<string, { requests: Map<string, OperationInvalidationRequest>; rootEntries: number }>();
   if (!invalidation) {
     return [];
   }
+  const groups = new Map<string, { requests: Map<string, OperationInvalidationRequest>; rootEntries: number }>();
   for (const { subgraph, kind, trace } of fetches) {
     for (const entry of trace.entries) {
       if (!entry.found && !entry.written) {
@@ -279,8 +301,7 @@ export const operationInvalidationRequests = (
       groups.set(subgraph, group);
       group.rootEntries += isRootFetch(kind) ? 1 : 0;
       for (const request of invalidationRequests(entry, subgraph, invalidation)) {
-        const id = JSON.stringify(request.body);
-        group.requests.set(id, { ...request, entries: (group.requests.get(id)?.entries ?? 0) + 1 });
+        group.requests.set(request.id, { ...request, entries: (group.requests.get(request.id)?.entries ?? 0) + 1 });
       }
     }
   }

@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { ResponseCacheInvalidation, ResponseCacheTrace } from './response-cache-trace';
+import { ResponseCacheTrace } from './response-cache-trace';
 
 type TabState = {
   id: string;
@@ -82,7 +82,6 @@ export type ARTFetchNode = {
   loadSkipped: boolean;
   loadStats?: LoadStats;
   responseCache?: ResponseCacheTrace;
-  responseCacheInvalidation?: ResponseCacheInvalidation;
 };
 
 export type Representation = {

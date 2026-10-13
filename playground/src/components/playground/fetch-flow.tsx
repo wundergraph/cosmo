@@ -209,13 +209,7 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
           {data.output && <ViewOutput output={data.output} asChild />}
           {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
           {data.responseCache && data.responseCache.status !== 'not_cacheable' && (
-            <ViewResponseCache
-              responseCache={data.responseCache}
-              kind={data.type}
-              subgraph={data.dataSourceName ?? ''}
-              invalidation={data.responseCacheInvalidation}
-              asChild
-            />
+            <ViewResponseCache responseCache={data.responseCache} kind={data.type} asChild />
           )}
         </div>
       </div>
