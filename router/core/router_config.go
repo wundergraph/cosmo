@@ -138,6 +138,7 @@ type Config struct {
 	redisClient                     rd.RDCloser
 	responseCacheConfig             *config.ResponseCacheConfiguration
 	responseCache                   ResponseCache
+	responseCacheMetrics            rmetric.ResponseCacheMetricStore
 	responseCacheInvalidationServer *http.Server
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server

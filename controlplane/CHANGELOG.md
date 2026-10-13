@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.253.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.3...controlplane@0.253.4) (2026-10-13)
+
+**Note:** Version bump only for package controlplane
+
+## [0.253.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.2...controlplane@0.253.3) (2026-10-12)
+
+### Bug Fixes
+
+* **controlplane:** isolate persisted operation deletion paths ([#3329](https://github.com/wundergraph/cosmo/issues/3329)) ([1658153](https://github.com/wundergraph/cosmo/commit/1658153f800bd94c4caeebc7382c24fac9bda25e)) (@fiam)
+
 ## [0.253.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.1...controlplane@0.253.2) (2026-10-07)
 
 ### Bug Fixes

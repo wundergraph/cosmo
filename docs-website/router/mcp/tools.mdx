@@ -19,10 +19,10 @@ The MCP server gives AI models a set of tools they can discover and execute. It 
 | `generate_query`     | Uses Cosmo Cloud Prompt to Query to generate a GraphQL operation from a natural-language prompt.                                    |
 
 <Warning>
-  `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
-  Enable them with [`expose_schema: true`](/router/mcp/configuration) and
-  [`enable_arbitrary_operations: true`](/router/mcp/configuration) respectively, and only when arbitrary access is
-  intended. Prefer creating focused tools.
+    `get_schema` and `execute_graphql` are disabled by default because they expose your full API surface to AI models.
+    Enable them with [`expose_schema: true`](/router/mcp/configuration) and
+    [`enable_arbitrary_operations: true`](/router/mcp/configuration) respectively, and only when arbitrary access is
+    intended. Prefer creating focused tools.
 </Warning>
 
 ### Generate a GraphQL Operation with Cosmo Cloud
@@ -87,8 +87,9 @@ Each file becomes a tool that AI models can call. The tool's name is derived fro
 The MCP server marks mutation tools as non-read-only and non-idempotent through [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations), signaling to AI clients that the tool has side effects.
 
 <Warning>
-  To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
-  until you've validated your mutation tools thoroughly.
+    To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your
+    configuration
+    until you've validated your mutation tools thoroughly.
 </Warning>
 
 ### Directory Structure
@@ -146,14 +147,40 @@ mcp:
 | `CreateUser`   | `execute_operation_create_user` | `create_user`                |
 
 <Warning>
-  Enabling this option changes all tool names and may break existing integrations that rely on the `execute_operation_`
-  prefix. Only enable this for new deployments or when you can update all dependent systems.
+    Enabling this option changes all tool names and may break existing integrations that rely on the
+    `execute_operation_`
+    prefix. Only enable this for new deployments or when you can update all dependent systems.
 </Warning>
 
 <Info>
-  Tools whose names would collide with any already-registered tool (including the [built-in tools](#built-in-tools) or
-  a previously registered operation) are **skipped** and logged as errors. Rename the operation to avoid the conflict.
+    Tools whose names would collide with any already-registered tool (including the [built-in tools](#built-in-tools) or
+    a previously registered operation) are **skipped** and logged as errors. Rename the operation to avoid the conflict.
 </Info>
+
+## Tool Titles
+
+Each tool's title is derived from its operation name:
+
+| Operation Name | Tool Title                      |
+|----------------|---------------------------------|
+| `GetUsers`     | `Execute operation GetUsers`    |
+| `CreateUser`   | `Execute operation CreateUser`  |
+| `GetUserById`  | `Execute operation GetUserById` |
+
+### Omitting the Tool Title Prefix
+
+By default, all operation-defined tools titles include the `Execute operation` prefix. You can enable `omit_tool_title_prefix` to generate shorter tool titles:
+
+```yaml
+mcp:
+  enabled: true
+  omit_tool_title_prefix: true
+```
+
+| Operation Name | Default                        | With `omit_tool_title_prefix` |
+|----------------|--------------------------------|-------------------------------|
+| `GetUsers`     | `Execute operation GetUsers`   | `GetUsers`                    |
+| `CreateUser`   | `Execute operation CreateUser` | `CreateUser`                  |
 
 ## Tool Descriptions
 
@@ -176,8 +203,8 @@ query GetUsers {
 If no description is provided, the description of the queried root field from your graph's schema is used instead (see [Field Descriptions](#field-descriptions)). If neither exists, a default description is generated from the operation name and type.
 
 <Info>
-  Only description strings (`"""..."""` or `"..."`) are supported. Standard GraphQL comments (`# comment`) are not
-  extracted as tool descriptions.
+    Only description strings (`"""..."""` or `"..."`) are supported. Standard GraphQL comments (`# comment`) are not
+    extracted as tool descriptions.
 </Info>
 
 ## Tool Schema
@@ -242,7 +269,7 @@ Both single-quoted (`"..."`) and triple-quoted (`"""..."""`) strings are support
 The router strips operation and variable descriptions before forwarding the operation to your subgraphs. Subgraph servers do not need to support the September 2025 GraphQL spec.
 
 <Info>
-  Variable descriptions require router version 0.316.0 or above.
+    Variable descriptions require router version 0.316.0 or above.
 </Info>
 
 ### Field Descriptions
@@ -319,8 +346,8 @@ Descriptions in the operation take priority over descriptions from the schema:
 - A [variable description](#variable-descriptions) replaces the schema-derived description for that property.
 
 <Info>
-  Descriptions on field arguments are not propagated. To describe a variable that maps to a plain argument, add a
-  variable description in the operation.
+    Descriptions on field arguments are not propagated. To describe a variable that maps to a plain argument, add a
+    variable description in the operation.
 </Info>
 
 ## Structured Tool Output
@@ -342,10 +369,10 @@ mcp:
 ```
 
 <Warning>
-  Output schemas are included in every `tools/list` response, which grows with the size of your operations' selection
-  sets, and structured content roughly doubles the size of each successful tool result because the response is carried
-  both as text and as structured content. Both consume the AI model's context window. Keep this feature disabled (the
-  default) unless your MCP clients consume output schemas or structured content.
+    Output schemas are included in every `tools/list` response, which grows with the size of your operations' selection
+    sets, and structured content roughly doubles the size of each successful tool result because the response is carried
+    both as text and as structured content. Both consume the AI model's context window. Keep this feature disabled (the
+    default) unless your MCP clients consume output schemas or structured content.
 </Warning>
 
 The generated schemas are intentionally permissive: they describe what the router returns without over-constraining it, so a valid GraphQL response is never rejected by a client validating against the schema. Fields behind `@skip`, `@include`, or `@defer` directives and fragments on abstract types are marked optional, and custom scalars accept any JSON value. If a schema cannot be derived for an operation, the tool is still registered without an output schema.
@@ -493,24 +520,26 @@ query GetTransactionHistory(
 ### Design for AI Consumption
 
 <Steps>
-  <Step title="Use meaningful names">
-    Give operations clear, action-oriented names that describe what the tool does: `GetActiveUsers`, `SearchProducts`,
-    `CreateSupportTicket`.
-  </Step>
-  <Step title="Use explicit types">
-    Define all input variables with explicit types to ensure proper validation and help AI models understand required
-    inputs.
-  </Step>
-  <Step title="Describe your variables">
-    Add a [description](/router/mcp/tools#variable-descriptions) to each variable. Descriptions appear in the
-    tool's input schema and tell AI models what each parameter means, its expected format, and any constraints.
-  </Step>
-  <Step title="Create focused tools">
-    Design each tool specifically for AI model consumption rather than exposing generic operations. A tool that
-    returns exactly what the AI needs is better than one that returns everything.
-  </Step>
-  <Step title="Add safety checks for mutations">
-    For mutation tools, add checks and validations in your backend to prevent misuse. Consider requiring
-    confirmation parameters for destructive operations.
-  </Step>
+    <Step title="Use meaningful names">
+        Give operations clear, action-oriented names that describe what the tool does: `GetActiveUsers`,
+        `SearchProducts`,
+        `CreateSupportTicket`.
+    </Step>
+    <Step title="Use explicit types">
+        Define all input variables with explicit types to ensure proper validation and help AI models understand
+        required
+        inputs.
+    </Step>
+    <Step title="Describe your variables">
+        Add a [description](/router/mcp/tools#variable-descriptions) to each variable. Descriptions appear in the
+        tool's input schema and tell AI models what each parameter means, its expected format, and any constraints.
+    </Step>
+    <Step title="Create focused tools">
+        Design each tool specifically for AI model consumption rather than exposing generic operations. A tool that
+        returns exactly what the AI needs is better than one that returns everything.
+    </Step>
+    <Step title="Add safety checks for mutations">
+        For mutation tools, add checks and validations in your backend to prevent misuse. Consider requiring
+        confirmation parameters for destructive operations.
+    </Step>
 </Steps>

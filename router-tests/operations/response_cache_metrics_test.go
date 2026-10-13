@@ -33,21 +33,6 @@ func TestResponseCacheMetrics(t *testing.T) {
 
 	const moodQuery = `query { employees { id currentMood } }`
 
-	// The memory provider keeps these tests off redis. The attribute is read
-	// from what the engine reports, which is the same for every provider.
-	memoryCacheOptions := func(t *testing.T, mutate func(*config.ResponseCacheConfiguration)) []core.Option {
-		t.Helper()
-		cfg := responseCacheConfig(t, time.Minute)
-		cfg.Storage = config.ResponseCacheStorageConfig{
-			Provider:   config.ResponseCacheStorageProviderMemory,
-			MaxEntries: 1000,
-		}
-		if mutate != nil {
-			mutate(cfg)
-		}
-		return []core.Option{core.WithResponseCache(cfg)}
-	}
-
 	t.Run("a hit and a miss are told apart on the subgraph request counter", func(t *testing.T) {
 		t.Parallel()
 
@@ -536,6 +521,21 @@ func TestResponseCacheMetrics(t *testing.T) {
 			require.Zero(t, counts[resolve.ResponseCacheStatusHit.String()])
 		})
 	})
+}
+
+// memoryCacheOptions keeps these tests off redis. The attribute is read
+// from what the engine reports, which is the same for every provider.
+func memoryCacheOptions(t *testing.T, mutate func(*config.ResponseCacheConfiguration)) []core.Option {
+	t.Helper()
+	cfg := responseCacheConfig(t, time.Minute)
+	cfg.Storage = config.ResponseCacheStorageConfig{
+		Provider:   config.ResponseCacheStorageProviderMemory,
+		MaxEntries: 1000,
+	}
+	if mutate != nil {
+		mutate(cfg)
+	}
+	return []core.Option{core.WithResponseCache(cfg)}
 }
 
 func collectMetrics(t *testing.T, reader *metric.ManualReader) metricdata.ResourceMetrics {

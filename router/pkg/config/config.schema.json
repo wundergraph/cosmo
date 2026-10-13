@@ -1520,6 +1520,11 @@
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
+                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1705,6 +1710,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -2777,6 +2787,11 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
+        },
+        "omit_tool_title_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool titles generated from GraphQL operations omit the 'Execute operation' prefix. For example, the GraphQL operation 'GetUser' results in a tool title 'GetUser' instead of 'Execute operation GetUser'."
         },
         "output_schema": {
           "type": "object",

@@ -152,6 +152,7 @@ type Prometheus struct {
 	Path                string                     `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
 	ListenAddr          string                     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool                       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ResponseCache       bool                       `yaml:"response_cache" envDefault:"false" env:"PROMETHEUS_RESPONSE_CACHE"`
 	ConnectionStats     bool                       `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	Network             TelemetryCategory          `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
 	Resolver            TelemetryCategory          `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
@@ -170,6 +171,7 @@ type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
+	ResponseCache       bool                  `yaml:"response_cache" envDefault:"false" env:"METRICS_OTLP_RESPONSE_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
 	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
@@ -1473,8 +1475,11 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
-	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	// OmitToolTitlePrefix removes the MCP operation prefix from the MCP tool title.
+	// When enabled, "Execute operation GetUser" becomes "GetUser".
+	OmitToolTitlePrefix bool                  `yaml:"omit_tool_title_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_TITLE_PREFIX"`
+	OAuth               MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
