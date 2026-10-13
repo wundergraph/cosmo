@@ -202,6 +202,47 @@ export class UsageRepository {
     };
   }
 
+  // Same filters as getFieldUsage, so counts match Studio.
+  // https://cosmo-docs.wundergraph.com/studio/analytics/schema-field-usage
+  public async getGraphFieldUsage({
+    organizationId,
+    federatedGraphId,
+    dateRange,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    dateRange: DateRange<number>;
+  }) {
+    const query = `
+      WITH
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
+      SELECT
+        TypeName AS typeName,
+        FieldName AS fieldName,
+        sum(TotalUsages) AS requestCount
+      FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
+      ARRAY JOIN arrayDistinct(TypeNames) AS TypeName
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND IsArgument = false
+        AND IsInput = false
+        AND IsIndirectFieldUsage = false
+        AND IsNull = false
+      GROUP BY TypeName, FieldName
+    `;
+
+    const res = await this.client.queryPromise<{ typeName: string; fieldName: string; requestCount: string }>(query, {
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId,
+    });
+
+    return Array.isArray(res) ? res : [];
+  }
+
   public async getUnusedFields({
     organizationId,
     federatedGraphId,

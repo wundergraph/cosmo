@@ -4,6 +4,7 @@ import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
 import { getFieldUsage } from './analytics/getFieldUsage.js';
+import { getGraphFieldUsage } from './analytics/getGraphFieldUsage.js';
 import { getGraphMetrics } from './analytics/getGraphMetrics.js';
 import { getMetricsErrorRate } from './analytics/getMetricsErrorRate.js';
 import { getOperationContent } from './analytics/getOperationContent.js';
@@ -668,6 +669,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFieldUsage: (req, ctx) => {
       return getFieldUsage(opts, req, ctx);
+    },
+
+    getGraphFieldUsage: (req, ctx) => {
+      return getGraphFieldUsage(opts, req, ctx);
     },
 
     getOperationContent: (req, ctx) => {
