@@ -58,20 +58,11 @@ export default (opts: BaseCommandOptions) => {
   command.option('-j, --json', 'Prints to the console in json format instead of text.');
 
   command.action(async (name, options) => {
-    let result: FindProposalResult;
-
-    try {
-      result = await findProposal(opts.client, {
-        name,
-        federatedGraphName: options.federationGraph,
-        namespace: options.namespace,
-      });
-    } catch (error) {
-      result = {
-        success: false,
-        details: error instanceof Error ? error.message : 'An unknown error occurred.',
-      };
-    }
+    const result = await findProposal(opts.client, {
+      name,
+      federatedGraphName: options.federationGraph,
+      namespace: options.namespace,
+    });
 
     if (!result.success) {
       if (options.json) {
