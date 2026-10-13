@@ -273,6 +273,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Subgraph: h.responseCacheInvalidation.Subgraph,
 				Type:     h.responseCacheInvalidation.Type,
 			}
+			if resolveCtx.TracingOptions.Enable {
+				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(resolveCtx)
+			}
 			resolveCtx.SetResponseCache(cacheOpts)
 		}
 	}
@@ -344,6 +347,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
 				pw.cacheTagHeader = &h.responseCacheTagHeader
+			}
+			if h.responseCacheStore != nil && h.enableCacheResponseHeaders {
+				pw.responseCacheStatusFor = reqCtx
 			}
 		}
 
