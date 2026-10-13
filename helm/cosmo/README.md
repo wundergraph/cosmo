@@ -50,8 +50,10 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | clickhouse.persistence.size | string | `"2Gi"` |  |
 | clickhouse.replicaCount | int | `1` |  |
-| clickhouse.resources.cpu | int | `1` |  |
-| clickhouse.resources.memory | string | `"2Gi"` |  |
+| clickhouse.resources.limits.cpu | string | `"1"` |  |
+| clickhouse.resources.limits.memory | string | `"2Gi"` |  |
+| clickhouse.resources.requests.cpu | string | `"1"` |  |
+| clickhouse.resources.requests.memory | string | `"2Gi"` |  |
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
 | controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
