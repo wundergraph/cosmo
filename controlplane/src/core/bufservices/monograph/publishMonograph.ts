@@ -151,6 +151,8 @@ export function publishMonograph(
       opts.chClient,
       opts.webhookProxyUrl,
       false,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =

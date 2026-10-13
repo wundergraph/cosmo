@@ -96,10 +96,6 @@ func GetMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metri
 	return nil
 }
 
-func ToPtr[T any](v T) *T {
-	return &v
-}
-
 // HasDataPointWithAttribute checks if any data point in a Sum or Gauge metric has the given attribute.
 func HasDataPointWithAttribute[N int64 | float64](dataPoints []metricdata.DataPoint[N], attr attribute.KeyValue) bool {
 	for _, dp := range dataPoints {

@@ -801,7 +801,7 @@ func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
 	}
 	ch := make(chan result, workers)
 
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go func() {
 			h, hash := hb.HeadersForSubgraph("sg-1")
 			ch <- result{h: h, hash: hash}
@@ -809,7 +809,7 @@ func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
 	}
 
 	var first result
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		r := <-ch
 		if i == 0 {
 			first = r

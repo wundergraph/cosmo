@@ -36,7 +36,7 @@ func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value r
 
 	if value.IsEnum {
 		data := value.ParsedData.GetStringBytes()
-		_, err = out.Write([]byte(fmt.Sprintf(`"Mood-%s"`, data)))
+		_, err = out.Write(fmt.Appendf(nil, `"Mood-%s"`, data))
 	}
 
 	return err

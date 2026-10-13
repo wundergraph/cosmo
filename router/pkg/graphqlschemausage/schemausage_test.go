@@ -1338,9 +1338,10 @@ func TestMultipleSubgraphs(t *testing.T) {
 	for _, info := range fieldUsageInfo {
 		if len(info.Path) > 0 {
 			firstPath := info.Path[0]
-			if firstPath == "user" {
+			switch firstPath {
+			case "user":
 				assert.Equal(t, []string{"users-subgraph"}, info.SubgraphIDs, "user fields should only reference users-subgraph")
-			} else if firstPath == "product" {
+			case "product":
 				assert.Equal(t, []string{"products-subgraph"}, info.SubgraphIDs, "product fields should only reference products-subgraph")
 			}
 		}
@@ -1350,9 +1351,10 @@ func TestMultipleSubgraphs(t *testing.T) {
 	for _, info := range argumentUsageInfo {
 		if len(info.Path) > 0 {
 			firstPath := info.Path[0]
-			if firstPath == "user" {
+			switch firstPath {
+			case "user":
 				assert.Equal(t, []string{"users-subgraph"}, info.SubgraphIDs, "user arguments should reference users-subgraph")
-			} else if firstPath == "product" {
+			case "product":
 				assert.Equal(t, []string{"products-subgraph"}, info.SubgraphIDs, "product arguments should reference products-subgraph")
 			}
 		}
@@ -4216,7 +4218,7 @@ func TestNilVariablesHandling(t *testing.T) {
 	})
 }
 
-func prettyJSON(t *testing.T, v interface{}) string {
+func prettyJSON(t *testing.T, v any) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(t, err)
 	return string(b)

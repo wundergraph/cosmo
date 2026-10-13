@@ -129,6 +129,8 @@ export function updateSubgraph(
       opts.chClient,
       opts.webhookProxyUrl,
       req.disableResolvabilityValidation,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =

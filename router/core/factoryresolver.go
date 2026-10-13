@@ -449,7 +449,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
-			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled)
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled, routerEngineConfig.Execution.EnableGRPCWireEncoding)
 			if grpcConfig != nil {
 				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
 				if err != nil {
@@ -762,7 +762,8 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 // toGRPCConfiguration converts a nodev1.GRPCConfiguration to a grpcdatasource.GRPCConfiguration.
 // It is used to configure the gRPC datasource for a subgraph.
 // The pluginsEnabled flag is used to disable the gRPC datasource if the plugins are not enabled.
-func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
+// The wireEncodingEnabled flag selects wire encoding or protoreflect to build gRPC request messages.
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled, wireEncodingEnabled bool) *grpcdatasource.GRPCConfiguration {
 	if config == nil || config.Mapping == nil {
 		return nil
 	}
@@ -872,8 +873,9 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	disabled := config.Plugin != nil && !pluginsEnabled
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping:  result,
-		Disabled: disabled,
+		Mapping:         result,
+		Disabled:        disabled,
+		UseProtoReflect: !wireEncodingEnabled,
 	}
 }
 
