@@ -1756,9 +1756,10 @@ describe('Contract tests', () => {
       namespace,
     });
 
+    let blobStorageKeys = blobStorage.keys();
     const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${baseGraphResponse.graph!.id}/manifest/latest.json`;
-    expect(blobStorage.keys()).toHaveLength(2);
-    expect(baseGraphKey).toContain(baseGraphKey);
+    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
 
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
@@ -1780,9 +1781,10 @@ describe('Contract tests', () => {
     });
 
     // There should be four keys in storage (the mapper and latest for the source graph and contract)
+    blobStorageKeys = blobStorage.keys();
     const contractKey = `${users.adminAliceCompanyA.organizationId}/${contractResponse.graph!.id}/manifest/latest.json`;
-    expect(blobStorage.keys()).toHaveLength(4);
-    expect(contractKey).toContain(contractKey);
+    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([contractKey]));
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -2016,9 +2018,10 @@ describe('Contract tests', () => {
       namespace,
     });
 
+    let blobStorageKeys = blobStorage.keys();
     const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${baseGraphResponse.graph!.id}/manifest/latest.json`;
-    expect(blobStorage.keys()).toHaveLength(2);
-    expect(baseGraphKey).toContain(baseGraphKey);
+    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
 
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
@@ -2040,9 +2043,10 @@ describe('Contract tests', () => {
     });
 
     // There should be four keys in storage (the mapper and latest for the source graph and contract)
+    blobStorageKeys = blobStorage.keys();
     const contractKey = `${users.adminAliceCompanyA.organizationId}/${contractResponse.graph!.id}/manifest/latest.json`;
-    expect(blobStorage.keys()).toHaveLength(4);
-    expect(blobStorage.keys()).toContain(contractKey);
+    expect(blobStorageKeys).toHaveLength(4);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([contractKey]));
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
