@@ -285,6 +285,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
