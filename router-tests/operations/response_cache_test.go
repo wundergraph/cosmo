@@ -1028,7 +1028,8 @@ func TestResponseCacheInvalidation(t *testing.T) {
 
 			entries, tags := responseCacheStored(t, cfg.KeyPrefix)
 			require.Len(t, entries, 9, "the other nine are untouched")
-			require.NotContains(t, tags, "declared:mood:employee-1", "the tag goes with the entry")
+			// The walk removes the tag's member once its entry is deleted.
+			require.Empty(t, tags["declared:mood:employee-1"])
 		})
 	})
 
@@ -1299,6 +1300,8 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 const (
 	responseCacheEntryNamespace = "e:"
 	responseCacheTagNamespace   = "t:"
+	// Mirrors the redis adapter's walksMember, the walk count in a tag set.
+	responseCacheWalksMember = "\x00walks"
 )
 
 // responseCacheStored reads back what a test wrote, split into the entries
@@ -1330,7 +1333,7 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
 				members, err := client.ZRange(ctx, key, 0, -1).Result()
 				require.NoError(t, err)
-				tags[tag] = members
+				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return m == responseCacheWalksMember })
 				continue
 			}
 			entries = append(entries, strings.TrimPrefix(name, responseCacheEntryNamespace))

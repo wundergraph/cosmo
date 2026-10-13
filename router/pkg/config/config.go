@@ -1475,8 +1475,11 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
-	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	// OmitToolTitlePrefix removes the MCP operation prefix from the MCP tool title.
+	// When enabled, "Execute operation GetUser" becomes "GetUser".
+	OmitToolTitlePrefix bool                  `yaml:"omit_tool_title_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_TITLE_PREFIX"`
+	OAuth               MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
