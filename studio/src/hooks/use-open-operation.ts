@@ -55,6 +55,11 @@ export const useOpenOperation = ({
   } | null>(null);
   const [pendingOpen, setPendingOpen] = useState<PendingOpen | null>(null);
 
+  /**
+   * An open requested before the query editor existed. See `openOperation`.
+   */
+  const [deferredOpen, setDeferredOpen] = useState<{ operationId: string; collectionId: string } | null>(null);
+
   // Never cached: the response carries the `contentHash` that becomes this
   // tab's save precondition, and a stale one fails the first save as a
   // conflict for no visible reason.
@@ -238,7 +243,7 @@ export const useOpenOperation = ({
    * Reusing the tab is what stops repeated clicks producing several tabs that
    * each claim the operation, with competing save preconditions.
    */
-  const openOperation = useCallback(
+  const openOperationNow = useCallback(
     (operationId: string, collectionId: string) => {
       const existingTabId = findTabFor(operationId);
 
@@ -275,6 +280,40 @@ export const useOpenOperation = ({
     },
     [findTabFor, tabs, changeTab],
   );
+
+  /**
+   * Switching tabs before the query editor exists corrupts the tab we switch
+   * to. GraphiQL initialises a late-mounting editor with the document of
+   * whichever tab was active when the provider first rendered, then writes that
+   * document into whatever tab is active by the time it mounts - so a deep link
+   * that switches first makes the editor stamp the previous tab's operation
+   * onto the one it opened. Covered by `graphiql-tab-clobber.test.tsx`.
+   *
+   * On a cold load the editors mount after the collections query resolves, so
+   * this is the common path for a shared link, not an edge case.
+   */
+  const openOperation = useCallback(
+    (operationId: string, collectionId: string) => {
+      if (!queryEditor) {
+        trace('open:deferred', { operationId });
+        setDeferredOpen({ operationId, collectionId });
+        return;
+      }
+
+      openOperationNow(operationId, collectionId);
+    },
+    [queryEditor, openOperationNow],
+  );
+
+  useEffect(() => {
+    if (!deferredOpen || !queryEditor) {
+      return;
+    }
+
+    trace('open:deferred-resumed', { operationId: deferredOpen.operationId });
+    setDeferredOpen(null);
+    openOperationNow(deferredOpen.operationId, deferredOpen.collectionId);
+  }, [deferredOpen, queryEditor, openOperationNow]);
 
   return { openOperation, activeBinding: bindingFor(activeTabId) };
 };
