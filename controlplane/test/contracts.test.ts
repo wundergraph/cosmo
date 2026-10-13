@@ -1783,7 +1783,7 @@ describe('Contract tests', () => {
     // There should be four keys in storage (the mapper and latest for the source graph and contract)
     blobStorageKeys = blobStorage.keys();
     const contractKey = `${users.adminAliceCompanyA.organizationId}/${contractResponse.graph!.id}/manifest/latest.json`;
-    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toHaveLength(4);
     expect(blobStorageKeys).toEqual(expect.arrayContaining([contractKey]));
 
     // There should be a composition for the contract
