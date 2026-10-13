@@ -332,6 +332,8 @@ response_cache:
 
 The endpoint speaks plain HTTP. Keep `listen_addr` on the loopback interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
 
+The endpoint applies the router's [CORS](/router/configuration#cors) settings, so a browser page on an allowed origin, such as the router playground, can send requests. It still needs the shared key.
+
 ### Send a request
 
 `POST` a JSON array to the endpoint, with the shared key as the `Authorization` header. There is no `Bearer` prefix.
@@ -593,6 +595,19 @@ access_logs:
 #### Notes
 
 The status is also exposed to [template expressions](/router/configuration/template-expressions) as `subgraph.response.cache.status`, next to `storeDecision`, `lookupDuration` and `entityType`, which puts them within reach of custom attributes and the subgraph access log. No request is sent for a hit, so its access log line has no `method`, `path`, `url` or request header fields.
+
+### Debugging
+
+[Advanced Request Tracing](/router/advanced-request-tracing-art) shows what the cache did for each fetch of one request. Send the request with `X-WG-Trace: true`. The data is in `extensions.trace` of the response:
+
+* `fetches.*.trace.response_cache` per fetch: the status, the store decision, the keys requested and found, the subgraph `Cache-Control` and `Vary`, and one entry per cache key with what the lookup found and what was written. Entries of a merged fetch carry their response path.
+* `response_cache` for the request: its surrogate keys, what the [`Cache-Tag` header](#cdn-purging) made of them, and which [invalidation](#invalidation) indexes are maintained.
+
+Cached values follow `exclude_output`. `exclude_response_cache` leaves the cache out of the trace.
+
+ART carries cached data. It requires development mode or a Studio token, like the rest of ART.
+
+With [`enable_cache_response_headers`](/router/configuration#debug-configuration), the response also carries `X-WG-Response-Cache` with `HIT`, `PARTIAL_HIT` or `MISS`. A request without a cacheable fetch has no header.
 
 ### Cache health
 

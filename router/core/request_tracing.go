@@ -19,6 +19,7 @@ const (
 	requestTraceOptionExcludeInput                  = "exclude_input"
 	requestTraceOptionExcludeOutput                 = "exclude_output"
 	requestTraceOptionExcludeLoadStats              = "exclude_load_stats"
+	requestTraceOptionExcludeResponseCache          = "exclude_response_cache"
 	requestTraceOptionEnablePredictableDebugTimings = "enable_predictable_debug_timings"
 )
 
@@ -44,6 +45,7 @@ func (h *PreHandler) parseRequestTraceOptions(r *http.Request) (options resolve.
 		options.ExcludeInput = true
 		options.ExcludeOutput = true
 		options.ExcludeLoadStats = true
+		options.ExcludeResponseCache = true
 		options.EnablePredictableDebugTimings = true
 		return
 	}
@@ -66,6 +68,8 @@ func (h *PreHandler) parseRequestTraceOptions(r *http.Request) (options resolve.
 			options.ExcludeOutput = true
 		case requestTraceOptionExcludeLoadStats:
 			options.ExcludeLoadStats = true
+		case requestTraceOptionExcludeResponseCache:
+			options.ExcludeResponseCache = true
 		case requestTraceOptionEnablePredictableDebugTimings:
 			options.EnablePredictableDebugTimings = true
 		}
