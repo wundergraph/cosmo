@@ -4451,11 +4451,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: testutils.ToPtr(10 * time.Second),
+							RequestTimeout: new(10 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: testutils.ToPtr(3 * time.Second),
+								RequestTimeout: new(3 * time.Second),
 							},
 						},
 					})),
@@ -10247,7 +10247,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
 						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 						// Verify Authenticate span has correct span kind
@@ -10259,7 +10259,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 					}
 				}
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.Contains(t, sn[i].Attributes(), attribute.String(headerKey, headerVal))
 				}
 
@@ -10324,7 +10324,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
 				}
 
@@ -10387,7 +10387,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
 				}
 
@@ -10608,7 +10608,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				var authenticateSpanDetected bool
 				require.Len(t, sn, 10)
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					traceAttribute := attribute.String(claimKeyWithAuth, claimValWithAuth)
 					attributes := sn[i].Attributes()
 
@@ -11229,7 +11229,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 					var engineSpanDetected bool
 
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						subgraphTraceAttribute := attribute.String("custom.subgraph", "employees")
 						attributes := sn[i].Attributes()
 
@@ -11291,7 +11291,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					var engineSpanDetected bool
 
 					subgraphTraceAttribute := attribute.String(key, expectedValue)
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						attributes := sn[i].Attributes()
 
 						if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
@@ -11367,7 +11367,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Len(t, sn, 9)
 
 					subgraphTraceAttribute := attribute.String(key, expectedValue)
-					for i := 0; i < len(sn); i++ {
+					for i := range sn {
 						attributes := sn[i].Attributes()
 						assert.NotContains(t, attributes, subgraphTraceAttribute)
 					}
@@ -11434,7 +11434,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				var attributeDetected bool
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					attributes := sn[i].Attributes()
 
 					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
@@ -11516,7 +11516,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				var attributesDetected int
 
-				for i := 0; i < len(sn); i++ {
+				for i := range sn {
 					attributes := sn[i].Attributes()
 
 					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {

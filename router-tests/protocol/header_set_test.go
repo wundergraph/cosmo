@@ -87,7 +87,7 @@ func TestHeaderSet(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: global(customHeader, employeeVal),
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				payload := []byte(fmt.Sprintf(`{"query":"query { ... @defer { headerValue(name:\"%s\") } }"}`, customHeader))
+				payload := fmt.Appendf(nil, `{"query":"query { ... @defer { headerValue(name:\"%s\") } }"}`, customHeader)
 
 				req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
 				res, err := xEnv.RouterClient.Do(req)

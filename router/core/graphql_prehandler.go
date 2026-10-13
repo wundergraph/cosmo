@@ -264,6 +264,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
+			if cacheStatus, ok := requestContext.responseCacheStatus(); ok {
+				routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+				requestContext.expressionContext.Response.Cache.Status = cacheStatus.String()
+			}
+
 			// Read the actual status code from the wrapped response w.
 			// This captures the correct status code for all paths, including early returns.
 			statusCode := ww.Status()
@@ -1395,7 +1400,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
 		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (any, error) {
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {

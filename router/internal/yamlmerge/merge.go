@@ -25,13 +25,14 @@ import (
 	"fmt"
 	yaml "github.com/goccy/go-yaml"
 	"io"
+	"maps"
 )
 
 type (
 	// YAML has two fundamental types other than scalar. When unmarshaled into interface{},
 	// they're represented like this.
-	mapping  = map[string]interface{} // go-yaml unmarshalls it into string maps
-	sequence = []interface{}
+	mapping  = map[string]any // go-yaml unmarshalls it into string maps
+	sequence = []any
 )
 
 // YAML deep-merges any number of YAML sources, with later sources taking
@@ -54,11 +55,11 @@ type (
 //
 // Enabling strict mode returns errors in the above case.
 func YAMLMerge(sources [][]byte, strict bool) ([]byte, error) {
-	var merged interface{}
+	var merged any
 	var hasContent bool
 	for _, r := range sources {
 
-		var contents interface{}
+		var contents any
 
 		if err := yaml.Unmarshal(r, &contents); err == io.EOF {
 			// Skip empty and comment-only sources, which we should handle
@@ -89,7 +90,7 @@ func YAMLMerge(sources [][]byte, strict bool) ([]byte, error) {
 	return bytes, nil
 }
 
-func merge(into, from interface{}, strict bool) (interface{}, error) {
+func merge(into, from any, strict bool) (any, error) {
 	// It's possible to handle this with a mass of reflection, but we only need
 	// to merge whole YAML files. Since we're always unmarshaling into
 	// interface{}, we only need to handle a few types. This ends up being
@@ -121,9 +122,7 @@ func merge(into, from interface{}, strict bool) (interface{}, error) {
 
 func mergeMapping(into, from mapping, strict bool) (mapping, error) {
 	merged := make(mapping, len(into))
-	for k, v := range into {
-		merged[k] = v
-	}
+	maps.Copy(merged, into)
 	for k := range from {
 		m, err := merge(merged[k], from[k], strict)
 		if err != nil {
@@ -136,24 +135,24 @@ func mergeMapping(into, from mapping, strict bool) (mapping, error) {
 
 // IsMapping reports whether a type is a mapping in YAML, represented as a
 // map[interface{}]interface{}.
-func IsMapping(i interface{}) bool {
+func IsMapping(i any) bool {
 	_, is := i.(mapping)
 	return is
 }
 
 // IsSequence reports whether a type is a sequence in YAML, represented as an
 // []interface{}.
-func IsSequence(i interface{}) bool {
+func IsSequence(i any) bool {
 	_, is := i.(sequence)
 	return is
 }
 
 // IsScalar reports whether a type is a scalar value in YAML.
-func IsScalar(i interface{}) bool {
+func IsScalar(i any) bool {
 	return !IsMapping(i) && !IsSequence(i)
 }
 
-func describe(i interface{}) string {
+func describe(i any) string {
 	if IsMapping(i) {
 		return "mapping"
 	}

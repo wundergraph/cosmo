@@ -431,7 +431,7 @@ func (o *OperationKit) validatePersistedOperationID(pq *GraphQLRequestExtensions
 	}
 	for _, c := range []byte(pq.Sha256Hash) {
 		if !isCustomPersistedOperationIDChar(c) {
-			return &httpGraphqlError{message: "persistedQuery id may only contain [A-Za-z0-9_-]", statusCode: http.StatusBadRequest}
+			return &httpGraphqlError{message: `persistedQuery id must use printable ASCII, without / or \`, statusCode: http.StatusBadRequest}
 		}
 	}
 	return nil
@@ -995,17 +995,17 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
+// setAndParseOperationDoc parses the normalized representation restored from an
+// operation cache. The original document already passed the parser limits in Parse.
+// Normalization inlines fragment spreads, so the normalized representation can exceed
+// those limits; applying them again here would reject an operation that was accepted
+// on its first request.
 func (o *OperationKit) setAndParseOperationDoc() error {
 	o.kit.doc.Reset()
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	report := &operationreport.Report{}
-	if _, err := o.kit.parser.ParseWithLimits(o.operationProcessor.parserTokenizerLimits, o.kit.doc, report); err != nil {
-		return &httpGraphqlError{
-			message:    err.Error(),
-			statusCode: http.StatusBadRequest,
-		}
-	}
+	o.kit.parser.Parse(o.kit.doc, report)
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
@@ -1671,7 +1671,9 @@ func appendLengthPrefixed(dst []byte, s string) []byte {
 }
 
 func isCustomPersistedOperationIDChar(c byte) bool {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-'
+	// IDs become <id>.json filenames. Exclude separators without normalizing
+	// otherwise valid printable ASCII, including spaces and periods.
+	return c >= 0x20 && c <= 0x7e && c != '/' && c != '\\'
 }
 
 type parseKitOptions struct {

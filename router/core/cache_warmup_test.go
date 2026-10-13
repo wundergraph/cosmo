@@ -97,8 +97,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		assert.NoError(t, err)
 		processor.mux.Lock()
@@ -137,8 +136,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Millisecond,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
@@ -174,8 +172,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        6,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		assert.NoError(t, err)
 		processor.mux.Lock()
@@ -215,8 +212,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		assert.NoError(t, err)
 		processor.mux.Lock()
@@ -246,8 +242,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        10,
 			Timeout:        time.Second * 5,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		assert.NoError(t, err)
 		processor.mux.Lock()
@@ -358,8 +353,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		require.NoError(t, err)
 
@@ -387,8 +381,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		require.NoError(t, err)
 
@@ -425,8 +418,7 @@ func TestCacheWarmup(t *testing.T) {
 			Workers:        2,
 			Timeout:        time.Second,
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		err := WarmupCaches(ctx, cfg)
 		require.NoError(t, err)
 

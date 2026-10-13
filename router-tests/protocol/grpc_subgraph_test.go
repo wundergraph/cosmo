@@ -520,26 +520,39 @@ func TestGRPCSubgraph(t *testing.T) {
 				expected: `{"data":{"employee":null}}`,
 			},
 		}
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.Debug.PrintQueryPlans = true
+		run := func(t *testing.T, enableWireEncoding bool) {
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+					cfg.Debug.PrintQueryPlans = true
+					cfg.EnableGRPCWireEncoding = enableWireEncoding
+				},
+				EnableGRPC: true,
 			},
-			EnableGRPC: true,
-		},
-			func(t *testing.T, xEnv *testenv.Environment) {
-				for _, test := range tests {
-					t.Run(test.name, func(t *testing.T) {
-						t.Parallel()
+				func(t *testing.T, xEnv *testenv.Environment) {
+					for _, test := range tests {
+						t.Run(test.name, func(t *testing.T) {
+							t.Parallel()
 
-						response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-							Query: test.query,
+							response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+								Query: test.query,
+							})
+
+							assert.Equal(t, test.expected, response.Body)
 						})
+					}
+				})
+		}
 
-						assert.Equal(t, test.expected, response.Body)
-					})
-				}
-			})
+		t.Run("with wire encoding", func(t *testing.T) {
+			t.Parallel()
+			run(t, true)
+		})
+
+		t.Run("with protoreflect", func(t *testing.T) {
+			t.Parallel()
+			run(t, false)
+		})
 	})
 
 	t.Run("Should send http headers as gRPC metadata to subgraphs", func(t *testing.T) {
@@ -749,7 +762,8 @@ func TestGRPCSubgraph(t *testing.T) {
 
 				// ensure content-type is present with the correct value
 				// even if the request headers have a different value
-				require.Equal(t, []string{"application/grpc"}, captured.Get("content-type"))
+				// We use our own codec to marshal the request, therefore the content-type contains a subtype (+proto).
+				require.Equal(t, []string{"application/grpc+proto"}, captured.Get("content-type"))
 
 				// host is handled by the HTTP stack and never forwarded
 				require.Empty(t, captured.Get("host"))

@@ -24,6 +24,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
+import pLimit from 'p-limit';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -923,18 +924,30 @@ export class FederatedGraphRepository {
     return { sdl: version[0].schemaSDL, clientSchema: version[0].clientSchema };
   }
 
-  public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
-    return this.db
-      .insert(schemaVersionChangeAction)
-      .values(
-        data.changes.map((change) => ({
-          schemaVersionId: data.schemaVersionID,
-          changeType: change.changeType,
-          changeMessage: change.message,
-          path: change.path,
-        })),
-      )
-      .execute();
+  public async createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
+    const CHANGELOG_INSERT_CHUNK_SIZE = 500;
+
+    const limit = pLimit(CHANGELOG_INSERT_CHUNK_SIZE);
+
+    // Do it in chunks to avoid exceeding Postgres statement parameter limit
+    for (let i = 0; i < data.changes.length; i += CHANGELOG_INSERT_CHUNK_SIZE) {
+      const chunk = data.changes.slice(i, i + CHANGELOG_INSERT_CHUNK_SIZE);
+      await Promise.all(
+        chunk.map((change) =>
+          limit(() =>
+            this.db
+              .insert(schemaVersionChangeAction)
+              .values({
+                schemaVersionId: data.schemaVersionID,
+                changeType: change.changeType,
+                changeMessage: change.message,
+                path: change.path,
+              })
+              .execute(),
+          ),
+        ),
+      );
+    }
   }
 
   public fetchFederatedGraphChangelog(

@@ -56,7 +56,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}
@@ -101,7 +101,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}
@@ -145,7 +145,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}
@@ -194,7 +194,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}
@@ -252,7 +252,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}
@@ -324,7 +324,7 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"publishModule": customModule,
 			},
 		}

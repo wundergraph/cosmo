@@ -135,7 +135,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			// Send the same inline-argument operation twice. The second request
 			// hits the normalization cache, but the warning must still fire because
 			// the findings are restored from the cache entry.
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: inlineArgumentQuery})
 				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			}
@@ -229,7 +229,7 @@ func TestValidateInlineArguments(t *testing.T) {
 			// the normalization cache; the extension must still surface because the
 			// findings are restored from the cache entry (same as the warning log).
 			const wantBody = `{"data":{"employee":{"id":1}},"extensions":{"inlineArguments":{"count":1,"arguments":["query.employee#id"]}}}`
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: inlineArgumentQuery})
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 				require.JSONEq(t, wantBody, res.Body, "extension must surface on both cache-miss and cache-hit")

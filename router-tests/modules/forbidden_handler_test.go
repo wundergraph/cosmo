@@ -19,7 +19,7 @@ const expectedForbiddenBody = `{"errors":[{"message":"Insufficient permissions t
 
 func forbiddenModuleOpts() []core.Option {
 	return []core.Option{
-		core.WithModulesConfig(map[string]interface{}{
+		core.WithModulesConfig(map[string]any{
 			"forbiddenHandlerModule": forbiddenhandler.ForbiddenHandlerModule{},
 		}),
 		core.WithCustomModules(&forbiddenhandler.ForbiddenHandlerModule{}),
