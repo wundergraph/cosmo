@@ -135,7 +135,6 @@ const Trace = ({
         singleFlightSharedResponse: fetch.datasource_load_trace?.single_flight_shared_response,
         loadSkipped: fetch.datasource_load_trace?.load_skipped,
         responseCache: parseResponseCacheTrace(fetch.datasource_load_trace?.response_cache),
-        responseCacheInvalidation: requestCache?.invalidation,
         children: [],
       };
 
@@ -275,7 +274,6 @@ const Trace = ({
         singleFlightSharedResponse: fetch.trace?.single_flight_shared_response,
         loadSkipped: fetch.trace?.load_skipped,
         responseCache: parseResponseCacheTrace(fetch.trace?.response_cache),
-        responseCacheInvalidation: requestCache?.invalidation,
         children: [],
       };
 

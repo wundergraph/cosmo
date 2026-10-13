@@ -16,13 +16,13 @@ import {
   ResponseCacheTrace,
   entryLabel,
   invalidationCurl,
+  InvalidationResult,
   isRootFetch,
   mergedEntrySummary,
-  invalidationRequests,
-  InvalidationResult,
   operationInvalidationRequests,
-  sendInvalidation,
   responseCacheStatusLabel,
+  sendInvalidation,
+  subgraphInvalidationId,
 } from './response-cache-trace';
 
 export const ResponseCacheBadge = ({ status }: { status: ResponseCacheStatus }) => {
@@ -71,18 +71,7 @@ const EntryResult = ({ entry }: { entry: ResponseCacheEntry }) =>
     <Badge variant="outline">Not found</Badge>
   );
 
-const Entry = ({
-  entry,
-  kind,
-  subgraph,
-  invalidation,
-}: {
-  entry: ResponseCacheEntry;
-  kind?: string;
-  subgraph: string;
-  invalidation?: ResponseCacheInvalidation;
-}) => {
-  const requests = invalidationRequests(entry, subgraph, invalidation);
+const Entry = ({ entry, kind }: { entry: ResponseCacheEntry; kind?: string }) => {
   return (
     <div className="flex flex-col gap-y-1 rounded-md border p-3 text-sm">
       <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -123,19 +112,6 @@ const Entry = ({
           </div>
         </details>
       )}
-      {requests.length > 0 && invalidation?.endpoint && (
-        <details className="mt-1">
-          <summary className="cursor-pointer text-primary">Invalidate</summary>
-          <div className="mt-2 flex flex-col gap-y-3">
-            {requests.map((r) => (
-              <div key={r.label} className="flex flex-col gap-y-1">
-                <span className="text-xs text-muted-foreground">By {r.label}</span>
-                <CopyBlock text={invalidationCurl(invalidation.endpoint!, [r])} />
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
     </div>
   );
 };
@@ -165,14 +141,10 @@ const MergedEntries = ({ trace }: { trace: ResponseCacheTrace }) => {
 export const ViewResponseCache = ({
   responseCache,
   kind,
-  subgraph,
-  invalidation,
   asChild,
 }: {
   responseCache: ResponseCacheTrace;
   kind?: string;
-  subgraph: string;
-  invalidation?: ResponseCacheInvalidation;
   asChild?: boolean;
 }) => {
   return (
@@ -211,19 +183,10 @@ export const ViewResponseCache = ({
                 <span className="text-destructive">{responseCache.writeError}</span>
               </Row>
             )}
-            {invalidation && !invalidation.endpoint && responseCache.entries.length > 0 && (
-              <p className="text-muted-foreground">Enable the invalidation endpoint to get invalidation commands.</p>
-            )}
           </div>
           <MergedEntries trace={responseCache} />
           {responseCache.entries.map((entry) => (
-            <Entry
-              key={`${entry.alias ?? ''}-${entry.index}`}
-              entry={entry}
-              kind={kind}
-              subgraph={subgraph}
-              invalidation={invalidation}
-            />
+            <Entry key={`${entry.alias ?? ''}-${entry.index}`} entry={entry} kind={kind} />
           ))}
         </div>
       </DialogContent>
@@ -234,7 +197,7 @@ export const ViewResponseCache = ({
 const grid = 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_8rem_5rem_5rem] items-center gap-x-3';
 
 // Entries lists every entry of the operation; a row expands to its details.
-const Entries = ({ fetches, invalidation }: { fetches: CachedFetch[]; invalidation?: ResponseCacheInvalidation }) => {
+const Entries = ({ fetches }: { fetches: CachedFetch[] }) => {
   const rows = fetches.flatMap((f) => f.trace.entries.map((entry) => ({ ...f, entry })));
   const notCacheable = fetches.filter((f) => f.trace.status === 'not_cacheable');
   return (
@@ -270,7 +233,7 @@ const Entries = ({ fetches, invalidation }: { fetches: CachedFetch[]; invalidati
                 </div>
               </summary>
               <div className="px-3 pb-3">
-                <Entry entry={entry} kind={kind} subgraph={subgraph} invalidation={invalidation} />
+                <Entry entry={entry} kind={kind} />
               </div>
             </details>
           ))}
@@ -303,23 +266,6 @@ const writeSharedKey = (key: string) => {
   } catch {}
 };
 
-const invalidationOption = (r: InvalidationRequest, subgraph: string) => {
-  switch (r.body.kind) {
-    case 'subgraph':
-      return { title: `Everything from ${subgraph}`, description: 'Every cached response from this subgraph.' };
-    case 'type':
-      return {
-        title: `${r.body.type} entities`,
-        description: `Cached ${r.body.type} entities resolved by ${subgraph}.`,
-      };
-    default:
-      return {
-        title: `Tag ${r.body.cache_tag}`,
-        description: `Entries ${subgraph} tagged ${r.body.cache_tag}.`,
-      };
-  }
-};
-
 // ViewResponseCacheInvalidate builds one invalidation request from targets picked across the operation.
 export const ViewResponseCacheInvalidate = ({
   fetches,
@@ -341,20 +287,18 @@ export const ViewResponseCacheInvalidate = ({
   if (groups.length === 0) {
     return null;
   }
-  const id = (r: InvalidationRequest) => JSON.stringify(r.body);
   // Picking a whole subgraph covers its finer options.
   const covered = (r: InvalidationRequest, subgraph: string) =>
-    r.body.kind !== 'subgraph' && selected.has(JSON.stringify({ kind: 'subgraph', subgraph }));
-  const picked = groups.flatMap((g) => g.requests.filter((r) => selected.has(id(r)) && !covered(r, g.subgraph)));
+    r.id !== subgraphInvalidationId(subgraph) && selected.has(subgraphInvalidationId(subgraph));
+  const picked = groups.flatMap((g) => g.requests.filter((r) => selected.has(r.id) && !covered(r, g.subgraph)));
   const toggle = (r: InvalidationRequest) => {
     setResult(undefined);
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id(r)) ? next.delete(id(r)) : next.add(id(r));
+      next.has(r.id) ? next.delete(r.id) : next.add(r.id);
       return next;
     });
   };
-  const order = ['subgraph', 'type', 'cache_tag'];
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -385,37 +329,34 @@ export const ViewResponseCacheInvalidate = ({
               )}
               {g.requests.length > 0 && (
                 <div className="flex flex-col rounded-md border">
-                  {[...g.requests]
-                    .sort((x, y) => order.indexOf(String(x.body.kind)) - order.indexOf(String(y.body.kind)))
-                    .map((r) => {
-                      const option = invalidationOption(r, g.subgraph);
-                      const isCovered = covered(r, g.subgraph);
-                      return (
-                        <label
-                          key={id(r)}
-                          className={cn(
-                            'flex items-start gap-x-3 border-b px-3 py-2 last:border-b-0',
-                            isCovered ? 'opacity-50' : 'cursor-pointer hover:bg-muted/40',
-                          )}
-                        >
-                          <Checkbox
-                            className="mt-0.5 border-foreground/60"
-                            checked={isCovered || selected.has(id(r))}
-                            disabled={isCovered || sending}
-                            onCheckedChange={() => toggle(r)}
-                          />
-                          <span className="flex min-w-0 flex-1 flex-col">
-                            <span>{option.title}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {isCovered ? `Included in everything from ${g.subgraph}.` : option.description}
-                            </span>
+                  {g.requests.map((r) => {
+                    const isCovered = covered(r, g.subgraph);
+                    return (
+                      <label
+                        key={r.id}
+                        className={cn(
+                          'flex items-start gap-x-3 border-b px-3 py-2 last:border-b-0',
+                          isCovered ? 'opacity-50' : 'cursor-pointer hover:bg-muted/40',
+                        )}
+                      >
+                        <Checkbox
+                          className="mt-0.5 border-foreground/60"
+                          checked={isCovered || selected.has(r.id)}
+                          disabled={isCovered || sending}
+                          onCheckedChange={() => toggle(r)}
+                        />
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span>{r.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {isCovered ? `Included in everything from ${g.subgraph}.` : r.description}
                           </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {r.entries} {r.entries === 1 ? 'entry' : 'entries'}
-                          </span>
-                        </label>
-                      );
-                    })}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {r.entries} {r.entries === 1 ? 'entry' : 'entries'}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -493,7 +434,7 @@ export const ViewResponseCacheRequest = ({
           <DialogTitle>Response Cache</DialogTitle>
         </DialogHeader>
         <div className="scrollbar-custom flex max-h-[70vh] flex-col gap-y-4 overflow-auto text-sm">
-          <Entries fetches={fetches} invalidation={trace.invalidation} />
+          <Entries fetches={fetches} />
           <div className="flex flex-col gap-y-1">
             <h2 className="mb-1 text-base font-medium">Surrogate keys</h2>
             {trace.surrogateKeys.length > 0 ? (
@@ -519,7 +460,7 @@ export const ViewResponseCacheRequest = ({
               <List label="Rejected (cannot be sent)" items={tagHeader.rejected} />
               {!tagHeader.emitted && tagHeader.value && (
                 <p className="text-muted-foreground">
-                  Not sent: the response has subgraph errors and is marked no-store.
+                  Not sent: the response has subgraph errors, or is not a plain response (defer, subscription).
                 </p>
               )}
             </div>

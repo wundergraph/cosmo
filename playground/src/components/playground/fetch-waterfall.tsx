@@ -291,12 +291,7 @@ export const FetchWaterfall = ({
                 {fetch.output && <ViewOutput output={fetch.output} />}
                 {fetch.loadStats && <ViewLoadStats loadStats={fetch.loadStats} />}
                 {fetch.responseCache && fetch.responseCache.status !== 'not_cacheable' && (
-                  <ViewResponseCache
-                    responseCache={fetch.responseCache}
-                    kind={fetch.type}
-                    subgraph={fetch.dataSourceName ?? ''}
-                    invalidation={fetch.responseCacheInvalidation}
-                  />
+                  <ViewResponseCache responseCache={fetch.responseCache} kind={fetch.type} />
                 )}
               </div>
             </div>
