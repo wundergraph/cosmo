@@ -214,6 +214,7 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
