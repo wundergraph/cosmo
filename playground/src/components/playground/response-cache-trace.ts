@@ -19,6 +19,7 @@ export type ResponseCacheEntry = {
   found: boolean;
   served: boolean;
   private: boolean;
+  writtenPrivate: boolean;
   remainingTTL?: string;
   vary?: string[][];
   written: boolean;
@@ -53,6 +54,7 @@ export type CacheTagHeader = {
   untruncatedSize: number;
   maxBytes: number;
   dropped: string[];
+  rejected: string[];
 };
 
 export type ResponseCacheRequestTrace = {
@@ -87,6 +89,7 @@ export const parseResponseCacheTrace = (raw: any): ResponseCacheTrace | undefine
         found: !!e.found,
         served: !!e.served,
         private: !!e.private,
+        writtenPrivate: !!e.written_private,
         remainingTTL: e.remaining_ttl_pretty,
         vary: e.vary,
         written: !!e.written,
@@ -120,6 +123,7 @@ export const parseResponseCacheRequestTrace = (raw: any): ResponseCacheRequestTr
           untruncatedSize: tagHeader.untruncated_size ?? 0,
           maxBytes: tagHeader.max_bytes ?? 0,
           dropped: strings(tagHeader.dropped),
+          rejected: strings(tagHeader.rejected),
         }
       : undefined,
     invalidation: invalidation
@@ -179,8 +183,11 @@ export const invalidationRequests = (
 };
 
 // invalidationCurl never carries the shared key, it reads it from the environment.
+const shellQuote = (s: string) => s.replace(/'/g, "'\\''");
+
 export const invalidationCurl = (endpoint: string, requests: InvalidationRequest[]): string => {
-  const body = JSON.stringify(requests.map((r) => r.body)).replace(/'/g, "'\\''");
+  const body = shellQuote(JSON.stringify(requests.map((r) => r.body)));
+  endpoint = shellQuote(endpoint);
   return `curl -X POST '${endpoint}' \\\n  -H "Authorization: $INVALIDATION_SHARED_KEY" \\\n  -H 'Content-Type: application/json' \\\n  -d '${body}'`;
 };
 
@@ -250,6 +257,7 @@ export type SubgraphInvalidationRequests = {
   subgraph: string;
   requests: OperationInvalidationRequest[];
   // rootEntries have no type, so only a subgraph or tag request drops them.
+  // Counts are of entries this response left in the cache: found or written.
   rootEntries: number;
 };
 
@@ -259,14 +267,20 @@ export const operationInvalidationRequests = (
   invalidation?: ResponseCacheInvalidation,
 ): SubgraphInvalidationRequests[] => {
   const groups = new Map<string, { requests: Map<string, OperationInvalidationRequest>; rootEntries: number }>();
+  if (!invalidation) {
+    return [];
+  }
   for (const { subgraph, kind, trace } of fetches) {
     for (const entry of trace.entries) {
+      if (!entry.found && !entry.written) {
+        continue;
+      }
+      const group = groups.get(subgraph) ?? { requests: new Map(), rootEntries: 0 };
+      groups.set(subgraph, group);
+      group.rootEntries += isRootFetch(kind) ? 1 : 0;
       for (const request of invalidationRequests(entry, subgraph, invalidation)) {
-        const group = groups.get(subgraph) ?? { requests: new Map(), rootEntries: 0 };
         const id = JSON.stringify(request.body);
         group.requests.set(id, { ...request, entries: (group.requests.get(id)?.entries ?? 0) + 1 });
-        group.rootEntries += isRootFetch(kind) && request.body.kind === 'subgraph' ? 1 : 0;
-        groups.set(subgraph, group);
       }
     }
   }
