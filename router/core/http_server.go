@@ -57,6 +57,9 @@ type server struct {
 	draining atomic.Bool
 	// openConns counts the client connections the HTTP server still owns (not closed or hijacked).
 	openConns atomic.Int64
+	// drained is closed once the server is draining and no client connections are left.
+	drained     chan struct{}
+	drainedOnce sync.Once
 }
 
 type httpServerOptions struct {
@@ -104,6 +107,7 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
 		listener:    listener, // Store the pre-bound listener
+		drained:     make(chan struct{}),
 	}
 
 	// Store the initial state with health check mux (graphServer nil until first config)
@@ -117,7 +121,12 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		case http.StateNew:
 			n.openConns.Add(1)
 		case http.StateClosed, http.StateHijacked:
-			n.openConns.Add(-1)
+			remaining := n.openConns.Add(-1)
+			// Only relevant while draining. drain stores draining before reading openConns, and we
+			// decrement before reading draining, so one of the two sides always closes drained.
+			if remaining == 0 && n.draining.Load() {
+				n.markDrained()
+			}
 		}
 	}
 
@@ -136,34 +145,34 @@ func newServer(opts *httpServerOptions) (*server, error) {
 	return n, nil
 }
 
-// drainPollInterval is how often drain checks whether all client connections are closed.
-const drainPollInterval = 100 * time.Millisecond
-
 // drain marks the server as not ready and makes every subsequent response carry
 // "Connection: close", so clients retire their pooled connections themselves. Unlike
 // http.Server.SetKeepAlivesEnabled(false) it does not close idle connections, which would race
 // the client's next write. It blocks until all client connections are closed, period has elapsed
 // or ctx is done. Draining is not reversible.
 func (s *server) drain(ctx context.Context, period time.Duration) {
+	// Store draining before reading openConns, see ConnState in newServer.
 	s.draining.Store(true)
 	s.healthcheck.SetReady(false)
+
+	// If there are no open connections, we can mark the server as drained immediately.
+	// Otherwise, we wait for the httpServer.ConnState callback to mark the server as drained.
+	if s.openConns.Load() == 0 {
+		s.markDrained()
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, period)
 	defer cancel()
 
-	ticker := time.NewTicker(drainPollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if s.openConns.Load() == 0 {
-				return
-			}
-		}
+	select {
+	case <-ctx.Done():
+	case <-s.drained:
 	}
+}
+
+// markDrained closes drained exactly once.
+func (s *server) markDrained() {
+	s.drainedOnce.Do(func() { close(s.drained) })
 }
 
 func (s *server) HealthChecks() health.Checker {
