@@ -202,7 +202,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     async (splitConfigEnabled) => {
       const { client, server } = await SetupTest({
         dbname,
-        enabledFeatures: splitConfigEnabled ? ['split-config-loading'] : [],
+        enableSplitConfigLoadingByDefault: splitConfigEnabled,
       });
       onTestFinished(() => server.close());
 
@@ -346,7 +346,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     async (splitConfigEnabled) => {
       const { client, server } = await SetupTest({
         dbname,
-        enabledFeatures: splitConfigEnabled ? ['split-config-loading'] : [],
+        enableSplitConfigLoadingByDefault: splitConfigEnabled,
       });
       onTestFinished(() => server.close());
 

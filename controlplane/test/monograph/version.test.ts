@@ -185,7 +185,7 @@ describe('monograph version tests', () => {
 
   describe('set tests', () => {
     test('that an error is returned if an invalid router compatibility version integer is provided', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -212,9 +212,10 @@ describe('monograph version tests', () => {
         name: monographName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+      expect(blobStorage.keys()).toHaveLength(2);
+      expect(blobStorage.keys()).toContain(baseGraphKey);
       await assertNumberOfCompositions(client, monographName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({
@@ -235,7 +236,7 @@ describe('monograph version tests', () => {
     });
 
     test('that an error is returned if an invalid router compatibility version string is provided', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -262,9 +263,12 @@ describe('monograph version tests', () => {
         name: monographName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, monographName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({
@@ -314,9 +318,12 @@ describe('monograph version tests', () => {
           name: monographName,
           namespace,
         });
-        expect(blobStorage.keys()).toHaveLength(1);
-        const baseGraphKey = blobStorage.keys()[0];
-        expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+        const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+        const blobStorageKeys = blobStorage.keys();
+        expect(blobStorageKeys).toHaveLength(2);
+        expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
         await assertNumberOfCompositions(client, monographName, 1, namespace);
 
         authenticator.changeUserWithSuppliedContext({
@@ -373,9 +380,12 @@ describe('monograph version tests', () => {
         name: monographName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, monographName, 1, namespace);
 
       authenticator.changeUserWithSuppliedContext({
@@ -463,9 +473,12 @@ describe('monograph version tests', () => {
         name: monographName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, monographName, 1, namespace);
 
       authenticator.changeUserWithSuppliedContext({
@@ -483,7 +496,7 @@ describe('monograph version tests', () => {
     });
 
     test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -510,9 +523,12 @@ describe('monograph version tests', () => {
         name: monographName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${monographResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${monographResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, monographName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({
