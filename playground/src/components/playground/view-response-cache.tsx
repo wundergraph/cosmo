@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { sentenceCase } from 'change-case';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { CodeViewer } from '../code-viewer';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
@@ -92,7 +92,7 @@ const Entry = ({
         </span>
         <EntryResult entry={entry} />
         {entry.written && <Badge variant="secondary">Written</Badge>}
-        {entry.private && <Badge variant="muted">Private</Badge>}
+        {(entry.private || entry.writtenPrivate) && <Badge variant="muted">Private</Badge>}
       </div>
       {isRootFetch(kind) && (
         <p className="text-muted-foreground">
@@ -333,6 +333,11 @@ export const ViewResponseCacheInvalidate = ({
   const [sharedKey, setSharedKey] = useState(readSharedKey);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<InvalidationResult>();
+  // A new response starts a new selection.
+  useEffect(() => {
+    setSelected(new Set());
+    setResult(undefined);
+  }, [fetches]);
   if (groups.length === 0) {
     return null;
   }
@@ -374,43 +379,45 @@ export const ViewResponseCacheInvalidate = ({
               </h2>
               {g.rootEntries > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Includes a root field response, which has no type: only everything from {g.subgraph} or a cache tag
-                  drops it.
+                  Includes a root field response, which has no type: only{' '}
+                  {invalidation?.subgraph ? `everything from ${g.subgraph} or a cache tag` : 'a cache tag'} drops it.
                 </p>
               )}
-              <div className="flex flex-col rounded-md border">
-                {[...g.requests]
-                  .sort((x, y) => order.indexOf(String(x.body.kind)) - order.indexOf(String(y.body.kind)))
-                  .map((r) => {
-                    const option = invalidationOption(r, g.subgraph);
-                    const isCovered = covered(r, g.subgraph);
-                    return (
-                      <label
-                        key={id(r)}
-                        className={cn(
-                          'flex items-start gap-x-3 border-b px-3 py-2 last:border-b-0',
-                          isCovered ? 'opacity-50' : 'cursor-pointer hover:bg-muted/40',
-                        )}
-                      >
-                        <Checkbox
-                          className="mt-0.5 border-foreground/60"
-                          checked={isCovered || selected.has(id(r))}
-                          disabled={isCovered}
-                          onCheckedChange={() => toggle(r)}
-                        />
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span>{option.title}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {isCovered ? `Included in everything from ${g.subgraph}.` : option.description}
+              {g.requests.length > 0 && (
+                <div className="flex flex-col rounded-md border">
+                  {[...g.requests]
+                    .sort((x, y) => order.indexOf(String(x.body.kind)) - order.indexOf(String(y.body.kind)))
+                    .map((r) => {
+                      const option = invalidationOption(r, g.subgraph);
+                      const isCovered = covered(r, g.subgraph);
+                      return (
+                        <label
+                          key={id(r)}
+                          className={cn(
+                            'flex items-start gap-x-3 border-b px-3 py-2 last:border-b-0',
+                            isCovered ? 'opacity-50' : 'cursor-pointer hover:bg-muted/40',
+                          )}
+                        >
+                          <Checkbox
+                            className="mt-0.5 border-foreground/60"
+                            checked={isCovered || selected.has(id(r))}
+                            disabled={isCovered || sending}
+                            onCheckedChange={() => toggle(r)}
+                          />
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span>{option.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {isCovered ? `Included in everything from ${g.subgraph}.` : option.description}
+                            </span>
                           </span>
-                        </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {r.entries} {r.entries === 1 ? 'entry' : 'entries'}
-                        </span>
-                      </label>
-                    );
-                  })}
-              </div>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {r.entries} {r.entries === 1 ? 'entry' : 'entries'}
+                          </span>
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           ))}
           {!invalidation?.endpoint ? (
@@ -508,7 +515,8 @@ export const ViewResponseCacheRequest = ({
                 {tagHeader.size} of {tagHeader.untruncatedSize} bytes (max {tagHeader.maxBytes})
               </Row>
               {tagHeader.value && <Row label="Value">{tagHeader.value}</Row>}
-              <List label="Dropped" items={tagHeader.dropped} />
+              <List label="Dropped (over max bytes)" items={tagHeader.dropped} />
+              <List label="Rejected (cannot be sent)" items={tagHeader.rejected} />
               {!tagHeader.emitted && tagHeader.value && (
                 <p className="text-muted-foreground">
                   Not sent: the response has subgraph errors and is marked no-store.

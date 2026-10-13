@@ -605,10 +605,10 @@ The status is also exposed to [template expressions](/router/configuration/templ
 
 The Request Trace view in the router playground renders it:
 
-* A cache status badge on every fetch.
+* A cache status badge on every fetch the cache was asked about.
 * A **View Cache** dialog per fetch with the store decision, the subgraph `Cache-Control` and every entry: its key, remaining or written TTL, declared tags, surrogate keys and cached value. For a merged fetch it shows how many entries of each path came from the cache.
 * A **Response Cache** dialog for the request. It lists every entry of the operation in one table, the surrogate keys, and what the `Cache-Tag` header made of them, including the keys dropped by `max_bytes`.
-* An **Invalidate** dialog, offered when the [invalidation](#invalidation) endpoint is enabled. Pick the subgraphs, types or tags seen in the response, then send one request with the shared key or copy it as `curl`. The `curl` reads the key from `$INVALIDATION_SHARED_KEY`.
+* An **Invalidate** dialog. Pick the subgraphs, types or tags of the entries this response found or wrote, then send one request with the shared key or copy it as `curl`. The `curl` reads the key from `$INVALIDATION_SHARED_KEY`. Sending needs the [invalidation](#invalidation) endpoint enabled.
 
 Cached values follow `exclude_output`. `exclude_response_cache` leaves the cache out of the trace.
 
