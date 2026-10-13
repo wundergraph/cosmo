@@ -896,6 +896,9 @@ func (s *graphMux) waitForCaches() {
 	if s.operationHashCache != nil {
 		s.operationHashCache.Wait()
 	}
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Wait()
+	}
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
@@ -1064,7 +1067,7 @@ func (s *graphServer) buildGraphMux(
 		cancel:                   graphMuxCancel,
 		metricStore:              rmetric.NewNoopMetrics(),
 		streamMetricStore:        rmetric.NewNoopStreamMetricStore(),
-		skipUnavailableProviders: s.Config.eventsConfig.SkipUnavailableProviders,
+		skipUnavailableProviders: s.eventsConfig.SkipUnavailableProviders,
 		logger:                   s.logger,
 	}
 
@@ -1611,7 +1614,7 @@ func (s *graphServer) buildGraphMux(
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
-		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations); mErr != nil {
+		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations, opts.RouterConfigVersion); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
 	}
@@ -1791,6 +1794,8 @@ func (s *graphServer) buildGraphMux(
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
+		s.responseCache != nil,
+		s.responseCacheMetrics,
 	)
 
 	handlerOpts := HandlerOptions{
@@ -1806,6 +1811,20 @@ func (s *graphServer) buildGraphMux(
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
+		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
+	}
+
+	if s.responseCache != nil {
+		handlerOpts.ResponseCache = s.responseCache
+		handlerOpts.ResponseCacheMetrics = s.responseCacheMetrics
+		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
+		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
+
+		// Compiled with this mux's manager so what the expressions use is recorded.
+		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.logger)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.redisClient != nil {

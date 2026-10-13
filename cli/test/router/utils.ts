@@ -67,7 +67,7 @@ export const mockFetchRouterConfig: typeof fetch = async (info): Promise<Respons
 
   let body: ReadableStream | undefined;
   if (filePath && existsSync(filePath)) {
-    body = new Blob([await readFile(filePath)]).stream();
+    body = new Blob([Uint8Array.from(await readFile(filePath))]).stream();
   }
 
   return new Response(body, {

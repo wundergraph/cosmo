@@ -39,7 +39,7 @@ import (
 
 // Define the wsJSONMessage type at the package level
 type wsJSONMessage struct {
-	data interface{}
+	data any
 	done chan error
 }
 
@@ -58,9 +58,9 @@ type GraphQLWSSubscriptionMessage struct {
 
 // GraphQLPayload represents the payload within a GraphQL subscription message
 type GraphQLPayload struct {
-	Query         string                 `json:"query,omitempty"`
-	Variables     map[string]interface{} `json:"variables,omitempty"`
-	OperationName string                 `json:"operationName,omitempty"`
+	Query         string         `json:"query,omitempty"`
+	Variables     map[string]any `json:"variables,omitempty"`
+	OperationName string         `json:"operationName,omitempty"`
 }
 
 // GraphQLWSSimpleResponse for simpler messages like connection_ack, pong, complete
@@ -70,9 +70,9 @@ type GraphQLWSSimpleResponse struct {
 
 // GraphQLWSDataResponse for sending subscription data
 type GraphQLWSDataResponse struct {
-	Type    string      `json:"type"`
-	ID      string      `json:"id"`
-	Payload interface{} `json:"payload"`
+	Type    string `json:"type"`
+	ID      string `json:"id"`
+	Payload any    `json:"payload"`
 }
 
 // CountEmpData represents the structure of the countEmp field data
@@ -1351,7 +1351,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription with unexposed upgrade error", func(t *testing.T) {
@@ -1389,7 +1389,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"Subscription Upgrade request failed"}]`, string(msg.Payload))
+			require.Equal(t, `[{"message":"Subscription connection request failed"}]`, string(msg.Payload))
 		})
 	})
 	t.Run("subscription error in resolver", func(t *testing.T) {
@@ -2354,7 +2354,14 @@ func TestWebSockets(t *testing.T) {
 	t.Run("operation with mismatched hash is rejected", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
 
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
@@ -2383,12 +2390,15 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("cache poisoning is tried but prevented", func(t *testing.T) {
+	t.Run("rejects cache poisoning when query and hash differ", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
@@ -2716,7 +2726,7 @@ func TestFlakyWebSockets(t *testing.T) {
 				firstCountEmpID, countEmpID, countEmp2ID, countHobID string
 				firstCountEmp, countEmp, countEmp2, countHob         int
 				err                                                  error
-				variables                                            = map[string]interface{}{
+				variables                                            = map[string]any{
 					"max":      10,
 					"interval": 200,
 				}
@@ -2724,7 +2734,7 @@ func TestFlakyWebSockets(t *testing.T) {
 
 			wg.Add(1)
 
-			firstCountEmpID, err = client.Subscribe(&subscriptionCountEmp, map[string]interface{}{
+			firstCountEmpID, err = client.Subscribe(&subscriptionCountEmp, map[string]any{
 				"max":      5,
 				"interval": 100,
 			}, func(dataValue []byte, errValue error) error {
@@ -2813,11 +2823,9 @@ func TestFlakyWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", countHobID)
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				require.NoError(t, client.Run())
-			}()
+			})
 
 			wg.Wait()
 
@@ -3114,7 +3122,7 @@ func TestWebsocketClose(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.JSONEq(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}]`, string(res.Payload))
+			require.JSONEq(t, `[{"message":"Subscription connection request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}]`, string(res.Payload))
 
 			require.NoError(t, conn.SetReadDeadline(time.Now().Add(500*time.Millisecond)))
 			_, _, nextErr := conn.ReadMessage()

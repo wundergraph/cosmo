@@ -1,14 +1,12 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useParams } from 'next/navigation';
+import { parseAsString, useQueryState } from 'nuqs';
 import { CodeViewer } from '@/components/code-viewer';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
-import {
-  attachPlaygroundAPI,
-  CustomScripts,
-  detachPlaygroundAPI,
-  PreFlightScript,
-} from '@/components/playground/custom-scripts';
+import { attachPlaygroundAPI, CustomScripts, detachPlaygroundAPI } from '@/components/playground/custom-scripts';
 import { CopyOperation } from '@/components/playground/copy-operation';
+import { DefaultHeadersDialog } from '@/components/playground/default-headers/default-headers-dialog';
 import { PlanView } from '@/components/playground/plan-view';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
@@ -26,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
 import {
   Select,
   SelectContent,
@@ -43,7 +42,7 @@ import { useHydratePlaygroundStateFromUrl } from '@/hooks/use-hydrate-playground
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { NextPageWithLayout } from '@/lib/page';
-import { substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
+import { effectiveDefaultHeadersString, substituteHeadersFromEnv, validateHeaders } from '@/lib/playground-headers';
 import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
@@ -57,6 +56,7 @@ import {
   getClients,
   getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
+  getPlaygroundDefaultHeaders,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -71,7 +71,6 @@ import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
 import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -284,9 +283,7 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const PersistOperation = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { slug, namespace } = useParams<{ slug: string; namespace: string }>();
 
   const { query } = useContext(TraceContext);
 
@@ -605,15 +602,13 @@ const ToggleClientValidation = () => {
 };
 
 const ConfigSelect = () => {
-  const router = useRouter();
-
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
   const compositionFlagsData = useCompositionFlags();
   const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
-  const selected = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const [selected] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type', parseAsString.withDefault('graph'));
 
   const applyParams = useApplyParams();
 
@@ -684,7 +679,7 @@ const PlaygroundPortal = () => {
   const saveDiv = document.getElementById('save-button');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const scriptsSection = document.getElementById('scripts-section');
-  const preFlightScriptSection = document.getElementById('pre-flight-script-section');
+  const defaultHeadersSection = document.getElementById('default-headers-section');
   const shareButton = document.getElementById('share-button');
   const copyButton = document.getElementById('copy-button');
 
@@ -697,7 +692,7 @@ const PlaygroundPortal = () => {
     !scriptsSection ||
     !shareButton ||
     !copyButton ||
-    !preFlightScriptSection
+    !defaultHeadersSection
   ) {
     return null;
   }
@@ -710,22 +705,21 @@ const PlaygroundPortal = () => {
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
-      {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(<SharePlaygroundModal />, shareButton)}
       {createPortal(<CopyOperation />, copyButton)}
+      {createPortal(<DefaultHeadersDialog />, defaultHeadersSection)}
     </>
   );
 };
 
 const PlaygroundPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const operation = router.query.operation as string;
-  const variables = router.query.variables as string;
+  const [operation] = useQueryState('operation');
+  const [variables] = useQueryState('variables');
 
   const graphContext = useContext(GraphContext);
 
-  const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
-  const type = (router.query.type as string) || 'graph';
+  const [loadSchemaGraphId] = useQueryState('load', parseAsString.withDefault(graphContext?.graph?.id || ''));
+  const [type] = useQueryState('type', parseAsString.withDefault('graph'));
 
   const compositionFlagsData = useCompositionFlags();
 
@@ -751,6 +745,28 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
+
+  const { data: defaultHeadersData, isLoading: isLoadingDefaultHeaders } = useQuery(
+    getPlaygroundDefaultHeaders,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+      retry: 1,
+      // These change only when someone edits them in the dialog (which
+      // refetches explicitly); no need to re-fetch on every window focus.
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  const effectiveDefaultHeaders = useMemo(() => {
+    return effectiveDefaultHeadersString(
+      (defaultHeadersData?.graphHeaders ?? []).map((h) => ({ key: h.key, value: h.value })),
+      (defaultHeadersData?.personalHeaders ?? []).map((h) => ({ key: h.key, value: h.value })),
+    );
+  }, [defaultHeadersData]);
 
   const schema = useMemo(() => {
     return parseSchema(subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
@@ -790,7 +806,31 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  const [headers, setHeaders] = useState(PLAYGROUND_DEFAULT_HEADERS_TEMPLATE);
+  // What GraphiQL will restore into the header editor, or null on a first visit.
+  // Guarded because this page server-renders and localStorage is client-only.
+  const persistedHeaders = useMemo(
+    () => (typeof window === 'undefined' ? null : graphiqlStorage.getItem('graphiql:headers')),
+    [graphiqlStorage],
+  );
+
+  // `headers` mirrors GraphiQL's header editor for the two consumers below that are not
+  // GraphiQL (the query plan request and TraceContext). GraphiQL never reports the
+  // editor's initial value - its change handler is attached after construction - so the
+  // mirror has to be seeded rather than waited for.
+  const [headers, setHeaders] = useState<string>(() => persistedHeaders ?? effectiveDefaultHeaders);
+
+  // The defaults query is usually still in flight on the first render, so the seed above
+  // falls back to the built-in template. Adopt the real defaults once they resolve, but
+  // only on a first visit and only while untouched: a restored tab and anything the user
+  // has typed both take precedence over a default.
+  useEffect(() => {
+    if (persistedHeaders !== null) {
+      return;
+    }
+
+    setHeaders((current) => (current === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? effectiveDefaultHeaders : current));
+  }, [persistedHeaders, effectiveDefaultHeaders]);
+
   const [response, setResponse] = useState<string>('');
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
@@ -821,6 +861,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (isLoadingDefaultHeaders) {
+      return;
+    }
+
     const responseToolbar = document.getElementById('response-toolbar');
     if (responseToolbar && isMounted) {
       return;
@@ -837,6 +881,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
         div.className = 'flex items-center justify-center mx-2';
         header.append(div);
       }
+    }
+
+    const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
+
+    const defaultHeadersSection = document.getElementById('default-headers-section') ?? document.createElement('div');
+
+    if (editors && !defaultHeadersSection.isConnected) {
+      defaultHeadersSection.id = 'default-headers-section';
+      defaultHeadersSection.className = 'invisible';
+      editors.appendChild(defaultHeadersSection);
     }
 
     const editorToolsTabBar = document.getElementsByClassName('graphiql-editor-tools')[0] as any as HTMLDivElement;
@@ -856,13 +910,21 @@ const PlaygroundPage: NextPageWithLayout = () => {
       scriptsSection.id = 'scripts-section';
       scriptsSection.className = 'graphiql-editor hidden';
 
+      // childNodes[1] is the Headers tab; the default headers row belongs to it alone.
+      const HEADERS_TAB_INDEX = 1;
+
       tabs.forEach((e, index) =>
         e.addEventListener('click', () => {
           (e as HTMLButtonElement).className = 'graphiql-un-styled active';
           (sections[index] as HTMLDivElement).className = 'graphiql-editor';
           scriptsSection.className = 'graphiql-editor hidden';
+          defaultHeadersSection.className = index === HEADERS_TAB_INDEX ? '' : 'invisible';
         }),
       );
+
+      if ((tabs[HEADERS_TAB_INDEX] as HTMLButtonElement).classList.contains('active')) {
+        defaultHeadersSection.className = '';
+      }
 
       scriptsButton.onclick = (e) => {
         (tabs[0] as HTMLButtonElement).className = 'graphiql-un-styled';
@@ -870,6 +932,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         (sections[0] as HTMLDivElement).className = 'graphiql-editor hidden';
         (sections[1] as HTMLDivElement).className = 'graphiql-editor hidden';
         scriptsSection.className = 'graphiql-editor';
+        defaultHeadersSection.className = 'invisible';
 
         scriptsButton.className = 'graphiql-un-styled active';
       };
@@ -882,14 +945,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
       editorToolsTabBar.insertBefore(scriptsButton, editorToolsTabBar.childNodes[2]);
       editorToolsSection.appendChild(scriptsSection);
-    }
-
-    const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
-
-    if (editors) {
-      const preFlightScriptSection = document.createElement('div');
-      preFlightScriptSection.id = 'pre-flight-script-section';
-      editors.appendChild(preFlightScriptSection);
     }
 
     const responseSection = document.getElementsByClassName('graphiql-response')[0];
@@ -1149,28 +1204,34 @@ const PlaygroundPage: NextPageWithLayout = () => {
         }}
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
-          <GraphiQL
-            key={graphId}
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            query={shouldPassEditorStateProps ? query : undefined}
-            variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
-            onEditQuery={setQuery}
-            headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
-            defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
-            onEditHeaders={setHeaders}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
-            // null stops introspection and undefined forces introspection if schema is null
-            schema={isLoading ? null : (schema ?? undefined)}
-            storage={graphiqlStorage}
-            onTabChange={setTabsState}
-          />
-          {isMounted && <PlaygroundPortal />}
+          {isLoadingDefaultHeaders ? (
+            <Loader fullscreen />
+          ) : (
+            <>
+              <GraphiQL
+                key={graphId}
+                shouldPersistHeaders
+                showPersistHeadersSettings={false}
+                fetcher={fetcher}
+                query={shouldPassEditorStateProps ? query : undefined}
+                variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
+                onEditQuery={setQuery}
+                headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
+                defaultHeaders={effectiveDefaultHeaders}
+                onEditHeaders={setHeaders}
+                plugins={[
+                  explorerPlugin({
+                    showAttribution: false,
+                  }),
+                ]}
+                // null stops introspection and undefined forces introspection if schema is null
+                schema={isLoading ? null : (schema ?? undefined)}
+                storage={graphiqlStorage}
+                onTabChange={setTabsState}
+              />
+              {isMounted && <PlaygroundPortal />}
+            </>
+          )}
         </div>
         <div className="flex flex-1 items-center justify-center md:hidden">
           <Alert className="m-8">

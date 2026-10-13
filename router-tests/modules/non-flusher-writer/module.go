@@ -22,8 +22,8 @@ func (m *NonFlusherWriterModule) Cleanup() error {
 	return nil
 }
 
-// nonFlusherWriter wraps http.ResponseWriter but explicitly does NOT implement http.Flusher
-// This will cause GetSubscriptionResponseWriter to return false, triggering the error path
+// nonFlusherWriter wraps http.ResponseWriter but explicitly does NOT implement http.Flusher,
+// triggering the subscription error path.
 type nonFlusherWriter struct {
 	http.ResponseWriter
 }

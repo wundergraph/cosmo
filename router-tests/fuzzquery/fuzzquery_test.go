@@ -12,7 +12,7 @@ import (
 type testQuery struct {
 	Name      string
 	Body      string
-	Variables map[string]interface{}
+	Variables map[string]any
 }
 
 func (t *testQuery) Data() []byte {
@@ -20,7 +20,7 @@ func (t *testQuery) Data() []byte {
 	if name == "" {
 		name = testenv.RandString(10)
 	}
-	values := map[string]interface{}{
+	values := map[string]any{
 		"query":         fmt.Sprintf("query %s %s", name, t.Body),
 		"operationName": name,
 	}

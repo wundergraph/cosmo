@@ -16,7 +16,9 @@ const (
 	tcpConnectDuration     = "router.http.client.tcp_connect_duration"
 	tlsHandshakeDuration   = "router.http.client.tls_handshake_duration"
 	timeToFirstRequestByte = "router.http.client.time_to_first_request_byte"
+	timeToLastRequestByte  = "router.http.client.time_to_last_request_byte"
 	timeToFirstByte        = "router.http.client.time_to_first_byte"
+	timeToLastByte         = "router.http.client.time_to_last_byte"
 )
 
 var (
@@ -53,9 +55,19 @@ var (
 		otelmetric.WithDescription("Time from the start of the HTTP attempt to the first request byte written for outgoing subgraph requests"),
 	}
 
+	timeToLastRequestByteOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("Time from the first request byte write event to the successful request write completion event for outgoing subgraph requests"),
+	}
+
 	timeToFirstByteOptions = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription("Time from request write completion to first response byte from subgraph"),
+	}
+
+	timeToLastByteOptions = []otelmetric.Float64HistogramOption{
+		otelmetric.WithUnit("ms"),
+		otelmetric.WithDescription("Time from the first response byte to the last response byte from subgraph"),
 	}
 )
 
@@ -69,7 +81,9 @@ type connectionInstruments struct {
 	tcpConnectDuration     otelmetric.Float64Histogram
 	tlsHandshakeDuration   otelmetric.Float64Histogram
 	timeToFirstRequestByte otelmetric.Float64Histogram
+	timeToLastRequestByte  otelmetric.Float64Histogram
 	timeToFirstByte        otelmetric.Float64Histogram
+	timeToLastByte         otelmetric.Float64Histogram
 }
 
 func newConnectionInstruments(meter otelmetric.Meter, enhancedConnectionStats bool) (*connectionInstruments, error) {
@@ -119,8 +133,14 @@ func newConnectionInstruments(meter otelmetric.Meter, enhancedConnectionStats bo
 	if ci.timeToFirstRequestByte, err = meter.Float64Histogram(timeToFirstRequestByte, timeToFirstRequestByteOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create time to first request byte histogram: %w", err)
 	}
+	if ci.timeToLastRequestByte, err = meter.Float64Histogram(timeToLastRequestByte, timeToLastRequestByteOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create time to last request byte histogram: %w", err)
+	}
 	if ci.timeToFirstByte, err = meter.Float64Histogram(timeToFirstByte, timeToFirstByteOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create time to first byte histogram: %w", err)
+	}
+	if ci.timeToLastByte, err = meter.Float64Histogram(timeToLastByte, timeToLastByteOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create time to last byte histogram: %w", err)
 	}
 
 	return ci, nil

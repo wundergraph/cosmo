@@ -154,6 +154,55 @@ describe('S3 Utils', () => {
     });
   });
 
+  describe('createS3ClientConfig without explicit credentials', () => {
+    test('that it omits the credentials field when username/password are empty strings, to allow the AWS SDK default credential provider chain (e.g. IRSA) to be used', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        endpoint: '',
+        username: '',
+        password: '',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+      const config = createS3ClientConfig(bucketName, opts);
+
+      expect(config).toEqual({
+        region: 'us-east-1',
+        endpoint: 'https://cosmo-controlplane-bucket.provider.com',
+        forcePathStyle: true,
+      });
+      expect(config).not.toHaveProperty('credentials');
+      expect(bucketName).toBe('cosmo');
+    });
+
+    test('that it omits the credentials field when username/password are absent from both the URL and opts', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        forcePathStyle: true,
+      };
+
+      const config = createS3ClientConfig(extractS3BucketName(opts), opts);
+
+      expect(config).not.toHaveProperty('credentials');
+    });
+
+    test('that it still throws when region is missing, even without explicit credentials', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: '',
+        endpoint: '',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+
+      expect(() => createS3ClientConfig(bucketName, opts)).toThrowError('Missing region in S3 configuration.');
+    });
+  });
+
   describe('isVirtualHostStyleUrl tests', () => {
     test('that it returns true for a virtual-hosted-style URL', () => {
       const url = new URL('https://cosmo-controlplane-bucket.s3.amazonaws.com');

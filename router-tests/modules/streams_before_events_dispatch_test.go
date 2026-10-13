@@ -51,7 +51,7 @@ func TestBroadcastHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"beforeEventsDispatchModule": customModule,
 			},
 		}
@@ -88,7 +88,7 @@ func TestBroadcastHook(t *testing.T) {
 			clientRunChs := make([]chan error, numSubscribers)
 			subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, numSubscribers)
 
-			for i := 0; i < numSubscribers; i++ {
+			for i := range numSubscribers {
 				clients[i] = graphql.NewSubscriptionClient(surl)
 				clientRunChs[i] = make(chan error)
 				subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
@@ -155,7 +155,7 @@ func TestBroadcastHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"beforeEventsDispatchModule": customModule,
 			},
 		}
@@ -270,7 +270,7 @@ func TestBroadcastHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"beforeEventsDispatchModule": customModule,
 			},
 		}
@@ -369,7 +369,7 @@ func TestBroadcastHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"beforeEventsDispatchModule": customModule,
 			},
 		}

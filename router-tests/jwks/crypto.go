@@ -202,7 +202,7 @@ func randomKID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 
-	for i := 0; i < len(b); i++ {
+	for i := range b {
 		b[i] = 'a' + (b[i] % 26)
 	}
 

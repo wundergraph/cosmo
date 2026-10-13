@@ -137,10 +137,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		}
 	}
 
-	p.closeWg.Add(1)
-
-	go func() {
-		defer p.closeWg.Done()
+	p.closeWg.Go(func() {
 		defer cleanup()
 
 		for {
@@ -176,7 +173,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 				return
 			}
 		}
-	}()
+	})
 
 	return nil
 }

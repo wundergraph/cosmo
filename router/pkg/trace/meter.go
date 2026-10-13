@@ -228,10 +228,8 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	// Don't set globals when we use the router in tests.
 	// In practice, setting them globally only makes sense for module development.
-	// In tests, the error handler is wired locally via errorLoggingExporter above.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 	}
 
 	return tp, nil

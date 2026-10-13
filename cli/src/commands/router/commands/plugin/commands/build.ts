@@ -3,7 +3,7 @@ import os from 'node:os';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
-import { ProtoOption } from '@wundergraph/protographic';
+import type { ProtoOption } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {

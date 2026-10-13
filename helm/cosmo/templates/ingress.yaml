@@ -1,4 +1,13 @@
-{{- if .Values.ingress.enabled -}}
+{{- $enabledRoutes := dict -}}
+{{- range $name := list "controlplane" "keycloak" "otelcollector" "graphqlmetrics" "studio" "router" "cdn" -}}
+  {{- $component := index $.Values.global $name -}}
+  {{/* Older releases upgraded with --reuse-values do not have ingress settings. */}}
+  {{- $ingress := $component.ingress | default dict -}}
+  {{- if and $component.enabled (or (not (hasKey $ingress "enabled")) $ingress.enabled) -}}
+    {{- $_ := set $enabledRoutes $name true -}}
+  {{- end -}}
+{{- end -}}
+{{- if and .Values.ingress.enabled (or $enabledRoutes .Values.ingress.defaultBackend) -}}
 {{- $fullName := include "cosmo.fullname" . -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
@@ -48,8 +57,9 @@ spec:
     servicePort: {{ .Values.ingress.defaultBackend.port }}
   {{- end }}
   {{- end }}
+  {{- if $enabledRoutes }}
   rules:
-    {{- if .Values.global.controlplane.enabled }}
+    {{- if hasKey $enabledRoutes "controlplane" }}
     - host: {{ (urlParse .Values.global.controlplane.webUrl).host | quote }}
       http:
         paths:
@@ -62,7 +72,7 @@ spec:
                   number: {{ .Values.global.controlplane.port }}
     {{- end }}
 
-    {{- if .Values.global.keycloak.enabled }}
+    {{- if hasKey $enabledRoutes "keycloak" }}
     - host: {{ (urlParse .Values.global.keycloak.webUrl).host | quote }}
       http:
         paths:
@@ -75,7 +85,7 @@ spec:
                   number: {{ .Values.global.keycloak.port }}
     {{- end }}
 
-    {{- if .Values.global.otelcollector.enabled }}
+    {{- if hasKey $enabledRoutes "otelcollector" }}
     - host: {{ (urlParse .Values.global.otelcollector.webUrl).host | quote }}
       http:
         paths:
@@ -88,7 +98,7 @@ spec:
                   number: {{ .Values.global.otelcollector.port }}
     {{- end }}
 
-    {{- if .Values.global.graphqlmetrics.enabled }}
+    {{- if hasKey $enabledRoutes "graphqlmetrics" }}
     - host: {{ (urlParse .Values.global.graphqlmetrics.webUrl).host | quote }}
       http:
         paths:
@@ -101,7 +111,7 @@ spec:
                   number: {{ .Values.global.graphqlmetrics.port }}
     {{- end }}
 
-    {{- if .Values.global.studio.enabled }}
+    {{- if hasKey $enabledRoutes "studio" }}
     - host: {{ (urlParse .Values.global.studio.webUrl).host | quote }}
       http:
         paths:
@@ -114,7 +124,7 @@ spec:
                   number: {{ .Values.global.studio.port }}
     {{- end }}
 
-    {{- if .Values.global.router.enabled }}
+    {{- if hasKey $enabledRoutes "router" }}
     - host: {{ (urlParse .Values.global.router.webUrl).host | quote }}
       http:
         paths:
@@ -127,7 +137,7 @@ spec:
                   number: {{ .Values.global.router.port }}
     {{- end }}
 
-    {{- if .Values.global.cdn.enabled }}
+    {{- if hasKey $enabledRoutes "cdn" }}
     - host: {{ (urlParse .Values.global.cdn.webUrl).host | quote }}
       http:
         paths:
@@ -140,4 +150,5 @@ spec:
                   number: {{ .Values.global.cdn.port }}
     {{- end }}
 
+{{- end }}
 {{- end }}

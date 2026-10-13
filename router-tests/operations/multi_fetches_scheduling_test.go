@@ -31,14 +31,10 @@ func TestMultiFetch(t *testing.T) {
 	}`
 	const multiFetchExpectedResponse = `{"data":{"products":[{"__typename":"Consultancy","lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"},"isLeadAvailable":false},{"__typename":"Cosmo"},{"__typename":"SDK"}]}}`
 
-	t.Run("merges same-wave entity fetches to the same subgraph when enabled", func(t *testing.T) {
+	t.Run("merges same-wave entity fetches to the same subgraph by default", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.EnableMultiFetch = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: multiFetchQuery})
 			require.JSONEq(t, multiFetchExpectedResponse, res.Body)
 
@@ -51,10 +47,14 @@ func TestMultiFetch(t *testing.T) {
 		})
 	})
 
-	t.Run("sends one request per entity fetch by default", func(t *testing.T) {
+	t.Run("sends one request per entity fetch when disabled", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableMultiFetch = false
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: multiFetchQuery})
 			// Merging must not change the result: same response as the merged case above.
 			require.JSONEq(t, multiFetchExpectedResponse, res.Body)

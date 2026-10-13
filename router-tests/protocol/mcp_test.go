@@ -67,13 +67,13 @@ func TestMCP(t *testing.T) {
 					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "enum": []interface{}{"UpdateMood", "MyEmployees"}, "type": "string"}},
+						Properties: map[string]any{"operationName": map[string]any{"description": "The exact name of the GraphQL operation to retrieve information for.", "enum": []any{"UpdateMood", "MyEmployees"}, "type": "string"}},
 						Required:   []string{"operationName"}},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:          "Get GraphQL Operation Info",
-						ReadOnlyHint:   mcp.ToBoolPtr(true),
-						IdempotentHint: mcp.ToBoolPtr(false),
+						ReadOnlyHint:   new(true),
+						IdempotentHint: new(false),
 					},
 				})
 			})
@@ -101,14 +101,14 @@ func TestMCP(t *testing.T) {
 					Description: "Provides the full GraphQL schema of the API.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{},
+						Properties: map[string]any{},
 						Required:   []string(nil),
 					},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:          "Get GraphQL Schema",
-						ReadOnlyHint:   mcp.ToBoolPtr(true),
-						IdempotentHint: mcp.ToBoolPtr(false),
+						ReadOnlyHint:   new(true),
+						IdempotentHint: new(false),
 					},
 				})
 
@@ -121,12 +121,12 @@ func TestMCP(t *testing.T) {
 					Description: "Executes a GraphQL query or mutation.",
 					InputSchema: mcp.ToolInputSchema{
 						Type: "object",
-						Properties: map[string]interface{}{
-							"query": map[string]interface{}{
+						Properties: map[string]any{
+							"query": map[string]any{
 								"type":        "string",
 								"description": "The GraphQL query or mutation string to execute.",
 							},
-							"variables": map[string]interface{}{
+							"variables": map[string]any{
 								"type":                 "object",
 								"additionalProperties": true,
 								"description":          "The variables to pass to the GraphQL query as a JSON object.",
@@ -137,10 +137,10 @@ func TestMCP(t *testing.T) {
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:           "Execute GraphQL Query",
-						ReadOnlyHint:    mcp.ToBoolPtr(false),
-						DestructiveHint: mcp.ToBoolPtr(true),
-						IdempotentHint:  mcp.ToBoolPtr(false),
-						OpenWorldHint:   mcp.ToBoolPtr(true),
+						ReadOnlyHint:    new(false),
+						DestructiveHint: new(true),
+						IdempotentHint:  new(false),
+						OpenWorldHint:   new(true),
 					},
 				})
 
@@ -166,14 +166,14 @@ func TestMCP(t *testing.T) {
 					Description: "This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "properties": map[string]interface{}{"hasPets": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN", nil}, "type": []interface{}{"string", "null"}}, "nested": map[string]interface{}{"additionalProperties": false, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED", nil}, "type": []interface{}{"string", "null"}}}, "type": []interface{}{"object", "null"}}}, "type": "object"}},
+						Properties: map[string]any{"criteria": map[string]any{"additionalProperties": false, "description": "Allows to filter employees by their details.", "properties": map[string]any{"hasPets": map[string]any{"type": []any{"boolean", "null"}}, "nationality": map[string]any{"enum": []any{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN", nil}, "type": []any{"string", "null"}}, "nested": map[string]any{"additionalProperties": false, "properties": map[string]any{"hasChildren": map[string]any{"type": []any{"boolean", "null"}}, "maritalStatus": map[string]any{"enum": []any{"ENGAGED", "MARRIED", nil}, "type": []any{"string", "null"}}}, "type": []any{"object", "null"}}}, "type": "object"}},
 						Required:   []string(nil)},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:          "Execute operation MyEmployees",
-						ReadOnlyHint:   mcp.ToBoolPtr(true),
-						IdempotentHint: mcp.ToBoolPtr(true),
-						OpenWorldHint:  mcp.ToBoolPtr(true),
+						ReadOnlyHint:   new(true),
+						IdempotentHint: new(true),
+						OpenWorldHint:  new(true),
 					},
 				})
 
@@ -184,12 +184,12 @@ func TestMCP(t *testing.T) {
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_update_mood",
 					Description: "This mutation update the mood of an employee.",
-					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
+					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]any{"employeeID": map[string]any{"type": "integer"}, "mood": map[string]any{"enum": []any{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:          "Execute operation UpdateMood",
-						ReadOnlyHint:   mcp.ToBoolPtr(false),
-						IdempotentHint: mcp.ToBoolPtr(false),
-						OpenWorldHint:  mcp.ToBoolPtr(true),
+						ReadOnlyHint:   new(false),
+						IdempotentHint: new(false),
+						OpenWorldHint:  new(true),
 					},
 				})
 			})
@@ -308,7 +308,7 @@ func TestMCP(t *testing.T) {
 
 					req := mcp.CallToolRequest{}
 					req.Params.Name = "get_operation_info"
-					req.Params.Arguments = map[string]interface{}{
+					req.Params.Arguments = map[string]any{
 						"operationName": "MyEmployees",
 					}
 
@@ -379,8 +379,8 @@ Important Notes:
 
 						req := mcp.CallToolRequest{}
 						req.Params.Name = "execute_operation_my_employees"
-						req.Params.Arguments = map[string]interface{}{
-							"criteria": map[string]interface{}{},
+						req.Params.Arguments = map[string]any{
+							"criteria": map[string]any{},
 						}
 
 						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
@@ -408,7 +408,7 @@ Important Notes:
 
 						req := mcp.CallToolRequest{}
 						req.Params.Name = "execute_operation_my_employees"
-						req.Params.Arguments = map[string]interface{}{
+						req.Params.Arguments = map[string]any{
 							"criteria": nil,
 						}
 
@@ -436,7 +436,7 @@ Important Notes:
 
 						req := mcp.CallToolRequest{}
 						req.Params.Name = "execute_operation_update_mood"
-						req.Params.Arguments = map[string]interface{}{
+						req.Params.Arguments = map[string]any{
 							"employeeID": 1,
 							"mood":       "HAPPY",
 						}
@@ -468,7 +468,7 @@ Important Notes:
 
 						req := mcp.CallToolRequest{}
 						req.Params.Name = "execute_graphql"
-						req.Params.Arguments = map[string]interface{}{
+						req.Params.Arguments = map[string]any{
 							"query": `
 							query {
 							  employees {
@@ -781,11 +781,11 @@ Important Notes:
 				mcpAddr := xEnv.GetMCPServerAddr()
 
 				// Create a POST request with MCP payload
-				mcpRequest := map[string]interface{}{
+				mcpRequest := map[string]any{
 					"jsonrpc": "2.0",
 					"id":      1,
 					"method":  "tools/list",
-					"params":  map[string]interface{}{},
+					"params":  map[string]any{},
 				}
 
 				requestBody, err := json.Marshal(mcpRequest)
@@ -1236,14 +1236,14 @@ input UserInput {
 
 				// Make a direct HTTP POST request with custom headers
 				// This simulates a real MCP client sending custom headers on tool calls
-				mcpRequest := map[string]interface{}{
+				mcpRequest := map[string]any{
 					"jsonrpc": "2.0",
 					"id":      1,
 					"method":  "tools/call",
-					"params": map[string]interface{}{
+					"params": map[string]any{
 						"name": "execute_operation_my_employees",
-						"arguments": map[string]interface{}{
-							"criteria": map[string]interface{}{},
+						"arguments": map[string]any{
+							"criteria": map[string]any{},
 						},
 					},
 				}
@@ -1346,14 +1346,14 @@ input UserInput {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				mcpAddr := xEnv.GetMCPServerAddr()
 
-				mcpRequest := map[string]interface{}{
+				mcpRequest := map[string]any{
 					"jsonrpc": "2.0",
 					"id":      1,
 					"method":  "tools/call",
-					"params": map[string]interface{}{
+					"params": map[string]any{
 						"name": "execute_operation_my_employees",
-						"arguments": map[string]interface{}{
-							"criteria": map[string]interface{}{},
+						"arguments": map[string]any{
+							"criteria": map[string]any{},
 						},
 					},
 				}
@@ -1433,13 +1433,13 @@ input UserInput {
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					mcpAddr := xEnv.GetMCPServerAddr()
 
-					mcpRequest := map[string]interface{}{
+					mcpRequest := map[string]any{
 						"jsonrpc": "2.0",
 						"id":      1,
 						"method":  "tools/call",
-						"params": map[string]interface{}{
+						"params": map[string]any{
 							"name":      "execute_operation_my_employees",
-							"arguments": map[string]interface{}{},
+							"arguments": map[string]any{},
 						},
 					}
 

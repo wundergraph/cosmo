@@ -61,6 +61,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -104,6 +105,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -178,6 +180,9 @@
     "Enabled": true,
     "AllowOrigins": [
       "*"
+    ],
+    "MatchOrigins": [
+      "^https://([a-z0-9-]+\\.)*example\\.com$"
     ],
     "AllowMethods": [
       "HEAD",
@@ -291,7 +296,8 @@
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
@@ -732,7 +738,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
@@ -773,7 +780,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "ExcludeSubscriptions": true
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {
@@ -862,6 +870,49 @@
     "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
+  },
+  "ResponseCache": {
+    "Enabled": true,
+    "KeyPrefix": "response_cache_test:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "my_redis",
+      "MaxEntries": 2048
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": false,
+      "Type": true,
+      "Endpoint": {
+        "Enabled": true,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
+      }
+    },
+    "TagHeader": {
+      "Enabled": true,
+      "Name": "Surrogate-Key",
+      "Delimiter": " ",
+      "MaxBytes": 1024
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": "request.auth.claims.sub"
+    },
+    "Subgraphs": {
+      "inventory": {
+        "Enabled": false,
+        "FallbackTTL": 0,
+        "PrivateID": ""
+      },
+      "products": {
+        "Enabled": true,
+        "FallbackTTL": 300000000000,
+        "PrivateID": "request.header.Get('X-User-Id')"
+      }
+    }
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -987,9 +1038,11 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
-    "EnableMultiFetch": false,
-    "EnableScheduleFetches": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -1017,6 +1070,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [

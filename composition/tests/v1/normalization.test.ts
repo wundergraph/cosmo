@@ -777,41 +777,43 @@ describe('Normalization tests', () => {
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
     expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          KEY_DIRECTIVE +
-          TAG_DIRECTIVE +
-          `
-      type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }") {
-        createdBy: User
-        dimensions: ProductDimension
-        id: ID! @tag(name: "hi-from-products")
-        package: String
-        sku: String @tag(name: "hi-from-products")
-        variation: ProductVariation
-      }
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
 
-      type ProductDimension {
-        size: String
-        weight: Float
-      }
-      
-      type ProductVariation {
-        id: ID!
-      }
+        ${KEY_DIRECTIVE}
 
-      type Query {
-        allProducts: [Product]
-        product(id: ID!): Product
-      }
-      
-      type User @key(fields: "email") {
-        email: ID!
-        totalProductsCreated: Int
-      }
-      ` +
-          OPENFED_FIELD_SET,
-      ),
+        ${TAG_DIRECTIVE}
+
+        type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }") {
+          createdBy: User
+          dimensions: ProductDimension
+          id: ID! @tag(name: "hi-from-products")
+          package: String
+          sku: String @tag(name: "hi-from-products")
+          variation: ProductVariation
+        }
+
+        type ProductDimension {
+          size: String
+          weight: Float
+        }
+
+        type ProductVariation {
+          id: ID!
+        }
+
+        type Query {
+          allProducts: [Product]
+          product(id: ID!): Product
+        }
+
+        type User @key(fields: "email") {
+          email: ID!
+          totalProductsCreated: Int
+        }
+
+        ${OPENFED_FIELD_SET}
+      `),
     );
   });
 
@@ -821,72 +823,78 @@ describe('Normalization tests', () => {
     });
     const { schema } = normalizeSubgraphSuccess(createSubgraph('subgraph', sdl), ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          `directive @hello on FIELD_DEFINITION` +
-          KEY_DIRECTIVE +
-          `directive @myDirective(a: String!) on FIELD_DEFINITION` +
-          SHAREABLE_DIRECTIVE +
-          TAG_DIRECTIVE +
-          `
-      type Product implements ProductItf & SkuItf 
-        @key(fields: "id") 
-        @key(fields: "sku package") 
-        @key(fields: "sku variation { id }") {
-        createdBy: User
-        dimensions: ProductDimension
-        hidden: String
-        id: ID! @tag(name: "hi-from-products")
-        name: String @hello
-        oldField: String
-        package: String
-        reviewsScore: Float! @shareable
-        sku: String
-        variation: ProductVariation
-      }
-      
-      type ProductDimension {
-        size: String @shareable
-        weight: Float @shareable
-      }
-      
-      interface ProductItf implements SkuItf {
-        createdBy: User
-        dimensions: ProductDimension
-        hidden: String
-        id: ID!
-        name: String
-        oldField: String @deprecated(reason: "refactored out")
-        package: String
-        sku: String
-        variation: ProductVariation
-      }
-      
-      type ProductVariation {
-        id: ID!
-        name: String
-      }
-      
-      type Query {
-        allProducts: [ProductItf]
-        product(id: ID!): ProductItf
-      }
-      
-      enum ShippingClass {
-        EXPRESS
-        STANDARD
-      }
-      
-      interface SkuItf {
-        sku: String
-      }
-      
-      type User @key(fields: "email") {
-        email: ID!
-        totalProductsCreated: Int @shareable
-      }` +
-          OPENFED_FIELD_SET,
-      ),
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        directive @hello on FIELD_DEFINITION
+
+        ${KEY_DIRECTIVE}
+
+        directive @myDirective(a: String!) on FIELD_DEFINITION
+
+        ${SHAREABLE_DIRECTIVE}
+
+        ${TAG_DIRECTIVE}
+
+        type Product implements ProductItf & SkuItf
+          @key(fields: "id")
+          @key(fields: "sku package")
+          @key(fields: "sku variation { id }") {
+          createdBy: User
+          dimensions: ProductDimension
+          hidden: String
+          id: ID! @tag(name: "hi-from-products")
+          name: String @hello
+          oldField: String
+          package: String
+          reviewsScore: Float! @shareable
+          sku: String
+          variation: ProductVariation
+        }
+
+        type ProductDimension {
+          size: String @shareable
+          weight: Float @shareable
+        }
+
+        interface ProductItf implements SkuItf {
+          createdBy: User
+          dimensions: ProductDimension
+          hidden: String
+          id: ID!
+          name: String
+          oldField: String @deprecated(reason: "refactored out")
+          package: String
+          sku: String
+          variation: ProductVariation
+        }
+
+        type ProductVariation {
+          id: ID!
+          name: String
+        }
+
+        type Query {
+          allProducts: [ProductItf]
+          product(id: ID!): ProductItf
+        }
+
+        enum ShippingClass {
+          EXPRESS
+          STANDARD
+        }
+
+        interface SkuItf {
+          sku: String
+        }
+
+        type User @key(fields: "email") {
+          email: ID!
+          totalProductsCreated: Int @shareable
+        }
+
+        ${OPENFED_FIELD_SET}
+      `),
     );
   });
 

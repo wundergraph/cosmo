@@ -5,6 +5,10 @@ export const AUTHENTICATED_DIRECTIVE = `
   directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 `;
 
+export const CACHE_TAG_DIRECTIVE = `
+  directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
+`;
+
 export const CONFIGURE_DESCRIPTION_DIRECTIVE = `
   directive @openfed__configureDescription(descriptionOverride: String, propagate: Boolean! = true) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
 `;
@@ -12,6 +16,12 @@ export const CONFIGURE_DESCRIPTION_DIRECTIVE = `
 export const CONNECT_FIELD_RESOLVER_DIRECTIVE = `
   directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
 `;
+
+export const CONTEXT_DIRECTIVE = `
+  directive @context(name: String!) repeatable on INTERFACE | OBJECT | UNION
+`;
+
+export const CONTEXT_FIELD_VALUE_SCALAR = `  scalar ContextFieldValue`;
 
 export const COST_DIRECTIVE = `
   directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
@@ -49,6 +59,10 @@ export const EXTENDS_DIRECTIVE = `
 
 export const EXTERNAL_DIRECTIVE = `
   directive @external on FIELD_DEFINITION | OBJECT
+`;
+
+export const FROM_CONTEXT_DIRECTIVE = `
+  directive @fromContext(field: ContextFieldValue) on ARGUMENT_DEFINITION
 `;
 
 export const INACCESSIBLE_DIRECTIVE = `
@@ -104,6 +118,14 @@ export const ONE_OF_DIRECTIVE = `
   directive @oneOf on INPUT_OBJECT
 `;
 
+export const OVERRIDE_DIRECTIVE = `
+  directive @override(from: String!, label: String) on FIELD_DEFINITION
+`;
+
+export const POLICY_DIRECTIVE = `
+  directive @policy(policies: [[federation__Policy!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+`;
+
 export const REQUIRES_DIRECTIVE = `
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
 `;
@@ -121,45 +143,6 @@ export const SUBSCRIPTION_FILTER_DIRECTIVE = `
 `;
 
 export const TAG_DIRECTIVE = `
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
-// The V1 definitions that are required during normalization
-export const versionOneBaseSchema = `
-  directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @specifiedBy(url: String!) on SCALAR
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-  scalar openfed__FieldSet
-`;
-
-export const baseDirectiveDefinitions = `
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
-export const versionTwoDirectiveDefinitions = `
-  directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @composeDirective(name: String!) repeatable on SCHEMA
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @interfaceObject on OBJECT
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @override(from: String!) on FIELD_DEFINITION
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @shareable repeatable on FIELD_DEFINITION | OBJECT
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 

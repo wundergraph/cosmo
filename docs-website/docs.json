@@ -167,6 +167,16 @@
                 ]
               },
               {
+                "group": "Defer",
+                "icon": "forward-step",
+                "pages": [
+                  "router/defer",
+                  "router/defer/usage",
+                  "router/defer/how-it-works",
+                  "router/defer/when-to-use"
+                ]
+              },
+              {
                 "group": "Persisted Queries",
                 "icon": "cloud-binary",
                 "pages": [
@@ -243,6 +253,7 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
+              "router/response-cache",
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",
@@ -327,7 +338,8 @@
                 "pages": [
                   "studio/playground",
                   "studio/playground/custom-scripts",
-                  "studio/playground/shared-playground-state"
+                  "studio/playground/shared-playground-state",
+                  "studio/playground/default-headers"
                 ]
               },
               "studio/studio",
@@ -414,6 +426,7 @@
                   "federation/directives/authenticated",
                   "federation/directives/composeddirective",
                   "federation/directives/connect__fieldresolver",
+                  "federation/directives/defer",
                   "federation/directives/deprecated",
                   "federation/directives/external",
                   "federation/directives/key",
@@ -672,7 +685,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/status"]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status", "cli/proposal/status"]
               }
             ]
           }

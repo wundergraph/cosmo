@@ -18,7 +18,7 @@ runs:
     - name: Run staticcheck linter
       uses: dominikh/staticcheck-action@v1.3.1
       with:
-        version: 2025.1.1
+        version: 2026.2.1
         install-go: false
         working-directory: ${{ inputs.working-directory }}
 
@@ -30,5 +30,10 @@ runs:
           echo "$files"
           exit 1
         fi
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Check go fix
+      run: go fix -diff ./...
       shell: bash
       working-directory: ${{ inputs.working-directory }}

@@ -3,6 +3,7 @@ package operationstorage
 import (
 	"fmt"
 	"github.com/dgraph-io/ristretto/v2"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -42,7 +43,7 @@ func NewOperationsCache(cacheSize int64) (*OperationsCache, error) {
 }
 
 func (c *OperationsCache) key(clientName string, operationHash string) string {
-	return clientName + operationHash
+	return strconv.Itoa(len(clientName)) + ":" + clientName + operationHash
 }
 
 func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
@@ -54,11 +55,10 @@ func (c *OperationsCache) Get(clientName string, operationHash string) []byte {
 	return item
 }
 
-func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl int) {
+func (c *OperationsCache) Set(clientName, operationHash string, operationBody []byte, ttl time.Duration) {
 	if ttl > 0 {
-		ttlD := time.Duration(float64(ttl)) * time.Second
 		c.cacheLock.Lock()
-		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttlD)
+		c.Cache.SetWithTTL(c.key(clientName, operationHash), operationBody, int64(len(operationBody)), ttl)
 		c.cacheLock.Unlock()
 		return
 	}

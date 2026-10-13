@@ -24,27 +24,27 @@ func NewPluginLogger(logger *zap.Logger) *PluginLogger {
 
 // Trace logs a message at the trace level. In this implementation,
 // trace maps to the zap debug level since zap doesn't have a trace level.
-func (p *PluginLogger) Trace(msg string, args ...interface{}) {
+func (p *PluginLogger) Trace(msg string, args ...any) {
 	p.Logger.Debug(msg, argsToFields(args)...)
 }
 
 // Debug logs a message at the debug level.
-func (p *PluginLogger) Debug(msg string, args ...interface{}) {
+func (p *PluginLogger) Debug(msg string, args ...any) {
 	p.Logger.Debug(msg, argsToFields(args)...)
 }
 
 // Warn logs a message at the warn level.
-func (p *PluginLogger) Warn(msg string, args ...interface{}) {
+func (p *PluginLogger) Warn(msg string, args ...any) {
 	p.Logger.Warn(msg, argsToFields(args)...)
 }
 
 // Error logs a message at the error level.
-func (p *PluginLogger) Error(msg string, args ...interface{}) {
+func (p *PluginLogger) Error(msg string, args ...any) {
 	p.Logger.Error(msg, argsToFields(args)...)
 }
 
 // Info logs a message at the info level.
-func (p *PluginLogger) Info(msg string, args ...interface{}) {
+func (p *PluginLogger) Info(msg string, args ...any) {
 	p.Logger.Info(msg, argsToFields(args)...)
 }
 
@@ -54,7 +54,7 @@ func (p *PluginLogger) GetLevel() hclog.Level {
 }
 
 // ImpliedArgs returns the logger's implied args, which aren't used in this implementation.
-func (p *PluginLogger) ImpliedArgs() []interface{} {
+func (p *PluginLogger) ImpliedArgs() []any {
 	return nil
 }
 
@@ -85,7 +85,7 @@ func (p *PluginLogger) IsWarn() bool {
 }
 
 // Log logs a message at the specified level.
-func (p *PluginLogger) Log(level hclog.Level, msg string, args ...interface{}) {
+func (p *PluginLogger) Log(level hclog.Level, msg string, args ...any) {
 	p.Logger.Log(zapcore.Level(level), msg)
 }
 
@@ -121,13 +121,13 @@ func (p *PluginLogger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writ
 }
 
 // With returns a new logger with the specified key-value pairs added as context.
-func (p *PluginLogger) With(args ...interface{}) hclog.Logger {
+func (p *PluginLogger) With(args ...any) hclog.Logger {
 	return &PluginLogger{Logger: p.Logger.With(argsToFields(args)...)}
 }
 
 // argsToFields converts hclog-style args (alternating key/value pairs)
 // to zap.Field objects for use with zap logger methods.
-func argsToFields(args []interface{}) []zap.Field {
+func argsToFields(args []any) []zap.Field {
 	fields := make([]zap.Field, 0, len(args))
 	for i := 0; i < len(args); i += 2 {
 		fields = append(fields, zap.Any(args[i].(string), args[i+1]))

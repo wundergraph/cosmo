@@ -9,6 +9,9 @@ import (
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/internal/prompttoquery"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
@@ -159,6 +162,26 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		options = append(options, WithSelfRegistration(selfRegister))
 	}
 
+	if cfg.MCP.Enabled && cfg.Graph.Token != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(cfg.Graph.Token)
+		if err != nil {
+			return nil, fmt.Errorf("could not inspect graph token features: %w", err)
+		}
+
+		if claims.HasFeature(rjwt.FeaturePromptToQuery) {
+			controlplaneTransport, err := controlplane.NewTransport(cfg.Graph.Token, logger)
+			if err != nil {
+				return nil, fmt.Errorf("could not create controlplane transport: %w", err)
+			}
+
+			promptToQueryClient, err := prompttoquery.New(cfg.ControlplaneURL, controlplaneTransport)
+			if err != nil {
+				return nil, fmt.Errorf("could not create prompt-to-query client: %w", err)
+			}
+			options = append(options, WithPromptToQueryClient(promptToQueryClient))
+		}
+	}
+
 	if opt := optionFromExecutionConfig(&cfg.ExecutionConfig, cfg.RouterConfigPath); opt != nil {
 		options = append(options, opt)
 	} else {
@@ -260,6 +283,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
 			AllowOrigins:     config.CORS.AllowOrigins,
+			MatchOrigins:     config.CORS.MatchOrigins,
 			AllowMethods:     config.CORS.AllowMethods,
 			AllowCredentials: config.CORS.AllowCredentials,
 			AllowHeaders:     config.CORS.AllowHeaders,
@@ -285,6 +309,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithRateLimitConfig(&config.RateLimit),
 		WithClientHeader(config.ClientHeader),
 		WithCacheWarmupConfig(&config.CacheWarmup),
+		WithResponseCache(&config.ResponseCache),
 		WithMCP(config.MCP),
 		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),
@@ -353,9 +378,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 	}
 
 	opts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                 "jwks",
-		HeaderSourcePrefixes: headerSourceMap,
-		TokenDecoder:         tokenDecoder,
+		Name:                     "jwks",
+		HeaderSourcePrefixes:     headerSourceMap,
+		TokenDecoder:             tokenDecoder,
+		IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 	}
 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
@@ -373,9 +399,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 		}
 
 		opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
-			TokenDecoder:        tokenDecoder,
-			Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
-			HeaderValuePrefixes: headerPrefixes,
+			TokenDecoder:             tokenDecoder,
+			Key:                      cfg.WebSocket.Authentication.FromInitialPayload.Key,
+			HeaderValuePrefixes:      headerPrefixes,
+			IgnoreInvalidCredentials: jwtConf.OnError == config.JWTOnErrorContinue,
 		}
 		authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 		if err != nil {

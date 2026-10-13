@@ -2213,6 +2213,7 @@ enum Feature {
   rbac = 0;
   ai = 1;
   scim = 2;
+  promptToQuery = 3;
 }
 
 message UpdateFeatureSettingsRequest {
@@ -2221,6 +2222,14 @@ message UpdateFeatureSettingsRequest {
 }
 
 message UpdateFeatureSettingsResponse {
+  Response response = 1;
+}
+
+message AcceptFeatureTermsRequest {
+  optional Feature featureId = 1;
+}
+
+message AcceptFeatureTermsResponse {
   Response response = 1;
 }
 
@@ -2652,6 +2661,7 @@ message FeatureFlag {
   string created_by = 6;
   string created_at = 7;
   string updated_at = 8;
+  optional bool has_failed_latest_composition = 9;
 }
 
 message GetFeatureFlagsRequest {
@@ -2836,6 +2846,47 @@ message PlaygroundScript {
 message GetPlaygroundScriptsResponse {
   Response response = 1;
   repeated PlaygroundScript scripts = 2;
+}
+
+message PlaygroundHeader {
+  string key = 1;
+  string value = 2;
+}
+
+message PlaygroundHeaderList {
+  repeated PlaygroundHeader headers = 1;
+}
+
+message GetPlaygroundDefaultHeadersRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetPlaygroundDefaultHeadersResponse {
+  Response response = 1;
+  repeated PlaygroundHeader graphHeaders = 2;
+  repeated PlaygroundHeader personalHeaders = 3;
+  bool canEditGraphHeaders = 4;
+}
+
+message UpdatePlaygroundDefaultHeadersRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  // Each scope is three-state. These are wrapped messages rather than plain
+  // `repeated` fields because proto3 repeated has no presence, so an omitted
+  // list and an empty one would be identical on the wire - and both meanings
+  // are needed here:
+  //   omitted            -> leave that scope's stored headers unchanged
+  //   present, empty     -> clear that scope, deleting its row
+  //   present, non-empty -> replace that scope's headers with these
+  // A caller without permission for a scope omits it; sending it is rejected
+  // rather than silently ignored.
+  PlaygroundHeaderList graphHeaders = 3;
+  PlaygroundHeaderList personalHeaders = 4;
+}
+
+message UpdatePlaygroundDefaultHeadersResponse {
+  Response response = 1;
 }
 
 message GetFederatedGraphByIdRequest {
@@ -3524,6 +3575,10 @@ service PlatformService {
   rpc UpdatePlaygroundScript(UpdatePlaygroundScriptRequest) returns (UpdatePlaygroundScriptResponse) {}
   rpc GetPlaygroundScripts(GetPlaygroundScriptsRequest) returns (GetPlaygroundScriptsResponse) {}
 
+  // Playground default headers
+  rpc GetPlaygroundDefaultHeaders(GetPlaygroundDefaultHeadersRequest) returns (GetPlaygroundDefaultHeadersResponse) {}
+  rpc UpdatePlaygroundDefaultHeaders(UpdatePlaygroundDefaultHeadersRequest) returns (UpdatePlaygroundDefaultHeadersResponse) {}
+
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
   rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}
@@ -3773,8 +3828,10 @@ service PlatformService {
   rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
   // GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
-  // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+  // UpdateFeatureSettings updates the settings of features of the organization
   rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
+  // AcceptFeatureTerms accepts the terms for an organization feature
+  rpc AcceptFeatureTerms(AcceptFeatureTermsRequest) returns (AcceptFeatureTermsResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph

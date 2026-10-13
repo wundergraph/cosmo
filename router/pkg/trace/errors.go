@@ -24,21 +24,13 @@ func hasInvalidUTF8Error(err error) bool {
 	return false
 }
 
-func errHandler(config *ProviderConfig) func(err error) {
-	return newOtelErrorHandler(config.Logger)
-}
-
-// NewOtelErrorHandler returns a function that handles OTel export errors by
-// logging them. Invalid UTF-8 errors include a hint about the sanitize_utf8 config.
+// NewOtelErrorHandler returns a function that handles OTEL export errors by
+// logging them. Invalid UTF-8 errors include a hint about sanitizing trace attributes.
 func NewOtelErrorHandler(logger *zap.Logger) func(error) {
-	return newOtelErrorHandler(logger)
-}
-
-func newOtelErrorHandler(logger *zap.Logger) func(error) {
 	return func(err error) {
 		if hasInvalidUTF8Error(err) {
 			logger.Error(
-				"otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.",
+				"otel error: string field contains invalid UTF-8. Ensure telemetry attributes are valid UTF-8; for trace attributes, enable 'telemetry.tracing.sanitize_utf8.enabled' in your config.",
 				zap.Error(err))
 			return
 		}
