@@ -1,4 +1,4 @@
-ARG KEYCLOAK_VERSION=26.7.2
+ARG KEYCLOAK_VERSION=26.7.5
 
 FROM --platform=${BUILDPLATFORM} timbru31/java-node:17-jdk-22 AS themebuilder
 

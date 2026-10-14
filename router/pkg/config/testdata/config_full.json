@@ -285,6 +285,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
@@ -655,8 +656,9 @@
   "LogLevel": "info",
   "JSONLog": true,
   "LogServiceName": "my-custom-router",
-  "ShutdownDelay": 15000000000,
+  "ShutdownDelay": 30000000000,
   "GracePeriod": 20000000000,
+  "DrainPeriod": 5000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
