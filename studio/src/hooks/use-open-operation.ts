@@ -7,7 +7,6 @@ import { useGraphCollectionsContext } from '@/components/playground/graph-collec
 import { reportFailure } from '@/lib/graph-collections';
 import { useGraphCollections } from '@/hooks/use-graph-collections';
 
-/** What we are waiting to place into a freshly opened tab. */
 type PendingOpen = {
   operationId: string;
   collectionId: string;
@@ -18,51 +17,31 @@ type PendingOpen = {
   targetTabId?: string;
 };
 
+type OpenRequest = {
+  id: string;
+  collectionId: string;
+  /** Refill this tab instead of creating one. Set when healing an empty tab. */
+  intoTabId?: string;
+};
+
 /**
- * Opens a saved operation into a GraphiQL tab.
- *
- * Opening is three beats rather than one, because GraphiQL's tab API gives us
- * no way to create a tab with contents:
- *
- *   1. Fetch the body. The list response carries metadata only, so the query
- *      text does not exist on the client until now.
- *   2. Ask GraphiQL for a tab. `addTab()` takes no arguments and the new tab's
- *      id is only knowable after it re-renders.
- *   3. Once that tab is active and the editors exist, write the contents and
- *      record the binding.
- *
- * Must be called from inside GraphiQL's provider tree, since it uses the
- * editor and tab APIs.
+ * Three beats, because GraphiQL cannot create a tab with contents: fetch the
+ * body, ask for a tab, fill it once that tab is active and the editors exist.
  */
-export const useOpenOperation = ({
-  onOperationMissing,
-}: {
-  /** Called when the fetch fails, so the caller can refresh a stale list. */
-  onOperationMissing: () => void;
-}) => {
+export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: () => void }) => {
   const { bindTabTo, findTabFor, bindingFor } = useGraphCollectionsContext();
-  /** Tabs we have already tried to refill, so a failed fetch cannot loop. */
   const refillAttempted = useRef<Set<string>>(new Set());
   const { federatedGraphId } = useGraphCollections();
   const { tabs, activeTabIndex, addTab, changeTab, queryEditor, variableEditor, updateActiveTabValues } =
     useEditorContext({ nonNull: true });
 
-  const [openingOperation, setOpeningOperation] = useState<{
-    id: string;
-    collectionId: string;
-    /** Refill this tab instead of creating one. Set when healing an empty tab. */
-    intoTabId?: string;
-  } | null>(null);
+  const [openingOperation, setOpeningOperation] = useState<OpenRequest | null>(null);
   const [pendingOpen, setPendingOpen] = useState<PendingOpen | null>(null);
 
-  /**
-   * An open requested before the query editor existed. See `openOperation`.
-   */
   const [deferredOpen, setDeferredOpen] = useState<{ operationId: string; collectionId: string } | null>(null);
 
-  // Never cached: the response carries the `contentHash` that becomes this
-  // tab's save precondition, and a stale one fails the first save as a
-  // conflict for no visible reason.
+  // Never cached: the response carries the `contentHash` used as the save
+  // precondition, and a stale one fails the next save as a phantom conflict.
   const { data: fetchedOperation, isError } = useQuery(
     getGraphCollectionOperation,
     { id: openingOperation?.id ?? '', federatedGraphId, collectionId: openingOperation?.collectionId ?? '' },
@@ -70,17 +49,12 @@ export const useOpenOperation = ({
   );
 
   // `setOpeningOperation(null)` only lands on the next render, so without this
-  // a re-run in between calls `addTab()` again and leaves a blank tab behind.
-  const openHandled = useRef<string | null>(null);
+  // a re-run calls `addTab()` again. Keyed on the object, not the id: an id
+  // would block reopening the same operation after its tab was closed.
+  const openHandled = useRef<OpenRequest | null>(null);
 
-  /**
-   * Refills a bound tab that has lost its document.
-   *
-   * GraphiQL can blank a tab behind our backs: its editor auto-save writes
-   * whatever the editor held into whichever tab is active 100ms later. We
-   * cannot prevent it, nor repair a tab in the background - `updateActiveTabValues`
-   * only writes to the active one - but we can restore it once it is activated.
-   */
+  // Refills a tab GraphiQL blanked: its auto-save writes whatever the editor
+  // held into whichever tab is active 100ms later. Only repairable on activation.
   useEffect(() => {
     const active = tabs[activeTabIndex];
 
@@ -108,7 +82,7 @@ export const useOpenOperation = ({
       return;
     }
 
-    if (openHandled.current === openingOperation.id) {
+    if (openHandled.current === openingOperation) {
       return;
     }
 
@@ -129,7 +103,7 @@ export const useOpenOperation = ({
       contentHash: operation.contentHash,
       targetTabId: openingOperation.intoTabId,
     });
-    openHandled.current = operation.id;
+    openHandled.current = openingOperation;
     setOpeningOperation(null);
 
     if (!openingOperation.intoTabId) {
@@ -148,15 +122,13 @@ export const useOpenOperation = ({
 
   // Beat three: fill the tab that is now active and bind it.
   useEffect(() => {
-    // Waits for the editors as well as the tab: on a cold load they mount after
-    // the collections query resolves, and writing with `?.` would skip silently
-    // and then clear pendingOpen, leaving a tab that never gets its operation.
+    // Waits for the editors too: on a cold load they mount late, and writing
+    // with `?.` would skip silently and leave a tab with no operation.
     if (!pendingOpen || !activeTabId || !queryEditor || !variableEditor) {
       return;
     }
 
-    // When refilling, only write once that tab is the active one, since
-    // `updateActiveTabValues` always targets whichever tab is active.
+    // `updateActiveTabValues` always targets the active tab, so refills wait.
     if (pendingOpen.targetTabId && pendingOpen.targetTabId !== activeTabId) {
       const index = tabs.findIndex((tab) => tab.id === pendingOpen.targetTabId);
 
@@ -169,9 +141,8 @@ export const useOpenOperation = ({
       return;
     }
 
-    // Record first: GraphiQL restores a tab's *stored* values on every sync, so
-    // setting only the editor is undone the moment anything re-syncs. The
-    // setValue calls below just make it visible before the next sync.
+    // Record first: GraphiQL restores a tab's *stored* values on every sync,
+    // so setting only the editor is undone. setValue just shows it sooner.
     updateActiveTabValues({ query: pendingOpen.query, variables: pendingOpen.variables ?? '' });
 
     queryEditor.setValue(pendingOpen.query);
@@ -198,12 +169,6 @@ export const useOpenOperation = ({
     updateActiveTabValues,
   ]);
 
-  /**
-   * Focuses the tab already editing this operation, or starts the open above.
-   *
-   * Reusing the tab is what stops repeated clicks producing several tabs that
-   * each claim the operation, with competing save preconditions.
-   */
   const openOperationNow = useCallback(
     (operationId: string, collectionId: string) => {
       const existingTabId = findTabFor(operationId);
@@ -211,8 +176,7 @@ export const useOpenOperation = ({
       if (existingTabId) {
         const index = tabs.findIndex((tab) => tab.id === existingTabId);
         if (index !== -1) {
-          // Blanked by the auto-save described above. Without this the binding
-          // sends every later open back to that same empty tab, permanently.
+          // Blanked as described above; without this every later open returns here.
           if (!(tabs[index].query ?? '').trim()) {
             changeTab(index);
             setOpeningOperation({ id: operationId, collectionId, intoTabId: existingTabId });
@@ -224,8 +188,8 @@ export const useOpenOperation = ({
         }
       }
 
-      // Same object for a repeated request: a new identity re-runs beat two,
-      // which calls `addTab()` again. The deep-link effect does fire twice.
+      // Same object for a repeated request: a new identity re-runs beat two
+      // and calls `addTab()` again. The deep-link effect does fire twice.
       setOpeningOperation((current) =>
         current && current.id === operationId && current.collectionId === collectionId
           ? current
@@ -235,17 +199,10 @@ export const useOpenOperation = ({
     [findTabFor, tabs, changeTab],
   );
 
-  /**
-   * Switching tabs before the query editor exists corrupts the tab we switch
-   * to. GraphiQL initialises a late-mounting editor with the document of
-   * whichever tab was active when the provider first rendered, then writes that
-   * document into whatever tab is active by the time it mounts - so a deep link
-   * that switches first makes the editor stamp the previous tab's operation
-   * onto the one it opened. Covered by `graphiql-tab-clobber.test.tsx`.
-   *
-   * On a cold load the editors mount after the collections query resolves, so
-   * this is the common path for a shared link, not an edge case.
-   */
+  // Never switch tabs before the editor exists: GraphiQL initialises a
+  // late-mounting editor with the tab that was active at first render, then
+  // writes it into whatever tab is active by then - stamping the old
+  // operation onto the one just opened.
   const openOperation = useCallback(
     (operationId: string, collectionId: string) => {
       if (!queryEditor) {
