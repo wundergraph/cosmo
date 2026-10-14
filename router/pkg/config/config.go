@@ -1303,6 +1303,17 @@ type SplitConfigPollerRules struct {
 	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
 	// Listed flags are not fetched even when present in the mapper.
 	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+	// FetchRetry controls how a file is fetched again when the CDN response body is truncated.
+	FetchRetry SplitConfigFetchRetry `yaml:"fetch_retry,omitempty" envPrefix:"FETCH_RETRY_"`
+}
+
+type SplitConfigFetchRetry struct {
+	// MaxAttempts is the total number of fetches for a single file, including the first one.
+	MaxAttempts int `yaml:"max_attempts" envDefault:"3" env:"MAX_ATTEMPTS"`
+	// Interval is the base step of the exponential backoff with jitter between attempts.
+	Interval time.Duration `yaml:"interval" envDefault:"100ms" env:"INTERVAL"`
+	// MaxDuration caps the wait between two attempts.
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"2s" env:"MAX_DURATION"`
 }
 
 type ExecutionConfig struct {

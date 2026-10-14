@@ -1610,6 +1610,10 @@ split_config_poller:
   ignored_feature_flags:
     - "experimental-checkout"
     - "ab-test-foo"
+  fetch_retry:
+    max_attempts: 3
+    interval: 100ms
+    max_duration: 2s
 ```
 
 ### Split config poller options
@@ -1618,6 +1622,9 @@ split_config_poller:
 | ------------------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | SPLIT_CONFIG_POLLER_SKIP_MISSING_FEATURE_FLAGS    | split_config_poller.skip_missing_feature_flags      | <Icon icon="square" /> | Keep polling alive when a feature flag listed in the mapper cannot be fetched (responds with `file not found`). When false, a single missing feature flag aborts the poll cycle.                     | false         |
 | SPLIT_CONFIG_POLLER_IGNORED_FEATURE_FLAGS         | split_config_poller.ignored_feature_flags           | <Icon icon="square" /> | Feature flag names to skip entirely during polling. Listed flags are not fetched even when present in the mapper, and are absent from the assembled execution config.                                | []            |
+| SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_ATTEMPTS      | split_config_poller.fetch_retry.max_attempts        | <Icon icon="square" /> | Total number of fetches for a single file when the CDN response body is truncated (unexpected EOF), including the first one. Set to `1` to disable retries.                                          | 3             |
+| SPLIT_CONFIG_POLLER_FETCH_RETRY_INTERVAL          | split_config_poller.fetch_retry.interval            | <Icon icon="square" /> | Base interval of the exponential backoff with jitter. The wait before the nth retry is a random value between 0 and `interval * 2^(n-1)`, capped by `max_duration`.                                  | 100ms         |
+| SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_DURATION      | split_config_poller.fetch_retry.max_duration        | <Icon icon="square" /> | Maximum wait between two attempts.                                                                                                                                                                   | 2s            |
 
 ## Traffic Shaping
 

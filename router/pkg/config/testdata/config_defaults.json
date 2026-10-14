@@ -677,7 +677,12 @@
   },
   "SplitConfigPoller": {
     "SkipMissingFeatureFlags": false,
-    "IgnoredFeatureFlags": null
+    "IgnoredFeatureFlags": null,
+    "FetchRetry": {
+      "MaxAttempts": 3,
+      "Interval": 100000000,
+      "MaxDuration": 2000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

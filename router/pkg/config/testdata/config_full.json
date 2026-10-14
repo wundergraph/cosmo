@@ -1189,7 +1189,12 @@
     "IgnoredFeatureFlags": [
       "experimental-checkout",
       "ab-test-foo"
-    ]
+    ],
+    "FetchRetry": {
+      "MaxAttempts": 5,
+      "Interval": 1000000000,
+      "MaxDuration": 30000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
