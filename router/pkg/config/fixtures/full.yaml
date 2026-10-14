@@ -659,6 +659,10 @@ split_config_poller:
   ignored_feature_flags:
     - 'experimental-checkout'
     - 'ab-test-foo'
+  fetch_retry:
+    max_attempts: 5
+    interval: 1s
+    max_duration: 30s
 
 router_config_path: 'latest.json'
 

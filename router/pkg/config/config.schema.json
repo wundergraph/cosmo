@@ -461,6 +461,37 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        },
+        "fetch_retry": {
+          "type": "object",
+          "description": "Retry behavior when a file is received from the CDN with a truncated response body (unexpected EOF while reading it).",
+          "additionalProperties": false,
+          "properties": {
+            "max_attempts": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 1,
+              "description": "The total number of fetches for a single file, including the first one. Set to 1 to disable retries. The default value is 3."
+            },
+            "interval": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "100ms",
+              "duration": {
+                "minimum": "1ms"
+              },
+              "description": "The base interval of the exponential backoff with jitter between attempts. The wait before the nth retry is a random value between 0 and interval * 2^(n-1), capped by max_duration. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "max_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "2s",
+              "duration": {
+                "minimum": "1ms"
+              },
+              "description": "The maximum wait between two attempts. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
         }
       }
     },

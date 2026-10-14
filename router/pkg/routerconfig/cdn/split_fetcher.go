@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cloudflare/backoff"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
@@ -26,8 +27,9 @@ import (
 )
 
 const (
-	defaultConfigFetchAttempts  = 3
-	defaultConfigFetchRetryWait = 500 * time.Millisecond
+	defaultFetchRetryMaxAttempts = 3
+	defaultFetchRetryInterval    = 100 * time.Millisecond
+	defaultFetchRetryMaxDuration = 2 * time.Second
 )
 
 // SplitFetcher fetches mapper and individual router configs from the CDN
@@ -41,10 +43,12 @@ type SplitFetcher struct {
 	logger              *zap.Logger
 	hash                hash.Hash // HMAC-SHA256 for signature validation; nil if no key configured
 
-	// configFetchAttempts is how many times a config is fetched before giving up
-	// when its body cannot be unmarshalled; configFetchRetryWait is the linear backoff step.
-	configFetchAttempts  int
-	configFetchRetryWait time.Duration
+	// fetchRetryMaxAttempts is how many times a file is fetched before giving up when its
+	// response body is truncated. fetchRetryInterval and fetchRetryMaxDuration configure the
+	// exponential backoff with jitter between attempts.
+	fetchRetryMaxAttempts int
+	fetchRetryInterval    time.Duration
+	fetchRetryMaxDuration time.Duration
 }
 
 // NewSplitFetcher creates a SplitFetcher for the given CDN endpoint and router token.
@@ -75,14 +79,25 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	logger := opts.Logger.With(zap.String("component", "split_config_fetcher"))
 
 	f := &SplitFetcher{
-		cdnURL:               u,
-		authenticationToken:  token,
-		federatedGraphID:     url.PathEscape(claims.FederatedGraphID),
-		organizationID:       url.PathEscape(claims.OrganizationID),
-		httpClient:           httpclient.NewRetryableHTTPClient(logger),
-		logger:               logger,
-		configFetchAttempts:  defaultConfigFetchAttempts,
-		configFetchRetryWait: defaultConfigFetchRetryWait,
+		cdnURL:                u,
+		authenticationToken:   token,
+		federatedGraphID:      url.PathEscape(claims.FederatedGraphID),
+		organizationID:        url.PathEscape(claims.OrganizationID),
+		httpClient:            httpclient.NewRetryableHTTPClient(logger),
+		logger:                logger,
+		fetchRetryMaxAttempts: defaultFetchRetryMaxAttempts,
+		fetchRetryInterval:    defaultFetchRetryInterval,
+		fetchRetryMaxDuration: defaultFetchRetryMaxDuration,
+	}
+
+	if opts.FetchRetryMaxAttempts > 0 {
+		f.fetchRetryMaxAttempts = opts.FetchRetryMaxAttempts
+	}
+	if opts.FetchRetryInterval > 0 {
+		f.fetchRetryInterval = opts.FetchRetryInterval
+	}
+	if opts.FetchRetryMaxDuration > 0 {
+		f.fetchRetryMaxDuration = opts.FetchRetryMaxDuration
 	}
 
 	if opts.SignatureKey != "" {
@@ -90,6 +105,51 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	}
 
 	return f, nil
+}
+
+// fetch calls post and fetches the file again when its response body ends before the
+// length announced by the CDN (io.ErrUnexpectedEOF). The CDN occasionally answers with a 200
+// and a truncated body, which the retryable HTTP client does not retry since the status is fine.
+func (f *SplitFetcher) fetch(ctx context.Context, path string) ([]byte, error) {
+	var lastErr error
+
+	b := backoff.New(f.fetchRetryMaxDuration, f.fetchRetryInterval)
+
+	for attempt := 1; attempt <= f.fetchRetryMaxAttempts; attempt++ {
+		if attempt > 1 {
+			// Checked up front so a cancelled context wins even when the jittered wait is ~0.
+			if err := ctx.Err(); err != nil {
+				return nil, errors.Join(lastErr, err)
+			}
+
+			timer := time.NewTimer(b.Duration())
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, errors.Join(lastErr, ctx.Err())
+			case <-timer.C:
+			}
+		}
+
+		body, err := f.post(ctx, path)
+		if err == nil {
+			return body, nil
+		}
+		if !errors.Is(err, io.ErrUnexpectedEOF) {
+			return nil, err
+		}
+
+		lastErr = err
+
+		f.logger.Warn("Truncated response body received from CDN",
+			zap.String("path", path),
+			zap.Int("attempt", attempt),
+			zap.Int("max_attempts", f.fetchRetryMaxAttempts),
+			zap.Error(err),
+		)
+	}
+
+	return nil, lastErr
 }
 
 // post performs an authenticated POST request to the given CDN path, validates the
@@ -196,7 +256,7 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, erro
 	if err != nil {
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
-	body, err := f.post(ctx, path)
+	body, err := f.fetch(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
 	}
@@ -212,9 +272,6 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, erro
 
 // FetchConfig fetches a single router config from CDN.
 // featureFlagName="" returns the base graph; any other value returns the named feature flag config.
-//
-// A config whose body cannot be unmarshalled is fetched again: the CDN occasionally answers
-// with a 200 and a truncated body ("proto: unexpected EOF"), which the HTTP client does not retry.
 func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) (*nodev1.RouterConfig, error) {
 	var (
 		path string
@@ -232,39 +289,15 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
 
-	var unmarshalErr error
-
-	for attempt := 1; attempt <= f.configFetchAttempts; attempt++ {
-		if attempt > 1 {
-			timer := time.NewTimer(f.configFetchRetryWait * time.Duration(attempt-1))
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return nil, errors.Join(unmarshalErr, ctx.Err())
-			case <-timer.C:
-			}
-		}
-
-		body, err := f.post(ctx, path)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
-		}
-
-		cfg, err := execution_config.UnmarshalConfig(body)
-		if err == nil {
-			return cfg, nil
-		}
-
-		unmarshalErr = fmt.Errorf("could not unmarshal router config for %q: %w", featureFlagName, err)
-
-		f.logger.Warn("Could not unmarshal router config fetched from CDN",
-			zap.String("feature_flag", featureFlagName),
-			zap.Int("attempt", attempt),
-			zap.Int("max_attempts", f.configFetchAttempts),
-			zap.Int("body_size", len(body)),
-			zap.Error(err),
-		)
+	body, err := f.fetch(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
 	}
 
-	return nil, unmarshalErr
+	cfg, err := execution_config.UnmarshalConfig(body)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal router config for %q: %w", featureFlagName, err)
+	}
+
+	return cfg, nil
 }
