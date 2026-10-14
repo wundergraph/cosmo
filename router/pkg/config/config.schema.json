@@ -2788,6 +2788,11 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "omit_tool_title_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool titles generated from GraphQL operations omit the 'Execute operation' prefix. For example, the GraphQL operation 'GetUser' results in a tool title 'GetUser' instead of 'Execute operation GetUser'."
+        },
         "output_schema": {
           "type": "object",
           "description": "Configuration for MCP structured tool output (MCP specification revision 2025-06-18).",

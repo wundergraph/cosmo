@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.358.1](https://github.com/wundergraph/cosmo/compare/router@0.358.0...router@0.358.1) (2026-10-13)
+
+### Bug Fixes
+
+* race conditions on invalidations leading to dangling entries that cannot be invalidated ([#3322](https://github.com/wundergraph/cosmo/issues/3322)) ([d334142](https://github.com/wundergraph/cosmo/commit/d33414211a709a5d3fb70b4593670af2d941ec8c)) (@SkArchon)
+* **router/mcpserver:** mirror omitToolNamePrefix in Annotations.Title ([#3247](https://github.com/wundergraph/cosmo/issues/3247)) ([ca0011c](https://github.com/wundergraph/cosmo/commit/ca0011ce7a96e0f347da756057e85377c3cd543e)) (@Tyagiquamar)
+
 ## [0.358.0](https://github.com/wundergraph/cosmo/compare/router@0.357.0...router@0.358.0) (2026-10-12)
 
 ### Features
