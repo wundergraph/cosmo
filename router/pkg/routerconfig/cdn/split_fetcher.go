@@ -115,8 +115,8 @@ func (f *SplitFetcher) fetch(ctx context.Context, path string) ([]byte, error) {
 
 	b := backoff.New(f.fetchRetryMaxDuration, f.fetchRetryInterval)
 
-	for attempt := 1; attempt <= f.fetchRetryMaxAttempts; attempt++ {
-		if attempt > 1 {
+	for attempt := range f.fetchRetryMaxAttempts {
+		if attempt > 0 {
 			// Checked up front so a cancelled context wins even when the jittered wait is ~0.
 			if err := ctx.Err(); err != nil {
 				return nil, errors.Join(lastErr, err)
@@ -142,7 +142,7 @@ func (f *SplitFetcher) fetch(ctx context.Context, path string) ([]byte, error) {
 		lastErr = err
 
 		f.logger.Warn("Truncated response body received from CDN, retrying",
-			zap.Int("attempt", attempt),
+			zap.Int("attempt", attempt+1),
 			zap.Int("max_attempts", f.fetchRetryMaxAttempts),
 			zap.Error(err),
 		)
