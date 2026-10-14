@@ -13,6 +13,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -105,6 +106,14 @@ export function updateFederatedGraph(
       };
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const result = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
@@ -117,6 +126,7 @@ export function updateFederatedGraph(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -133,6 +143,8 @@ export function updateFederatedGraph(
         updatedBy: authContext.userId,
       });
     });
+    const mapperDeploymentErrors = await mapperUpdater.flush();
+    result?.deploymentErrors.push(...mapperDeploymentErrors);
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

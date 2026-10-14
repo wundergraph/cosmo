@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function enableFeatureFlag(
   opts: RouterOptions,
@@ -79,6 +80,14 @@ export function enableFeatureFlag(
       };
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
       await txFeatureFlagRepo.enableFeatureFlag({
@@ -98,6 +107,7 @@ export function enableFeatureFlag(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       return compositionService.composeAndDeployFeatureFlag({
@@ -106,6 +116,7 @@ export function enableFeatureFlag(
         isEnabled: req.enabled,
       });
     });
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

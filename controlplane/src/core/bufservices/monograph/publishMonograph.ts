@@ -16,6 +16,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -142,6 +143,14 @@ export function publishMonograph(
 
     // The transaction is managed by `SubgraphRepository.update`
     // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -153,6 +162,7 @@ export function publishMonograph(
       false,
       opts.promptToQueryClient,
       opts.billingDefaultPlanId,
+      mapperUpdater,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -168,6 +178,8 @@ export function publishMonograph(
         },
         compositionService,
       );
+
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
