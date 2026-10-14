@@ -55,12 +55,14 @@ try {
   queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
-  const { lockAdapter } = await createRedisConnections({
+  const { redisLock, lockAdapter } = await createRedisConnections({
     host: redis.host!,
     port: Number(redis.port),
     password: redis.password,
     tls: redis.tls,
   });
+
+  await redisLock.connect();
 
   // Assume the given organization id is a comma-separated list of uuids and process each valid id one at a time
   for (const orgId of organizationId.split(',')) {
@@ -71,6 +73,8 @@ try {
 
     await enableFeatureForOrganization(db, lockAdapter, orgId);
   }
+
+  await redisLock.quit();
 } catch (e) {
   console.error(e);
   // eslint-disable-next-line unicorn/no-process-exit

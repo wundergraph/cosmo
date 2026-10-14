@@ -76,15 +76,13 @@ export class RouterConfigMapperUpdater {
           try {
             await this.rebuild(federatedGraphId);
           } catch (err) {
-            this.logger.error(
-              err instanceof DeploymentFailedError ? err.cause : err,
-              `Failed to update the router config mapper of federated graph "${graph.name}"`,
-            );
+            const error = err instanceof DeploymentFailedError ? err.cause : err;
 
+            this.logger.error(error, `Failed to update the router config mapper of federated graph "${graph.name}"`);
             deploymentErrors.push({
               federatedGraphName: graph.name,
               namespace: graph.namespace,
-              message: err instanceof Error ? err.message : 'Failed to update the router config mapper',
+              message: error instanceof Error ? error.message : 'Failed to update the router config mapper',
             });
           }
         }),
@@ -128,7 +126,7 @@ export class RouterConfigMapperUpdater {
             retryCount: 0,
             automaticExtensionThreshold: 2500,
           },
-          async () => {
+          async (signal) => {
             const routerHashesForGraph = await this.db
               .select({
                 hash: schema.routerConfigHash.hash,
@@ -138,6 +136,10 @@ export class RouterConfigMapperUpdater {
               .leftJoin(schema.featureFlags, eq(schema.featureFlags.id, schema.routerConfigHash.featureFlagId))
               .where(eq(schema.routerConfigHash.federatedGraphId, federatedGraphId))
               .execute();
+
+            if (signal?.aborted) {
+              throw signal.error ?? new Error('Operation aborted');
+            }
 
             const mapper: Record<string, string> = {};
             for (const routerHash of routerHashesForGraph) {
@@ -154,6 +156,7 @@ export class RouterConfigMapperUpdater {
                 () =>
                   this.blobStorage.putObject({
                     key: `${this.organizationId}/${federatedGraphId}/manifest/mapper.json`,
+                    abortSignal: signal,
                     body: Buffer.from(mapperContent, 'utf8'),
                     contentType: 'application/json; charset=utf-8',
                     metadata: {
@@ -166,6 +169,7 @@ export class RouterConfigMapperUpdater {
                   baseInterval: 500,
                   maxInterval: 15_000,
                   jitter: true,
+                  signal,
                 },
               );
             } catch (err) {

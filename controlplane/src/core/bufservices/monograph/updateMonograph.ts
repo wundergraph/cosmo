@@ -22,7 +22,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function updateMonograph(
   opts: RouterOptions,
@@ -234,7 +234,6 @@ export function updateMonograph(
       };
     });
 
-    await mapperUpdater.flush();
-    return result;
+    return await flushMapperIntoResponse(mapperUpdater, result);
   });
 }
