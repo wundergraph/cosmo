@@ -107,6 +107,7 @@ mcp:
   enable_arbitrary_operations: false
   exclude_mutations: false
   omit_tool_name_prefix: false
+  omit_tool_title_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
