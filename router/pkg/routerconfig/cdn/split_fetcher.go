@@ -141,8 +141,7 @@ func (f *SplitFetcher) fetch(ctx context.Context, path string) ([]byte, error) {
 
 		lastErr = err
 
-		f.logger.Warn("Truncated response body received from CDN",
-			zap.String("path", path),
+		f.logger.Warn("Truncated response body received from CDN, retrying",
 			zap.Int("attempt", attempt),
 			zap.Int("max_attempts", f.fetchRetryMaxAttempts),
 			zap.Error(err),

@@ -611,3 +611,28 @@ func TestFetchConfig_TruncatedBodyRetryMaxAttemptsConfigurable(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchConfig_TruncatedBodyRetryWaitIsCappedByMaxDuration(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{Version: "v42"})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		writeTruncated(w, body)
+	}))
+	defer srv.Close()
+
+	// Without the cap the backoff would wait up to an hour before each retry.
+	f := newFetcher(t, srv.URL, &cdn.Options{
+		FetchRetryInterval:    time.Hour,
+		FetchRetryMaxDuration: 10 * time.Millisecond,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := f.FetchConfig(ctx, "")
+	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	require.NotErrorIs(t, err, context.DeadlineExceeded)
+	assert.Equal(t, int32(3), requests.Load())
+}

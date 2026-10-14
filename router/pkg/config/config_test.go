@@ -2948,3 +2948,92 @@ response_cache:
 		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products'")
 	})
 }
+
+func TestSplitConfigPollerFetchRetry(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 3,
+			Interval:    100 * time.Millisecond,
+			MaxDuration: 2 * time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("from yaml", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    max_attempts: 5
+    interval: 250ms
+    max_duration: 1s
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 5,
+			Interval:    250 * time.Millisecond,
+			MaxDuration: time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("from env", func(t *testing.T) {
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_ATTEMPTS", "7")
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_INTERVAL", "50ms")
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_DURATION", "3s")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 7,
+			Interval:    50 * time.Millisecond,
+			MaxDuration: 3 * time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("max_attempts below 1 is rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    max_attempts: 0
+`)
+
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"split_config_poller", "fetch_retry", "max_attempts"}, js.Causes[0].InstanceLocation)
+	})
+
+	t.Run("interval below 1ms is rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    interval: 0s
+`)
+
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"split_config_poller", "fetch_retry", "interval"}, js.Causes[0].InstanceLocation)
+	})
+}
