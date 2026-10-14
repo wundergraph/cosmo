@@ -41,7 +41,7 @@ Use [CVSS v3.1](https://www.first.org/cvss/v3.1/specification-document) because 
 Use the official score bands: None 0.0, Low 0.1-3.9, Medium 4.0-6.9, High 7.0-8.9, Critical 9.0-10.0.
 
 - Privileges Required: An unauthenticated router request is PR:N. If exploitation needs a valid token, use PR:L or PR:H according to the token's permissions.
-- Scope: Consider S:C when exploitation crosses an organization's authorization boundary or reaches a private service under a separate authority. Otherwise use S:U.
+- Scope: Use S:C only when exploitation affects resources managed by a different security authority. Cross-organization access inside one deployment normally stays S:U. Score data disclosure or modification with C and I. Reaching a private service alone does not establish S:C.
 - Attack Vector: Use AV:N for network-accessible HTTP or WebSocket requests. Use AV:L for an exploit that requires local access to the host.
 
 State the entry point, required privileges, and deployment configuration in each report. Include a local reproducer and the expected result. Do not send test traffic to production services or include live credentials in reports.
