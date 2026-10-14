@@ -29,10 +29,10 @@ kill "$router_pid"
 wait "$router_pid" 2>/dev/null || true
 cd /src/router && GOPROXY=off timeout 180 go test ./pkg/authentication ./pkg/health
 cd /src/composition && timeout 180 pnpm exec vitest run tests/v1/regexp.test.ts tests/v1/normalization-utils.test.ts
-cd /src && timeout 30 node --test .oss-scanner/controlplane.test.mjs
+cd /src/controlplane && timeout -k 5 180 pnpm exec vitest run --config /src/.oss-scanner/vitest.controlplane.config.ts src/core/util.test.ts test/rbac-evaluator.test.ts test/timers.test.ts test/dual-blob-storage.test.ts
 ```
 
-The smoke request returns `{"data":{"__typename":"Query"}}` without a subgraph. Other graph fields need running subgraphs. Many tests under `controlplane/test` start a database in their setup. The full integration tests need services such as Postgres, Redis, NATS, or ClickHouse. Those services do not run in this image.
+The smoke request returns `{"data":{"__typename":"Query"}}` without a subgraph. Other graph fields need running subgraphs. The offline Vitest configuration skips the Keycloak global setup for the selected control plane unit tests. Many other tests under `controlplane/test` start a database in their setup. The full integration tests need services such as Postgres, Redis, NATS, or ClickHouse. Those services do not run in this image.
 
 ## How you rate severity
 

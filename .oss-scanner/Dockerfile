@@ -29,6 +29,9 @@ RUN cd graphqlmetrics && go build ./...
 RUN (cd router && GOPROXY=off timeout 600 go test -run '^$' ./pkg/authentication ./pkg/health ./core) || echo 'WARNING: Router test compilation failed'
 RUN (cd router && GOPROXY=off timeout 180 go test ./pkg/authentication ./pkg/health) || echo 'WARNING: Router unit tests failed'
 RUN (cd composition && timeout 180 pnpm exec vitest run tests/v1/regexp.test.ts tests/v1/normalization-utils.test.ts) || echo 'WARNING: Composition unit tests failed'
-RUN (timeout 30 node --test .oss-scanner/controlplane.test.mjs) || echo 'WARNING: Control plane unit tests failed'
+RUN (cd controlplane && timeout -k 5 180 pnpm exec vitest run \
+      --config /src/.oss-scanner/vitest.controlplane.config.ts \
+      src/core/util.test.ts test/rbac-evaluator.test.ts test/timers.test.ts test/dual-blob-storage.test.ts) \
+    || echo 'WARNING: Control plane unit tests failed'
 
 CMD ["bash"]
