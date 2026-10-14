@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.22.0...helm-cosmo@0.22.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **values.yaml:** fix clickhouse resources default ([#3301](https://github.com/wundergraph/cosmo/issues/3301)) ([b1fc0da](https://github.com/wundergraph/cosmo/commit/b1fc0da82d20e4fa131659f5ffadf40a59cc1bf1))
+
 ## [0.22.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.21.0...helm-cosmo@0.22.0) (2026-10-12)
 
 

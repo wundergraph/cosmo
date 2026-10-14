@@ -2017,7 +2017,12 @@
       "type": "string",
       "format": "go-duration",
       "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-      "default": "20s"
+      "default": "30s"
+    },
+    "drain_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "How long the router answers every response with 'Connection: close' after a stop signal (never on a config reload), before it shuts the HTTP server down, so clients retire pooled keep-alive connections instead of hitting EOF. The router also reports not ready while draining, and stops draining early once all client connections are closed. When unset, the drain gets the part of shutdown_delay that grace_period leaves (shutdown_delay - grace_period, 30s with the defaults). Set it above the longest idle timeout of any pooled client in front of the router. An explicit value runs inside the shutdown_delay, so shutdown_delay must be at least drain_period + grace_period; the router refuses to start otherwise. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. 0s disables the drain."
     },
     "poll_interval": {
       "type": "string",
@@ -2787,6 +2792,11 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
+        },
+        "omit_tool_title_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool titles generated from GraphQL operations omit the 'Execute operation' prefix. For example, the GraphQL operation 'GetUser' results in a tool title 'GetUser' instead of 'Execute operation GetUser'."
         },
         "output_schema": {
           "type": "object",

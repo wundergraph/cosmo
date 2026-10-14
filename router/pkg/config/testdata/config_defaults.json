@@ -214,6 +214,7 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
@@ -358,6 +359,7 @@
   "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
+  "DrainPeriod": null,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
