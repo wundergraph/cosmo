@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.358.2](https://github.com/wundergraph/cosmo/compare/router@0.358.1...router@0.358.2) (2026-10-14)
+
+### Bug Fixes
+
+* handle graceful draining of keep alive connections during shutdown ([#3356](https://github.com/wundergraph/cosmo/issues/3356)) ([9b436e7](https://github.com/wundergraph/cosmo/commit/9b436e7cf700a4c335e70a027acd402a07478466)) (@Noroth)
+
 ## [0.358.1](https://github.com/wundergraph/cosmo/compare/router@0.358.0...router@0.358.1) (2026-10-13)
 
 ### Bug Fixes
