@@ -53,6 +53,8 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
   // would block reopening the same operation after its tab was closed.
   const openHandled = useRef<OpenRequest | null>(null);
 
+  const activeTabId = tabs[activeTabIndex]?.id;
+
   // Refills a tab GraphiQL blanked: its auto-save writes whatever the editor
   // held into whichever tab is active 100ms later. Only repairable on activation.
   useEffect(() => {
@@ -74,7 +76,10 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       collectionId: binding.collectionId,
       intoTabId: active.id,
     });
-  }, [tabs, activeTabIndex, bindingFor, openingOperation, pendingOpen]);
+    // Keyed on the active tab id, not `tabs`: `tabs` changes on every keystroke,
+    // so this would refill a tab the moment the user cleared it themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabId, bindingFor, openingOperation, pendingOpen]);
 
   // Beat two: the body arrived, so ask for a tab.
   useEffect(() => {
@@ -117,8 +122,6 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       setOpeningOperation(null);
     }
   }, [openingOperation, isError]);
-
-  const activeTabId = tabs[activeTabIndex]?.id;
 
   // Beat three: fill the tab that is now active and bind it.
   useEffect(() => {
