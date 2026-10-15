@@ -39,10 +39,10 @@ export class TraceRepository {
         SpanAttributes['wg.engine.normalization_cache_hit'] as attrNormalizationCacheHit,
         SpanAttributes['wg.engine.validation_cache_hit'] as attrValidationCacheHit,
         SpanAttributes['wg.operation.hash'] as attrOperationHash,
-        SpanAttributes['wg.organization.id'] as organizationId,
+        OrganizationID as organizationId,
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
-        SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId,
+        FederatedGraphID as attrFederatedGraphId,
         SpanAttributes['wg.operation.protocol'] as attrOperationProtocol,
         SpanAttributes['wg.operation.batching.is_batched'] as attrIsBatched,
         SpanAttributes['wg.operation.batching.operations_count'] as attrBatchedOperationsCount,
@@ -52,25 +52,25 @@ export class TraceRepository {
     const query = `
     WITH RECURSIVE spans AS (
       SELECT ${columns}
-      FROM ${this.client.database}.otel_traces
-      WHERE 
-        TraceId = trace_id
-        AND Timestamp >= start 
+      FROM ${this.client.database}.otel_spans_by_trace
+      WHERE
+        FederatedGraphID = {federatedGraphId:String}
+        AND OrganizationID = {organizationID:String}
+        AND TraceId = trace_id
+        AND Timestamp >= start
         AND Timestamp <= end
-        AND SpanAttributes['wg.organization.id'] = {organizationID:String}
-        AND SpanAttributes['wg.federated_graph.id'] = {federatedGraphId:String}
         AND spanId = {spanID:String}
       
       UNION ALL
       
       SELECT ${columns}
-      FROM spans s, ${this.client.database}.otel_traces as t
-      WHERE t.ParentSpanId = s.spanId 
+      FROM spans s, ${this.client.database}.otel_spans_by_trace as t
+      WHERE t.ParentSpanId = s.spanId
+        AND t.FederatedGraphID = {federatedGraphId:String}
+        AND t.OrganizationID = {organizationID:String}
         AND t.TraceId = trace_id
         AND t.Timestamp >= start
         AND t.Timestamp <= end
-        AND t.SpanAttributes['wg.organization.id'] = {organizationID:String}
-        AND t.SpanAttributes['wg.federated_graph.id'] = {federatedGraphId:String}
     ),
     {traceID:String} AS trace_id,
     (

@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.255.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.254.0...controlplane@0.255.0) (2026-10-15)
+
+### Features
+
+* update trace queries to utilize new ClickHouse tables ([#3362](https://github.com/wundergraph/cosmo/issues/3362)) ([e2ab6fa](https://github.com/wundergraph/cosmo/commit/e2ab6fa224224f75ff64375279e2e2202c108c71)) (@JivusAyrus)
+
+### Bug Fixes
+
+* **controlplane:** validate persisted IDs against router character rules ([#3330](https://github.com/wundergraph/cosmo/issues/3330)) ([a86ca72](https://github.com/wundergraph/cosmo/commit/a86ca72f85e7c9a6e6ebcf379492cf1434c23098)) (@fiam)
+
 ## [0.254.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.4...controlplane@0.254.0) (2026-10-14)
 
 ### Features
