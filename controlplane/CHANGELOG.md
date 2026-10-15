@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.254.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.4...controlplane@0.254.0) (2026-10-14)
+
+### Features
+
+* add proposal status command ([#3164](https://github.com/wundergraph/cosmo/issues/3164)) ([02589dd](https://github.com/wundergraph/cosmo/commit/02589dd0c2f8bd18fa91eebc81d3c8da8b931ac1)) (@alepane21)
+* enhance span tracking for aborted requests ([#3299](https://github.com/wundergraph/cosmo/issues/3299)) ([c780a4e](https://github.com/wundergraph/cosmo/commit/c780a4e20a617ddf80e91445ec59d5022be6f664)) (@JivusAyrus)
+
 ## [0.253.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.253.3...controlplane@0.253.4) (2026-10-13)
 
 **Note:** Version bump only for package controlplane
