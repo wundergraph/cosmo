@@ -189,11 +189,11 @@ export class BatchNormalizer {
         }
 
         subtractSet(fieldNames, configurationData.fieldNames);
-        if (configurationData.entityCaching) {
-          configurationData.entityCaching.cacheTagRootFieldConfigurations =
-            configurationData.entityCaching.cacheTagRootFieldConfigurations.filter(
-              ({ fieldName }) => !fieldNames.has(fieldName),
-            );
+        const { entityCaching } = configurationData;
+        if (entityCaching) {
+          entityCaching.cacheTagRootFieldConfigurations = entityCaching.cacheTagRootFieldConfigurations.filter(
+            ({ fieldName }) => !fieldNames.has(fieldName),
+          );
         }
         if (configurationData.fieldNames.size < 1) {
           internalSubgraph.configurationDataByTypeName.delete(parentTypeName);
