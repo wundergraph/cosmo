@@ -7,6 +7,43 @@ import { resolve } from 'pathe';
 import { LabelSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
+import type { Client } from '../../core/client/client.js';
+import { getBaseHeaders } from '../../core/config.js';
+
+export const getProposalsByFederatedGraph = ({
+  client,
+  federatedGraphName,
+  namespace,
+  proposalName,
+  startDate,
+  endDate,
+  limit,
+  offset,
+}: {
+  client: Client;
+  federatedGraphName: string;
+  namespace?: string;
+  proposalName?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  return client.platform.getProposalsByFederatedGraph(
+    {
+      federatedGraphName,
+      namespace,
+      proposalName,
+      startDate,
+      endDate,
+      limit,
+      offset,
+    },
+    {
+      headers: getBaseHeaders(),
+    },
+  );
+};
 
 // Define interfaces for parsing parameters
 interface SubgraphParams {

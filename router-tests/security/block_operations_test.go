@@ -355,7 +355,7 @@ func TestBlockOperations(t *testing.T) {
 					"Authorization": []string{"Bearer " + token},
 				}
 
-				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 				err = conn.WriteJSON(&testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
@@ -458,7 +458,7 @@ func TestBlockOperations(t *testing.T) {
 					"Authorization": []string{"Bearer " + token},
 				}
 
-				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 				err = conn.WriteJSON(&testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
