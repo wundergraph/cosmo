@@ -48,7 +48,7 @@ type InstanceData struct {
 }
 
 type FactoryResolver interface {
-	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveGraphqlFactory(subgraphName string, hasSubscriptions bool) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	InstanceData() InstanceData
 }
@@ -167,7 +167,18 @@ func NewDefaultFactoryResolver(
 	}
 }
 
-func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+// hasSubscriptionRootNodes reports whether a data source's root nodes include
+// any Subscription fields.
+func hasSubscriptionRootNodes(rootNodes []*nodev1.TypeField) bool {
+	for _, node := range rootNodes {
+		if node.TypeName == "Subscription" && len(node.FieldNames) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string, hasSubscriptions bool) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
 	if d.connector != nil {
 		// If the connector is not nil, we try to get the provider for the subgraph.
 		// In case of a provider, we use the gRPC client provider to create the factory.
@@ -183,9 +194,13 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 	if d.transportFactory == nil || d.baseTransport == nil {
 		// dummy implementation for plan generator that doesn't make requests
-		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx,
-			d.subscriptionClientOptions...,
-		)
+		var subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+		if hasSubscriptions {
+			subscriptionClient = graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx,
+				d.subscriptionClientOptions...,
+			)
+		}
+
 		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
 	}
 
@@ -194,14 +209,17 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		Transport: d.transportFactory.RoundTripper(d.baseTransport),
 	}
 
-	streamingClient := &http.Client{
-		Transport: d.transportFactory.RoundTripper(d.baseTransport),
-	}
+	var subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+	if hasSubscriptions {
+		streamingClient := &http.Client{
+			Transport: d.transportFactory.RoundTripper(d.baseTransport),
+		}
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		d.engineCtx,
-		append([]graphql_datasource.SubscriptionClientOption{graphql_datasource.WithUpgradeClient(defaultHTTPClient), graphql_datasource.WithStreamingClient(streamingClient)}, d.subscriptionClientOptions...)...,
-	)
+		subscriptionClient = graphql_datasource.NewGraphQLSubscriptionClient(
+			d.engineCtx,
+			append([]graphql_datasource.SubscriptionClientOption{graphql_datasource.WithUpgradeClient(defaultHTTPClient), graphql_datasource.WithStreamingClient(streamingClient)}, d.subscriptionClientOptions...)...,
+		)
+	}
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
@@ -358,7 +376,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, err
 			}
 
-			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
+			out, err = plan.NewDataSourceConfiguration(
 				in.Id,
 				factory,
 				l.dataSourceMetaData(in),
@@ -486,12 +504,12 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
 
-			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
+			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName, hasSubscriptionRootNodes(in.RootNodes))
 			if err != nil {
 				return nil, providers, err
 			}
 
-			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
+			out, err = plan.NewDataSourceConfigurationWithName(
 				in.Id,
 				dataSourceName,
 				factory,
