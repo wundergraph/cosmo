@@ -10,6 +10,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -84,6 +85,14 @@ export function moveSubgraph(
       authContext,
     });
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
@@ -114,6 +123,7 @@ export function moveSubgraph(
           req.disableResolvabilityValidation,
           opts.promptToQueryClient,
           opts.billingDefaultPlanId,
+          mapperUpdater,
         );
 
         const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -146,6 +156,7 @@ export function moveSubgraph(
 
         return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
       });
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(

@@ -12,7 +12,7 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
-import { expect } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest';
 import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
@@ -1088,6 +1088,12 @@ export async function seedBilling(queryConnection: postgres.Sql) {
       })
       .execute();
   }
+}
+
+export async function readBlob(blobStorage: BlobStorage, key: string): Promise<string> {
+  const blob = await blobStorage.getObject({ key });
+  const result = await blob.stream.getReader().read();
+  return result.value.toString();
 }
 
 export const resolvabilitySDLOne = `

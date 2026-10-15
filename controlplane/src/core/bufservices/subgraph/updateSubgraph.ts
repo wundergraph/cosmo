@@ -13,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import {
   enrichLogger,
   formatSubgraphType,
@@ -120,6 +121,14 @@ export function updateSubgraph(
 
     // The transaction is managed by `SubgraphRepository.update`
     // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -131,6 +140,7 @@ export function updateSubgraph(
       req.disableResolvabilityValidation,
       opts.promptToQueryClient,
       opts.billingDefaultPlanId,
+      mapperUpdater,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -151,6 +161,8 @@ export function updateSubgraph(
         },
         compositionService,
       );
+
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

@@ -26,6 +26,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { withSpan } from '../../tracing.js';
 import { BatchPublishJobDetailsRepository } from '../../repositories/BatchPublishJobDetailsRepository.js';
 
@@ -424,6 +425,14 @@ async function runBatchPublish({
    * This comment is true only for when we are not using async composition as to guarantee that the compositions are
    * processed in the correct order, we need to have a transaction lock.
    */
+  const mapperUpdater = new RouterConfigMapperUpdater(
+    opts.db,
+    opts.lockAdapter,
+    authContext.organizationId,
+    logger,
+    opts.blobStorage,
+  );
+
   const compositionService = new CompositionService(
     opts.db,
     authContext.organizationId,
@@ -435,6 +444,7 @@ async function runBatchPublish({
     disableResolvabilityValidation,
     opts.promptToQueryClient,
     opts.billingDefaultPlanId,
+    mapperUpdater,
   );
 
   const { compositionErrors, compositionWarnings, deploymentErrors } =
@@ -444,6 +454,7 @@ async function runBatchPublish({
       affectedFeatureFlags,
       isFeatureSubgraph: false,
     });
+  deploymentErrors.push(...(await mapperUpdater.flush()));
 
   // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
   const updatedFederatedGraphs = (
