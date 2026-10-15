@@ -188,6 +188,8 @@ type (
 	}
 
 	AccessLogsConfig struct {
+		Filter                string
+		SubgraphFilter        string
 		Attributes            []config.CustomAttribute
 		Logger                *zap.Logger
 		SubgraphEnabled       bool
