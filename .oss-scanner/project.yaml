@@ -1,0 +1,5 @@
+repo: https://github.com/wundergraph/cosmo#main
+primary_contact: security@wundergraph.com
+homepage: https://cosmo-docs.wundergraph.com/overview
+dockerfile: .oss-scanner/Dockerfile
+threat_model: .oss-scanner/threat_model.md

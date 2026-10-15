@@ -1431,6 +1431,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithOmitToolTitlePrefix(r.mcp.OmitToolTitlePrefix),
 		mcpserver.WithOutputSchemaEnabled(r.mcp.OutputSchema.Enabled),
 		mcpserver.WithStateless(r.mcp.Session.Stateless),
 		mcpserver.WithInstructions(r.mcp.Server.Discover.Instructions),
@@ -2083,6 +2084,15 @@ func (e *concSafeErrorJoiner) Append(err error) {
 
 func (e *concSafeErrorJoiner) ErrOrNil() error {
 	return errors.Join(e.errs...)
+}
+
+// drain makes the router's HTTP server answer every response with "Connection: close" and blocks
+// until its client connections are closed, period has elapsed or ctx is done. It is a no-op when
+// the HTTP server is not running.
+func (r *Router) drain(ctx context.Context, period time.Duration) {
+	if r.httpServer != nil {
+		r.httpServer.drain(ctx, period)
+	}
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
