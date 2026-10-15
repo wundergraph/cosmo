@@ -53,6 +53,36 @@ const (
 	// PlatformServiceUpdatePlaygroundDefaultHeadersProcedure is the fully-qualified name of the
 	// PlatformService's UpdatePlaygroundDefaultHeaders RPC.
 	PlatformServiceUpdatePlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdatePlaygroundDefaultHeaders"
+	// PlatformServiceGetGraphCollectionsProcedure is the fully-qualified name of the PlatformService's
+	// GetGraphCollections RPC.
+	PlatformServiceGetGraphCollectionsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetGraphCollections"
+	// PlatformServiceGetGraphCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's GetGraphCollectionOperation RPC.
+	PlatformServiceGetGraphCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/GetGraphCollectionOperation"
+	// PlatformServiceCreateGraphCollectionProcedure is the fully-qualified name of the
+	// PlatformService's CreateGraphCollection RPC.
+	PlatformServiceCreateGraphCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateGraphCollection"
+	// PlatformServiceRenameGraphCollectionProcedure is the fully-qualified name of the
+	// PlatformService's RenameGraphCollection RPC.
+	PlatformServiceRenameGraphCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/RenameGraphCollection"
+	// PlatformServiceShareGraphCollectionProcedure is the fully-qualified name of the PlatformService's
+	// ShareGraphCollection RPC.
+	PlatformServiceShareGraphCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/ShareGraphCollection"
+	// PlatformServiceDeleteGraphCollectionProcedure is the fully-qualified name of the
+	// PlatformService's DeleteGraphCollection RPC.
+	PlatformServiceDeleteGraphCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteGraphCollection"
+	// PlatformServiceCreateGraphCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's CreateGraphCollectionOperation RPC.
+	PlatformServiceCreateGraphCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateGraphCollectionOperation"
+	// PlatformServiceUpdateGraphCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's UpdateGraphCollectionOperation RPC.
+	PlatformServiceUpdateGraphCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateGraphCollectionOperation"
+	// PlatformServiceRenameGraphCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's RenameGraphCollectionOperation RPC.
+	PlatformServiceRenameGraphCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/RenameGraphCollectionOperation"
+	// PlatformServiceDeleteGraphCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's DeleteGraphCollectionOperation RPC.
+	PlatformServiceDeleteGraphCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteGraphCollectionOperation"
 	// PlatformServiceCreateNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// CreateNamespace RPC.
 	PlatformServiceCreateNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateNamespace"
@@ -640,6 +670,17 @@ type PlatformServiceClient interface {
 	// Playground default headers
 	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
 	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
+	// GraphCollections
+	GetGraphCollections(context.Context, *connect.Request[v1.GetGraphCollectionsRequest]) (*connect.Response[v1.GetGraphCollectionsResponse], error)
+	GetGraphCollectionOperation(context.Context, *connect.Request[v1.GetGraphCollectionOperationRequest]) (*connect.Response[v1.GetGraphCollectionOperationResponse], error)
+	CreateGraphCollection(context.Context, *connect.Request[v1.CreateGraphCollectionRequest]) (*connect.Response[v1.CreateGraphCollectionResponse], error)
+	RenameGraphCollection(context.Context, *connect.Request[v1.RenameGraphCollectionRequest]) (*connect.Response[v1.RenameGraphCollectionResponse], error)
+	ShareGraphCollection(context.Context, *connect.Request[v1.ShareGraphCollectionRequest]) (*connect.Response[v1.ShareGraphCollectionResponse], error)
+	DeleteGraphCollection(context.Context, *connect.Request[v1.DeleteGraphCollectionRequest]) (*connect.Response[v1.DeleteGraphCollectionResponse], error)
+	CreateGraphCollectionOperation(context.Context, *connect.Request[v1.CreateGraphCollectionOperationRequest]) (*connect.Response[v1.CreateGraphCollectionOperationResponse], error)
+	UpdateGraphCollectionOperation(context.Context, *connect.Request[v1.UpdateGraphCollectionOperationRequest]) (*connect.Response[v1.UpdateGraphCollectionOperationResponse], error)
+	RenameGraphCollectionOperation(context.Context, *connect.Request[v1.RenameGraphCollectionOperationRequest]) (*connect.Response[v1.RenameGraphCollectionOperationResponse], error)
+	DeleteGraphCollectionOperation(context.Context, *connect.Request[v1.DeleteGraphCollectionOperationRequest]) (*connect.Response[v1.DeleteGraphCollectionOperationResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -1054,6 +1095,66 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
+		getGraphCollections: connect.NewClient[v1.GetGraphCollectionsRequest, v1.GetGraphCollectionsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetGraphCollectionsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetGraphCollections")),
+			connect.WithClientOptions(opts...),
+		),
+		getGraphCollectionOperation: connect.NewClient[v1.GetGraphCollectionOperationRequest, v1.GetGraphCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceGetGraphCollectionOperationProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetGraphCollectionOperation")),
+			connect.WithClientOptions(opts...),
+		),
+		createGraphCollection: connect.NewClient[v1.CreateGraphCollectionRequest, v1.CreateGraphCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateGraphCollectionProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("CreateGraphCollection")),
+			connect.WithClientOptions(opts...),
+		),
+		renameGraphCollection: connect.NewClient[v1.RenameGraphCollectionRequest, v1.RenameGraphCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceRenameGraphCollectionProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("RenameGraphCollection")),
+			connect.WithClientOptions(opts...),
+		),
+		shareGraphCollection: connect.NewClient[v1.ShareGraphCollectionRequest, v1.ShareGraphCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceShareGraphCollectionProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("ShareGraphCollection")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteGraphCollection: connect.NewClient[v1.DeleteGraphCollectionRequest, v1.DeleteGraphCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteGraphCollectionProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteGraphCollection")),
+			connect.WithClientOptions(opts...),
+		),
+		createGraphCollectionOperation: connect.NewClient[v1.CreateGraphCollectionOperationRequest, v1.CreateGraphCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateGraphCollectionOperationProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("CreateGraphCollectionOperation")),
+			connect.WithClientOptions(opts...),
+		),
+		updateGraphCollectionOperation: connect.NewClient[v1.UpdateGraphCollectionOperationRequest, v1.UpdateGraphCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateGraphCollectionOperationProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateGraphCollectionOperation")),
+			connect.WithClientOptions(opts...),
+		),
+		renameGraphCollectionOperation: connect.NewClient[v1.RenameGraphCollectionOperationRequest, v1.RenameGraphCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceRenameGraphCollectionOperationProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("RenameGraphCollectionOperation")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteGraphCollectionOperation: connect.NewClient[v1.DeleteGraphCollectionOperationRequest, v1.DeleteGraphCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteGraphCollectionOperationProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteGraphCollectionOperation")),
 			connect.WithClientOptions(opts...),
 		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
@@ -2226,6 +2327,16 @@ type platformServiceClient struct {
 	getPlaygroundScripts                               *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
 	getPlaygroundDefaultHeaders                        *connect.Client[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse]
 	updatePlaygroundDefaultHeaders                     *connect.Client[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse]
+	getGraphCollections                                *connect.Client[v1.GetGraphCollectionsRequest, v1.GetGraphCollectionsResponse]
+	getGraphCollectionOperation                        *connect.Client[v1.GetGraphCollectionOperationRequest, v1.GetGraphCollectionOperationResponse]
+	createGraphCollection                              *connect.Client[v1.CreateGraphCollectionRequest, v1.CreateGraphCollectionResponse]
+	renameGraphCollection                              *connect.Client[v1.RenameGraphCollectionRequest, v1.RenameGraphCollectionResponse]
+	shareGraphCollection                               *connect.Client[v1.ShareGraphCollectionRequest, v1.ShareGraphCollectionResponse]
+	deleteGraphCollection                              *connect.Client[v1.DeleteGraphCollectionRequest, v1.DeleteGraphCollectionResponse]
+	createGraphCollectionOperation                     *connect.Client[v1.CreateGraphCollectionOperationRequest, v1.CreateGraphCollectionOperationResponse]
+	updateGraphCollectionOperation                     *connect.Client[v1.UpdateGraphCollectionOperationRequest, v1.UpdateGraphCollectionOperationResponse]
+	renameGraphCollectionOperation                     *connect.Client[v1.RenameGraphCollectionOperationRequest, v1.RenameGraphCollectionOperationResponse]
+	deleteGraphCollectionOperation                     *connect.Client[v1.DeleteGraphCollectionOperationRequest, v1.DeleteGraphCollectionOperationResponse]
 	createNamespace                                    *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
 	deleteNamespace                                    *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                                    *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
@@ -2450,6 +2561,61 @@ func (c *platformServiceClient) GetPlaygroundDefaultHeaders(ctx context.Context,
 // wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders.
 func (c *platformServiceClient) UpdatePlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
 	return c.updatePlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
+// GetGraphCollections calls wg.cosmo.platform.v1.PlatformService.GetGraphCollections.
+func (c *platformServiceClient) GetGraphCollections(ctx context.Context, req *connect.Request[v1.GetGraphCollectionsRequest]) (*connect.Response[v1.GetGraphCollectionsResponse], error) {
+	return c.getGraphCollections.CallUnary(ctx, req)
+}
+
+// GetGraphCollectionOperation calls
+// wg.cosmo.platform.v1.PlatformService.GetGraphCollectionOperation.
+func (c *platformServiceClient) GetGraphCollectionOperation(ctx context.Context, req *connect.Request[v1.GetGraphCollectionOperationRequest]) (*connect.Response[v1.GetGraphCollectionOperationResponse], error) {
+	return c.getGraphCollectionOperation.CallUnary(ctx, req)
+}
+
+// CreateGraphCollection calls wg.cosmo.platform.v1.PlatformService.CreateGraphCollection.
+func (c *platformServiceClient) CreateGraphCollection(ctx context.Context, req *connect.Request[v1.CreateGraphCollectionRequest]) (*connect.Response[v1.CreateGraphCollectionResponse], error) {
+	return c.createGraphCollection.CallUnary(ctx, req)
+}
+
+// RenameGraphCollection calls wg.cosmo.platform.v1.PlatformService.RenameGraphCollection.
+func (c *platformServiceClient) RenameGraphCollection(ctx context.Context, req *connect.Request[v1.RenameGraphCollectionRequest]) (*connect.Response[v1.RenameGraphCollectionResponse], error) {
+	return c.renameGraphCollection.CallUnary(ctx, req)
+}
+
+// ShareGraphCollection calls wg.cosmo.platform.v1.PlatformService.ShareGraphCollection.
+func (c *platformServiceClient) ShareGraphCollection(ctx context.Context, req *connect.Request[v1.ShareGraphCollectionRequest]) (*connect.Response[v1.ShareGraphCollectionResponse], error) {
+	return c.shareGraphCollection.CallUnary(ctx, req)
+}
+
+// DeleteGraphCollection calls wg.cosmo.platform.v1.PlatformService.DeleteGraphCollection.
+func (c *platformServiceClient) DeleteGraphCollection(ctx context.Context, req *connect.Request[v1.DeleteGraphCollectionRequest]) (*connect.Response[v1.DeleteGraphCollectionResponse], error) {
+	return c.deleteGraphCollection.CallUnary(ctx, req)
+}
+
+// CreateGraphCollectionOperation calls
+// wg.cosmo.platform.v1.PlatformService.CreateGraphCollectionOperation.
+func (c *platformServiceClient) CreateGraphCollectionOperation(ctx context.Context, req *connect.Request[v1.CreateGraphCollectionOperationRequest]) (*connect.Response[v1.CreateGraphCollectionOperationResponse], error) {
+	return c.createGraphCollectionOperation.CallUnary(ctx, req)
+}
+
+// UpdateGraphCollectionOperation calls
+// wg.cosmo.platform.v1.PlatformService.UpdateGraphCollectionOperation.
+func (c *platformServiceClient) UpdateGraphCollectionOperation(ctx context.Context, req *connect.Request[v1.UpdateGraphCollectionOperationRequest]) (*connect.Response[v1.UpdateGraphCollectionOperationResponse], error) {
+	return c.updateGraphCollectionOperation.CallUnary(ctx, req)
+}
+
+// RenameGraphCollectionOperation calls
+// wg.cosmo.platform.v1.PlatformService.RenameGraphCollectionOperation.
+func (c *platformServiceClient) RenameGraphCollectionOperation(ctx context.Context, req *connect.Request[v1.RenameGraphCollectionOperationRequest]) (*connect.Response[v1.RenameGraphCollectionOperationResponse], error) {
+	return c.renameGraphCollectionOperation.CallUnary(ctx, req)
+}
+
+// DeleteGraphCollectionOperation calls
+// wg.cosmo.platform.v1.PlatformService.DeleteGraphCollectionOperation.
+func (c *platformServiceClient) DeleteGraphCollectionOperation(ctx context.Context, req *connect.Request[v1.DeleteGraphCollectionOperationRequest]) (*connect.Response[v1.DeleteGraphCollectionOperationResponse], error) {
+	return c.deleteGraphCollectionOperation.CallUnary(ctx, req)
 }
 
 // CreateNamespace calls wg.cosmo.platform.v1.PlatformService.CreateNamespace.
@@ -3464,6 +3630,17 @@ type PlatformServiceHandler interface {
 	// Playground default headers
 	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
 	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
+	// GraphCollections
+	GetGraphCollections(context.Context, *connect.Request[v1.GetGraphCollectionsRequest]) (*connect.Response[v1.GetGraphCollectionsResponse], error)
+	GetGraphCollectionOperation(context.Context, *connect.Request[v1.GetGraphCollectionOperationRequest]) (*connect.Response[v1.GetGraphCollectionOperationResponse], error)
+	CreateGraphCollection(context.Context, *connect.Request[v1.CreateGraphCollectionRequest]) (*connect.Response[v1.CreateGraphCollectionResponse], error)
+	RenameGraphCollection(context.Context, *connect.Request[v1.RenameGraphCollectionRequest]) (*connect.Response[v1.RenameGraphCollectionResponse], error)
+	ShareGraphCollection(context.Context, *connect.Request[v1.ShareGraphCollectionRequest]) (*connect.Response[v1.ShareGraphCollectionResponse], error)
+	DeleteGraphCollection(context.Context, *connect.Request[v1.DeleteGraphCollectionRequest]) (*connect.Response[v1.DeleteGraphCollectionResponse], error)
+	CreateGraphCollectionOperation(context.Context, *connect.Request[v1.CreateGraphCollectionOperationRequest]) (*connect.Response[v1.CreateGraphCollectionOperationResponse], error)
+	UpdateGraphCollectionOperation(context.Context, *connect.Request[v1.UpdateGraphCollectionOperationRequest]) (*connect.Response[v1.UpdateGraphCollectionOperationResponse], error)
+	RenameGraphCollectionOperation(context.Context, *connect.Request[v1.RenameGraphCollectionOperationRequest]) (*connect.Response[v1.RenameGraphCollectionOperationResponse], error)
+	DeleteGraphCollectionOperation(context.Context, *connect.Request[v1.DeleteGraphCollectionOperationRequest]) (*connect.Response[v1.DeleteGraphCollectionOperationResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -3874,6 +4051,66 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
 		svc.UpdatePlaygroundDefaultHeaders,
 		connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetGraphCollectionsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetGraphCollectionsProcedure,
+		svc.GetGraphCollections,
+		connect.WithSchema(platformServiceMethods.ByName("GetGraphCollections")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetGraphCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceGetGraphCollectionOperationProcedure,
+		svc.GetGraphCollectionOperation,
+		connect.WithSchema(platformServiceMethods.ByName("GetGraphCollectionOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateGraphCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateGraphCollectionProcedure,
+		svc.CreateGraphCollection,
+		connect.WithSchema(platformServiceMethods.ByName("CreateGraphCollection")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceRenameGraphCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceRenameGraphCollectionProcedure,
+		svc.RenameGraphCollection,
+		connect.WithSchema(platformServiceMethods.ByName("RenameGraphCollection")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceShareGraphCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceShareGraphCollectionProcedure,
+		svc.ShareGraphCollection,
+		connect.WithSchema(platformServiceMethods.ByName("ShareGraphCollection")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteGraphCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteGraphCollectionProcedure,
+		svc.DeleteGraphCollection,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteGraphCollection")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateGraphCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateGraphCollectionOperationProcedure,
+		svc.CreateGraphCollectionOperation,
+		connect.WithSchema(platformServiceMethods.ByName("CreateGraphCollectionOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateGraphCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateGraphCollectionOperationProcedure,
+		svc.UpdateGraphCollectionOperation,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateGraphCollectionOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceRenameGraphCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceRenameGraphCollectionOperationProcedure,
+		svc.RenameGraphCollectionOperation,
+		connect.WithSchema(platformServiceMethods.ByName("RenameGraphCollectionOperation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteGraphCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteGraphCollectionOperationProcedure,
+		svc.DeleteGraphCollectionOperation,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteGraphCollectionOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
@@ -5049,6 +5286,26 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetPlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdatePlaygroundDefaultHeadersProcedure:
 			platformServiceUpdatePlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
+		case PlatformServiceGetGraphCollectionsProcedure:
+			platformServiceGetGraphCollectionsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetGraphCollectionOperationProcedure:
+			platformServiceGetGraphCollectionOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateGraphCollectionProcedure:
+			platformServiceCreateGraphCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceRenameGraphCollectionProcedure:
+			platformServiceRenameGraphCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceShareGraphCollectionProcedure:
+			platformServiceShareGraphCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteGraphCollectionProcedure:
+			platformServiceDeleteGraphCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateGraphCollectionOperationProcedure:
+			platformServiceCreateGraphCollectionOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateGraphCollectionOperationProcedure:
+			platformServiceUpdateGraphCollectionOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceRenameGraphCollectionOperationProcedure:
+			platformServiceRenameGraphCollectionOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteGraphCollectionOperationProcedure:
+			platformServiceDeleteGraphCollectionOperationHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateNamespaceProcedure:
 			platformServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteNamespaceProcedure:
@@ -5464,6 +5721,46 @@ func (UnimplementedPlatformServiceHandler) GetPlaygroundDefaultHeaders(context.C
 
 func (UnimplementedPlatformServiceHandler) UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetGraphCollections(context.Context, *connect.Request[v1.GetGraphCollectionsRequest]) (*connect.Response[v1.GetGraphCollectionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetGraphCollections is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetGraphCollectionOperation(context.Context, *connect.Request[v1.GetGraphCollectionOperationRequest]) (*connect.Response[v1.GetGraphCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetGraphCollectionOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateGraphCollection(context.Context, *connect.Request[v1.CreateGraphCollectionRequest]) (*connect.Response[v1.CreateGraphCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateGraphCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RenameGraphCollection(context.Context, *connect.Request[v1.RenameGraphCollectionRequest]) (*connect.Response[v1.RenameGraphCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RenameGraphCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ShareGraphCollection(context.Context, *connect.Request[v1.ShareGraphCollectionRequest]) (*connect.Response[v1.ShareGraphCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ShareGraphCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteGraphCollection(context.Context, *connect.Request[v1.DeleteGraphCollectionRequest]) (*connect.Response[v1.DeleteGraphCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteGraphCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateGraphCollectionOperation(context.Context, *connect.Request[v1.CreateGraphCollectionOperationRequest]) (*connect.Response[v1.CreateGraphCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateGraphCollectionOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateGraphCollectionOperation(context.Context, *connect.Request[v1.UpdateGraphCollectionOperationRequest]) (*connect.Response[v1.UpdateGraphCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateGraphCollectionOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RenameGraphCollectionOperation(context.Context, *connect.Request[v1.RenameGraphCollectionOperationRequest]) (*connect.Response[v1.RenameGraphCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RenameGraphCollectionOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteGraphCollectionOperation(context.Context, *connect.Request[v1.DeleteGraphCollectionOperationRequest]) (*connect.Response[v1.DeleteGraphCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteGraphCollectionOperation is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
