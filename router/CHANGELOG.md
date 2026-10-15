@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.359.0](https://github.com/wundergraph/cosmo/compare/router@0.358.2...router@0.359.0) (2026-10-15)
+
+### Features
+
+* execution config reload on truncated body ([#3365](https://github.com/wundergraph/cosmo/issues/3365)) ([4879bb5](https://github.com/wundergraph/cosmo/commit/4879bb547802dae3b1e35f71e6a8af2165c01009)) (@alepane21)
+
 ## [0.358.2](https://github.com/wundergraph/cosmo/compare/router@0.358.1...router@0.358.2) (2026-10-14)
 
 ### Bug Fixes

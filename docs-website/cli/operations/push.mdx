@@ -22,6 +22,10 @@ The operations file might be one of the following formats:
 
 The operations are validated against the graph schema before registering them. If any of the operations is invalid, no operations will be registered.
 
+### Operation IDs
+
+Apollo manifests and Relay query maps preserve supplied operation IDs. Plain GraphQL files receive a SHA256 ID computed from their contents. IDs must contain 1–250 printable ASCII characters (space through tilde), excluding forward slash and backslash. IDs are case-sensitive and are not trimmed or normalized. Control characters, DEL, and non-ASCII characters are rejected.
+
 ### Options
 
 - `-n, --namespace` : The namespace of the federated graph (Default: "default").
