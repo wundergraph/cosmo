@@ -89,6 +89,7 @@ import {
   type SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
+import { mergePolicyDirectives } from './policy';
 import {
   CLIENT_FEDERATED_DIRECTIVE_NAMES,
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -209,6 +210,7 @@ import {
   ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
+  POLICY,
   QUERY,
   STRING,
   SUBSCRIPTION_FILTER,
@@ -338,7 +340,7 @@ export class FederationFactory {
       }
 
       this.referencedFederatedDirectiveNames.add(directiveName);
-      // @authenticated and @requiresScopes are handled differently
+      // @authenticated, @requiresScopes, and @policy are handled differently
       if (AUTHORIZATION_DIRECTIVES.has(directiveName) || directiveNodes.length < 1) {
         continue;
       }
@@ -2430,6 +2432,15 @@ export class FederationFactory {
   federateSubgraphData() {
     this.federateInternalSubgraphData();
     this.handleEntityInterfaces();
+    // @policy only needs to be merged if a subgraph defines it
+    if (this.referencedFederatedDirectiveNames.has(POLICY)) {
+      const subgraphs = [...this.internalSubgraphBySubgraphName.values()];
+      mergePolicyDirectives({
+        concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+        subgraphs,
+      });
+    }
     // generate the map of tag data that is used by contracts
     this.generateTagData();
     this.#addDirectiveDefinitionsAndDepsToRouterAndClientSchemas();

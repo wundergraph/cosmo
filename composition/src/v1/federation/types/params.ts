@@ -33,6 +33,12 @@ export type ValidateOneOfDirectiveParams = {
   requiredFieldNames: Set<FieldName>;
 };
 
+export type MergePolicyDirectivesParams = {
+  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  subgraphs: Array<InternalSubgraph>;
+};
+
 export type ExtractFederatedDirectivesParams = {
   data: FederatedDirectivesData;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
