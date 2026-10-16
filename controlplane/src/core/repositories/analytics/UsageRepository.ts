@@ -212,7 +212,7 @@ export class UsageRepository {
     organizationId: string;
     federatedGraphId: string;
     dateRange: DateRange<number>;
-  }) {
+  }): Promise<{ typeName: string; fieldName: string; requestCount: string }[]> {
     const query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
@@ -233,14 +233,27 @@ export class UsageRepository {
       GROUP BY TypeName, FieldName
     `;
 
-    const res = await this.client.queryPromise<{ typeName: string; fieldName: string; requestCount: string }>(query, {
+    const params = {
       startDate: dateRange.start,
       endDate: dateRange.end,
       organizationId,
       federatedGraphId,
-    });
+    };
 
-    return Array.isArray(res) ? res : [];
+    const res = await this.client.queryPromise<{ typeName: string; fieldName: string; requestCount: string }>(
+      query,
+      params,
+    );
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        typeName: item.typeName,
+        fieldName: item.fieldName,
+        requestCount: item.requestCount,
+      }));
+    }
+
+    return [];
   }
 
   public async getUnusedFields({

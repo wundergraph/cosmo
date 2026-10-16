@@ -20997,15 +20997,13 @@ func (x *GetFieldUsageResponse) GetMeta() *FieldUsageMeta {
 }
 
 type GetGraphFieldUsageRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	GraphName string                 `protobuf:"bytes,1,opt,name=graph_name,json=graphName,proto3" json:"graph_name,omitempty"`
-	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	// Range in hours. Defaults to 24 when no date range is given.
-	Range *int32 `protobuf:"varint,3,opt,name=range,proto3,oneof" json:"range,omitempty"`
-	// Takes precedence over range. Both are limited to the plan's analytics retention.
-	DateRange     *DateRange `protobuf:"bytes,4,opt,name=date_range,json=dateRange,proto3,oneof" json:"date_range,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	FederatedGraphName string                 `protobuf:"bytes,1,opt,name=federatedGraphName,proto3" json:"federatedGraphName,omitempty"`
+	Namespace          string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Range              *int32                 `protobuf:"varint,3,opt,name=range,proto3,oneof" json:"range,omitempty"` // range in hours
+	DateRange          *DateRange             `protobuf:"bytes,4,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetGraphFieldUsageRequest) Reset() {
@@ -21038,9 +21036,9 @@ func (*GetGraphFieldUsageRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{308}
 }
 
-func (x *GetGraphFieldUsageRequest) GetGraphName() string {
+func (x *GetGraphFieldUsageRequest) GetFederatedGraphName() string {
 	if x != nil {
-		return x.GraphName
+		return x.FederatedGraphName
 	}
 	return ""
 }
@@ -21067,12 +21065,10 @@ func (x *GetGraphFieldUsageRequest) GetDateRange() *DateRange {
 }
 
 type GetGraphFieldUsageResponse struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	Response *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	// Fields without requests in the window are not listed.
-	Fields []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
-	// The window that was queried, after the plan's analytics retention limit. Not set when the request fails.
-	DateRange     *DateRange `protobuf:"bytes,3,opt,name=date_range,json=dateRange,proto3,oneof" json:"date_range,omitempty"`
+	state         protoimpl.MessageState              `protogen:"open.v1"`
+	Response      *Response                           `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Fields        []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
+	DateRange     *DateRange                          `protobuf:"bytes,3,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"` // the window that was queried, after the analytics retention limit
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -33837,9 +33833,9 @@ func (x *ClientWithOperations_Operation) GetCount() int32 {
 
 type GetGraphFieldUsageResponse_Field struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	TypeName      string                 `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	FieldName     string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
-	RequestCount  int64                  `protobuf:"varint,3,opt,name=request_count,json=requestCount,proto3" json:"request_count,omitempty"`
+	TypeName      string                 `protobuf:"bytes,1,opt,name=typeName,proto3" json:"typeName,omitempty"`
+	FieldName     string                 `protobuf:"bytes,2,opt,name=fieldName,proto3" json:"fieldName,omitempty"`
+	RequestCount  int64                  `protobuf:"varint,3,opt,name=requestCount,proto3" json:"requestCount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -36363,27 +36359,25 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12N\n" +
 	"\x0erequest_series\x18\x02 \x03(\v2'.wg.cosmo.platform.v1.RequestSeriesItemR\rrequestSeries\x12D\n" +
 	"\aclients\x18\x03 \x03(\v2*.wg.cosmo.platform.v1.ClientWithOperationsR\aclients\x128\n" +
-	"\x04meta\x18\x04 \x01(\v2$.wg.cosmo.platform.v1.FieldUsageMetaR\x04meta\"\xd1\x01\n" +
-	"\x19GetGraphFieldUsageRequest\x12\x1d\n" +
-	"\n" +
-	"graph_name\x18\x01 \x01(\tR\tgraphName\x12\x1c\n" +
+	"\x04meta\x18\x04 \x01(\v2$.wg.cosmo.platform.v1.FieldUsageMetaR\x04meta\"\xe0\x01\n" +
+	"\x19GetGraphFieldUsageRequest\x12.\n" +
+	"\x12federatedGraphName\x18\x01 \x01(\tR\x12federatedGraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x19\n" +
-	"\x05range\x18\x03 \x01(\x05H\x00R\x05range\x88\x01\x01\x12C\n" +
+	"\x05range\x18\x03 \x01(\x05H\x00R\x05range\x88\x01\x01\x12B\n" +
+	"\tdateRange\x18\x04 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x01R\tdateRange\x88\x01\x01B\b\n" +
+	"\x06_rangeB\f\n" +
 	"\n" +
-	"date_range\x18\x04 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x01R\tdateRange\x88\x01\x01B\b\n" +
-	"\x06_rangeB\r\n" +
-	"\v_date_range\"\xe6\x02\n" +
+	"_dateRange\"\xe1\x02\n" +
 	"\x1aGetGraphFieldUsageResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12N\n" +
-	"\x06fields\x18\x02 \x03(\v26.wg.cosmo.platform.v1.GetGraphFieldUsageResponse.FieldR\x06fields\x12C\n" +
+	"\x06fields\x18\x02 \x03(\v26.wg.cosmo.platform.v1.GetGraphFieldUsageResponse.FieldR\x06fields\x12B\n" +
+	"\tdateRange\x18\x03 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x00R\tdateRange\x88\x01\x01\x1ae\n" +
+	"\x05Field\x12\x1a\n" +
+	"\btypeName\x18\x01 \x01(\tR\btypeName\x12\x1c\n" +
+	"\tfieldName\x18\x02 \x01(\tR\tfieldName\x12\"\n" +
+	"\frequestCount\x18\x03 \x01(\x03R\frequestCountB\f\n" +
 	"\n" +
-	"date_range\x18\x03 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x00R\tdateRange\x88\x01\x01\x1ah\n" +
-	"\x05Field\x12\x1b\n" +
-	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12\x1d\n" +
-	"\n" +
-	"field_name\x18\x02 \x01(\tR\tfieldName\x12#\n" +
-	"\rrequest_count\x18\x03 \x01(\x03R\frequestCountB\r\n" +
-	"\v_date_range\",\n" +
+	"_dateRange\",\n" +
 	"\x16CreateNamespaceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"U\n" +
 	"\x17CreateNamespaceResponse\x12:\n" +
@@ -38514,10 +38508,10 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	121, // 335: wg.cosmo.platform.v1.GetFieldUsageResponse.request_series:type_name -> wg.cosmo.platform.v1.RequestSeriesItem
 	323, // 336: wg.cosmo.platform.v1.GetFieldUsageResponse.clients:type_name -> wg.cosmo.platform.v1.ClientWithOperations
 	324, // 337: wg.cosmo.platform.v1.GetFieldUsageResponse.meta:type_name -> wg.cosmo.platform.v1.FieldUsageMeta
-	111, // 338: wg.cosmo.platform.v1.GetGraphFieldUsageRequest.date_range:type_name -> wg.cosmo.platform.v1.DateRange
+	111, // 338: wg.cosmo.platform.v1.GetGraphFieldUsageRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
 	19,  // 339: wg.cosmo.platform.v1.GetGraphFieldUsageResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	534, // 340: wg.cosmo.platform.v1.GetGraphFieldUsageResponse.fields:type_name -> wg.cosmo.platform.v1.GetGraphFieldUsageResponse.Field
-	111, // 341: wg.cosmo.platform.v1.GetGraphFieldUsageResponse.date_range:type_name -> wg.cosmo.platform.v1.DateRange
+	111, // 341: wg.cosmo.platform.v1.GetGraphFieldUsageResponse.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
 	19,  // 342: wg.cosmo.platform.v1.CreateNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	19,  // 343: wg.cosmo.platform.v1.DeleteNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	19,  // 344: wg.cosmo.platform.v1.RenameNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response

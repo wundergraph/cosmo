@@ -2380,26 +2380,21 @@ message GetFieldUsageResponse {
 }
 
 message GetGraphFieldUsageRequest {
-  string graph_name = 1;
+  string federatedGraphName = 1;
   string namespace = 2;
-  // Range in hours. Defaults to 24 when no date range is given.
-  optional int32 range = 3;
-  // Takes precedence over range. Both are limited to the plan's analytics retention.
-  optional DateRange date_range = 4;
+  optional int32 range = 3; // range in hours
+  optional DateRange dateRange = 4;
 }
 
 message GetGraphFieldUsageResponse {
   message Field {
-    string type_name = 1;
-    string field_name = 2;
-    int64 request_count = 3;
+    string typeName = 1;
+    string fieldName = 2;
+    int64 requestCount = 3;
   }
-
   Response response = 1;
-  // Fields without requests in the window are not listed.
   repeated Field fields = 2;
-  // The window that was queried, after the plan's analytics retention limit. Not set when the request fails.
-  optional DateRange date_range = 3;
+  optional DateRange dateRange = 3; // the window that was queried, after the analytics retention limit
 }
 
 message CreateNamespaceRequest {
@@ -3901,8 +3896,6 @@ service PlatformService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
-  // GetGraphFieldUsage returns the request count of every field of a federated graph, equal to the client totals in Studio field usage.
-  // A field selected through an interface also counts for every type that implements it.
   rpc GetGraphFieldUsage(GetGraphFieldUsageRequest) returns (GetGraphFieldUsageResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }

@@ -897,8 +897,6 @@ type PlatformServiceClient interface {
 	GetSubgraphMetrics(context.Context, *connect.Request[v1.GetSubgraphMetricsRequest]) (*connect.Response[v1.GetSubgraphMetricsResponse], error)
 	GetSubgraphMetricsErrorRate(context.Context, *connect.Request[v1.GetSubgraphMetricsErrorRateRequest]) (*connect.Response[v1.GetSubgraphMetricsErrorRateResponse], error)
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
-	// GetGraphFieldUsage returns the request count of every field of a federated graph, equal to the client totals in Studio field usage.
-	// A field selected through an interface also counts for every type that implements it.
 	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
@@ -3737,8 +3735,6 @@ type PlatformServiceHandler interface {
 	GetSubgraphMetrics(context.Context, *connect.Request[v1.GetSubgraphMetricsRequest]) (*connect.Response[v1.GetSubgraphMetricsResponse], error)
 	GetSubgraphMetricsErrorRate(context.Context, *connect.Request[v1.GetSubgraphMetricsErrorRateRequest]) (*connect.Response[v1.GetSubgraphMetricsErrorRateResponse], error)
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
-	// GetGraphFieldUsage returns the request count of every field of a federated graph, equal to the client totals in Studio field usage.
-	// A field selected through an interface also counts for every type that implements it.
 	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)

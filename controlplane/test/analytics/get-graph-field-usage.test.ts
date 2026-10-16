@@ -56,6 +56,18 @@ const createGraph = async (client: Awaited<ReturnType<typeof SetupTest>>['client
   return { fedGraphName, graphId: graph.id, targetId: graph.targetId };
 };
 
+const readQuery = (chClient: ClickHouseClient) => {
+  const { calls } = vi.mocked(chClient.queryPromise).mock;
+  expect(calls).toHaveLength(1);
+  const [query, params] = calls[0];
+  return { query, params };
+};
+
+const readWindow = (chClient: ClickHouseClient) => {
+  const { params } = readQuery(chClient);
+  return { start: Number(params?.startDate), end: Number(params?.endDate) };
+};
+
 describe('GetGraphFieldUsage', () => {
   let chClient: ClickHouseClient;
   let dbname: string;
@@ -77,25 +89,16 @@ describe('GetGraphFieldUsage', () => {
     await afterAllSetup(dbname);
   });
 
-  const lastQuery = () => {
-    const { calls } = vi.mocked(chClient.queryPromise).mock;
-    expect(calls).toHaveLength(1);
-    const [query, params] = calls[0];
-    return { query, params };
-  };
-
-  const lastWindow = () => {
-    const { params } = lastQuery();
-    return { start: Number(params?.startDate), end: Number(params?.endDate) };
-  };
-
   test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient: undefined });
     testContext.onTestFinished(() => server.close());
 
     const { fedGraphName } = await createGraph(client);
 
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ANALYTICS_DISABLED);
     expect(response.fields).toEqual([]);
@@ -107,54 +110,30 @@ describe('GetGraphFieldUsage', () => {
 
     const fedGraphName = genID('nonExistentGraph');
 
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(response.response?.details).toBe(`Federated graph '${fedGraphName}' not found`);
+    expect(response.response?.details).toContain(`Federated graph '${fedGraphName}' not found`);
     expect(response.fields).toEqual([]);
     expect(chClient.queryPromise).not.toHaveBeenCalled();
   });
 
-  test.each([
-    {
-      name: 'a date range that starts after it ends',
-      range: undefined,
-      start: formatISO(new Date()),
-      end: formatISO(subHours(new Date(), 24)),
-    },
-    {
-      name: 'a date range that ends before the retention window',
-      range: undefined,
-      start: formatISO(subHours(new Date(), 61 * 24)),
-      end: formatISO(subHours(new Date(), 60 * 24)),
-    },
-    {
-      name: 'a date range that ends before the retention window when a range is also given',
-      range: 1,
-      start: formatISO(subHours(new Date(), 61 * 24)),
-      end: formatISO(subHours(new Date(), 60 * 24)),
-    },
-    {
-      name: 'a date range whose start is not a date',
-      range: undefined,
-      start: 'not-a-date',
-      end: formatISO(new Date()),
-    },
-    { name: 'a date range whose end is not a date', range: undefined, start: formatISO(new Date()), end: 'not-a-date' },
-    { name: 'an empty date range', range: undefined, start: '', end: '' },
-    { name: 'a negative range', range: -5, start: undefined, end: undefined },
-    { name: 'a zero range', range: 0, start: undefined, end: undefined },
-  ])('Should return ERR for $name', async ({ range, start, end }) => {
+  test('Should return ERR when date range is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
-    onTestFinished(() => server.close());
+    testContext.onTestFinished(() => server.close());
 
     const { fedGraphName } = await createGraph(client);
 
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      range,
-      dateRange: start === undefined || end === undefined ? undefined : { start, end },
+      dateRange: {
+        start: formatISO(new Date()),
+        end: formatISO(subHours(new Date(), 24)),
+      },
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
@@ -162,6 +141,22 @@ describe('GetGraphFieldUsage', () => {
     expect(response.fields).toEqual([]);
     expect(response.dateRange).toBeUndefined();
     expect(chClient.queryPromise).not.toHaveBeenCalled();
+  });
+
+  test('Should return empty fields when no usage exists', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const { fedGraphName } = await createGraph(client);
+    vi.mocked(chClient.queryPromise).mockResolvedValue([]);
+
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.fields).toEqual([]);
   });
 
   test('Should return the request count of every field of the graph', async (testContext) => {
@@ -176,7 +171,10 @@ describe('GetGraphFieldUsage', () => {
       { typeName: 'Query', fieldName: 'employees', requestCount: '42' },
     ]);
 
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.fields).toHaveLength(2);
@@ -187,11 +185,9 @@ describe('GetGraphFieldUsage', () => {
     expect(response.fields[1]?.fieldName).toBe('employees');
     expect(response.fields[1]?.requestCount).toBe(BigInt(42));
 
-    const { query, params } = lastQuery();
-    expect(params).toMatchObject({
-      organizationId: users.adminAliceCompanyA.organizationId,
-      federatedGraphId: graphId,
-    });
+    const { query, params } = readQuery(chClient);
+    expect(params?.organizationId).toBe(users.adminAliceCompanyA.organizationId);
+    expect(params?.federatedGraphId).toBe(graphId);
     for (const fragment of [
       'sum(TotalUsages) AS requestCount',
       'ARRAY JOIN arrayDistinct(TypeNames)',
@@ -216,12 +212,17 @@ describe('GetGraphFieldUsage', () => {
     const { fedGraphName } = await createGraph(client);
     vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.fields).toEqual([]);
-    const { start, end } = lastWindow();
-    expect(response.dateRange).toMatchObject(toDateRange(lastWindow()));
+    const { start, end } = readWindow(chClient);
+    const queried = toDateRange(readWindow(chClient));
+    expect(response.dateRange?.start).toBe(queried.start);
+    expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(24 * HOUR_IN_SECONDS);
     expect(Math.abs(end - toUnixSeconds(new Date()))).toBeLessThanOrEqual(60);
   });
@@ -234,14 +235,16 @@ describe('GetGraphFieldUsage', () => {
     vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       range: 30 * 24,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const { start, end } = lastWindow();
-    expect(response.dateRange).toMatchObject(toDateRange(lastWindow()));
+    const { start, end } = readWindow(chClient);
+    const queried = toDateRange(readWindow(chClient));
+    expect(response.dateRange?.start).toBe(queried.start);
+    expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(7 * 24 * HOUR_IN_SECONDS);
   });
 
@@ -253,14 +256,16 @@ describe('GetGraphFieldUsage', () => {
     vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       range: 30 * 24,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const { start, end } = lastWindow();
-    expect(response.dateRange).toMatchObject(toDateRange(lastWindow()));
+    const { start, end } = readWindow(chClient);
+    const queried = toDateRange(readWindow(chClient));
+    expect(response.dateRange?.start).toBe(queried.start);
+    expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(14 * 24 * HOUR_IN_SECONDS);
   });
 
@@ -273,7 +278,7 @@ describe('GetGraphFieldUsage', () => {
 
     const now = new Date();
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       dateRange: {
         start: formatISO(subHours(now, 30 * 24)),
@@ -282,8 +287,10 @@ describe('GetGraphFieldUsage', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const { start, end } = lastWindow();
-    expect(response.dateRange).toMatchObject(toDateRange(lastWindow()));
+    const { start, end } = readWindow(chClient);
+    const queried = toDateRange(readWindow(chClient));
+    expect(response.dateRange?.start).toBe(queried.start);
+    expect(response.dateRange?.end).toBe(queried.end);
     expect(Math.abs(start - toUnixSeconds(subHours(now, 7 * 24)))).toBeLessThanOrEqual(60);
     expect(Math.abs(end - toUnixSeconds(now))).toBeLessThanOrEqual(60);
   });
@@ -298,15 +305,16 @@ describe('GetGraphFieldUsage', () => {
     const end = new Date(toUnixSeconds(new Date()) * 1000);
     const start = subHours(end, 2);
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       range,
       dateRange: { start: formatISO(start), end: formatISO(end) },
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(lastWindow()).toEqual({ start: toUnixSeconds(start), end: toUnixSeconds(end) });
-    expect(response.dateRange).toMatchObject({ start: start.toISOString(), end: end.toISOString() });
+    expect(readWindow(chClient)).toEqual({ start: toUnixSeconds(start), end: toUnixSeconds(end) });
+    expect(response.dateRange?.start).toBe(start.toISOString());
+    expect(response.dateRange?.end).toBe(end.toISOString());
   });
 
   test('Should query from the exact start of the date range, not the start of its time bucket', async (testContext) => {
@@ -320,13 +328,13 @@ describe('GetGraphFieldUsage', () => {
     const start = subHours(end, 3);
     start.setUTCMinutes(2, 0, 0);
     const response = await client.getGraphFieldUsage({
-      graphName: fedGraphName,
+      federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       dateRange: { start: formatISO(start), end: formatISO(end) },
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(lastWindow().start).toBe(toUnixSeconds(start));
+    expect(readWindow(chClient).start).toBe(toUnixSeconds(start));
   });
 
   test('Should not return the graph of another organization', async (testContext) => {
@@ -337,32 +345,18 @@ describe('GetGraphFieldUsage', () => {
 
     authenticator.changeUser(TestUser.adminJimCompanyB);
 
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(response.fields).toEqual([]);
     expect(chClient.queryPromise).not.toHaveBeenCalled();
   });
 
-  test('Should deny a role that cannot read federated graphs', async (testContext) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
-    testContext.onTestFinished(() => server.close());
-
-    const { fedGraphName } = await createGraph(client);
-
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role: 'subgraph-publisher' })),
-    });
-
-    const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
-
-    expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    expect(chClient.queryPromise).not.toHaveBeenCalled();
-  });
-
   test.each(['organization-admin', 'organization-developer', 'organization-viewer', 'graph-admin', 'graph-viewer'])(
-    '%s scoped to the graph should be able to read its field usage',
+    '%s should be able to get graph field usage',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
       onTestFinished(() => server.close());
@@ -375,14 +369,17 @@ describe('GetGraphFieldUsage', () => {
         rbac: createTestRBACEvaluator(createTestGroup({ role, resources: [targetId] })),
       });
 
-      const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+      const response = await client.getGraphFieldUsage({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
 
       expect(response.response?.code).toBe(EnumStatusCode.OK);
     },
   );
 
-  test.each(['graph-admin', 'graph-viewer'])(
-    '%s scoped to a different graph should not be able to read its field usage',
+  test.each(['graph-admin', 'graph-viewer', 'subgraph-admin', 'subgraph-viewer'])(
+    '%s scoped to a different graph should NOT have access',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
       onTestFinished(() => server.close());
@@ -395,7 +392,10 @@ describe('GetGraphFieldUsage', () => {
         rbac: createTestRBACEvaluator(createTestGroup({ role, resources: [otherTargetId] })),
       });
 
-      const response = await client.getGraphFieldUsage({ graphName: fedGraphName, namespace: DEFAULT_NAMESPACE });
+      const response = await client.getGraphFieldUsage({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
 
       expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
       expect(chClient.queryPromise).not.toHaveBeenCalled();

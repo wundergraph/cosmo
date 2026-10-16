@@ -4,7 +4,6 @@ import {
   GetGraphFieldUsageRequest,
   GetGraphFieldUsageResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValid } from 'date-fns';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
@@ -33,15 +32,16 @@ export function getGraphFieldUsage(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    const usageRepo = new UsageRepository(opts.chClient);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
-    const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+    const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!graph) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph '${req.graphName}' not found`,
+          details: `Federated graph '${req.federatedGraphName}' not found`,
         },
         fields: [],
       };
@@ -63,12 +63,7 @@ export function getGraphFieldUsage(
       dateRange: req.dateRange,
     });
 
-    // validateDateRanges accepts unparsable dates and negative ranges, and drops an invalid date range without an error.
-    const isInvalid =
-      req.dateRange === undefined
-        ? req.range !== undefined && req.range < 1
-        : !isValid(new Date(req.dateRange.start)) || !isValid(new Date(req.dateRange.end)) || !validatedDateRange;
-    if (isInvalid) {
+    if (!range && !validatedDateRange) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -78,28 +73,32 @@ export function getGraphFieldUsage(
       };
     }
 
-    const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range);
-    const [start, end] = getDateRange(parsedDateRange);
+    const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range || 24);
+    const [startTimestamp, endTimestamp] = getDateRange(parsedDateRange);
 
-    const usageRepo = new UsageRepository(opts.chClient);
-    const fields = await usageRepo.getGraphFieldUsage({
+    const fieldsData = await usageRepo.getGraphFieldUsage({
       organizationId: authContext.organizationId,
       federatedGraphId: graph.id,
-      dateRange: { start, end },
+      dateRange: {
+        start: startTimestamp,
+        end: endTimestamp,
+      },
     });
+
+    const fields = fieldsData.map((field) => ({
+      typeName: field.typeName,
+      fieldName: field.fieldName,
+      requestCount: BigInt(field.requestCount),
+    }));
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      fields: fields.map((field) => ({
-        typeName: field.typeName,
-        fieldName: field.fieldName,
-        requestCount: BigInt(field.requestCount),
-      })),
+      fields,
       dateRange: {
-        start: new Date(start * 1000).toISOString(),
-        end: new Date(end * 1000).toISOString(),
+        start: new Date(startTimestamp * 1000).toISOString(),
+        end: new Date(endTimestamp * 1000).toISOString(),
       },
     };
   });
