@@ -35,7 +35,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())

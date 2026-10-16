@@ -311,6 +311,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
+	// EnableMultiFetch makes the planner record the subgraph operation artifacts
+	// the postprocessor's multi-fetch merge stage consumes.
+	outConfig.EnableMultiFetch = routerEngineConfig.Execution.EnableMultiFetch
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
 		for _, argumentConfiguration := range configuration.ArgumentsConfiguration {
@@ -446,7 +449,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
-			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled)
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled, routerEngineConfig.Execution.EnableGRPCWireEncoding)
 			if grpcConfig != nil {
 				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
 				if err != nil {
@@ -528,6 +531,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
 	}
 
+	beforeEventsDispatchFns := make([]pubsub_datasource.BeforeEventsDispatchFn, len(l.subscriptionHooks.beforeEventsDispatch.handlers))
+	for i, fn := range l.subscriptionHooks.beforeEventsDispatch.handlers {
+		beforeEventsDispatchFns[i] = NewPubSubBeforeEventsDispatchHook(fn, l.logger)
+	}
+
 	subscriptionOnCreateFns := make([]pubsub_datasource.SubscriptionOnCreateFn, len(l.subscriptionHooks.onCreate.handlers))
 	for i, fn := range l.subscriptionHooks.onCreate.handlers {
 		subscriptionOnCreateFns[i] = NewPubSubSubscriptionOnCreateHook(fn)
@@ -552,6 +560,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				Handlers:              onReceiveEventsFns,
 				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
 				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
+			},
+			BeforeEventsDispatch: pubsub_datasource.BeforeEventsDispatchHooks{
+				Handlers: beforeEventsDispatchFns,
+				Timeout:  l.subscriptionHooks.beforeEventsDispatch.timeout,
 			},
 			SubscriptionOnCreate: pubsub_datasource.SubscriptionOnCreateHooks{
 				Handlers: subscriptionOnCreateFns,
@@ -750,7 +762,8 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 // toGRPCConfiguration converts a nodev1.GRPCConfiguration to a grpcdatasource.GRPCConfiguration.
 // It is used to configure the gRPC datasource for a subgraph.
 // The pluginsEnabled flag is used to disable the gRPC datasource if the plugins are not enabled.
-func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
+// The wireEncodingEnabled flag selects wire encoding or protoreflect to build gRPC request messages.
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled, wireEncodingEnabled bool) *grpcdatasource.GRPCConfiguration {
 	if config == nil || config.Mapping == nil {
 		return nil
 	}
@@ -860,8 +873,9 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	disabled := config.Plugin != nil && !pluginsEnabled
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping:  result,
-		Disabled: disabled,
+		Mapping:         result,
+		Disabled:        disabled,
+		UseProtoReflect: !wireEncodingEnabled,
 	}
 }
 

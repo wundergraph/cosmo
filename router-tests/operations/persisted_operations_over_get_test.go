@@ -40,7 +40,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -88,12 +88,15 @@ func TestPersistedOperationOverGET(t *testing.T) {
 func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Operation not found", func(t *testing.T) {
+	t.Run("returns not found when the hash is unknown", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -243,7 +246,7 @@ func TestPersistedSubscriptionOverGET(t *testing.T) {
 			wg.Add(2)
 
 			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "a78014f326504cdcc3ed9c4440c989ca0ac7ef237f6379ea7fee0ffde5ea71cb"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "6fb148106ecc3a18ede2cae41846df8dfa3bf5c1ec762637b4b36c30d5347a1d"}}`),
 				Header: map[string][]string{
 					"Content-Type":  {"application/json"},
 					"Accept":        {"text/event-stream,application/json"},

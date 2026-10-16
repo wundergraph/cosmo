@@ -1,9 +1,9 @@
-FROM --platform=${BUILDPLATFORM} node:lts AS builder
+FROM --platform=${BUILDPLATFORM} node:22.22.2 AS builder
 
 WORKDIR /app
 
-# Ensure we have pnpm available to us
-RUN npm install --global pnpm@9
+# Ensure we have pnpm available to us, pinned to the version in package.json's packageManager field
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
 # Files required by pnpm install
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -45,7 +45,7 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./composition build
 
-FROM --platform=${TARGETPLATFORM} node:lts-alpine
+FROM node:lts-alpine
 
 RUN apk add --no-cache --upgrade bash
 

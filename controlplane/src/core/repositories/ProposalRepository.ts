@@ -217,18 +217,24 @@ export class ProposalRepository {
 
   public async ByFederatedGraphId({
     federatedGraphId,
+    proposalName,
     startDate,
     endDate,
     limit,
     offset,
   }: {
     federatedGraphId: string;
+    proposalName?: string;
     startDate?: string;
     endDate?: string;
     limit: number;
     offset: number;
   }): Promise<{ proposals: { proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] }[] }> {
     const conditions: (SQL<unknown> | undefined)[] = [];
+
+    if (proposalName) {
+      conditions.push(eq(schema.proposals.name, proposalName));
+    }
 
     if (startDate && endDate) {
       conditions.push(
@@ -322,14 +328,20 @@ export class ProposalRepository {
 
   public async countByFederatedGraphId({
     federatedGraphId,
+    proposalName,
     startDate,
     endDate,
   }: {
     federatedGraphId: string;
+    proposalName?: string;
     startDate?: string;
     endDate?: string;
   }): Promise<number> {
     const conditions: (SQL<unknown> | undefined)[] = [];
+
+    if (proposalName) {
+      conditions.push(eq(schema.proposals.name, proposalName));
+    }
 
     if (startDate && endDate) {
       conditions.push(

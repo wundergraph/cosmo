@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -62,6 +64,9 @@ type OAuthTestServer struct {
 type OAuthTestServerOptions struct {
 	DefaultScopes        string
 	PreRegisteredClients []*OAuthClient
+	// KeyID sets the JWKS key ID for the signing key. Defaults to "test_rsa".
+	// Set a unique value per server when a test runs multiple OAuth servers.
+	KeyID string
 }
 
 // NewOAuthTestServer creates and starts a minimal OAuth 2.1 AS on a random port.
@@ -72,7 +77,12 @@ func NewOAuthTestServer(t *testing.T, opts *OAuthTestServerOptions) (*OAuthTestS
 		opts = &OAuthTestServerOptions{}
 	}
 
-	cryptoProvider, err := jwks.NewRSACrypto("test_rsa", jwkset.AlgRS256, 2048)
+	keyID := opts.KeyID
+	if keyID == "" {
+		keyID = "test_rsa"
+	}
+
+	cryptoProvider, err := jwks.NewRSACrypto(keyID, jwkset.AlgRS256, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RSA crypto: %w", err)
 	}
@@ -89,7 +99,7 @@ func NewOAuthTestServer(t *testing.T, opts *OAuthTestServerOptions) (*OAuthTestS
 	s := &OAuthTestServer{
 		t:             t,
 		provider:      cryptoProvider,
-		keyID:         "test_rsa",
+		keyID:         keyID,
 		audience:      "test-audience",
 		storage:       jwkStorage,
 		clients:       make(map[string]*OAuthClient),
@@ -268,13 +278,7 @@ func (s *OAuthTestServer) handleAuthorize(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if len(c.RedirectURIs) > 0 {
-		redirectAllowed := false
-		for _, allowed := range c.RedirectURIs {
-			if allowed == redirectURI {
-				redirectAllowed = true
-				break
-			}
-		}
+		redirectAllowed := slices.Contains(c.RedirectURIs, redirectURI)
 		if !redirectAllowed {
 			http.Error(w, "unregistered redirect_uri", http.StatusBadRequest)
 			return
@@ -438,9 +442,7 @@ func (s *OAuthTestServer) CreateToken(claims map[string]any) (string, error) {
 		"iat": now.Unix(),
 		"exp": now.Add(1 * time.Hour).Unix(),
 	}
-	for k, v := range claims {
-		tokenClaims[k] = v
-	}
+	maps.Copy(tokenClaims, claims)
 
 	token := jwt.NewWithClaims(s.provider.SigningMethod(), tokenClaims)
 	token.Header[jwkset.HeaderKID] = s.keyID

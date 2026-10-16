@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useCheckParams } from '@/hooks/use-check-params';
 import { BarChartIcon, CheckIcon, Cross1Icon, GlobeIcon } from '@radix-ui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
@@ -10,7 +11,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext } from 'react';
 import { GraphContext } from '../layout/graph-layout';
 import { Button } from '../ui/button';
@@ -40,6 +41,8 @@ export const ChangesTable = ({
   hasIgnoreAll?: boolean;
 }) => {
   const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
+  const { checkId, slug } = useCheckParams();
+  const { pageSize: limit, offset } = usePaginationParams();
 
   return (
     <TableWrapper>
@@ -63,6 +66,10 @@ export const ChangesTable = ({
               operationName={operationName}
               openUsage={openUsage}
               subgraphName={c.subgraphName}
+              limit={limit}
+              offset={offset}
+              checkId={checkId}
+              slug={slug}
             />
           ))}
         </TableBody>
@@ -83,6 +90,10 @@ const Row = ({
   operationName,
   subgraphName,
   openUsage,
+  limit,
+  offset,
+  checkId,
+  slug,
 }: {
   changeType: string;
   message: string;
@@ -93,29 +104,29 @@ const Row = ({
   operationHash?: string;
   operationName?: string;
   subgraphName?: string;
+  limit: number;
+  offset: number;
+  checkId: string;
+  slug: string;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
-  const router = useRouter();
   const { toast } = useToast();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
-  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || '10');
-
   const client = useQueryClient();
 
   const invalidateCheckOperations = () => {
     const key = createConnectQueryKey({
       schema: getCheckOperations,
       input: {
-        checkId: router.query.checkId as string,
+        checkId,
         graphName: graphContext?.graph?.name,
         namespace: graphContext?.graph?.namespace,
-        limit: limit > 200 ? 200 : limit,
-        offset: (pageNumber - 1) * limit,
+        limit,
+        offset,
       },
       cardinality: 'finite',
     });
@@ -237,7 +248,7 @@ const Row = ({
                           query: {
                             organizationSlug,
                             namespace,
-                            slug: router.query.slug,
+                            slug,
                             typename: path?.split('.')?.[0],
                           },
                         }

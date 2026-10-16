@@ -56,8 +56,8 @@ The Cosmo MCP Server builds on top of the concept of persisted operations (also 
   <Card title="IDE Setup" icon="display-code" href="/router/mcp/ide-setup">
     Connect Claude, Cursor, Windsurf, VS Code, and other AI tools to your MCP server.
   </Card>
-  <Card title="Operations" icon="file-code" href="/router/mcp/operations">
-    Learn how to create, describe, and organize GraphQL operations for AI consumption.
+  <Card title="Tools" icon="wrench" href="/router/mcp/tools">
+    Learn how to define, describe, and organize the tools you expose to AI models.
   </Card>
 </CardGroup>
 
@@ -172,33 +172,14 @@ When an AI model interacts with your MCP endpoint:
 4. Executes tools with appropriate parameters
 5. Receives structured data that it can interpret and use in its responses
 
-## Built-in MCP Tools
+## Tools
 
-The MCP server provides several tools out of the box to help AI models discover and interact with your GraphQL API:
+The MCP server exposes two kinds of tools to AI models:
 
-### Discovery Tools
+- **Built-in tools** provided by the server itself: `get_operation_info` for HTTP execution and integration instructions, and the optional `get_schema` and `execute_graphql` for schema access and arbitrary queries.
+- **Tools you create**, each defined by a GraphQL operation. This is the primary way to shape what AI models can do with your API.
 
-<CardGroup cols={2}>
-  <Card title="get_operation_info" icon="circle-info">
-    Retrieves detailed information about a specific GraphQL operation, including its input schema, query structure, and
-    execution guidance. AI models use this to understand how to properly call an operation in real-world scenarios.
-  </Card>
-  <Card title="get_schema" icon="code">
-    Provides the full GraphQL schema as a string. This helps AI models understand the entire API structure. This tool is
-    only available if `expose_schema` is enabled.
-  </Card>
-</CardGroup>
-
-### Execution Tools
-
-<CardGroup cols={2}>
-  <Card title="execute_graphql" icon="play">
-    Executes arbitrary GraphQL queries or mutations against your API. This tool is only available if `enable_arbitrary_operations` is enabled, allowing AI models to craft and execute custom operations beyond predefined ones.
-  </Card>
-  <Card title="execute_operation_*" icon="rocket">
-    For each GraphQL operation in your operations directory, the MCP server automatically generates a corresponding execution tool with the pattern `execute_operation_<operation_name>` (e.g., `execute_operation_get_users`).
-  </Card>
-</CardGroup>
+See the [Tools](/router/mcp/tools) page for the built-in tool reference and how to create your own.
 
 <Card title="Next: Quickstart" icon="arrow-right" href="/router/mcp/quickstart">
   Ready to get started? Follow the quickstart guide to have MCP running in 5 minutes.

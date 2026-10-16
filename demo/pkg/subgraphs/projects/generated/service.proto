@@ -39,6 +39,10 @@ service ProjectsService {
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
   rpc RequireEmployeeDeepWorkItemInfoById(RequireEmployeeDeepWorkItemInfoByIdRequest) returns (RequireEmployeeDeepWorkItemInfoByIdResponse) {}
   rpc RequireEmployeeFilteredProjectSummaryById(RequireEmployeeFilteredProjectSummaryByIdRequest) returns (RequireEmployeeFilteredProjectSummaryByIdResponse) {}
+  rpc RequireEmployeeLatestWorkOperationById(RequireEmployeeLatestWorkOperationByIdRequest) returns (RequireEmployeeLatestWorkOperationByIdResponse) {}
+  rpc RequireEmployeeOptionalLatestWorkOperationById(RequireEmployeeOptionalLatestWorkOperationByIdRequest) returns (RequireEmployeeOptionalLatestWorkOperationByIdResponse) {}
+  rpc RequireEmployeeRecommendedWorkItemById(RequireEmployeeRecommendedWorkItemByIdRequest) returns (RequireEmployeeRecommendedWorkItemByIdResponse) {}
+  rpc RequireEmployeeRecommendedWorkItemsById(RequireEmployeeRecommendedWorkItemsByIdRequest) returns (RequireEmployeeRecommendedWorkItemsByIdResponse) {}
   rpc RequireEmployeeReviewReportById(RequireEmployeeReviewReportByIdRequest) returns (RequireEmployeeReviewReportByIdResponse) {}
   rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc RequireEmployeeWorkItemHandlerInfoById(RequireEmployeeWorkItemHandlerInfoByIdRequest) returns (RequireEmployeeWorkItemHandlerInfoByIdResponse) {}
@@ -1160,6 +1164,104 @@ message RequireEmployeeDeepWorkItemInfoByIdFields {
     }
   }
   EmployeeWorkItem primary_work_item = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemByIdRequest {
+  // RequireEmployeeRecommendedWorkItemByIdContext provides the context for the required fields method RequireEmployeeRecommendedWorkItemById.
+  repeated RequireEmployeeRecommendedWorkItemByIdContext context = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeRecommendedWorkItemByIdFields fields = 2;
+}
+
+message RequireEmployeeRecommendedWorkItemByIdResponse {
+  // RequireEmployeeRecommendedWorkItemByIdResult provides the result for the required fields method RequireEmployeeRecommendedWorkItemById.
+  repeated RequireEmployeeRecommendedWorkItemByIdResult result = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemByIdResult {
+  EmployeeWorkItem recommended_work_item = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdRequest {
+  // RequireEmployeeRecommendedWorkItemsByIdContext provides the context for the required fields method RequireEmployeeRecommendedWorkItemsById.
+  repeated RequireEmployeeRecommendedWorkItemsByIdContext context = 1;
+  // RequireEmployeeRecommendedWorkItemsByIdArgs provides the field arguments for the required field with method RequireEmployeeRecommendedWorkItemsById.
+  RequireEmployeeRecommendedWorkItemsByIdArgs field_args = 2;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeRecommendedWorkItemsByIdFields fields = 2;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdArgs {
+  int32 limit = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdResponse {
+  // RequireEmployeeRecommendedWorkItemsByIdResult provides the result for the required fields method RequireEmployeeRecommendedWorkItemsById.
+  repeated RequireEmployeeRecommendedWorkItemsByIdResult result = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdResult {
+  repeated EmployeeWorkItem recommended_work_items = 1;
+}
+
+message RequireEmployeeRecommendedWorkItemsByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeLatestWorkOperationByIdRequest {
+  // RequireEmployeeLatestWorkOperationByIdContext provides the context for the required fields method RequireEmployeeLatestWorkOperationById.
+  repeated RequireEmployeeLatestWorkOperationByIdContext context = 1;
+}
+
+message RequireEmployeeLatestWorkOperationByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeLatestWorkOperationByIdFields fields = 2;
+}
+
+message RequireEmployeeLatestWorkOperationByIdResponse {
+  // RequireEmployeeLatestWorkOperationByIdResult provides the result for the required fields method RequireEmployeeLatestWorkOperationById.
+  repeated RequireEmployeeLatestWorkOperationByIdResult result = 1;
+}
+
+message RequireEmployeeLatestWorkOperationByIdResult {
+  WorkReviewResult latest_work_operation = 1;
+}
+
+message RequireEmployeeLatestWorkOperationByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeOptionalLatestWorkOperationByIdRequest {
+  // RequireEmployeeOptionalLatestWorkOperationByIdContext provides the context for the required fields method RequireEmployeeOptionalLatestWorkOperationById.
+  repeated RequireEmployeeOptionalLatestWorkOperationByIdContext context = 1;
+}
+
+message RequireEmployeeOptionalLatestWorkOperationByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeOptionalLatestWorkOperationByIdFields fields = 2;
+}
+
+message RequireEmployeeOptionalLatestWorkOperationByIdResponse {
+  // RequireEmployeeOptionalLatestWorkOperationByIdResult provides the result for the required fields method RequireEmployeeOptionalLatestWorkOperationById.
+  repeated RequireEmployeeOptionalLatestWorkOperationByIdResult result = 1;
+}
+
+message RequireEmployeeOptionalLatestWorkOperationByIdResult {
+  WorkReviewResult optional_latest_work_operation = 1;
+}
+
+message RequireEmployeeOptionalLatestWorkOperationByIdFields {
+  string expertise = 1;
 }
 
 message Project {

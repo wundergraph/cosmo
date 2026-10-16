@@ -101,7 +101,12 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 		cdn.federatedGraphID,
 		url.PathEscape(clientName),
 		url.PathEscape(sha256Hash))
-	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
+	// operationPath already contains escaped path segments. Parse it as an
+	// escaped reference rather than setting URL.Path, which would escape it again.
+	operationURL, err := cdn.cdnURL.Parse(operationPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid persisted operation URL: %w", err)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)
 	if err != nil {

@@ -47,6 +47,12 @@ const (
 	// PlatformServiceGetPlaygroundScriptsProcedure is the fully-qualified name of the PlatformService's
 	// GetPlaygroundScripts RPC.
 	PlatformServiceGetPlaygroundScriptsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundScripts"
+	// PlatformServiceGetPlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's GetPlaygroundDefaultHeaders RPC.
+	PlatformServiceGetPlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPlaygroundDefaultHeaders"
+	// PlatformServiceUpdatePlaygroundDefaultHeadersProcedure is the fully-qualified name of the
+	// PlatformService's UpdatePlaygroundDefaultHeaders RPC.
+	PlatformServiceUpdatePlaygroundDefaultHeadersProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdatePlaygroundDefaultHeaders"
 	// PlatformServiceCreateNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// CreateNamespace RPC.
 	PlatformServiceCreateNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateNamespace"
@@ -98,6 +104,9 @@ const (
 	// PlatformServiceCreateFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's CreateFederatedSubgraph RPC.
 	PlatformServiceCreateFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraph"
+	// PlatformServiceCreateFederatedSubgraphsProcedure is the fully-qualified name of the
+	// PlatformService's CreateFederatedSubgraphs RPC.
+	PlatformServiceCreateFederatedSubgraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedSubgraphs"
 	// PlatformServicePublishFederatedSubgraphProcedure is the fully-qualified name of the
 	// PlatformService's PublishFederatedSubgraph RPC.
 	PlatformServicePublishFederatedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph"
@@ -397,6 +406,9 @@ const (
 	// PlatformServiceUpdateFeatureSettingsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateFeatureSettings RPC.
 	PlatformServiceUpdateFeatureSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateFeatureSettings"
+	// PlatformServiceAcceptFeatureTermsProcedure is the fully-qualified name of the PlatformService's
+	// AcceptFeatureTerms RPC.
+	PlatformServiceAcceptFeatureTermsProcedure = "/wg.cosmo.platform.v1.PlatformService/AcceptFeatureTerms"
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
@@ -625,6 +637,9 @@ type PlatformServiceClient interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -651,6 +666,9 @@ type PlatformServiceClient interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -849,8 +867,10 @@ type PlatformServiceClient interface {
 	GetChangelogBySchemaVersion(context.Context, *connect.Request[v1.GetChangelogBySchemaVersionRequest]) (*connect.Response[v1.GetChangelogBySchemaVersionResponse], error)
 	// GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
-	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+	// UpdateFeatureSettings updates the settings of features of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
+	// AcceptFeatureTerms accepts the terms for an organization feature
+	AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -1024,6 +1044,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 			connect.WithClientOptions(opts...),
 		),
+		getPlaygroundDefaultHeaders: connect.NewClient[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
+		updatePlaygroundDefaultHeaders: connect.NewClient[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+			connect.WithClientOptions(opts...),
+		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateNamespaceProcedure,
@@ -1124,6 +1156,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedSubgraphProcedure,
 			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+			connect.WithClientOptions(opts...),
+		),
+		createFederatedSubgraphs: connect.NewClient[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateFederatedSubgraphsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		publishFederatedSubgraph: connect.NewClient[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse](
@@ -1726,6 +1764,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		acceptFeatureTerms: connect.NewClient[v1.AcceptFeatureTermsRequest, v1.AcceptFeatureTermsResponse](
+			httpClient,
+			baseURL+PlatformServiceAcceptFeatureTermsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("AcceptFeatureTerms")),
+			connect.WithClientOptions(opts...),
+		),
 		getSubgraphMembers: connect.NewClient[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
@@ -2180,6 +2224,8 @@ type platformServiceClient struct {
 	deletePlaygroundScript                             *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
 	updatePlaygroundScript                             *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
 	getPlaygroundScripts                               *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
+	getPlaygroundDefaultHeaders                        *connect.Client[v1.GetPlaygroundDefaultHeadersRequest, v1.GetPlaygroundDefaultHeadersResponse]
+	updatePlaygroundDefaultHeaders                     *connect.Client[v1.UpdatePlaygroundDefaultHeadersRequest, v1.UpdatePlaygroundDefaultHeadersResponse]
 	createNamespace                                    *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
 	deleteNamespace                                    *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
 	renameNamespace                                    *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
@@ -2197,6 +2243,7 @@ type platformServiceClient struct {
 	updateMonograph                                    *connect.Client[v1.UpdateMonographRequest, v1.UpdateMonographResponse]
 	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
 	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
+	createFederatedSubgraphs                           *connect.Client[v1.CreateFederatedSubgraphsRequest, v1.CreateFederatedSubgraphsResponse]
 	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
 	publishFederatedSubgraphs                          *connect.Client[v1.PublishFederatedSubgraphsRequest, v1.PublishFederatedSubgraphsResponse]
 	getBatchPublishJobStatus                           *connect.Client[v1.GetBatchPublishJobStatusRequest, v1.GetBatchPublishJobStatusResponse]
@@ -2297,6 +2344,7 @@ type platformServiceClient struct {
 	getChangelogBySchemaVersion                        *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
 	getUserAccessibleResources                         *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
 	updateFeatureSettings                              *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
+	acceptFeatureTerms                                 *connect.Client[v1.AcceptFeatureTermsRequest, v1.AcceptFeatureTermsResponse]
 	getSubgraphMembers                                 *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
 	addReadme                                          *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions                       *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
@@ -2392,6 +2440,18 @@ func (c *platformServiceClient) GetPlaygroundScripts(ctx context.Context, req *c
 	return c.getPlaygroundScripts.CallUnary(ctx, req)
 }
 
+// GetPlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders.
+func (c *platformServiceClient) GetPlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return c.getPlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
+// UpdatePlaygroundDefaultHeaders calls
+// wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders.
+func (c *platformServiceClient) UpdatePlaygroundDefaultHeaders(ctx context.Context, req *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return c.updatePlaygroundDefaultHeaders.CallUnary(ctx, req)
+}
+
 // CreateNamespace calls wg.cosmo.platform.v1.PlatformService.CreateNamespace.
 func (c *platformServiceClient) CreateNamespace(ctx context.Context, req *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return c.createNamespace.CallUnary(ctx, req)
@@ -2475,6 +2535,11 @@ func (c *platformServiceClient) MigrateMonograph(ctx context.Context, req *conne
 // CreateFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph.
 func (c *platformServiceClient) CreateFederatedSubgraph(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return c.createFederatedSubgraph.CallUnary(ctx, req)
+}
+
+// CreateFederatedSubgraphs calls wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs.
+func (c *platformServiceClient) CreateFederatedSubgraphs(ctx context.Context, req *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return c.createFederatedSubgraphs.CallUnary(ctx, req)
 }
 
 // PublishFederatedSubgraph calls wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph.
@@ -2995,6 +3060,11 @@ func (c *platformServiceClient) UpdateFeatureSettings(ctx context.Context, req *
 	return c.updateFeatureSettings.CallUnary(ctx, req)
 }
 
+// AcceptFeatureTerms calls wg.cosmo.platform.v1.PlatformService.AcceptFeatureTerms.
+func (c *platformServiceClient) AcceptFeatureTerms(ctx context.Context, req *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error) {
+	return c.acceptFeatureTerms.CallUnary(ctx, req)
+}
+
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
 func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return c.getSubgraphMembers.CallUnary(ctx, req)
@@ -3391,6 +3461,9 @@ type PlatformServiceHandler interface {
 	DeletePlaygroundScript(context.Context, *connect.Request[v1.DeletePlaygroundScriptRequest]) (*connect.Response[v1.DeletePlaygroundScriptResponse], error)
 	UpdatePlaygroundScript(context.Context, *connect.Request[v1.UpdatePlaygroundScriptRequest]) (*connect.Response[v1.UpdatePlaygroundScriptResponse], error)
 	GetPlaygroundScripts(context.Context, *connect.Request[v1.GetPlaygroundScriptsRequest]) (*connect.Response[v1.GetPlaygroundScriptsResponse], error)
+	// Playground default headers
+	GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error)
+	UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error)
 	// Namespaces
 	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
 	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
@@ -3417,6 +3490,9 @@ type PlatformServiceHandler interface {
 	MigrateMonograph(context.Context, *connect.Request[v1.MigrateMonographRequest]) (*connect.Response[v1.MigrateMonographResponse], error)
 	// CreateFederatedSubgraph creates a federated subgraph on the control plane.
 	CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error)
+	// CreateFederatedSubgraphs creates multiple federated subgraphs on the control plane in a single request. Either
+	// every subgraph is created or none is.
+	CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error)
 	// PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
 	PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error)
 	// PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
@@ -3615,8 +3691,10 @@ type PlatformServiceHandler interface {
 	GetChangelogBySchemaVersion(context.Context, *connect.Request[v1.GetChangelogBySchemaVersionRequest]) (*connect.Response[v1.GetChangelogBySchemaVersionResponse], error)
 	// GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
-	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+	// UpdateFeatureSettings updates the settings of features of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
+	// AcceptFeatureTerms accepts the terms for an organization feature
+	AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -3786,6 +3864,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetPlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetPlaygroundDefaultHeadersProcedure,
+		svc.GetPlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdatePlaygroundDefaultHeadersHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdatePlaygroundDefaultHeadersProcedure,
+		svc.UpdatePlaygroundDefaultHeaders,
+		connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundDefaultHeaders")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
@@ -3886,6 +3976,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateFederatedSubgraphProcedure,
 		svc.CreateFederatedSubgraph,
 		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateFederatedSubgraphsHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateFederatedSubgraphsProcedure,
+		svc.CreateFederatedSubgraphs,
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishFederatedSubgraphHandler := connect.NewUnaryHandler(
@@ -4488,6 +4584,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceAcceptFeatureTermsHandler := connect.NewUnaryHandler(
+		PlatformServiceAcceptFeatureTermsProcedure,
+		svc.AcceptFeatureTerms,
+		connect.WithSchema(platformServiceMethods.ByName("AcceptFeatureTerms")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetSubgraphMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
@@ -4943,6 +5045,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdatePlaygroundScriptHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPlaygroundScriptsProcedure:
 			platformServiceGetPlaygroundScriptsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetPlaygroundDefaultHeadersProcedure:
+			platformServiceGetPlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdatePlaygroundDefaultHeadersProcedure:
+			platformServiceUpdatePlaygroundDefaultHeadersHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateNamespaceProcedure:
 			platformServiceCreateNamespaceHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteNamespaceProcedure:
@@ -4977,6 +5083,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceMigrateMonographHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedSubgraphProcedure:
 			platformServiceCreateFederatedSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateFederatedSubgraphsProcedure:
+			platformServiceCreateFederatedSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphProcedure:
 			platformServicePublishFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServicePublishFederatedSubgraphsProcedure:
@@ -5177,6 +5285,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetUserAccessibleResourcesHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFeatureSettingsProcedure:
 			platformServiceUpdateFeatureSettingsHandler.ServeHTTP(w, r)
+		case PlatformServiceAcceptFeatureTermsProcedure:
+			platformServiceAcceptFeatureTermsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
@@ -5348,6 +5458,14 @@ func (UnimplementedPlatformServiceHandler) GetPlaygroundScripts(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) GetPlaygroundDefaultHeaders(context.Context, *connect.Request[v1.GetPlaygroundDefaultHeadersRequest]) (*connect.Response[v1.GetPlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPlaygroundDefaultHeaders is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdatePlaygroundDefaultHeaders(context.Context, *connect.Request[v1.UpdatePlaygroundDefaultHeadersRequest]) (*connect.Response[v1.UpdatePlaygroundDefaultHeadersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundDefaultHeaders is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateNamespace is not implemented"))
 }
@@ -5414,6 +5532,10 @@ func (UnimplementedPlatformServiceHandler) MigrateMonograph(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraph(context.Context, *connect.Request[v1.CreateFederatedSubgraphRequest]) (*connect.Response[v1.CreateFederatedSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateFederatedSubgraphs(context.Context, *connect.Request[v1.CreateFederatedSubgraphsRequest]) (*connect.Response[v1.CreateFederatedSubgraphsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraphs is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) PublishFederatedSubgraph(context.Context, *connect.Request[v1.PublishFederatedSubgraphRequest]) (*connect.Response[v1.PublishFederatedSubgraphResponse], error) {
@@ -5814,6 +5936,10 @@ func (UnimplementedPlatformServiceHandler) GetUserAccessibleResources(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) AcceptFeatureTerms(context.Context, *connect.Request[v1.AcceptFeatureTermsRequest]) (*connect.Response[v1.AcceptFeatureTermsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.AcceptFeatureTerms is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {

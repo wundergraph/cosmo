@@ -34,6 +34,12 @@ type Options struct {
 	Logger                     *zap.Logger
 	SignatureKey               string
 	RouterCompatibilityVersion int
+	// FetchRetryMaxAttempts, FetchRetryInterval and FetchRetryMaxDuration control how the
+	// SplitFetcher refetches a file whose response body was truncated, using exponential
+	// backoff with jitter. Zero values fall back to the defaults.
+	FetchRetryMaxAttempts int
+	FetchRetryInterval    time.Duration
+	FetchRetryMaxDuration time.Duration
 }
 
 type Client struct {

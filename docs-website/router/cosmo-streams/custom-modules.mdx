@@ -14,9 +14,10 @@ Custom Modules in Cosmo Streams are available since Router version 0.266.0
 
 ## Available Hooks
 
-The Cosmo Streams system provides three main hook interfaces that you can implement with [Custom Modules](/router/custom-modules):
+The Cosmo Streams system provides the following hook interfaces that you can implement with [Custom Modules](/router/custom-modules):
 
 - [`SubscriptionOnCreateHandler`](/router/cosmo-streams/custom-modules/subscription-on-create): Called before a subscription is registered, allows modifying the event configuration (experimental)
 - [`SubscriptionOnStartHandler`](/router/cosmo-streams/custom-modules/subscription-on-start): Called when a client subscribes
+- [`StreamBeforeEventsDispatchHandler`](/router/cosmo-streams/custom-modules/before-events-dispatch): Called once per batch of events received from a message broker, before it is dispatched to any subscriber
 - [`OnReceiveEventHandler`](/router/cosmo-streams/custom-modules/on-receive-event): Called when events are received from a message broker
 - [`OnPublishEventHandler`](/router/cosmo-streams/custom-modules/on-publish-event): Called when events are going to be sent to a message broker

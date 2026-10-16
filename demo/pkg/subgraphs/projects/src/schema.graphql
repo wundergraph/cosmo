@@ -322,6 +322,16 @@ type Employee @key(fields: "id") {
   # Pattern 6: Nested abstract through concrete intermediary (handler → assignedItem)
   deepWorkItemInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { assignedItem { __typename ... on ManagementWorkItem { name teamSize } ... on TechnicalWorkItem { name codeCount } } } } ... on ManagementWorkItem { handler { name } } }")
 
+  # @requires fields returning abstract types
+  # Pattern 7: interface return type
+  recommendedWorkItem: EmployeeWorkItem! @requires(fields: "expertise")
+  # Pattern 8: list of interface return type, with an argument
+  recommendedWorkItems(limit: Int!): [EmployeeWorkItem!]! @requires(fields: "expertise")
+  # Pattern 9: union return type
+  latestWorkOperation: WorkReviewResult! @requires(fields: "expertise")
+  # Pattern 10: nullable union return type
+  optionalLatestWorkOperation: WorkReviewResult @requires(fields: "expertise")
+
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
   averageTaskCompletionDays(projectId: ID, priority: TaskPriority): Float @connect__fieldResolver(context: "id")

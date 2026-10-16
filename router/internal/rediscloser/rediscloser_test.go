@@ -1,6 +1,7 @@
 package rediscloser
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestRedisCloser(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, cl)
-		isFunctioning, err := IsFunctioningClient(cl)
+		isFunctioning, err := IsFunctioningClient(context.Background(), cl)
 		require.True(t, isFunctioning)
 		require.NoError(t, err)
 		require.False(t, isClusterClient(cl))
@@ -49,7 +50,7 @@ func TestRedisCloser(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, cl)
-		isFunctioning, err := IsFunctioningClient(cl)
+		isFunctioning, err := IsFunctioningClient(context.Background(), cl)
 		require.True(t, isFunctioning)
 		require.NoError(t, err)
 		require.False(t, isClusterClient(cl))

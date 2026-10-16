@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
 import { useQuery } from '@connectrpc/connect-query';
 import {
   ChartBarIcon,
@@ -18,7 +19,6 @@ import {
   GetFederatedGraphByNameResponse,
   GetFederatedGraphsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useRouter } from 'next/router';
 import { Fragment, createContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
@@ -39,6 +39,7 @@ import { buildUrl } from '@/lib/build-url';
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse['graph'];
   subgraphs: GetFederatedGraphByNameResponse['subgraphs'];
+  featureSubgraphs: GetFederatedGraphByNameResponse['featureSubgraphs'];
   graphs: GetFederatedGraphsResponse['graphs'];
   graphRequestToken: string;
 }
@@ -184,12 +185,11 @@ const GraphLayoutWrapperWithSidebar = ({
 };
 
 export const GraphLayout = ({ children }: LayoutProps) => {
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphByName, {
     name: slug,
@@ -205,6 +205,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     return {
       graph: data.graph,
       subgraphs: data.subgraphs,
+      featureSubgraphs: data.featureSubgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
     };

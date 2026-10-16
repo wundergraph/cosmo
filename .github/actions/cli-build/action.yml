@@ -26,7 +26,10 @@ runs:
         bun-version: '1.2.19'
 
     - name: Setup Node
-      uses: ./.github/actions/node
+      uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+      with:
+        cache: true
+        install: false
 
     - name: Generate outfile name
       id: outfile
@@ -40,6 +43,13 @@ runs:
     - name: Build
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
+    # The npm release sets the composition version in the postversion hook,
+    # binary builds skip that hook and set it here.
+    - name: Set composition version
+      shell: bash
+      run: node ./scripts/get-composition-version.mjs
+      working-directory: composition
 
     - name: 'Build wgc binary'
       shell: bash

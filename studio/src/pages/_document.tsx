@@ -20,19 +20,12 @@ export default function Document() {
   return (
     <Html className="antialiased [font-feature-settings:'ss01']" lang="en">
       <Head>
-        {isProduction && (
-          <>
-            {osanoScriptId && (
-              <Script
-                id="osano-cmp"
-                src={`https://cmp.osano.com/${osanoScriptId}/osano.js`}
-                strategy="beforeInteractive"
-              />
-            )}
+        {isProduction && osanoScriptId && (
+          <Script id="osano-cmp" src={`https://cmp.osano.com/${osanoScriptId}/osano.js`} strategy="beforeInteractive" />
+        )}
 
-            {gtmId && (
-              <>
-                <Script id="gtm-default" strategy="beforeInteractive">{`window.dataLayer = window.dataLayer || [];
+        {isProduction && gtmId && (
+          <Script id="gtm-default" strategy="beforeInteractive">{`window.dataLayer = window.dataLayer || [];
 function gtag(){ dataLayer.push(arguments); }
 gtag('consent', 'default', {
   ad_storage: 'denied',
@@ -42,11 +35,9 @@ gtag('consent', 'default', {
   functionality_storage: 'granted', // essentials
   security_storage: 'granted'
 });`}</Script>
-                <GtmScript gtmId={gtmId} />
-              </>
-            )}
-          </>
         )}
+
+        {isProduction && gtmId && <GtmScript gtmId={gtmId} />}
 
         <link rel="apple-touch-icon" sizes="57x57" href="/favicon/apple-icon-57x57.png" />
         <link rel="apple-touch-icon" sizes="60x60" href="/favicon/apple-icon-60x60.png" />

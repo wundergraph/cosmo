@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"time"
 
@@ -98,7 +99,10 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	}
 
 	// postprocess query plan to get its final state
-	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
+	post := postprocess.NewProcessor(append(
+		slices.Clone(p.executor.PostprocessorOptions),
+		postprocess.CollectDataSourceInfo(),
+	)...)
 	post.Process(preparedPlan)
 
 	return &planWithMetaData{
@@ -185,7 +189,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
-		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
+		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (any, error) {
 			start := time.Now()
 			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.slowPlanCache != nil})
 			if err != nil {

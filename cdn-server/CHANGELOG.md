@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/cdn@0.21.6...cdn@0.22.0) (2026-09-25)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
+## [0.21.6](https://github.com/wundergraph/cosmo/compare/cdn@0.21.5...cdn@0.21.6) (2026-09-14)
+
+**Note:** Version bump only for package cdn
+
+## [0.21.5](https://github.com/wundergraph/cosmo/compare/cdn@0.21.4...cdn@0.21.5) (2026-09-08)
+
+**Note:** Version bump only for package cdn
+
+## [0.21.4](https://github.com/wundergraph/cosmo/compare/cdn@0.21.3...cdn@0.21.4) (2026-08-30)
+
+### Bug Fixes
+
+* allow AWS default credential chain for S3 storage ([#3116](https://github.com/wundergraph/cosmo/issues/3116)) ([7530061](https://github.com/wundergraph/cosmo/commit/7530061b6171b55d2ef51a516a92f405f2d05b70)) (@davideugui1)
+
+## [0.21.3](https://github.com/wundergraph/cosmo/compare/cdn@0.21.2...cdn@0.21.3) (2026-07-31)
+
+**Note:** Version bump only for package cdn
+
 ## [0.21.2](https://github.com/wundergraph/cosmo/compare/cdn@0.21.1...cdn@0.21.2) (2026-06-26)
 
 ### Bug Fixes

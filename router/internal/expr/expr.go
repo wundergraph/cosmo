@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"time"
@@ -47,15 +48,11 @@ func (copyCtx Context) Clone() *Context {
 	copyCtx.Request.Auth.Scopes = scopes
 
 	claims := make(map[string]any, len(copyCtx.Request.Auth.Claims))
-	for k, v := range copyCtx.Request.Auth.Claims {
-		claims[k] = v
-	}
+	maps.Copy(claims, copyCtx.Request.Auth.Claims)
 	copyCtx.Request.Auth.Claims = claims
 
 	query := make(map[string]string, len(copyCtx.Request.URL.Query))
-	for k, v := range copyCtx.Request.URL.Query {
-		query[k] = v
-	}
+	maps.Copy(query, copyCtx.Request.URL.Query)
 	copyCtx.Request.URL.Query = query
 
 	return &copyCtx
@@ -75,7 +72,14 @@ type Request struct {
 }
 
 type Response struct {
-	Body Body `expr:"body"`
+	Body  Body          `expr:"body"`
+	Cache ResponseCache `expr:"cache"`
+}
+
+// ResponseCache is what the response cache did for the response as a whole.
+type ResponseCache struct {
+	// Status is "hit", "partial_hit" or "miss". It is empty when no fetch was counted.
+	Status string `expr:"status"`
 }
 
 type Operation struct {
@@ -96,6 +100,11 @@ type Operation struct {
 	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
 	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
 	PlanCacheHit                   bool `expr:"planCacheHit"`
+	QueryDepth                     int  `expr:"queryDepth"`
+	QueryTotalFields               int  `expr:"queryTotalFields"`
+	QueryRootFields                int  `expr:"queryRootFields"`
+	QueryRootFieldAliases          int  `expr:"queryRootFieldAliases"`
+	QueryComplexityCacheHit        bool `expr:"queryComplexityCacheHit"`
 
 	// Variables is the JSON string of the operation variables sent with the request. It is only
 	// populated when an expression references it, to avoid the serialization cost on every request.
@@ -155,8 +164,23 @@ type SubgraphRequest struct {
 }
 
 type SubgraphResponse struct {
-	Body   Body    `expr:"body"`
-	Header Headers `expr:"header"`
+	Body   Body                  `expr:"body"`
+	Header Headers               `expr:"header"`
+	Cache  SubgraphResponseCache `expr:"cache"`
+}
+
+// SubgraphResponseCache is what the response cache did for the fetch.
+// Everything is empty when the response cache is not enabled.
+type SubgraphResponseCache struct {
+	// Status is "hit", "partial_hit", "miss" or "not_cacheable".
+	Status string `expr:"status"`
+	// StoreDecision is "stored", or the reason the response was not stored.
+	// It is "empty" for a fetch nothing was decided for.
+	StoreDecision string `expr:"storeDecision"`
+	// LookupDuration is the time spent asking the cache.
+	LookupDuration time.Duration `expr:"lookupDuration"`
+	// EntityType names the types the fetch resolves fields of.
+	EntityType string `expr:"entityType"`
 }
 
 type ClientTrace struct {
@@ -166,7 +190,9 @@ type ClientTrace struct {
 	TCPConnectDuration        time.Duration `expr:"tcpConnectDuration"`
 	TLSHandshakeDuration      time.Duration `expr:"tlsHandshakeDuration"`
 	TimeToFirstRequestByte    time.Duration `expr:"timeToFirstRequestByte"`
+	TimeToLastRequestByte     time.Duration `expr:"timeToLastRequestByte"`
 	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
+	TimeToLastByte            time.Duration `expr:"timeToLastByte"`
 }
 
 // Subgraph Related

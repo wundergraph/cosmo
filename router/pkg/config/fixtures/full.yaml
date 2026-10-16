@@ -25,8 +25,9 @@ introspection:
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
 log_service_name: 'my-custom-router'
-shutdown_delay: 15s
+shutdown_delay: 30s
 grace_period: 20s
+drain_period: 5s
 poll_interval: 10s
 health_check_path: '/health'
 readiness_check_path: '/health/ready'
@@ -106,13 +107,21 @@ mcp:
   enable_arbitrary_operations: false
   exclude_mutations: false
   omit_tool_name_prefix: false
+  omit_tool_title_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
     listen_addr: localhost:5025
     base_url: 'http://localhost:5025'
+    version: '1.0.0'
+    title: 'Cosmo Graph'
+    description: 'Federated graph exposed via MCP.'
+    discover:
+      instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+  output_schema:
+    enabled: true
 
 watch_config:
   enabled: true
@@ -127,6 +136,7 @@ demo_mode: true
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ['*']
+  match_origins: ['^https://([a-z0-9-]+\.)*example\.com$']
   allow_methods:
     - HEAD
     - GET
@@ -208,6 +218,7 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      response_cache: true
       connection_stats: true
       network:
         enabled: true
@@ -241,6 +252,7 @@ telemetry:
       path: '/metrics'
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
+      response_cache: true
       connection_stats: true
       network:
         enabled: true
@@ -377,6 +389,7 @@ headers:
 authentication:
   ignore_introspection: false
   jwt:
+    on_error: continue
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
@@ -408,6 +421,7 @@ cdn:
   cache_size: 100MB
 
 events:
+  skip_unavailable_providers: false
   providers:
     nats:
       - id: default
@@ -439,6 +453,8 @@ events:
     on_receive_events:
       max_concurrent_handlers: 100
       handler_timeout: 5s
+    before_events_dispatch:
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true
@@ -452,6 +468,7 @@ engine:
   websocket_client_write_timeout: 10s
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s
+  sse_server_write_timeout: 10s
   websocket_server_poll_timeout: 1s
   websocket_server_conn_buffer_size: 128
   websocket_client_read_limit: 1MB
@@ -468,6 +485,7 @@ engine:
 rate_limit:
   enabled: true
   strategy: 'simple'
+  exclude_subscriptions: true
   storage:
     cluster_enabled: true
     urls:
@@ -502,6 +520,7 @@ websocket:
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
+  default_subprotocol: graphql-transport-ws
   forward_initial_payload: true
   forward_upgrade_headers:
     enabled: true
@@ -537,6 +556,39 @@ storage_providers:
       urls:
         - 'test@localhost:8000'
         - 'test2@localhost:8001'
+
+response_cache:
+  enabled: true
+  key_prefix: 'response_cache_test:'
+  storage:
+    provider: 'redis'
+    provider_id: 'my_redis'
+    max_entries: 2048
+  invalidation:
+    cache_tag: true
+    subgraph: false
+    type: true
+    endpoint:
+      enabled: true
+      listen_addr: 'localhost:5027'
+      path: '/invalidation'
+      shared_key: 'a-shared-key-that-is-long-enough-to-pass'
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+    max_bytes: 1024
+  all:
+    enabled: true
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+      private_id: "request.header.Get('X-User-Id')"
 
 security:
   complexity_calculation_cache:
@@ -621,6 +673,10 @@ split_config_poller:
   ignored_feature_flags:
     - 'experimental-checkout'
     - 'ab-test-foo'
+  fetch_retry:
+    max_attempts: 5
+    interval: 1s
+    max_duration: 30s
 
 router_config_path: 'latest.json'
 

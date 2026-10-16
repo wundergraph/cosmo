@@ -1176,6 +1176,15 @@ Example:
         const messageDefinitions = visitor.getMessageDefinitions();
         this.usesWrapperTypes = this.usesWrapperTypes || visitor.usesWrapperTypes;
 
+        for (const [wrapperName, wrapperMessage] of visitor.nestedListWrappers) {
+          if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
+            continue;
+          }
+
+          this.nestedListWrappers.set(wrapperName, wrapperMessage);
+          this.processedTypes.add(wrapperName);
+        }
+
         result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
         result.methodNames.push(...rpcMethods.map((m) => m.name));
         const messageLines = messageDefinitions.flatMap((m) => buildProtoMessage(this.includeComments, m));

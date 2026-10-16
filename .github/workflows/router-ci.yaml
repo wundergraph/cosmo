@@ -8,7 +8,11 @@ on:
       - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
+      - 'composition/**/*'
       - 'Makefile'
+      - '.golangci.yml'
+      - '.golangci-lint-version'
+      - '.github/actions/go-linter/**'
       - '.github/workflows/router-ci.yaml'
 
 concurrency:
@@ -49,7 +53,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |
@@ -145,7 +152,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |
@@ -360,7 +370,10 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          cache: true
+          install: false
 
       - name: Install Cli Node Dependencies
         run: |

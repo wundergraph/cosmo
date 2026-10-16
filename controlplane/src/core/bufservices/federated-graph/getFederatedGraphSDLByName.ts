@@ -77,6 +77,15 @@ export function getFederatedGraphSDLByName(
         };
       }
 
+      if (!featureFlag.isEnabled) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Feature flag ${req.featureFlagName} is disabled`,
+          },
+        };
+      }
+
       const ffSchemaVersion = await featureFlagRepo.getFeatureFlagSchemaVersionByBaseSchemaVersion({
         baseSchemaVersionId: schemaVersion.schemaVersionId,
         federatedGraphId: federatedGraph.id,

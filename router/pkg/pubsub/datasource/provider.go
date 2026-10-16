@@ -113,4 +113,10 @@ type PublishEventConfiguration interface {
 
 type ProviderOpts struct {
 	StreamMetricStore metric.StreamMetricStore
+	// SkipUnavailableProviders mirrors events.skip_unavailable_providers. When true the
+	// adapter keeps a resilient, auto-reconnecting client even if the broker is unreachable
+	// at startup. Startup still reports the connection error (so the router can log a
+	// distinct "could not connect" message), but the provider recovers without a restart
+	// once the broker becomes reachable again.
+	SkipUnavailableProviders bool
 }

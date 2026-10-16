@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+	"golang.org/x/net/http/httpguts"
 
 	"github.com/wundergraph/cosmo/router/pkg/health"
 )
@@ -51,6 +52,14 @@ type server struct {
 	healthcheck health.Checker
 	baseURL     string
 	listener    net.Listener // Pre-bound listener for synchronous port check
+	// draining makes every response carry "Connection: close" so clients retire their
+	// keep-alive connections before the server shuts down. See drain.
+	draining atomic.Bool
+	// openConns counts the client connections the HTTP server still owns (not closed or hijacked).
+	openConns atomic.Int64
+	// drained is closed once the server is draining and no client connections are left.
+	drained     chan struct{}
+	drainedOnce sync.Once
 }
 
 type httpServerOptions struct {
@@ -65,6 +74,8 @@ type httpServerOptions struct {
 	healthCheckPath    string
 }
 
+// newServer binds the listener synchronously, so port conflicts surface immediately, and builds
+// the HTTP server with its handler chain.
 func newServer(opts *httpServerOptions) (*server, error) {
 	// Bind the port synchronously to detect port conflicts immediately
 	listener, err := net.Listen("tcp", opts.addr)
@@ -96,6 +107,7 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
 		listener:    listener, // Store the pre-bound listener
+		drained:     make(chan struct{}),
 	}
 
 	// Store the initial state with health check mux (graphServer nil until first config)
@@ -104,14 +116,63 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		graphServer: nil,
 	})
 
+	httpServer.ConnState = func(_ net.Conn, state http.ConnState) {
+		switch state {
+		case http.StateNew:
+			n.openConns.Add(1)
+		case http.StateClosed, http.StateHijacked:
+			remaining := n.openConns.Add(-1)
+			// Only relevant while draining. drain stores draining before reading openConns, and we
+			// decrement before reading draining, so one of the two sides always closes drained.
+			if remaining == 0 && n.draining.Load() {
+				n.markDrained()
+			}
+		}
+	}
+
 	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Lock-free hot path: single atomic load gets both mux and graphServer.
 		// The state is never nil (initialized with health mux, swapped to notReadyState on shutdown).
 		// Direct method call on *chi.Mux avoids interface vtable indirection.
+		// While draining, ask clients to retire the connection. Not on upgrade requests:
+		// "Connection: close" on a 101 Switching Protocols response breaks WebSockets.
+		if n.draining.Load() && !httpguts.HeaderValuesContainsToken(r.Header["Connection"], "upgrade") {
+			w.Header().Set("Connection", "close")
+		}
 		n.state.Load().mux.ServeHTTP(w, r)
 	})
 
 	return n, nil
+}
+
+// drain marks the server as not ready and makes every subsequent response carry
+// "Connection: close", so clients retire their pooled connections themselves. Unlike
+// http.Server.SetKeepAlivesEnabled(false) it does not close idle connections, which would race
+// the client's next write. It blocks until all client connections are closed, period has elapsed
+// or ctx is done. Draining is not reversible.
+func (s *server) drain(ctx context.Context, period time.Duration) {
+	// Store draining before reading openConns, see ConnState in newServer.
+	s.draining.Store(true)
+	s.healthcheck.SetReady(false)
+
+	// If there are no open connections, we can mark the server as drained immediately.
+	// Otherwise, we wait for the httpServer.ConnState callback to mark the server as drained.
+	if s.openConns.Load() == 0 {
+		s.markDrained()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, period)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+	case <-s.drained:
+	}
+}
+
+// markDrained closes drained exactly once.
+func (s *server) markDrained() {
+	s.drainedOnce.Do(func() { close(s.drained) })
 }
 
 func (s *server) HealthChecks() health.Checker {

@@ -1,0 +1,340 @@
+---
+title: "BeforeEventsDispatch Handler"
+description: "A Cosmo Streams Custom Module, which lets you customize a batch of events received from a message provider once, before it is dispatched to any subscriber"
+icon: "split"
+---
+
+The `BeforeEventsDispatch` handler is a custom module hook that allows you to intercept and process a batch of events
+received from supported message providers before it is dispatched to GraphQL subscription clients.
+Unlike [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event), this handler runs **once per batch**,
+before the batch is fanned out to any subscriber.
+
+This handler is particularly useful for:
+- **Event filtering**: Remove unwanted events before they reach any subscriber
+- **Data transformation**: Modify event payloads to match client expectations
+- **Event enrichment**: Add additional data to events from external sources
+- **Monitoring and analytics**: Log or track events for observability
+
+<Info>
+This handler is very similar to the [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event) but in contrast only runs once per batch, whereas the [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event) handler runs for each active subscriber.  
+This comes with a trade-off. Event processing with this handler is much more lightweight because on a Router with 1000 subscribers this handler runs once instead of 1000 times.
+The downside is that you can't do per-subscriber decisions in this hook. For that you need to use the [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event) handler.
+A rule of thumb is to use this hook when you want to change the event for every client the same way.
+</Info>
+
+<Info>
+If there is no active subscription this handler is not executed, even if new messages arrive at the provider.
+This is because the Router will not listen for messages on the provider topic/queue until at least one
+client subscribes to a particular subscription.
+</Info>
+
+## Handler Interface
+
+In order to use the `BeforeEventsDispatch` handler you need to create a [Custom Module](../../custom-modules) which implements
+the `StreamBeforeEventsDispatchHandler` interface.
+
+```go
+type StreamBeforeEventsDispatchHandler interface {
+    // BeforeEventsDispatch is called once whenever a batch of events is received from a provider,
+    // before delivering them to clients. Unlike OnReceiveEvents, it is called ONCE per batch (not
+    // once per active subscriber), and it runs on the concurrent broadcast delivery path.
+    // The returned events replace the batch for all subscribers.
+    // Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+    // Returning an error drops the batch and logs the error.
+    BeforeEventsDispatch(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+}
+
+type StreamBeforeEventsDispatchHandlerContext interface {
+    // Context is a context for handlers.
+    // If it is cancelled, the handler should stop processing.
+    Context() context.Context
+    // Logger is the logger for the handler
+    Logger() *zap.Logger
+    // SubscriptionEventConfiguration the subscription event configuration
+    SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+    // NewEvent creates a new event that can be used in the subscription.
+    //
+    // The data parameter must contain valid JSON bytes representing the raw event payload
+    // from your message broker (Kafka, NATS, etc.). The JSON must have properly quoted
+    // property names and must include the __typename field required by GraphQL.
+    // For example: []byte(`{"__typename": "Employee", "id": 1, "update": {"name": "John"}}`).
+    //
+    // This method is typically used in BeforeEventsDispatch hooks to create new or modified events.
+    NewEvent(data []byte) datasource.MutableStreamEvent
+}
+```
+
+## Execution Order and Performance Considerations
+
+`BeforeEventsDispatch` runs before [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event). The router calls it once for the whole batch as soon as it is
+received from the provider, and only afterwards fans the (possibly modified) batch out to each active subscriber's
+[`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event) handler.
+
+If you register multiple modules implementing `BeforeEventsDispatch`, they are executed sequentially, with each
+handler receiving the events returned by the previous one.
+
+Because this handler runs once per batch instead of once per subscriber, there is no `max_concurrent_handlers`
+option to configure. You can, however, configure how long the router waits for the handler(s) to finish before
+giving up on the batch:
+
+```yaml
+events:
+  handlers:
+    before_events_dispatch:
+      handler_timeout: 1s # default: 5s
+```
+
+If the timeout is reached, or the handler returns an error, the entire batch is dropped: it is never dispatched to
+any subscriber, and [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event) does not run for that batch. A warning is logged in both cases.
+
+It is recommended to use `ctx.Context()`, which is cancelled in such situations.
+You can use this context to abort any long-running operations:
+
+```go
+func (m *CosmoStreamsModule) BeforeEventsDispatch(
+    ctx core.StreamBeforeEventsDispatchHandlerContext,
+    events datasource.StreamEvents,
+) (datasource.StreamEvents, error) {
+	for _, event := range events.All() {
+		select {
+		case <-ctx.Context().Done():
+			ctx.Logger().Debug("context cancelled, stopping processing and dropping batch")
+			return datasource.StreamEvents{}, ctx.Context().Err()
+		default:
+			// process event here...
+		}
+	}
+	return events, nil
+}
+```
+
+<Warning>
+Unlike [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event), which only closes the subscription of the client that encountered the error,
+`BeforeEventsDispatch` failures drop the batch for **every** subscriber of that subscription, since the handler
+runs once for the shared batch rather than per client.
+</Warning>
+
+## Error Handling
+
+When the `BeforeEventsDispatch` handler returns an error, the router takes the following actions:
+
+1. **Batch Dropped**: The entire batch of events is discarded and never delivered to any subscriber
+2. **No Subscription Closure**: Unlike [`OnReceiveEvents`](/router/cosmo-streams/custom-modules/on-receive-event), subscriptions stay open; the router simply waits for the next batch from the provider
+3. **Error Logging**: The error is logged by the router with details about the provider and field name
+4. **No Error Propagation**: The error is **not** sent to any GraphQL client
+
+<Warning>
+Returning an error from `BeforeEventsDispatch` drops the batch for all subscribers of the affected subscription. For filtering events, return an empty event list instead of an error so that other, unrelated batches keep flowing normally.
+</Warning>
+
+**Example of proper error handling:**
+
+```go
+func (m *MyEventHandler) BeforeEventsDispatch(
+    ctx core.StreamBeforeEventsDispatchHandlerContext,
+    events datasource.StreamEvents,
+) (datasource.StreamEvents, error) {
+    // For recoverable issues, filter events instead of returning errors
+    if someCondition {
+        return datasource.NewStreamEvents(nil), nil // Empty events, no error
+    }
+
+    // Only return errors for unrecoverable conditions
+    if criticalSystemFailure {
+        return nil, errors.New("critical system failure - dropping batch")
+    }
+
+    return events, nil
+}
+```
+
+## Usage Example
+
+### Complete Custom Module with Event Bypass
+
+The following example contains a complete Custom Module implementation, including handler registration,
+with a handler that will simply bypass events unchanged. This is not useful on it's own but demonstrates
+how to register your `BeforeEventsDispatch` Custom Module.
+
+```go
+package module
+
+import (
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+    "go.uber.org/zap"
+)
+
+func init() {
+    // Register your module with the router
+    core.RegisterModule(&EventBypassModule{})
+}
+
+const ModuleID = "eventBypassModule"
+
+// EventBypassModule demonstrates a complete custom module implementation
+// that implements StreamBeforeEventsDispatchHandler but simply passes events through unchanged
+type EventBypassModule struct {}
+
+// BeforeEventsDispatch passes all events through unchanged
+func (m *EventBypassModule) BeforeEventsDispatch(
+    ctx core.StreamBeforeEventsDispatchHandlerContext,
+    events datasource.StreamEvents,
+) (datasource.StreamEvents, error) {
+    logger := ctx.Logger()
+    logger.Debug("Processing batch - bypassing unchanged",
+        zap.Int("event_count", len(events.All())),
+    )
+
+    // Simply return the events unchanged
+    return events, nil
+}
+
+// Module returns the module information for registration
+func (m *EventBypassModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: ModuleID,
+        New: func() core.Module {
+            return &EventBypassModule{}
+        },
+    }
+}
+
+// Interface guards to ensure we implement the required interfaces
+var (
+    _ core.StreamBeforeEventsDispatchHandler = (*EventBypassModule)(nil)
+)
+```
+
+### Restrict Handler to run on certain subscriptions and providers
+
+Most of the time you want your hook to only deal with a certain subscription.
+The `BeforeEventsDispatch` Handler is run for every subscription configured for Cosmo Streams.
+You can access the name of the subscription you care for and return early if it's not the right one.
+
+```go
+func (m *SelectiveEventHandler) BeforeEventsDispatch(
+    ctx core.StreamBeforeEventsDispatchHandlerContext,
+    events datasource.StreamEvents,
+) (datasource.StreamEvents, error) {
+    logger := ctx.Logger()
+    subConfig := ctx.SubscriptionEventConfiguration()
+
+    // Bypass handler if it's not the right subscription
+    if subConfig.RootFieldName() != "employeeUpdated" {
+        return events, nil
+    }
+
+    // And / or you can decide to process events only from a specific provider configured in the Router
+    if subConfig.ProviderID() != "my-nats" {
+        return events, nil
+    }
+
+    // Your specific event processing logic here
+    // ...
+
+    return datasource.NewStreamEvents(processedEvents), nil
+}
+```
+
+### Filter out events based on message metadata
+
+Certain providers enrich their messages with metadata accessible by the Router.
+Kafka and NATS, for example, have the option to add headers to messages.
+Here's an example that filters out all messages coming from a Kafka instance where a header indicates
+it's not meant for GraphQL subscriptions. Since this handler runs once per batch, the filtering applies
+to every subscriber of the subscription at once.
+
+```go
+import (
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+)
+
+func (m *HeaderFilterModule) BeforeEventsDispatch(
+    ctx core.StreamBeforeEventsDispatchHandlerContext,
+    events datasource.StreamEvents,
+) (datasource.StreamEvents, error) {
+    logger := ctx.Logger()
+    subConfig := ctx.SubscriptionEventConfiguration()
+
+    // Only process events from Kafka providers.
+    // Pass through unchanged for non-Kafka providers.
+    if subConfig.ProviderType() != datasource.ProviderTypeKafka {
+        return events, nil
+    }
+
+    logger.Debug("Processing Kafka batch for subscription",
+        zap.String("provider_id", subConfig.ProviderID()),
+        zap.String("field_name", subConfig.RootFieldName()),
+        zap.Int("event_count", events.Len()),
+    )
+
+    filteredEvents := make([]datasource.StreamEvent, 0, events.Len())
+
+    for _, event := range events.All() {
+        // Check if this is a Kafka event with headers
+        if kafkaEvent, ok := event.(*kafka.Event); ok {
+            headers := kafkaEvent.GetHeaders()
+
+            // Filter out events with "internal" header set to "true"
+            if internalHeader, exists := headers["internal"]; exists {
+                if string(internalHeader) == "true" {
+                    logger.Debug("Filtering out internal event")
+                    continue
+                }
+            }
+        }
+
+        // Include this event in the results
+        filteredEvents = append(filteredEvents, event)
+    }
+
+    logger.Debug("Filtered batch by headers",
+        zap.Int("original_count", events.Len()),
+        zap.Int("filtered_count", len(filteredEvents)),
+    )
+
+    return datasource.NewStreamEvents(filteredEvents), nil
+}
+```
+
+### Transform events
+
+You can change event data. For example you could change the id of the entity
+you want to resolve for a client. Since this handler runs once per batch, the transformation
+applies to every subscriber of the subscription at once.
+
+```go
+type myEvent struct {
+	Typename string `json:"__typename"`
+	ID       int    `json:"id"` // this is the entity key
+}
+
+func (m *CosmoStreamsModule) BeforeEventsDispatch(ctx core.StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+	if ctx.SubscriptionEventConfiguration().ProviderType() != datasource.ProviderTypeKafka {
+		return events, nil
+	}
+
+	newEvents := make([]datasource.StreamEvent, 0, events.Len())
+
+	for _, event := range events.All() {
+		var evt myEvent
+		err := json.Unmarshal(event.GetData(), &evt)
+		if err != nil {
+			// handle error
+		}
+
+		// force to event to reference entity with id 2
+		evt.ID = 2
+
+		evtPayload, err := json.Marshal(evt)
+		if err != nil {
+			// handle error
+		}
+
+		newEvents = append(newEvents, ctx.NewEvent(evtPayload))
+	}
+
+	return datasource.NewStreamEvents(newEvents), nil
+}
+```

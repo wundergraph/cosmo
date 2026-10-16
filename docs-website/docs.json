@@ -98,7 +98,7 @@
                 "pages": [
                   "router/mcp",
                   "router/mcp/quickstart",
-                  "router/mcp/operations",
+                  "router/mcp/tools",
                   "router/mcp/configuration",
                   {
                     "group": "OAuth 2.1",
@@ -164,6 +164,16 @@
                   "router/subscriptions/websocket-subprotocols",
                   "router/subscriptions/router-configuration-for-subscriptions",
                   "router/subscriptions-migration"
+                ]
+              },
+              {
+                "group": "Defer",
+                "icon": "forward-step",
+                "pages": [
+                  "router/defer",
+                  "router/defer/usage",
+                  "router/defer/how-it-works",
+                  "router/defer/when-to-use"
                 ]
               },
               {
@@ -243,6 +253,7 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
+              "router/response-cache",
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",
@@ -273,6 +284,7 @@
                       "router/cosmo-streams/custom-modules",
                       "router/cosmo-streams/custom-modules/subscription-on-create",
                       "router/cosmo-streams/custom-modules/subscription-on-start",
+                      "router/cosmo-streams/custom-modules/before-events-dispatch",
                       "router/cosmo-streams/custom-modules/on-receive-event",
                       "router/cosmo-streams/custom-modules/on-publish-event"
                     ]
@@ -326,7 +338,8 @@
                 "pages": [
                   "studio/playground",
                   "studio/playground/custom-scripts",
-                  "studio/playground/shared-playground-state"
+                  "studio/playground/shared-playground-state",
+                  "studio/playground/default-headers"
                 ]
               },
               "studio/studio",
@@ -413,6 +426,7 @@
                   "federation/directives/authenticated",
                   "federation/directives/composeddirective",
                   "federation/directives/connect__fieldresolver",
+                  "federation/directives/defer",
                   "federation/directives/deprecated",
                   "federation/directives/external",
                   "federation/directives/key",
@@ -671,7 +685,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update"]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status", "cli/proposal/status"]
               }
             ]
           }
@@ -811,6 +825,10 @@
     {
       "source": "/router/subgraph-error-propagation",
       "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
+    },
+    {
+      "source": "/router/mcp/operations",
+      "destination": "/router/mcp/tools"
     }
   ]
 }

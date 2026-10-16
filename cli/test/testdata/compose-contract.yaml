@@ -1,0 +1,15 @@
+version: 1
+subgraphs:
+  - name: tagged
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ../fixtures/tagged-schema.graphql
+
+feature_flags:
+  - name: my-feature-flag
+    feature_graphs:
+      - name: feature-tagged
+        subgraph_name: tagged
+        routing_url: http://localhost:4001/graphql-feature-flag
+        schema:
+          file: ../fixtures/tagged-schema-variant.graphql

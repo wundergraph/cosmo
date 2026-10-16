@@ -33,3 +33,14 @@ jobs:
           image_name: keycloak
           image_description: "Cosmo Keycloak Distribution"
 
+  build_test:
+    runs-on: ubuntu-latest
+    needs: [build_push_image]
+    if: always()
+    steps:
+      - name: 'All tests passed'
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: 'Some tests failed'
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1

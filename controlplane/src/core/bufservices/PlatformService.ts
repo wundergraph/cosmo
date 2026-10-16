@@ -122,6 +122,7 @@ import { getPendingOrganizationMembers } from './organization/getPendingOrganiza
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
 import { updateFeatureSettings } from './organization/updateFeatureSettings.js';
+import { acceptFeatureTerms } from './organization/acceptFeatureTerms.js';
 import { updateOrganizationDetails } from './organization/updateOrganizationDetails.js';
 import { whoAmI } from './organization/whoAmI.js';
 import { getClients } from './persisted-operation/getClients.js';
@@ -133,7 +134,9 @@ import { previewDeleteClient } from './persisted-operation/previewDeleteClient.j
 import { deleteClient } from './persisted-operation/deleteClient.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
+import { getPlaygroundDefaultHeaders } from './playground/getPlaygroundDefaultHeaders.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
+import { updatePlaygroundDefaultHeaders } from './playground/updatePlaygroundDefaultHeaders.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
 import { listRouterCompatibilityVersions } from './router/listRouterCompatibilityVersions.js';
 import { getChangelogBySchemaVersion } from './schema-version/getChangelogBySchemaVersion.js';
@@ -146,6 +149,7 @@ import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
 import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
+import { createFederatedSubgraphs } from './subgraph/createFederatedSubgraphs.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
 import { fixSubgraphSchema } from './subgraph/fixSubgraphSchema.js';
 import { getLatestSubgraphSDL } from './subgraph/getLatestSubgraphSDL.js';
@@ -252,6 +256,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     createFederatedSubgraph: (req, ctx) => {
       return createFederatedSubgraph(opts, req, ctx);
+    },
+
+    createFederatedSubgraphs: (req, ctx) => {
+      return createFederatedSubgraphs(opts, req, ctx);
     },
 
     checkSubgraphSchema: (req, ctx) => {
@@ -472,6 +480,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateFeatureSettings: (req, ctx) => {
       return updateFeatureSettings(opts, req, ctx);
+    },
+
+    acceptFeatureTerms: (req, ctx) => {
+      return acceptFeatureTerms(opts, req, ctx);
     },
 
     addReadme: (req, ctx) => {
@@ -833,6 +845,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deletePlaygroundScript: (req, ctx) => {
       return deletePlaygroundScript(opts, req, ctx);
+    },
+
+    getPlaygroundDefaultHeaders: (req, ctx) => {
+      return getPlaygroundDefaultHeaders(opts, req, ctx);
+    },
+
+    updatePlaygroundDefaultHeaders: (req, ctx) => {
+      return updatePlaygroundDefaultHeaders(opts, req, ctx);
     },
 
     getCacheWarmerOperations: (req, ctx) => {

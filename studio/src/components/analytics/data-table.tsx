@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { parseAsString, useQueryStates } from 'nuqs';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -50,6 +51,8 @@ import { HiOutlineCheck } from 'react-icons/hi2';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { calculateUrlLength, checkFilterLimits, MAX_URL_LENGTH } from './metrics';
+
+export const traceParams = { traceID: parseAsString, spanID: parseAsString };
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -128,6 +131,7 @@ export function AnalyticsDataTable<T>({
 
   const applyNewParams = useApplyParams();
   const { toast } = useToast();
+  const [{ traceID, spanID }, setTrace] = useQueryStates(traceParams);
 
   // Safety net: Validate URL on initial load (e.g., user pastes malicious URL in browser)
   // While onColumnFiltersChange (below) catches most cases via useSyncTableWithQuery,
@@ -377,10 +381,7 @@ export function AnalyticsDataTable<T>({
         // Save the current route in sessionStorage, so we can go back to it
         setRouteCache(router.query);
 
-        applyNewParams({
-          traceID: row.getValue('traceId'),
-          spanID: row.getValue('spanId'),
-        });
+        setTrace({ traceID: row.getValue('traceId'), spanID: row.getValue('spanId') });
         return;
       }
       case AnalyticsViewGroupName.Client: {
@@ -510,8 +511,7 @@ export function AnalyticsDataTable<T>({
                     data-state={row.getIsSelected() && 'selected'}
                     onClick={() => relinkTable(row)}
                     className={cn('group cursor-pointer hover:bg-secondary/30', {
-                      'bg-secondary/50':
-                        row.original.traceId === router.query.traceID && row.original.spanId === router.query.spanID,
+                      'bg-secondary/50': row.original.traceId === traceID && row.original.spanId === spanID,
                       'bg-destructive/10': row.original.statusCode === 'STATUS_CODE_ERROR',
                     })}
                   >

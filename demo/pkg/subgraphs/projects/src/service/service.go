@@ -775,6 +775,212 @@ func (p *ProjectsService) RequireEmployeeDeepWorkItemInfoById(_ context.Context,
 	return &service.RequireEmployeeDeepWorkItemInfoByIdResponse{Result: results}, nil
 }
 
+// isTechnicalExpertise reports whether an expertise describes a technical role. The @requires fields
+// that return abstract types use it to pick the concrete member they return, so that both members
+// are reachable from the static employee data.
+func isTechnicalExpertise(expertise string) bool {
+	words := strings.Fields(expertise)
+	if len(words) == 0 {
+		return false
+	}
+
+	switch words[0] {
+	case "Backend", "Frontend", "Fullstack":
+		return true
+	default:
+		return false
+	}
+}
+
+// newTechnicalWorkItem builds a fully populated TechnicalWorkItem wrapped in the EmployeeWorkItem
+// interface message. assignedItem is attached to the item's handler and may be nil to terminate the
+// recursion, as EmployeeWorkItem is reachable from itself via handler.assignedItem.
+func newTechnicalWorkItem(name string, priority int32, assignedItem *service.EmployeeWorkItem) *service.EmployeeWorkItem {
+	return &service.EmployeeWorkItem{
+		Instance: &service.EmployeeWorkItem_TechnicalWorkItem{
+			TechnicalWorkItem: &service.TechnicalWorkItem{
+				Name:      name,
+				Priority:  priority,
+				CodeCount: int32(len(name)) * 100,
+				Handler: &service.WorkItemHandler{
+					Name:         "Handler for " + name,
+					AssignedItem: assignedItem,
+				},
+				Specs: &service.TechnicalSpecs{
+					Name:       name + " specs",
+					Complexity: float64(priority) * 1.5,
+					Metrics: &service.WorkMetrics{
+						Score:      95.5,
+						Efficiency: 0.9,
+					},
+				},
+			},
+		},
+	}
+}
+
+// newManagementWorkItem builds a fully populated ManagementWorkItem wrapped in the EmployeeWorkItem
+// interface message. assignedItem is attached to the item's handler and may be nil to terminate the
+// recursion, as EmployeeWorkItem is reachable from itself via handler.assignedItem.
+func newManagementWorkItem(name string, priority int32, assignedItem *service.EmployeeWorkItem) *service.EmployeeWorkItem {
+	return &service.EmployeeWorkItem{
+		Instance: &service.EmployeeWorkItem_ManagementWorkItem{
+			ManagementWorkItem: &service.ManagementWorkItem{
+				Name:     name,
+				Priority: priority,
+				TeamSize: fmt.Sprintf("team of %d", priority*3),
+				Handler: &service.WorkItemHandler{
+					Name:         "Handler for " + name,
+					AssignedItem: assignedItem,
+				},
+				Specs: &service.ManagementSpecs{
+					Name:  name + " specs",
+					Scope: float64(priority) * 2.5,
+					Metrics: &service.WorkMetrics{
+						Score:      88.0,
+						Efficiency: 0.9,
+					},
+				},
+			},
+		},
+	}
+}
+
+// RequireEmployeeRecommendedWorkItemById implements projects.ProjectsServiceServer.
+// Pattern 7: the @requires field returns an interface. The concrete member is derived from the
+// required expertise, and the returned item's handler is assigned the opposite member so that a
+// nested abstract type is reachable inside an abstract result.
+func (p *ProjectsService) RequireEmployeeRecommendedWorkItemById(_ context.Context, req *service.RequireEmployeeRecommendedWorkItemByIdRequest) (*service.RequireEmployeeRecommendedWorkItemByIdResponse, error) {
+	results := make([]*service.RequireEmployeeRecommendedWorkItemByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		expertise := ctx.GetFields().GetExpertise()
+
+		var item *service.EmployeeWorkItem
+		if isTechnicalExpertise(expertise) {
+			assigned := newManagementWorkItem(fmt.Sprintf("%s follow-up", expertise), 2, nil)
+			item = newTechnicalWorkItem(fmt.Sprintf("%s work item", expertise), 1, assigned)
+		} else {
+			assigned := newTechnicalWorkItem(fmt.Sprintf("%s follow-up", expertise), 2, nil)
+			item = newManagementWorkItem(fmt.Sprintf("%s work item", expertise), 1, assigned)
+		}
+
+		results = append(results, &service.RequireEmployeeRecommendedWorkItemByIdResult{
+			RecommendedWorkItem: item,
+		})
+	}
+
+	return &service.RequireEmployeeRecommendedWorkItemByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeRecommendedWorkItemsById implements projects.ProjectsServiceServer.
+// Pattern 8: the @requires field returns a list of an interface and takes an argument. It produces
+// one entry per word of the required expertise, alternating between both concrete members by index
+// and capped at the limit argument, so that a limit of zero yields an empty list.
+func (p *ProjectsService) RequireEmployeeRecommendedWorkItemsById(_ context.Context, req *service.RequireEmployeeRecommendedWorkItemsByIdRequest) (*service.RequireEmployeeRecommendedWorkItemsByIdResponse, error) {
+	results := make([]*service.RequireEmployeeRecommendedWorkItemsByIdResult, 0, len(req.GetContext()))
+	limit := req.GetFieldArgs().GetLimit()
+
+	for _, ctx := range req.GetContext() {
+		words := strings.Fields(ctx.GetFields().GetExpertise())
+
+		items := make([]*service.EmployeeWorkItem, 0, len(words))
+		for i, word := range words {
+			if int32(len(items)) >= limit {
+				break
+			}
+
+			if i%2 == 0 {
+				items = append(items, newTechnicalWorkItem(fmt.Sprintf("Technical %s", word), int32(i+1), nil))
+			} else {
+				items = append(items, newManagementWorkItem(fmt.Sprintf("Management %s", word), int32(i+1), nil))
+			}
+		}
+
+		results = append(results, &service.RequireEmployeeRecommendedWorkItemsByIdResult{
+			RecommendedWorkItems: items,
+		})
+	}
+
+	return &service.RequireEmployeeRecommendedWorkItemsByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeLatestWorkOperationById implements projects.ProjectsServiceServer.
+// Pattern 9: the @requires field returns a union. Technical expertise reports an approval,
+// everything else a rejection.
+func (p *ProjectsService) RequireEmployeeLatestWorkOperationById(_ context.Context, req *service.RequireEmployeeLatestWorkOperationByIdRequest) (*service.RequireEmployeeLatestWorkOperationByIdResponse, error) {
+	results := make([]*service.RequireEmployeeLatestWorkOperationByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		expertise := ctx.GetFields().GetExpertise()
+
+		operation := &service.WorkReviewResult{}
+		if isTechnicalExpertise(expertise) {
+			operation.Value = &service.WorkReviewResult_WorkApproval{
+				WorkApproval: &service.WorkApproval{
+					Comment:    fmt.Sprintf("Approved for %s", expertise),
+					ApprovedAt: "2024-01-01T00:00:00Z",
+				},
+			}
+		} else {
+			operation.Value = &service.WorkReviewResult_WorkRejection{
+				WorkRejection: &service.WorkRejection{
+					Reason:        fmt.Sprintf("Rejected for %s", expertise),
+					RejectionCode: "NON_TECHNICAL",
+				},
+			}
+		}
+
+		results = append(results, &service.RequireEmployeeLatestWorkOperationByIdResult{
+			LatestWorkOperation: operation,
+		})
+	}
+
+	return &service.RequireEmployeeLatestWorkOperationByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeOptionalLatestWorkOperationById implements projects.ProjectsServiceServer.
+// Pattern 10: the @requires field returns a nullable union. An expertise spanning more than two
+// words has no single latest operation, so no union value is returned at all, which has to surface
+// as null rather than as an empty object.
+func (p *ProjectsService) RequireEmployeeOptionalLatestWorkOperationById(_ context.Context, req *service.RequireEmployeeOptionalLatestWorkOperationByIdRequest) (*service.RequireEmployeeOptionalLatestWorkOperationByIdResponse, error) {
+	results := make([]*service.RequireEmployeeOptionalLatestWorkOperationByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		expertise := ctx.GetFields().GetExpertise()
+
+		var operation *service.WorkReviewResult
+		switch {
+		case len(strings.Fields(expertise)) > 2:
+			operation = nil
+		case isTechnicalExpertise(expertise):
+			operation = &service.WorkReviewResult{
+				Value: &service.WorkReviewResult_WorkApproval{
+					WorkApproval: &service.WorkApproval{
+						Comment:    fmt.Sprintf("Latest operation approved for %s", expertise),
+						ApprovedAt: "2024-01-02T00:00:00Z",
+					},
+				},
+			}
+		default:
+			operation = &service.WorkReviewResult{
+				Value: &service.WorkReviewResult_WorkRejection{
+					WorkRejection: &service.WorkRejection{
+						Reason:        fmt.Sprintf("Latest operation rejected for %s", expertise),
+						RejectionCode: "NO_TECHNICAL_OPERATION",
+					},
+				},
+			}
+		}
+
+		results = append(results, &service.RequireEmployeeOptionalLatestWorkOperationByIdResult{
+			OptionalLatestWorkOperation: operation,
+		})
+	}
+
+	return &service.RequireEmployeeOptionalLatestWorkOperationByIdResponse{Result: results}, nil
+}
+
 // LookupProjectById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.LookupProjectByIdRequest) (*service.LookupProjectByIdResponse, error) {
 	logger := hclog.FromContext(ctx)

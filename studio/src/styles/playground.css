@@ -70,3 +70,8 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-tabs {
   @apply z-10;
 }
+
+/* replaced by our own copy menu, which can also copy the operation as a curl request */
+.graphiql-toolbar button[aria-label^='Copy query'] {
+  @apply hidden;
+}

@@ -445,13 +445,14 @@ func TestNatsEvents(t *testing.T) {
 					runes := []rune(string(allData))
 
 					for i := 0; i < len(runes); i++ {
-						if runes[i] == '\r' {
+						switch runes[i] {
+						case '\r':
 							// Validate that this is not a stray \r entry
 							if i+1 >= len(runes) || runes[i+1] != '\n' {
 								assert.Fail(t, "Invalid newline detected: '\\r' not followed by '\\n'")
 							}
 							i++
-						} else if runes[i] == '\n' {
+						case '\n':
 							// Validate that this is not a stray \n entry
 							if i == 0 || runes[i-1] != '\r' {
 								assert.Fail(t, "Invalid newline detected: '\\n' not preceded by '\\r'")
@@ -461,6 +462,90 @@ func TestNatsEvents(t *testing.T) {
 					return true
 				}, EventWaitTimeout, time.Millisecond*100)
 			})
+		})
+	})
+
+	t.Run("subscription receive subscription when using inaccessible field as filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.NatsSubscriptionFilterJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionPayload struct {
+				employeeUpdated struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdated(tag: \"test\")"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl).WithSyncMode(true)
+
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
+			subscriptionID, err := client.Subscribe(&subscriptionPayload, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- natsSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionID)
+
+			clientRunErrCh := make(chan error)
+			go func() {
+				clientErr := client.Run()
+				clientRunErrCh <- clientErr
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			// Receive the first message, which matches the filter
+			subject := xEnv.GetPubSubName("employee-updated.test")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee","tag": "test"}`), 1, EventWaitTimeout)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3}}`, string(args.dataValue))
+			})
+
+			// Published on the subject the subscription listens on, but the tag does not match the filter condition,
+			//so the message must be filtered out
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":7,"__typename": "Employee","tag": "other"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			// Should receive the last message because it matches the filter again
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":12,"__typename": "Employee","tag": "test"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":12}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+			xEnv.WaitForConnectionCount(0, EventWaitTimeout)
+
+			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
+			require.Len(t, natsLogs, 2)
+			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
+			require.Len(t, providerIDFields, 2)
 		})
 	})
 
@@ -1327,7 +1412,7 @@ func TestNatsEvents(t *testing.T) {
 			EnableNats:               false,
 			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
 				url := "nats://127.0.0.1:" + strconv.Itoa(listener.Port())
-				natsEventSources := make([]config.NatsEventSource, len(testenv.DemoNatsProviders))
+				natsEventSources := make([]config.NatsEventSource, 0, len(testenv.DemoNatsProviders))
 				for _, sourceName := range testenv.DemoNatsProviders {
 					natsEventSources = append(natsEventSources, config.NatsEventSource{
 						ID:  sourceName,
@@ -1943,7 +2028,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := 2; i < 13; i++ {
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename": "Employee"}`, i))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -2024,7 +2109,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			// This loop tests the filter with events 2-12.
 			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
 			for i := uint32(2); i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), fmt.Appendf(nil, `{"id":%d,"__typename":"Employee"}`, i))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)

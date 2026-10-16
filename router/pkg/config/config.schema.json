@@ -362,7 +362,7 @@
           "properties": {
             "storage": {
               "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
-              "required": ["provider_id", "object_path"],
+              "required": ["provider_id"],
               "properties": {
                 "provider_id": {
                   "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -370,18 +370,12 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. Required for S3 providers. Not used by CDN providers."
                 }
               }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
+            },
             "fallback_storage": {
-              "description": "The fallback storage provider for the execution config in case the primary one fails.",
+              "description": "The fallback storage provider for the execution config in case the primary one fails. Can be combined with storage. When storage is omitted, the Cosmo CDN is the primary provider.",
               "required": ["enabled"],
               "properties": {
                 "enabled": {
@@ -467,6 +461,37 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        },
+        "fetch_retry": {
+          "type": "object",
+          "description": "Retry behavior when a file is received from the CDN with a truncated response body (unexpected EOF while reading it).",
+          "additionalProperties": false,
+          "properties": {
+            "max_attempts": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 1,
+              "description": "The total number of fetches for a single file, including the first one. Set to 1 to disable retries. The default value is 3."
+            },
+            "interval": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "100ms",
+              "duration": {
+                "minimum": "1ms"
+              },
+              "description": "The base interval of the exponential backoff with jitter between attempts. The wait before the nth retry is a random value between 0 and interval * 2^(n-1), capped by max_duration. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "max_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "2s",
+              "duration": {
+                "minimum": "1ms"
+              },
+              "description": "The maximum wait between two attempts. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
         }
       }
     },
@@ -823,6 +848,11 @@
               "description": "The path to mount the Absinthe Protocol Handler on. The default value is '/absinthe/socket'."
             }
           }
+        },
+        "default_subprotocol": {
+          "type": "string",
+          "enum": ["graphql-transport-ws", "graphql-ws"],
+          "description": "The subprotocol to use when the client does not send a Sec-WebSocket-Protocol header. By default such connections are rejected."
         },
         "forward_upgrade_headers": {
           "type": "object",
@@ -1212,7 +1242,7 @@
                   },
                   "expression": {
                     "type": "string",
-                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                    "description": "The expression to evaluate for the value. If the evaluation fails, the default value is used."
                   }
                 },
                 "oneOf": [
@@ -1457,6 +1487,10 @@
                           "operation_hash",
                           "router_config_version"
                         ]
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression to evaluate for the value. If the evaluation fails, the default value is used."
                       }
                     }
                   }
@@ -1496,7 +1530,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1516,6 +1550,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1682,7 +1721,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, and time-to-first-byte histograms. The default value is false."
+                      "description": "Enable per-request subgraph HTTP phase metrics, including DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte, time-to-first-byte, and time-to-last-byte histograms. The default value is false."
                     }
                   }
                 },
@@ -1702,6 +1741,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
+                "response_cache": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of metrics for the response cache. This contains metrics related to lookups, writes and invalidations of the response cache store. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1828,8 +1872,16 @@
         },
         "allow_origins": {
           "type": "array",
-          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "description": "The allowed origins. Origins can use any URL scheme, and wildcard patterns are supported. The default '*' allows all origins.",
           "default": ["*"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "match_origins": {
+          "type": "array",
+          "description": "Go regular expressions matched against the original Origin header, in addition to allow_origins. Patterns are unanchored; use ^ and $ to match the entire origin. Matching is case-insensitive by default; prefix a pattern with (?-i) for case-sensitive matching. Set allow_origins to [] to allow only regex matches; its default '*' still allows all origins. Invalid expressions fail startup when CORS is enabled.",
+          "default": [],
           "items": {
             "type": "string"
           }
@@ -1996,7 +2048,12 @@
       "type": "string",
       "format": "go-duration",
       "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-      "default": "20s"
+      "default": "30s"
+    },
+    "drain_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "How long the router answers every response with 'Connection: close' after a stop signal (never on a config reload), before it shuts the HTTP server down, so clients retire pooled keep-alive connections instead of hitting EOF. The router also reports not ready while draining, and stops draining early once all client connections are closed. When unset, the drain gets the part of shutdown_delay that grace_period leaves (shutdown_delay - grace_period, 30s with the defaults). Set it above the longest idle timeout of any pooled client in front of the router. An explicit value runs inside the shutdown_delay, so shutdown_delay must be at least drain_period + grace_period; the router refuses to start otherwise. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. 0s disables the drain."
     },
     "poll_interval": {
       "type": "string",
@@ -2470,6 +2527,12 @@
                 ]
               }
             },
+            "on_error": {
+              "type": "string",
+              "enum": ["reject", "continue"],
+              "default": "reject",
+              "description": "Controls JWT credential failures. The default 'reject' returns HTTP 401 Unauthorized, or sends an error message and closes the connection for WebSocket initial-payload authentication. With 'continue', invalid tokens, unsupported header prefixes, and empty tokens are ignored. Custom authenticator errors and malformed WebSocket payloads still return errors. Required authentication and field authorization still apply."
+            },
             "scope_claim": {
               "type": "string",
               "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
@@ -2658,6 +2721,11 @@
           "type": "string",
           "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
         },
+        "exclude_subscriptions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude subscription operations from rate limiting. Be aware that disabling rate limiting for subscriptions can expose the router and subgraphs to a denial-of-service risk from unrestricted clients."
+        },
         "error_extension_code": {
           "type": "object",
           "description": "If enabled, a code will be added to the extensions.code field of error objects related to rate limiting. This allows clients to easily identify if an error happened due to rate limiting.",
@@ -2730,6 +2798,29 @@
               "type": "string",
               "description": "The base URL of the MCP server used for OAuth 2.0 discovery (RFC 9728). This URL is advertised in the Protected Resource Metadata endpoint and used to construct the resource metadata URL. Required when OAuth is enabled. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
+            },
+            "version": {
+              "type": "string",
+              "description": "The version reported to MCP clients as the server version in serverInfo, alongside the server name derived from graph_name. Use this to expose your own API version to AI agents. Defaults to the router release version when unset."
+            },
+            "title": {
+              "type": "string",
+              "description": "A human-readable display name for this MCP server, reported to MCP clients in serverInfo. Clients show it in UIs, falling back to the machine name derived from graph_name when unset."
+            },
+            "description": {
+              "type": "string",
+              "description": "A human-readable description of this MCP server, reported to MCP clients in serverInfo."
+            },
+            "discover": {
+              "type": "object",
+              "description": "Configuration for the server identity exposed via the MCP server/discover method (protocol version 2026-07-28).",
+              "additionalProperties": false,
+              "properties": {
+                "instructions": {
+                  "type": "string",
+                  "description": "Natural-language guidance for MCP clients (AI agents) on how to use this server effectively. Served in the server/discover response and in the legacy initialize response, so all clients receive it."
+                }
+              }
             }
           }
         },
@@ -2787,6 +2878,23 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "omit_tool_title_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool titles generated from GraphQL operations omit the 'Execute operation' prefix. For example, the GraphQL operation 'GetUser' results in a tool title 'GetUser' instead of 'Execute operation GetUser'."
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "Configuration for MCP structured tool output (MCP specification revision 2025-06-18).",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, every tool generated from a GraphQL operation declares an output schema derived from the operation's selection set, and successful tool results additionally carry the response as structured content. This lets MCP clients know the response shape ahead of time and validate results, at the cost of larger tools/list payloads and roughly doubled tool result sizes, which consume more of the AI model's context window."
+            }
+          }
+        },
         "resource_documentation": {
           "type": "string",
           "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
@@ -2805,7 +2913,17 @@
             "authorization_server_url": {
               "type": "string",
               "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
-              "format": "http-url"
+              "format": "http-url",
+              "deprecated": true,
+              "deprecationMessage": "The authorization_server_url is deprecated. Please use the authorization_server_urls configuration instead."
+            },
+            "authorization_server_urls": {
+              "type": "array",
+              "description": "A list of base URLs of OAuth 2.0 authorization servers. All URLs are advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728). Use this field to trust more than one authorization server. Entries are merged with 'authorization_server_url' and duplicates are removed. Configure a JWKS entry for each issuer under 'jwks' so the router can validate its tokens.",
+              "items": {
+                "type": "string",
+                "format": "http-url"
+              }
             },
             "scopes": {
               "type": "object",
@@ -2840,6 +2958,11 @@
                 "get_schema": {
                   "type": "array",
                   "description": "Scopes required to call the get_schema built-in tool. Additive to tools_call scopes. Only relevant when expose_schema is true.",
+                  "items": { "type": "string" }
+                },
+                "generate_query": {
+                  "type": "array",
+                  "description": "Scopes required to call the generate_query built-in tool. Additive to tools_call scopes. Only relevant when query generation is enabled.",
                   "items": { "type": "string" }
                 }
               }
@@ -3095,6 +3218,11 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
+        "skip_unavailable_providers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the router even when an event provider referenced by the execution config is unavailable, instead of aborting startup. This covers both a provider that is not defined in this configuration and a provider that is defined but cannot be reached at startup (e.g. the broker is down). The router logs an error and starts anyway, leaving only the fields backed by that provider unavailable; requests to them return an error instead of crashing the router. Defaults to false, in which case an unavailable provider prevents the router from starting."
+        },
         "providers": {
           "type": "object",
           "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",
@@ -3328,7 +3456,7 @@
           "properties": {
             "on_receive_events": {
               "type": "object",
-              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "description": "Configuration for the OnReceiveEvents hook that is called for each subscriber when events are received from a broker.",
               "additionalProperties": false,
               "properties": {
                 "max_concurrent_handlers": {
@@ -3343,9 +3471,180 @@
                   "default": "5s"
                 }
               }
+            },
+            "before_events_dispatch": {
+              "type": "object",
+              "description": "Configuration for the BeforeEventsDispatch hook, that is called once per event batch, before delivering them to subscribers.",
+              "additionalProperties": false,
+              "properties": {
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that BeforeEventsDispatch handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
             }
           }
         }
+      }
+    },
+    "response_cache": {
+      "type": "object",
+      "description": "Caches subgraph responses, either in Redis or in this router's own memory. Two things are cached: each entity of a federation entity fetch, per selection set, so asking for different fields of the same entity does not share a cache entry, and a batch is served from the cache only when every entity in it is present; and the whole answer of a root query fetch, keyed by the request that produced it, so any difference in the operation or its variables sends the request to the subgraph unchanged. Neither key covers the headers the router forwards on its own; a subgraph whose answer varies by request header names them in a Vary response header, and the router keeps one variant per set of values it sent, learned from the first response. Vary: *, or more than 100 names, is not cached. Only subgraph responses whose Cache-Control header asks to be cached are stored; public is not required. NOTE: This option is experimental and may change in future versions.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable response caching.",
+          "default": false
+        },
+        "key_prefix": {
+          "type": "string",
+          "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
+          "default": "cosmo_response_cache:"
+        },
+        "all": {
+          "description": "What the cache does for every subgraph that has no entry of its own under 'subgraphs'.",
+          "$ref": "#/$defs/response_cache_subgraph_all"
+        },
+        "subgraphs": {
+          "type": "object",
+          "description": "Per-subgraph settings. Each key is a subgraph name. An entry fully overrides 'all' for that subgraph and is explicit: nothing is inherited from 'all' and nothing is defaulted. An entry without 'enabled: true' does not cache that subgraph, an enabled entry must name a 'fallback_ttl' or startup fails, and an entry without 'private_id' does not cache that subgraph's private responses even when 'all' names one.",
+          "additionalProperties": {
+            "$ref": "#/$defs/response_cache_subgraph_entry"
+          }
+        },
+        "storage": {
+          "type": "object",
+          "description": "Where cached entities are stored.",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": ["redis", "memory"],
+              "default": "redis",
+              "description": "Which backend holds the cache. 'redis' stores entries in the Redis instance named by 'provider_id', so every router replica shares one cache and entries outlive the process. 'memory' stores them in this router process: each replica then caches on its own, nothing survives a restart, and no Redis is needed. Defaults to 'redis', so caching in memory has to be asked for by name.",
+              "examples": ["redis", "memory"]
+            },
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of a Redis storage provider declared under 'storage_providers.redis'. Required when 'provider' is 'redis', which is the default; an unknown ID fails startup. The instance must run Redis 7.0 or newer: tagged writes use EXPIRE options that older versions reject. Ignored by the 'memory' provider."
+            },
+            "max_entries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 10000,
+              "description": "The greatest number of entries the 'memory' provider holds, after which the least valuable are evicted. Entries are counted, not measured, so the memory this costs depends on the size of the cached subgraph responses. Ignored by the 'redis' provider.",
+              "examples": [10000]
+            }
+          },
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "memory"
+              }
+            },
+            "required": ["provider"]
+          },
+          "then": {},
+          "else": {
+            "required": ["provider_id"]
+          }
+        },
+        "invalidation": {
+          "type": "object",
+          "description": "Secondary indexes built over cached entries so they can later be invalidated by what they are about rather than waiting out their TTL. Each index is independent; with all of them off entries are cached untagged.",
+          "additionalProperties": false,
+          "properties": {
+            "cache_tag": {
+              "type": "boolean",
+              "description": "Index entries under the cache tags a subgraph declares. A subgraph opts in by returning an 'apolloEntityCacheTags' extension: an array of arrays holding one list of tags per cached value, in the same order as the '_entities' it answered with, or a single element outer array for a root query fetch. The extension is consumed by the router and never forwarded to clients. Set to false to stop recording declared cache tags.",
+              "default": true
+            },
+            "subgraph": {
+              "type": "boolean",
+              "description": "Index every cached entry under the subgraph that answered it, so everything one subgraph contributed can be found without that subgraph having declared anything. Set to false to stop maintaining the by-subgraph index.",
+              "default": true
+            },
+            "type": {
+              "type": "boolean",
+              "description": "Index every cached entity under its __typename, scoped to the subgraph that answered so invalidating one subgraph's type leaves the others alone. Requires the typename to be present in what is cached, which a root query fetch has no single one of. Set to false to stop maintaining the by-type index.",
+              "default": true
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "An HTTP endpoint that drops cached entries before their TTL. It listens on an address of its own rather than as a route on the router's port, so that reaching the graph does not by itself reach the thing that empties its cache. It accepts a POST carrying a JSON array of invalidation requests, each naming a 'kind' of 'subgraph', 'type' or 'cache_tag' together with the subgraph it applies to, and answers 202 with the number of cache keys removed.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Start the invalidation listener. When disabled, entries are still indexed and still expire on their own TTL; they simply cannot be dropped early.",
+                  "default": false
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "format": "hostname-port",
+                  "description": "The address the invalidation endpoint listens on. Defaults to loopback, because an endpoint that empties the cache should be exposed on purpose rather than by inheriting whatever the router itself is exposed on. Expose it to internal networks only.",
+                  "default": "localhost:5027"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path the invalidation endpoint is served at.",
+                  "default": "/invalidation"
+                },
+                "shared_key": {
+                  "type": "string",
+                  "minLength": 32,
+                  "description": "Compared in full against the 'Authorization' header of an invalidation request, with no 'Bearer' prefix expected. Required when the endpoint is enabled: an enabled endpoint without a key fails startup rather than accepting unauthenticated requests."
+                }
+              }
+            }
+          }
+        },
+        "cache_tag_header": {
+          "type": "object",
+          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Emit the header.",
+              "default": false
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the header. Use 'Surrogate-Key' for Fastly.",
+              "default": "Cache-Tag",
+              "examples": ["Cache-Tag", "Surrogate-Key"]
+            },
+            "delimiter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What separates tags in the header value. Use a space for Fastly. A tag containing the delimiter cannot be sent and is left out.",
+              "default": ",",
+              "examples": [",", " "]
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The largest header value emitted, in bytes. When the tags do not fit they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. The default matches Cloudflare's Cache-Tag limit.",
+              "default": 16384
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": ["enabled"]
+      },
+      "then": {
+        "required": ["storage"]
       }
     },
     "cache_warmup": {
@@ -3586,7 +3885,7 @@
             },
             "depth": {
               "type": "object",
-              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",
+              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -3596,7 +3895,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3619,7 +3918,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3642,7 +3941,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3665,7 +3964,7 @@
                 },
                 "limit": {
                   "type": "integer",
-                  "description": "The root field alias limit for query. If the limit is 0, this limit isn't applied.",
+                  "description": "The root field alias limit for query. A limit of 0 disallows root field aliases when enabled. Set enabled to false to disable this limit.",
                   "default": 0,
                   "minimum": 0
                 },
@@ -3762,7 +4061,7 @@
             },
             "limit": {
               "type": "integer",
-              "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+              "description": "The depth limit for query. A limit of 0 is enforced when enabled. Set enabled to false to disable this limit.",
               "default": 0,
               "minimum": 0
             },
@@ -3977,6 +4276,21 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
+        "enable_multi_fetch": {
+          "type": "boolean",
+          "description": "Merges entity fetches to the same subgraph that execute in the same wave into a single batched request with aliased _entities fields. Merging reduces the number of subgraph requests. Set to false to send one request per entity fetch.",
+          "default": true
+        },
+        "enable_schedule_fetches": {
+          "type": "boolean",
+          "description": "Uses the dependency-aware fetch scheduler, which organizes fetches into component-split, chain-inlined execution trees instead of the legacy wave-based structure. Set to false to fall back to the wave-based structure.",
+          "default": true
+        },
+        "enable_grpc_wire_encoding": {
+          "type": "boolean",
+          "description": "Encodes gRPC request messages directly to the protobuf wire format. This is faster and uses less memory, because the router does not build dynamic protobuf messages for each request. Set to false to build request messages with protoreflect instead. Use this only as a fallback if a gRPC subgraph receives an incorrect request with wire encoding.",
+          "default": true
+        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",
@@ -4132,6 +4446,12 @@
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "sse_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "The maximum time for one SSE write and flush to a client. If a write takes longer, the router closes that subscription so it does not block other subscriptions on the same trigger. Set 0s to disable the timeout."
         },
         "enable_defer": {
           "type": "boolean",
@@ -4615,6 +4935,54 @@
           }
         }
       ]
+    },
+    "response_cache_subgraph_all": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the response cache does for every subgraph without an entry of its own.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Cache subgraph responses. Set to false to cache only the subgraphs whose entry under 'subgraphs' enables it.",
+          "default": true
+        },
+        "fallback_ttl": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "default": "30s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "private_id": {
+          "type": "string",
+          "description": "An expression, evaluated per request, that yields the id of the private context the request belongs to, such as a user or a tenant, e.g. request.auth.claims.sub or request.header.Get('X-User-Id'). A subgraph response whose Cache-Control header contains private is then cached under a key partitioned by that id, so each context is served its own entry and requests sharing an id share it. When the expression yields nothing, for example an anonymous request, private responses are not cached. Public responses are unaffected. The expression must evaluate to a string; see https://expr-lang.org/docs/language-definition for the syntax."
+        }
+      }
+    },
+    "response_cache_subgraph_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the response cache does for one subgraph. Explicit: no key is defaulted or inherited from 'all'.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Cache this subgraph's responses. Omitted means false."
+        },
+        "fallback_ttl": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "How long a response of this subgraph is kept when its Cache-Control header asks for caching without a max-age or s-maxage, under the same rules as 'all.fallback_ttl'. Required when 'enabled' is true. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "private_id": {
+          "type": "string",
+          "description": "An expression yielding the id of the private context a request belongs to, under the same rules as 'all.private_id', for this subgraph alone. Omitted means this subgraph's private responses are not cached, whatever 'all' names."
+        }
+      }
     },
     "traffic_shaping_subgraph_request_rule": {
       "type": "object",

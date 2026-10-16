@@ -9,10 +9,11 @@ import (
 )
 
 type websocketInitialPayloadAuthenticator struct {
-	tokenDecoder        TokenDecoder
-	key                 string
-	name                string
-	headerValuePrefixes []string
+	tokenDecoder             TokenDecoder
+	key                      string
+	name                     string
+	headerValuePrefixes      []string
+	ignoreInvalidCredentials bool
 }
 
 func (a *websocketInitialPayloadAuthenticator) Name() string {
@@ -23,11 +24,14 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 	initialPayload := WebsocketInitialPayloadFromContext(ctx)
 	var errs error
 	if initialPayload == nil {
+		if a.ignoreInvalidCredentials {
+			return nil, nil
+		}
 		errs = errors.Join(errs, fmt.Errorf("could not validate token, initial payload is empty"))
 		return nil, errs
 	}
 
-	var initialPayloadMap map[string]interface{}
+	var initialPayloadMap map[string]any
 	err := json.Unmarshal(initialPayload, &initialPayloadMap)
 	if err != nil {
 		errs = errors.Join(errs, fmt.Errorf("error parsing initial payload: %v", err))
@@ -46,7 +50,9 @@ func (a *websocketInitialPayloadAuthenticator) Authenticate(ctx context.Context,
 					authorization := strings.TrimSpace(authorization[len(prefix):])
 					claims, err := a.tokenDecoder.Decode(authorization)
 					if err != nil {
-						errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+						if !a.ignoreInvalidCredentials {
+							errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+						}
 						continue
 					}
 					return claims, nil
@@ -66,6 +72,9 @@ type WebsocketInitialPayloadAuthenticatorOptions struct {
 	// HeaderValuePrefixes are the prefixes to use for retrieving the token. It defaults to
 	// Bearer
 	HeaderValuePrefixes []string
+	// IgnoreInvalidCredentials treats missing credentials and invalid tokens as absent credentials.
+	// Malformed payloads and non-string credentials still return errors.
+	IgnoreInvalidCredentials bool
 }
 
 // NewWebsocketInitialPayloadAuthenticator returns an InitialPayload based authenticator. See WebsocketInitialPayloadAuthenticatorOptions
@@ -84,9 +93,10 @@ func NewWebsocketInitialPayloadAuthenticator(opts WebsocketInitialPayloadAuthent
 		headerValuePrefixes = []string{defaultHeaderValuePrefix}
 	}
 	return &websocketInitialPayloadAuthenticator{
-		tokenDecoder:        opts.TokenDecoder,
-		name:                "websocket-initial-payload",
-		key:                 opts.Key,
-		headerValuePrefixes: headerValuePrefixes,
+		tokenDecoder:             opts.TokenDecoder,
+		name:                     "websocket-initial-payload",
+		key:                      opts.Key,
+		headerValuePrefixes:      headerValuePrefixes,
+		ignoreInvalidCredentials: opts.IgnoreInvalidCredentials,
 	}, nil
 }

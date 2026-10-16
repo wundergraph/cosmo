@@ -321,18 +321,113 @@ func TestCacheWarmup(t *testing.T) {
 				header.Add("graphql-client-name", "my-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 
 				res2, err2 := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:     header,
 				})
 				require.NoError(t, err2)
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
+			})
+		})
+		t.Run("cache warmup persisted operation normalization cache hit", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+					cfg.FeatureFlagConfigs = nil
+				},
+				MetricOptions: testenv.MetricOptions{
+					EnableOTLPRouterCache: true,
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.WarnLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Workers: 1,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testdata/cache_warmup/json_po_cache_hit",
+							},
+						},
+					}),
+					core.WithPlanningDurationOverride(func(_ string) time.Duration {
+						// The real planner has prepared the first plan. Wait for the
+						// asynchronous normalization-cache write before the single
+						// worker advances to the second, identical hash-only item.
+						assert.Eventually(t, func() bool {
+							var rm metricdata.ResourceMetrics
+							if err := metricReader.Collect(t.Context(), &rm); err != nil {
+								return false
+							}
+							scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+							if scope == nil {
+								return false
+							}
+							m := testutils.GetMetricByName(scope, "router.graphql.cache.keys.stats")
+							if m == nil {
+								return false
+							}
+							for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+								cacheType, _ := dp.Attributes.Value(otel.CacheMetricsCacheTypeAttribute)
+								operation, _ := dp.Attributes.Value(otel.CacheMetricsOperationAttribute)
+								if cacheType.AsString() == "persisted_query_normalization" && operation.AsString() == otel.CacheMetricsOperationTypeAdded && dp.Value == 1 {
+									return true
+								}
+							}
+							return false
+						}, 5*time.Second, time.Millisecond, "persisted operation must enter the normalization cache before the next warmup item")
+						return 0
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Check startup metrics before making any live requests: a request
+				// could succeed using the first item's plan even if warmup skipped
+				// the cached item with an "empty request body" error.
+				var rm metricdata.ResourceMetrics
+				require.NoError(t, metricReader.Collect(t.Context(), &rm))
+				cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+				require.NotNil(t, cacheScope)
+				cacheRequests := testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
+				require.NotNil(t, cacheRequests)
+				var normalizationHits int64
+				for _, dp := range cacheRequests.Data.(metricdata.Sum[int64]).DataPoints {
+					cacheType, _ := dp.Attributes.Value(otel.CacheMetricsCacheTypeAttribute)
+					requestType, _ := dp.Attributes.Value(otel.CacheMetricsTypeAttribute)
+					if cacheType.AsString() == "persisted_query_normalization" && requestType.AsString() == otel.CacheMetricsRequestTypeHits {
+						normalizationHits += dp.Value
+					}
+				}
+				assert.Equal(t, int64(1), normalizationHits, "the second warmup item must use the cached document")
+
+				scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				require.NotNil(t, scope)
+				planning := testutils.GetMetricByName(scope, "router.graphql.operation.planning_time")
+				require.NotNil(t, planning)
+				var planned uint64
+				for _, dp := range planning.Data.(metricdata.Histogram[float64]).DataPoints {
+					planned += dp.Count
+				}
+				assert.Equal(t, uint64(2), planned, "both hash-only warmup items must reach planning")
+				assert.Zero(t, xEnv.Observer().FilterMessage("Failed to process operation, skipping").Len())
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
+					Header:     http.Header{"Graphql-Client-Name": {"my-client"}},
+				})
+				assert.JSONEq(t, testutils.EmployeesIDData, res.Body)
+				assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+				assert.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 			})
 		})
 		t.Run("cache warmup persisted operation with and without queries passed", func(t *testing.T) {
@@ -398,7 +493,7 @@ func TestCacheWarmup(t *testing.T) {
 				header.Add("graphql-client-name", "my-other-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)
@@ -804,7 +899,7 @@ func TestCacheWarmup(t *testing.T) {
 				header.Add("graphql-client-name", "my-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "27feb15f92b000437ffd50a557f06db2813949353ed716e0c65f6e41b5d4e6af"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)
@@ -812,7 +907,7 @@ func TestCacheWarmup(t *testing.T) {
 
 				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"A"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e24399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "30476d5043e9e0086051425d9820cdbc6efc8691456f7e881988bce2fc1bdae9"}}`),
 					Header:        header,
 				})
 				require.NoError(t, err)

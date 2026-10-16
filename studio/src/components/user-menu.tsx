@@ -78,6 +78,12 @@ export const UserMenuMobile = () => {
   );
 };
 
+function openOsanoCookieConsent() {
+  if (typeof window === 'object' && window.Osano?.cm?.showDrawer) {
+    window.Osano.cm.showDrawer('osano-cm-dom-info-dialog-open');
+  }
+}
+
 export const UserMenu = () => {
   const user = useUser();
 
@@ -85,6 +91,9 @@ export const UserMenu = () => {
 
   const loginMethod = user.loginMethod;
   const hasInvitations = user.invitations.length > 0;
+
+  const osanoScriptId = process.env.NEXT_PUBLIC_OSANO_SCRIPT_ID;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return (
     <DropdownMenu>
@@ -121,6 +130,9 @@ export const UserMenu = () => {
             <p className="text-xs text-muted-foreground">Logged in via password</p>
           )}
         </div>
+        {isProduction && osanoScriptId && (
+          <DropdownMenuItem onClick={openOsanoCookieConsent}>Cookie Preferences</DropdownMenuItem>
+        )}
         <Link href="/account/invitations">
           <DropdownMenuItem>
             Invitations

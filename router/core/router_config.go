@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io"
 	"net/http"
 	"time"
 
@@ -21,7 +22,9 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/profile/pyroscope"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -31,10 +34,11 @@ import (
 )
 
 type subscriptionHooks struct {
-	onCreate        onCreateHooks
-	onStart         onStartHooks
-	onPublishEvents onPublishEventsHooks
-	onReceiveEvents onReceiveEventsHooks
+	onCreate             onCreateHooks
+	onStart              onStartHooks
+	onPublishEvents      onPublishEventsHooks
+	onReceiveEvents      onReceiveEventsHooks
+	beforeEventsDispatch beforeEventsDispatchHooks
 }
 
 type onCreateHooks struct {
@@ -53,6 +57,17 @@ type onReceiveEventsHooks struct {
 	handlers              []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	maxConcurrentHandlers int
 	timeout               time.Duration
+}
+
+type beforeEventsDispatchHooks struct {
+	handlers []func(ctx StreamBeforeEventsDispatchHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	timeout  time.Duration
+}
+
+type ResponseCache interface {
+	caching.Cache
+	responsecaching.Invalidator
+	io.Closer
 }
 
 type Config struct {
@@ -105,7 +120,7 @@ type Config struct {
 	demoMode                        bool
 	eventsConfig                    config.EventsConfiguration
 	prometheusServer                *http.Server
-	modulesConfig                   map[string]interface{}
+	modulesConfig                   map[string]any
 	executionConfig                 *ExecutionConfig
 	manifestConfig                  *ManifestConfig
 	routerOnRequestHandlers         []func(http.Handler) http.Handler
@@ -122,6 +137,10 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
+	responseCacheConfig             *config.ResponseCacheConfiguration
+	responseCache                   ResponseCache
+	responseCacheMetrics            rmetric.ResponseCacheMetricStore
+	responseCacheInvalidationServer *http.Server
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
@@ -138,6 +157,7 @@ type Config struct {
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
+	promptToQueryClient          mcpserver.PromptToQueryClient
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module
@@ -305,6 +325,7 @@ func (c *Config) Usage() map[string]any {
 	usage["engine_execution_configuration_resolver_max_recyclable_parser_size"] = c.engineExecutionConfiguration.ResolverMaxRecyclableParserSize
 	usage["engine_execution_configuration_enable_subgraph_fetch_operation_name"] = c.engineExecutionConfiguration.EnableSubgraphFetchOperationName
 	usage["engine_execution_configuration_disable_variables_remapping"] = c.engineExecutionConfiguration.DisableVariablesRemapping
+	usage["engine_execution_configuration_enable_grpc_wire_encoding"] = c.engineExecutionConfiguration.EnableGRPCWireEncoding
 
 	usage["overrides_subgraphs"] = len(c.overrides.Subgraphs) > 0
 	usage["authorization"] = c.authorization != nil

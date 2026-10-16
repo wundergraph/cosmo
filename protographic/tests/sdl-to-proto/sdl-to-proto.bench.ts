@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { test } from 'vitest';
 import { buildSchema } from 'graphql';
 import { compileGraphQLToProto } from '../../src/index.js';
 
@@ -123,16 +123,16 @@ const complexSchema = `
   }
 `;
 
-describe('GraphQL to Proto Benchmarks', () => {
+test('GraphQL to Proto Benchmarks', async ({ bench }) => {
   const simpleSchemaObj = buildSchema(simpleSchema);
-
-  bench('Simple Schema - compileGraphQLToProto', () => {
-    compileGraphQLToProto(simpleSchemaObj);
-  });
-
   const complexSchemaObj = buildSchema(complexSchema);
 
-  bench('Complex Schema - compileGraphQLToProto', () => {
-    compileGraphQLToProto(complexSchemaObj);
-  });
+  await bench.compare(
+    bench('Simple Schema - compileGraphQLToProto', () => {
+      compileGraphQLToProto(simpleSchemaObj);
+    }),
+    bench('Complex Schema - compileGraphQLToProto', () => {
+      compileGraphQLToProto(complexSchemaObj);
+    }),
+  );
 });

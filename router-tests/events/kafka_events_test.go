@@ -72,7 +72,6 @@ func overrideKafkaTopicsForField(t *testing.T, routerConfig *nodev1.RouterConfig
 
 func TestKafkaEvents(t *testing.T) {
 	t.Parallel()
-	// All tests are running in sequence because they are using the same kafka topic
 
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -1085,7 +1084,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
-					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
+					Payload: fmt.Appendf(nil, `{"query":%q}`, subscriptionQuery),
 				}))
 
 				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
@@ -1157,7 +1156,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
-					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
+					Payload: fmt.Appendf(nil, `{"query":%q}`, subscriptionQuery),
 				}))
 
 				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
@@ -1230,7 +1229,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
-					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
+					Payload: fmt.Appendf(nil, `{"query":%q}`, subscriptionQuery),
 				}))
 
 				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
@@ -1290,7 +1289,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
-					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
+					Payload: fmt.Appendf(nil, `{"query":%q}`, subscriptionQuery),
 				}))
 
 				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)

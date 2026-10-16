@@ -4,6 +4,103 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.1](https://github.com/wundergraph/cosmo/compare/studio@0.183.0...studio@0.183.1) (2026-10-14)
+
+**Note:** Version bump only for package studio
+
+## [0.183.0](https://github.com/wundergraph/cosmo/compare/studio@0.182.2...studio@0.183.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+
+## [0.182.2](https://github.com/wundergraph/cosmo/compare/studio@0.182.1...studio@0.182.2) (2026-10-02)
+
+### Bug Fixes
+
+* **studio:** read namespace from querystring on top-level pages ([#3315](https://github.com/wundergraph/cosmo/issues/3315)) ([d485c08](https://github.com/wundergraph/cosmo/commit/d485c089e2992a86fa327823d40d7a66c2c558d1)) (@gausie)
+
+## [0.182.1](https://github.com/wundergraph/cosmo/compare/studio@0.182.0...studio@0.182.1) (2026-09-28)
+
+**Note:** Version bump only for package studio
+
+# [0.182.0](https://github.com/wundergraph/cosmo/compare/studio@0.181.2...studio@0.182.0) (2026-09-25)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
+## [0.181.2](https://github.com/wundergraph/cosmo/compare/studio@0.181.1...studio@0.181.2) (2026-09-23)
+
+**Note:** Version bump only for package studio
+
+## [0.181.1](https://github.com/wundergraph/cosmo/compare/studio@0.181.0...studio@0.181.1) (2026-09-16)
+
+**Note:** Version bump only for package studio
+
+# [0.181.0](https://github.com/wundergraph/cosmo/compare/studio@0.180.5...studio@0.181.0) (2026-09-14)
+
+### Features
+
+* add an option to set default headers ([#3208](https://github.com/wundergraph/cosmo/issues/3208)) ([fd12221](https://github.com/wundergraph/cosmo/commit/fd12221ef769fea0920941b47acf151655d82223)) (@JivusAyrus)
+
+## [0.180.5](https://github.com/wundergraph/cosmo/compare/studio@0.180.4...studio@0.180.5) (2026-09-09)
+
+**Note:** Version bump only for package studio
+
+## [0.180.4](https://github.com/wundergraph/cosmo/compare/studio@0.180.3...studio@0.180.4) (2026-09-09)
+
+**Note:** Version bump only for package studio
+
+## [0.180.3](https://github.com/wundergraph/cosmo/compare/studio@0.180.2...studio@0.180.3) (2026-09-08)
+
+**Note:** Version bump only for package studio
+
+## [0.180.2](https://github.com/wundergraph/cosmo/compare/studio@0.180.1...studio@0.180.2) (2026-08-26)
+
+### Bug Fixes
+
+* show feature flags for a federated graph under split config ([#3129](https://github.com/wundergraph/cosmo/issues/3129)) ([6a8da18](https://github.com/wundergraph/cosmo/commit/6a8da18dffcb02d012ae9491c017293e78efda39)) (@JivusAyrus)
+* update packages with high severity vulnerabilities ([#3190](https://github.com/wundergraph/cosmo/issues/3190)) ([5ac650f](https://github.com/wundergraph/cosmo/commit/5ac650ffa61b16b5e70aba197a9b8c2d4abdfbfc)) (@gausie)
+
+## [0.180.1](https://github.com/wundergraph/cosmo/compare/studio@0.180.0...studio@0.180.1) (2026-08-11)
+
+**Note:** Version bump only for package studio
+
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/studio@0.179.0...studio@0.180.0) (2026-08-11)
+
+### Features
+
+* add copy cURL request option to playground copy button ([#3141](https://github.com/wundergraph/cosmo/issues/3141)) ([6b57d4c](https://github.com/wundergraph/cosmo/commit/6b57d4c4a0a84d8d9eb3e3d543987c4847fa1d8e)) (@JivusAyrus)
+
+# [0.179.0](https://github.com/wundergraph/cosmo/compare/studio@0.178.7...studio@0.179.0) (2026-08-10)
+
+### Features
+
+* resolve feature subgraphs in federated graph field usage ([#3144](https://github.com/wundergraph/cosmo/issues/3144)) ([e81b5fa](https://github.com/wundergraph/cosmo/commit/e81b5fa984e8496aab8042f351372b239358099a)) (@JivusAyrus)
+
+## [0.178.7](https://github.com/wundergraph/cosmo/compare/studio@0.178.6...studio@0.178.7) (2026-07-31)
+
+**Note:** Version bump only for package studio
+
+## [0.178.6](https://github.com/wundergraph/cosmo/compare/studio@0.178.5...studio@0.178.6) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** read document.referrer inside an effect on onboarding ([#3128](https://github.com/wundergraph/cosmo/issues/3128)) ([cb6d98d](https://github.com/wundergraph/cosmo/commit/cb6d98db32478d7d3a261f639cac0a1fd245c6ff)) (@thisisnithin)
+
+## [0.178.5](https://github.com/wundergraph/cosmo/compare/studio@0.178.4...studio@0.178.5) (2026-07-30)
+
+### Bug Fixes
+
+* **studio:** load studio when analytics cookies are declined ([#3127](https://github.com/wundergraph/cosmo/issues/3127)) ([1bc4562](https://github.com/wundergraph/cosmo/commit/1bc4562737341a96023d026672c63b503e897909)) (@thisisnithin)
+
+## [0.178.4](https://github.com/wundergraph/cosmo/compare/studio@0.178.3...studio@0.178.4) (2026-07-29)
+
+### Bug Fixes
+
+* osano and analytics script not being bootstrapped correctly ([#3126](https://github.com/wundergraph/cosmo/issues/3126)) ([2c93bca](https://github.com/wundergraph/cosmo/commit/2c93bca89be91043334829c99f4a248630b3788e)) (@wilsonrivera)
+
 ## [0.178.3](https://github.com/wundergraph/cosmo/compare/studio@0.178.2...studio@0.178.3) (2026-07-17)
 
 ### Bug Fixes

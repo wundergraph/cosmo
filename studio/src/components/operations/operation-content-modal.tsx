@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useParams } from 'next/navigation';
 import { Loader } from '@/components/ui/loader';
 import { useQuery } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -12,7 +13,6 @@ import { CodeViewer } from '@/components/code-viewer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlayIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -32,12 +32,11 @@ export const OperationContentModal = ({
   onClose,
 }: OperationContentModalProps) => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const slug = router.query.slug as string;
+  const { slug } = useParams<{ slug: string }>();
 
   const { data, isLoading, error, refetch } = useQuery(
     getOperationContent,

@@ -38,9 +38,31 @@ func TestBuildNatsOptions(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
+	})
+
+	t.Run("skip unavailable providers enables retry on failed connect with unlimited reconnects", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+		}
+		logger := zaptest.NewLogger(t)
+
+		// Strict mode must keep the default fail-fast behavior on the initial connect.
+		strict, err := buildNatsOptions(cfg, logger, false)
+		require.NoError(t, err)
+		strictOpts := applyNatsOptions(t, strict)
+		require.False(t, strictOpts.RetryOnFailedConnect)
+
+		// Lenient mode retries the initial connect and reconnects forever so the provider
+		// recovers without a restart once the broker becomes reachable.
+		lenient, err := buildNatsOptions(cfg, logger, true)
+		require.NoError(t, err)
+		lenientOpts := applyNatsOptions(t, lenient)
+		require.True(t, lenientOpts.RetryOnFailedConnect)
+		require.Equal(t, -1, lenientOpts.MaxReconnect)
 	})
 
 	t.Run("with token authentication", func(t *testing.T) {
@@ -56,7 +78,7 @@ func TestBuildNatsOptions(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 		// Can't directly check for token options, but we can verify options are present
@@ -78,7 +100,7 @@ func TestBuildNatsOptions(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 		// Can't directly check for auth options, but we can verify options are present
@@ -95,7 +117,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 
 		natsOpts := applyNatsOptions(t, opts)
@@ -116,7 +138,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 
 		natsOpts := applyNatsOptions(t, opts)
@@ -135,7 +157,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		_, err := buildNatsOptions(cfg, logger)
+		_, err := buildNatsOptions(cfg, logger, false)
 		require.ErrorContains(t, err, "failed to read CA file")
 	})
 
@@ -149,7 +171,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		_, err := buildNatsOptions(cfg, logger)
+		_, err := buildNatsOptions(cfg, logger, false)
 		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
 	})
 
@@ -163,7 +185,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		_, err := buildNatsOptions(cfg, logger)
+		_, err := buildNatsOptions(cfg, logger, false)
 		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
 	})
 
@@ -179,7 +201,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 
 		natsOpts := applyNatsOptions(t, opts)
@@ -200,7 +222,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 
 		natsOpts := applyNatsOptions(t, opts)
@@ -224,7 +246,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		opts, err := buildNatsOptions(cfg, logger)
+		opts, err := buildNatsOptions(cfg, logger, false)
 		require.NoError(t, err)
 
 		natsOpts := applyNatsOptions(t, opts)

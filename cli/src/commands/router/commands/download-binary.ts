@@ -60,7 +60,7 @@ export default function (_: BaseCommandOptions) {
       chunks.push(chunk);
     }
     bar.stop();
-    await decompress(Buffer.from(await new Blob(chunks).arrayBuffer()), path);
+    await decompress(Buffer.concat(chunks), path);
   });
   return command;
 }

@@ -1662,6 +1662,27 @@ export const organizationFeatures = pgTable(
   },
 );
 
+export const organizationFeatureTermsAcceptance = pgTable(
+  'organization_feature_terms_acceptance',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    feature: text('feature').notNull(),
+    lastAcceptedBy: uuid('last_accepted_by_id').references(() => users.id, { onDelete: 'set null' }),
+    lastAcceptedAt: timestamp('last_accepted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_fta_idx').on(t.organizationId, t.feature),
+      organizationIdIndex: index('org_fta_organization_id_idx').on(t.organizationId),
+    };
+  },
+);
+
 export const organizationInvitations = pgTable(
   'organization_invitations', // orginv
   {
@@ -2541,6 +2562,48 @@ export const playgroundScripts = pgTable(
     return {
       organizationIdIndex: index('ps_organization_id_idx').on(t.organizationId),
       createdByIdIndex: index('ps_created_by_id_idx').on(t.createdById),
+    };
+  },
+);
+
+export interface PlaygroundHeaderEntry {
+  key: string;
+  value: string;
+}
+
+export const playgroundDefaultHeaders = pgTable(
+  'playground_default_headers', // pdh
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    // NULL = the graph-level (organization-shared) row. Set = that user's personal row.
+    userId: uuid('user_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+    headers: json('headers').$type<PlaygroundHeaderEntry[]>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      federatedGraphIdIndex: index('pdh_federated_graph_id_idx').on(t.federatedGraphId),
+      // Postgres treats NULLs as distinct in a unique constraint, so the two
+      // levels need two partial unique indexes rather than one composite unique.
+      uniqueGraphLevel: uniqueIndex('pdh_unique_graph_level')
+        .on(t.federatedGraphId)
+        .where(sql`${t.userId} IS NULL`),
+      uniquePersonalLevel: uniqueIndex('pdh_unique_personal_level')
+        .on(t.federatedGraphId, t.userId)
+        .where(sql`${t.userId} IS NOT NULL`),
     };
   },
 );

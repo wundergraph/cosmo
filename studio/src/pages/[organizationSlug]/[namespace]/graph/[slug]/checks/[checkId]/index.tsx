@@ -1,4 +1,6 @@
 import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { useCheckParams } from '@/hooks/use-check-params';
+import { useQueryState } from 'nuqs';
 import { getCheckBadge, getCheckIcon, isCheckSuccessful } from '@/components/check-badge-icon';
 import { ChangesTable } from '@/components/checks/changes-table';
 import { ComposedSchemaChangesTable } from '@/components/checks/composed-schema-changes-table';
@@ -121,7 +123,7 @@ const ProposedSchemas = ({
   graphPruningIssues: GraphPruningIssue[];
 }) => {
   const router = useRouter();
-  const subgraph = router.query.subgraph as string;
+  const [subgraph] = useQueryState('subgraph');
   const hash = router.asPath.split('#')?.[1];
 
   const checkedSubgraph = checkedSubgraphs.find((s) => s.subgraphName === subgraph);
@@ -213,14 +215,12 @@ const ProposedSchemas = ({
 
 const CheckOverviewPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
 
   const organizationSlug = useCurrentOrganization()?.slug;
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.checkId as string;
+  const { slug, checkId: id } = useCheckParams();
 
   const { data, isLoading, error, refetch } = useQuery(
     getCheckSummary,
@@ -346,9 +346,8 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
   const {
     namespace: { name: namespace },
   } = useWorkspace();
-  const slug = router.query.slug as string;
-  const id = router.query.checkId as string;
-  const tab = router.query.tab as string;
+  const { slug, checkId: id } = useCheckParams();
+  const [tab] = useQueryState('tab');
 
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {
     onSuccess: (data) => {

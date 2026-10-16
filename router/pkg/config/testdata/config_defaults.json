@@ -40,6 +40,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -71,6 +72,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "ResponseCache": false,
         "ConnectionStats": false,
         "Network": {
           "Enabled": false
@@ -130,6 +132,7 @@
     "AllowOrigins": [
       "*"
     ],
+    "MatchOrigins": null,
     "AllowMethods": [
       "HEAD",
       "GET",
@@ -191,7 +194,13 @@
     "Enabled": false,
     "Server": {
       "ListenAddr": "localhost:5025",
-      "BaseURL": ""
+      "BaseURL": "",
+      "Version": "",
+      "Title": "",
+      "Description": "",
+      "Discover": {
+        "Instructions": ""
+      }
     },
     "Storage": {
       "ProviderID": ""
@@ -205,22 +214,28 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
       "AuthorizationServerURL": "",
+      "AuthorizationServerURLs": null,
       "Scopes": {
         "Initialize": null,
         "ToolsList": null,
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "OutputSchema": {
+      "Enabled": false
+    }
   },
   "ConnectRPC": {
     "Enabled": false,
@@ -345,6 +360,7 @@
   "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
+  "DrainPeriod": null,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
@@ -358,7 +374,8 @@
       "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
-      "HeaderSources": null
+      "HeaderSources": null,
+      "OnError": "reject"
     },
     "IgnoreIntrospection": false
   },
@@ -389,7 +406,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "ExcludeSubscriptions": false
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {
@@ -403,9 +421,13 @@
       "Kafka": null,
       "Redis": null
     },
+    "SkipUnavailableProviders": true,
     "Handlers": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      },
+      "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
     }
@@ -423,6 +445,38 @@
     "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
+  },
+  "ResponseCache": {
+    "Enabled": false,
+    "KeyPrefix": "cosmo_response_cache:",
+    "Storage": {
+      "Provider": "redis",
+      "ProviderID": "",
+      "MaxEntries": 10000
+    },
+    "Invalidation": {
+      "CacheTag": true,
+      "Subgraph": true,
+      "Type": true,
+      "Endpoint": {
+        "Enabled": false,
+        "ListenAddr": "localhost:5027",
+        "Path": "/invalidation",
+        "SharedKey": ""
+      }
+    },
+    "TagHeader": {
+      "Enabled": false,
+      "Name": "Cache-Tag",
+      "Delimiter": ",",
+      "MaxBytes": 16384
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": ""
+    },
+    "Subgraphs": null
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -506,7 +560,11 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -534,6 +592,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [
@@ -619,7 +678,12 @@
   },
   "SplitConfigPoller": {
     "SkipMissingFeatureFlags": false,
-    "IgnoredFeatureFlags": null
+    "IgnoredFeatureFlags": null,
+    "FetchRetry": {
+      "MaxAttempts": 3,
+      "Interval": 100000000,
+      "MaxDuration": 2000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

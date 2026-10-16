@@ -1,18 +1,38 @@
 package mcpserver
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	aiv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/ai/v1"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+type fakePromptToQueryClient struct {
+	response        *aiv1.GenerateQueryResponse
+	schemaVersionID string
+	prompt          string
+}
+
+func (f *fakePromptToQueryClient) GenerateQuery(_ context.Context, schemaVersionID, prompt string) (*aiv1.GenerateQueryResponse, error) {
+	f.schemaVersionID = schemaVersionID
+	f.prompt = prompt
+	return f.response, nil
+}
 
 const testSchema = `
 schema {
@@ -90,14 +110,14 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	require.NoError(t, err)
 
 	// First load
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	firstLoadTools := make([]string, len(srv.registeredTools))
 	copy(firstLoadTools, srv.registeredTools)
 
 	// Second load (simulates config reload)
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// registeredTools should be identical after reload — no duplicates
@@ -136,7 +156,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// The operation "GetOperationInfo" (snake: "get_operation_info") should be skipped
@@ -180,7 +200,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc, nil)
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
 	require.NoError(t, err)
 
 	// No collisions because the prefix disambiguates from the reserved name
@@ -194,4 +214,326 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"execute_operation_list_employees",
 		"get_operation_info",
 	}, srv.registeredTools)
+}
+
+func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
+	logger := zap.New(core)
+
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"ListEmployees.graphql": listEmployeesOp,
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
+	require.NoError(t, err)
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(logger),
+		WithOperationsDir(tempDir),
+		WithOmitToolNamePrefix(true),
+		WithOutputSchemaEnabled(true),
+	)
+	require.NoError(t, err)
+
+	err = srv.Reload(&schemaDoc, nil, "schema-version-test")
+	require.NoError(t, err)
+	require.Contains(t, srv.registeredTools, "list_employees")
+	require.Equal(t, 0, logs.FilterMessage("failed to build output schema for operation; registering tool without output schema").Len(),
+		"no output schema warning expected for a valid operation")
+
+	// Replace the loaded operation with one selecting a field missing from the
+	// schema and re-register: the tool must still be registered, just without
+	// an output schema.
+	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
+	require.False(t, report.HasErrors())
+
+	operations := srv.operationsManager.GetOperations()
+	require.Len(t, operations, 1)
+	operations[0].Document = brokenDoc
+
+	srv.registeredTools = nil
+	require.NoError(t, srv.registerTools())
+
+	assert.Contains(t, srv.registeredTools, "list_employees")
+	assert.Equal(t, 1, logs.FilterMessage("failed to build output schema for operation; registering tool without output schema").Len(),
+		"expected a warning about the failed output schema")
+}
+
+func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
+	logger := zap.New(core)
+
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"ListEmployees.graphql": listEmployeesOp,
+	})
+
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(logger),
+		WithOperationsDir(tempDir),
+		WithOmitToolNamePrefix(true),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+	require.Contains(t, srv.registeredTools, "list_employees")
+
+	// With the flag disabled (default), a broken operation must not produce an
+	// output schema warning because no schema is built at all.
+	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
+	require.False(t, report.HasErrors())
+
+	operations := srv.operationsManager.GetOperations()
+	require.Len(t, operations, 1)
+	operations[0].Document = brokenDoc
+
+	srv.registeredTools = nil
+	require.NoError(t, srv.registerTools())
+
+	assert.Contains(t, srv.registeredTools, "list_employees")
+	assert.Equal(t, 0, logs.FilterMessage("failed to build output schema for operation; registering tool without output schema").Len(),
+		"no output schema is built when the flag is disabled")
+}
+
+// TestExecuteGraphQLQueryResultBoundary pins the result semantics of
+// executeGraphQLQuery with structured output enabled:
+//   - transport-level breakage (non-JSON, empty, or literal null body) is a
+//     tool error, unconditionally
+//   - spec-valid GraphQL error envelopes keep their existing IsError semantics
+//   - successful responses carry structured content mirroring the text content
+func TestExecuteGraphQLQueryResultBoundary(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		responseBody          string
+		wantIsError           bool
+		wantStructuredContent bool
+	}{
+		{"data object succeeds with structured content", `{"data":{"hello":"world"}}`, false, true},
+		{"null data without errors succeeds with structured content", `{"data":null}`, false, true},
+		{"empty object succeeds with structured content", `{}`, false, true},
+		{"errors without data keep returning a tool error", `{"errors":[{"message":"boom"}],"data":null}`, true, false},
+		{"errors with partial data keep returning a tool error", `{"errors":[{"message":"boom"}],"data":{"hello":null}}`, true, false},
+		{"non-JSON body returns a tool error", `<html>bad gateway</html>`, true, false},
+		{"empty body returns a tool error", ``, true, false},
+		{"null body returns a tool error", `null`, true, false},
+		{"trailing JSON value returns a tool error", `{"data":{}} {}`, true, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.responseBody))
+			}))
+			defer upstream.Close()
+
+			srv, err := NewGraphQLSchemaServer(
+				t.Context(),
+				upstream.URL,
+				WithLogger(zap.NewNop()),
+				WithOperationsDir(t.TempDir()),
+				WithOutputSchemaEnabled(true),
+			)
+			require.NoError(t, err)
+
+			result, err := srv.executeGraphQLQuery(t.Context(), "query { hello }", nil)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.wantIsError, result.IsError)
+			if tc.wantStructuredContent {
+				// Structured content must accompany every success result and mirror the text content
+				assert.Equal(t, json.RawMessage(tc.responseBody), result.StructuredContent)
+			} else {
+				assert.Nil(t, result.StructuredContent)
+			}
+		})
+	}
+}
+
+func TestExecuteGraphQLQueryPreservesGraphQLErrorDetails(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		responseBody string
+		wantText     string
+	}{
+		{
+			name:         "message-only error keeps the existing format",
+			responseBody: `{"errors":[{"message":"boom"}]}`,
+			wantText:     "Response error: boom",
+		},
+		{
+			name:         "error details are preserved",
+			responseBody: `{"errors":[{"message":"Input validation error","locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}}]}`,
+			wantText:     `Response error: Input validation error (details: {"locations":[{"line":2,"column":7}],"path":["createDataSet",0],"extensions":{"code":"INPUT_VALIDATION","issues":{"dataSetId":["IS_BLANK"]}}})`,
+		},
+		{
+			name:         "multiple errors are separated",
+			responseBody: `{"errors":[{"message":"First error"},{"message":"Second error","path":["createDataSet"],"extensions":{"code":"INVALID"}}]}`,
+			wantText:     `Response error: First error; Second error (details: {"path":["createDataSet"],"extensions":{"code":"INVALID"}})`,
+		},
+		{
+			name:         "large integers preserve precision",
+			responseBody: `{"errors":[{"message":"Invalid identifier","path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}}]}`,
+			wantText:     `Response error: Invalid identifier (details: {"path":["createDataSet",9007199254740993],"extensions":{"requestId":9007199254740993}})`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.responseBody))
+			}))
+			defer upstream.Close()
+
+			srv, err := NewGraphQLSchemaServer(
+				t.Context(),
+				upstream.URL,
+				WithLogger(zap.NewNop()),
+				WithOperationsDir(t.TempDir()),
+				WithOutputSchemaEnabled(true),
+			)
+			require.NoError(t, err)
+
+			result, err := srv.executeGraphQLQuery(t.Context(), "query { employee { name } }", nil)
+			require.NoError(t, err)
+			require.True(t, result.IsError)
+			require.Nil(t, result.StructuredContent)
+			require.Len(t, result.Content, 1)
+
+			content, ok := result.Content[0].(*mcp.TextContent)
+			require.True(t, ok)
+			assert.Equal(t, tc.wantText, content.Text)
+		})
+	}
+}
+
+// TestExecuteGraphQLQueryStructuredContentDisabled proves that the flag only
+// gates structured content: the transport-level error boundary applies
+// unconditionally, and successful results stay text-only.
+func TestExecuteGraphQLQueryStructuredContentDisabled(t *testing.T) {
+	testCases := []struct {
+		name         string
+		responseBody string
+		wantIsError  bool
+	}{
+		{"data object stays text-only", `{"data":{"hello":"world"}}`, false},
+		{"non-JSON body is still a tool error", `<html>bad gateway</html>`, true},
+		{"null body is still a tool error", `null`, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.responseBody))
+			}))
+			defer upstream.Close()
+
+			srv, err := NewGraphQLSchemaServer(
+				t.Context(),
+				upstream.URL,
+				WithLogger(zap.NewNop()),
+				WithOperationsDir(t.TempDir()),
+			)
+			require.NoError(t, err)
+
+			result, err := srv.executeGraphQLQuery(t.Context(), "query { hello }", nil)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.wantIsError, result.IsError)
+			assert.Nil(t, result.StructuredContent)
+		})
+	}
+}
+
+func TestGenerateQueryTool(t *testing.T) {
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	client := &fakePromptToQueryClient{
+		response: &aiv1.GenerateQueryResponse{
+			Response: &aiv1.Response{Code: common.EnumStatusCode_OK},
+			Query: &aiv1.SatisfiedQuery{
+				Description:     "Lists employees",
+				Document:        "query ListEmployees { employees { id name } }",
+				OperationName:   "ListEmployees",
+				OperationType:   aiv1.SatisfiedOperationType_SATISFIED_OPERATION_TYPE_QUERY,
+				VariablesSchema: `{"type":"object"}`,
+			},
+		},
+	}
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithPromptToQueryClient(client),
+		WithOperationsDir(""),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-first"))
+	require.Contains(t, srv.registeredTools, "generate_query")
+
+	result, err := srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"prompt":"  List all employees  "}`)},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Equal(t, "schema-version-first", client.schemaVersionID)
+	require.Equal(t, "List all employees", client.prompt)
+	require.Len(t, result.Content, 1)
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.JSONEq(t, `{
+		"description":"Lists employees",
+		"document":"query ListEmployees { employees { id name } }",
+		"operationName":"ListEmployees",
+		"operationType":"query",
+		"variablesSchema":"{\"type\":\"object\"}"
+	}`, textContent.Text)
+
+	require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-second"))
+	_, err = srv.handleGenerateQuery()(t.Context(), &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"prompt":"List employees again"}`)},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "schema-version-second", client.schemaVersionID)
+}
+
+func TestGenerateQueryScopeIncludedInProtectedResourceMetadata(t *testing.T) {
+	srv := &GraphQLSchemaServer{
+		oauthConfig: &config.MCPOAuthConfiguration{
+			AuthorizationServerURL: "https://auth.example.com",
+			Scopes: config.MCPOAuthScopesConfiguration{
+				ToolsCall:     []string{"mcp:tools:call"},
+				GenerateQuery: []string{"mcp:query:generate"},
+			},
+		},
+		promptToQueryClient: &fakePromptToQueryClient{},
+		serverBaseURL:       "https://mcp.example.com",
+		logger:              zap.NewNop(),
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil)
+	srv.handleProtectedResourceMetadata(recorder, request)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var metadata ProtectedResourceMetadata
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &metadata))
+	require.Equal(t, []string{"mcp:query:generate", "mcp:tools:call"}, metadata.ScopesSupported)
 }
