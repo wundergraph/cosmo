@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package wg.cosmo.streams.v1;
+
+// Cursor describes the position of a subscription inside the message broker
+// at the time a message was delivered. It is the payload of the cursor wire format.
+message Cursor {
+  // Id of the provider as configured in the router config.
+  string provider_id = 1;
+
+  // The point in time when the cursor got created, as a unix timestamp in milliseconds.
+  int64 issued_at = 2;
+
+  // The provider-specific message position in the broker.
+  // The set field determines the provider type.
+  oneof position {
+    KafkaCursorPosition kafka = 10;
+  }
+}
+
+// KafkaCursorPosition is the position of a subscription on Kafka.
+// It holds the offset of the last delivered message for every partition of every topic
+// of the subscription.
+message KafkaCursorPosition {
+  // Key = topic name.
+  map<string, KafkaPartitionPositions> topics = 1;
+}
+
+message KafkaPartitionPositions {
+  // Key = partition index.
+  map<int32, KafkaPartitionOffset> partitions = 1;
+}
+
+message KafkaPartitionOffset {
+  // Leader epoch of the partition at the time the message was read,
+  // used for detecting log truncation on resume. Kafka uses -1 for an unknown epoch,
+  // so it is zigzag encoded.
+  sint32 epoch = 1;
+  // Offset of the message in the partition.
+  int64 offset = 2;
+}
