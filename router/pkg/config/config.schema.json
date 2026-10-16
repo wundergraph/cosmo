@@ -2162,6 +2162,42 @@
               "bytes": {
                 "minimum": "1B"
               }
+            },
+            "read_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the entire client request, including headers and body. Slow clients that do not finish sending the request within this period have their connection closed. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "60s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "read_header_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the client request headers. Setting this to 0 falls back to read_timeout. The period is specified as a string with a number and a unit, e.g. 5s, 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "idle_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration to wait for the next request on a keep-alive client connection. Setting this to 0 falls back to read_timeout. The period is specified as a string with a number and a unit, e.g. 30s, 1m, 2m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "write_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for writing the response to the client, measured from the end of reading the request headers. Disabled by default (0). When set, it also terminates long-lived responses such as subscriptions over SSE or multipart once the duration elapses, so only set it if you don't use them. The period is specified as a string with a number and a unit, e.g. 30s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
             }
           }
         },
