@@ -60,7 +60,7 @@ traffic_shaping:
 
 * `read_timeout`: The maximum amount of time to read the entire client request, including the headers and the body. It starts when the router begins reading the request. Defaults to `60s`, the minimum is `1s`.
 
-* `read_header_timeout`: The maximum amount of time to read the client request headers. Use it to drop clients that send headers slowly without shortening the time allowed for large request bodies. Defaults to `0s`, which falls back to `read_timeout`.
+* `read_header_timeout`: The maximum amount of time to read the client request headers. Use it to drop clients that send headers slowly without shortening the time allowed for large request bodies. Defaults to `0s`, which falls back to `read_timeout`. This limit only applies to HTTP/1 connections. For HTTP/2 over TLS, slow headers are limited by `idle_timeout` instead, except while another stream on the same connection is still open (for example an SSE subscription). To cover that case, an upstream proxy or load balancer must enforce the limit.
 
 * `idle_timeout`: The maximum amount of time an idle keep-alive client connection is kept open while waiting for the next request. Defaults to `0s`, which falls back to `read_timeout`.
 

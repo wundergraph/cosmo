@@ -99,7 +99,9 @@ func newServer(opts *httpServerOptions) (*server, error) {
 	httpServer := &http.Server{
 		Addr:        opts.addr,
 		ReadTimeout: readTimeout,
-		// Zero values fall back to ReadTimeout in net/http
+		// Zero values fall back to ReadTimeout in net/http.
+		// ReadHeaderTimeout is ignored by the HTTP/2 server, so it only limits slow header reads on HTTP/1.
+		// On HTTP/2, IdleTimeout closes connections with slow headers unless another stream is still open.
 		ReadHeaderTimeout: max(opts.readHeaderTimeout, 0),
 		IdleTimeout:       max(opts.idleTimeout, 0),
 		// The write timeout is disabled by default to keep the connection open until the client closes it.

@@ -2175,7 +2175,7 @@
             "read_header_timeout": {
               "type": "string",
               "format": "go-duration",
-              "description": "The maximum duration for reading the client request headers. Setting this to 0 falls back to read_timeout. The period is specified as a string with a number and a unit, e.g. 5s, 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "description": "The maximum duration for reading the client request headers. Setting this to 0 falls back to read_timeout. Applies to HTTP/1 only; for HTTP/2 over TLS, idle_timeout limits slow headers, except while another stream on the same connection is open. The period is specified as a string with a number and a unit, e.g. 5s, 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
               "default": "0s",
               "duration": {
                 "minimum": "0s"
