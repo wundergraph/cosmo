@@ -22,9 +22,9 @@ import (
 // does not implement fall through to the router's default behavior without a
 // WASM call.
 //
-// Because this type lives in the core package it can read the private
-// requestContext key/value store to snapshot it for the guest (see
-// snapshotContextValues).
+// Guests do not receive copies of router objects: each hook passes a
+// wasm.CallState pointing at the live request/response and RequestContext, and
+// the guest reads and mutates them through host functions.
 type wasmModule struct {
 	id       ModuleID
 	priority int
@@ -76,25 +76,20 @@ func (m *wasmModule) OnOriginRequest(req *http.Request, ctx RequestContext) (*ht
 		return req, nil
 	}
 
-	reqSnap, err := httpRequestSnapshot(req, true)
-	if err != nil {
-		m.logger.Error("wasm: failed to snapshot origin request", zap.Error(err))
-		return req, nil
-	}
-	snap := m.contextSnapshot(ctx, true, ctx.ActiveSubgraph(req))
-
-	out, ok := call[wire.OnOriginRequestOutput](m, req.Context(), wire.HookOnOriginRequest, wire.OnOriginRequestInput{
-		Request: reqSnap,
-		Context: snap,
+	out, ok := call[wire.HTTPHookOutput](m, req.Context(), wire.HookOnOriginRequest, nil, &wasm.CallState{
+		Request:             req,
+		RequestBodyReadable: true,
+		Info: func() wire.ContextInfo {
+			return requestContextInfo(ctx, true, ctx.ActiveSubgraph(req), ctx.Error())
+		},
+		Store: ctx,
 	})
 	if !ok {
 		return req, nil
 	}
-	applyContextSets(ctx, out.ContextSets)
 	if out.Response != nil {
 		return req, buildHTTPResponse(out.Response, req)
 	}
-	applyRequestMutation(req, out.Request)
 	return req, nil
 }
 
@@ -105,36 +100,36 @@ func (m *wasmModule) OnOriginResponse(resp *http.Response, ctx RequestContext) *
 		return nil
 	}
 
-	respSnap, err := httpResponseSnapshot(resp)
-	if err != nil {
-		m.logger.Error("wasm: failed to snapshot origin response", zap.Error(err))
-		return nil
-	}
-
-	var activeSubgraph *Subgraph
 	var originReq *http.Request
+	var activeSubgraph *Subgraph
 	if resp != nil && resp.Request != nil {
 		originReq = resp.Request
 		activeSubgraph = ctx.ActiveSubgraph(resp.Request)
 	}
-	snap := m.contextSnapshot(ctx, true, activeSubgraph)
 
-	sendError := ""
-	if mc, ok := ctx.(ModuleRequestContext); ok {
-		if e := mc.SendError(); e != nil {
-			sendError = e.Error()
-		}
+	// For a failed round trip, expose the send error as the context error.
+	reqErr := ctx.Error()
+	if mc, ok := ctx.(ModuleRequestContext); ok && mc.SendError() != nil {
+		reqErr = mc.SendError()
 	}
 
-	out, ok := call[wire.OnOriginResponseOutput](m, ctx.Request().Context(), wire.HookOnOriginResponse, wire.OnOriginResponseInput{
-		Response:  respSnap,
-		SendError: sendError,
-		Context:   snap,
+	out, ok := call[wire.HTTPHookOutput](m, ctx.Request().Context(), wire.HookOnOriginResponse, wire.OnOriginResponseInput{
+		HasResponse: resp != nil,
+	}, &wasm.CallState{
+		Request:         originReq,
+		RequestReadOnly: true,
+		Response:        resp,
+		Info: func() wire.ContextInfo {
+			return requestContextInfo(ctx, true, activeSubgraph, reqErr)
+		},
+		Store: ctx,
 	})
 	if !ok {
 		return nil
 	}
-	applyContextSets(ctx, out.ContextSets)
+	// In-place mutations were applied to resp during the call. Only return a
+	// response when the guest replaced it: a non-nil return stops the
+	// remaining post-origin handlers.
 	if out.Response != nil {
 		return buildHTTPResponse(out.Response, originReq)
 	}
@@ -150,31 +145,18 @@ func (m *wasmModule) RouterOnRequest(ctx RequestContext, next http.Handler) {
 	}
 
 	req := ctx.Request()
-	// The body is intentionally not read here: consuming the incoming client
-	// body would make it unavailable to the rest of the router.
-	reqSnap, err := httpRequestSnapshot(req, false)
-	if err != nil {
-		m.logger.Error("wasm: failed to snapshot request", zap.Error(err))
-		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
-		return
-	}
-	// The GraphQL operation has not been parsed yet at this point, so it is not
-	// included in the snapshot.
-	snap := m.contextSnapshot(ctx, false, nil)
-
-	out, ok := call[wire.RouterOnRequestOutput](m, req.Context(), wire.HookRouterOnRequest, wire.RouterOnRequestInput{
-		Request: reqSnap,
-		Context: snap,
+	out, ok := call[wire.HTTPHookOutput](m, req.Context(), wire.HookRouterOnRequest, nil, &wasm.CallState{
+		Request: req,
+		// The body is intentionally not readable here: consuming the incoming
+		// client body would make it unavailable to the rest of the router.
+		RequestBodyReadable: false,
+		Info: func() wire.ContextInfo {
+			// The GraphQL operation has not been parsed yet at this point.
+			return requestContextInfo(ctx, false, nil, ctx.Error())
+		},
+		Store: ctx,
 	})
-	if !ok {
-		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
-		return
-	}
-	applyContextSets(ctx, out.ContextSets)
-	if out.Request != nil && out.Request.Header != nil {
-		ctx.Request().Header = http.Header(out.Request.Header)
-	}
-	if out.Response != nil {
+	if ok && out.Response != nil {
 		writeWasmResponse(ctx.ResponseWriter(), out.Response)
 		return
 	}
@@ -187,11 +169,9 @@ func (m *wasmModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) 
 	if !m.module.HasCapability(wire.HookSubscriptionOnStart) {
 		return nil
 	}
-	snap := operationContextSnapshot(ctx.Operation())
 	out, ok := call[wire.SubscriptionOnStartOutput](m, subscriptionCallContext(ctx.Request()), wire.HookSubscriptionOnStart, wire.SubscriptionOnStartInput{
-		Context:     snap,
 		EventConfig: subscriptionEventConfig(ctx.SubscriptionEventConfiguration()),
-	})
+	}, operationCallState(ctx.Operation()))
 	if !ok {
 		return nil
 	}
@@ -211,10 +191,9 @@ func (m *wasmModule) OnPublishEvents(ctx StreamPublishEventHandlerContext, event
 		return events, nil
 	}
 	out, ok := call[wire.OnEventsOutput](m, subscriptionCallContext(ctx.Request()), wire.HookOnPublishEvents, wire.OnEventsInput{
-		Context:     operationContextSnapshot(ctx.Operation()),
 		EventConfig: publishEventConfig(ctx.PublishEventConfiguration()),
 		Events:      eventPayloads(events),
-	})
+	}, operationCallState(ctx.Operation()))
 	if !ok {
 		return events, nil
 	}
@@ -231,10 +210,9 @@ func (m *wasmModule) OnReceiveEvents(ctx StreamReceiveEventHandlerContext, event
 		return events, nil
 	}
 	out, ok := call[wire.OnEventsOutput](m, ctx.Context(), wire.HookOnReceiveEvents, wire.OnEventsInput{
-		Context:     operationContextSnapshot(ctx.Operation()),
 		EventConfig: subscriptionEventConfig(ctx.SubscriptionEventConfiguration()),
 		Events:      eventPayloads(events),
-	})
+	}, operationCallState(ctx.Operation()))
 	if !ok {
 		return events, nil
 	}
@@ -256,9 +234,8 @@ func (m *wasmModule) SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext
 		ec = &wire.EventConfig{}
 	}
 	out, ok := call[wire.SubscriptionOnCreateOutput](m, subscriptionCallContext(ctx.Request()), wire.HookSubscriptionOnCreate, wire.SubscriptionOnCreateInput{
-		Context:     operationContextSnapshot(ctx.Operation()),
 		EventConfig: *ec,
-	})
+	}, operationCallState(ctx.Operation()))
 	if !ok {
 		return nil
 	}
@@ -276,20 +253,28 @@ func (m *wasmModule) SubscriptionOnCreate(ctx SubscriptionOnCreateHandlerContext
 
 // --- helpers ---
 
-// call marshals input, invokes the guest hook and unmarshals the output into T.
-// It centralizes the fail-open behavior: on any error it logs and returns
-// ok=false so the caller applies the router's default behavior.
-func call[T any](m *wasmModule, ctx context.Context, hook string, input any) (T, bool) {
+// call marshals input (nil sends no input), invokes the guest hook with the
+// given call state and unmarshals the output into T. It centralizes the
+// fail-open behavior: on any error it logs and returns ok=false so the caller
+// applies the router's default behavior. Mutations the guest made to the live
+// objects in state before failing are kept.
+func call[T any](m *wasmModule, ctx context.Context, hook string, input any, state *wasm.CallState) (T, bool) {
 	var out T
-	payload, err := json.Marshal(input)
-	if err != nil {
-		m.logger.Error("wasm: failed to encode hook input", zap.String("hook", hook), zap.Error(err))
-		return out, false
+	var payload []byte
+	if input != nil {
+		var err error
+		if payload, err = json.Marshal(input); err != nil {
+			m.logger.Error("wasm: failed to encode hook input", zap.String("hook", hook), zap.Error(err))
+			return out, false
+		}
 	}
-	res, err := m.module.Call(ctx, hook, payload)
+	res, err := m.module.Call(ctx, hook, payload, state)
 	if err != nil {
 		m.logger.Error("wasm: hook call failed", zap.String("hook", hook), zap.Error(err))
 		return out, false
+	}
+	if len(res) == 0 {
+		return out, true
 	}
 	if err := json.Unmarshal(res, &out); err != nil {
 		m.logger.Error("wasm: failed to decode hook output", zap.String("hook", hook), zap.Error(err))
@@ -305,40 +290,37 @@ func subscriptionCallContext(req *http.Request) context.Context {
 	return context.Background()
 }
 
-// contextSnapshot builds the ContextSnapshot for a RequestContext hook. When
-// includeOperation is false (e.g. router_on_request) the operation is omitted
-// because it has not been parsed yet.
-func (m *wasmModule) contextSnapshot(ctx RequestContext, includeOperation bool, activeSubgraph *Subgraph) wire.ContextSnapshot {
-	snap := wire.ContextSnapshot{}
+// requestContextInfo builds the read-only context view for a RequestContext
+// hook. When includeOperation is false (router_on_request) the operation is
+// omitted because it has not been parsed yet.
+func requestContextInfo(ctx RequestContext, includeOperation bool, activeSubgraph *Subgraph, reqErr error) wire.ContextInfo {
+	info := wire.ContextInfo{}
 	if includeOperation {
-		if op, ci := safeOperationSnapshot(ctx.Operation()); op != nil {
-			snap.Operation = op
-			snap.ClientInfo = ci
-		}
+		info.Operation, info.ClientInfo = safeOperationSnapshot(ctx.Operation())
 	}
 	if activeSubgraph != nil {
-		snap.ActiveSubgraph = &wire.Subgraph{
+		info.ActiveSubgraph = &wire.Subgraph{
 			ID:   activeSubgraph.Id,
 			Name: activeSubgraph.Name,
 			URL:  activeSubgraph.UrlString,
 		}
 	}
-	if err := ctx.Error(); err != nil {
-		snap.Error = err.Error()
+	if reqErr != nil {
+		info.Error = reqErr.Error()
 	}
-	snap.Values = m.snapshotContextValues(ctx)
-	return snap
+	return info
 }
 
-// operationContextSnapshot builds a snapshot from a bare OperationContext (used
-// by subscription hooks, which do not expose the full RequestContext).
-func operationContextSnapshot(op OperationContext) wire.ContextSnapshot {
-	snap := wire.ContextSnapshot{}
-	if o, ci := safeOperationSnapshot(op); o != nil {
-		snap.Operation = o
-		snap.ClientInfo = ci
+// operationCallState builds the call state for subscription/stream hooks,
+// which expose the operation but no HTTP message or context store.
+func operationCallState(op OperationContext) *wasm.CallState {
+	return &wasm.CallState{
+		Info: func() wire.ContextInfo {
+			info := wire.ContextInfo{}
+			info.Operation, info.ClientInfo = safeOperationSnapshot(op)
+			return info
+		},
 	}
-	return snap
 }
 
 // safeOperationSnapshot reads an OperationContext defensively. ctx.Operation()
@@ -370,128 +352,11 @@ func safeOperationSnapshot(op OperationContext) (operation *wire.Operation, clie
 	return operation, clientInfo
 }
 
-// snapshotContextValues serializes the JSON-encodable subset of the request
-// context key/value store. It reaches into the concrete requestContext because
-// the RequestContext interface has no way to enumerate keys.
-func (m *wasmModule) snapshotContextValues(ctx RequestContext) map[string]json.RawMessage {
-	var rc *requestContext
-	switch c := ctx.(type) {
-	case *requestContext:
-		rc = c
-	case *moduleRequestContext:
-		rc = c.requestContext
-	}
-	if rc == nil {
-		return nil
-	}
-
-	rc.mu.RLock()
-	defer rc.mu.RUnlock()
-	if len(rc.keys) == 0 {
-		return nil
-	}
-	values := make(map[string]json.RawMessage, len(rc.keys))
-	for k, v := range rc.keys {
-		raw, err := json.Marshal(v)
-		if err != nil {
-			// Skip values that cannot be represented as JSON.
-			continue
-		}
-		values[k] = raw
-	}
-	return values
-}
-
-// applyContextSets writes values the guest produced back into the request
-// context so later modules and the router can read them. Numbers are decoded
-// with UseNumber so large integers keep their precision (a plain any-decode
-// would coerce every number to float64 and lose precision beyond 2^53). Values
-// are therefore JSON-typed on the receiving side (json.Number/string/bool/
-// map/slice); the router's typed getters (GetInt, GetString, ...) handle
-// json.Number.
-func applyContextSets(ctx RequestContext, sets map[string]json.RawMessage) {
-	for k, raw := range sets {
-		dec := json.NewDecoder(bytes.NewReader(raw))
-		dec.UseNumber()
-		var val any
-		if err := dec.Decode(&val); err != nil {
-			ctx.Set(k, string(raw))
-			continue
-		}
-		ctx.Set(k, val)
-	}
-}
-
-func httpRequestSnapshot(req *http.Request, includeBody bool) (wire.HTTPRequest, error) {
-	snap := wire.HTTPRequest{
-		Method: req.Method,
-		Host:   req.Host,
-		Header: wire.Header(req.Header.Clone()),
-	}
-	if req.URL != nil {
-		snap.URL = req.URL.String()
-	}
-	if includeBody && req.Body != nil {
-		body, err := io.ReadAll(req.Body)
-		_ = req.Body.Close()
-		if err != nil {
-			return snap, err
-		}
-		// Restore the body so downstream handlers can read it.
-		req.Body = io.NopCloser(bytes.NewReader(body))
-		snap.Body = body
-	}
-	return snap, nil
-}
-
-func applyRequestMutation(req *http.Request, mut *wire.RequestMutation) {
-	if mut == nil {
-		return
-	}
-	if mut.Header != nil {
-		req.Header = http.Header(mut.Header)
-	}
-	if mut.Body != nil {
-		body := *mut.Body
-		req.Body = io.NopCloser(bytes.NewReader(body))
-		req.ContentLength = int64(len(body))
-		req.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(body)), nil
-		}
-		// The Content-Length header (if any) is now stale; rely on
-		// req.ContentLength instead.
-		req.Header.Del("Content-Length")
-	}
-}
-
-func httpResponseSnapshot(resp *http.Response) (*wire.HTTPResponse, error) {
-	if resp == nil {
-		return nil, nil
-	}
-	snap := &wire.HTTPResponse{
-		StatusCode: resp.StatusCode,
-		Header:     wire.Header(resp.Header.Clone()),
-	}
-	if resp.Body != nil {
-		body, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-		resp.Body = io.NopCloser(bytes.NewReader(body))
-		snap.Body = body
-	}
-	return snap, nil
-}
-
 func buildHTTPResponse(resp *wire.HTTPResponse, req *http.Request) *http.Response {
 	if resp == nil {
 		return nil
 	}
-	header := http.Header(resp.Header)
-	if header == nil {
-		header = http.Header{}
-	}
+	header := canonicalHeader(resp.Header)
 	status := resp.StatusCode
 	if status == 0 {
 		status = http.StatusOK
@@ -510,9 +375,21 @@ func buildHTTPResponse(resp *wire.HTTPResponse, req *http.Request) *http.Respons
 	}
 }
 
+// canonicalHeader converts a guest-built header map into an http.Header with
+// canonical keys, so e.g. "content-type" and "Content-Type" are not both sent.
+func canonicalHeader(h wire.Header) http.Header {
+	header := make(http.Header, len(h))
+	for k, values := range h {
+		for _, v := range values {
+			header.Add(k, v)
+		}
+	}
+	return header
+}
+
 func writeWasmResponse(w http.ResponseWriter, resp *wire.HTTPResponse) {
 	header := w.Header()
-	for k, values := range resp.Header {
+	for k, values := range canonicalHeader(resp.Header) {
 		header[k] = values
 	}
 	status := resp.StatusCode

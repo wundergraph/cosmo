@@ -107,9 +107,11 @@ func (m *Module) HasCapability(hook string) bool {
 }
 
 // Call invokes a guest hook with the given JSON input and returns the JSON
-// output. It transparently acquires a free instance from the pool (creating one
-// up to MaxInstances) and returns it afterwards.
-func (m *Module) Call(ctx context.Context, hook string, input []byte) ([]byte, error) {
+// output. state is the live request/response/context the guest reaches through
+// host functions during the call; it may be nil for hooks without HTTP or
+// request context. Call transparently acquires a free instance from the pool
+// (creating one up to MaxInstances) and returns it afterwards.
+func (m *Module) Call(ctx context.Context, hook string, input []byte, state *CallState) ([]byte, error) {
 	if !m.caps[hook] {
 		return nil, ErrHookNotImplemented
 	}
@@ -119,10 +121,10 @@ func (m *Module) Call(ctx context.Context, hook string, input []byte) ([]byte, e
 		return nil, err
 	}
 
-	callCtx := ctx
+	callCtx := withCallState(ctx, state)
 	if m.timeout > 0 {
 		var cancel context.CancelFunc
-		callCtx, cancel = context.WithTimeout(ctx, m.timeout)
+		callCtx, cancel = context.WithTimeout(callCtx, m.timeout)
 		defer cancel()
 	}
 

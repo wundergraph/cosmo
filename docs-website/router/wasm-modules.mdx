@@ -30,8 +30,10 @@ A WASM module implements any subset of these SDK interfaces. The router only wir
 The router-level `RouterMiddlewareHandler` is not available to WASM modules. Use `RouterOnRequestHandler` instead.
 
 <Note>
-  Each hook receives a JSON snapshot of the request/response and the request context, and returns the changes to apply. A module never holds a live reference to router objects, which keeps it safe to run concurrently behind a pool of WASM instances. At `RouterOnRequest` time the GraphQL operation has not been parsed yet, so the operation fields of the snapshot are empty.
+  Hooks work on the live router objects. `sdk.Request`, `sdk.Response` and `sdk.RequestContext` are handles whose methods call into the router, so a module only reads the data it uses, and its changes are visible immediately to later modules and the router. At `RouterOnRequest` time the GraphQL operation has not been parsed yet, so `ctx.Operation()` is empty, and the client request body is not readable.
 </Note>
+
+`OnOriginResponse` should change the response in place and return `nil`. Returning a response replaces the origin response and skips the remaining post-origin handlers.
 
 ## Writing a module
 
@@ -57,8 +59,8 @@ func (m *MyModule) Provision(config []byte) error {
 
 // OnOriginRequest mutates the outgoing subgraph request. Return a non-nil
 // response to short-circuit the request.
-func (m *MyModule) OnOriginRequest(req *wire.HTTPRequest, ctx *sdk.RequestContext) *wire.HTTPResponse {
-	req.Header.Set("X-My-Header", "value")
+func (m *MyModule) OnOriginRequest(req *sdk.Request, ctx *sdk.RequestContext) *wire.HTTPResponse {
+	req.Header().Set("X-My-Header", ctx.Operation().Name)
 	return nil
 }
 
@@ -113,6 +115,8 @@ wasm_modules:
 
 ## Limitations
 
+- Request bodies are readable and writable only in `OnOriginRequest`; response status, headers and body only in `OnOriginResponse`. Calling them in another hook fails that hook call.
+- Subscription and stream hooks can read the operation but have no request context store: `ctx.Get` reports nothing and `ctx.Set` fails the hook.
 - Values written to the request context by a WASM module are JSON-encoded. Numbers cross the boundary as JSON numbers, so a value read back by an in-process custom module is not a native Go `int`.
 - Stream event metadata (for example a Kafka message key and headers, or NATS headers) is preserved for events passed through or edited in place, but is not exposed to the guest for inspection or modification.
 - Outbound network access from a module requires an explicit `allowed_hosts` entry.

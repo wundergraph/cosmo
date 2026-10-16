@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -58,53 +57,14 @@ func TestRebuildEventsPreservesMetadata(t *testing.T) {
 	assert.JSONEq(t, `{"a":3}`, string(e2.GetData()))
 }
 
-func TestApplyContextSetsPreservesIntegerPrecision(t *testing.T) {
-	rc := &requestContext{}
-	// 2^53 + 1 cannot be represented exactly as a float64.
-	applyContextSets(rc, map[string]json.RawMessage{
-		"bigID": json.RawMessage(`9007199254740993`),
-		"name":  json.RawMessage(`"alice"`),
-	})
+func TestBuildHTTPResponseCanonicalizesHeaders(t *testing.T) {
+	resp := buildHTTPResponse(&wire.HTTPResponse{
+		Header: wire.Header{"content-type": {"application/json"}, "X-Multi": {"a", "b"}},
+		Body:   []byte(`{}`),
+	}, nil)
 
-	got, ok := rc.Get("bigID")
-	require.True(t, ok)
-	num, ok := got.(json.Number)
-	require.True(t, ok, "integers must be decoded as json.Number, got %T", got)
-	assert.Equal(t, "9007199254740993", num.String())
-
-	// The stored value round-trips back into a guest snapshot with full
-	// precision (a plain float64 decode would corrupt it to ...992).
-	m := &wasmModule{}
-	snap := m.snapshotContextValues(rc)
-	assert.JSONEq(t, `9007199254740993`, string(snap["bigID"]))
-	assert.JSONEq(t, `"alice"`, string(snap["name"]))
-}
-
-func TestApplyRequestMutation(t *testing.T) {
-	t.Run("replaces headers", func(t *testing.T) {
-		req := &http.Request{Header: http.Header{"A": {"1"}}}
-		applyRequestMutation(req, &wire.RequestMutation{Header: wire.Header{"B": {"2"}}})
-		assert.Equal(t, "", req.Header.Get("A"))
-		assert.Equal(t, "2", req.Header.Get("B"))
-	})
-
-	t.Run("clears all headers with an empty map", func(t *testing.T) {
-		req := &http.Request{Header: http.Header{"A": {"1"}}}
-		applyRequestMutation(req, &wire.RequestMutation{Header: wire.Header{}})
-		assert.Empty(t, req.Header)
-	})
-
-	t.Run("nil header is a no-op", func(t *testing.T) {
-		req := &http.Request{Header: http.Header{"A": {"1"}}}
-		applyRequestMutation(req, &wire.RequestMutation{Header: nil})
-		assert.Equal(t, "1", req.Header.Get("A"))
-	})
-
-	t.Run("clears body with an empty slice", func(t *testing.T) {
-		req := &http.Request{Header: http.Header{}, Body: nil}
-		empty := []byte{}
-		applyRequestMutation(req, &wire.RequestMutation{Body: &empty})
-		require.NotNil(t, req.Body)
-		assert.Equal(t, int64(0), req.ContentLength)
-	})
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "zero status defaults to 200")
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	assert.Equal(t, []string{"a", "b"}, resp.Header.Values("X-Multi"))
+	assert.Equal(t, int64(2), resp.ContentLength)
 }

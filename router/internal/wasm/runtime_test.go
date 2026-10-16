@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -118,38 +122,139 @@ func TestProvisionFailureAbortsLoad(t *testing.T) {
 	require.Contains(t, err.Error(), "value must be set")
 }
 
+// mapStore is a ContextStore backed by a map.
+type mapStore map[string]any
+
+func (s mapStore) Get(key string) (any, bool) { v, ok := s[key]; return v, ok }
+func (s mapStore) Set(key string, value any)  { s[key] = value }
+
+func newOriginRequest(t *testing.T, body string) *http.Request {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, "http://subgraph/graphql", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func decodeHTTPOutput(t *testing.T, out []byte) wire.HTTPHookOutput {
+	t.Helper()
+	var res wire.HTTPHookOutput
+	require.NoError(t, json.Unmarshal(out, &res))
+	return res
+}
+
 func TestOnOriginRequestHook(t *testing.T) {
 	_, mod := loadExample(t, ModuleConfig{ProvisionConfig: []byte(`{"value":"hello"}`)})
 
-	input, err := json.Marshal(wire.OnOriginRequestInput{
-		Request: wire.HTTPRequest{
-			Method: "POST",
-			URL:    "http://subgraph/graphql",
-			Header: wire.Header{"Content-Type": {"application/json"}},
-			Body:   []byte(`{"query":"{ me }"}`),
+	const body = `{"query":"{ me }"}`
+	req := newOriginRequest(t, body)
+	store := mapStore{}
+
+	out, err := mod.Call(context.Background(), wire.HookOnOriginRequest, nil, &CallState{
+		Request:             req,
+		RequestBodyReadable: true,
+		Info: func() wire.ContextInfo {
+			return wire.ContextInfo{Operation: &wire.Operation{Name: "Me"}}
 		},
-		Context: wire.ContextSnapshot{},
+		Store: store,
 	})
 	require.NoError(t, err)
+	require.Nil(t, decodeHTTPOutput(t, out).Response)
 
-	out, err := mod.Call(context.Background(), wire.HookOnOriginRequest, input)
+	// The guest mutated the live request headers.
+	require.Equal(t, "hello", req.Header.Get("X-Wasm-Module"))
+	require.Equal(t, "Me", req.Header.Get("X-Wasm-Operation"))
+	require.Equal(t, strconv.Itoa(len(body)), req.Header.Get("X-Wasm-Body-Size"))
+	require.Equal(t, "application/json", req.Header.Get("Content-Type"), "untouched headers are kept")
+
+	// Reading the body in the guest leaves it readable for the transport.
+	got, err := io.ReadAll(req.Body)
+	require.NoError(t, err)
+	require.Equal(t, body, string(got))
+
+	// The module stored a JSON-decoded value on the context.
+	require.Equal(t, "hello", store["wasmValue"])
+}
+
+func TestOnOriginResponseHook(t *testing.T) {
+	_, mod := loadExample(t, ModuleConfig{ProvisionConfig: []byte(`{"value":"hello"}`)})
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{},
+		Body:       io.NopCloser(strings.NewReader(`{"data":{}}`)),
+	}
+	input, err := json.Marshal(wire.OnOriginResponseInput{HasResponse: true})
 	require.NoError(t, err)
 
-	var res wire.OnOriginRequestOutput
-	require.NoError(t, json.Unmarshal(out, &res))
-	require.Empty(t, res.Error)
-	require.Nil(t, res.Response)
-	require.NotNil(t, res.Request)
-	require.Equal(t, "hello", res.Request.Header.Get("X-Wasm-Module"))
-	// The body was not modified, so no body mutation should be returned.
-	require.Nil(t, res.Request.Body)
-	// The module stored a value on the context.
-	require.JSONEq(t, `"hello"`, string(res.ContextSets["wasmValue"]))
+	out, err := mod.Call(context.Background(), wire.HookOnOriginResponse, input, &CallState{
+		Request:         newOriginRequest(t, ""),
+		RequestReadOnly: true,
+		Response:        resp,
+		Store:           mapStore{"wasmValue": "from-request"},
+	})
+	require.NoError(t, err)
+	// The response was mutated in place, not replaced.
+	require.Nil(t, decodeHTTPOutput(t, out).Response)
+	require.Equal(t, "from-request", resp.Header.Get("X-Wasm-Origin-Value"))
+}
+
+func TestRouterOnRequestShortCircuit(t *testing.T) {
+	_, mod := loadExample(t, ModuleConfig{ProvisionConfig: []byte(`{"value":"hello"}`)})
+
+	req := newOriginRequest(t, "")
+	req.Header.Set("X-Wasm-Ping", "1")
+	out, err := mod.Call(context.Background(), wire.HookRouterOnRequest, nil, &CallState{Request: req})
+	require.NoError(t, err)
+
+	res := decodeHTTPOutput(t, out)
+	require.NotNil(t, res.Response)
+	require.Equal(t, 418, res.Response.StatusCode)
+	require.JSONEq(t, `{"pong":"hello"}`, string(res.Response.Body))
+}
+
+func TestHostFunctionPermissionTrapsGuest(t *testing.T) {
+	_, mod := loadExample(t, ModuleConfig{ProvisionConfig: []byte(`{"value":"hello"}`)})
+
+	// The example reads the request body in on_origin_request; with the body
+	// not readable the host function traps and the call fails.
+	_, err := mod.Call(context.Background(), wire.HookOnOriginRequest, nil, &CallState{
+		Request: newOriginRequest(t, "body"),
+		Store:   mapStore{},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "request body is not available")
+
+	// Without call state no host function is available.
+	_, err = mod.Call(context.Background(), wire.HookOnOriginRequest, nil, nil)
+	require.Error(t, err)
+
+	// The failed instances were discarded; the module keeps serving.
+	_, err = mod.Call(context.Background(), wire.HookOnOriginRequest, nil, &CallState{
+		Request:             newOriginRequest(t, "body"),
+		RequestBodyReadable: true,
+		Store:               mapStore{},
+	})
+	require.NoError(t, err)
+}
+
+func TestDecodeContextValuePreservesIntegerPrecision(t *testing.T) {
+	// 2^53 + 1 cannot be represented exactly as a float64.
+	v := DecodeContextValue([]byte(`9007199254740993`))
+	num, ok := v.(json.Number)
+	require.True(t, ok, "integers must be decoded as json.Number, got %T", v)
+	require.Equal(t, "9007199254740993", num.String())
+
+	raw, ok := EncodeContextValue(num)
+	require.True(t, ok)
+	require.Equal(t, `9007199254740993`, string(raw))
+
+	require.Equal(t, "not json", DecodeContextValue([]byte(`not json`)))
 }
 
 func TestCallUnimplementedHook(t *testing.T) {
 	_, mod := loadExample(t, ModuleConfig{ProvisionConfig: []byte(`{"value":"hello"}`)})
-	_, err := mod.Call(context.Background(), wire.HookSubscriptionOnStart, []byte(`{}`))
+	_, err := mod.Call(context.Background(), wire.HookSubscriptionOnStart, []byte(`{}`), nil)
 	require.ErrorIs(t, err, ErrHookNotImplemented)
 }
 
@@ -159,16 +264,23 @@ func TestConcurrentCalls(t *testing.T) {
 		MaxInstances:    4,
 	})
 
-	input, err := json.Marshal(wire.OnOriginRequestInput{
-		Request: wire.HTTPRequest{Method: "POST", URL: "http://s/graphql", Header: wire.Header{}},
-	})
-	require.NoError(t, err)
-
 	const n = 50
 	errs := make(chan error, n)
-	for range n {
+	for i := range n {
 		go func() {
-			_, callErr := mod.Call(context.Background(), wire.HookOnOriginRequest, input)
+			req, err := http.NewRequest(http.MethodPost, "http://s/graphql", strings.NewReader(strconv.Itoa(i)))
+			if err != nil {
+				errs <- err
+				return
+			}
+			_, callErr := mod.Call(context.Background(), wire.HookOnOriginRequest, nil, &CallState{
+				Request:             req,
+				RequestBodyReadable: true,
+				Store:               mapStore{},
+			})
+			if callErr == nil && req.Header.Get("X-Wasm-Body-Size") != strconv.Itoa(len(strconv.Itoa(i))) {
+				callErr = fmt.Errorf("call %d saw another call's request", i)
+			}
 			errs <- callErr
 		}()
 	}

@@ -1,12 +1,13 @@
 // Package wasm is the router host runtime for WASM custom modules. It wraps
-// Extism (on top of wazero) to compile and instantiate guest modules and to
-// invoke their hooks over the JSON ABI defined in
+// Extism (on top of wazero) to compile and instantiate guest modules, invoke
+// their hooks and serve the host functions guests use to read and mutate the
+// live HTTP messages and request context. The ABI is defined in
 // github.com/wundergraph/cosmo/router-wasm-module/wire.
 //
 // This package deliberately has no dependency on the router core package; it
-// only deals with bytes and the Extism runtime, so core can import it without
-// creating an import cycle. The mapping between the router RequestContext and
-// the wire messages lives in the core package (wasm_module.go).
+// only deals with net/http types, bytes and the Extism runtime, so core can
+// import it without creating an import cycle. The mapping from the router
+// module interfaces to a CallState lives in the core package (wasm_module.go).
 package wasm
 
 import (
@@ -91,7 +92,7 @@ func (r *Runtime) LoadModule(ctx context.Context, cfg ModuleConfig) (*Module, er
 	compiled, err := extism.NewCompiledPlugin(ctx, manifest, extism.PluginConfig{
 		EnableWasi:    true,
 		RuntimeConfig: runtimeConfig,
-	}, nil)
+	}, hostFunctions())
 	if err != nil {
 		return nil, fmt.Errorf("compile wasm module %q: %w", cfg.ID, err)
 	}

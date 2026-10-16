@@ -14,8 +14,8 @@ the [wazero](https://wazero.io/) runtime.
 
 | Package    | Purpose                                                                                   |
 | ---------- | ----------------------------------------------------------------------------------------- |
-| `wire`     | The JSON ABI shared by the router host and the guest. Single source of truth, no imports beyond `encoding/json`. |
-| `sdk`      | The guest SDK. Interfaces mirroring the router's `core.Module` handlers plus the Extism entrypoints. |
+| `wire`     | The ABI shared by the router host and the guest: guest exports, host functions and JSON messages. Single source of truth, no imports beyond `encoding/json`. |
+| `sdk`      | The guest SDK. Interfaces mirroring the router's `core.Module` handlers, handles to the live request/response/context, and the Extism entrypoints. |
 | `example`  | A runnable example module.                                                                |
 
 ## Writing a module
@@ -39,8 +39,8 @@ func (m *MyModule) Provision(config []byte) error {
 }
 
 // OnOriginRequest mutates outgoing subgraph requests (optional).
-func (m *MyModule) OnOriginRequest(req *wire.HTTPRequest, ctx *sdk.RequestContext) *wire.HTTPResponse {
-	req.Header.Set("X-My-Header", "value")
+func (m *MyModule) OnOriginRequest(req *sdk.Request, ctx *sdk.RequestContext) *wire.HTTPResponse {
+	req.Header().Set("X-My-Header", ctx.Operation().Name)
 	return nil // return a *wire.HTTPResponse to short-circuit the request
 }
 
@@ -95,7 +95,26 @@ See the router documentation for the full set of `wasm_modules` options.
 
 ## How it works
 
-Each hook receives a JSON snapshot of the request/response and the request
-context, and returns the mutations to apply. The guest never holds a live
-reference to router objects; it works on the snapshot and returns changes, which
-keeps modules safe to run concurrently behind a pool of WASM instances.
+Hooks do not receive copies of router objects. `sdk.Request`, `sdk.Response`
+and `sdk.RequestContext` are handles: each method is a host function call that
+reads or mutates the live `*http.Request`, `*http.Response` or router
+`RequestContext`. A module only pays for the data it touches (a module that
+sets one header never serializes the body), and mutations take effect
+immediately, so later modules and the router see them.
+
+JSON only crosses the boundary for configuration, stream event batches and
+guest-built short-circuit responses (`*wire.HTTPResponse`).
+
+Some operations are only valid in certain hooks. Calling one elsewhere fails
+the hook call, which the router logs before falling back to its default
+behavior:
+
+| Operation                    | Available in                              |
+| ---------------------------- | ----------------------------------------- |
+| `Request.Body` / `SetBody`   | `OnOriginRequest`                         |
+| Request header mutation      | `OnOriginRequest`, `RouterOnRequest`      |
+| `Response` (status/headers/body) | `OnOriginResponse`                    |
+| `RequestContext.Set`         | HTTP hooks (not subscription/stream hooks) |
+
+`OnOriginResponse` should mutate the response in place and return `nil`.
+Returning a response replaces it and stops the remaining post-origin handlers.

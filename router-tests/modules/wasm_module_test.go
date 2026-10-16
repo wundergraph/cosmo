@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -97,6 +98,41 @@ func TestWasmModule(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, 200, res.Response.StatusCode)
 			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+	})
+
+	t.Run("origin hooks mutate the live subgraph request", func(t *testing.T) {
+		t.Parallel()
+
+		var seen atomic.Pointer[http.Header]
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithWasmModules(wasmModules),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							h := r.Header.Clone()
+							seen.Store(&h)
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Employees { employees { id } }`,
+			})
+			require.NoError(t, err)
+			// The guest read the request body, which must still reach the subgraph.
+			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+			h := seen.Load()
+			require.NotNil(t, h)
+			assert.Equal(t, "pong-value", h.Get("X-Wasm-Module"))
+			assert.Equal(t, "Employees", h.Get("X-Wasm-Operation"))
+			assert.NotEqual(t, "0", h.Get("X-Wasm-Body-Size"))
 		})
 	})
 

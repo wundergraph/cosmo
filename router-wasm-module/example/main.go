@@ -14,6 +14,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/wundergraph/cosmo/router-wasm-module/sdk"
 	"github.com/wundergraph/cosmo/router-wasm-module/wire"
@@ -47,44 +48,39 @@ func (m *ExampleModule) Provision(raw []byte) error {
 	return nil
 }
 
-// OnOriginRequest adds a header to every subgraph request and stores a value on
-// the request context for OnOriginResponse to read.
-func (m *ExampleModule) OnOriginRequest(req *wire.HTTPRequest, ctx *sdk.RequestContext) *wire.HTTPResponse {
-	if req.Header == nil {
-		req.Header = wire.Header{}
-	}
-	req.Header.Set("X-Wasm-Module", m.Value)
+// OnOriginRequest adds headers to every subgraph request and stores a value on
+// the request context for OnOriginResponse to read. Each call below is a single
+// host call against the live request; nothing else is copied into the module.
+func (m *ExampleModule) OnOriginRequest(req *sdk.Request, ctx *sdk.RequestContext) *wire.HTTPResponse {
+	req.Header().Set("X-Wasm-Module", m.Value)
+	req.Header().Set("X-Wasm-Operation", ctx.Operation().Name)
+	req.Header().Set("X-Wasm-Body-Size", strconv.Itoa(len(req.Body())))
 	_ = ctx.Set("wasmValue", m.Value)
 	return nil
 }
 
 // OnOriginResponse reads the value stored in OnOriginRequest and adds a
-// response header with it.
-func (m *ExampleModule) OnOriginResponse(resp *wire.HTTPResponse, ctx *sdk.RequestContext) *wire.HTTPResponse {
+// response header with it. The response is mutated in place, so it returns nil
+// to let later modules run.
+func (m *ExampleModule) OnOriginResponse(resp *sdk.Response, ctx *sdk.RequestContext) *wire.HTTPResponse {
 	if resp == nil {
 		return nil
 	}
-	if resp.Header == nil {
-		resp.Header = wire.Header{}
-	}
-	resp.Header.Set("X-Wasm-Origin-Value", ctx.GetString("wasmValue"))
-	return resp
+	resp.Header().Set("X-Wasm-Origin-Value", ctx.GetString("wasmValue"))
+	return nil
 }
 
 // RouterOnRequest short-circuits requests carrying the X-Wasm-Ping header with
 // a canned response, otherwise tags the request with a header.
-func (m *ExampleModule) RouterOnRequest(req *wire.HTTPRequest, ctx *sdk.RequestContext) *wire.HTTPResponse {
-	if req.Header.Get("X-Wasm-Ping") != "" {
+func (m *ExampleModule) RouterOnRequest(req *sdk.Request, ctx *sdk.RequestContext) *wire.HTTPResponse {
+	if req.Header().Get("X-Wasm-Ping") != "" {
 		return &wire.HTTPResponse{
 			StatusCode: 418,
 			Header:     wire.Header{"Content-Type": {"application/json"}},
 			Body:       []byte(`{"pong":"` + m.Value + `"}`),
 		}
 	}
-	if req.Header == nil {
-		req.Header = wire.Header{}
-	}
-	req.Header.Set("X-Wasm-Router", m.Value)
+	req.Header().Set("X-Wasm-Router", m.Value)
 	return nil
 }
 

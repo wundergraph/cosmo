@@ -3,16 +3,15 @@
 package sdk
 
 import (
-	"bytes"
-
 	"github.com/extism/go-pdk"
 
 	"github.com/wundergraph/cosmo/router-wasm-module/wire"
 )
 
-// The functions below are the Extism ABI entrypoints. Each reads its JSON
-// input with pdk.InputJSON, dispatches to the registered module, and writes its
-// JSON output with pdk.OutputJSON. They are always compiled into the guest; the
+// The functions below are the Extism ABI entrypoints. Each dispatches to the
+// registered module and writes its JSON output with pdk.OutputJSON. HTTP hooks
+// take no (or a tiny) input: the module reaches the live request, response and
+// context through the host functions in host_wasm.go. They are always compiled into the guest; the
 // host uses the capabilities export to learn which handlers are actually
 // implemented, so unimplemented hooks simply return an empty result.
 
@@ -43,24 +42,12 @@ func _provision() int32 {
 //export on_origin_request
 //go:wasmexport on_origin_request
 func _onOriginRequest() int32 {
-	var in wire.OnOriginRequestInput
-	if err := pdk.InputJSON(&in); err != nil {
-		return fail(err)
-	}
 	m, ok := registered.(EnginePreOriginHandler)
 	if !ok {
-		return output(wire.OnOriginRequestOutput{})
+		return output(wire.HTTPHookOutput{})
 	}
-	ctx := newRequestContext(in.Context)
-	// Copy the original body up front so an in-place mutation by the guest
-	// (which shares the backing array with req.Body) is still detected.
-	originalBody := append([]byte(nil), in.Request.Body...)
-	req := in.Request
-	resp := m.OnOriginRequest(&req, ctx)
-	return output(wire.OnOriginRequestOutput{
-		Request:     requestMutation(&req, originalBody),
-		Response:    resp,
-		ContextSets: ctx.contextSets(),
+	return output(wire.HTTPHookOutput{
+		Response: m.OnOriginRequest(&Request{}, &RequestContext{}),
 	})
 }
 
@@ -73,37 +60,26 @@ func _onOriginResponse() int32 {
 	}
 	m, ok := registered.(EnginePostOriginHandler)
 	if !ok {
-		return output(wire.OnOriginResponseOutput{})
+		return output(wire.HTTPHookOutput{})
 	}
-	ctx := newRequestContext(in.Context)
-	resp := m.OnOriginResponse(in.Response, ctx)
-	return output(wire.OnOriginResponseOutput{
-		Response:    resp,
-		ContextSets: ctx.contextSets(),
+	var resp *Response
+	if in.HasResponse {
+		resp = &Response{}
+	}
+	return output(wire.HTTPHookOutput{
+		Response: m.OnOriginResponse(resp, &RequestContext{}),
 	})
 }
 
 //export router_on_request
 //go:wasmexport router_on_request
 func _routerOnRequest() int32 {
-	var in wire.RouterOnRequestInput
-	if err := pdk.InputJSON(&in); err != nil {
-		return fail(err)
-	}
 	m, ok := registered.(RouterOnRequestHandler)
 	if !ok {
-		return output(wire.RouterOnRequestOutput{})
+		return output(wire.HTTPHookOutput{})
 	}
-	ctx := newRequestContext(in.Context)
-	// Copy the original body up front so an in-place mutation by the guest
-	// (which shares the backing array with req.Body) is still detected.
-	originalBody := append([]byte(nil), in.Request.Body...)
-	req := in.Request
-	resp := m.RouterOnRequest(&req, ctx)
-	return output(wire.RouterOnRequestOutput{
-		Request:     requestMutation(&req, originalBody),
-		Response:    resp,
-		ContextSets: ctx.contextSets(),
+	return output(wire.HTTPHookOutput{
+		Response: m.RouterOnRequest(&Request{}, &RequestContext{}),
 	})
 }
 
@@ -118,8 +94,7 @@ func _subscriptionOnStart() int32 {
 	if !ok {
 		return output(wire.SubscriptionOnStartOutput{})
 	}
-	ctx := newRequestContext(in.Context)
-	emit, err := m.SubscriptionOnStart(ctx, in.EventConfig)
+	emit, err := m.SubscriptionOnStart(&RequestContext{}, in.EventConfig)
 	out := wire.SubscriptionOnStartOutput{EmitEvents: emit}
 	if err != nil {
 		out.Error = err.Error()
@@ -164,10 +139,9 @@ func _subscriptionOnCreate() int32 {
 	if !ok {
 		return output(wire.SubscriptionOnCreateOutput{})
 	}
-	ctx := newRequestContext(in.Context)
 	cfg := in.EventConfig
 	out := wire.SubscriptionOnCreateOutput{EventConfig: &cfg}
-	if err := m.SubscriptionOnCreate(ctx, &cfg); err != nil {
+	if err := m.SubscriptionOnCreate(&RequestContext{}, &cfg); err != nil {
 		out.Error = err.Error()
 	}
 	return output(out)
@@ -179,8 +153,7 @@ func onEvents(call func(m any, ctx *RequestContext, cfg *wire.EventConfig, event
 	if err := pdk.InputJSON(&in); err != nil {
 		return fail(err)
 	}
-	ctx := newRequestContext(in.Context)
-	events, err, implemented := call(registered, ctx, in.EventConfig, in.Events)
+	events, err, implemented := call(registered, &RequestContext{}, in.EventConfig, in.Events)
 	if !implemented {
 		// Pass the batch through unchanged.
 		return output(wire.OnEventsOutput{Events: in.Events})
@@ -190,24 +163,6 @@ func onEvents(call func(m any, ctx *RequestContext, cfg *wire.EventConfig, event
 		out.Error = err.Error()
 	}
 	return output(out)
-}
-
-// requestMutation builds a RequestMutation from a (possibly) mutated request.
-// The header is always sent back (it is cheap and the guest received the full
-// set); the body is only sent when it actually changed, so we avoid needlessly
-// rewriting the request body.
-func requestMutation(req *wire.HTTPRequest, originalBody []byte) *wire.RequestMutation {
-	mut := &wire.RequestMutation{Header: req.Header}
-	if !bytes.Equal(originalBody, req.Body) {
-		body := req.Body
-		if body == nil {
-			// A non-nil empty slice signals "clear the body"; a nil pointer
-			// (omitempty) would instead mean "no change".
-			body = []byte{}
-		}
-		mut.Body = &body
-	}
-	return mut
 }
 
 func output(v any) int32 {
