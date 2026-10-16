@@ -2,10 +2,12 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap/zaptest"
@@ -102,4 +104,57 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 		assert.NotNil(t, kafkaProvider.Logger)
 		assert.NotNil(t, kafkaProvider.Adapter)
 	})
+}
+
+func TestBuildEngineDataSourceFactoryDeliveryGuaranteeMode(t *testing.T) {
+	providerId := "test-provider"
+	providers := map[string]datasource.Provider{
+		providerId: datasource.NewPubSubProvider(providerId, providerTypeID, nil, zaptest.NewLogger(t), nil),
+	}
+
+	tests := []struct {
+		name               string
+		deliveryGuarantees *nodev1.DeliveryGuarantees
+		want               datasource.DeliveryGuaranteeMode
+	}{
+		{
+			name:               "defaults to off if no delivery guarantees are declared",
+			deliveryGuarantees: nil,
+			want:               datasource.DeliveryGuaranteeModeOff,
+		},
+		{
+			name:               "off",
+			deliveryGuarantees: &nodev1.DeliveryGuarantees{Mode: nodev1.DeliveryGuaranteeMode_DELIVERY_GUARANTEE_MODE_OFF},
+			want:               datasource.DeliveryGuaranteeModeOff,
+		},
+		{
+			name:               "cursor",
+			deliveryGuarantees: &nodev1.DeliveryGuarantees{Mode: nodev1.DeliveryGuaranteeMode_DELIVERY_GUARANTEE_MODE_CURSOR},
+			want:               datasource.DeliveryGuaranteeModeCursor,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := NewProviderBuilder(context.Background(), zaptest.NewLogger(t), "host", "addr")
+			factory, err := builder.BuildEngineDataSourceFactory(&nodev1.KafkaEventConfiguration{
+				EngineEventConfiguration: &nodev1.EngineEventConfiguration{
+					ProviderId:         providerId,
+					Type:               nodev1.EventType_SUBSCRIBE,
+					TypeName:           "Subscription",
+					FieldName:          "testField",
+					DeliveryGuarantees: tt.deliveryGuarantees,
+				},
+				Topics: []string{"test-topic"},
+			}, providers)
+			require.NoError(t, err)
+
+			input, err := factory.ResolveDataSourceSubscriptionInput()
+			require.NoError(t, err)
+
+			var subscriptionConfig SubscriptionEventConfiguration
+			require.NoError(t, json.Unmarshal([]byte(input), &subscriptionConfig))
+			assert.Equal(t, tt.want, subscriptionConfig.DeliveryGuaranteeMode)
+		})
+	}
 }
