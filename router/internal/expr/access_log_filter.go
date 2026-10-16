@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	exprlang "github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
 )
 
@@ -17,17 +18,18 @@ type AccessLogContext struct {
 
 // CompileAccessLogFilter shares the visitors used by log attributes so references
 // in filters also enable body capture, client tracing, hashes and variables.
-func (c *Manager) CompileAccessLogFilter(expression string) (*vm.Program, error) {
+func (c *Manager) CompileAccessLogFilter(expression string, visitors ...ast.Visitor) (*vm.Program, error) {
 	if expression == "" {
 		return nil, nil
 	}
-	return c.compileExpressionWithExprOptions([]exprlang.Option{
+	options := mergeOptions(exprlang.AsBool(), visitors)
+	options = append(options,
 		exprlang.Env(AccessLogContext{}),
-		exprlang.AsBool(),
 		exprlang.Function("rand", func(params ...any) (any, error) {
 			return rand.Float64(), nil
 		}, new(func() float64)),
-	}, expression)
+	)
+	return c.compileExpressionWithExprOptions(options, expression)
 }
 
 func ResolveAccessLogFilter(program *vm.Program, ctx AccessLogContext) (bool, error) {

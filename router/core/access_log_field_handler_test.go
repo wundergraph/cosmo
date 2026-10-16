@@ -194,33 +194,3 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 	})
 
 }
-
-func TestAccessLogExpressionContext(t *testing.T) {
-	t.Parallel()
-	req, err := http.NewRequest(http.MethodPost, "http://localhost/graphql", nil)
-	require.NoError(t, err)
-	ctx := buildRequestContext(requestContextOptions{r: req})
-	ctx.dataSourceNames = []string{"employees"}
-	ctx.graphQLErrorCodes = []string{"FORBIDDEN"}
-	ctx.graphQLErrorServices = []string{"employees"}
-	ctx.SetError(errors.New("failed"))
-	req = req.WithContext(withRequestContext(req.Context(), ctx))
-	headers := http.Header{"X-Test": {"value"}}
-	snapshot := accessLogExpressionContext(req, &headers, nil)
-	manager := expr.CreateNewExprManager()
-	program, err := manager.CompileAccessLogFilter(`request.error != nil && response.errorMessage == 'failed' &&
- 'employees' in request.operation.serviceNames && 'FORBIDDEN' in response.graphqlErrorCodes &&
- 'employees' in response.graphqlErrorServices && response.header.Get('X-Test') == 'value'`)
-	require.NoError(t, err)
-	include, err := expr.ResolveAccessLogFilter(program, expr.AccessLogContext{Context: *snapshot})
-	require.NoError(t, err)
-	require.True(t, include)
-	require.Empty(t, ctx.expressionContext.Response.ErrorMessage, "snapshot must not mutate the shared context")
-
-	panicSnapshot := accessLogExpressionContext(req, &headers, "panic")
-	require.Equal(t, "panic", panicSnapshot.Response.ErrorMessage)
-	require.EqualError(t, panicSnapshot.Request.Error, "panic")
-	require.EqualError(t, ctx.error, "failed")
-
-	require.NotNil(t, accessLogExpressionContext(nil, nil, nil))
-}

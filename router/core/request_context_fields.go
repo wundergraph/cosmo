@@ -107,38 +107,18 @@ func RouterAccessLogsFieldHandler(
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
 
-	if len(exprAttributes) > 0 {
-		resFields = processExpressionAttributes(logger, exprAttributes, resFields, accessLogExpressionContext(request, responseHeader, passedErr))
+	if reqContext != nil {
+		resFields = processExpressionAttributes(logger, exprAttributes, resFields, accessLogExpressionContext(reqContext))
 	}
 
 	return resFields
 }
 
-// accessLogExpressionContext takes a snapshot after request processing. It also
-// exposes legacy context-field sources without requiring them in the output.
-func accessLogExpressionContext(request *http.Request, header *http.Header, passedErr any) *expr.Context {
-	ctx := &expr.Context{}
-	if request != nil {
-		if req := getRequestContext(request.Context()); req != nil {
-			ctx = req.expressionContext.Clone()
-			ctx.Request.Operation.ServiceNames = req.dataSourceNames
-			ctx.Response.GraphQLErrorCodes = req.graphQLErrorCodes
-			ctx.Response.GraphQLErrorServices = req.graphQLErrorServices
-			if req.error != nil {
-				ctx.Response.ErrorMessage = req.error.Error()
-			}
-		} else if request.URL != nil {
-			ctx.Request = expr.LoadRequest(request)
-		}
-	}
-	if header != nil {
-		ctx.Response.Header = expr.Headers{Header: *header}
-	}
-	if passedErr != nil {
-		ctx.Request.Error = fmt.Errorf("%v", passedErr)
-		ctx.Response.ErrorMessage = fmt.Sprint(passedErr)
-	}
-	ctx.Request.Error = WrapExprError(ctx.Request.Error)
+// accessLogExpressionContext snapshots the request expression context for router
+// access log fields and filters.
+func accessLogExpressionContext(reqContext *requestContext) *expr.Context {
+	ctx := reqContext.expressionContext.Clone()
+	ctx.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
 	return ctx
 }
 

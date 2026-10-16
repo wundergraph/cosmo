@@ -16,7 +16,7 @@ func TestResponseCacheAccessLogFilter(t *testing.T) {
 		RouterOptions:             memoryCacheOptions(t, nil),
 		SubgraphAccessLogsEnabled: true,
 		AccessLogFilter:           `response.cache.status == 'partial_hit'`,
-		SubgraphAccessLogFilter:   `subgraph.name == 'mood' && subgraph.response.cache.status == 'hit' && request.operation.name == 'Moods' && log.request_id != '' && log.url == nil`,
+		SubgraphAccessLogFilter:   `subgraph.name == 'mood' && subgraph.response.cache.status == 'hit' && request.operation.name == 'Moods' && (log.request_id ?? '') != '' && log.url == nil`,
 		LogObservation:            testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
 		Subgraphs:                 testenv.SubgraphsConfig{Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")}},
 	}, func(t *testing.T, env *testenv.Environment) {

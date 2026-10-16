@@ -83,7 +83,6 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.queryRootFields` (int) - Number of root fields without aliases.
 - `request.operation.queryRootFieldAliases` (int) - Number of root fields that use aliases.
 - `request.operation.queryComplexityCacheHit` (bool) - Whether all four query complexity values were reused from the complexity calculation cache.
-- `request.operation.serviceNames` ([]string) - Names of the participating subgraphs. Available in router access log fields and filters after execution.
 - `request.operation.variables` - The operation variables sent with the request, as a JSON string. The value can contain sensitive data and can be large, so log it with care. It is only serialized when an expression references it, so configurations that do not use it pay no cost.
 
 The query complexity fields are calculated during validation when `security.complexity_limits` is configured. They remain zero-valued when complexity limits are not configured or a request exits before validation. Use `mode: measure` to collect them without rejecting operations. Aliased root fields are counted in `queryRootFieldAliases`, not `queryRootFields`.
@@ -269,10 +268,6 @@ The `response` object is a read-only entity that provides details about the outg
 **Available Fields**:
 
 - `response.body` (ResponseBody)
-- `response.header` (ResponseHeaders): Router response headers, available in router access log fields and filters. Read values with `response.header.Get('Header-Name')`. Missing headers return an empty string.
-- `response.errorMessage` (string): The router request error message, or an empty string on success. Available in router access log fields and filters.
-- `response.graphqlErrorCodes` ([]string): GraphQL error codes collected during execution. Available in router access log fields and filters.
-- `response.graphqlErrorServices` ([]string): Names of subgraphs that produced GraphQL errors. Available in router access log fields and filters.
 - `response.cache.status` (string): What the [response cache](/router/response-cache) did for the response as a whole: `hit`, `partial_hit` or `miss`. Empty when the response cache is not enabled, no subgraph was fetched, or the operation is a subscription or mutation. Only known once the response has been resolved, so it is available to router access logs and not to telemetry attributes.
 
 ### ResponseBody Object

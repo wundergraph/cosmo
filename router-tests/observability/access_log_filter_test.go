@@ -9,10 +9,8 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestAccessLogFilters(t *testing.T) {
@@ -26,7 +24,7 @@ func TestAccessLogFilters(t *testing.T) {
 		{name: "subgraph only", subgraphFilter: "false", routerCount: 2, subgraphCount: 0},
 		{name: "both", routerFilter: "false", subgraphFilter: "false"},
 		{name: "operation", routerFilter: "request.operation.name == 'Keep'", subgraphFilter: "request.operation.name == 'Keep'", routerCount: 1, subgraphCount: 1},
-		{name: "built in and custom fields", routerFilter: `log.status == 200 && log.latency > duration('0s') && log.path == '/graphql' && log.method == 'POST' && log.ip == '[REDACTED]' && log.log_type == 'request' && log.request_id != '' && log.config_version != '' && log.header == 'Keep' && log.operation == 'Keep' && log.fallback == 'fallback' && log.expression == 'Keep'`, subgraphFilter: `log.status == 200 && log.latency > duration('0s') && log.subgraph_name == subgraph.name && log.subgraph_id == subgraph.id && log.url != '' && log.log_type == 'client/subgraph' && log.operation == 'Keep' && log.fallback == 'fallback' && log.expression == 'Keep'`, routerCount: 1, subgraphCount: 1},
+		{name: "built in and custom fields", routerFilter: `log.status == 200 && log.latency > duration('0s') && log.path == '/graphql' && log.method == 'POST' && log.ip == '[REDACTED]' && log.log_type == 'request' && (log.request_id ?? '') != '' && (log.config_version ?? '') != '' && log.header == 'Keep' && log.operation == 'Keep' && log.fallback == 'fallback' && log.expression == 'Keep'`, subgraphFilter: `log.status == 200 && log.latency > duration('0s') && log.subgraph_name == subgraph.name && log.subgraph_id == subgraph.id && (log.url ?? '') != '' && log.log_type == 'client/subgraph' && log.operation == 'Keep' && log.fallback == 'fallback' && log.expression == 'Keep'`, routerCount: 1, subgraphCount: 1},
 		{name: "filter only body hash variables and tracing", routerFilter: `request.body.raw contains 'Keep' && response.body.raw contains 'data' && request.operation.sha256Hash != '' && fromJSON(request.operation.variables).id == 4`, subgraphFilter: `request.body.raw contains 'Keep' && request.operation.sha256Hash != '' && fromJSON(request.operation.variables).id == 4 && subgraph.response.body.raw contains 'data' && subgraph.request.clientTrace.fetchDuration > duration('0s') && subgraph.request.startTime > 0`, routerCount: 1, subgraphCount: 1},
 		{name: "runtime error preserves entries", routerFilter: "int(request.header.Get('absent')) > 0", subgraphFilter: "int(subgraph.response.header.Get('absent')) > 0", routerCount: 2, subgraphCount: 2},
 		{name: "sampling all", routerFilter: "rand() < 1", subgraphFilter: "rand() < 1", routerCount: 2, subgraphCount: 2},
@@ -112,7 +110,7 @@ func TestAccessLogFilterResponseHeaders(t *testing.T) {
 func TestAccessLogFilterEarlyError(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		AccessLogFilter: `request.error != nil && response.errorMessage != ''`,
+		AccessLogFilter: `request.error != nil`,
 		LogObservation:  testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
 	}, func(t *testing.T, env *testenv.Environment) {
 		response, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{Query: "invalid"})
@@ -127,7 +125,12 @@ func TestAccessLogFilterEarlyError(t *testing.T) {
 func TestAccessLogFiltersGraphQLErrors(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
-		AccessLogFilter:           `'UNAUTHORIZED' in response.graphqlErrorCodes && 'products' in response.graphqlErrorServices && 'products' in request.operation.serviceNames && log.status == 200`,
+		AccessLogFields: []config.CustomAttribute{
+			{Key: "error_codes", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldGraphQLErrorCodes}},
+			{Key: "error_services", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldGraphQLErrorServices}},
+			{Key: "services", ValueFrom: &config.CustomDynamicAttribute{ContextField: core.ContextFieldOperationServices}},
+		},
+		AccessLogFilter:           `'UNAUTHORIZED' in (log.error_codes ?? []) && 'products' in (log.error_services ?? []) && 'products' in (log.services ?? []) && log.status == 200`,
 		SubgraphAccessLogsEnabled: true,
 		SubgraphAccessLogFilter:   `subgraph.request.error != nil && log.status == 403 && subgraph.name == 'products'`,
 		LogObservation:            testenv.LogObservationConfig{Enabled: true, LogLevel: zapcore.InfoLevel},
@@ -147,34 +150,11 @@ func TestAccessLogFiltersGraphQLErrors(t *testing.T) {
 	}, func(t *testing.T, env *testenv.Environment) {
 		response := env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `{ employees { id details { forename surname } notes } }`})
 		require.Contains(t, response.Body, "UNAUTHORIZED")
+		// Without errors the router filter excludes the entry and the products subgraph is not fetched.
+		env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `{ employees { id } }`})
 		require.Len(t, env.Observer().FilterMessage("/graphql").FilterField(zap.String("log_type", "request")).All(), 1)
 		subgraphLogs := env.Observer().FilterMessage("/graphql").FilterField(zap.String("log_type", "client/subgraph")).All()
 		require.Len(t, subgraphLogs, 1)
 		require.Equal(t, "products", subgraphLogs[0].ContextMap()["subgraph_name"])
-	})
-}
-
-func TestAccessLogFiltersLoggerContext(t *testing.T) {
-	t.Parallel()
-	logCore, logs := observer.New(zapcore.InfoLevel)
-	logger := logging.NewZapLoggerWithCore(logCore, false, false).With(
-		zap.String("hostname", "configured-host"), zap.Int("pid", 42), zap.String("deployment", "test"),
-	)
-	const filter = `log.hostname == 'configured-host' && log.pid == 42 && log.deployment == 'test'`
-	testenv.Run(t, &testenv.Config{
-		AccessLogger:              logger,
-		AccessLogFilter:           filter,
-		SubgraphAccessLogsEnabled: true,
-		SubgraphAccessLogFilter:   filter,
-	}, func(t *testing.T, env *testenv.Environment) {
-		env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
-		require.Len(t, logs.FilterField(zap.String("log_type", "request")).All(), 1)
-		require.Len(t, logs.FilterField(zap.String("log_type", "client/subgraph")).All(), 1)
-		for _, entry := range logs.All() {
-			fields := entry.ContextMap()
-			require.Equal(t, "configured-host", fields["hostname"])
-			require.EqualValues(t, 42, fields["pid"])
-			require.Equal(t, "test", fields["deployment"])
-		}
 	})
 }

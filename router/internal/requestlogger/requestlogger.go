@@ -55,7 +55,7 @@ type handler struct {
 	logger          *zap.Logger
 	panicLogger     *zap.Logger
 	logLevelHandler func(r *http.Request) zapcore.Level
-	filter          func(r *http.Request, header http.Header, err any, fields []zap.Field) bool
+	filter          func(r *http.Request, fields []zap.Field) bool
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -66,7 +66,9 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	return r
 }
 
-func WithFilter(fn func(r *http.Request, header http.Header, err any, fields []zap.Field) bool) Option {
+// WithFilter suppresses completed request entries for which fn returns false.
+// Panic entries are always logged.
+func WithFilter(fn func(r *http.Request, fields []zap.Field) bool) Option {
 	return func(h *handler) { h.filter = fn }
 }
 
@@ -170,19 +172,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
-			header := w.Header()
 			if h.accessLogger.fieldsHandler != nil {
-				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, &header, nil)...)
-			}
-			if brokenPipe {
-				fields = append(fields, zap.Bool("broken_pipe", true))
-			}
-
-			if h.filter != nil && !h.filter(r, header, err, fields) {
-				panic(err)
+				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, nil, nil)...)
 			}
 
 			if brokenPipe {
+				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
 				h.panicLogger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
@@ -206,9 +201,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.Int("status", ww.Status()),
 	}
 
-	header := ww.Header()
 	if h.accessLogger.fieldsHandler != nil {
-		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, &header, nil)...)
+		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil, nil)...)
 	}
 
 	logLevel := zapcore.InfoLevel
@@ -217,7 +211,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fields = append(fields, resFields...)
-	if h.filter == nil || h.filter(r, header, nil, fields) {
+	if h.filter == nil || h.filter(r, fields) {
 		h.logger.Log(logLevel, path, fields...)
 	}
 }

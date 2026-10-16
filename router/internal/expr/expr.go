@@ -72,12 +72,8 @@ type Request struct {
 }
 
 type Response struct {
-	Header               Headers       `expr:"header"`
-	ErrorMessage         string        `expr:"errorMessage"`
-	GraphQLErrorCodes    []string      `expr:"graphqlErrorCodes"`
-	GraphQLErrorServices []string      `expr:"graphqlErrorServices"`
-	Body                 Body          `expr:"body"`
-	Cache                ResponseCache `expr:"cache"`
+	Body  Body          `expr:"body"`
+	Cache ResponseCache `expr:"cache"`
 }
 
 // ResponseCache is what the response cache did for the response as a whole.
@@ -87,7 +83,6 @@ type ResponseCache struct {
 }
 
 type Operation struct {
-	ServiceNames            []string      `expr:"serviceNames"`
 	Sha256Hash              string        `expr:"sha256Hash"`
 	ParsingTime             time.Duration `expr:"parsingTime"`
 	Name                    string        `expr:"name"`

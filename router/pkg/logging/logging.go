@@ -48,10 +48,6 @@ func zapConsoleEncoder() zapcore.Encoder {
 }
 
 func attachBaseFields(logger *zap.Logger) *zap.Logger {
-	logger = logger.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		return &contextFieldsCore{Core: core}
-	}))
-
 	host, err := os.Hostname()
 	if err != nil {
 		host = "unknown"

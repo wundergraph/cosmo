@@ -1417,8 +1417,11 @@ func (s *graphServer) buildGraphMux(
 		}
 
 		if filter != nil {
-			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithFilter(func(r *http.Request, header http.Header, err any, fields []zap.Field) bool {
-				ctx := accessLogExpressionContext(r, &header, err)
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithFilter(func(r *http.Request, fields []zap.Field) bool {
+				var ctx *expr.Context
+				if reqContext := getRequestContext(r.Context()); reqContext != nil {
+					ctx = accessLogExpressionContext(reqContext)
+				}
 				return filter.ShouldLog(s.accessLogsConfig.Logger, ctx, "request", fields)
 			}))
 		}
