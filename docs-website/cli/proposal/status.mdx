@@ -1,0 +1,41 @@
+---
+title: 'Status'
+description: 'Checks the status of an existing proposal for a federated graph.'
+icon: magnifying-glass
+---
+
+## Usage
+
+```bash
+npx wgc proposal status <name> --federation-graph <federated-graph-name> [options]
+```
+
+## Description
+
+The `npx wgc proposal status` command checks the current status of a proposal by its name.
+
+## **Parameters**
+
+- `[name]`: The name of the proposal whose status you want to check.
+
+## **Options**
+
+- `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph this proposal is for.
+
+- `-n, --namespace [namespace]`: The namespace of the federated graph (Default: "default").
+
+- `-j, --json`: Print the result in JSON format instead of text.
+
+## **Examples**
+
+### Check proposal status
+
+```bash
+npx wgc proposal status product-changes --federation-graph my-graph
+```
+
+### Print JSON output
+
+```bash
+npx wgc proposal status product-changes --federation-graph my-graph --json
+```

@@ -692,6 +692,30 @@ describe('Proposal Data Isolation Tests', () => {
     expect(proposalNames2).toContain(proposalName2b);
     expect(proposalNames2).not.toContain(proposalName1);
 
+    // Filter proposals for the second federated graph by exact proposal name
+    const filteredProposals = await client.getProposalsByFederatedGraph({
+      federatedGraphName: fedGraphName2,
+      namespace: DEFAULT_NAMESPACE,
+      proposalName: proposalName2b,
+      limit: 10,
+      offset: 0,
+    });
+    expect(filteredProposals.response?.code).toBe(EnumStatusCode.OK);
+    expect(filteredProposals.proposals).toHaveLength(1);
+    expect(filteredProposals.proposals[0].name).toBe(proposalName2b);
+    expect(filteredProposals.totalCount).toBe(1);
+
+    const missingProposal = await client.getProposalsByFederatedGraph({
+      federatedGraphName: fedGraphName2,
+      namespace: DEFAULT_NAMESPACE,
+      proposalName: 'missing-proposal',
+      limit: 10,
+      offset: 0,
+    });
+    expect(missingProposal.response?.code).toBe(EnumStatusCode.OK);
+    expect(missingProposal.proposals).toHaveLength(0);
+    expect(missingProposal.totalCount).toBe(0);
+
     // Test getProposal - should only return proposal from the correct federated graph
     const proposalId1 = createProposalResponse1.proposalId;
     const getProposal1 = await client.getProposal({

@@ -4,15 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
 func TestOperationProcessorPersistentOperations(t *testing.T) {
@@ -1045,4 +1048,151 @@ func TestOperationProcessorDeferValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newTestRistrettoCache[V any](t *testing.T) *ristretto.Cache[uint64, V] {
+	t.Helper()
+	cache, err := ristretto.NewCache[uint64, V](&ristretto.Config[uint64, V]{
+		MaxCost:            1024,
+		NumCounters:        1024 * 10,
+		IgnoreInternalCost: true,
+		BufferItems:        64,
+	})
+	require.NoError(t, err)
+	return cache
+}
+
+// TestOperationProcessorParserLimitsOnCachedNormalizedOperation verifies that the
+// parser tokenizer limits are enforced against the operation as sent by the client,
+// and not against the normalized representation restored from the operation caches.
+// Normalization inlines fragment spreads, so the normalized representation can
+// contain more fields than the original operation. Re-applying the limits on a
+// cache hit would reject an operation that was accepted on its first request.
+func TestOperationProcessorParserLimitsOnCachedNormalizedOperation(t *testing.T) {
+	const clientSchemaSDL = `
+		type Query { u1: User u2: User u3: User }
+		type User { a: String b: String c: String d: String }
+	`
+
+	// The tokenizer counts 7 fields here (u1, u2, u3 and a, b, c, d in the fragment),
+	// while the normalized representation inlines the fragment into every root field:
+	// query Q { u1 { a b c d } u2 { a b c d } u3 { a b c d } } -> 15 fields.
+	const body = `{"query":"query Q { u1 { ...F } u2 { ...F } u3 { ...F } } fragment F on User { a b c d }"}`
+
+	limits := astparser.TokenizerLimits{MaxFields: 10}
+
+	newProcessor := func(t *testing.T) (*OperationProcessor, func()) {
+		t.Helper()
+
+		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaSDL)
+		require.False(t, report.HasErrors(), "failed to parse client schema")
+		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
+
+		normalizationCache := newTestRistrettoCache[NormalizationCacheEntry](t)
+		variablesNormalizationCache := newTestRistrettoCache[VariablesNormalizationCacheEntry](t)
+		remapVariablesCache := newTestRistrettoCache[RemapVariablesCacheEntry](t)
+
+		processor := NewOperationProcessor(OperationProcessorOptions{
+			Executor:                    &Executor{ClientSchema: &clientSchema},
+			MaxOperationSizeInBytes:     10 << 20,
+			ParseKitPoolSize:            4,
+			ParserTokenizerLimits:       limits,
+			NormalizationCache:          normalizationCache,
+			VariablesNormalizationCache: variablesNormalizationCache,
+			RemapVariablesCache:         remapVariablesCache,
+		})
+
+		waitForCaches := func() {
+			normalizationCache.Wait()
+			variablesNormalizationCache.Wait()
+			remapVariablesCache.Wait()
+		}
+
+		return processor, waitForCaches
+	}
+
+	type cacheHits struct {
+		normalization          bool
+		variablesNormalization bool
+		remapVariables         bool
+	}
+
+	// process mirrors the order in which the prehandler runs the operation kit.
+	process := func(t *testing.T, p *OperationProcessor, body string) (cacheHits, string) {
+		t.Helper()
+
+		kit, err := p.NewKit()
+		require.NoError(t, err)
+		defer kit.Free()
+
+		var hits cacheHits
+
+		require.NoError(t, kit.UnmarshalOperationFromBody([]byte(body)))
+		require.NoError(t, kit.Parse())
+
+		hits.normalization, err = kit.NormalizeOperation("test", false)
+		require.NoError(t, err)
+
+		hits.variablesNormalization, _, err = kit.NormalizeVariables()
+		require.NoError(t, err)
+
+		hits.remapVariables, err = kit.RemapVariables(false)
+		require.NoError(t, err)
+
+		return hits, kit.parsedOperation.NormalizedRepresentation
+	}
+
+	t.Run("operation exceeding the limits before normalization is rejected", func(t *testing.T) {
+		p, _ := newProcessor(t)
+
+		kit, err := p.NewKit()
+		require.NoError(t, err)
+		defer kit.Free()
+
+		// 11 fields in the operation as sent by the client.
+		require.NoError(t, kit.UnmarshalOperationFromBody([]byte(`{"query":"{ u1 { a b c d } u2 { a b c d } u3 }"}`)))
+		err = kit.Parse()
+		require.Error(t, err)
+
+		var httpErr *httpGraphqlError
+		require.ErrorAs(t, err, &httpErr)
+		require.Equal(t, http.StatusBadRequest, httpErr.StatusCode())
+		require.EqualError(t, err, "allowed number of fields per GraphQL document of '10' exceeded")
+	})
+
+	t.Run("normalized representation exceeding the limits is accepted on cache hits", func(t *testing.T) {
+		p, waitForCaches := newProcessor(t)
+
+		hits, firstNormalized := process(t, p, body)
+		require.Equal(t, cacheHits{}, hits, "first request must not hit any cache")
+
+		// Make sure the scenario is meaningful: the normalized representation must exceed
+		// the limit, otherwise this test would pass regardless of where the limits are applied.
+		normalizedDoc := ast.NewSmallDocument()
+		normalizedDoc.Input.ResetInputString(firstNormalized)
+		_, err := astparser.NewParser().ParseWithLimits(limits, normalizedDoc, &operationreport.Report{})
+		require.ErrorAs(t, err, &astparser.ErrFieldsLimitExceeded{}, "normalized representation must exceed the field limit")
+
+		waitForCaches()
+
+		hits, secondNormalized := process(t, p, body)
+		require.Equal(t, cacheHits{normalization: true, variablesNormalization: true, remapVariables: true}, hits,
+			"second request must be served from the caches")
+		require.Equal(t, firstNormalized, secondNormalized)
+	})
+
+	t.Run("persisted operation entry exceeding the limits is accepted", func(t *testing.T) {
+		p, _ := newProcessor(t)
+
+		kit, err := p.NewKit()
+		require.NoError(t, err)
+		defer kit.Free()
+
+		err = kit.handleFoundPersistedOperationEntry(NormalizationCacheEntry{
+			normalizedRepresentation: "query Q { u1 { a b c d } u2 { a b c d } u3 { a b c d } }",
+			operationType:            "query",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "Q", kit.parsedOperation.Request.OperationName)
+	})
 }

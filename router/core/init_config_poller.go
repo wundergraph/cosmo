@@ -200,8 +200,11 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 		r.cdnConfig.URL,
 		r.graphApiToken,
 		&configCDNProvider.Options{
-			Logger:       r.logger,
-			SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+			Logger:                r.logger,
+			SignatureKey:          r.routerConfigPollerConfig.GraphSignKey,
+			FetchRetryMaxAttempts: r.routerConfigPollerConfig.SplitConfigPoller.FetchRetry.MaxAttempts,
+			FetchRetryInterval:    r.routerConfigPollerConfig.SplitConfigPoller.FetchRetry.Interval,
+			FetchRetryMaxDuration: r.routerConfigPollerConfig.SplitConfigPoller.FetchRetry.MaxDuration,
 		},
 	)
 	if err != nil {

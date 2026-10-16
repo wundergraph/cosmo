@@ -9,6 +9,8 @@ on:
       - '.github/workflows/*.yml'
       - '.github/actions/**'
       - 'docs-website/**'
+      - 'rfc/**'
+      - '.oss-scanner/**'
       - 'CLAUDE.md'
       - 'CONTRIBUTING.md'
       - 'README.md'

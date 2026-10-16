@@ -1,0 +1,14 @@
+# Use a checked-in test graph for an offline router smoke test.
+version: '1'
+router_registration: false
+execution_config:
+  file:
+    path: /src/router-tests/protocol/testdata/routerConfig.json
+watch_config:
+  enabled: false
+telemetry:
+  tracing:
+    enabled: false
+  metrics:
+    prometheus:
+      enabled: false

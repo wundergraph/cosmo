@@ -995,17 +995,17 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	return false, nil
 }
 
+// setAndParseOperationDoc parses the normalized representation restored from an
+// operation cache. The original document already passed the parser limits in Parse.
+// Normalization inlines fragment spreads, so the normalized representation can exceed
+// those limits; applying them again here would reject an operation that was accepted
+// on its first request.
 func (o *OperationKit) setAndParseOperationDoc() error {
 	o.kit.doc.Reset()
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	report := &operationreport.Report{}
-	if _, err := o.kit.parser.ParseWithLimits(o.operationProcessor.parserTokenizerLimits, o.kit.doc, report); err != nil {
-		return &httpGraphqlError{
-			message:    err.Error(),
-			statusCode: http.StatusBadRequest,
-		}
-	}
+	o.kit.parser.Parse(o.kit.doc, report)
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
