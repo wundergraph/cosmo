@@ -108,12 +108,18 @@ func RouterAccessLogsFieldHandler(
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
 
 	if reqContext != nil {
-		copyContext := reqContext.expressionContext.Clone()
-		copyContext.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
-		resFields = processExpressionAttributes(logger, exprAttributes, resFields, copyContext)
+		resFields = processExpressionAttributes(logger, exprAttributes, resFields, accessLogExpressionContext(reqContext))
 	}
 
 	return resFields
+}
+
+// accessLogExpressionContext snapshots the request expression context for router
+// access log fields and filters.
+func accessLogExpressionContext(reqContext *requestContext) *expr.Context {
+	ctx := reqContext.expressionContext.Clone()
+	ctx.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
+	return ctx
 }
 
 func SubgraphAccessLogsFieldHandler(
