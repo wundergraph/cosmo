@@ -628,9 +628,10 @@ export class FederationFactory {
    * Directive argument named type kinds are only resolved for base scalars (otherwise Kind.NULL).
    * */
   upsertEnumUsage({ coords, data, isInput }: UpsertEnumUsageParams) {
-    if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION && data.namedTypeKind !== Kind.NULL) {
+    if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION) {
       return;
     }
+
     const usageData = getValueOrDefault(this.enumUsageDataByTypeName, data.namedTypeName, () => ({
       inputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
       outputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),

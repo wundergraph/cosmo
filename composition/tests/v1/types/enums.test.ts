@@ -760,6 +760,93 @@ describe('Enum tests', () => {
       );
     });
 
+    test('that usage of an Enum before its declaration does not affect validation', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+
+        type Query {
+          both(enum: Enum!): Enum!
+        }
+        
+        enum Enum {
+            A
+            B
+          }
+
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            unused: String!
+          }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'subgraph-c',
+        `
+          enum Enum {
+            A
+            B
+            C
+          }
+
+          input Input {
+            enum: Enum!
+          }
+
+          type Query {
+            input(input: Input!): String!
+          }
+        `,
+      );
+      const subgraphD = createSubgraph(
+        'subgraph-d',
+        `
+          enum Enum {
+            B
+          }
+
+          type Object {
+            enum: Enum!
+          }
+
+          type Query {
+            output: Object!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure(
+        [subgraphA, subgraphB, subgraphC, subgraphD],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both(enum: ...)']],
+            [subgraphC.name, ['Input.enum']],
+          ]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['C']],
+            [subgraphB.name, ['B', 'C']],
+            [subgraphD.name, ['A', 'C']],
+          ]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both']],
+            [subgraphD.name, ['Object.enum']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
     test('that an inconsistent shared Enum error includes coordinates shared by multiple subgraphs', () => {
       const subgraphA = createSubgraph(
         'subgraph-a',
