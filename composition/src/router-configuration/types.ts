@@ -19,12 +19,19 @@ export type StreamConfiguration = {
   streamName: string;
 };
 
+export type DeliveryGuaranteeMode = 'OFF' | 'CURSOR';
+
+export type DeliveryGuarantees = {
+  mode: DeliveryGuaranteeMode;
+};
+
 export type KafkaEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'kafka';
   topics: string[];
   type: KafkaEventType;
+  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type NatsEventConfiguration = {
@@ -34,6 +41,7 @@ export type NatsEventConfiguration = {
   subjects: string[];
   type: NatsEventType;
   streamConfiguration?: StreamConfiguration;
+  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type RedisEventConfiguration = {
@@ -42,6 +50,7 @@ export type RedisEventConfiguration = {
   providerType: 'redis';
   channels: string[];
   type: RedisEventType;
+  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration | RedisEventConfiguration;

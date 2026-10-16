@@ -16,8 +16,10 @@ import {
   CONTEXT,
   COST,
   DEFAULT_EDFS_PROVIDER_ID,
+  DELIVERY_GUARANTEES,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
+  EDFS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -341,7 +343,11 @@ export const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+/* directive @edfs__kafkaSubscribe(
+ *   topics: [String!]!, providerId: String! = "default",
+ *   deliveryGuarantees: edfs__DeliveryGuarantees
+ * ) on FIELD_DEFINITION
+ */
 export const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -363,6 +369,11 @@ export const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
       },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(DELIVERY_GUARANTEES),
+      type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -421,7 +432,8 @@ export const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
 
 /* directive @edfs__natsSubscribe(
  *   subjects: [String!]!, providerId: String! = "default",
- *   streamConfiguration: edfs__NatsStreamConfiguration
+ *   streamConfiguration: edfs__NatsStreamConfiguration,
+ *   deliveryGuarantees: edfs__DeliveryGuarantees
  * ) on FIELD_DEFINITION
  */
 export const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
@@ -450,6 +462,11 @@ export const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(STREAM_CONFIGURATION),
       type: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(DELIVERY_GUARANTEES),
+      type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -482,7 +499,11 @@ export const EDFS_REDIS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+/* directive @edfs__redisSubscribe(
+ *   channels: [String!]!, providerId: String! = "default",
+ *   deliveryGuarantees: edfs__DeliveryGuarantees
+ * ) on FIELD_DEFINITION
+ */
 export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -504,6 +525,11 @@ export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
       },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(DELIVERY_GUARANTEES),
+      type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

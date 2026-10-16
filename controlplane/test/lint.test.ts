@@ -486,7 +486,7 @@ interface A{
           InputObjectTypeDefinition: {
             requiredSuffixes: ['Input'],
             ignorePattern:
-              '^(edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
+              '^(edfs__DeliveryGuarantees|edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
           },
           allowLeadingUnderscore: true,
         },
@@ -523,8 +523,18 @@ type edfs__PublishResult {
     const schema = `directive @edfs__natsSubscribe(
 subjects: [String!]!,
 providerId: String! = "default",
-streamConfiguration: edfs__NatsStreamConfiguration
+streamConfiguration: edfs__NatsStreamConfiguration,
+deliveryGuarantees: edfs__DeliveryGuarantees
 ) on FIELD_DEFINITION
+
+enum edfs__DeliveryGuaranteeMode {
+    OFF
+    CURSOR
+}
+
+input edfs__DeliveryGuarantees {
+    mode: edfs__DeliveryGuaranteeMode! = OFF
+}
 
 input edfs__NatsStreamConfiguration {
     consumerInactiveThreshold: Int! = 30
