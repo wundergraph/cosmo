@@ -3111,7 +3111,7 @@ export class NormalizationFactory {
     return { fieldName, providerId, providerType: PROVIDER_TYPE_KAFKA, topics, type: PUBLISH };
   }
 
-  /* Parses the optional "deliveryGuarantees" argument of the EDFS subscribe directives.
+  /* Parses the optional "deliveryGuarantees" argument of the @edfs__kafkaSubscribe directive.
    * Returns the parsed mode, or undefined if the argument value is invalid (an error message is appended).
    */
   getDeliveryGuaranteeMode(
@@ -3260,7 +3260,6 @@ export class NormalizationFactory {
     let consumerInactiveThreshold = DEFAULT_CONSUMER_INACTIVE_THRESHOLD;
     let consumerName = '';
     let streamName = '';
-    let deliveryGuaranteeMode: DeliveryGuaranteeMode | undefined;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case SUBJECTS: {
@@ -3376,10 +3375,6 @@ export class NormalizationFactory {
           }
           break;
         }
-        case DELIVERY_GUARANTEES: {
-          deliveryGuaranteeMode = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
-          break;
-        }
       }
     }
     if (errorMessages.length > 0) {
@@ -3417,7 +3412,6 @@ export class NormalizationFactory {
             },
           }
         : {}),
-      ...(deliveryGuaranteeMode === CURSOR_UPPER ? { deliveryGuarantees: { mode: deliveryGuaranteeMode } } : {}),
     };
   }
 
@@ -3464,7 +3458,6 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const channels: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
-    let deliveryGuaranteeMode: DeliveryGuaranteeMode | undefined;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case CHANNELS: {
@@ -3491,10 +3484,6 @@ export class NormalizationFactory {
           providerId = argumentNode.value.value;
           break;
         }
-        case DELIVERY_GUARANTEES: {
-          deliveryGuaranteeMode = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
-          break;
-        }
       }
     }
     if (errorMessages.length > 0) {
@@ -3506,7 +3495,6 @@ export class NormalizationFactory {
       providerType: PROVIDER_TYPE_REDIS,
       channels,
       type: SUBSCRIBE,
-      ...(deliveryGuaranteeMode === CURSOR_UPPER ? { deliveryGuarantees: { mode: deliveryGuaranteeMode } } : {}),
     };
   }
 
@@ -3902,11 +3890,7 @@ export class NormalizationFactory {
         return;
       }
     }
-    if (
-      this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE) ||
-      this.edfsDirectiveReferences.has(EDFS_NATS_SUBSCRIBE) ||
-      this.edfsDirectiveReferences.has(EDFS_REDIS_SUBSCRIBE)
-    ) {
+    if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
       const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEES);
       if (
         deliveryGuaranteesInputData &&
@@ -3923,7 +3907,7 @@ export class NormalizationFactory {
       ) {
         errorMessages.push(invalidDeliveryGuaranteeModeDefinitionErrorMessage);
       }
-      /* The canonical definitions are injected into the document as dependencies of the subscribe directives,
+      /* The canonical definitions are injected into the document as dependencies of @edfs__kafkaSubscribe,
        * and both type names are ignored by federation, so any user-declared definitions are simply dropped.
        */
       this.parentDefinitionDataByTypeName.delete(EDFS_DELIVERY_GUARANTEES);

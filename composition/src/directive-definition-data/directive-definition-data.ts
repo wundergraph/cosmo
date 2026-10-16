@@ -746,20 +746,11 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
         typeNode: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
       }),
     ],
-    [
-      DELIVERY_GUARANTEES,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_NATS_SUBSCRIBE}`,
-        name: DELIVERY_GUARANTEES,
-        namedTypeKind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-        typeNode: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
-      }),
-    ],
   ]),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
   name: EDFS_NATS_SUBSCRIBE,
   node: EDFS_NATS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, STREAM_CONFIGURATION, DELIVERY_GUARANTEES]),
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, STREAM_CONFIGURATION]),
   requiredArgumentNames: new Set<ArgumentName>([SUBJECTS]),
 });
 
@@ -934,20 +925,11 @@ export const REDIS_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
         },
       }),
     ],
-    [
-      DELIVERY_GUARANTEES,
-      newDirectiveArgumentData({
-        directive: `@${EDFS_REDIS_SUBSCRIBE}`,
-        name: DELIVERY_GUARANTEES,
-        namedTypeKind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-        typeNode: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
-      }),
-    ],
   ]),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
   name: EDFS_REDIS_SUBSCRIBE,
   node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, DELIVERY_GUARANTEES]),
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
   requiredArgumentNames: new Set<ArgumentName>([CHANNELS]),
 });
 

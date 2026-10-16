@@ -523,7 +523,12 @@ type edfs__PublishResult {
     const schema = `directive @edfs__natsSubscribe(
 subjects: [String!]!,
 providerId: String! = "default",
-streamConfiguration: edfs__NatsStreamConfiguration,
+streamConfiguration: edfs__NatsStreamConfiguration
+) on FIELD_DEFINITION
+
+directive @edfs__kafkaSubscribe(
+topics: [String!]!,
+providerId: String! = "default",
 deliveryGuarantees: edfs__DeliveryGuarantees
 ) on FIELD_DEFINITION
 

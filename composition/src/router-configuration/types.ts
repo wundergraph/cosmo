@@ -41,7 +41,6 @@ export type NatsEventConfiguration = {
   subjects: string[];
   type: NatsEventType;
   streamConfiguration?: StreamConfiguration;
-  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type RedisEventConfiguration = {
@@ -50,7 +49,6 @@ export type RedisEventConfiguration = {
   providerType: 'redis';
   channels: string[];
   type: RedisEventType;
-  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration | RedisEventConfiguration;

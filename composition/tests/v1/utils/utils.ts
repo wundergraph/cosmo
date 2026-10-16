@@ -53,7 +53,7 @@ export const EDFS_NATS_REQUEST_DIRECTIVE = `
 `;
 
 export const EDFS_NATS_SUBSCRIBE_DIRECTIVE = `
-  directive @edfs__natsSubscribe(deliveryGuarantees: edfs__DeliveryGuarantees, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
+  directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
 export const EDFS_NATS_STREAM_CONFIGURATION_INPUT = `
@@ -197,7 +197,7 @@ export const versionOnePersistedDirectiveDefinitions = `
 export const eventDirectiveDefinitions = `
   directive @edfs__natsPublish(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
   directive @edfs__natsRequest(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
-  directive @edfs__natsSubscribe(deliveryGuarantees: edfs__DeliveryGuarantees, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
+  directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
 export const versionTwoRouterDirectiveDefinitions = `

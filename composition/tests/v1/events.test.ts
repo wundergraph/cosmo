@@ -41,8 +41,6 @@ import {
 import {
   EDFS_NATS_PUBLISH_DIRECTIVE,
   EDFS_NATS_REQUEST_DIRECTIVE,
-  EDFS_DELIVERY_GUARANTEE_MODE_ENUM,
-  EDFS_DELIVERY_GUARANTEES_INPUT,
   EDFS_NATS_STREAM_CONFIGURATION_INPUT,
   EDFS_NATS_SUBSCRIBE_DIRECTIVE,
   EDFS_PUBLISH_RESULT_OBJECT,
@@ -181,8 +179,6 @@ describe('events Configuration tests', () => {
           entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"})
         }
       ` +
-            EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-            EDFS_DELIVERY_GUARANTEES_INPUT +
             EDFS_NATS_STREAM_CONFIGURATION_INPUT +
             EDFS_PUBLISH_RESULT_OBJECT +
             OPENFED_FIELD_SET,
@@ -612,8 +608,6 @@ describe('events Configuration tests', () => {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
       ` +
-          EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-          EDFS_DELIVERY_GUARANTEES_INPUT +
           EDFS_NATS_STREAM_CONFIGURATION_INPUT +
           OPENFED_FIELD_SET,
       ),
@@ -637,8 +631,6 @@ describe('events Configuration tests', () => {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"})
     }
       ` +
-          EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-          EDFS_DELIVERY_GUARANTEES_INPUT +
           EDFS_NATS_STREAM_CONFIGURATION_INPUT +
           OPENFED_FIELD_SET,
       ),

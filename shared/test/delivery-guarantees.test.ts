@@ -18,7 +18,7 @@ function subscriptionConfigurationData(events: Array<EventConfiguration>): Map<T
 }
 
 describe('Delivery guarantees proto generation tests', () => {
-  test('that deliveryGuarantees is propagated to the engine event configuration of every provider', () => {
+  test('that deliveryGuarantees is propagated to the Kafka engine event configuration', () => {
     const { events } = configurationDatasToDataSourceConfiguration(
       subscriptionConfigurationData([
         {
@@ -29,27 +29,9 @@ describe('Delivery guarantees proto generation tests', () => {
           topics: ['topic'],
           type: 'subscribe',
         },
-        {
-          deliveryGuarantees: { mode: 'CURSOR' },
-          fieldName: 'natsField',
-          providerId: 'default',
-          providerType: 'nats',
-          subjects: ['subject'],
-          type: 'subscribe',
-        },
-        {
-          deliveryGuarantees: { mode: 'CURSOR' },
-          fieldName: 'redisField',
-          providerId: 'default',
-          providerType: 'redis',
-          channels: ['channel'],
-          type: 'subscribe',
-        },
       ]),
     );
     expect(events.kafka[0].engineEventConfiguration?.deliveryGuarantees?.mode).toBe(DeliveryGuaranteeMode.CURSOR);
-    expect(events.nats[0].engineEventConfiguration?.deliveryGuarantees?.mode).toBe(DeliveryGuaranteeMode.CURSOR);
-    expect(events.redis[0].engineEventConfiguration?.deliveryGuarantees?.mode).toBe(DeliveryGuaranteeMode.CURSOR);
   });
 
   test('that deliveryGuarantees is not set if it is absent from the event configuration', () => {

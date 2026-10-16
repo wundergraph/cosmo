@@ -1728,8 +1728,6 @@ export type EngineEventConfiguration = Message<"wg.cosmo.node.v1.EngineEventConf
   fieldName: string;
 
   /**
-   * Only set for subscriptions that declare delivery guarantees via the deliveryGuarantees directive argument.
-   *
    * @generated from field: wg.cosmo.node.v1.DeliveryGuarantees delivery_guarantees = 5;
    */
   deliveryGuarantees?: DeliveryGuarantees | undefined;

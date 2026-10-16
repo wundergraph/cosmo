@@ -3896,13 +3896,12 @@ func (x *DeliveryGuarantees) GetMode() DeliveryGuaranteeMode {
 }
 
 type EngineEventConfiguration struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	ProviderId string                 `protobuf:"bytes,1,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
-	Type       EventType              `protobuf:"varint,2,opt,name=type,proto3,enum=wg.cosmo.node.v1.EventType" json:"type,omitempty"`
-	TypeName   string                 `protobuf:"bytes,3,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	FieldName  string                 `protobuf:"bytes,4,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
-	// Only set for subscriptions that declare delivery guarantees via the deliveryGuarantees directive argument.
-	DeliveryGuarantees *DeliveryGuarantees `protobuf:"bytes,5,opt,name=delivery_guarantees,json=deliveryGuarantees,proto3" json:"delivery_guarantees,omitempty"`
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ProviderId         string                 `protobuf:"bytes,1,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	Type               EventType              `protobuf:"varint,2,opt,name=type,proto3,enum=wg.cosmo.node.v1.EventType" json:"type,omitempty"`
+	TypeName           string                 `protobuf:"bytes,3,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	FieldName          string                 `protobuf:"bytes,4,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	DeliveryGuarantees *DeliveryGuarantees    `protobuf:"bytes,5,opt,name=delivery_guarantees,json=deliveryGuarantees,proto3" json:"delivery_guarantees,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }

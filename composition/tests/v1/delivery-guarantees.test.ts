@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest';
 import {
   DEFAULT_EDFS_PROVIDER_ID,
   EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_SUBSCRIBE,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDeliveryGuaranteeModeDefinitionErrorMessage,
@@ -13,10 +15,9 @@ import {
   invalidEventDrivenGraphError,
   parse,
   PROVIDER_TYPE_KAFKA,
-  PROVIDER_TYPE_NATS,
-  PROVIDER_TYPE_REDIS,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
+  unexpectedDirectiveArgumentErrorMessage,
 } from '../../src';
 import {
   EDFS_DELIVERY_GUARANTEE_MODE_ENUM,
@@ -112,37 +113,24 @@ describe('deliveryGuarantees tests', () => {
     );
   });
 
-  test('that deliveryGuarantees is added to the NATS event configuration if the mode is CURSOR', () => {
-    const { configurationDataByTypeName } = normalizeSubgraphSuccess(dgNatsCursor, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(configurationDataByTypeName.get('Subscription')?.events).toStrictEqual([
-      {
-        deliveryGuarantees: { mode: 'CURSOR' },
-        fieldName: 'entitySubscription',
-        providerId: DEFAULT_EDFS_PROVIDER_ID,
-        providerType: PROVIDER_TYPE_NATS,
-        subjects: ['entities'],
-        streamConfiguration: {
-          consumerInactiveThreshold: 30,
-          consumerName: 'consumer',
-          streamName: 'stream',
-        },
-        type: 'subscribe',
-      },
-    ]);
+  test('that an error is returned if deliveryGuarantees is defined on @edfs__natsSubscribe', () => {
+    const { errors } = normalizeSubgraphFailure(dgNatsCursor, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      invalidDirectiveError(EDFS_NATS_SUBSCRIBE, 'Subscription.entitySubscription', FIRST_ORDINAL, [
+        unexpectedDirectiveArgumentErrorMessage(EDFS_NATS_SUBSCRIBE, ['deliveryGuarantees']),
+      ]),
+    );
   });
 
-  test('that deliveryGuarantees is added to the Redis event configuration if the mode is CURSOR', () => {
-    const { configurationDataByTypeName } = normalizeSubgraphSuccess(dgRedisCursor, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(configurationDataByTypeName.get('Subscription')?.events).toStrictEqual([
-      {
-        channels: ['entities'],
-        deliveryGuarantees: { mode: 'CURSOR' },
-        fieldName: 'entitySubscription',
-        providerId: DEFAULT_EDFS_PROVIDER_ID,
-        providerType: PROVIDER_TYPE_REDIS,
-        type: 'subscribe',
-      },
-    ]);
+  test('that an error is returned if deliveryGuarantees is defined on @edfs__redisSubscribe', () => {
+    const { errors } = normalizeSubgraphFailure(dgRedisCursor, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      invalidDirectiveError(EDFS_REDIS_SUBSCRIBE, 'Subscription.entitySubscription', FIRST_ORDINAL, [
+        unexpectedDirectiveArgumentErrorMessage(EDFS_REDIS_SUBSCRIBE, ['deliveryGuarantees']),
+      ]),
+    );
   });
 
   test('that an error is returned if deliveryGuarantees is not an object', () => {

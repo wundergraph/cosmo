@@ -220,7 +220,6 @@ export function configurationDatasToDataSourceConfiguration(
                 providerId: event.providerId,
                 type: eventType(event.type),
                 typeName,
-                ...deliveryGuaranteesField(event.deliveryGuarantees),
               }),
               subjects: event.subjects,
               ...(event.streamConfiguration
@@ -244,7 +243,6 @@ export function configurationDatasToDataSourceConfiguration(
                 providerId: event.providerId,
                 type: eventType(event.type),
                 typeName,
-                ...deliveryGuaranteesField(event.deliveryGuarantees),
               }),
               channels: event.channels,
             }),
