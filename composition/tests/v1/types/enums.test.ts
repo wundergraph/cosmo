@@ -1310,21 +1310,6 @@ const subgraphD = {
   `),
 };
 
-const subgraphE = {
-  name: 'subgraph-e',
-  url: '',
-  definitions: parse(`
-    enum Instruction {
-      FIGHT
-      POKEMON
-    }
-
-    type BattleAction {
-      baseAction: Instruction!
-    }
-  `),
-};
-
 const subgraphF: Subgraph = {
   name: 'subgraph-f',
   url: '',
