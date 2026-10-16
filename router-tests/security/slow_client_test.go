@@ -94,7 +94,8 @@ func TestSlowClientTimeouts(t *testing.T) {
 			require.NoError(t, err)
 
 			elapsed := requireClosedByServer(t, conn, conn, start)
-			require.GreaterOrEqual(t, elapsed, 500*time.Millisecond)
+			// The read deadline starts when the server begins reading, which can be before start.
+			require.GreaterOrEqual(t, elapsed, 400*time.Millisecond)
 		})
 	})
 
@@ -122,7 +123,8 @@ func TestSlowClientTimeouts(t *testing.T) {
 			res, err := http.ReadResponse(br, nil)
 			require.NoError(t, err)
 			defer func() { _ = res.Body.Close() }()
-			require.GreaterOrEqual(t, time.Since(start), 500*time.Millisecond)
+			// The read deadline starts when the server begins reading, which can be before start.
+			require.GreaterOrEqual(t, time.Since(start), 400*time.Millisecond)
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
@@ -158,7 +160,8 @@ func TestSlowClientTimeouts(t *testing.T) {
 			res, err := http.ReadResponse(br, nil)
 			require.NoError(t, err)
 			defer func() { _ = res.Body.Close() }()
-			require.GreaterOrEqual(t, time.Since(start), 500*time.Millisecond)
+			// The read deadline starts when the server begins reading, which can be before start.
+			require.GreaterOrEqual(t, time.Since(start), 400*time.Millisecond)
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
