@@ -87,7 +87,6 @@ export type UpsertDirectiveArgumentDataParams = {
 export type UpsertEnumUsageParams = {
   coords: string;
   data: DirectiveArgumentData | FieldData | InputValueData;
-  isInput: boolean;
 };
 
 export type MergeSubscriptionFilterTargetResultParams = {

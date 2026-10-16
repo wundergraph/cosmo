@@ -627,7 +627,7 @@ export class FederationFactory {
    * inconsistently defined. Consequently, named types that are known not to be Enums are not recorded.
    * Directive argument named type kinds are only resolved for base scalars (otherwise Kind.NULL).
    * */
-  upsertEnumUsage({ coords, data, isInput }: UpsertEnumUsageParams) {
+  upsertEnumUsage({ coords, data }: UpsertEnumUsageParams) {
     if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION) {
       return;
     }
@@ -636,7 +636,8 @@ export class FederationFactory {
       inputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
       outputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
     }));
-    const coordsBySubgraphName = isInput ? usageData.inputCoordsBySubgraphName : usageData.outputCoordsBySubgraphName;
+    const coordsBySubgraphName =
+      data.kind === Kind.FIELD_DEFINITION ? usageData.outputCoordsBySubgraphName : usageData.inputCoordsBySubgraphName;
     for (const subgraphName of data.subgraphNames) {
       getValueOrDefault(coordsBySubgraphName, subgraphName, () => new Set<string>()).add(coords);
     }
@@ -833,7 +834,7 @@ export class FederationFactory {
     getValueOrDefault(this.coordsByNamedTypeName, targetData.namedTypeName, () => new Set<string>()).add(
       targetData.federatedCoords,
     );
-    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData, isInput: true });
+    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData });
     if (!existingData) {
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
       inputValueDataByValueName.set(targetData.name, targetData);
@@ -1022,7 +1023,7 @@ export class FederationFactory {
       targetData.federatedCoords,
     );
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
-    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData, isInput: false });
+    this.upsertEnumUsage({ coords: targetData.federatedCoords, data: incomingData });
     this.handleSubscriptionFilterDirective(incomingData, targetData);
     this.extractFederatedDirectives({
       data: targetData.federatedDirectivesData,
@@ -1244,7 +1245,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
-      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData, isInput: true });
+      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData });
       this.recordTagNamesByCoords(targetData, `${parentCoords}.${sourceData.name}`);
       inputValueDataByInputValueName.set(inputValueName, targetData);
     }
@@ -1316,7 +1317,7 @@ export class FederationFactory {
         targetData.federatedCoords,
       );
       this.namedOutputTypeNames.add(targetData.namedTypeName);
-      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData, isInput: false });
+      this.upsertEnumUsage({ coords: targetData.federatedCoords, data: sourceData });
       this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
       if (isFieldInaccessible) {
         this.inaccessibleCoords.add(targetData.federatedCoords);
@@ -1757,7 +1758,6 @@ export class FederationFactory {
             this.upsertEnumUsage({
               coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
               data: argumentData,
-              isInput: true,
             });
           }
           // Shared set between locations and executable locations because type-system locations are removed.
@@ -1797,7 +1797,6 @@ export class FederationFactory {
           this.upsertEnumUsage({
             coords: `${argumentData.federatedCoords}(${argumentData.name}: ...)`,
             data: argumentData,
-            isInput: true,
           });
         }
         setLongestDescription(existingData, data);
