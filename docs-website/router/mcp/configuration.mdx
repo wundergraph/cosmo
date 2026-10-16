@@ -82,9 +82,28 @@ For OAuth-related environment variables, see [OAuth Configuration Reference](/ro
 
 MCP loads operations from a configured storage provider. A storage provider **must** be specified. See [Storage Providers](/router/storage-providers) for more details on configuring storage providers.
 
+### Operation Directory
+
+The router loads all `.graphql` and `.gql` files in the directory of a `file_system` provider:
+
+```yaml
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations' # Relative to the router binary
+```
+
+Then reference this storage provider in your MCP configuration:
+
+```yaml
+mcp:
+  storage:
+    provider_id: 'mcp'
+```
+
 ### Operation Manifest
 
-Set `storage.object_path` to load the operations from one [operation manifest](/router/mcp/tools#operation-manifest) file. The router polls the file and swaps the tools when its `revision` changes. It does not need a restart. You can use a `file_system` or an `s3` provider. The `cdn` provider is not supported for MCP.
+As an alternative to a directory, set `storage.object_path` to load the operations from one [operation manifest](/router/mcp/tools#operation-manifest) file. The router polls the file and swaps the tools when its `revision` changes. It does not need a restart. You can use a `file_system` or an `s3` provider. The `cdn` provider is not supported for MCP.
 
 <CodeGroup>
 ```yaml File system
@@ -124,29 +143,6 @@ Keep these points in mind:
 - If the router cannot read or parse a new manifest, it logs a warning and keeps the previous tools.
 - Stateless MCP sessions see tool changes on their next `tools/list` request.
 - On S3, the router sends `If-None-Match` with the last ETag, so it only downloads a changed manifest. S3-compatible stores that do not support `If-None-Match` still work, but the router then downloads the manifest on every poll.
-
-### Operation Directory (deprecated)
-
-<Warning>
-  Directory mode is deprecated. Use an [operation manifest](#operation-manifest) instead.
-</Warning>
-
-Without `storage.object_path`, the router loads all `.graphql` and `.gql` files in the directory of a `file_system` provider:
-
-```yaml
-storage_providers:
-  file_system:
-    - id: 'mcp'
-      path: 'operations' # Relative to the router binary
-```
-
-Then reference this storage provider in your MCP configuration:
-
-```yaml
-mcp:
-  storage:
-    provider_id: 'mcp'
-```
 
 ## Server Discovery
 
