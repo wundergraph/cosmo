@@ -1,6 +1,6 @@
 ---
 title: "Timeout"
-description: "Configure subgraph timeouts according to your needs."
+description: "Configure subgraph and client timeouts according to your needs."
 icon: "clock"
 ---
 
@@ -45,3 +45,33 @@ traffic_shaping:
 
 * `expect_continue_timeout`: If non-zero, specifies the amount of time to wait for a server's first response headers after fully writing the request headers if the request has an "Expect: 100-continue" header.
 
+## Client timeouts
+
+These timeouts apply to the connections between clients and the router. They protect the router against slow clients, for example clients that open a connection and then send the request headers or body very slowly (slowloris-style attacks), which would otherwise hold a goroutine, a socket and a request body buffer for a long time.
+
+```yaml
+traffic_shaping:
+  router:
+    read_timeout: 60s
+    read_header_timeout: 10s
+    idle_timeout: 120s
+    write_timeout: 60s
+```
+
+* `read_timeout`: The maximum amount of time to read the entire client request, including the headers and the body. It starts when the router begins reading the request. Defaults to `60s`, the minimum is `1s`.
+
+* `read_header_timeout`: The maximum amount of time to read the client request headers. Use it to drop clients that send headers slowly without shortening the time allowed for large request bodies. Defaults to `0s`, which falls back to `read_timeout`. This limit only applies to HTTP/1 connections. For HTTP/2 over TLS, slow headers are limited by `idle_timeout` instead, except while another stream on the same connection is still open (for example an SSE subscription). To cover that case, an upstream proxy or load balancer must enforce the limit.
+
+* `idle_timeout`: The maximum amount of time an idle keep-alive client connection is kept open while waiting for the next request. Defaults to `0s`, which falls back to `read_timeout`.
+
+* `write_timeout`: The maximum amount of time to write the response to the client, measured from the end of reading the request headers. Defaults to `0s`, which disables it.
+
+When the headers are not received in time, the router closes the connection without a response. When the headers were received but the body is not received within `read_timeout`, the router responds with `408 Request Timeout` and closes the connection.
+
+<Warning>
+`write_timeout` is disabled by default. Setting it disrupts subscriptions over SSE and multipart: the router closes these long-lived responses once the timeout elapses, even if the subscription is still active, and slow or long-running query responses are cut off the same way. Only set it if your clients don't use SSE or multipart subscriptions. Subscriptions over WebSockets are not affected; they use `engine.websocket_server_write_timeout` instead.
+</Warning>
+
+<Note>
+The read timeouts don't affect long-lived responses such as subscriptions over SSE or multipart. To limit how long the router waits for subgraphs, use the subgraph timeouts above.
+</Note>

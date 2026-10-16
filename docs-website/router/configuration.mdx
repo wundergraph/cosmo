@@ -1645,6 +1645,11 @@ traffic_shaping:
     max_header_bytes: 1MiB
     decompression_enabled: true
     response_compression_min_size: 4KiB
+    # Client-facing HTTP server timeouts
+    read_timeout: 60s
+    read_header_timeout: 0s # 0 falls back to read_timeout
+    idle_timeout: 0s # 0 falls back to read_timeout
+    write_timeout: 0s # disabled by default, setting it disrupts SSE and multipart subscriptions
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -1768,6 +1773,10 @@ These rules apply to requests being made from clients to the Router.
 | MAX_HEADER_BYTES     | max_header_bytes              | <Icon icon="square" /> | Minimum Router version: [0.156.0](https://github.com/wundergraph/cosmo/compare/router@0.155.0...router@0.156.0) The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB. | 1mib          |
 |                      | decompression_enabled         | <Icon icon="square" /> | When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly Note: Currently only "gzip" is supported                                                                           | true          |
 |                      | response_compression_min_size | <Icon icon="square" /> | The minimum size of the response body in bytes to enable response compression. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB                                                                               | 4KiB          |
+| TRAFFIC_SHAPING_ROUTER_READ_TIMEOUT | read_timeout | <Icon icon="square" /> | The maximum duration for reading the entire client request, including headers and body. Clients that do not finish sending the request in time have their connection closed; if the headers were already read, the router responds with `408 Request Timeout`. Minimum is 1s. See [Client timeouts](/router/traffic-shaping/timeout#client-timeouts). | 60s |
+| TRAFFIC_SHAPING_ROUTER_READ_HEADER_TIMEOUT | read_header_timeout | <Icon icon="square" /> | The maximum duration for reading the client request headers. Setting this to 0 falls back to `read_timeout`. Applies to HTTP/1 only; for HTTP/2 over TLS, `idle_timeout` limits slow headers, except while another stream on the same connection is open. | 0s |
+| TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT | idle_timeout | <Icon icon="square" /> | The maximum duration to wait for the next request on an idle keep-alive client connection. Setting this to 0 falls back to `read_timeout`. | 0s |
+| TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT | write_timeout | <Icon icon="square" /> | The maximum duration for writing the response to the client, measured from the end of reading the request headers. Disabled by default. **Setting it disrupts subscriptions over SSE and multipart**: they are terminated once the timeout elapses. See [Client timeouts](/router/traffic-shaping/timeout#client-timeouts). | 0s (disabled) |
 | 5mb                  |                               |                        |                                                                                                                                                                                                                                              |               |
 
 ## WebSocket
