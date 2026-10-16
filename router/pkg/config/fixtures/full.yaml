@@ -25,8 +25,9 @@ introspection:
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
 log_service_name: 'my-custom-router'
-shutdown_delay: 15s
+shutdown_delay: 30s
 grace_period: 20s
+drain_period: 5s
 poll_interval: 10s
 health_check_path: '/health'
 readiness_check_path: '/health/ready'
@@ -660,6 +661,10 @@ split_config_poller:
   ignored_feature_flags:
     - 'experimental-checkout'
     - 'ab-test-foo'
+  fetch_retry:
+    max_attempts: 5
+    interval: 1s
+    max_duration: 30s
 
 router_config_path: 'latest.json'
 
