@@ -47,12 +47,13 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventCo
 	}
 
 	return &EngineDataSourceFactory{
-		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
-		eventType:    eventType,
-		topics:       data.GetTopics(),
-		providerId:   providerId,
-		KafkaAdapter: provider,
-		logger:       p.logger,
+		fieldName:             data.GetEngineEventConfiguration().GetFieldName(),
+		eventType:             eventType,
+		topics:                data.GetTopics(),
+		providerId:            providerId,
+		deliveryGuaranteeMode: datasource.NewDeliveryGuaranteeMode(data.GetEngineEventConfiguration()),
+		KafkaAdapter:          provider,
+		logger:                p.logger,
 	}, nil
 }
 

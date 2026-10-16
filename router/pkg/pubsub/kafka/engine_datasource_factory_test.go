@@ -211,3 +211,21 @@ func TestTransformEventConfig(t *testing.T) {
 		require.Equal(t, []string{"transformed.original.topic1", "transformed.original.topic2"}, cfg.topics)
 	})
 }
+
+func TestKafkaEngineDataSourceFactorySubscriptionInputDeliveryGuaranteeMode(t *testing.T) {
+	pubsub := &EngineDataSourceFactory{
+		fieldName:             "testField",
+		eventType:             EventTypeSubscribe,
+		topics:                []string{"test-topic"},
+		providerId:            "test-provider",
+		deliveryGuaranteeMode: datasource.DeliveryGuaranteeModeCursor,
+	}
+
+	subscriptionInput, err := pubsub.ResolveDataSourceSubscriptionInput()
+	require.NoError(t, err)
+	require.JSONEq(t, `{"providerId":"test-provider","topics":["test-topic"],"rootFieldName":"testField","deliveryGuaranteeMode":"cursor"}`, subscriptionInput)
+
+	var subscriptionConfig SubscriptionEventConfiguration
+	require.NoError(t, json.Unmarshal([]byte(subscriptionInput), &subscriptionConfig))
+	require.Equal(t, datasource.DeliveryGuaranteeModeCursor, subscriptionConfig.DeliveryGuaranteeMode)
+}

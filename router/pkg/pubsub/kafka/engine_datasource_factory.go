@@ -20,11 +20,12 @@ const (
 )
 
 type EngineDataSourceFactory struct {
-	fieldName  string
-	eventType  EventType
-	topics     []string
-	providerId string
-	logger     *zap.Logger
+	fieldName             string
+	eventType             EventType
+	topics                []string
+	providerId            string
+	deliveryGuaranteeMode datasource.DeliveryGuaranteeMode
+	logger                *zap.Logger
 
 	KafkaAdapter datasource.Adapter
 }
@@ -95,9 +96,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		Provider:  c.providerId,
-		Topics:    c.topics,
-		FieldName: c.fieldName,
+		Provider:              c.providerId,
+		Topics:                c.topics,
+		FieldName:             c.fieldName,
+		DeliveryGuaranteeMode: c.deliveryGuaranteeMode,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

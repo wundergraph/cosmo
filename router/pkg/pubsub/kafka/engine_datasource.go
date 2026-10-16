@@ -86,9 +86,10 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
 // of the provider
 type SubscriptionEventConfiguration struct {
-	Provider  string   `json:"providerId"`
-	Topics    []string `json:"topics"`
-	FieldName string   `json:"rootFieldName"`
+	Provider              string                           `json:"providerId"`
+	Topics                []string                         `json:"topics"`
+	FieldName             string                           `json:"rootFieldName"`
+	DeliveryGuaranteeMode datasource.DeliveryGuaranteeMode `json:"deliveryGuaranteeMode"`
 }
 
 // ProviderID returns the provider ID
