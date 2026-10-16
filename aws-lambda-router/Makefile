@@ -20,8 +20,12 @@ dev: build-sam
 deploy: build-sam
 	sam deploy
 
+.PHONY: lint lint-fix
 lint:
-	staticcheck ./...
+	../scripts/golangci-lint.sh run
+
+lint-fix:
+	../scripts/golangci-lint.sh run --fix
 
 test:
 	go test -v ./...

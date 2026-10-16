@@ -106,6 +106,7 @@ export function getProposalsByFederatedGraph(
 
     const { proposals } = await proposalRepo.ByFederatedGraphId({
       federatedGraphId: federatedGraph.id,
+      proposalName: req.proposalName,
       startDate: dateRange.start,
       endDate: dateRange.end,
       limit: req.limit,
@@ -114,6 +115,7 @@ export function getProposalsByFederatedGraph(
 
     const totalCount = await proposalRepo.countByFederatedGraphId({
       federatedGraphId: federatedGraph.id,
+      proposalName: req.proposalName,
       startDate: dateRange.start,
       endDate: dateRange.end,
     });
