@@ -4593,6 +4593,7 @@ export class NormalizationFactory {
       this.validateDirectives(parentData, parentTypeName);
     }
     for (const [name, data] of this.directiveDefinitionDataByName) {
+      // In-built directive arguments are pre-validated
       if (!this.customDirectiveDefinitionByName.has(name)) {
         continue;
       }

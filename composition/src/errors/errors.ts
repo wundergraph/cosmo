@@ -126,7 +126,7 @@ export function incompatibleInputValueDefaultValuesError(
   );
 }
 
-function getValuesBySubgraphNameMessage(valuesBySubgraphName: Map<SubgraphName, Array<string>>): string {
+function enumValuesBySubgraphMessage(valuesBySubgraphName: Map<SubgraphName, Array<string>>): string {
   let message = '';
   for (const [subgraphName, values] of valuesBySubgraphName) {
     message += `  Subgraph "${subgraphName}": "` + values.join(QUOTATION_JOIN) + `"\n`;
@@ -145,20 +145,20 @@ export function incompatibleSharedEnumError({
     ` The following subgraph` +
     (missingValueNamesBySubgraphName.size > 1 ? `s do` : ` does`) +
     ` not define every Enum Value:\n` +
-    getValuesBySubgraphNameMessage(missingValueNamesBySubgraphName);
+    enumValuesBySubgraphMessage(missingValueNamesBySubgraphName);
   if (inputCoordsBySubgraphName.size > 0) {
     message +=
       ` The Enum is used as an input in the following subgraph` +
       (inputCoordsBySubgraphName.size > 1 ? 's' : '') +
       `:\n` +
-      getValuesBySubgraphNameMessage(inputCoordsBySubgraphName);
+      enumValuesBySubgraphMessage(inputCoordsBySubgraphName);
   }
   if (outputCoordsBySubgraphName.size > 0) {
     message +=
       ` The Enum is used as an output in the following subgraph` +
       (outputCoordsBySubgraphName.size > 1 ? 's' : '') +
       `:\n` +
-      getValuesBySubgraphNameMessage(outputCoordsBySubgraphName);
+      enumValuesBySubgraphMessage(outputCoordsBySubgraphName);
   }
   return new Error(
     message +

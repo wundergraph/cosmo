@@ -623,15 +623,12 @@ export class FederationFactory {
     }
   }
 
-  /* The coordinates are only used to provide context should an Enum that is used as both an input and an output be
-   * inconsistently defined. Consequently, named types that are known not to be Enums are not recorded.
-   * Directive argument named type kinds are only resolved for base scalars (otherwise Kind.NULL).
-   * */
   upsertEnumUsage({ coords, data }: UpsertEnumUsageParams) {
     if (data.namedTypeKind !== Kind.ENUM_TYPE_DEFINITION) {
       return;
     }
 
+    // The coordinates provide context should an inconsistently defined Enum be used as both an input and output.
     const usageData = getValueOrDefault(this.enumUsageDataByTypeName, data.namedTypeName, () => ({
       inputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
       outputCoordsBySubgraphName: new Map<SubgraphName, Set<string>>(),
@@ -662,13 +659,14 @@ export class FederationFactory {
       }
       const inputCoords = usageData?.inputCoordsBySubgraphName.get(subgraphName);
       if (inputCoords) {
-        inputCoordsBySubgraphName.set(subgraphName, Array.from(inputCoords));
+        inputCoordsBySubgraphName.set(subgraphName, [...inputCoords]);
       }
       const outputCoords = usageData?.outputCoordsBySubgraphName.get(subgraphName);
       if (outputCoords) {
-        outputCoordsBySubgraphName.set(subgraphName, Array.from(outputCoords));
+        outputCoordsBySubgraphName.set(subgraphName, [...outputCoords]);
       }
     }
+
     this.errors.push(
       incompatibleSharedEnumError({
         inputCoordsBySubgraphName,
