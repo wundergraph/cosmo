@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"mime"
 	"net/http"
@@ -18,8 +17,6 @@ type HttpDeferWriter struct {
 	flusher http.Flusher
 	buf     *bytes.Buffer
 	started bool
-	// closed is set once the final part is written with its close delimiter.
-	closed bool
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
@@ -39,11 +36,13 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
-	// A final part with hasNext:false has already been closed. Reaching here without one means the stream
-	// ends after a part boundary, so the close is written as an empty trailing part.
-	if !f.closed {
-		_, _ = io.WriteString(f.writer, deferCloseLine)
+	// The close follows the boundary that ended the last part, so the stream ends with an empty part. That is
+	// the only close that stays valid when Complete runs after a part that still said hasNext:true.
+	closing := deferCloseLine
+	if f.started {
+		closing = deferCloseBoundary
 	}
+	_, _ = io.WriteString(f.writer, closing)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -73,18 +72,13 @@ func (f *HttpDeferWriter) Flush() (err error) {
 		header = deferFirstPartHeader
 		f.started = true
 	}
-	delimiter := deferPartBoundary
-	if deferPartIsFinal(resp) {
-		delimiter = deferCloseBoundary
-		f.closed = true
-	}
 	if _, err = io.WriteString(f.writer, header); err != nil {
 		return err
 	}
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, delimiter); err != nil {
+	if _, err = io.WriteString(f.writer, deferPartBoundary); err != nil {
 		return err
 	}
 
@@ -92,18 +86,6 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	return nil
-}
-
-// deferPartIsFinal reports whether a payload ends the response. Only hasNext:true leaves more parts to come, so
-// a missing or null hasNext counts as final.
-func deferPartIsFinal(payload []byte) bool {
-	var part struct {
-		HasNext bool `json:"hasNext"`
-	}
-	if err := json.Unmarshal(payload, &part); err != nil {
-		return false
-	}
-	return !part.HasNext
 }
 
 func GetDeferResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.DeferResponseWriter, bool) {

@@ -6,4 +6,6 @@ Content-Type: application/json
 Content-Type: application/json
 
 {"incremental":[{"data":{"productTypes":[{},{"lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"url":"https://docs.wundergraph.com/","urls":["https://cosmo-docs.wundergraph.com/","https://wundergraph.com/pricing"]}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
+--graphql
+
 --graphql--

@@ -6,4 +6,6 @@ Content-Type: application/json
 Content-Type: application/json
 
 {"incremental":[{"data":{"isLeadAvailable":false,"lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"}},"id":"1","subPath":[0]}],"completed":[{"id":"1"}],"hasNext":false}
+--graphql
+
 --graphql--
