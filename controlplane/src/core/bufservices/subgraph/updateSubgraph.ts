@@ -162,6 +162,20 @@ export function updateSubgraph(
         compositionService,
       );
 
+    const result = await flushMapperIntoResponse(mapperUpdater, {
+      response: {
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
+      },
+      compositionErrors,
+      deploymentErrors,
+      compositionWarnings,
+    });
+
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
@@ -191,7 +205,7 @@ export function updateSubgraph(
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            errors: result.compositionErrors.length > 0 || result.deploymentErrors.length > 0,
             actor_id: authContext.userId,
           },
         },
@@ -199,18 +213,6 @@ export function updateSubgraph(
       );
     }
 
-    return flushMapperIntoResponse(mapperUpdater, {
-      response: {
-        code:
-          compositionErrors.length > 0
-            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
-            : deploymentErrors.length > 0
-              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
-              : EnumStatusCode.OK,
-      },
-      compositionErrors,
-      deploymentErrors,
-      compositionWarnings,
-    });
+    return result;
   });
 }
