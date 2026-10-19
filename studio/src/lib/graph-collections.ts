@@ -1,3 +1,4 @@
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphCollection, GraphCollectionOperationMeta } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
 import { toast } from '@/components/ui/use-toast';
@@ -320,3 +321,22 @@ export const parseTabBindings = (stored: string | null): TabBindings => {
 export const reportFailure = (fallback: string, details?: string) => {
   toast({ description: details || fallback, duration: 3000 });
 };
+
+/**
+ * The callbacks every collections mutation passes to `mutate`.
+ *
+ * A transport failure and an application error have to reach the same toast,
+ * and `onDone` must run only for an OK response, or a dialog closes over a
+ * mutation that did not happen.
+ */
+export const collectionMutationHandlers = (failure: string, onDone: () => void) => ({
+  onSuccess: ({ response }: { response?: { code: EnumStatusCode; details?: string } }) => {
+    if (response?.code !== EnumStatusCode.OK) {
+      reportFailure(failure, response?.details);
+      return;
+    }
+
+    onDone();
+  },
+  onError: () => reportFailure(failure),
+});

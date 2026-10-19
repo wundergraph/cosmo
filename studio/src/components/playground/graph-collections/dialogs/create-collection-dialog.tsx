@@ -1,4 +1,6 @@
-import { MAX_COLLECTION_NAME_LENGTH } from '@/lib/graph-collections';
+import { useMutation } from '@connectrpc/connect-query';
+import { createGraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { collectionMutationHandlers, MAX_COLLECTION_NAME_LENGTH } from '@/lib/graph-collections';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,39 +12,31 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 
 /**
  * Creating a collection, with its scope chosen up front.
  *
- * Separate from the shared NameDialog because renames must not grow a scope
- * control: scope can be set at creation and promoted later, but never changed
- * back, so it belongs only where that choice is still open.
+ * Scope can be set here and promoted later, but never changed back, so the
+ * choice is offered only at creation.
  */
 export const CreateCollectionDialog = ({
-  open,
-  onOpenChange,
   canCreateTeamCollection,
-  isPending,
-  onSubmit,
+  federatedGraphName,
+  namespace,
+  onClose,
+  onDone,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   /** False for anyone without write access to the graph; the option is then omitted. */
   canCreateTeamCollection: boolean;
-  isPending?: boolean;
-  onSubmit: (input: { name: string; teamScoped: boolean }) => void;
+  federatedGraphName: string;
+  namespace: string;
+  onClose: () => void;
+  onDone: () => void;
 }) => {
+  const { mutate, isPending } = useMutation(createGraphCollection);
   const [name, setName] = useState('');
   const [scope, setScope] = useState<'private' | 'team'>('private');
-
-  // Reopening starts fresh rather than from whatever was abandoned last time.
-  useEffect(() => {
-    if (open) {
-      setName('');
-      setScope('private');
-    }
-  }, [open]);
 
   const trimmed = name.trim();
 
@@ -53,11 +47,14 @@ export const CreateCollectionDialog = ({
       return;
     }
 
-    onSubmit({ name: trimmed, teamScoped: scope === 'team' });
+    mutate(
+      { federatedGraphName, namespace, name: trimmed, teamScoped: scope === 'team' },
+      collectionMutationHandlers('Could not create the collection', onDone),
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <form onSubmit={submit}>
           <DialogHeader>
@@ -79,8 +76,6 @@ export const CreateCollectionDialog = ({
               />
             </div>
 
-            {/* Omitted entirely without write access: a permanently disabled
-                option the reader can never use is just noise. */}
             {canCreateTeamCollection && (
               <div className="space-y-2">
                 <span className="text-sm font-medium">Who can see it</span>
@@ -111,7 +106,7 @@ export const CreateCollectionDialog = ({
           )}
 
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={!trimmed} isLoading={isPending}>
