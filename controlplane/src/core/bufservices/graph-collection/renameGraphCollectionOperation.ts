@@ -59,7 +59,7 @@ export function renameGraphCollectionOperation(
       throw new UnauthorizedError();
     }
 
-    await repo.renameOperation(operation.id, name, operation.collectionId);
+    await repo.renameOperation(operation.id, name, operation.collectionId, authContext.userId);
 
     await new AuditLogRepository(opts.db).addAuditLog({
       organizationId: authContext.organizationId,

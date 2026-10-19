@@ -396,10 +396,10 @@ export class GraphCollectionsRepository {
     return updated.length > 0 ? { contentHash } : undefined;
   }
 
-  public async renameOperation(id: string, name: string, collectionId: string): Promise<void> {
+  public async renameOperation(id: string, name: string, collectionId: string, userId: string): Promise<void> {
     await this.db
       .update(graphCollectionOperations)
-      .set({ name, updatedAt: new Date() })
+      .set({ name, updatedAt: new Date(), updatedById: userId })
       .where(and(eq(graphCollectionOperations.id, id), eq(graphCollectionOperations.collectionId, collectionId)));
   }
 

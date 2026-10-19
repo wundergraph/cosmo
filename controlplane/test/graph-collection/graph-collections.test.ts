@@ -418,7 +418,7 @@ describe('Graph Collections', () => {
       const repo = new GraphCollectionsRepository(server.log, server.db, users.adminAliceCompanyA.organizationId);
 
       // A real operation id, paired with a collection that does not own it.
-      await repo.renameOperation(created.id, 'Hijacked', other.id);
+      await repo.renameOperation(created.id, 'Hijacked', other.id, users.adminAliceCompanyA.userId);
       await repo.deleteOperation(created.id, other.id);
       const updated = await repo.updateOperation({
         id: created.id,
@@ -1219,6 +1219,50 @@ describe('Graph Collections', () => {
       authenticator.changeUserWithSuppliedContext(users.adminAliceCompanyA);
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       expect(list.collections[0].operations).toEqual([expect.objectContaining({ name: 'From Bob' })]);
+    });
+
+    test('Renaming an operation attributes the update to whoever renamed it', async () => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname, enableMultiUsers: true });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      const created = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Team',
+        teamScoped: true,
+      });
+
+      const operation = await client.createGraphCollectionOperation({
+        federatedGraphId,
+        collectionId: created.id,
+        name: 'From Alice',
+        query: QUERY,
+      });
+      expect(operation.response?.code).toBe(EnumStatusCode.OK);
+
+      // A rename bumps `updated_at`, so it has to move `updated_by` with it or
+      // the row credits the change to whoever last edited the document.
+      authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
+      const renamed = await client.renameGraphCollectionOperation({
+        id: operation.id,
+        federatedGraphId,
+        collectionId: created.id,
+        name: 'Renamed by Bob',
+      });
+      expect(renamed.response?.code).toBe(EnumStatusCode.OK);
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections[0].operations).toEqual([
+        expect.objectContaining({
+          name: 'Renamed by Bob',
+          updatedByEmail: users.adminBobCompanyA!.email,
+        }),
+      ]);
     });
 
     test('Two members editing the same shared operation cannot silently overwrite each other', async () => {
