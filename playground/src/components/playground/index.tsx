@@ -8,6 +8,7 @@ import {
   OperationTypeNode,
   buildClientSchema,
   getIntrospectionQuery,
+  getOperationAST,
   parse,
   validate,
 } from 'graphql';
@@ -23,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
@@ -147,6 +149,8 @@ type GraphiQLScripts = {
   transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
+const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
@@ -199,6 +203,11 @@ const graphiQLFetch = async (
       ...init,
       headers,
     });
+
+    if (isMultipartResponse(response)) {
+      onFetch(undefined, response.status, response.statusText);
+      return response;
+    }
 
     const responseData = await response.clone().json();
 
@@ -614,12 +623,36 @@ export const Playground = (input: {
       setStatusText(statusText);
     };
 
-    return createGraphiQLFetcher({
+    const toolkit = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
+
+    return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
+      const isSubscription =
+        !!opts?.documentAST &&
+        getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+      if (isSubscription || params.operationName === 'IntrospectionQuery') {
+        return toolkit(params, opts);
+      }
+
+      return runOperation(params, opts?.headers);
+    };
+
+    async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
+        body: JSON.stringify(params),
+      });
+
+      if (isMultipartResponse(response)) {
+        return readDeferStream(response);
+      }
+      return response.json();
+    }
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
