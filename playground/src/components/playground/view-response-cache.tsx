@@ -279,6 +279,11 @@ export const ViewResponseCacheInvalidate = ({
   const [sharedKey, setSharedKey] = useState(readSharedKey);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<InvalidationResult>();
+  // Editable: the advertised URL may not be reachable from this browser.
+  const [endpoint, setEndpoint] = useState(invalidation?.endpoint ?? '');
+  useEffect(() => {
+    setEndpoint(invalidation?.endpoint ?? '');
+  }, [invalidation?.endpoint]);
   // A new response starts a new selection.
   useEffect(() => {
     setSelected(new Set());
@@ -365,6 +370,17 @@ export const ViewResponseCacheInvalidate = ({
             <p className="text-muted-foreground">Enable the invalidation endpoint to get invalidation commands.</p>
           ) : picked.length > 0 ? (
             <div className="flex flex-col gap-y-3">
+              <input
+                type="url"
+                aria-label="Invalidation endpoint"
+                placeholder="Invalidation endpoint"
+                value={endpoint}
+                onChange={(e) => {
+                  setEndpoint(e.target.value);
+                  setResult(undefined);
+                }}
+                className="h-8 min-w-0 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
               <div className="flex items-center gap-x-2">
                 <input
                   type="password"
@@ -379,10 +395,10 @@ export const ViewResponseCacheInvalidate = ({
                 />
                 <Button
                   size="sm"
-                  disabled={!sharedKey || sending}
+                  disabled={!endpoint || !sharedKey || sending}
                   onClick={async () => {
                     setSending(true);
-                    setResult(await sendInvalidation(invalidation.endpoint!, sharedKey, picked));
+                    setResult(await sendInvalidation(endpoint, sharedKey, picked));
                     setSending(false);
                   }}
                 >
@@ -401,7 +417,7 @@ export const ViewResponseCacheInvalidate = ({
                   <span className="text-xs text-muted-foreground">
                     Set INVALIDATION_SHARED_KEY to the router&apos;s invalidation shared key, then run:
                   </span>
-                  <CopyBlock text={invalidationCurl(invalidation.endpoint, picked)} />
+                  <CopyBlock text={invalidationCurl(endpoint, picked)} />
                 </div>
               </details>
             </div>

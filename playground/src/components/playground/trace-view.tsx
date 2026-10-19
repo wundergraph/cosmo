@@ -372,7 +372,8 @@ const Trace = ({
       return fetchNode;
     };
     const parseJsonNew = (json: any, parentId?: string) => {
-      return parseFetchNew(json.fetches, parentId);
+      // A Single root carries its fetch under `fetch`.
+      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
     };
 
     try {
