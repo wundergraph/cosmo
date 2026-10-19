@@ -27,7 +27,17 @@ func TestResponseCacheValidateResponses(t *testing.T) {
 		query     string
 		calls     func(*testenv.Environment) int64
 		want      int64
+		valid     bool
 	}{
+		{
+			name:      "a well-formed response is cached when validating",
+			validate:  true,
+			valid:     true,
+			subgraphs: testenv.SubgraphsConfig{Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")}},
+			query:     `query { employees { id } }`,
+			calls:     func(xEnv *testenv.Environment) int64 { return xEnv.SubgraphRequestCount.Employees.Load() },
+			want:      1,
+		},
 		{
 			name:      "a malformed response is not cached when validating",
 			validate:  true,
@@ -64,7 +74,11 @@ func TestResponseCacheValidateResponses(t *testing.T) {
 				for range 2 {
 					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: tc.query})
 					require.NoError(t, err)
-					require.Contains(t, res.Body, `"errors"`)
+					if tc.valid {
+						require.NotContains(t, res.Body, `"errors"`)
+					} else {
+						require.Contains(t, res.Body, `"errors"`)
+					}
 				}
 				require.EqualValues(t, tc.want, tc.calls(xEnv))
 			})
