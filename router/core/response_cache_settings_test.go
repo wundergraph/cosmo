@@ -28,7 +28,7 @@ func TestResponseCacheSettings(t *testing.T) {
 	}
 	build := func(t *testing.T, cfg *config.ResponseCacheConfiguration) *ResponseCacheSettings {
 		t.Helper()
-		s, err := NewResponseCacheSettings(cfg, expr.CreateNewExprManager(), known, zap.NewNop())
+		s, err := NewResponseCacheSettings(cfg, expr.CreateNewExprManager(), known, nil, zap.NewNop())
 		require.NoError(t, err)
 		return s
 	}
@@ -117,7 +117,7 @@ func TestResponseCacheSettings(t *testing.T) {
 		_, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
 			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"mood": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.nope"}},
-		}, expr.CreateNewExprManager(), known, zap.NewNop())
+		}, expr.CreateNewExprManager(), known, nil, zap.NewNop())
 		require.ErrorContains(t, err, "response_cache.subgraphs.mood: response cache private_id")
 	})
 
@@ -127,11 +127,45 @@ func TestResponseCacheSettings(t *testing.T) {
 		s, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
 			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"nope": {Enabled: false}, "mood": {Enabled: false}},
-		}, expr.CreateNewExprManager(), known, zap.New(core))
+		}, expr.CreateNewExprManager(), known, nil, zap.New(core))
 		require.NoError(t, err)
 		require.True(t, s.options(expr.Context{}, failing(t)).Subgraphs["nope"].Disabled)
 
 		require.Equal(t, 1, logs.Len())
 		require.Equal(t, "nope", logs.All()[0].ContextMap()["subgraph"])
+	})
+}
+
+func TestFeatureSubgraphBases(t *testing.T) {
+	t.Parallel()
+
+	sg := func(id, name string) *nodev1.Subgraph { return &nodev1.Subgraph{Id: id, Name: name} }
+	base := []*nodev1.Subgraph{sg("0", "employees"), sg("3", "products"), sg("4", "mood")}
+
+	t.Run("matched by id", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, map[string]string{"products_fg": "products"},
+			featureSubgraphBases(base, []*nodev1.Subgraph{sg("0", "employees"), sg("3", "products_fg"), sg("4", "mood")}))
+	})
+
+	t.Run("the only one replaced", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, map[string]string{"products_fg": "products"},
+			featureSubgraphBases(base, []*nodev1.Subgraph{sg("0", "employees"), sg("x", "products_fg"), sg("4", "mood")}))
+	})
+
+	t.Run("ambiguous replacements are left out", func(t *testing.T) {
+		t.Parallel()
+		require.Empty(t, featureSubgraphBases(base, []*nodev1.Subgraph{sg("0", "employees"), sg("x", "a_fg"), sg("y", "b_fg")}))
+	})
+
+	t.Run("a base subgraph's settings reach its replacement", func(t *testing.T) {
+		t.Parallel()
+		s, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
+			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"products": {Enabled: false}},
+		}, expr.CreateNewExprManager(), []*nodev1.Subgraph{sg("3", "products_fg")}, map[string]string{"products_fg": "products"}, zap.NewNop())
+		require.NoError(t, err)
+		require.True(t, s.options(expr.Context{}, nil).Subgraphs["products_fg"].Disabled)
 	})
 }

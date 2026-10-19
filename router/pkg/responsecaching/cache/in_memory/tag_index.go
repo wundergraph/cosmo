@@ -1,6 +1,7 @@
 package in_memory
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"sync"
 	"time"
 )
@@ -17,22 +18,34 @@ type tagIndex struct {
 	mu        sync.Mutex
 	tags      map[string]map[string]time.Time
 	lastPrune time.Time
+	// invalidated is when each tag was last invalidated, kept for
+	// responsecaching.InvalidationWindow so a fetch in flight then can't store after it.
+	invalidated map[string]time.Time
 }
 
 func newTagIndex() *tagIndex {
-	return &tagIndex{tags: make(map[string]map[string]time.Time), lastPrune: time.Now()}
+	return &tagIndex{tags: make(map[string]map[string]time.Time), invalidated: make(map[string]time.Time), lastPrune: time.Now()}
 }
 
-// add records that key carries each of tags until expiresAt. A key already in a
-// tag has its expiry moved rather than being added twice.
-func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
+// addUnlessInvalidated records that key carries each of tags until expiresAt,
+// moving the expiry of a key already there, unless one of tags was invalidated
+// at or after fetchedAt (zero is unknown). It reports whether it recorded.
+// Checked and added under one lock, so no invalidation falls between them.
+func (t *tagIndex) addUnlessInvalidated(key string, tags []string, expiresAt, fetchedAt time.Time) bool {
 	if len(tags) == 0 {
-		return
+		return true
 	}
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	if !fetchedAt.IsZero() {
+		for _, tag := range tags {
+			if at, ok := t.invalidated[tag]; ok && !at.Before(fetchedAt) {
+				return false
+			}
+		}
+	}
 	for _, tag := range tags {
 		keys, ok := t.tags[tag]
 		if !ok {
@@ -41,6 +54,7 @@ func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
 		}
 		keys[key] = expiresAt
 	}
+	return true
 }
 
 // take removes tag from the index and returns the keys it named. Keys already
@@ -48,6 +62,8 @@ func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
 func (t *tagIndex) take(tag string, now time.Time) []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	t.invalidated[tag] = now
 
 	keys, ok := t.tags[tag]
 	if !ok {
@@ -75,6 +91,12 @@ func (t *tagIndex) prune(now time.Time) {
 		return
 	}
 	t.lastPrune = now
+
+	for tag, at := range t.invalidated {
+		if now.Sub(at) > responsecaching.InvalidationWindow {
+			delete(t.invalidated, tag)
+		}
+	}
 
 	for tag, keys := range t.tags {
 		for key, expiresAt := range keys {
