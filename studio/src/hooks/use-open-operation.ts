@@ -13,9 +13,12 @@ type PendingOpen = {
   query: string;
   variables: string;
   contentHash: string;
-  /** Set when refilling an existing tab, in which case no tab was created. */
-  targetTabId?: string;
-};
+} & (
+  | { kind: 'refill'; targetTabId: string }
+  // `addTab()` returns nothing, so the tab it appended is identified as the one
+  // that was not in the list when beat two asked for it.
+  | { kind: 'new-tab'; tabIdsBefore: string[] }
+);
 
 type OpenRequest = {
   id: string;
@@ -100,18 +103,25 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       return;
     }
 
-    setPendingOpen({
+    const body = {
       operationId: operation.id,
       collectionId: operation.collectionId,
       query: operation.query,
       variables: operation.variables,
       contentHash: operation.contentHash,
-      targetTabId: openingOperation.intoTabId,
-    });
+    };
+
+    const intoTabId = openingOperation.intoTabId;
+
+    setPendingOpen(
+      intoTabId
+        ? { ...body, kind: 'refill', targetTabId: intoTabId }
+        : { ...body, kind: 'new-tab', tabIdsBefore: tabs.map((tab) => tab.id) },
+    );
     openHandled.current = openingOperation;
     setOpeningOperation(null);
 
-    if (!openingOperation.intoTabId) {
+    if (!intoTabId) {
       addTab();
     }
   }, [openingOperation, fetchedOperation, addTab, onOperationMissing, tabs, activeTabIndex]);
@@ -131,9 +141,27 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       return;
     }
 
-    // `updateActiveTabValues` always targets the active tab, so refills wait.
-    if (pendingOpen.targetTabId && pendingOpen.targetTabId !== activeTabId) {
-      const index = tabs.findIndex((tab) => tab.id === pendingOpen.targetTabId);
+    const targetTabId =
+      pendingOpen.kind === 'refill'
+        ? pendingOpen.targetTabId
+        : tabs.find((tab) => !pendingOpen.tabIdsBefore.includes(tab.id))?.id;
+
+    // The tab `addTab()` asked for has not rendered yet; this re-runs when it does.
+    if (!targetTabId) {
+      return;
+    }
+
+    // A refill only repairs a tab GraphiQL blanked. If it holds text again by the
+    // time the body arrives, the user typed into it while the fetch was in flight.
+    if (pendingOpen.kind === 'refill' && (tabs.find((tab) => tab.id === targetTabId)?.query ?? '').trim()) {
+      setPendingOpen(null);
+      return;
+    }
+
+    // `updateActiveTabValues` always writes to the active tab, so if the user
+    // moved away while this was pending, go back before writing.
+    if (targetTabId !== activeTabId) {
+      const index = tabs.findIndex((tab) => tab.id === targetTabId);
 
       if (index === -1) {
         setPendingOpen(null);
