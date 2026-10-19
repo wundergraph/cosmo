@@ -33,7 +33,7 @@ export const SaveConflictDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>This operation changed while you were editing it</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="[overflow-wrap:anywhere]">
             {serverVersion?.updatedByEmail
               ? `${serverVersion.updatedByEmail} saved a different version after you opened this one.`
               : 'Someone saved a different version after you opened this one.'}{' '}

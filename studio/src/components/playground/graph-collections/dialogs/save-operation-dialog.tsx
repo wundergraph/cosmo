@@ -45,7 +45,7 @@ export const SaveOperationDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="min-w-0">
           <DialogHeader>
             <DialogTitle>Save operation</DialogTitle>
             <DialogDescription>
@@ -64,14 +64,23 @@ export const SaveOperationDialog = ({
                   Collection
                 </label>
                 <Select value={collectionId} onValueChange={onCollectionChange}>
-                  <SelectTrigger id="graph-collection-target">
+                  <SelectTrigger
+                    id="graph-collection-target"
+                    className="min-w-0 [&>span>p]:overflow-hidden [&>span>p]:text-ellipsis [&>span>p]:whitespace-nowrap [&>span]:truncate"
+                  >
                     <SelectValue placeholder="Choose a collection" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[--radix-select-trigger-width]">
                     {collections.map((collection) => (
-                      <SelectItem key={collection.id} value={collection.id}>
-                        {collection.name}
-                        {collection.isTeamScoped ? ' (team)' : ''}
+                      <SelectItem
+                        key={collection.id}
+                        value={collection.id}
+                        className="max-w-[calc(var(--radix-select-trigger-width)_-_0.5rem)] [&>p]:overflow-hidden [&>p]:text-ellipsis [&>p]:whitespace-nowrap"
+                      >
+                        <span title={collection.name}>
+                          {collection.name}
+                          {collection.isTeamScoped ? ' (team)' : ''}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>

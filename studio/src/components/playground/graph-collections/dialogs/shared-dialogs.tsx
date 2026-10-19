@@ -122,11 +122,11 @@ export const ConfirmDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle className="[overflow-wrap:anywhere]">{title}</DialogTitle>
+          <DialogDescription className="[overflow-wrap:anywhere]">{description}</DialogDescription>
         </DialogHeader>
 
-        {consequence && <p className="my-2 text-sm text-muted-foreground">{consequence}</p>}
+        {consequence && <p className="my-2 text-sm text-muted-foreground [overflow-wrap:anywhere]">{consequence}</p>}
 
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
@@ -163,8 +163,10 @@ export const ShareDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Share “{collectionName}” with the team?</DialogTitle>
+        <DialogHeader className="pr-6">
+          <DialogTitle className="leading-snug [overflow-wrap:anywhere]">
+            Share “{collectionName}” with the team?
+          </DialogTitle>
           <DialogDescription>
             Everyone with access to this graph will be able to see this collection, and anyone who can edit the graph
             will be able to change its operations.
