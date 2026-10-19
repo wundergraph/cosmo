@@ -13,6 +13,7 @@
 /helm/              @wundergraph/Platform
 /infrastructure/    @wundergraph/Platform
 /keycloak/          @wundergraph/Cosmo
+/.oss-scanner/      @wundergraph/Platform
 /otelcollector/     @wundergraph/Platform
 /patches/           @wundergraph/Cosmo
 /playground/        @wundergraph/Cosmo
