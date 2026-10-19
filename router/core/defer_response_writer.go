@@ -28,7 +28,6 @@ const (
 	deferFirstPartHeader = "--" + multipartBoundary + "\r\n" + deferNextPartHeader
 	deferPartBoundary    = multipartStart + "\r\n"
 	deferCloseLine       = "--" + multipartBoundary + "--"
-	deferCloseBoundary   = "\r\n" + deferCloseLine
 )
 
 func (f *HttpDeferWriter) Complete() {
@@ -38,11 +37,10 @@ func (f *HttpDeferWriter) Complete() {
 
 	// The close follows the boundary that ended the last part, so the stream ends with an empty part. That is
 	// the only close that stays valid when Complete runs after a part that still said hasNext:true.
-	closing := deferCloseLine
 	if f.started {
-		closing = deferCloseBoundary
+		_, _ = io.WriteString(f.writer, "\r\n")
 	}
-	_, _ = io.WriteString(f.writer, closing)
+	_, _ = io.WriteString(f.writer, deferCloseLine)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()

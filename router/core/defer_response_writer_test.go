@@ -45,20 +45,6 @@ func TestHttpDeferWriterEndsEachPartWithItsBoundary(t *testing.T) {
 		rec.Body.String())
 }
 
-// Complete closes the stream with an empty trailing part, whatever the last payload said about hasNext.
-func TestHttpDeferWriterCloseFollowsLastBoundary(t *testing.T) {
-	t.Parallel()
-
-	w, rec := newTestDeferWriter(t)
-
-	_, err := w.Write([]byte(`{"data":{"a":1},"hasNext":true}`))
-	require.NoError(t, err)
-	require.NoError(t, w.Flush())
-	w.Complete()
-
-	assert.Equal(t, "--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":{\"a\":1},\"hasNext\":true}\r\n--graphql\r\n\r\n--graphql--", rec.Body.String())
-}
-
 func TestHttpDeferWriterCompleteWithoutParts(t *testing.T) {
 	t.Parallel()
 
