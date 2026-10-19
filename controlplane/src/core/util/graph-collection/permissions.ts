@@ -2,9 +2,10 @@ import { AuthContext } from '../../../types/index.js';
 import { CollectionRow, GraphTarget } from '../../repositories/GraphCollectionsRepository.js';
 
 /**
- * Whether `userId` may mutate `collection`. A private one is the caller's own
- * scratchpad, so it needs only graph read access plus being its owner. A team
- * one (private_to_user_id IS NULL) is shared, so mutating it needs graph write.
+ * Whether `userId` may mutate `collection`. A private one is visible only to its
+ * owner, so editing needs graph read access and being that owner. A team one
+ * (private_to_user_id IS NULL) is visible to everyone who can see the graph, so
+ * editing needs graph write access.
  *
  * Callers must have already established graph read access.
  */

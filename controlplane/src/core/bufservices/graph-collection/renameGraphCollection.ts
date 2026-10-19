@@ -6,6 +6,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -52,6 +53,24 @@ export function renameGraphCollection(
     }
 
     await repo.renameCollection(req.id, name, req.federatedGraphId);
+
+    await new AuditLogRepository(opts.db).addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'graph_collection.renamed',
+      action: 'renamed',
+      auditableType: 'graph_collection',
+      auditableDisplayName: name,
+      actorId: authContext.userId,
+      actorDisplayName: authContext.userDisplayName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      apiKeyName: authContext.apiKeyName,
+      targetId: collectionWithGraph!.federatedGraph.targetId,
+      targetType: 'federated_graph',
+      targetDisplayName: collectionWithGraph!.federatedGraph.name,
+      targetNamespaceId: collectionWithGraph!.federatedGraph.namespaceId,
+      targetNamespaceDisplayName: collectionWithGraph!.federatedGraph.namespaceName,
+    });
 
     return {
       response: {

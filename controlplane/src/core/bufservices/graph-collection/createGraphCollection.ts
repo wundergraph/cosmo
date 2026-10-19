@@ -7,6 +7,7 @@ import {
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -64,6 +65,24 @@ export function createGraphCollection(
       name,
       userId: authContext.userId,
       teamScoped: req.teamScoped,
+    });
+
+    await new AuditLogRepository(opts.db).addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'graph_collection.created',
+      action: 'created',
+      auditableType: 'graph_collection',
+      auditableDisplayName: name,
+      actorId: authContext.userId,
+      actorDisplayName: authContext.userDisplayName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      apiKeyName: authContext.apiKeyName,
+      targetId: federatedGraph.targetId,
+      targetType: 'federated_graph',
+      targetDisplayName: federatedGraph.name,
+      targetNamespaceId: federatedGraph.namespaceId,
+      targetNamespaceDisplayName: federatedGraph.namespace,
     });
 
     return {

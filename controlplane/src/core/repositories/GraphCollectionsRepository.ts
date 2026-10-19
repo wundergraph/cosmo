@@ -44,6 +44,8 @@ export interface GraphTarget {
   targetId: string;
   namespaceId: string;
   creatorUserId?: string;
+  name: string;
+  namespaceName: string;
 }
 
 const computeContentHash = (query: string, variables?: string | null): string =>
