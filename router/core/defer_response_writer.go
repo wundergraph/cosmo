@@ -16,24 +16,15 @@ type HttpDeferWriter struct {
 	writer  io.Writer
 	flusher http.Flusher
 	buf     *bytes.Buffer
-	// started is set once the first part is written, so later parts omit the opening boundary.
 	started bool
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
 
 const (
-	// deferPartHeader opens the first part of the multipart/mixed stream. Unlike
-	// subscriptions, the payload is raw JSON (not wrapped in a `payload` field).
-	deferPartHeader = "--" + multipartBoundary + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-	// deferNextPartHeader opens every part after the first. Its boundary was
-	// already written after the previous part.
+	// deferNextPartHeader opens every part after the first; its boundary was written after the previous part.
 	deferNextPartHeader = "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-	// deferBoundary ends each part. It is written right after the part's body,
-	// so a reader can finish the part without waiting for the next one.
-	deferBoundary = "\r\n--" + multipartBoundary
-	// deferCloseBoundary terminates the multipart/mixed stream after the last boundary.
-	deferCloseBoundary = "--"
+	deferPartHeader     = "--" + multipartBoundary + deferNextPartHeader
 )
 
 func (f *HttpDeferWriter) Complete() {
@@ -41,11 +32,11 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
+	closing := "--"
 	if !f.started {
-		_, _ = io.WriteString(f.writer, "--"+multipartBoundary+"--")
-	} else {
-		_, _ = io.WriteString(f.writer, deferCloseBoundary)
+		closing = "--" + multipartBoundary + "--"
 	}
+	_, _ = io.WriteString(f.writer, closing)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -70,10 +61,6 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	resp := bytes.TrimRight(f.buf.Bytes(), "\n")
 	f.buf.Reset()
 
-	// Write the part directly to the underlying writer rather than assembling a
-	// new buffer: the header/trailer are tiny constants and the (potentially
-	// large) JSON payload is written without copying. The net/http response is
-	// buffered, so these writes coalesce into a single chunk on Flush.
 	header := deferNextPartHeader
 	if !f.started {
 		header = deferPartHeader
@@ -85,7 +72,7 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, deferBoundary); err != nil {
+	if _, err = io.WriteString(f.writer, multipartStart); err != nil {
 		return err
 	}
 

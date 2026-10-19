@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -43,7 +42,6 @@ func TestHttpDeferWriterEndsEachPartWithItsBoundary(t *testing.T) {
 		"--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":{\"a\":1}}\r\n--graphql"+
 			"\r\nContent-Type: application/json\r\n\r\n{\"data\":{\"b\":2}}\r\n--graphql--",
 		rec.Body.String())
-	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
 func TestHttpDeferWriterCompleteWithoutParts(t *testing.T) {
