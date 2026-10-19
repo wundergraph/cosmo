@@ -24,6 +24,8 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
+	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -262,25 +264,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 
-	if h.responseCacheStore != nil && h.responseCacheSettings != nil {
-		store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl)
-		if store != nil {
-			cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
-			cacheOpts.Store = store
-			cacheOpts.OnError = h.responseCacheErrorHandler
-			cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
-				CacheTag: h.responseCacheInvalidation.CacheTag,
-				Subgraph: h.responseCacheInvalidation.Subgraph,
-				Type:     h.responseCacheInvalidation.Type,
-			}
-			resolveCtx.SetResponseCache(cacheOpts)
-		}
-	}
-	if h.responseCacheStore != nil && reqCtx.cacheControl != nil && reqCtx.cacheControl.NoCache {
-		// The leader of a shared flight may answer from the cache,
-		// so a no-cache request resolves on its own.
-		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
-	}
+	h.configureResponseCache(resolveCtx, reqCtx.cacheControl, reqCtx.expressionContext)
 
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
@@ -761,5 +745,30 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
+	}
+}
+
+// configureResponseCache hands a request's resolve context the response cache,
+// as the request's Cache-Control allows.
+func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, cacheControl *cachedirective.RequestCacheDirectives, exprCtx expr.Context) {
+	// The graph mux sets settings with the store, or fails to build.
+	if h.responseCacheStore == nil {
+		return
+	}
+	if store := selectCacheStore(h.responseCacheStore, cacheControl); store != nil {
+		cacheOpts := h.responseCacheSettings.options(exprCtx, h.responseCacheErrorHandler)
+		cacheOpts.Store = store
+		cacheOpts.OnError = h.responseCacheErrorHandler
+		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
+			CacheTag: h.responseCacheInvalidation.CacheTag,
+			Subgraph: h.responseCacheInvalidation.Subgraph,
+			Type:     h.responseCacheInvalidation.Type,
+		}
+		resolveCtx.SetResponseCache(cacheOpts)
+	}
+	if requestRevalidates(cacheControl) {
+		// The leader of a shared flight may answer from the cache,
+		// so a no-cache request resolves on its own.
+		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
 	}
 }
