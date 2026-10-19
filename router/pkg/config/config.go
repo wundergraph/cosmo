@@ -1226,6 +1226,15 @@ type ResponseCacheStorageConfig struct {
 	// Entries are counted, not measured, so what this costs depends on how big
 	// the cached subgraph responses are.
 	MaxEntries int64 `yaml:"max_entries,omitempty" envDefault:"10000" env:"MAX_ENTRIES"`
+	// LookupTimeout bounds a redis read on the request path; past it the
+	// lookup is a miss.
+	LookupTimeout time.Duration `yaml:"lookup_timeout,omitempty" envDefault:"150ms" env:"LOOKUP_TIMEOUT"`
+	// WriteTimeout bounds a redis write on the request path; past it the
+	// write is dropped.
+	WriteTimeout time.Duration `yaml:"write_timeout,omitempty" envDefault:"500ms" env:"WRITE_TIMEOUT"`
+	// RequiredToStart fails startup when redis is unreachable. Otherwise the
+	// router starts and caches once redis is back.
+	RequiredToStart bool `yaml:"required_to_start,omitempty" envDefault:"false" env:"REQUIRED_TO_START"`
 }
 
 type StorageProviders struct {

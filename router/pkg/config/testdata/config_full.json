@@ -879,7 +879,10 @@
     "Storage": {
       "Provider": "redis",
       "ProviderID": "my_redis",
-      "MaxEntries": 2048
+      "MaxEntries": 2048,
+      "LookupTimeout": 200000000,
+      "WriteTimeout": 1000000000,
+      "RequiredToStart": true
     },
     "Invalidation": {
       "CacheTag": true,
