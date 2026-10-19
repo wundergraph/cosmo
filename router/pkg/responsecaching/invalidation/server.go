@@ -17,7 +17,7 @@ import (
 
 const ResponseCacheInvalidationSharedKeyMinLength = 32
 
-func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, invalidator responsecaching.Invalidator) (*http.Server, error) {
+func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, invalidator responsecaching.Invalidator, aliases *responsecaching.SubgraphAliases) (*http.Server, error) {
 	if cfg.Endpoint.SharedKey == "" {
 		return nil, errors.New("response cache invalidation is enabled but no shared_key is set")
 	}
@@ -40,7 +40,7 @@ func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, i
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Handle(cfg.Endpoint.Path, NewHandler(logger, invalidator, cfg))
+	r.Handle(cfg.Endpoint.Path, NewHandler(logger, invalidator, cfg, aliases))
 
 	svr := &http.Server{
 		Addr:              cfg.Endpoint.ListenAddr,

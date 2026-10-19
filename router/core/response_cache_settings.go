@@ -70,7 +70,10 @@ type responseCacheSubgraphEntry struct {
 // NewResponseCacheSettings compiles every private_id once per distinct
 // expression. An entry naming a subgraph the graph does not have is kept and
 // logged: feature flag graphs have subgraph sets of their own.
-func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, log *zap.Logger) (*ResponseCacheSettings, error) {
+//
+// bases maps a feature flag graph's subgraphs to the base subgraphs they
+// replace, which they share settings with unless named themselves.
+func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, bases map[string]string, log *zap.Logger) (*ResponseCacheSettings, error) {
 	s := &ResponseCacheSettings{
 		defaultDisabled: !cfg.All.Enabled,
 		fallbackTTL:     cfg.All.FallbackTTL,
@@ -102,6 +105,11 @@ func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.
 	for _, sg := range known {
 		names[sg.GetName()] = struct{}{}
 	}
+	// A base subgraph replaced in this graph is still configured, for its
+	// replacement.
+	for _, base := range bases {
+		names[base] = struct{}{}
+	}
 
 	s.entries = make(map[string]responseCacheSubgraphEntry, len(cfg.Subgraphs))
 	dynamic := false
@@ -118,6 +126,14 @@ func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.
 			dynamic = true
 		}
 		s.entries[name] = entry
+	}
+	for flagged, base := range bases {
+		if _, named := cfg.Subgraphs[flagged]; named {
+			continue
+		}
+		if entry, ok := s.entries[base]; ok {
+			s.entries[flagged] = entry
+		}
 	}
 	if !dynamic {
 		s.static = s.subgraphs(expr.Context{}, nil)
@@ -158,4 +174,46 @@ func (s *ResponseCacheSettings) subgraphs(ctx expr.Context, onError func(error))
 		out[name] = o
 	}
 	return out
+}
+
+// featureSubgraphBases maps each subgraph of a feature flag graph that is not
+// in the base graph to the base subgraph it replaces: the one with its ID, or
+// the only one replaced. Others are left out.
+func featureSubgraphBases(base, flagged []*nodev1.Subgraph) map[string]string {
+	baseNames := make(map[string]string, len(base))
+	for _, sg := range base {
+		baseNames[sg.GetName()] = sg.GetId()
+	}
+	flaggedNames := make(map[string]struct{}, len(flagged))
+	var added []*nodev1.Subgraph
+	for _, sg := range flagged {
+		flaggedNames[sg.GetName()] = struct{}{}
+		if _, inBase := baseNames[sg.GetName()]; !inBase {
+			added = append(added, sg)
+		}
+	}
+
+	replaced := make(map[string]string) // id to name
+	for name, id := range baseNames {
+		if _, kept := flaggedNames[name]; !kept {
+			replaced[id] = name
+		}
+	}
+
+	bases := make(map[string]string, len(added))
+	var unmatched []*nodev1.Subgraph
+	for _, sg := range added {
+		if name, ok := replaced[sg.GetId()]; ok {
+			bases[sg.GetName()] = name
+			delete(replaced, sg.GetId())
+			continue
+		}
+		unmatched = append(unmatched, sg)
+	}
+	if len(unmatched) == 1 && len(replaced) == 1 {
+		for _, name := range replaced {
+			bases[unmatched[0].GetName()] = name
+		}
+	}
+	return bases
 }
