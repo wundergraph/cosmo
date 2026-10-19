@@ -11,7 +11,6 @@ import {
   getOperationAST,
   parse,
   validate,
-  visit,
 } from 'graphql';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -153,23 +152,6 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
-// Matches the directive node, so a comment that mentions @defer does not count.
-const usesDefer = (query: string) => {
-  try {
-    let found = false;
-    visit(parse(query), {
-      Directive(node) {
-        if (node.name.value === 'defer') {
-          found = true;
-        }
-      },
-    });
-    return found;
-  } catch {
-    return false;
-  }
-};
-
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
@@ -224,8 +206,7 @@ const graphiQLFetch = async (
     });
 
     const isMultipart = isMultipartResponse(response);
-    // An HTTP error says nothing about whether the router would have streamed the query.
-    const deferIgnored = response.ok && usesDefer(requestBody.query) && !isMultipart;
+    const deferIgnored = requestBody.query.includes('@defer') && !isMultipart;
 
     if (isMultipart) {
       onFetch(undefined, response.status, response.statusText);
