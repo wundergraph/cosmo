@@ -1222,14 +1222,7 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 // The header is set before the handler runs, because the handler writes the body
 // and a header set after that is a header nobody receives.
 func cacheControlMiddleware(value string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if value != "" {
-				w.Header().Set("Cache-Control", value)
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+	return headersMiddleware("Cache-Control", value)
 }
 
 const responseCacheSharedKey = "a-shared-key-that-is-long-enough-to-pass"

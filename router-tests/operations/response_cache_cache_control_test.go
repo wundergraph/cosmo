@@ -1,15 +1,20 @@
 package integration
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 // moodQuery reaches employees for the root fetch and mood for the entity fetch.
@@ -108,6 +113,138 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 		})
 	})
 
+	t.Run("a stored miss reports the lifetime it was stored with", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, 30*time.Second),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
+			Subgraphs: testenv.SubgraphsConfig{
+				// No max-age: stored for the 30s fallback.
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			// The default fills the max-age mood left out; shared caches keep what
+			// was stored. No public: employees' default does not grant it.
+			require.Equal(t, "max-age=300, s-maxage=30", first.Response.Header.Get("Cache-Control"))
+		})
+	})
+
+	t.Run("s-maxage alone reaches the client without a max-age", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: headersMiddleware("Cache-Control", "s-maxage=300", "Age", "240")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, "s-maxage=60", first.Response.Header.Get("Cache-Control"))
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			cc := second.Response.Header.Get("Cache-Control")
+			require.Equal(t, -1, maxAgeOf(t, cc), "a hit makes up no max-age either: %q", cc)
+			require.LessOrEqual(t, sMaxAgeOf(t, cc), 60)
+			require.Greater(t, sMaxAgeOf(t, cc), 0)
+		})
+	})
+
+	t.Run("a public fallback reaches shared caches only", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, 30*time.Second),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, "s-maxage=30, public", first.Response.Header.Get("Cache-Control"))
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			cc := second.Response.Header.Get("Cache-Control")
+			require.Equal(t, -1, maxAgeOf(t, cc), "%q", cc)
+			require.LessOrEqual(t, sMaxAgeOf(t, cc), 30)
+			require.Contains(t, cc, "public")
+		})
+	})
+
+	t.Run("field-specific no-cache keeps the lifetime", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware(`public, max-age=60, no-cache="Set-Cookie"`)},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, `max-age=60, no-cache="Set-Cookie", public`, first.Response.Header.Get("Cache-Control"))
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			require.Greater(t, maxAgeOf(t, second.Response.Header.Get("Cache-Control")), 0)
+		})
+	})
+
+	t.Run("Age shortens the stored lifetime", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: headersMiddleware("Cache-Control", "public, max-age=45", "Age", "40")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, "max-age=5", first.Response.Header.Get("Cache-Control"))
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			require.LessOrEqual(t, maxAgeOf(t, second.Response.Header.Get("Cache-Control")), 5)
+		})
+	})
+
+	t.Run("a response that arrived stale is neither stored nor kept by the client", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: headersMiddleware("Cache-Control", "public, max-age=10", "Age", "30")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
+	t.Run("field-specific no-cache is stored", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(t, time.Minute),
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware(`public, max-age=60, no-cache="Set-Cookie"`)},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
 	t.Run("a cache hit emits nothing without a cache control policy", func(t *testing.T) {
 		t.Parallel()
 
@@ -127,17 +264,142 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 	})
 }
 
+// TestResponseCacheClientCacheControlFromEntries covers what a hit tells the
+// client, and request directives that bypass or skip the cache.
+func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
+	t.Parallel()
+
+	moodCached := testenv.SubgraphsConfig{
+		Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+	}
+	policy := config.CacheControlPolicy{Enabled: true, Value: "max-age=300"}
+
+	t.Run("a hit does not stretch max-age to s-maxage", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: policy,
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60, s-maxage=600")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			hit := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			require.LessOrEqual(t, maxAgeOf(t, hit.Response.Header.Get("Cache-Control")), 60,
+				"browsers must not keep it longer than the subgraph's max-age")
+			require.Contains(t, hit.Response.Header.Get("Cache-Control"), "s-maxage=", "shared caches keep the longer life")
+		})
+	})
+
+	t.Run("a hit is not made public when the subgraph did not say so", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions:      responseCacheOptions(t, time.Minute),
+			CacheControlPolicy: policy,
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			miss := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			hit := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+			require.Equal(t, "max-age=60", miss.Response.Header.Get("Cache-Control"))
+			require.NotContains(t, hit.Response.Header.Get("Cache-Control"), "public",
+				"a hit should say what the miss said")
+		})
+	})
+
+	for _, tc := range []struct {
+		name   string
+		header http.Header
+	}{
+		{name: "request max-age=0 revalidates", header: http.Header{"Cache-Control": {"max-age=0"}}},
+		{name: "request Pragma: no-cache revalidates", header: http.Header{"Pragma": {"no-cache"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: responseCacheOptions(t, time.Minute),
+				Subgraphs:     moodCached,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: tc.header})
+				require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+			})
+		})
+	}
+
+	t.Run("max-age=0 with no-store neither reads nor writes", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(t, time.Minute),
+			Subgraphs:     moodCached,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			bypass := testenv.GraphQLRequest{Query: moodQuery, Header: http.Header{"Cache-Control": {"max-age=0, no-store"}}}
+			xEnv.MakeGraphQLRequestOK(bypass)
+			xEnv.MakeGraphQLRequestOK(bypass)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "the first wrote an entry, or the second read one")
+		})
+	})
+
+	t.Run("a no-store request does not report its answer as stored", func(t *testing.T) {
+		t.Parallel()
+		exporter := tracetest.NewInMemoryExporter(t)
+		cfg := responseCacheConfig(t, time.Minute)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs:     moodCached,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: http.Header{"Cache-Control": {"no-store"}}})
+			entries, _ := responseCacheStored(t, cfg.KeyPrefix)
+			require.Empty(t, entries, "no-store wrote an entry")
+
+			attrs := attribute.NewSet(fetchSpanFor(t, exporter, "mood").Attributes()...)
+			decision, _ := attrs.Value(otel.WgResponseCacheStoreDecision)
+			require.NotEqual(t, "stored", decision.AsString(), "the span reports a write that never happened")
+		})
+	})
+}
+
+// headersMiddleware makes a subgraph answer with the given name, value pairs.
+// An empty value sets nothing.
+func headersMiddleware(pairs ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for i := 0; i+1 < len(pairs); i += 2 {
+				if pairs[i+1] != "" {
+					w.Header().Set(pairs[i], pairs[i+1])
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // maxAgeOf returns the max-age of a Cache-Control header, or -1 when it has none.
 func maxAgeOf(t *testing.T, header string) int {
 	t.Helper()
+	return deltaSecondsOf(t, header, "max-age")
+}
+
+// sMaxAgeOf returns the s-maxage of a Cache-Control header, or -1 when it has none.
+func sMaxAgeOf(t *testing.T, header string) int {
+	t.Helper()
+	return deltaSecondsOf(t, header, "s-maxage")
+}
+
+func deltaSecondsOf(t *testing.T, header, directive string) int {
+	t.Helper()
 
 	for part := range strings.SplitSeq(header, ",") {
-		value, ok := strings.CutPrefix(strings.TrimSpace(part), "max-age=")
+		value, ok := strings.CutPrefix(strings.TrimSpace(part), directive+"=")
 		if !ok {
 			continue
 		}
 		seconds, err := strconv.Atoi(value)
-		require.NoError(t, err, "unparsable max-age in %q", header)
+		require.NoError(t, err, "unparsable %s in %q", directive, header)
 		return seconds
 	}
 	return -1

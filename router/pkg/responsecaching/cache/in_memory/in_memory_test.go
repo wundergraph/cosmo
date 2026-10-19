@@ -823,3 +823,20 @@ func TestInMemoryCache(t *testing.T) {
 		})
 	})
 }
+
+func TestInMemoryCacheKeepsClientDirectives(t *testing.T) {
+	t.Parallel()
+
+	c, err := NewInMemoryCache(100)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+
+	item := enginecache.Item{Key: "k", Value: []byte(`{}`), TTL: time.Minute, Public: true, SharedOnly: true, ClientShortfall: 5 * time.Second}
+	require.NoError(t, c.SetMany(context.Background(), []enginecache.Item{item}))
+
+	got, err := c.GetMany(context.Background(), []string{"k"})
+	require.NoError(t, err)
+	require.True(t, got["k"].Public)
+	require.True(t, got["k"].SharedOnly)
+	require.Equal(t, 5*time.Second, got["k"].ClientShortfall)
+}
