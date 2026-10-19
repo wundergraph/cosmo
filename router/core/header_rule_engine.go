@@ -112,6 +112,9 @@ type headerPropagationWriter struct {
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
 	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
+	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
+	responseCacheStatusFor    *requestContext
+	didSetResponseCacheStatus bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -151,6 +154,10 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
 			h.writer.Header().Set(h.cacheTagHeader.Name, value)
 		}
+	}
+	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
+		h.didSetResponseCacheStatus = true
+		setResponseCacheStatusHeader(h.writer.Header(), h.responseCacheStatusFor)
 	}
 	return h.writer.Write(p)
 }
