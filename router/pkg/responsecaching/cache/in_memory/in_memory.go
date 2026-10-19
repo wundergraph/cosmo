@@ -144,10 +144,6 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	c.tags.prune(now)
 
 	for _, item := range last {
-		// Read before an invalidation of one of its tags: stale already.
-		if c.tags.invalidatedSince(item.Tags, item.FetchedAt) {
-			continue
-		}
 		// A write ristretto turned away is not there to be found, so indexing
 		// it would leave the tag naming an entry that never existed.
 		stored := entry{
@@ -158,8 +154,13 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 			sharedOnly:      item.SharedOnly,
 			clientShortfall: item.ClientShortfall,
 		}
-		if c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
-			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
+		if !c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
+			continue
+		}
+		// Read before an invalidation of one of its tags: stale already. Stored
+		// first, so an invalidation after the check finds it indexed.
+		if !c.tags.addUnlessInvalidated(item.Key, item.Tags, now.Add(item.TTL), item.FetchedAt) {
+			c.cache.Del(item.Key)
 		}
 	}
 

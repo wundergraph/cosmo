@@ -164,11 +164,28 @@ func TestInMemoryTagIndexHousekeeping(t *testing.T) {
 		index := newTagIndex()
 		past := time.Now().Add(-time.Hour)
 
-		index.add("v1:a", []string{"declared:users"}, past)
+		index.addUnlessInvalidated("v1:a", []string{"declared:users"}, past, time.Time{})
 		require.Equal(t, 1, indexLen(index))
 
 		index.prune(time.Now().Add(tagIndexPruneInterval))
 		require.Zero(t, indexLen(index))
 		require.Empty(t, index.tags)
 	})
+}
+
+func TestTagIndexAddUnlessInvalidated(t *testing.T) {
+	t.Parallel()
+
+	index := newTagIndex()
+	expires := time.Now().Add(time.Minute)
+	fetched := time.Now()
+
+	index.take("declared:users", fetched.Add(time.Millisecond))
+	require.False(t, index.addUnlessInvalidated("v1:a", []string{"declared:users"}, expires, fetched),
+		"read before the invalidation")
+	require.Empty(t, index.take("declared:users", time.Now()), "and not indexed")
+
+	require.True(t, index.addUnlessInvalidated("v1:b", []string{"declared:users"}, expires, time.Now().Add(time.Second)),
+		"read after it")
+	require.True(t, index.addUnlessInvalidated("v1:c", []string{"declared:users"}, expires, time.Time{}), "unknown fetch time")
 }

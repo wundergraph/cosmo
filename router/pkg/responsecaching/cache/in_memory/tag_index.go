@@ -27,32 +27,25 @@ func newTagIndex() *tagIndex {
 	return &tagIndex{tags: make(map[string]map[string]time.Time), invalidated: make(map[string]time.Time), lastPrune: time.Now()}
 }
 
-// invalidatedSince reports whether one of tags was invalidated at or after
-// fetchedAt. A zero fetchedAt is unknown and never is.
-func (t *tagIndex) invalidatedSince(tags []string, fetchedAt time.Time) bool {
-	if fetchedAt.IsZero() || len(tags) == 0 {
-		return false
+// addUnlessInvalidated records that key carries each of tags until expiresAt,
+// moving the expiry of a key already there, unless one of tags was invalidated
+// at or after fetchedAt (zero is unknown). It reports whether it recorded.
+// Checked and added under one lock, so no invalidation falls between them.
+func (t *tagIndex) addUnlessInvalidated(key string, tags []string, expiresAt, fetchedAt time.Time) bool {
+	if len(tags) == 0 {
+		return true
 	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	for _, tag := range tags {
-		if at, ok := t.invalidated[tag]; ok && !at.Before(fetchedAt) {
-			return true
+
+	if !fetchedAt.IsZero() {
+		for _, tag := range tags {
+			if at, ok := t.invalidated[tag]; ok && !at.Before(fetchedAt) {
+				return false
+			}
 		}
 	}
-	return false
-}
-
-// add records that key carries each of tags until expiresAt. A key already in a
-// tag has its expiry moved rather than being added twice.
-func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
-	if len(tags) == 0 {
-		return
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	for _, tag := range tags {
 		keys, ok := t.tags[tag]
 		if !ok {
@@ -61,6 +54,7 @@ func (t *tagIndex) add(key string, tags []string, expiresAt time.Time) {
 		}
 		keys[key] = expiresAt
 	}
+	return true
 }
 
 // take removes tag from the index and returns the keys it named. Keys already
