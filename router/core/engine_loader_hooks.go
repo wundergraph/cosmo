@@ -157,7 +157,8 @@ func ttlToCacheControl(ttl time.Duration, private bool) string {
 		if private {
 			return "private, " + noCache
 		}
-		return noCache
+		// Still public: the merge only keeps public when every fetch says it.
+		return "public, " + noCache
 	}
 	if private {
 		return fmt.Sprintf("private, max-age=%d", maxAge)

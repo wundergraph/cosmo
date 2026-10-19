@@ -110,6 +110,41 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			expectedDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, Public: true},
 		},
 		{
+			name: "s-maxage is kept and capped by the shortest shared life",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 45, SMaxAge: 10, Public: true}},
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 3600, Public: true}},
+			},
+			expectedHeader:     "max-age=45, s-maxage=10, public",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 45, SMaxAge: 10, Public: true},
+		},
+		{
+			name: "a shorter max-age elsewhere caps s-maxage",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, SMaxAge: 30}},
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 20}},
+			},
+			expectedHeader:     "max-age=20, s-maxage=20",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 20, SMaxAge: 20},
+		},
+		{
+			name: "no s-maxage without one in the policies",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, SMaxAge: -1}},
+			},
+			expectedHeader:     "max-age=60",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60},
+		},
+		{
+			name: "public only when every policy grants it",
+			policies: []*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, Public: true}},
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 30}},
+			},
+			expectedHeader:     "max-age=30",
+			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 30},
+		},
+		{
 			name: "no-cache with private",
 			policies: []*cachedirective.Object{
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true, PrivatePresent: true}},
@@ -131,6 +166,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			assert.Equal(t, tt.expectedDirectives.NoStore, result.RespDirectives.NoStore, "no-store directive")
 			assert.Equal(t, tt.expectedDirectives.NoCachePresent, result.RespDirectives.NoCachePresent, "no-cache directive")
 			assert.Equal(t, tt.expectedDirectives.MaxAge, result.RespDirectives.MaxAge, "max-age directive")
+			assert.Equal(t, tt.expectedDirectives.SMaxAge, result.RespDirectives.SMaxAge, "s-maxage directive")
 		})
 	}
 
@@ -167,8 +203,16 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				first: []*cachedirective.Object{
 					{RespDirectives: &cachedirective.ResponseCacheDirectives{Public: true}},
 				},
-				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{}},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{Public: true}},
 				expectedHeader: "public",
+			},
+			{
+				name: "a later policy without public withdraws it",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{Public: true, MaxAge: 60}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 30}},
+				expectedHeader: "max-age=30",
 			},
 			{
 				name: "no-cache from a previous round is not lost to a later max-age",
@@ -225,6 +269,30 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				},
 				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 600}},
 				expectedHeader: "max-age=300, private",
+			},
+			{
+				name: "field-specific no-cache survives a round trip, its fields merged",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, NoCachePresent: true, NoCache: cachedirective.FieldNames{"Set-Cookie": true}}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, NoCachePresent: true, NoCache: cachedirective.FieldNames{"X-Token": true}}},
+				expectedHeader: `max-age=60, no-cache="Set-Cookie, X-Token"`,
+			},
+			{
+				name: "bare no-cache in a later round overrides field-specific no-cache",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, NoCachePresent: true, NoCache: cachedirective.FieldNames{"Set-Cookie": true}}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{NoCachePresent: true}},
+				expectedHeader: "no-cache",
+			},
+			{
+				name: "must-revalidate and proxy-revalidate survive a round trip",
+				first: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, MustRevalidate: true}},
+				},
+				second:         &cachedirective.Object{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, ProxyRevalidate: true}},
+				expectedHeader: "max-age=60, must-revalidate, proxy-revalidate",
 			},
 			{
 				name: "no-cache and public both survive a round trip",
@@ -759,4 +827,42 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 		require.NotNil(t, hp)
 		assert.Empty(t, hp.fileSourceContents)
 	})
+}
+
+func TestSubtractAge(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name            string
+		maxAge, sMaxAge cachedirective.DeltaSeconds
+		age             string
+		wantMaxAge      cachedirective.DeltaSeconds
+		wantSMaxAge     cachedirective.DeltaSeconds
+	}{
+		{name: "shortens both", maxAge: 45, sMaxAge: 10, age: "4", wantMaxAge: 41, wantSMaxAge: 6},
+		{name: "stale on arrival is zero", maxAge: 10, sMaxAge: -1, age: "30", wantMaxAge: 0, wantSMaxAge: -1},
+		{name: "absent lifetimes stay absent", maxAge: -1, sMaxAge: -1, age: "5", wantMaxAge: -1, wantSMaxAge: -1},
+		{name: "invalid age is ignored", maxAge: 10, sMaxAge: -1, age: "soon", wantMaxAge: 10, wantSMaxAge: -1},
+		{name: "no age", maxAge: 10, sMaxAge: -1, wantMaxAge: 10, wantSMaxAge: -1},
+		{name: "overflowing age is stale", maxAge: 10, sMaxAge: -1, age: "99999999999999999999", wantMaxAge: 0, wantSMaxAge: -1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := &cachedirective.ResponseCacheDirectives{MaxAge: tc.maxAge, SMaxAge: tc.sMaxAge}
+			subtractAge(dir, tc.age)
+			assert.Equal(t, tc.wantMaxAge, dir.MaxAge)
+			assert.Equal(t, tc.wantSMaxAge, dir.SMaxAge)
+		})
+	}
+}
+
+func TestMarkStale(t *testing.T) {
+	t.Parallel()
+
+	dir, err := cachedirective.ParseResponseCacheControl(`max-age=10, no-cache="Set-Cookie"`)
+	require.NoError(t, err)
+	subtractAge(dir, "30")
+	markStale(dir)
+	_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: dir}})
+	require.Equal(t, "no-cache", header, "a stale response is bare no-cache, not field-specific")
 }

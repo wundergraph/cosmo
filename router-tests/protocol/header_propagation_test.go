@@ -920,6 +920,58 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		for _, tc := range []struct {
+			name, policy, employees, hobbies, want string
+		}{
+			{name: "public only when every subgraph says it", employees: "public, max-age=120", hobbies: "max-age=60", want: "max-age=60"},
+			{name: "a subgraph without Cache-Control does not withdraw public", employees: "public, max-age=120", want: "max-age=120, public"},
+			{name: "the policy default does not withdraw a subgraph's public", policy: "max-age=300", employees: "public, max-age=120", hobbies: "public, max-age=60", want: "max-age=60, public"},
+			// hobbies' max-age=60 does not say public.
+			{name: "zero max-age is not raised to the policy default", policy: "max-age=300", employees: "max-age=0, public", hobbies: "max-age=60", want: "no-cache"},
+			{name: "s-maxage is kept", policy: "max-age=300", employees: "max-age=120, s-maxage=10", hobbies: "max-age=60", want: "max-age=60, s-maxage=10"},
+			{name: "must-revalidate and proxy-revalidate are kept", policy: "max-age=300", employees: "max-age=120, must-revalidate", hobbies: "max-age=60, proxy-revalidate", want: "max-age=60, must-revalidate, proxy-revalidate"},
+			{name: "field-specific no-cache keeps the lifetime", policy: "max-age=300", employees: `max-age=120, no-cache="Set-Cookie"`, hobbies: `max-age=60, no-cache="X-Token"`, want: `max-age=60, no-cache="Set-Cookie, X-Token"`},
+			{name: "bare no-cache wins over field-specific no-cache", policy: "max-age=300", employees: `max-age=120, no-cache="Set-Cookie"`, hobbies: "no-cache", want: "no-cache"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: tc.policy},
+					Subgraphs:          cacheOptions(tc.employees, tc.hobbies),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+					require.Equal(t, tc.want, res.Response.Header.Get("Cache-Control"))
+				})
+			})
+		}
+
+		// With or without a Cache-Control of its own, a failed fetch is not cacheable.
+		for _, cacheControl := range []string{"max-age=60, public", ""} {
+			t.Run("a failed subgraph response is no-store: "+cacheControl, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{Middleware: cacheOptions("public, max-age=120", "").Employees.Middleware},
+						Hobbies: testenv.SubgraphConfig{
+							Middleware: func(next http.Handler) http.Handler {
+								return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+									if cacheControl != "" {
+										w.Header().Set("Cache-Control", cacheControl)
+									}
+									next.ServeHTTP(&forcedStatusWriter{ResponseWriter: w, status: http.StatusInternalServerError}, r)
+								})
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+					require.NoError(t, err)
+					require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+				})
+			})
+		}
+
 		// Test case for max-age: shortest max-age wins
 		t.Run("shortest max-age wins", func(t *testing.T) {
 			t.Parallel()
@@ -2059,4 +2111,23 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 			require.Equal(t, "token is malformed: token contains an invalid number of segments", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
+}
+
+// forcedStatusWriter answers with status whatever the handler writes.
+type forcedStatusWriter struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (w *forcedStatusWriter) WriteHeader(int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(w.status)
+	}
+}
+
+func (w *forcedStatusWriter) Write(b []byte) (int, error) {
+	w.WriteHeader(w.status)
+	return w.ResponseWriter.Write(b)
 }
