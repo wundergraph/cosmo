@@ -330,6 +330,19 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 		})
 	}
 
+	t.Run("max-age=0 with no-store neither reads nor writes", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(t, time.Minute),
+			Subgraphs:     moodCached,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			bypass := testenv.GraphQLRequest{Query: moodQuery, Header: http.Header{"Cache-Control": {"max-age=0, no-store"}}}
+			xEnv.MakeGraphQLRequestOK(bypass)
+			xEnv.MakeGraphQLRequestOK(bypass)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "the first wrote an entry, or the second read one")
+		})
+	})
+
 	t.Run("a no-store request does not report its answer as stored", func(t *testing.T) {
 		t.Parallel()
 		exporter := tracetest.NewInMemoryExporter(t)
