@@ -53,6 +53,19 @@ func TestSubscriptionRootFieldArgumentsPreserveRemappedNameSwap(t *testing.T) {
 	require.JSONEq(t, `{"first":"B","second":"A"}`, string(got))
 }
 
+func TestSubscriptionRootFieldArgumentsOmitMissingRemappedSource(t *testing.T) {
+	variables, err := astjson.Parse(`{"a":"A"}`)
+	require.NoError(t, err)
+	op := &operationContext{
+		content:        `subscription Swap($a: String, $b: String) { updates(first: $a, second: $b) }`,
+		variables:      variables,
+		remapVariables: map[string]string{"a": "b", "b": "a"},
+	}
+	got, err := subscriptionRootFieldArguments(op, nil, "updates")
+	require.NoError(t, err)
+	require.JSONEq(t, `{"second":"A"}`, string(got))
+}
+
 func TestSubscriptionRootFieldArgumentsApplyFieldDefaults(t *testing.T) {
 	schema, report := astparser.ParseGraphqlDocumentString(`type Subscription { updates(optional: String, fallback: String = "default", explicit: String = "default", unmentioned: String = "also-default"): String }`)
 	require.False(t, report.HasErrors(), report.Error())
@@ -165,6 +178,7 @@ func TestGraphQLSubscriptionStartFailureUnwindsSuccessfulHooks(t *testing.T) {
 	want := errors.New("reject")
 	var calls []string
 	handlers := []graphqlSubscriptionLifecycleHandler{
+		{onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end-only") }},
 		{onStart: func(GraphQLSubscriptionHookContext) error { calls = append(calls, "start-a"); return nil },
 			onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end-a") }},
 		{onStart: func(GraphQLSubscriptionHookContext) error { calls = append(calls, "start-b"); return want },
@@ -174,4 +188,16 @@ func TestGraphQLSubscriptionStartFailureUnwindsSuccessfulHooks(t *testing.T) {
 	require.ErrorIs(t, err, want)
 	require.Nil(t, end)
 	require.Equal(t, []string{"start-a", "start-b", "end-a"}, calls)
+}
+
+func TestGraphQLSubscriptionEndOnlyHookRunsAfterSuccessfulStart(t *testing.T) {
+	var calls []string
+	end, err := startGraphQLSubscriptionHooks([]graphqlSubscriptionLifecycleHandler{
+		{onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end-only") }},
+		{onStart: func(GraphQLSubscriptionHookContext) error { calls = append(calls, "start"); return nil },
+			onEnd: func(GraphQLSubscriptionHookContext) { calls = append(calls, "end") }},
+	}, &graphqlSubscriptionHookContext{logger: zap.NewNop()})
+	require.NoError(t, err)
+	end()
+	require.Equal(t, []string{"start", "end", "end-only"}, calls)
 }

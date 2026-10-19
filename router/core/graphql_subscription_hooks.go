@@ -103,6 +103,12 @@ func subscriptionRootFieldArguments(operation *operationContext, schema *ast.Doc
 	for name, value := range originalVariables {
 		variables[name] = value
 	}
+	// A generated name may also be an original name for another variable.
+	// Clear every remapped destination before populating it from the unchanged
+	// source map, so an omitted source cannot leave a stale value behind.
+	for newName := range operation.remapVariables {
+		delete(variables, newName)
+	}
 	for newName, oldName := range operation.remapVariables {
 		if value, ok := originalVariables[oldName]; ok {
 			variables[newName] = value
@@ -184,12 +190,22 @@ func startGraphQLSubscriptionHooks(handlers []graphqlSubscriptionLifecycleHandle
 		return nil, nil
 	}
 
-	completed := make([]func(GraphQLSubscriptionHookContext), 0, len(handlers))
+	type completedHook struct {
+		onEnd      func(GraphQLSubscriptionHookContext)
+		hasStarted bool
+	}
+	completed := make([]completedHook, 0, len(handlers))
+	allStartsSucceeded := false
 	var once sync.Once
 	end = func() {
 		once.Do(func() {
 			for i := len(completed) - 1; i >= 0; i-- {
-				invokeGraphQLSubscriptionEnd(completed[i], ctx)
+				// An end-only module has no startup work to unwind when a
+				// later module rejects the subscription.
+				if !allStartsSucceeded && !completed[i].hasStarted {
+					continue
+				}
+				invokeGraphQLSubscriptionEnd(completed[i].onEnd, ctx)
 			}
 		})
 	}
@@ -202,10 +218,11 @@ func startGraphQLSubscriptionHooks(handlers []graphqlSubscriptionLifecycleHandle
 			}
 		}
 		if handler.onEnd != nil {
-			completed = append(completed, handler.onEnd)
+			completed = append(completed, completedHook{onEnd: handler.onEnd, hasStarted: handler.onStart != nil})
 		}
 	}
 
+	allStartsSucceeded = true
 	return end, nil
 }
 
