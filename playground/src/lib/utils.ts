@@ -19,3 +19,5 @@ export const nsToTime = (ns: bigint) => {
 
   return milliseconds.toFixed(2) + ' ms';
 };
+
+export const formatMs = (ms: number) => `${Math.round(ms)}ms`;

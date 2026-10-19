@@ -24,8 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -204,7 +205,10 @@ const graphiQLFetch = async (
       headers,
     });
 
-    if (isMultipartResponse(response)) {
+    const isMultipart = isMultipartResponse(response);
+    const deferIgnored = requestBody.query.includes('@defer') && !isMultipart;
+
+    if (isMultipart) {
       onFetch(undefined, response.status, response.statusText);
       return response;
     }
@@ -213,7 +217,12 @@ const graphiQLFetch = async (
 
     await executePostScripts('0', requestBody, responseData);
 
-    onFetch(await response.clone().json(), response.status, response.statusText);
+    onFetch(
+      await response.clone().json(),
+      response.status,
+      response.statusText,
+      deferIgnored ? { state: 'disabled' } : undefined,
+    );
     return response;
   } catch (e: any) {
     const customMessage =
@@ -287,7 +296,7 @@ const ResponseToolbar = () => {
     }
   };
 
-  const { status, statusText } = useContext(PlaygroundContext);
+  const { status, statusText, responseDefer } = useContext(PlaygroundContext);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
@@ -299,6 +308,7 @@ const ResponseToolbar = () => {
           {status || statusText}
         </Badge>
       )}
+      <DeferStatusBadge defer={responseDefer} />
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -615,12 +625,14 @@ export const Playground = (input: {
 
   const [status, setStatus] = useState<number>();
   const [statusText, setStatusText] = useState<string>();
+  const [responseDefer, setResponseDefer] = useState<DeferStatus>();
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
+    const onFetch = (response: any, status?: number, statusText?: string, defer?: DeferStatus) => {
       setResponse(JSON.stringify(response));
       setStatus(status);
       setStatusText(statusText);
+      setResponseDefer(defer);
     };
 
     const toolkit = createGraphiQLFetcher({
@@ -649,7 +661,7 @@ export const Playground = (input: {
       });
 
       if (isMultipartResponse(response)) {
-        return readDeferStream(response);
+        return readDeferStream(response, setResponseDefer);
       }
       return response.json();
     }
@@ -723,6 +735,7 @@ export const Playground = (input: {
           tabsState,
           status,
           statusText,
+          responseDefer,
           view,
           setView,
         }}
