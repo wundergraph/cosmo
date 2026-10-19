@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"mime"
 	"net/http"
@@ -17,14 +18,20 @@ type HttpDeferWriter struct {
 	flusher http.Flusher
 	buf     *bytes.Buffer
 	started bool
+	// closed is set once the final part is written with its close delimiter.
+	closed bool
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
 
 const (
-	// deferNextPartHeader opens every part after the first; its boundary was written after the previous part.
-	deferNextPartHeader = "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-	deferPartHeader     = "--" + multipartBoundary + deferNextPartHeader
+	// Each boundary is followed by its CRLF in the same write. A reader decides whether a boundary is a
+	// part boundary or the close from the two bytes after it, so the CRLF must not wait for the next part.
+	deferNextPartHeader  = "Content-Type: " + jsonContent + "\r\n\r\n"
+	deferFirstPartHeader = "--" + multipartBoundary + "\r\n" + deferNextPartHeader
+	deferPartBoundary    = multipartStart + "\r\n"
+	deferCloseLine       = "--" + multipartBoundary + "--"
+	deferCloseBoundary   = "\r\n" + deferCloseLine
 )
 
 func (f *HttpDeferWriter) Complete() {
@@ -32,11 +39,11 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
-	closing := "--"
-	if !f.started {
-		closing = "--" + multipartBoundary + "--"
+	// A final part with hasNext:false has already been closed. Reaching here without one means the stream
+	// ends after a part boundary, so the close is written as an empty trailing part.
+	if !f.closed {
+		_, _ = io.WriteString(f.writer, deferCloseLine)
 	}
-	_, _ = io.WriteString(f.writer, closing)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -63,8 +70,13 @@ func (f *HttpDeferWriter) Flush() (err error) {
 
 	header := deferNextPartHeader
 	if !f.started {
-		header = deferPartHeader
+		header = deferFirstPartHeader
 		f.started = true
+	}
+	delimiter := deferPartBoundary
+	if deferPartIsFinal(resp) {
+		delimiter = deferCloseBoundary
+		f.closed = true
 	}
 	if _, err = io.WriteString(f.writer, header); err != nil {
 		return err
@@ -72,7 +84,7 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, multipartStart); err != nil {
+	if _, err = io.WriteString(f.writer, delimiter); err != nil {
 		return err
 	}
 
@@ -80,6 +92,18 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	return nil
+}
+
+// deferPartIsFinal reports whether a payload ends the response. Only hasNext:true leaves more parts to come, so
+// a missing or null hasNext counts as final.
+func deferPartIsFinal(payload []byte) bool {
+	var part struct {
+		HasNext bool `json:"hasNext"`
+	}
+	if err := json.Unmarshal(payload, &part); err != nil {
+		return false
+	}
+	return !part.HasNext
 }
 
 func GetDeferResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.DeferResponseWriter, bool) {
