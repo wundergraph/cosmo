@@ -14,7 +14,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
@@ -157,9 +157,8 @@ export function setGraphRouterCompatibilityVersion(
 
       return await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -176,6 +175,6 @@ export function setGraphRouterCompatibilityVersion(
       compositionErrors,
       compositionWarnings,
       deploymentErrors,
-    };
+    });
   });
 }

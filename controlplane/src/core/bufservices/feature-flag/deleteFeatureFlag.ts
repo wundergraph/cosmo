@@ -11,7 +11,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function deleteFeatureFlag(
@@ -121,9 +121,8 @@ export function deleteFeatureFlag(
 
       return result;
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -135,6 +134,6 @@ export function deleteFeatureFlag(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

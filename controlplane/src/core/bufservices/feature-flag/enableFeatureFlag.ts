@@ -12,7 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function enableFeatureFlag(
   opts: RouterOptions,
@@ -116,7 +116,6 @@ export function enableFeatureFlag(
         isEnabled: req.enabled,
       });
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -133,7 +132,7 @@ export function enableFeatureFlag(
       targetNamespaceDisplayName: featureFlag.namespace,
     });
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -146,6 +145,6 @@ export function enableFeatureFlag(
       deploymentErrors,
       compositionWarnings,
       hasChanged: true,
-    };
+    });
   });
 }

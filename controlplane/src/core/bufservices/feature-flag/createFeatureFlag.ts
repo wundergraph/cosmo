@@ -12,7 +12,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
 
 export function createFeatureFlag(
@@ -217,9 +217,8 @@ export function createFeatureFlag(
         featureFlag: createdFeatureFlag,
       });
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -231,6 +230,6 @@ export function createFeatureFlag(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

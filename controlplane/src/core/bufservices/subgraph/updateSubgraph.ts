@@ -13,7 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import {
   enrichLogger,
   formatSubgraphType,
@@ -162,8 +162,6 @@ export function updateSubgraph(
         compositionService,
       );
 
-    deploymentErrors.push(...(await mapperUpdater.flush()));
-
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
@@ -201,35 +199,18 @@ export function updateSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        compositionWarnings,
-        deploymentErrors,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

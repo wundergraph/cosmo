@@ -29,7 +29,7 @@ export async function flushMapperIntoResponse<
       result.response?.code === EnumStatusCode.OK
         ? { ...result.response, code: EnumStatusCode.ERR_DEPLOYMENT_FAILED }
         : result.response,
-    deploymentErrors: [...(result.deploymentErrors ?? []), ...deploymentErrors],
+    deploymentErrors: [...deploymentErrors, ...(result.deploymentErrors ?? [])],
   };
 }
 

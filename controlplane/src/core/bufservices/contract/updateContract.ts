@@ -10,7 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -159,7 +159,6 @@ export function updateContract(
         },
       });
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -196,7 +195,7 @@ export function updateContract(
       authContext.userId,
     );
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -208,6 +207,6 @@ export function updateContract(
       deploymentErrors,
       compositionErrors,
       compositionWarnings,
-    };
+    });
   });
 }

@@ -15,7 +15,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -239,7 +239,6 @@ export function deleteFederatedSubgraph(
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };
       });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook
@@ -325,7 +324,7 @@ export function deleteFederatedSubgraph(
       }
     }
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -338,6 +337,6 @@ export function deleteFederatedSubgraph(
       compositionErrors,
       compositionWarnings,
       proposalMatchMessage,
-    };
+    });
   });
 }

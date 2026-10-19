@@ -16,7 +16,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -179,8 +179,6 @@ export function publishMonograph(
         compositionService,
       );
 
-    deploymentErrors.push(...(await mapperUpdater.flush()));
-
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
         {
@@ -228,35 +226,18 @@ export function publishMonograph(
       }
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        deploymentErrors: [],
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

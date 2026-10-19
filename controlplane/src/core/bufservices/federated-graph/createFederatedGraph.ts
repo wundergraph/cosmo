@@ -15,7 +15,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -233,7 +233,6 @@ export function createFederatedGraph(
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     orgWebhooks.send(
       {
@@ -255,7 +254,7 @@ export function createFederatedGraph(
       authContext.userId,
     );
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -267,6 +266,6 @@ export function createFederatedGraph(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

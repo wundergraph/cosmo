@@ -12,7 +12,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidLabels, normalizeLabels } from '../../util.js';
 
 export function updateFeatureFlag(
@@ -243,21 +243,19 @@ export function updateFeatureFlag(
       };
     }
 
-    const allDeploymentErrors = [...deploymentErrors, ...(await mapperUpdater.flush())];
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
             ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
-            : allDeploymentErrors.length > 0
+            : deploymentErrors.length > 0
               ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
               : EnumStatusCode.OK,
       },
       compositionErrors,
-      deploymentErrors: allDeploymentErrors,
+      deploymentErrors,
       compositionWarnings,
       hasChanged: true,
-    };
+    });
   });
 }

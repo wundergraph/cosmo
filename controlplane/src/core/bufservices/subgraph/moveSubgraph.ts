@@ -10,7 +10,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
-import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -156,7 +156,6 @@ export function moveSubgraph(
 
         return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
       });
-    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
@@ -180,35 +179,18 @@ export function moveSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }
