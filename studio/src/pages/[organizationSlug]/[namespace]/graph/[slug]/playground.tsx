@@ -1,12 +1,12 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
-import { parseAsString, useQueryState } from 'nuqs';
+import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
 import { PageHeader } from '@/components/layout/head';
 import { attachPlaygroundAPI, CustomScripts, detachPlaygroundAPI } from '@/components/playground/custom-scripts';
 import { CopyOperation } from '@/components/playground/copy-operation';
 import { DefaultHeadersDialog } from '@/components/playground/default-headers/default-headers-dialog';
 import { GraphCollectionsProvider } from '@/components/playground/graph-collections/graph-collections-provider';
-import { COLLECTION_QUERY_PARAM, OPERATION_QUERY_PARAM } from '@/lib/graph-collections';
+import { collectionDeepLinkParams } from '@/lib/graph-collections';
 import { collectionsPlugin } from '@/components/playground/graph-collections/collections-panel';
 import { SaveOperationControl } from '@/components/playground/graph-collections/save-operation-control';
 import { PlanView } from '@/components/playground/plan-view';
@@ -629,8 +629,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const [visiblePlugin, setVisiblePlugin] = useState<string | undefined>(undefined);
 
-  const [linkedCollection] = useQueryState(COLLECTION_QUERY_PARAM);
-  const [linkedOperation] = useQueryState(OPERATION_QUERY_PARAM);
+  const [{ collectionId: linkedCollection, operationId: linkedOperation }] = useQueryStates(collectionDeepLinkParams);
 
   useEffect(() => {
     if ((linkedCollection || linkedOperation) && !visiblePlugin) {

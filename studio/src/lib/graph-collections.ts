@@ -1,4 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { parseAsString } from 'nuqs';
+import { buildUrl } from '@/lib/build-url';
 import { GraphCollection, GraphCollectionOperationMeta } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
 import { toast } from '@/components/ui/use-toast';
@@ -160,6 +162,17 @@ export const COLLECTION_QUERY_PARAM = 'collectionId';
 export const OPERATION_QUERY_PARAM = 'operationId';
 
 /**
+ * The deep-link parameters, for `useQueryStates`.
+ *
+ * Keyed off the constants above so the panel, the playground page and the
+ * share link all read and write the same two names.
+ */
+export const collectionDeepLinkParams = {
+  [COLLECTION_QUERY_PARAM]: parseAsString,
+  [OPERATION_QUERY_PARAM]: parseAsString,
+};
+
+/**
  * Resolves `?collectionId=<uuid>` against the collections the caller can actually
  * see.
  *
@@ -169,7 +182,7 @@ export const OPERATION_QUERY_PARAM = 'operationId';
  */
 export const resolveDeepLinkedCollection = (
   collections: { id: string }[],
-  requested: string | undefined,
+  requested: string | null | undefined,
 ): DeepLinkResult => {
   if (!requested) {
     return { status: 'none' };
@@ -196,15 +209,11 @@ export const buildCollectionShareUrl = (
   pathname: string,
   collectionId: string,
   operationId?: string,
-): string => {
-  const params = new URLSearchParams({ [COLLECTION_QUERY_PARAM]: collectionId });
-
-  if (operationId) {
-    params.set(OPERATION_QUERY_PARAM, operationId);
-  }
-
-  return `${origin}${pathname}?${params.toString()}`;
-};
+): string =>
+  buildUrl(`${origin}${pathname}`, {
+    [COLLECTION_QUERY_PARAM]: collectionId,
+    [OPERATION_QUERY_PARAM]: operationId,
+  });
 
 export type DeepLinkedOperation =
   | { status: 'none' }
@@ -219,7 +228,7 @@ export type DeepLinkedOperation =
  */
 export const resolveDeepLinkedOperation = (
   collections: { id: string; operations: { id: string }[] }[],
-  requested: string | undefined,
+  requested: string | null | undefined,
 ): DeepLinkedOperation => {
   if (!requested) {
     return { status: 'none' };

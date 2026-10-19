@@ -6,18 +6,16 @@ import { useToast } from '@/components/ui/use-toast';
 import { ExclamationTriangleIcon, MagnifyingGlassIcon, PlusIcon } from '@radix-ui/react-icons';
 import { GraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
-import { useRouter } from 'next/router';
+import { useQueryStates } from 'nuqs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CollectionItem } from './collection-item';
 import { useGraphCollectionsContext } from './graph-collections-provider';
 import {
   buildCollectionShareUrl,
-  COLLECTION_QUERY_PARAM,
+  collectionDeepLinkParams,
   DialogState,
   filterCollections,
-  OPERATION_QUERY_PARAM,
   resolveDeepLinkedCollection,
-  reportFailure,
   resolveDeepLinkedOperation,
 } from '@/lib/graph-collections';
 import { CollectionDialogs } from './dialogs/collection-dialogs';
@@ -28,24 +26,9 @@ import { useOpenOperation } from '@/hooks/use-open-operation';
 
 export const CollectionsPanel = () => {
   const { toast } = useToast();
-  const router = useRouter();
 
-  const setUrlParams = useCallback(
-    (params: Record<string, string | null>) => {
-      const url = new URL(window.location.href);
-
-      for (const [key, value] of Object.entries(params)) {
-        if (value === null) {
-          url.searchParams.delete(key);
-        } else {
-          url.searchParams.set(key, value);
-        }
-      }
-
-      router.replace(`${url.pathname}${url.search}`, undefined, { shallow: true });
-    },
-    [router],
-  );
+  const [{ collectionId: requestedCollectionId, operationId: requestedOperationId }, setDeepLink] =
+    useQueryStates(collectionDeepLinkParams);
 
   const {
     collections,
@@ -62,8 +45,6 @@ export const CollectionsPanel = () => {
   const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
-  const requestedCollectionId = router.query[COLLECTION_QUERY_PARAM] as string | undefined;
 
   const deepLink = useMemo(
     () => resolveDeepLinkedCollection(collections, requestedCollectionId),
@@ -96,17 +77,17 @@ export const CollectionsPanel = () => {
   const openOperation = useCallback(
     (operationId: string, collectionId: string) => {
       // Keep the address bar describing what is on screen, so copying it shares it.
-      setUrlParams({ [COLLECTION_QUERY_PARAM]: collectionId, [OPERATION_QUERY_PARAM]: operationId });
+      setDeepLink({ collectionId, operationId });
       openSavedOperation(operationId, collectionId);
     },
-    [setUrlParams, openSavedOperation],
+    [setDeepLink, openSavedOperation],
   );
 
   // Arriving on a ?operationId=<id> link opens it once. Latched so that
   // closing the tab afterwards does not immediately reopen it.
   const deepLinkedOperation = useMemo(
-    () => resolveDeepLinkedOperation(collections, router.query[OPERATION_QUERY_PARAM] as string | undefined),
-    [collections, router.query],
+    () => resolveDeepLinkedOperation(collections, requestedOperationId),
+    [collections, requestedOperationId],
   );
 
   useEffect(() => {
@@ -158,10 +139,7 @@ export const CollectionsPanel = () => {
               setExpanded((current) => ({ ...current, [collection.id]: nowExpanded }));
 
               // Removed again on collapse, so the URL never names something off screen.
-              setUrlParams({
-                [COLLECTION_QUERY_PARAM]: nowExpanded ? collection.id : null,
-                ...(nowExpanded ? {} : { [OPERATION_QUERY_PARAM]: null }),
-              });
+              setDeepLink(nowExpanded ? { collectionId: collection.id } : { collectionId: null, operationId: null });
             }}
             onCopyLink={() => copyLink(collection.id)}
             boundOperationIds={boundOperationIds}
