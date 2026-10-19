@@ -1,3 +1,4 @@
+import { parse, visit } from 'graphql';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -21,3 +22,20 @@ export const nsToTime = (ns: bigint) => {
 };
 
 export const formatMs = (ms: number) => `${Math.round(ms)}ms`;
+
+// Matches the directive node itself, so a comment or string that mentions @name does not count.
+export const usesDirective = (name: string, query: string) => {
+  try {
+    let found = false;
+    visit(parse(query), {
+      Directive(node) {
+        if (node.name.value === name) {
+          found = true;
+        }
+      },
+    });
+    return found;
+  } catch {
+    return false;
+  }
+};
