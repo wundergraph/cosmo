@@ -469,7 +469,7 @@ describe('flushMapperIntoResponse', () => {
     });
 
     expect(result.response?.code).toBe(EnumStatusCode.ERR_DEPLOYMENT_FAILED);
-    expect(result.deploymentErrors).toStrictEqual([existingError, mapperError]);
+    expect(result.deploymentErrors).toStrictEqual([mapperError, existingError]);
   });
 
   test('that a non-OK response code is preserved', async () => {
