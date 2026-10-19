@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -48,6 +48,9 @@ export interface GraphTarget {
   namespaceName: string;
 }
 
+/** How the collections list is ordered. */
+export type CollectionSortBy = 'name' | 'createdAt';
+
 const computeContentHash = (query: string, variables?: string | null): string =>
   createHash('sha256')
     .update(`${query}\n${variables ?? ''}`)
@@ -70,7 +73,11 @@ export class GraphCollectionsRepository {
     return or(isNull(graphCollections.privateToUserId), eq(graphCollections.privateToUserId, userId));
   }
 
-  public async listByFederatedGraphId(federatedGraphId: string, userId: string): Promise<CollectionWithOperations[]> {
+  public async listByFederatedGraphId(
+    federatedGraphId: string,
+    userId: string,
+    sortBy: CollectionSortBy = 'name',
+  ): Promise<CollectionWithOperations[]> {
     const collections = await this.db
       .select({
         id: graphCollections.id,
@@ -90,7 +97,11 @@ export class GraphCollectionsRepository {
           this.visibleTo(userId),
         ),
       )
-      .orderBy(asc(sql`lower(${graphCollections.name})`));
+      .orderBy(
+        ...(sortBy === 'createdAt'
+          ? [desc(graphCollections.createdAt), asc(graphCollections.id)]
+          : [asc(sql`lower(${graphCollections.name})`), asc(graphCollections.id)]),
+      );
 
     if (collections.length === 0) {
       return [];

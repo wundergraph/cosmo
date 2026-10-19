@@ -2926,9 +2926,16 @@ message GraphCollectionOperation {
   string updatedByEmail = 8;
 }
 
+// Enum value names are global in protobuf, so these carry the message prefix.
+enum GraphCollectionSortBy {
+  GRAPH_COLLECTION_SORT_NAME = 0;
+  GRAPH_COLLECTION_SORT_CREATED_AT = 1;
+}
+
 message GetGraphCollectionsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
+  optional GraphCollectionSortBy sortBy = 3;
 }
 
 message GetGraphCollectionsResponse {

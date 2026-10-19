@@ -3,6 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   GetGraphCollectionsRequest,
   GetGraphCollectionsResponse,
+  GraphCollectionSortBy,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -44,7 +45,11 @@ export function getGraphCollections(
     }
 
     const repo = new GraphCollectionsRepository(logger, opts.db, authContext.organizationId);
-    const collections = await repo.listByFederatedGraphId(federatedGraph.id, authContext.userId);
+    const collections = await repo.listByFederatedGraphId(
+      federatedGraph.id,
+      authContext.userId,
+      req.sortBy === GraphCollectionSortBy.GRAPH_COLLECTION_SORT_CREATED_AT ? 'createdAt' : 'name',
+    );
 
     const hasGraphWriteAccess = authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph);
 

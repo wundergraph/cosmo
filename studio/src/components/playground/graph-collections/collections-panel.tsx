@@ -1,5 +1,5 @@
 import { GraphiQLPlugin } from '@graphiql/react';
-import { LuLayoutList } from 'react-icons/lu';
+import { LuArrowDownUp, LuLayoutList } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,12 +12,21 @@ import { CollectionItem } from './collection-item';
 import { useGraphCollectionsContext } from './graph-collections-provider';
 import {
   buildCollectionShareUrl,
+  CollectionSort,
   collectionDeepLinkParams,
   DialogState,
   filterCollections,
   resolveDeepLinkedCollection,
   resolveDeepLinkedOperation,
 } from '@/lib/graph-collections';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { CollectionDialogs } from './dialogs/collection-dialogs';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
@@ -30,6 +39,10 @@ export const CollectionsPanel = () => {
   const [{ collectionId: requestedCollectionId, operationId: requestedOperationId }, setDeepLink] =
     useQueryStates(collectionDeepLinkParams);
 
+  // Declared before the query: the server does the ordering, so the sort is
+  // part of its input.
+  const [sort, setSort] = useState<CollectionSort>('name');
+
   const {
     collections,
     canCreateTeamCollection,
@@ -39,7 +52,7 @@ export const CollectionsPanel = () => {
     federatedGraphName,
     namespace,
     federatedGraphId,
-  } = useGraphCollections();
+  } = useGraphCollections({ sort });
   const { boundOperationIds, hasOpenedDeepLink, markDeepLinkOpened } = useGraphCollectionsContext();
 
   const [search, setSearch] = useState('');
@@ -183,15 +196,36 @@ export const CollectionsPanel = () => {
 
       {/* Only worth the space once there is enough here to lose track of. */}
       {collections.length > 1 && (
-        <div className="graph-collections-search mb-3">
-          <MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            aria-label="Search collections and operations"
-          />
+        <div className="mb-3 flex items-center gap-x-1">
+          <div className="graph-collections-search min-w-0 flex-1">
+            <MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search"
+              aria-label="Search collections and operations"
+            />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon-sm" variant="ghost" className="shrink-0" aria-label="Sort collections">
+                <LuArrowDownUp />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={sort} onValueChange={(value) => setSort(value as CollectionSort)}>
+                <DropdownMenuRadioItem className="justify-between gap-x-6 pl-2" value="name">
+                  Name
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem className="justify-between gap-x-6 pl-2" value="createdAt">
+                  Date created
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 

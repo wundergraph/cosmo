@@ -1,7 +1,11 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseAsString } from 'nuqs';
 import { buildUrl } from '@/lib/build-url';
-import { GraphCollection, GraphCollectionOperationMeta } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GraphCollection,
+  GraphCollectionOperationMeta,
+  GraphCollectionSortBy,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
 import { toast } from '@/components/ui/use-toast';
 
@@ -67,6 +71,15 @@ export type DialogState =
   // collection an operation came from.
   | { kind: 'rename-operation'; operation: GraphCollectionOperationMeta; collectionId: string }
   | { kind: 'delete-operation'; operation: GraphCollectionOperationMeta; collectionId: string };
+
+/** How the collections list is ordered. */
+export type CollectionSort = 'name' | 'createdAt';
+
+/** The wire value for each sort, so the proto enum stays out of the UI. */
+export const collectionSortParam: Record<CollectionSort, GraphCollectionSortBy> = {
+  name: GraphCollectionSortBy.GRAPH_COLLECTION_SORT_NAME,
+  createdAt: GraphCollectionSortBy.GRAPH_COLLECTION_SORT_CREATED_AT,
+};
 
 type OperationLike = { id: string; name: string };
 type CollectionLike<TOperation extends OperationLike> = {

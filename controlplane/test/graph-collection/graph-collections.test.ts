@@ -1,4 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { GraphCollectionSortBy } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
@@ -113,6 +114,32 @@ describe('Graph Collections', () => {
         expect.objectContaining({ name: 'First' }),
         expect.objectContaining({ name: 'second' }),
         expect.objectContaining({ name: 'third' }),
+      ]);
+    });
+
+    test('Sorts by creation time, newest first, when asked', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+      // Created in an order that alphabetical sorting would not reproduce, so
+      // the two orderings cannot be confused for one another.
+      for (const name of ['mango', 'Apple', 'zebra']) {
+        await client.createGraphCollection({ federatedGraphName: graphName, namespace: 'default', name });
+      }
+
+      const listed = await client.getGraphCollections({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        sortBy: GraphCollectionSortBy.GRAPH_COLLECTION_SORT_CREATED_AT,
+      });
+
+      expect(listed.collections).toEqual([
+        expect.objectContaining({ name: 'zebra' }),
+        expect.objectContaining({ name: 'Apple' }),
+        expect.objectContaining({ name: 'mango' }),
       ]);
     });
 
