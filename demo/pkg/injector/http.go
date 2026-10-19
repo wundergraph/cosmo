@@ -48,7 +48,7 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 				if err := clone.ParseMultipartForm(1 << 30); err != nil {
 					panic(err)
 				}
-				payload := make(map[string]interface{})
+				payload := make(map[string]any)
 				for key, values := range clone.MultipartForm.Value {
 					if len(values) > 0 {
 						payload[key] = values[0]
@@ -56,7 +56,7 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 				}
 				r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
 			} else {
-				payload := map[string]interface{}{}
+				payload := map[string]any{}
 				if err := json.Unmarshal(body, &payload); err != nil {
 					panic(err)
 				}

@@ -4,6 +4,7 @@ import { checkAuth } from '../auth/utils.js';
 import CreateProposalCommand from './commands/create.js';
 import UpdateProposalStatusCommand from './commands/update-status.js';
 import UpdateProposalCommand from './commands/update.js';
+import StatusProposalCommand from './commands/status.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('proposal');
@@ -11,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(CreateProposalCommand(opts));
   command.addCommand(UpdateProposalCommand(opts));
   command.addCommand(UpdateProposalStatusCommand(opts));
+  command.addCommand(StatusProposalCommand(opts));
 
   command.hook('preAction', async (thisCmd) => {
     await checkAuth();

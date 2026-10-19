@@ -103,13 +103,20 @@ func (rs *RouterSupervisor) startRouter() error {
 	return nil
 }
 
-func (rs *RouterSupervisor) stopRouter() error {
+// stopRouter shuts the router down. shutdown is true on a real stop and false on a config reload.
+func (rs *RouterSupervisor) stopRouter(shutdown bool) error {
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), rs.resources.Config.ShutdownDelay)
 	defer cancel()
 
 	rs.logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", rs.resources.Config.ShutdownDelay.String()))
+
+	// Only drain on a real stop, never on a config reload.
+	if drainPeriod := rs.resources.Config.EffectiveDrainPeriod(); shutdown && drainPeriod > 0 {
+		rs.logger.Info("Draining router", zap.Duration("drain_period", drainPeriod))
+		rs.router.drain(shutdownCtx, drainPeriod)
+	}
 
 	if err := rs.router.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown router gracefully: %w", err)
@@ -162,7 +169,7 @@ func (rs *RouterSupervisor) Start() error {
 			rs.router.reloadPersistentState.OnRouterConfigReload()
 		}
 
-		if err := rs.stopRouter(); err != nil {
+		if err := rs.stopRouter(shutdown); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
 			}

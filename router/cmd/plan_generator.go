@@ -90,7 +90,7 @@ func PlanGenerator(args []string) {
 	cfg.Logger = logger
 
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
-	_, err = maxprocs.Set(maxprocs.Logger(func(msg string, args ...interface{}) {
+	_, err = maxprocs.Set(maxprocs.Logger(func(msg string, args ...any) {
 		logger.Info(fmt.Sprintf(msg, args...))
 	}))
 	if err != nil {

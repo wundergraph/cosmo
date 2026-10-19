@@ -25,6 +25,16 @@ func (e PersistentOperationNotFoundError) Error() string {
 	return fmt.Sprintf("operation '%s' for client '%s' not found", e.Sha256Hash, e.ClientName)
 }
 
+// OperationIDMismatchError is returned for a stored operation whose ID looks like a
+// SHA256 hash but is not the SHA256 of its body.
+type OperationIDMismatchError struct {
+	Sha256Hash string
+}
+
+func (e *OperationIDMismatchError) Error() string {
+	return fmt.Sprintf("persisted operation '%s' is invalid: an ID that looks like a SHA256 hash must be the SHA256 of its body", e.Sha256Hash)
+}
+
 type StorageClient interface {
 	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
 	Close()
@@ -65,6 +75,22 @@ func NewClient(opts *Options) (*Client, error) {
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+	return c.PersistedOperationWithManifest(ctx, clientName, sha256Hash, c.ManifestSnapshot())
+}
+
+// ManifestSnapshot captures the manifest used for cache identity and body lookup.
+func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
+	if c == nil || c.pqlStore == nil {
+		return nil
+	}
+	return c.pqlStore.Snapshot()
+}
+
+// PersistedOperationWithManifest resolves against the captured manifest, even if it has since reloaded.
+// A nil snapshot uses the storage provider, as before the initial manifest load.
+func (c *Client) PersistedOperationWithManifest(
+	ctx context.Context, clientName, sha256Hash string, manifest *pqlmanifest.Manifest,
+) ([]byte, bool, error) {
 	if c.APQEnabled() {
 		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
@@ -72,14 +98,13 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		}
 	}
 
-	if data := c.cache.Get(clientName, sha256Hash); data != nil {
-		return data, false, nil
-	}
-
-	// PQL manifest check (local, no network)
-	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
-		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
-			return body, false, nil
+	// A loaded manifest takes precedence over cached storage-provider responses.
+	if manifest != nil {
+		if body, found := manifest.Operations[sha256Hash]; found {
+			if !OperationIDMatchesBody(sha256Hash, body) {
+				return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
+			}
+			return []byte(body), false, nil
 		}
 		// Manifest is authoritative — operation not found
 		if c.APQEnabled() {
@@ -88,6 +113,10 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return nil, false, &PersistentOperationNotFoundError{
 			ClientName: clientName, Sha256Hash: sha256Hash,
 		}
+	}
+
+	if data := c.cache.Get(clientName, sha256Hash); data != nil {
+		return data, false, nil
 	}
 
 	if c.providerClient == nil {
@@ -99,6 +128,9 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	if err == nil && !OperationIDMatchesBody(sha256Hash, string(content)) {
+		return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
+	}
 	if errors.As(err, &poNotFound) && c.APQEnabled() {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil

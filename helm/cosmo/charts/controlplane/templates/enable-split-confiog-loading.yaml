@@ -1,0 +1,176 @@
+{{ if .Values.jobs.enableSplitConfigLoading.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # We truncate the organization id to keep within 52 characters for the name. We add the full id in the annotations.
+  name: "{{ include "controlplane.fullname" . }}-enable-scl-{{ trunc 8 .Values.jobs.enableSplitConfigLoading.id }}"
+  labels: 
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.enableSplitConfigLoading.additionalLabels "context" .) | nindent 4 }}
+  annotations:
+    organization-id: {{ .Values.jobs.enableSplitConfigLoading.id }}
+    # Run the job after installing the helm chart
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # Support for k14s.io. This annotation ensure that the job is run after the postgresql, keycloak and redis deployment
+    kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
+    kapp.k14s.io/change-rule.redis: "upsert after upserting cosmo.apps.redis.wundergraph.com/deployment"
+spec:
+  backoffLimit: 10
+  parallelism: 1
+  # 2 days
+  ttlSecondsAfterFinished: 172800
+  template:
+    metadata:
+      name: "{{ include "controlplane.fullname" . }}-enable-split-config-loading"
+      labels:
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.enableSplitConfigLoading.additionalLabels "context" .) | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: enable-split-config-loading
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseUrl
+            {{- if .Values.configuration.databaseTlsCert }}
+            - name: DB_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCert
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsCa }}
+            - name: DB_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsCa
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsKey }}
+            - name: DB_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: databaseTlsKey
+            {{- end }}
+            {{- if .Values.configuration.s3StorageUrl }}
+            - name: S3_STORAGE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3StorageUrl
+            {{- end }}
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3Region
+            {{- if .Values.configuration.s3Endpoint }}
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3Endpoint
+            {{- end }}
+            {{- if .Values.configuration.s3ForcePathStyle }}
+            - name: S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3ForcePathStyle
+            {{- end }}
+            {{- if .Values.configuration.s3AccessKeyId }}
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3AccessKeyId
+            {{- end }}
+            {{- if .Values.configuration.s3SecretAccessKey }}
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3SecretAccessKey
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverStorageUrl }}
+            - name: S3_FAILOVER_STORAGE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverStorageUrl
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverRegion }}
+            - name: S3_FAILOVER_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverRegion
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverEndpoint }}
+            - name: S3_FAILOVER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverEndpoint
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverForcePathStyle }}
+            - name: S3_FAILOVER_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: s3FailoverForcePathStyle
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverAccessKeyId }}
+            - name: S3_FAILOVER_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverAccessKeyId
+            {{- end }}
+            {{- if .Values.configuration.s3FailoverSecretAccessKey }}
+            - name: S3_FAILOVER_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: s3FailoverSecretAccessKey
+            {{- end }}
+            {{- if .Values.configuration.cdnBaseUrl }}
+            - name: CDN_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: cdnBaseUrl
+            {{- end }}
+            {{- if .Values.configuration.webhookProxyUrl }}
+            - name: WEBHOOK_PROXY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: webhookProxyUrl
+            {{- end }}
+            {{- if .Values.global.controlplane.admissionJwtSecret }}
+            - name: AUTH_ADMISSION_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: admissionJwtSecret
+            {{- end }}
+
+            - name: ORGANIZATION_ID
+              value: "{{ .Values.jobs.enableSplitConfigLoading.id }}"
+
+          args:
+            - "/app/dist/bin/enable-split-config-loading.js"
+{{- end }}

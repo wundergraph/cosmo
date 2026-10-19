@@ -15,9 +15,12 @@ new-migration:
 migrate:
 	dbmate -d "./migrations" up
 
+.PHONY: lint lint-fix
 lint:
-	go vet ./...
-	staticcheck ./...
+	../scripts/golangci-lint.sh run
+
+lint-fix:
+	../scripts/golangci-lint.sh run --fix
 
 VERSION?=dev
 build:

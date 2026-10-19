@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/wgc@0.133.0...wgc@0.133.1) (2026-10-19)
+
+**Note:** Version bump only for package wgc
+
+## [0.133.0](https://github.com/wundergraph/cosmo/compare/wgc@0.132.3...wgc@0.133.0) (2026-10-14)
+
+### Features
+
+* add proposal status command ([#3164](https://github.com/wundergraph/cosmo/issues/3164)) ([02589dd](https://github.com/wundergraph/cosmo/commit/02589dd0c2f8bd18fa91eebc81d3c8da8b931ac1)) (@alepane21)
+
+## [0.132.3](https://github.com/wundergraph/cosmo/compare/wgc@0.132.2...wgc@0.132.3) (2026-10-06)
+
+**Note:** Version bump only for package wgc
+
+## [0.132.2](https://github.com/wundergraph/cosmo/compare/wgc@0.132.1...wgc@0.132.2) (2026-10-02)
+
+**Note:** Version bump only for package wgc
+
+## [0.132.1](https://github.com/wundergraph/cosmo/compare/wgc@0.132.0...wgc@0.132.1) (2026-09-28)
+
+**Note:** Version bump only for package wgc
+
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/wgc@0.131.2...wgc@0.132.0) (2026-09-25)
+
+### Features
+
+* bump go version ([#3277](https://github.com/wundergraph/cosmo/issues/3277)) ([83d96f5](https://github.com/wundergraph/cosmo/commit/83d96f588b6a4b7f6c5def9801a2dd5a140bc75a)) (@Noroth)
+
 ## [0.131.2](https://github.com/wundergraph/cosmo/compare/wgc@0.131.1...wgc@0.131.2) (2026-09-23)
 
 ### Bug Fixes

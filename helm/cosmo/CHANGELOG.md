@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.22.0...helm-cosmo@0.22.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **values.yaml:** fix clickhouse resources default ([#3301](https://github.com/wundergraph/cosmo/issues/3301)) ([b1fc0da](https://github.com/wundergraph/cosmo/commit/b1fc0da82d20e4fa131659f5ffadf40a59cc1bf1))
+
+## [0.22.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.21.0...helm-cosmo@0.22.0) (2026-10-12)
+
+
+### Features
+
+* add `enableSplitConfigLoading` job to helm ([#3344](https://github.com/wundergraph/cosmo/issues/3344)) ([3642dc4](https://github.com/wundergraph/cosmo/commit/3642dc496f892ff773076048334204207537a894))
+
+## [0.21.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.20.0...helm-cosmo@0.21.0) (2026-10-06)
+
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971))
+* implement script for enabling `split-config-loading` ([#3227](https://github.com/wundergraph/cosmo/issues/3227)) ([e7162a7](https://github.com/wundergraph/cosmo/commit/e7162a756430e32d845ad0fe2f4152df59e01a03))
+
+
+### Bug Fixes
+
+* **helm:** allow disabling component ingress routes independently ([#3297](https://github.com/wundergraph/cosmo/issues/3297)) ([d2f3a95](https://github.com/wundergraph/cosmo/commit/d2f3a95d0ef82997ee131043e411671297b2e577))
+
 ## [0.20.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.19.0...helm-cosmo@0.20.0) (2026-07-27)
 
 

@@ -109,6 +109,8 @@ export function updateContract(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryClient,
+        opts.billingDefaultPlanId,
       );
 
       // Update the contract details

@@ -436,9 +436,7 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		if operationsBatch == nil {
 			return
@@ -465,11 +463,9 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 		if err != nil {
 			s.logger.Error("Failed to write operations", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		if metricsBatch == nil {
 			return
@@ -487,11 +483,9 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 		if err != nil {
 			s.logger.Error("Failed to write metrics", zap.Error(err))
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		if requestCountBatch == nil {
 			return
@@ -508,7 +502,7 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 		if err != nil {
 			s.logger.Error("Failed to write total requests", zap.Error(err))
 		}
-	}()
+	})
 
 	wg.Wait()
 

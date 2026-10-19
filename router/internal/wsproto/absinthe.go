@@ -37,7 +37,7 @@ type absintheMessage struct {
 }
 
 func (r absintheMessage) MarshalJSON() ([]byte, error) {
-	out := []interface{}{r.ID, r.Channel, r.Protocol, r.Type, r.Payload}
+	out := []any{r.ID, r.Channel, r.Protocol, r.Type, r.Payload}
 	return json.Marshal(out)
 }
 

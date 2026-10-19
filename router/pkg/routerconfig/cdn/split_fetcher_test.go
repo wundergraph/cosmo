@@ -11,7 +11,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +22,8 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -429,13 +434,205 @@ func TestFetchConfig_Success(t *testing.T) {
 }
 
 func TestFetchConfig_InvalidJSON(t *testing.T) {
+	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("not-valid-proto-json"))
 	}))
 	defer srv.Close()
 
-	_, err := newFetcher(t, srv.URL, nil).FetchConfig(context.Background(), "")
+	f := newFetcher(t, srv.URL, &cdn.Options{FetchRetryInterval: time.Millisecond})
+
+	_, err := f.FetchConfig(context.Background(), "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not unmarshal router config")
+	// A complete body that does not unmarshal is not a transfer problem, so it is not fetched again.
+	assert.Equal(t, int32(1), requests.Load())
+}
+
+// writeTruncated announces the full body length but only writes the first half,
+// so the client hits io.ErrUnexpectedEOF while reading the body.
+func writeTruncated(w http.ResponseWriter, body []byte) {
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body[:len(body)/2])
+}
+
+func TestFetchConfig_TruncatedBodyIsRetried(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{
+		Version:      "v42",
+		EngineConfig: &nodev1.EngineConfiguration{DefaultFlushInterval: 500},
+	})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if requests.Add(1) == 1 {
+			writeTruncated(w, body)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, &cdn.Options{FetchRetryInterval: time.Millisecond})
+
+	result, err := f.FetchConfig(context.Background(), "my-flag")
+	require.NoError(t, err)
+	assert.Equal(t, "v42", result.Version)
+	assert.Equal(t, int32(2), requests.Load())
+}
+
+func TestFetchConfig_TruncatedGzipBodyIsRetried(t *testing.T) {
+	compressed := gzipData(t, marshalRouterConfig(t, &nodev1.RouterConfig{
+		Version:      "v42",
+		EngineConfig: &nodev1.EngineConfiguration{DefaultFlushInterval: 500},
+	}))
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(http.StatusOK)
+		// The first gzip stream is cut short but its HTTP framing is complete,
+		// so the error comes from the gzip reader instead of the transport.
+		if requests.Add(1) == 1 {
+			_, _ = w.Write(compressed[:len(compressed)-8])
+			return
+		}
+		_, _ = w.Write(compressed)
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, &cdn.Options{FetchRetryInterval: time.Millisecond})
+
+	result, err := f.FetchConfig(context.Background(), "")
+	require.NoError(t, err)
+	assert.Equal(t, "v42", result.Version)
+	assert.Equal(t, int32(2), requests.Load())
+}
+
+func TestFetchConfig_TruncatedBodyRetriesExhausted(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{Version: "v42"})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		writeTruncated(w, body)
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, &cdn.Options{FetchRetryInterval: time.Millisecond})
+
+	_, err := f.FetchConfig(context.Background(), "")
+	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	assert.Contains(t, err.Error(), "could not read response body")
+	assert.Equal(t, int32(3), requests.Load())
+}
+
+func TestFetchConfig_TruncatedBodyRetryStopsOnContextCancel(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{Version: "v42"})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		writeTruncated(w, body)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Cancel when the truncated body is logged, i.e. after the first attempt and before the
+	// retry wait. The jittered wait can be ~0, so a timeout-based cancel would be racy.
+	logger := zap.New(zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(io.Discard), zap.WarnLevel,
+	), zap.Hooks(func(zapcore.Entry) error {
+		cancel()
+		return nil
+	}))
+
+	f := newFetcher(t, srv.URL, &cdn.Options{Logger: logger, FetchRetryInterval: time.Millisecond})
+
+	_, err := f.FetchConfig(ctx, "")
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	assert.Equal(t, int32(1), requests.Load())
+}
+
+func TestFetchMapper_TruncatedBodyIsRetried(t *testing.T) {
+	body := marshalActiveGraphs(t, map[string]string{"": "hash-base", "ff1": "hash-ff1"})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if requests.Add(1) == 1 {
+			writeTruncated(w, body)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	f := newFetcher(t, srv.URL, &cdn.Options{FetchRetryInterval: time.Millisecond})
+
+	result, err := f.FetchMapper(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "hash-ff1", result["ff1"])
+	assert.Equal(t, int32(2), requests.Load())
+}
+
+func TestFetchConfig_TruncatedBodyRetryMaxAttemptsConfigurable(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{Version: "v42"})
+
+	for _, tc := range []struct {
+		maxAttempts      int
+		expectedRequests int32
+	}{
+		{maxAttempts: 1, expectedRequests: 1},
+		{maxAttempts: 5, expectedRequests: 5},
+	} {
+		t.Run(strconv.Itoa(tc.maxAttempts), func(t *testing.T) {
+			var requests atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				requests.Add(1)
+				writeTruncated(w, body)
+			}))
+			defer srv.Close()
+
+			f := newFetcher(t, srv.URL, &cdn.Options{
+				FetchRetryMaxAttempts: tc.maxAttempts,
+				FetchRetryInterval:    time.Millisecond,
+			})
+
+			_, err := f.FetchConfig(context.Background(), "")
+			require.ErrorIs(t, err, io.ErrUnexpectedEOF)
+			assert.Equal(t, tc.expectedRequests, requests.Load())
+		})
+	}
+}
+
+func TestFetchConfig_TruncatedBodyRetryWaitIsCappedByMaxDuration(t *testing.T) {
+	body := marshalRouterConfig(t, &nodev1.RouterConfig{Version: "v42"})
+
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		writeTruncated(w, body)
+	}))
+	defer srv.Close()
+
+	// Without the cap the backoff would wait up to an hour before each retry.
+	f := newFetcher(t, srv.URL, &cdn.Options{
+		FetchRetryInterval:    time.Hour,
+		FetchRetryMaxDuration: 10 * time.Millisecond,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := f.FetchConfig(ctx, "")
+	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	require.NotErrorIs(t, err, context.DeadlineExceeded)
+	assert.Equal(t, int32(3), requests.Load())
 }

@@ -1,8 +1,14 @@
 package requestlogger
 
 import (
+	"context"
+	"net/http"
+	"slices"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -48,17 +54,45 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 	}
 }
 
-func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, overrideExprCtx *expr.Context) []zap.Field {
+// RequestFields returns the fields of a subgraph fetch. ctx is the fetch context,
+// used when no request was sent, e.g. on a response cache hit.
+func (h *SubgraphAccessLogger) RequestFields(
+	ctx context.Context, respInfo *resolve.ResponseInfo, overrideExprCtx *expr.Context,
+) []zap.Field {
 	if respInfo == nil {
 		return []zap.Field{}
 	}
 
-	fields := h.accessLogger.getRequestFields(respInfo.Request, h.logger)
-	if respInfo.Request != nil && respInfo.Request.URL != nil {
-		fields = append(fields, zap.String("url", respInfo.Request.URL.String()))
+	request := respInfo.Request
+	var fields []zap.Field
+	if request != nil {
+		fields = h.accessLogger.getRequestFields(request, h.logger)
+		if request.URL != nil {
+			fields = append(fields, zap.String("url", request.URL.String()))
+		}
+	} else {
+		fields = slices.Clone(h.accessLogger.baseFields)
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if h.accessLogger.traceID {
+			if traceID := rtrace.GetTraceID(ctx); traceID != "" {
+				fields = append(fields, logging.WithTraceID(traceID))
+			}
+		}
+		// Carries the context only, for the request scoped fields.
+		request = (&http.Request{Header: http.Header{}}).WithContext(ctx)
 	}
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders, overrideExprCtx)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(
+			h.logger,
+			h.accessLogger.attributes,
+			h.accessLogger.exprAttributes,
+			respInfo.Err,
+			request,
+			&respInfo.ResponseHeaders,
+			overrideExprCtx,
+		)...)
 	}
 
 	return fields

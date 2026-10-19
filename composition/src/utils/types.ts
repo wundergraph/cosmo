@@ -10,7 +10,9 @@ export type InvalidArgumentImplementation = {
 };
 
 export type InvalidFieldImplementation = {
+  implementationContextCoords: Set<string>;
   implementedResponseType?: string;
+  interfaceContextCoords: Set<string>;
   invalidAdditionalArguments: Set<string>;
   invalidImplementedArguments: InvalidArgumentImplementation[];
   isInaccessible: boolean;
@@ -21,6 +23,11 @@ export type InvalidFieldImplementation = {
 export type ImplementationErrors = {
   invalidFieldImplementations: Map<string, InvalidFieldImplementation>;
   unimplementedFields: string[];
+};
+
+export type EnumUsageData = {
+  inputCoordsBySubgraphName: Map<SubgraphName, Set<string>>;
+  outputCoordsBySubgraphName: Map<SubgraphName, Set<string>>;
 };
 
 export type GraphFieldData = {

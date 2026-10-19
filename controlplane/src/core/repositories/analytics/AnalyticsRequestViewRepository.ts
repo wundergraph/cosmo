@@ -277,10 +277,10 @@ export class AnalyticsRequestViewRepository {
             ClientVersion as clientVersion,
             IF(empty(OperationPersistedID), false, true) as isPersisted
           FROM
-            ${this.client.database}.traces
+            ${this.client.database}.traces_detail_by_time
           WHERE
             ${baseWhereSql}
-            ${baseOrderSql || 'ORDER BY toUnixTimestamp(Timestamp) DESC'}
+            ${baseOrderSql || 'ORDER BY Timestamp DESC'}
             ${basePaginationSql}
         `;
         break;
@@ -367,7 +367,7 @@ export class AnalyticsRequestViewRepository {
     switch (name) {
       case AnalyticsViewGroupName.None: {
         totalCountQuery = `
-          SELECT COUNT(*) as count FROM ${this.client.database}.traces
+          SELECT COUNT(*) as count FROM ${this.client.database}.traces_detail_by_time
           WHERE
             ${baseWhereSql}
         `;
@@ -680,7 +680,7 @@ export class AnalyticsRequestViewRepository {
     const allowedColumns = Object.keys(this.columnMetadata);
 
     if (id && allowedColumns.includes(id)) {
-      const dbExpression = id === 'unixTimestamp' ? 'toUnixTimestamp(Timestamp)' : id;
+      const dbExpression = id === 'unixTimestamp' ? 'Timestamp' : id;
       return `ORDER BY ${dbExpression} ${desc ? 'DESC' : 'ASC'}`;
     }
   }

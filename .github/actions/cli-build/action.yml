@@ -44,6 +44,13 @@ runs:
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
+    # The npm release sets the composition version in the postversion hook,
+    # binary builds skip that hook and set it here.
+    - name: Set composition version
+      shell: bash
+      run: node ./scripts/get-composition-version.mjs
+      working-directory: composition
+
     - name: 'Build wgc binary'
       shell: bash
       run: bun build --compile --minify --sourcemap --target ${{ inputs.target }} src/index.ts --outfile out/${{ steps.outfile.outputs.name }}

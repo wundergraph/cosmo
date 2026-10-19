@@ -1,0 +1,44 @@
+version: "2"
+
+linters:
+  # Start with a small subset of graphql-go-tools' checks and expand incrementally.
+  default: none
+  enable:
+    - asciicheck
+    - bidichk
+    - durationcheck
+    - fatcontext
+    - gocheckcompilerdirectives
+    - govet
+    - ineffassign
+    - loggercheck
+    - makezero
+    - nilnesserr
+    - nolintlint
+    - reassign
+    - staticcheck
+    - unused
+    - wastedassign
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+        - -QF*
+  exclusions:
+    # Preserve the standalone go vet command's coverage of generated files.
+    generated: disable
+    rules:
+      - path: ^router/
+        linters:
+          - staticcheck
+        text: '^(SA9003|ST1023|SA1019):'
+      - path: ^router-tests/plugintest/hello/generated/
+        linters:
+          - staticcheck
+        text: '^SA1019:'

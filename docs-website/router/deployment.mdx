@@ -47,6 +47,13 @@ The liveness route returns `200` when the router is up. The readiness handler re
 
 Before a Pod is terminated, a *SIGTERM* signal is sent to the Pod. Afterward, the Pod has 30 seconds to terminate itself (see [terminationGracePeriodSeconds](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination)). Ensure that the router-specific timeouts are set below this threshold or increase the termination period appropriately.
 
+On a stop signal, the router shuts down in two phases, both within `SHUTDOWN_DELAY`:
+
+1. **Drain** (up to `DRAIN_PERIOD`): the router keeps serving requests, but answers every response with `Connection: close` and reports `503` on the readiness endpoint. Clients that pool keep-alive connections, such as a proxy or load balancer in front of the router, retire each connection after its next response instead of reusing it. The drain ends as soon as all client connections are closed. WebSocket upgrades are not affected.
+2. **Shutdown** (up to `GRACE_PERIOD`): the router stops accepting connections, waits for in-flight requests to finish, and cleans up its resources.
+
+`DRAIN_PERIOD` defaults to `SHUTDOWN_DELAY - GRACE_PERIOD`, so the drain uses the part of the shutdown delay that the grace period leaves.
+
 For example, the following configuration was tested and could serve as a good starting point:
 
 **Router**
@@ -59,9 +66,13 @@ For example, the following configuration was tested and could serve as a good st
 
 * `terminationGracePeriodSeconds=60`
 
-With that configuration, your router has 30 seconds to respond to all active connections before forcefully shutting down the server. Kubernetes will not terminate the container until the termination period of 60 seconds is over. Because the readiness endpoint no longer responds `200` and the container is in`TERMINATION` state any new traffic from being redirected to the instance is prevented.
+With that configuration, the router drains connections for up to 10 seconds and then has up to 20 seconds to finish in-flight requests, so it is gone within 30 seconds. Kubernetes will not terminate the container until the termination period of 60 seconds is over. Because the readiness endpoint no longer responds `200` and the container is in `TERMINATION` state, no new traffic is routed to the instance.
 
-`GRACE_PERIOD` becomes interesting when the router updates its schema. This is also the time the server has to gracefully shut down old clients before the switch is enforced.
+<Note>
+  Without a drain, the router closes idle keep-alive connections immediately on shutdown. A client that sends a request on one of those connections at the same moment gets an `EOF`, and because GraphQL requests are `POST` requests, clients and proxies do not retry them. Set `DRAIN_PERIOD` above the idle connection timeout of any pooled client in front of the router so that every pooled connection is retired before the router shuts down. Set `DRAIN_PERIOD=0s` to disable the drain.
+</Note>
+
+`GRACE_PERIOD` also applies when the router updates its schema. After all in-flight requests on the old schema have finished, it is the time the router has to clean up the old graph's resources.
 
 <Info>
   For more information, we recommend the [Kubernetes Best Practice Terminating With Grace](https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-terminating-with-grace) article.
