@@ -118,6 +118,19 @@ func TestGraphQLSubscriptionArgumentsAreNotResolvedUnlessRequested(t *testing.T)
 	end()
 }
 
+func TestGraphQLSubscriptionStartOnlyHookNeedsNoEndCallback(t *testing.T) {
+	called := false
+	end, err := startGraphQLSubscriptionHooks([]graphqlSubscriptionLifecycleHandler{{
+		onStart: func(GraphQLSubscriptionHookContext) error {
+			called = true
+			return nil
+		},
+	}}, &graphqlSubscriptionHookContext{})
+	require.NoError(t, err)
+	require.True(t, called)
+	require.Nil(t, end)
+}
+
 type countingSubscriptionArguments struct {
 	GraphQLSubscriptionHookContext
 	calls int

@@ -245,6 +245,9 @@ func startGraphQLSubscriptionHooks(handlers []graphqlSubscriptionLifecycleHandle
 	}
 
 	allStartsSucceeded = true
+	if len(completed) == 0 {
+		return nil, nil
+	}
 	return end, nil
 }
 
