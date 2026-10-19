@@ -89,4 +89,26 @@ describe('readDeferStream', () => {
 
     expect(timelines.map((t) => t.state)).toEqual(['streaming', 'complete']);
   });
+  test('cancels the response body when the consumer stops early', async () => {
+    let cancelled = false;
+    const bytes = new TextEncoder().encode(ROUTER_V02_BODY);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = new Response(body, {
+      headers: { 'content-type': 'multipart/mixed; boundary="graphql"; incrementalSpec=v0.2' },
+    });
+
+    for await (const parts of readDeferStream(response)) {
+      expect(parts).toBeDefined();
+      break;
+    }
+
+    expect(cancelled).toBe(true);
+  });
 });
