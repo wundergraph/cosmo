@@ -29,11 +29,13 @@ type GraphQLSubscriptionHookContext interface {
 	SubscriptionInstanceID() string
 	// RootFieldName is the non-empty schema field name, even if the client selected an alias.
 	RootFieldName() string
-	// RootFieldArguments contains the selected root field's argument values as a
-	// JSON object, including field defaults when an argument was omitted. It is
-	// computed once per subscriber, not per event. Like Operation.Variables, it
-	// can contain sensitive client input.
-	RootFieldArguments() json.RawMessage
+	// RootFieldArguments resolves the selected root field's argument values as
+	// a JSON object, including field defaults when an argument was omitted.
+	// Resolution is lazy and cached only for this hook invocation, not for the
+	// lifetime of the subscription or for each event. The returned bytes are
+	// read-only and may contain sensitive client input; copy them to retain
+	// them after the hook returns.
+	RootFieldArguments() (json.RawMessage, error)
 }
 
 // SubscriptionOperationStartHandler runs once for each downstream GraphQL
@@ -57,13 +59,14 @@ type graphqlSubscriptionLifecycleHandler struct {
 }
 
 type graphqlSubscriptionHookContext struct {
-	request            *http.Request
-	logger             *zap.Logger
-	operation          OperationContext
-	authentication     authentication.Authentication
-	instanceID         string
-	rootFieldName      string
-	rootFieldArguments json.RawMessage
+	request           *http.Request
+	logger            *zap.Logger
+	operation         OperationContext
+	authentication    authentication.Authentication
+	instanceID        string
+	rootFieldName     string
+	argumentOperation *operationContext
+	schema            *ast.Document
 }
 
 func (c *graphqlSubscriptionHookContext) Request() *http.Request { return c.request }
@@ -76,8 +79,25 @@ func (c *graphqlSubscriptionHookContext) Authentication() authentication.Authent
 }
 func (c *graphqlSubscriptionHookContext) SubscriptionInstanceID() string { return c.instanceID }
 func (c *graphqlSubscriptionHookContext) RootFieldName() string          { return c.rootFieldName }
-func (c *graphqlSubscriptionHookContext) RootFieldArguments() json.RawMessage {
-	return c.rootFieldArguments
+func (c *graphqlSubscriptionHookContext) RootFieldArguments() (json.RawMessage, error) {
+	return subscriptionRootFieldArguments(c.argumentOperation, c.schema, c.rootFieldName)
+}
+
+// Each hook phase gets its own cache. The end closure retains only the base
+// context, so a resolved JSON value from the start phase is not retained for
+// the lifetime of a long-running subscription.
+type graphqlSubscriptionHookInvocation struct {
+	GraphQLSubscriptionHookContext
+	once      sync.Once
+	arguments json.RawMessage
+	err       error
+}
+
+func (c *graphqlSubscriptionHookInvocation) RootFieldArguments() (json.RawMessage, error) {
+	c.once.Do(func() {
+		c.arguments, c.err = c.GraphQLSubscriptionHookContext.RootFieldArguments()
+	})
+	return c.arguments, c.err
 }
 
 // subscriptionRootFieldArguments resolves the selected root field's arguments
@@ -199,20 +219,22 @@ func startGraphQLSubscriptionHooks(handlers []graphqlSubscriptionLifecycleHandle
 	var once sync.Once
 	end = func() {
 		once.Do(func() {
+			endCtx := &graphqlSubscriptionHookInvocation{GraphQLSubscriptionHookContext: ctx}
 			for i := len(completed) - 1; i >= 0; i-- {
 				// An end-only module has no startup work to unwind when a
 				// later module rejects the subscription.
 				if !allStartsSucceeded && !completed[i].hasStarted {
 					continue
 				}
-				invokeGraphQLSubscriptionEnd(completed[i].onEnd, ctx)
+				invokeGraphQLSubscriptionEnd(completed[i].onEnd, endCtx)
 			}
 		})
 	}
 
+	startCtx := &graphqlSubscriptionHookInvocation{GraphQLSubscriptionHookContext: ctx}
 	for _, handler := range handlers {
 		if handler.onStart != nil {
-			if err = invokeGraphQLSubscriptionStart(handler.onStart, ctx); err != nil {
+			if err = invokeGraphQLSubscriptionStart(handler.onStart, startCtx); err != nil {
 				end()
 				return nil, err
 			}

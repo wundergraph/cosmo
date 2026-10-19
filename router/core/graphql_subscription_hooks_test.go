@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http/httptest"
 	"testing"
@@ -83,13 +84,116 @@ func TestSubscriptionRootFieldArgumentsApplyFieldDefaults(t *testing.T) {
 	var got []byte
 	h := &GraphQLHandler{executor: &Executor{ClientSchema: &schema}, graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
 		onStart: func(ctx GraphQLSubscriptionHookContext) error {
-			got = ctx.RootFieldArguments()
-			return nil
+			var argumentErr error
+			got, argumentErr = ctx.RootFieldArguments()
+			return argumentErr
 		},
 	}}}
 	_, err = h.startGraphQLSubscription(reqCtx, request, subscription)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"fallback":"default","explicit":null,"unmentioned":"also-default"}`, string(got))
+}
+
+func TestGraphQLSubscriptionArgumentsAreNotResolvedUnlessRequested(t *testing.T) {
+	request := httptest.NewRequest("GET", "/graphql", nil)
+	// The plan has a valid root field, but the operation cannot be parsed for
+	// arguments. Hooks that do not request arguments must still run.
+	op := &operationContext{content: "not a GraphQL operation"}
+	reqCtx := &requestContext{request: request, logger: zap.NewNop(), operation: op}
+	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
+		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "updates"}}},
+	}}}
+	h := &GraphQLHandler{executor: &Executor{}, graphqlSubscriptionHooks: []graphqlSubscriptionLifecycleHandler{{
+		onStart: func(ctx GraphQLSubscriptionHookContext) error {
+			require.Equal(t, "updates", ctx.RootFieldName())
+			return nil
+		},
+		onEnd: func(ctx GraphQLSubscriptionHookContext) {
+			require.Equal(t, "updates", ctx.RootFieldName())
+		},
+	}}}
+	end, err := h.startGraphQLSubscription(reqCtx, request, subscription)
+	require.NoError(t, err)
+	require.NotNil(t, end)
+	end()
+}
+
+type countingSubscriptionArguments struct {
+	GraphQLSubscriptionHookContext
+	calls int
+}
+
+func (c *countingSubscriptionArguments) RootFieldArguments() (json.RawMessage, error) {
+	c.calls++
+	return json.RawMessage(`{"value":true}`), nil
+}
+
+func TestGraphQLSubscriptionArgumentsCacheIsHookInvocationScoped(t *testing.T) {
+	ctx := &countingSubscriptionArguments{}
+	readTwice := func(hookCtx GraphQLSubscriptionHookContext) {
+		first, err := hookCtx.RootFieldArguments()
+		require.NoError(t, err)
+		second, err := hookCtx.RootFieldArguments()
+		require.NoError(t, err)
+		require.JSONEq(t, `{"value":true}`, string(first))
+		require.Equal(t, first, second)
+	}
+	handlers := []graphqlSubscriptionLifecycleHandler{
+		{onStart: func(hookCtx GraphQLSubscriptionHookContext) error { readTwice(hookCtx); return nil }, onEnd: readTwice},
+		{onStart: func(hookCtx GraphQLSubscriptionHookContext) error { readTwice(hookCtx); return nil }, onEnd: readTwice},
+	}
+	end, err := startGraphQLSubscriptionHooks(handlers, ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, ctx.calls, "all start hooks share one invocation cache")
+	end()
+	require.Equal(t, 2, ctx.calls, "end hooks share a new invocation cache")
+	end()
+	require.Equal(t, 2, ctx.calls, "end runs only once")
+}
+
+func BenchmarkGraphQLSubscriptionHookArgumentAccess(b *testing.B) {
+	request := httptest.NewRequest("GET", "/graphql", nil)
+	variables, err := astjson.Parse(`{"ids":["one","two","three"]}`)
+	if err != nil {
+		b.Fatal(err)
+	}
+	op := &operationContext{
+		content:   `subscription Watch($ids: [ID!]!) { updates(ids: $ids) }`,
+		variables: variables,
+	}
+	reqCtx := &requestContext{request: request, logger: zap.NewNop(), operation: op}
+	subscription := &resolve.GraphQLSubscription{Response: &resolve.GraphQLResponse{Data: &resolve.Object{
+		Fields: []*resolve.Field{{Info: &resolve.FieldInfo{Name: "updates"}}},
+	}}}
+	benchmarks := []struct {
+		name     string
+		handlers []graphqlSubscriptionLifecycleHandler
+	}{
+		{name: "no_hooks"},
+		{name: "hooks_without_argument_access", handlers: []graphqlSubscriptionLifecycleHandler{{
+			onStart: func(GraphQLSubscriptionHookContext) error { return nil },
+			onEnd:   func(GraphQLSubscriptionHookContext) {},
+		}}},
+		{name: "hooks_with_argument_access", handlers: []graphqlSubscriptionLifecycleHandler{{
+			onStart: func(ctx GraphQLSubscriptionHookContext) error { _, err := ctx.RootFieldArguments(); return err },
+			onEnd:   func(ctx GraphQLSubscriptionHookContext) { _, _ = ctx.RootFieldArguments() },
+		}}},
+	}
+	for _, benchmark := range benchmarks {
+		b.Run(benchmark.name, func(b *testing.B) {
+			h := &GraphQLHandler{executor: &Executor{}, graphqlSubscriptionHooks: benchmark.handlers}
+			b.ReportAllocs()
+			for range b.N {
+				end, err := h.startGraphQLSubscription(reqCtx, request, subscription)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if end != nil {
+					end()
+				}
+			}
+		})
+	}
 }
 
 func TestGraphQLSubscriptionHookRejectsMissingRootField(t *testing.T) {

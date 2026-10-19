@@ -546,18 +546,15 @@ func (h *GraphQLHandler) startGraphQLSubscription(reqCtx *requestContext, reques
 	if err != nil {
 		return nil, err
 	}
-	rootFieldArguments, err := subscriptionRootFieldArguments(reqCtx.operation, h.executor.ClientSchema, rootFieldName)
-	if err != nil {
-		return nil, err
-	}
 	ctx := &graphqlSubscriptionHookContext{
-		request:            request,
-		logger:             reqCtx.Logger(),
-		operation:          reqCtx.Operation(),
-		authentication:     reqCtx.Authentication(),
-		instanceID:         uuid.NewString(),
-		rootFieldName:      rootFieldName,
-		rootFieldArguments: rootFieldArguments,
+		request:           request,
+		logger:            reqCtx.Logger(),
+		operation:         reqCtx.Operation(),
+		authentication:    reqCtx.Authentication(),
+		instanceID:        uuid.NewString(),
+		rootFieldName:     rootFieldName,
+		argumentOperation: reqCtx.operation,
+		schema:            h.executor.ClientSchema,
 	}
 	return startGraphQLSubscriptionHooks(h.graphqlSubscriptionHooks, ctx)
 }

@@ -2,6 +2,7 @@ package module_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -24,6 +25,14 @@ type subscriptionLifecycleDetails struct {
 	rootFieldArguments string
 	operationName      string
 	clientName         string
+}
+
+func rootFieldArgumentsJSON(ctx core.GraphQLSubscriptionHookContext) string {
+	arguments, err := ctx.RootFieldArguments()
+	if err != nil {
+		return fmt.Sprintf("argument resolution failed: %v", err)
+	}
+	return string(arguments)
 }
 
 func (r *subscriptionLifecycleRecorder) counts() (starts, ends int) {
@@ -51,7 +60,7 @@ func (m *subscriptionLifecycleModule) OnSubscriptionOperationStart(ctx core.Grap
 	defer m.recorder.mu.Unlock()
 	m.recorder.starts[ctx.SubscriptionInstanceID()] = subscriptionLifecycleDetails{
 		rootFieldName:      ctx.RootFieldName(),
-		rootFieldArguments: string(ctx.RootFieldArguments()),
+		rootFieldArguments: rootFieldArgumentsJSON(ctx),
 		operationName:      ctx.Operation().Name(),
 		clientName:         ctx.Operation().ClientInfo().Name,
 	}
@@ -63,7 +72,7 @@ func (m *subscriptionLifecycleModule) OnSubscriptionOperationEnd(ctx core.GraphQ
 	defer m.recorder.mu.Unlock()
 	m.recorder.ends[ctx.SubscriptionInstanceID()] = subscriptionLifecycleDetails{
 		rootFieldName:      ctx.RootFieldName(),
-		rootFieldArguments: string(ctx.RootFieldArguments()),
+		rootFieldArguments: rootFieldArgumentsJSON(ctx),
 		operationName:      ctx.Operation().Name(),
 		clientName:         ctx.Operation().ClientInfo().Name,
 	}
