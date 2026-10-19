@@ -46,15 +46,48 @@ const toPathBased = (payload: V02Payload, pending: Map<string, PendingEntry>): P
 };
 
 // onTimeline fires when a labelled part arrives or the state changes, not on every chunk.
+// meros does not cancel the body when the consumer stops early, so the body is read through a reader
+// this function owns and cancels in its finally.
 export async function* readDeferStream(
   response: Response,
   onTimeline?: (timeline: DeferTimeline) => void,
 ): AsyncGenerator<PathBasedPart[]> {
-  const chunks = await meros(response, { multiple: true });
-  if (chunks instanceof Response) {
+  const reader = response.body?.getReader();
+  if (!reader) {
     return;
   }
 
+  try {
+    const chunks = await meros(new Response(pullFrom(reader), { headers: response.headers }), { multiple: true });
+    if (chunks instanceof Response) {
+      return;
+    }
+    yield* parseChunks(chunks, onTimeline);
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // The stream may already be closed.
+    }
+  }
+}
+
+const pullFrom = (reader: ReadableStreamDefaultReader<Uint8Array>) =>
+  new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+  });
+
+async function* parseChunks(
+  chunks: AsyncIterable<ReadonlyArray<{ json: boolean; body: unknown }>>,
+  onTimeline?: (timeline: DeferTimeline) => void,
+): AsyncGenerator<PathBasedPart[]> {
   const pending = new Map<string, PendingEntry>();
   const started = performance.now();
   const arrived: DeferTimeline['arrived'] = [];
