@@ -144,6 +144,10 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 	c.tags.prune(now)
 
 	for _, item := range last {
+		// Read before an invalidation of one of its tags: stale already.
+		if c.tags.invalidatedSince(item.Tags, item.FetchedAt) {
+			continue
+		}
 		// A write ristretto turned away is not there to be found, so indexing
 		// it would leave the tag naming an entry that never existed.
 		stored := entry{

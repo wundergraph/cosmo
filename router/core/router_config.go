@@ -140,6 +140,9 @@ type Config struct {
 	responseCache                   ResponseCache
 	responseCacheMetrics            rmetric.ResponseCacheMetricStore
 	responseCacheInvalidationServer *http.Server
+	// responseCacheSubgraphAliases maps base subgraphs to the feature flag
+	// subgraphs replacing them, for invalidation.
+	responseCacheSubgraphAliases *responsecaching.SubgraphAliases
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time

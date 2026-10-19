@@ -1,6 +1,7 @@
 package in_memory
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"sync"
 	"time"
 )
@@ -17,10 +18,29 @@ type tagIndex struct {
 	mu        sync.Mutex
 	tags      map[string]map[string]time.Time
 	lastPrune time.Time
+	// invalidated is when each tag was last invalidated, kept for
+	// responsecaching.InvalidationWindow so a fetch in flight then can't store after it.
+	invalidated map[string]time.Time
 }
 
 func newTagIndex() *tagIndex {
-	return &tagIndex{tags: make(map[string]map[string]time.Time), lastPrune: time.Now()}
+	return &tagIndex{tags: make(map[string]map[string]time.Time), invalidated: make(map[string]time.Time), lastPrune: time.Now()}
+}
+
+// invalidatedSince reports whether one of tags was invalidated at or after
+// fetchedAt. A zero fetchedAt is unknown and never is.
+func (t *tagIndex) invalidatedSince(tags []string, fetchedAt time.Time) bool {
+	if fetchedAt.IsZero() || len(tags) == 0 {
+		return false
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, tag := range tags {
+		if at, ok := t.invalidated[tag]; ok && !at.Before(fetchedAt) {
+			return true
+		}
+	}
+	return false
 }
 
 // add records that key carries each of tags until expiresAt. A key already in a
@@ -49,6 +69,8 @@ func (t *tagIndex) take(tag string, now time.Time) []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	t.invalidated[tag] = now
+
 	keys, ok := t.tags[tag]
 	if !ok {
 		return nil
@@ -75,6 +97,12 @@ func (t *tagIndex) prune(now time.Time) {
 		return
 	}
 	t.lastPrune = now
+
+	for tag, at := range t.invalidated {
+		if now.Sub(at) > responsecaching.InvalidationWindow {
+			delete(t.invalidated, tag)
+		}
+	}
 
 	for tag, keys := range t.tags {
 		for key, expiresAt := range keys {

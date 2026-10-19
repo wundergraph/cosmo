@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"go.uber.org/zap"
 )
 
@@ -57,7 +58,7 @@ func post(t *testing.T, cfg config.ResponseCacheInvalidationConfig, store *recor
 	}
 
 	w := httptest.NewRecorder()
-	NewHandler(zap.NewNop(), store, cfg).ServeHTTP(w, r)
+	NewHandler(zap.NewNop(), store, cfg, nil).ServeHTTP(w, r)
 	return w
 }
 
@@ -321,7 +322,7 @@ func TestHandlerMethod(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/invalidation", nil)
 	r.Header.Set("Authorization", testKey)
 	w := httptest.NewRecorder()
-	NewHandler(zap.NewNop(), store, allIndexes()).ServeHTTP(w, r)
+	NewHandler(zap.NewNop(), store, allIndexes(), nil).ServeHTTP(w, r)
 
 	require.Equal(t, http.StatusMethodNotAllowed, w.Code)
 	require.Equal(t, http.MethodPost, w.Header().Get("Allow"))
@@ -349,7 +350,7 @@ func TestNewServerRequiresASharedKey(t *testing.T) {
 	cfg := allIndexes()
 	cfg.Endpoint.SharedKey = ""
 
-	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 	require.Error(t, err)
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "shared_key")
@@ -361,7 +362,7 @@ func TestNewServerRejectsShortSharedKey(t *testing.T) {
 	cfg := allIndexes()
 	cfg.Endpoint.SharedKey = "too-short"
 
-	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 	require.Error(t, err)
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "at least 32 characters")
@@ -374,9 +375,23 @@ func TestNewServerRejectsAnInvalidPath(t *testing.T) {
 		cfg := allIndexes()
 		cfg.Endpoint.Path = path
 
-		svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+		svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 		require.Error(t, err)
 		require.Nil(t, svr)
 		require.Contains(t, err.Error(), "must start with '/'")
 	}
+}
+
+func TestRequestTagsExpandsAliases(t *testing.T) {
+	aliases := &responsecaching.SubgraphAliases{}
+	aliases.Set(map[string]string{"products_fg": "products"})
+
+	tags, err := Request{Kind: KindSubgraph, Subgraph: "products"}.tags(allIndexes(), aliases.Expand)
+	require.NoError(t, err)
+	require.Equal(t, []string{"subgraph:products", "subgraph:products_fg"}, tags)
+
+	var none *responsecaching.SubgraphAliases
+	tags, err = Request{Kind: KindSubgraph, Subgraph: "products"}.tags(allIndexes(), none.Expand)
+	require.NoError(t, err)
+	require.Equal(t, []string{"subgraph:products"}, tags)
 }
