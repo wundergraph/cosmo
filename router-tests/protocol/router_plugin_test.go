@@ -461,6 +461,26 @@ func TestRouterPluginRequests(t *testing.T) {
 			expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING","otherSubs":[{"id":"1","name":"Cloud Migration Overhaul"}]},{"id":"5","name":"Security Overhaul","status":"ON_HOLD","otherSubs":[{"id":"2","name":"Microservices Revolution"}]}]}}}`,
 		},
 		{
+			name:     "query project with field resolver below a plain field inside a field resolver",
+			query:    `query { project(id: 1) { subProjects { id tasks { id isBlocked } } } }`,
+			expected: `{"data":{"project":{"subProjects":[{"id":"2","tasks":[{"id":"4","isBlocked":false},{"id":"5","isBlocked":false}]},{"id":"3","tasks":[{"id":"6","isBlocked":false},{"id":"7","isBlocked":false}]}]}}}`,
+		},
+		{
+			name:     "query project with field resolver with arguments below a plain field inside a field resolver",
+			query:    `query { project(id: 1) { subProjects { id milestones { id isAtRisk(threshold: 0.5) } } } }`,
+			expected: `{"data":{"project":{"subProjects":[{"id":"2","milestones":[{"id":"4","isAtRisk":false},{"id":"5","isAtRisk":false},{"id":"6","isAtRisk":false}]},{"id":"3","milestones":[]}]}}}`,
+		},
+		{
+			name:     "query project with field resolvers below plain fields inside recursive field resolvers",
+			query:    `query { project(id: 1) { subProjects { name tasks { name isBlocked(checkDependencies: true) totalEffort } subProjects { id tasks { id isBlocked } } } } }`,
+			expected: `{"data":{"project":{"subProjects":[{"name":"Microservices Revolution","tasks":[{"name":"Domain Model Analysis","isBlocked":false,"totalEffort":null},{"name":"API Gateway Configuration","isBlocked":false,"totalEffort":null}],"subProjects":[{"id":"4","tasks":[{"id":"8","isBlocked":false}]},{"id":"5","tasks":[{"id":"9","isBlocked":true}]}]},{"name":"AI-Powered Analytics","tasks":[{"name":"Machine Learning Model Research","isBlocked":false,"totalEffort":null},{"name":"Data Pipeline Design","isBlocked":false,"totalEffort":null}],"subProjects":[{"id":"6","tasks":[{"id":"10","isBlocked":false},{"id":"11","isBlocked":false}]},{"id":"7","tasks":[{"id":"12","isBlocked":false},{"id":"13","isBlocked":false}]}]}]}}}`,
+		},
+		{
+			name:     "query employee entity with field resolver below a plain field inside a field resolver",
+			query:    `query { employee(id: 4) { projects { id subProjects { id tasks { id isBlocked } } } } }`,
+			expected: `{"data":{"employee":{"projects":[{"id":"2","subProjects":[{"id":"4","tasks":[{"id":"8","isBlocked":false}]},{"id":"5","tasks":[{"id":"9","isBlocked":true}]}]}]}}}`,
+		},
+		{
 			name:     "query project resources with complex types inside inline fragments",
 			query:    `query { projectResources(projectId: "1") { ... on Milestone { id name dependencies { id name } } ... on Task { id name subtasks { id name } } } }`,
 			expected: `{"data":{"projectResources":[{},{},{},{},{"id":"1","name":"Infrastructure Assessment","dependencies":[]},{"id":"2","name":"Cloud Environment Setup","dependencies":[{"id":"1","name":"Infrastructure Assessment"},{"id":"","name":""}]},{"id":"3","name":"Application Migration","dependencies":[{"id":"2","name":"Cloud Environment Setup"},{"id":"","name":""}]},{"id":"1","name":"Current Infrastructure Audit","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","name":"Cloud Provider Selection","subtasks":null},{"id":"3","name":"Network Setup","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","name":"Database Migration","subtasks":[]}]}}`,
@@ -692,6 +712,31 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query non-existent employee with @requires fields returning abstract types returns null",
 			query:    `{ employee(id: 999) { id recommendedWorkItem { __typename } recommendedWorkItems(limit: 5) { __typename } latestWorkOperation { __typename } optionalLatestWorkOperation { __typename } } }`,
+			expected: `{"data":{"employee":null}}`,
+		},
+		{
+			name:     "query employee @requires field with field resolvers nested inside",
+			query:    `query { employee(id: 1) { workAudit { expertise riskScore(weight: 2) report { generatedAt findings { code severity remediation(detailed: true) { description estimatedHours } } } } } }`,
+			expected: `{"data":{"employee":{"workAudit":{"expertise":"Backend Architecture","riskScore":40,"report":{"generatedAt":"2024-01-01T00:00:00Z","findings":[{"code":"BACKEND","severity":1,"remediation":{"description":"Fix BACKEND (severity 1)","estimatedHours":12}},{"code":"ARCHITECTURE","severity":2,"remediation":{"description":"Fix ARCHITECTURE (severity 2)","estimatedHours":14.5}}]}}}}}`,
+		},
+		{
+			name:     "query employee @requires field with aliased field resolvers nested inside",
+			query:    `query { employee(id: 2) { workAudit { score: riskScore(weight: 0.5) report { findings { code short: remediation(detailed: false) { hours: estimatedHours } long: remediation(detailed: true) { description } } } } } }`,
+			expected: `{"data":{"employee":{"workAudit":{"score":10.5,"report":{"findings":[{"code":"FULLSTACK","short":{"hours":6.5},"long":{"description":"Fix FULLSTACK (severity 1)"}},{"code":"DEVELOPMENT","short":{"hours":7.5},"long":{"description":"Fix DEVELOPMENT (severity 2)"}}]}}}}}`,
+		},
+		{
+			name:     "query employee @requires field with field resolver below a plain field inside a field resolver",
+			query:    `query { employee(id: 1) { workAudit { report { findings { code remediation(detailed: false) { estimatedHours steps { title effort(multiplier: 0.5) } } } } } } }`,
+			expected: `{"data":{"employee":{"workAudit":{"report":{"findings":[{"code":"BACKEND","remediation":{"estimatedHours":5.5,"steps":[{"title":"Review BACKEND","effort":7},{"title":"Resolve BACKEND","effort":7.5}]}},{"code":"ARCHITECTURE","remediation":{"estimatedHours":8,"steps":[{"title":"Review ARCHITECTURE","effort":9.5},{"title":"Resolve ARCHITECTURE","effort":10}]}}]}}}}}`,
+		},
+		{
+			name:     "query employees with a field resolver on a @requires field",
+			query:    `query { employees { id workAudit { riskScore(weight: 1) } } }`,
+			expected: `{"data":{"employees":[{"id":1,"workAudit":{"riskScore":20}},{"id":2,"workAudit":{"riskScore":21}},{"id":3,"workAudit":{"riskScore":16}},{"id":4,"workAudit":{"riskScore":21}},{"id":5,"workAudit":{"riskScore":15}},{"id":7,"workAudit":{"riskScore":21}},{"id":8,"workAudit":{"riskScore":21}},{"id":10,"workAudit":{"riskScore":20}},{"id":11,"workAudit":{"riskScore":20}},{"id":12,"workAudit":{"riskScore":21}}]}}`,
+		},
+		{
+			name:     "query non-existent employee with field resolvers inside a @requires field returns null",
+			query:    `query { employee(id: 100) { workAudit { riskScore(weight: 1) report { findings { remediation(detailed: true) { estimatedHours } } } } } }`,
 			expected: `{"data":{"employee":null}}`,
 		},
 	}

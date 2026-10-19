@@ -284,6 +284,39 @@ type WorkSetup @shareable {
   primaryItem: EmployeeWorkItem!
 }
 
+# Types for field resolvers nested inside a @requires field
+type WorkAudit {
+  expertise: String!
+  report: WorkAuditReport!
+  # Field resolver directly on the @requires return type
+  riskScore(weight: Float!): Float! @connect__fieldResolver(context: "expertise")
+}
+
+type WorkAuditReport {
+  generatedAt: String!
+  findings: [WorkAuditFinding!]!
+}
+
+type WorkAuditFinding {
+  code: String!
+  severity: Int!
+  # Field resolver in a list, two levels below the @requires return type
+  remediation(detailed: Boolean!): WorkAuditRemediation @connect__fieldResolver(context: "code severity")
+}
+
+type WorkAuditRemediation {
+  description: String!
+  steps: [WorkAuditStep!]!
+  # Field resolver nested inside another field resolver
+  estimatedHours: Float! @connect__fieldResolver(context: "description")
+}
+
+type WorkAuditStep {
+  title: String!
+  # Field resolver below a plain field inside of another field resolver
+  effort(multiplier: Float!): Float! @connect__fieldResolver(context: "title")
+}
+
 # Federated types
 type Employee @key(fields: "id") {
   id: Int!
@@ -331,6 +364,10 @@ type Employee @key(fields: "id") {
   latestWorkOperation: WorkReviewResult! @requires(fields: "expertise")
   # Pattern 10: nullable union return type
   optionalLatestWorkOperation: WorkReviewResult @requires(fields: "expertise")
+
+  # @requires field returning nested types with field resolvers below it
+  # Path: workAudit -> report -> findings -> remediation -> estimatedHours
+  workAudit: WorkAudit! @requires(fields: "expertise")
 
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
