@@ -876,6 +876,7 @@
   "ResponseCache": {
     "Enabled": true,
     "KeyPrefix": "response_cache_test:",
+    "ValidateResponses": true,
     "Storage": {
       "Provider": "redis",
       "ProviderID": "my_redis",

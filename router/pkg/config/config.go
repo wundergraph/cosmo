@@ -1147,10 +1147,12 @@ type ResponseCacheConfiguration struct {
 	// KeyPrefix namespaces keys against everything else sharing the store, so it
 	// is a redis concern only. The in memory provider shares its keyspace with
 	// nothing and ignores this.
-	KeyPrefix    string                          `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
-	Storage      ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
-	Invalidation ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
-	TagHeader    ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
+	KeyPrefix string `yaml:"key_prefix" envDefault:"cosmo_response_cache:" env:"KEY_PREFIX"`
+	// ValidateResponses caches a response only if it has the types the plan expects.
+	ValidateResponses bool                            `yaml:"validate_responses" envDefault:"false" env:"VALIDATE_RESPONSES"`
+	Storage           ResponseCacheStorageConfig      `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+	Invalidation      ResponseCacheInvalidationConfig `yaml:"invalidation,omitempty" envPrefix:"INVALIDATION_"`
+	TagHeader         ResponseCacheTagHeaderConfig    `yaml:"cache_tag_header,omitempty" envPrefix:"CACHE_TAG_HEADER_"`
 	// All is what every subgraph gets unless Subgraphs names it.
 	All ResponseCacheSubgraphConfiguration `yaml:"all" envPrefix:"ALL_"`
 	// Subgraphs replaces All whole for the named subgraph; nothing is inherited.

@@ -548,6 +548,7 @@ storage_providers:
 response_cache:
   enabled: true
   key_prefix: 'response_cache_test:'
+  validate_responses: true
   storage:
     provider: 'redis'
     provider_id: 'my_redis'

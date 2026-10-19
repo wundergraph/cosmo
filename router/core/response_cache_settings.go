@@ -51,8 +51,9 @@ func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log 
 // ResponseCacheSettings is the per-subgraph configuration compiled once per
 // graph, and turned into the engine's options once per request.
 type ResponseCacheSettings struct {
-	defaultDisabled bool
-	fallbackTTL     time.Duration
+	defaultDisabled   bool
+	fallbackTTL       time.Duration
+	validateResponses bool
 	// all is nil when all has no private_id.
 	all     *responseCachePrivateID
 	entries map[string]responseCacheSubgraphEntry
@@ -72,8 +73,9 @@ type responseCacheSubgraphEntry struct {
 // logged: feature flag graphs have subgraph sets of their own.
 func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, log *zap.Logger) (*ResponseCacheSettings, error) {
 	s := &ResponseCacheSettings{
-		defaultDisabled: !cfg.All.Enabled,
-		fallbackTTL:     cfg.All.FallbackTTL,
+		defaultDisabled:   !cfg.All.Enabled,
+		fallbackTTL:       cfg.All.FallbackTTL,
+		validateResponses: cfg.ValidateResponses,
 	}
 	programs := make(map[string]*responseCachePrivateID)
 	compile := func(expression string) (*responseCachePrivateID, error) {
@@ -129,9 +131,10 @@ func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.
 // Invalidation are the caller's to fill in.
 func (s *ResponseCacheSettings) options(ctx expr.Context, onError func(error)) resolve.ResponseCacheOptions {
 	opts := resolve.ResponseCacheOptions{
-		DefaultTTL:      s.fallbackTTL,
-		DefaultDisabled: s.defaultDisabled,
-		PrivateID:       s.all.resolve(ctx, onError),
+		DefaultTTL:        s.fallbackTTL,
+		DefaultDisabled:   s.defaultDisabled,
+		PrivateID:         s.all.resolve(ctx, onError),
+		ValidateResponses: s.validateResponses,
 	}
 	if s.static != nil {
 		opts.Subgraphs = s.static

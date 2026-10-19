@@ -3449,6 +3449,11 @@
           "description": "Prepended to every cache key so response cache entries cannot collide with anything else sharing the Redis instance. Applies to the 'redis' storage provider only: the 'memory' storage provider shares its keyspace with nothing and ignores this.",
           "default": "cosmo_response_cache:"
         },
+        "validate_responses": {
+          "type": "boolean",
+          "default": false,
+          "description": "Cache a subgraph response only if the fields it provides have the types the query plan expects. A response of the wrong shape, such as a string where an object belongs, is still served, and its errors reported, but not cached. Costs a walk of each response before it is stored."
+        },
         "all": {
           "description": "What the cache does for every subgraph that has no entry of its own under 'subgraphs'.",
           "$ref": "#/$defs/response_cache_subgraph_all"

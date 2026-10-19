@@ -448,6 +448,7 @@
   "ResponseCache": {
     "Enabled": false,
     "KeyPrefix": "cosmo_response_cache:",
+    "ValidateResponses": false,
     "Storage": {
       "Provider": "redis",
       "ProviderID": "",
