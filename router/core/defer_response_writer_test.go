@@ -21,8 +21,7 @@ func newTestDeferWriter(t *testing.T) (*HttpDeferWriter, *httptest.ResponseRecor
 	}, rec
 }
 
-// A part must be complete on the wire as soon as it is flushed: the boundary after it carries its CRLF, so a
-// reader can tell it is a part boundary without waiting for the next part's headers.
+// The CRLF lets a reader finish each part before the next one arrives.
 func TestHttpDeferWriterEndsEachPartWithItsBoundary(t *testing.T) {
 	t.Parallel()
 

@@ -22,8 +22,7 @@ type HttpDeferWriter struct {
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
 
 const (
-	// Each boundary is followed by its CRLF in the same write. A reader decides whether a boundary is a
-	// part boundary or the close from the two bytes after it, so the CRLF must not wait for the next part.
+	// CRLF follows each boundary so readers can tell a part boundary from the close.
 	deferNextPartHeader  = "Content-Type: " + jsonContent + "\r\n\r\n"
 	deferFirstPartHeader = "--" + multipartBoundary + "\r\n" + deferNextPartHeader
 	deferPartBoundary    = multipartStart + "\r\n"
@@ -35,8 +34,7 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
-	// The close follows the boundary that ended the last part, so the stream ends with an empty part. That is
-	// the only close that stays valid when Complete runs after a part that still said hasNext:true.
+	// The close follows the last boundary, which leaves an empty part at the end.
 	if f.started {
 		_, _ = io.WriteString(f.writer, "\r\n")
 	}
