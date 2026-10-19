@@ -1343,6 +1343,9 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 // setupRedisResponseCache builds a response cache on a redis instance declared
 // under storage_providers.redis.
+// responseCacheStartupPingTimeout bounds the response cache's startup ping.
+const responseCacheStartupPingTimeout = 2 * time.Second
+
 func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 	providerID := r.responseCacheConfig.Storage.ProviderID
 	if providerID == "" {
@@ -1358,12 +1361,14 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		return fmt.Errorf("response cache references unknown redis storage provider %q", providerID)
 	}
 
+	// Bounded: a black-holed redis must not hold startup.
+	pingCtx, cancelPing := context.WithTimeout(ctx, responseCacheStartupPingTimeout)
+	defer cancelPing()
 	client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
 		URLs:           provider.URLs,
 		ClusterEnabled: provider.ClusterEnabled,
 		Logger:         r.logger,
-		// Startup cancels the ping.
-		Context: ctx,
+		Context:        pingCtx,
 		// Own client, so the storage timeouts can cut stalled reads.
 		ContextTimeoutEnabled: true,
 	})

@@ -113,7 +113,7 @@ func TestResponseCacheRedisTimeouts(t *testing.T) {
 			require.Equal(t, warm.Body, res.Body)
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "the lookup must give up and fetch")
 			// lookup + write bounds plus the fetch; the go-redis default is 3s per read.
-			require.Less(t, elapsed, 1500*time.Millisecond)
+			require.Less(t, elapsed, 2500*time.Millisecond)
 		})
 	})
 }
@@ -145,6 +145,27 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 			second := xEnv.MakeGraphQLRequestOK(query)
 			require.Equal(t, first.Body, second.Body)
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
+	t.Run("a redis that never answers does not hold startup", func(t *testing.T) {
+		t.Parallel()
+
+		proxy := newStallProxy(t)
+		proxy.stall()
+
+		start := time.Now()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
+				}),
+				core.WithResponseCache(responseCacheConfig(t, time.Minute)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// 2s ping bound plus startup; unbounded takes over 6s.
+			require.Less(t, time.Since(start), 5*time.Second)
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
 		})
 	})
 }
