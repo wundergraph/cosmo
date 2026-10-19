@@ -7,7 +7,7 @@
       "weight": 0,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
-        { "id": "users", "description": "1 User", "limit": 1 },
+        { "id": "users", "description": "3 users", "limit": 3 },
         {
           "id": "federated-graphs",
           "description": "1 Federated Graph",

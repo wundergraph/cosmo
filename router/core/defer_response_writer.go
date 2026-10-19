@@ -16,23 +16,17 @@ type HttpDeferWriter struct {
 	writer  io.Writer
 	flusher http.Flusher
 	buf     *bytes.Buffer
+	started bool
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
 
 const (
-	// deferPartHeader prefixes every @defer payload as a multipart/mixed part.
-	// Unlike subscriptions, the payload is raw JSON (not wrapped in a `payload`
-	// field):
-	//   --graphql\r\n
-	//   Content-Type: application/json\r\n
-	//   \r\n
-	deferPartHeader = "--" + multipartBoundary + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
-	// deferPartTrailer separates a part from the next boundary (or the closing
-	// boundary written by Complete).
-	deferPartTrailer = "\r\n\r\n"
-	// deferCloseBoundary terminates the multipart/mixed stream.
-	deferCloseBoundary = "--" + multipartBoundary + "--"
+	// CRLF follows each boundary so readers can tell a part boundary from the close.
+	deferNextPartHeader  = "Content-Type: " + jsonContent + "\r\n\r\n"
+	deferFirstPartHeader = "--" + multipartBoundary + "\r\n" + deferNextPartHeader
+	deferPartBoundary    = multipartStart + "\r\n"
+	deferCloseLine       = "--" + multipartBoundary + "--"
 )
 
 func (f *HttpDeferWriter) Complete() {
@@ -40,9 +34,11 @@ func (f *HttpDeferWriter) Complete() {
 		return
 	}
 
-	// Each part written by Flush already ends with deferPartTrailer, so the
-	// closing boundary follows directly.
-	_, _ = io.WriteString(f.writer, deferCloseBoundary)
+	// The close follows the last boundary, which leaves an empty part at the end.
+	if f.started {
+		_, _ = io.WriteString(f.writer, "\r\n")
+	}
+	_, _ = io.WriteString(f.writer, deferCloseLine)
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -67,17 +63,18 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	resp := bytes.TrimRight(f.buf.Bytes(), "\n")
 	f.buf.Reset()
 
-	// Write the part directly to the underlying writer rather than assembling a
-	// new buffer: the header/trailer are tiny constants and the (potentially
-	// large) JSON payload is written without copying. The net/http response is
-	// buffered, so these writes coalesce into a single chunk on Flush.
-	if _, err = io.WriteString(f.writer, deferPartHeader); err != nil {
+	header := deferNextPartHeader
+	if !f.started {
+		header = deferFirstPartHeader
+		f.started = true
+	}
+	if _, err = io.WriteString(f.writer, header); err != nil {
 		return err
 	}
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, deferPartTrailer); err != nil {
+	if _, err = io.WriteString(f.writer, deferPartBoundary); err != nil {
 		return err
 	}
 

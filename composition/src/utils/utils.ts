@@ -89,6 +89,9 @@ export function kindToNodeType(kind: Kind): string {
     case Kind.BOOLEAN: {
       return BOOLEAN_SCALAR;
     }
+    case Kind.DIRECTIVE_DEFINITION: {
+      return 'Directive definition';
+    }
     case Kind.ENUM:
     // intentional fallthrough
     case Kind.ENUM_TYPE_DEFINITION: {
