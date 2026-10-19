@@ -147,22 +147,4 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
 		})
 	})
-
-	t.Run("required_to_start fails startup", func(t *testing.T) {
-		t.Parallel()
-
-		cfg := responseCacheConfig(t, time.Minute)
-		cfg.Storage.RequiredToStart = true
-
-		testenv.FailsOnStartup(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithStorageProviders(config.StorageProviders{
-					Redis: []config.RedisStorageProvider{{URLs: []string{downURL(t)}, ID: responseCacheRedisProviderID}},
-				}),
-				core.WithResponseCache(cfg),
-			},
-		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "failed to create redis client for response cache")
-		})
-	})
 }

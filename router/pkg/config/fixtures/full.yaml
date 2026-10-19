@@ -554,7 +554,6 @@ response_cache:
     max_entries: 2048
     lookup_timeout: 200ms
     write_timeout: 1s
-    required_to_start: true
   invalidation:
     cache_tag: true
     subgraph: false

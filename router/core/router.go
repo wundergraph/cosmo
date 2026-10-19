@@ -1369,12 +1369,7 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 	})
 	if err != nil {
 		// A failed ping still returns the client; only a bad config returns none.
-		if client == nil || r.responseCacheConfig.Storage.RequiredToStart {
-			if client != nil {
-				if closeErr := client.Close(); closeErr != nil {
-					r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
-				}
-			}
+		if client == nil {
 			return fmt.Errorf("failed to create redis client for response cache: %w", err)
 		}
 		// go-redis reconnects on its own; until then lookups miss and writes drop.
