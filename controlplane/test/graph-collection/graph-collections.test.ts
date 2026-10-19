@@ -70,11 +70,14 @@ describe('Graph Collections', () => {
 
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       expect(list.response?.code).toBe(EnumStatusCode.OK);
-      expect(list.collections).toHaveLength(1);
-      expect(list.collections[0].name).toBe('Cart operations');
-      expect(list.collections[0].isTeamScoped).toBe(false);
-      expect(list.collections[0].canEdit).toBe(true);
-      expect(list.collections[0].operations).toEqual([]);
+      expect(list.collections).toEqual([
+        expect.objectContaining({
+          name: 'Cart operations',
+          isTeamScoped: false,
+          canEdit: true,
+          operations: [],
+        }),
+      ]);
     });
 
     test('Returns collections and their operations alphabetically, ignoring case', async () => {
@@ -93,7 +96,11 @@ describe('Graph Collections', () => {
       }
 
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
-      expect(list.collections.map((c) => c.name)).toEqual(['Apple', 'mango', 'zebra']);
+      expect(list.collections).toEqual([
+        expect.objectContaining({ name: 'Apple' }),
+        expect.objectContaining({ name: 'mango' }),
+        expect.objectContaining({ name: 'zebra' }),
+      ]);
 
       const collectionId = list.collections.find((c) => c.name === 'mango')!.id;
       for (const name of ['second', 'First', 'third']) {
@@ -102,7 +109,11 @@ describe('Graph Collections', () => {
 
       const withOps = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       const mango = withOps.collections.find((c) => c.name === 'mango')!;
-      expect(mango.operations.map((o) => o.name)).toEqual(['First', 'second', 'third']);
+      expect(mango.operations).toEqual([
+        expect.objectContaining({ name: 'First' }),
+        expect.objectContaining({ name: 'second' }),
+        expect.objectContaining({ name: 'third' }),
+      ]);
     });
 
     test('Renaming a collection moves it in the order', async () => {
@@ -124,7 +135,10 @@ describe('Graph Collections', () => {
       await client.renameGraphCollection({ federatedGraphId, id: apple.id, name: 'zebra' });
 
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
-      expect(list.collections.map((c) => c.name)).toEqual(['mango', 'zebra']);
+      expect(list.collections).toEqual([
+        expect.objectContaining({ name: 'mango' }),
+        expect.objectContaining({ name: 'zebra' }),
+      ]);
     });
 
     test('Rejects an empty collection name', async () => {
@@ -590,7 +604,7 @@ describe('Graph Collections', () => {
       expect(created.id).toBe('');
     });
 
-    test('Accepts a document that parses but does not match the schema', async () => {
+    test('Accepts a document that is valid GraphQL but names a field the graph does not have', async () => {
       const { client, server, federatedGraphId, collectionId } = await setupGraphWithCollection();
       onTestFinished(() => server.close());
 
@@ -1094,7 +1108,7 @@ describe('Graph Collections', () => {
       expect(list.collections[0].isTeamScoped).toBe(true);
     });
 
-    test('canCreateTeamCollection matches whether the caller may actually create one', async () => {
+    test('A graph viewer is not offered team collections and cannot create one', async () => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
 
@@ -1177,7 +1191,7 @@ describe('Graph Collections', () => {
 
       authenticator.changeUserWithSuppliedContext(users.adminAliceCompanyA);
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
-      expect(list.collections[0].operations.map((o) => o.name)).toEqual(['From Bob']);
+      expect(list.collections[0].operations).toEqual([expect.objectContaining({ name: 'From Bob' })]);
     });
 
     test('Two members editing the same shared operation cannot silently overwrite each other', async () => {
@@ -1480,7 +1494,14 @@ describe('Graph Collections', () => {
       // raw SQL fragment in the repository, the ORDER BY lower(name).
       const listed = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       expect(listed.response?.code).toBe(EnumStatusCode.OK);
-      expect(listed.collections.map((c) => c.name).sort()).toEqual([...INJECTION].sort());
+      expect(listed.collections.map((c) => c.name).sort()).toEqual([
+        // eslint-disable-next-line no-template-curly-in-string
+        '$1 $2 ${name}',
+        "' OR '1'='1",
+        "'; DROP TABLE graph_collections; --",
+        '100%_like\\_wildcards',
+        'Robert"); DROP TABLE graph_collection_operations;--',
+      ]);
     });
 
     test('Stores and returns injection-shaped documents and variables verbatim', async () => {
