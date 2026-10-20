@@ -14,6 +14,7 @@ import {
   buildCollectionShareUrl,
   CollectionSort,
   collectionDeepLinkParams,
+  DeletedEntity,
   DialogState,
   filterCollections,
   resolveDeepLinkedCollection,
@@ -82,6 +83,25 @@ export const CollectionsPanel = () => {
   );
 
   const closeDialog = useCallback(() => setDialog({ kind: 'none' }), []);
+
+  /**
+   * Refreshes the list, and drops a deep link to something that was just
+   * deleted - otherwise the panel warns that the id is "unavailable", which
+   * reads as a permission problem rather than the deletion the user performed.
+   */
+  const onChanged = useCallback(
+    (deleted?: DeletedEntity) => {
+      if (deleted?.kind === 'collection' && deleted.id === requestedCollectionId) {
+        // A deleted collection takes its operations with it.
+        setDeepLink({ collectionId: null, operationId: null });
+      } else if (deleted?.kind === 'operation' && deleted.id === requestedOperationId) {
+        setDeepLink({ operationId: null });
+      }
+
+      refetch();
+    },
+    [requestedCollectionId, requestedOperationId, setDeepLink, refetch],
+  );
 
   const { openOperation: openSavedOperation, activeBinding } = useOpenOperation({
     onOperationMissing: refetch,
@@ -278,7 +298,7 @@ export const CollectionsPanel = () => {
       <CollectionDialogs
         dialog={dialog}
         closeDialog={closeDialog}
-        onChanged={refetch}
+        onChanged={onChanged}
         canCreateTeamCollection={canCreateTeamCollection}
         federatedGraphName={federatedGraphName}
         namespace={namespace}

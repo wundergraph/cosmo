@@ -72,6 +72,12 @@ export type DialogState =
   | { kind: 'rename-operation'; operation: GraphCollectionOperationMeta; collectionId: string }
   | { kind: 'delete-operation'; operation: GraphCollectionOperationMeta; collectionId: string };
 
+/**
+ * What a mutation removed, for callers that hold references to it. Reported by
+ * the dialog host, which already knows which dialog ran.
+ */
+export type DeletedEntity = { kind: 'collection' | 'operation'; id: string };
+
 /** How the collections list is ordered. */
 export type CollectionSort = 'name' | 'createdAt';
 

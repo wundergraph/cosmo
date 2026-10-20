@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { DialogState } from '@/lib/graph-collections';
+import { DeletedEntity, DialogState } from '@/lib/graph-collections';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { DeleteCollectionDialog } from './delete-collection-dialog';
 import { DeleteOperationDialog } from './delete-operation-dialog';
@@ -25,16 +25,18 @@ export const CollectionDialogs = ({
   dialog: DialogState;
   closeDialog: () => void;
   canCreateTeamCollection: boolean;
-  /** Called after a successful mutation, to refresh the list. */
-  onChanged: () => void;
+  onChanged: (deleted?: DeletedEntity) => void;
   federatedGraphName: string;
   namespace: string;
   federatedGraphId: string;
 }) => {
-  const onDone = useCallback(() => {
-    closeDialog();
-    onChanged();
-  }, [closeDialog, onChanged]);
+  const onDone = useCallback(
+    (deleted?: DeletedEntity) => {
+      closeDialog();
+      onChanged(deleted);
+    },
+    [closeDialog, onChanged],
+  );
 
   switch (dialog.kind) {
     case 'none': {
@@ -70,7 +72,7 @@ export const CollectionDialogs = ({
           collection={dialog.collection}
           federatedGraphId={federatedGraphId}
           onClose={closeDialog}
-          onDone={onDone}
+          onDone={() => onDone({ kind: 'collection', id: dialog.collection.id })}
         />
       );
     }
@@ -105,7 +107,7 @@ export const CollectionDialogs = ({
           collectionId={dialog.collectionId}
           federatedGraphId={federatedGraphId}
           onClose={closeDialog}
-          onDone={onDone}
+          onDone={() => onDone({ kind: 'operation', id: dialog.operation.id })}
         />
       );
     }
