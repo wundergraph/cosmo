@@ -14,6 +14,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
@@ -112,6 +113,14 @@ export function setGraphRouterCompatibilityVersion(
       };
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
@@ -143,12 +152,13 @@ export function setGraphRouterCompatibilityVersion(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       return await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -165,6 +175,6 @@ export function setGraphRouterCompatibilityVersion(
       compositionErrors,
       compositionWarnings,
       deploymentErrors,
-    };
+    });
   });
 }
