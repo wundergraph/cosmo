@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 )
 
 // ResponseCacheStatusHeader reports the request's response cache status, with the other cache debug headers.
@@ -16,6 +17,8 @@ const (
 	cacheTagHeaderOutcomeEmpty     = "empty"
 	cacheTagHeaderOutcomeComplete  = "complete"
 	cacheTagHeaderOutcomeTruncated = "truncated"
+	// Did not fit, and on_overflow private sent none.
+	cacheTagHeaderOutcomePrivate = "private"
 )
 
 // responseCacheTraceDetails is the router's part of the request's response cache trace.
@@ -34,6 +37,9 @@ type cacheTagHeaderTrace struct {
 	// UntruncatedSize is the header with every usable key, before max_bytes.
 	UntruncatedSize int `json:"untruncated_size"`
 	MaxBytes        int `json:"max_bytes"`
+	// Tiers are the configured tiers; Excluded are keys of the others.
+	Tiers    []string `json:"tiers"`
+	Excluded []string `json:"excluded,omitempty"`
 	// Dropped did not fit max_bytes; Rejected can never be in the header.
 	Dropped  []string `json:"dropped,omitempty"`
 	Rejected []string `json:"rejected,omitempty"`
@@ -49,8 +55,8 @@ type responseCacheInvalidationTrace struct {
 
 // responseCacheTraceDetailsFunc is resolve.ResponseCacheOptions.TraceDetails for one request.
 // canEmitTagHeader reports whether this response's writer will set the Cache-Tag header.
-func (h *GraphQLHandler) responseCacheTraceDetailsFunc(canEmitTagHeader func() bool) func(surrogateKeys []string) any {
-	return func(surrogateKeys []string) any {
+func (h *GraphQLHandler) responseCacheTraceDetailsFunc(canEmitTagHeader func() bool) func(surrogateKeys []caching.SurrogateKey) any {
+	return func(surrogateKeys []caching.SurrogateKey) any {
 		details := responseCacheTraceDetails{
 			Invalidation: responseCacheInvalidationTrace{
 				CacheTag: h.responseCacheInvalidation.CacheTag,
@@ -62,48 +68,62 @@ func (h *GraphQLHandler) responseCacheTraceDetailsFunc(canEmitTagHeader func() b
 			details.Invalidation.Endpoint = invalidationEndpointURL(endpoint.ListenAddr, endpoint.Path)
 		}
 		if h.responseCacheTagHeader.Enabled {
-			details.TagHeader = describeCacheTagHeader(surrogateKeys, h.responseCacheTagHeader, canEmitTagHeader())
+			details.TagHeader = describeCacheTagHeader(surrogateKeys, &h.responseCacheTagHeader, canEmitTagHeader())
 		}
 		return details
 	}
 }
 
-// describeCacheTagHeader is what buildCacheTagHeader makes of the request's surrogate keys.
-func describeCacheTagHeader(surrogateKeys []string, cfg config.ResponseCacheTagHeaderConfig, canEmit bool) *cacheTagHeaderTrace {
-	value := buildCacheTagHeader(surrogateKeys, cfg.Delimiter, cfg.MaxBytes)
+// describeCacheTagHeader is what cacheTagHeader.set makes of the request's surrogate keys.
+func describeCacheTagHeader(surrogateKeys []caching.SurrogateKey, h *cacheTagHeader, canEmit bool) *cacheTagHeaderTrace {
+	value, overflow := buildCacheTagHeader(surrogateKeys, h.tiers, h.Delimiter, h.MaxBytes)
+	private := overflow && h.OnOverflow == config.ResponseCacheTagHeaderOverflowPrivate
+	if private {
+		value = ""
+	}
 	trace := &cacheTagHeaderTrace{
-		Name:     cfg.Name,
+		Name:     h.Name,
 		Value:    value,
 		Emitted:  canEmit && value != "",
 		Size:     len(value),
-		MaxBytes: cfg.MaxBytes,
+		MaxBytes: h.MaxBytes,
+		Tiers:    h.Tiers,
 	}
 
 	kept := make(map[string]struct{})
 	if value != "" {
-		for key := range strings.SplitSeq(value, cfg.Delimiter) {
+		for key := range strings.SplitSeq(value, h.Delimiter) {
 			kept[key] = struct{}{}
 		}
 	}
-	usable := 0
-	for _, key := range surrogateKeys {
-		if !usableCacheTag(key, cfg.Delimiter) {
+	for _, key := range caching.SurrogateKeyValues(surrogateKeys) {
+		if !usableCacheTag(key, h.Delimiter) {
 			trace.Rejected = append(trace.Rejected, key)
-			continue
 		}
-		if usable > 0 {
-			trace.UntruncatedSize += len(cfg.Delimiter)
+	}
+	usable := cacheTagHeaderKeys(surrogateKeys, h.tiers, h.Delimiter)
+	allowed := make(map[string]struct{}, len(usable))
+	for i, key := range usable {
+		allowed[key.Value] = struct{}{}
+		if i > 0 {
+			trace.UntruncatedSize += len(h.Delimiter)
 		}
-		trace.UntruncatedSize += len(key)
-		usable++
-		if _, ok := kept[key]; !ok {
-			trace.Dropped = append(trace.Dropped, key)
+		trace.UntruncatedSize += len(key.Value)
+		if _, ok := kept[key.Value]; !ok {
+			trace.Dropped = append(trace.Dropped, key.Value)
+		}
+	}
+	for _, key := range caching.SurrogateKeyValues(surrogateKeys) {
+		if _, ok := allowed[key]; !ok && usableCacheTag(key, h.Delimiter) {
+			trace.Excluded = append(trace.Excluded, key)
 		}
 	}
 
 	switch {
-	case usable == 0:
+	case len(usable) == 0:
 		trace.Outcome = cacheTagHeaderOutcomeEmpty
+	case private:
+		trace.Outcome = cacheTagHeaderOutcomePrivate
 	case len(trace.Dropped) == 0:
 		trace.Outcome = cacheTagHeaderOutcomeComplete
 	default:

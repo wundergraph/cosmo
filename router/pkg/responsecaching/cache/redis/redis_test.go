@@ -192,7 +192,10 @@ func TestRedisCache(t *testing.T) {
 
 			c, _ := newTestRedisCache(t)
 
-			surrogateKeys := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
+			surrogateKeys := []enginecache.SurrogateKey{
+				enginecache.SubgraphSurrogateKey("accounts"), enginecache.TypeSurrogateKey("accounts", "User"),
+				enginecache.DeclaredSurrogateKey("subgraph-other"), enginecache.DeclaredSurrogateKey("user-42"),
+			}
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
