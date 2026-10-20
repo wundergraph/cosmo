@@ -43,11 +43,7 @@ export type DeferTimeline = {
 
 // Incremental payloads refer to earlier pending entries by id, so the map must outlive a single part.
 function toPathBased(body: unknown, pending: Map<string, PendingEntry>): PathBasedPart[] {
-  const parsed = v02PayloadSchema.safeParse(body);
-  if (!parsed.success) {
-    throw parsed.error;
-  }
-  const payload = parsed.data;
+  const payload = v02PayloadSchema.parse(body);
 
   for (const entry of payload.pending ?? []) {
     pending.set(entry.id, entry);
@@ -75,9 +71,11 @@ function toPathBased(body: unknown, pending: Map<string, PendingEntry>): PathBas
 }
 
 // onTimeline fires when a labelled part arrives or the state changes, not on every chunk.
+// onInitialPart fires once with the first payload, which is the only one carrying response extensions such as the trace.
 export async function* readDeferStream(
   response: Response,
   onTimeline?: (timeline: DeferTimeline) => void,
+  onInitialPart?: (initial: PathBasedPart) => void,
 ): AsyncGenerator<PathBasedPart[]> {
   const chunks = await meros(response, { multiple: true });
   if (chunks instanceof Response) {
@@ -91,12 +89,18 @@ export async function* readDeferStream(
 
   onTimeline?.({ state, arrived: [] });
 
+  let initialReported = false;
   for await (const chunk of chunks) {
     const parts: PathBasedPart[] = [];
     for (const part of chunk) {
       if (part.json) {
         parts.push(...toPathBased(part.body, pending));
       }
+    }
+
+    if (!initialReported && parts.length > 0) {
+      initialReported = true;
+      onInitialPart?.(parts[0]);
     }
 
     const nextState = parts[parts.length - 1]?.hasNext === true ? 'streaming' : 'complete';
