@@ -2387,10 +2387,16 @@ message GetGraphFieldUsageRequest {
 }
 
 message GetGraphFieldUsageResponse {
+  message Subgraph {
+    string subgraphId = 1;
+    string subgraphName = 2;
+    int64 requestCount = 3; // requests this subgraph resolved the field in
+  }
   message Field {
     string typeName = 1;
     string fieldName = 2;
     int64 requestCount = 3;
+    repeated Subgraph subgraphs = 4; // a request resolved by several subgraphs counts for each of them
   }
   Response response = 1;
   repeated Field fields = 2;

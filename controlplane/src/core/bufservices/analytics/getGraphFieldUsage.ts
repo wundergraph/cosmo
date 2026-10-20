@@ -6,6 +6,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -85,10 +86,22 @@ export function getGraphFieldUsage(
       },
     });
 
+    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const subgraphNames = await subgraphRepo.getSubgraphNameByIds(
+      fieldsData.flatMap((field) => field.subgraphs.map((subgraph) => subgraph.subgraphId)),
+    );
+
     const fields = fieldsData.map((field) => ({
       typeName: field.typeName,
       fieldName: field.fieldName,
-      requestCount: BigInt(field.requestCount),
+      requestCount: field.requestCount,
+      // A subgraph deleted since the requests has no name, so its counts are left out.
+      subgraphs: field.subgraphs.flatMap((subgraph) => {
+        const subgraphName = subgraphNames[subgraph.subgraphId];
+        return subgraphName === undefined
+          ? []
+          : [{ subgraphId: subgraph.subgraphId, subgraphName, requestCount: subgraph.requestCount }];
+      }),
     }));
 
     return {

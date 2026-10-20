@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, test, vi, beforeEach, afterEach, beforeAll, afterAll, onTestFinished } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -30,13 +31,23 @@ const toDateRange = ({ start, end }: { start: number; end: number }) => ({
   end: new Date(end * 1000).toISOString(),
 });
 
+const readSubgraphId = async (client: Awaited<ReturnType<typeof SetupTest>>['client'], name: string) => {
+  const { response, graph } = await client.getSubgraphByName({ name, namespace: DEFAULT_NAMESPACE });
+  expect(response?.code).toBe(EnumStatusCode.OK);
+  if (!graph) {
+    throw new Error(`Subgraph '${name}' was not created`);
+  }
+  return graph.id;
+};
+
 const createGraph = async (client: Awaited<ReturnType<typeof SetupTest>>['client']) => {
   const fedGraphName = genID('fedGraph');
+  const subgraphName = genID('subgraph');
   const label = genUniqueLabel();
 
   await createThenPublishSubgraph(
     client,
-    genID('subgraph'),
+    subgraphName,
     DEFAULT_NAMESPACE,
     'type Query { hello: String! }',
     [label],
@@ -53,7 +64,7 @@ const createGraph = async (client: Awaited<ReturnType<typeof SetupTest>>['client
     throw new Error(`Federated graph '${fedGraphName}' was not created`);
   }
 
-  return { fedGraphName, graphId: graph.id, targetId: graph.targetId };
+  return { fedGraphName, subgraphName, graphId: graph.id, targetId: graph.targetId };
 };
 
 const readQuery = (chClient: ClickHouseClient) => {
@@ -167,8 +178,8 @@ describe('GetGraphFieldUsage', () => {
 
     // ClickHouse returns large sums as strings.
     vi.mocked(chClient.queryPromise).mockResolvedValue([
-      { typeName: 'Employee', fieldName: 'id', requestCount: '9007199254740993' },
-      { typeName: 'Query', fieldName: 'employees', requestCount: '42' },
+      { typeName: 'Employee', fieldName: 'id', subgraphIds: [], requestCount: '9007199254740993' },
+      { typeName: 'Query', fieldName: 'employees', subgraphIds: [], requestCount: '42' },
     ]);
 
     const response = await client.getGraphFieldUsage({
@@ -198,11 +209,69 @@ describe('GetGraphFieldUsage', () => {
       'IsInput = false',
       'IsIndirectFieldUsage = false',
       'IsNull = false',
-      'GROUP BY TypeName, FieldName',
+      'SubgraphIDs AS subgraphIds',
+      'GROUP BY TypeName, FieldName, SubgraphIDs',
     ]) {
       expect(query).toContain(fragment);
     }
     expect(query).toMatch(/\.gql_metrics_schema_usage_5m_90d\s/);
+  });
+
+  test('Should return how often each subgraph resolved a field, counting a request resolved by several subgraphs for each', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const { fedGraphName, subgraphName } = await createGraph(client);
+    const otherSubgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      otherSubgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { world: String! }',
+      [genUniqueLabel()],
+      'http://localhost:4002',
+    );
+    const subgraphId = await readSubgraphId(client, subgraphName);
+    const otherSubgraphId = await readSubgraphId(client, otherSubgraphName);
+    const deletedSubgraphId = randomUUID();
+
+    vi.mocked(chClient.queryPromise).mockResolvedValue([
+      { typeName: 'Employee', fieldName: 'details', subgraphIds: [subgraphId], requestCount: '10' },
+      { typeName: 'Employee', fieldName: 'details', subgraphIds: [subgraphId, otherSubgraphId], requestCount: '5' },
+      { typeName: 'Employee', fieldName: 'details', subgraphIds: [otherSubgraphId], requestCount: '2' },
+      { typeName: 'Employee', fieldName: 'id', subgraphIds: [deletedSubgraphId], requestCount: '3' },
+    ]);
+
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(
+      response.fields.map((field) => ({
+        typeName: field.typeName,
+        fieldName: field.fieldName,
+        requestCount: field.requestCount,
+        subgraphs: field.subgraphs.map((subgraph) => ({
+          subgraphId: subgraph.subgraphId,
+          subgraphName: subgraph.subgraphName,
+          requestCount: subgraph.requestCount,
+        })),
+      })),
+    ).toEqual([
+      {
+        typeName: 'Employee',
+        fieldName: 'details',
+        requestCount: BigInt(17),
+        subgraphs: [
+          { subgraphId, subgraphName, requestCount: BigInt(15) },
+          { subgraphId: otherSubgraphId, subgraphName: otherSubgraphName, requestCount: BigInt(7) },
+        ],
+      },
+      // A subgraph deleted since the requests has no name, so its counts are left out.
+      { typeName: 'Employee', fieldName: 'id', requestCount: BigInt(3), subgraphs: [] },
+    ]);
   });
 
   test('Should use the last 24 hours when no range is given', async (testContext) => {
