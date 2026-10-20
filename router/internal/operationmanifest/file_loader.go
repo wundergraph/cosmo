@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 )
 
-// FileLoader loads a manifest from a file below a root directory.
+// FileLoader loads a manifest from a file below a root directory. If the file name
+// ends with .gz or .zst, the content is decompressed.
 // It reads the file on every Fetch and compares revisions. It does not check
 // modification times because rsync -a, cp -p and mv keep old ones.
 type FileLoader struct {
@@ -19,7 +20,15 @@ func NewFileLoader(root, objectPath string) *FileLoader {
 }
 
 func (l *FileLoader) Fetch(_ context.Context, currentRevision string) (*Manifest, bool, error) {
-	data, err := os.ReadFile(l.path)
+	f, err := os.Open(l.path)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to read manifest file: %w", err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	data, err := decompressAndRead(f, l.path)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to read manifest file: %w", err)
 	}

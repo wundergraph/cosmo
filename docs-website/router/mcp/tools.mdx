@@ -155,7 +155,7 @@ Operations are validated against your GraphQL schema at load time. Invalid opera
 
 ## Tool Naming
 
-In an [operation manifest](#operation-manifest), the key is the tool name. The router uses the key as it is and does not change its case. The name in the operation body is not used. The `execute_operation_` prefix still applies (see [Omitting the Tool Name Prefix](#omitting-the-tool-name-prefix)). For example, the key `get_users` becomes `execute_operation_get_users`. A full tool name can be at most 128 characters long. The router skips longer names and logs an error.
+In an [operation manifest](#operation-manifest), the key is the tool name. The router uses the key as it is and does not change its case. The name in the operation body is not used. The `execute_operation_` prefix still applies (see [Omitting the Tool Name Prefix](#omitting-the-tool-name-prefix)). For example, the key `get_users` becomes `execute_operation_get_users`. A full tool name can be at most 128 characters long and can contain only letters, digits, `_`, `-`, and `.`. The router skips other names and logs an error.
 
 In directory mode, each tool's name is derived from its operation name:
 

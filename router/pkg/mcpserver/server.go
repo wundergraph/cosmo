@@ -10,6 +10,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -35,8 +36,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
 
-// maxToolNameLength is the longest tool name the MCP SDK accepts.
-const maxToolNameLength = 128
+// toolNamePattern is the tool name grammar of the MCP SDK. The SDK only logs invalid names.
+var toolNamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
 
 // reservedToolNames contains tool names that are internally registered by the MCP server
 // and must not be used by operations when omitToolNamePrefix is enabled.
@@ -972,11 +973,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			)
 			continue
 		}
-		// The SDK only logs tool names that are too long, so skip them here.
-		if len(toolName) > maxToolNameLength {
-			s.logger.Error("Skipping operation because its tool name is too long",
+		if !toolNamePattern.MatchString(toolName) {
+			s.logger.Error("Skipping operation because its tool name is not a valid MCP tool name",
 				zap.String("operation", op.Name),
-				zap.Int("max_length", maxToolNameLength),
+				zap.String("tool", toolName),
 			)
 			continue
 		}
@@ -1058,13 +1058,8 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 	addTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
 
-	// Until the swap completes, enforce the new scopes of every new or replaced tool and
-	// keep the scopes of tools that are about to be removed.
 	if s.authMiddleware != nil {
-		transitionScopes := make(map[string][][]string, len(s.toolScopes)+len(toolScopes))
-		maps.Copy(transitionScopes, s.toolScopes)
-		maps.Copy(transitionScopes, toolScopes)
-		s.authMiddleware.SetToolScopes(transitionScopes)
+		s.authMiddleware.SetToolScopes(transitionToolScopes(s.toolScopes, toolScopes))
 	}
 
 	for _, registration := range registrations {
@@ -1089,6 +1084,29 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	}
 
 	return nil
+}
+
+// transitionToolScopes returns the scopes to enforce until a tool swap completes. A call
+// to a tool that keeps its name may reach its old or its new handler, so the caller must
+// satisfy one scope group of each. Tools that are about to be removed keep their scopes.
+func transitionToolScopes(oldScopes, newScopes map[string][][]string) map[string][][]string {
+	transition := make(map[string][][]string, len(oldScopes)+len(newScopes))
+	maps.Copy(transition, oldScopes)
+	for name, newGroups := range newScopes {
+		oldGroups, ok := oldScopes[name]
+		if !ok {
+			transition[name] = newGroups
+			continue
+		}
+		var groups [][]string
+		for _, oldGroup := range oldGroups {
+			for _, newGroup := range newGroups {
+				groups = append(groups, slices.Concat(oldGroup, newGroup))
+			}
+		}
+		transition[name] = groups
+	}
+	return transition
 }
 
 func (s *GraphQLSchemaServer) setSchemaVersionID(schemaVersionID string) {
