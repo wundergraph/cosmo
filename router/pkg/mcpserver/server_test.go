@@ -183,6 +183,11 @@ query CountEmployees {
 		done := make(chan struct{})
 		var wg sync.WaitGroup
 		var missing []string
+		stop := sync.OnceFunc(func() {
+			close(done)
+			wg.Wait()
+		})
+		t.Cleanup(stop)
 		wg.Go(func() {
 			for {
 				select {
@@ -218,8 +223,7 @@ query CountEmployees {
 			}
 			require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 		}
-		close(done)
-		wg.Wait()
+		stop()
 
 		require.Empty(t, missing)
 
@@ -280,7 +284,7 @@ func TestManifestOperations(t *testing.T) {
 		require.Equal(t, []string{"get_schema", "FindEmployee", "list-employees_v2", "get_operation_info"}, srv.registeredTools)
 	})
 
-	t.Run("skips tools whose name is longer than 128 characters", func(t *testing.T) {
+	t.Run("skips tools whose name is not a valid MCP tool name", func(t *testing.T) {
 		t.Parallel()
 
 		// "execute_operation_" is 18 characters, so these keys make tool names of 128 and 129 characters.
@@ -291,13 +295,38 @@ func TestManifestOperations(t *testing.T) {
 			t.Context(),
 			"http://localhost:4000/graphql",
 			WithManifestOperations(func() map[string]string {
-				return map[string]string{longestKey: listEmployeesOp, tooLongKey: listEmployeesOp}
+				return map[string]string{
+					longestKey:        listEmployeesOp,
+					tooLongKey:        listEmployeesOp,
+					"with space":      listEmployeesOp,
+					"with/slash":      listEmployeesOp,
+					"with\u00fcmlaut": listEmployeesOp,
+				}
 			}),
 		)
 		require.NoError(t, err)
 		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 
 		require.Equal(t, []string{"get_schema", "execute_operation_" + longestKey, "get_operation_info"}, srv.registeredTools)
+	})
+}
+
+func TestTransitionToolScopes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("requires one old and one new scope group for a tool that keeps its name", func(t *testing.T) {
+		t.Parallel()
+
+		got := transitionToolScopes(
+			map[string][][]string{"kept": {{"old-a"}, {"old-b"}}, "removed": {{"gone"}}},
+			map[string][][]string{"kept": {{"new-a", "new-b"}}, "added": {{"fresh"}}},
+		)
+
+		require.Equal(t, map[string][][]string{
+			"kept":    {{"old-a", "new-a", "new-b"}, {"old-b", "new-a", "new-b"}},
+			"removed": {{"gone"}},
+			"added":   {{"fresh"}},
+		}, got)
 	})
 }
 
