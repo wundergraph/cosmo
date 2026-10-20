@@ -48,9 +48,11 @@ export const DeferStatusBadge = ({ defer }: { defer?: DeferStatus }) => {
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <Badge className={`h-8 ${className}`} variant={variant}>
-          <TbHourglass className={`h-4 w-4 ${spin ? 'animate-spin' : ''}`} />
-        </Badge>
+        <button type="button" aria-label="Deferred response status">
+          <Badge className={`h-8 ${className}`} variant={variant}>
+            <TbHourglass className={`h-4 w-4 ${spin ? 'animate-spin' : ''}`} />
+          </Badge>
+        </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs rounded-md border bg-background px-2 py-1 !text-foreground text-sm">
         {tip}
