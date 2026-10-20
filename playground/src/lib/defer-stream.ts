@@ -1,17 +1,40 @@
 import { meros } from 'meros/browser';
+import { z } from 'zod';
 
-type PendingEntry = { path: unknown[]; label?: string };
+const pendingEntrySchema = z.object({
+  id: z.string(),
+  path: z.array(z.unknown()),
+  label: z.string().optional(),
+});
 
-type V02Payload = {
+const v02PayloadSchema = z.object({
+  data: z.unknown(),
+  errors: z.unknown(),
+  extensions: z.unknown(),
+  pending: z.array(pendingEntrySchema).optional(),
+  incremental: z
+    .array(
+      z.object({
+        id: z.string(),
+        data: z.unknown(),
+        errors: z.unknown(),
+        extensions: z.unknown(),
+      }),
+    )
+    .optional(),
+  hasNext: z.boolean().optional(),
+});
+
+type PendingEntry = z.infer<typeof pendingEntrySchema>;
+
+type PathBasedPart = {
   data?: unknown;
   errors?: unknown;
   extensions?: unknown;
-  pending?: Array<PendingEntry & { id: string }>;
-  incremental?: Array<{ id: string; data?: unknown; errors?: unknown; extensions?: unknown }>;
+  path?: unknown[];
+  label?: string;
   hasNext?: boolean;
 };
-
-type PathBasedPart = Record<string, unknown>;
 
 export type DeferTimeline = {
   state: 'streaming' | 'complete';
@@ -19,9 +42,15 @@ export type DeferTimeline = {
 };
 
 // Incremental payloads refer to earlier pending entries by id, so the map must outlive a single part.
-function toPathBased(payload: V02Payload, pending: Map<string, PendingEntry>): PathBasedPart[] {
+function toPathBased(body: unknown, pending: Map<string, PendingEntry>): PathBasedPart[] {
+  const parsed = v02PayloadSchema.safeParse(body);
+  if (!parsed.success) {
+    throw parsed.error;
+  }
+  const payload = parsed.data;
+
   for (const entry of payload.pending ?? []) {
-    pending.set(entry.id, { path: entry.path, label: entry.label });
+    pending.set(entry.id, entry);
   }
 
   if (payload.incremental) {
@@ -66,7 +95,7 @@ export async function* readDeferStream(
     const parts: PathBasedPart[] = [];
     for (const part of chunk) {
       if (part.json) {
-        parts.push(...toPathBased(part.body as V02Payload, pending));
+        parts.push(...toPathBased(part.body, pending));
       }
     }
 
