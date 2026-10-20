@@ -152,11 +152,13 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
+type OnFetch = (response: unknown, status?: number, statusText?: string, defer?: DeferStatus) => void;
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   scripts: GraphiQLScripts | undefined,
-  onFetch: any,
+  onFetch: OnFetch,
   url: URL,
   init: RequestInit,
 ) => {
@@ -209,8 +211,8 @@ const graphiQLFetch = async (
     // An HTTP error says nothing about whether the router would have streamed the query.
     const deferIgnored = response.ok && usesDirective('defer', requestBody.query) && !isMultipart;
 
+    // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
     if (isMultipart) {
-      onFetch(undefined, response.status, response.statusText);
       return response;
     }
 
@@ -629,14 +631,25 @@ export const Playground = (input: {
   const [responseDefer, setResponseDefer] = useState<DeferStatus>();
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string, defer?: DeferStatus) => {
+    // The first-part callback from readDeferStream calls this without a defer, so only write it when given.
+    const onFetch: OnFetch = (response, status, statusText, defer) => {
       setResponse(JSON.stringify(response));
       setStatus(status);
       setStatusText(statusText);
-      setResponseDefer(defer);
+      if (defer) {
+        setResponseDefer(defer);
+      }
     };
 
-    const toolkit = createGraphiQLFetcher({
+    const clearResponse = () => {
+      setResponse('');
+      setStatus(undefined);
+      setStatusText(undefined);
+      setResponseDefer(undefined);
+    };
+
+    // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
+    const toolkitFetcher = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
@@ -648,13 +661,14 @@ export const Playground = (input: {
         !!opts?.documentAST &&
         getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
       if (isSubscription || params.operationName === 'IntrospectionQuery') {
-        return toolkit(params, opts);
+        return toolkitFetcher(params, opts);
       }
 
       return runOperation(params, opts?.headers);
     };
 
     async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      clearResponse();
       const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
@@ -662,7 +676,9 @@ export const Playground = (input: {
       });
 
       if (isMultipartResponse(response)) {
-        return readDeferStream(response, setResponseDefer);
+        return readDeferStream(response, setResponseDefer, (initial) =>
+          onFetch(initial, response.status, response.statusText),
+        );
       }
       return response.json();
     }

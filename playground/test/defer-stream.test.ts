@@ -83,6 +83,45 @@ describe('readDeferStream', () => {
     expect(timelines.at(-1)?.arrived.map((a) => a.label)).toEqual(['reviews']);
   });
 
+  test('rejects when the body stream errors partway through', async () => {
+    const bytes = new TextEncoder().encode(
+      '--graphql\r\nContent-Type: application/json\r\n\r\n{"data":{"pricing":450},"hasNext":true}\r\n--graphql\r\n',
+    );
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.error(new Error('connection reset'));
+      },
+    });
+    const response = new Response(body, {
+      headers: { 'content-type': 'multipart/mixed; boundary="graphql"; incrementalSpec=v0.2' },
+    });
+
+    await expect(collect(readDeferStream(response))).rejects.toThrow('connection reset');
+  });
+
+  test('rejects a part that does not match the v0.2 shape', async () => {
+    const body =
+      '--graphql\r\nContent-Type: application/json\r\n\r\n' +
+      '{"incremental":"not-an-array","hasNext":false}\r\n--graphql--';
+
+    await expect(collect(readDeferStream(responseOf(body, 4096)))).rejects.toThrow();
+  });
+
+  test('passes the initial part, with its extensions, to onInitialPart', async () => {
+    const initial: unknown[] = [];
+    const body =
+      '--graphql\r\nContent-Type: application/json\r\n\r\n' +
+      '{"data":{"pricing":450},"extensions":{"trace":{"version":"1"}},"pending":[{"id":"1","path":[],"label":"reviews"}],"hasNext":true}' +
+      '\r\n--graphql\r\nContent-Type: application/json\r\n\r\n' +
+      '{"incremental":[{"data":{"reviews":[]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}' +
+      '\r\n--graphql--';
+
+    await collect(readDeferStream(responseOf(body, 4096), undefined, (part) => initial.push(part)));
+
+    expect(initial).toEqual([{ data: { pricing: 450 }, extensions: { trace: { version: '1' } }, hasNext: true }]);
+  });
+
   test('reports once per change rather than once per chunk', async () => {
     const timelines: DeferTimeline[] = [];
     await collect(readDeferStream(responseOf(ROUTER_V02_BODY, 1), (timeline) => timelines.push(timeline)));
