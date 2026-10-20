@@ -2127,6 +2127,7 @@ export class FederationFactory {
           if (IGNORED_FEDERATED_TYPE_NAMES.has(parentTypeName)) {
             break;
           }
+
           const enumValueNodes: Array<MutableEnumValueNode> = [];
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
@@ -2134,13 +2135,15 @@ export class FederationFactory {
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
           for (const enumValueData of parentDefinitionData.enumValueDataByName.values()) {
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
+            const description = this.getFederatedGraphNodeDescription(enumValueData);
             const clientEnumValueNode: MutableEnumValueNode = {
               ...enumValueData.node,
+              description,
               directives: getClientFederatedDirectiveNodes(enumValueData),
             };
             const enumValueNodeResult = routerSchemaNodeFromData<EnumValueData>({
               data: enumValueData,
-              description: this.getFederatedGraphNodeDescription(enumValueData),
+              description,
               federatedDirectiveDataByName: this.federatedDirectiveDataByName,
               parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
             });
@@ -2148,6 +2151,7 @@ export class FederationFactory {
               this.errors.push(...enumValueNodeResult.errors);
               continue;
             }
+
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
                 if (!isValueInaccessible && parentDefinitionData.appearances > enumValueData.appearances) {
@@ -2204,6 +2208,7 @@ export class FederationFactory {
             );
             break;
           }
+
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
             directives: getClientFederatedDirectiveNodes(parentDefinitionData),
