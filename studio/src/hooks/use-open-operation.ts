@@ -13,6 +13,7 @@ type PendingOpen = {
   query: string;
   variables: string;
   contentHash: string;
+  expected: { query: string; variables: string };
 } & (
   | { kind: 'refill'; targetTabId: string }
   // `addTab()` returns nothing, so the tab it appended is identified as the one
@@ -112,11 +113,23 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
     };
 
     const intoTabId = openingOperation.intoTabId;
+    const refilled = intoTabId ? tabs.find((tab) => tab.id === intoTabId) : undefined;
 
     setPendingOpen(
       intoTabId
-        ? { ...body, kind: 'refill', targetTabId: intoTabId }
-        : { ...body, kind: 'new-tab', tabIdsBefore: tabs.map((tab) => tab.id) },
+        ? {
+            ...body,
+            kind: 'refill',
+            targetTabId: intoTabId,
+            expected: { query: refilled?.query ?? '', variables: refilled?.variables ?? '' },
+          }
+        : {
+            ...body,
+            kind: 'new-tab',
+            tabIdsBefore: tabs.map((tab) => tab.id),
+            // `addTab()` creates an empty tab, so anything in it is the user's.
+            expected: { query: '', variables: '' },
+          },
     );
     openHandled.current = openingOperation;
     setOpeningOperation(null);
@@ -151,9 +164,12 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       return;
     }
 
-    // A refill only repairs a tab GraphiQL blanked. If it holds text again by the
-    // time the body arrives, the user typed into it while the fetch was in flight.
-    if (pendingOpen.kind === 'refill' && (tabs.find((tab) => tab.id === targetTabId)?.query ?? '').trim()) {
+    const target = tabs.find((tab) => tab.id === targetTabId);
+
+    if (
+      (target?.query ?? '') !== pendingOpen.expected.query ||
+      (target?.variables ?? '') !== pendingOpen.expected.variables
+    ) {
       setPendingOpen(null);
       return;
     }
