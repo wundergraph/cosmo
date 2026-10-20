@@ -151,7 +151,6 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
-// The response is undefined for streamed (multipart) responses, which have no single JSON body.
 type OnFetch = (response: unknown, status?: number, statusText?: string) => void;
 
 const graphiQLFetch = async (
@@ -207,10 +206,8 @@ const graphiQLFetch = async (
       headers,
     });
 
-    // A multipart body can't be read as one JSON document, so the response pane stays empty.
-    // The Response goes back to the caller, which streams it with readDeferStream.
+    // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
     if (isMultipartResponse(response)) {
-      onFetch(undefined, response.status, response.statusText);
       return response;
     }
 
@@ -628,6 +625,12 @@ export const Playground = (input: {
       setStatusText(statusText);
     };
 
+    const clearResponse = () => {
+      setResponse('');
+      setStatus(undefined);
+      setStatusText(undefined);
+    };
+
     // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
     const toolkitFetcher = createGraphiQLFetcher({
       url: url,
@@ -648,6 +651,7 @@ export const Playground = (input: {
     };
 
     async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      clearResponse();
       const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
@@ -655,7 +659,9 @@ export const Playground = (input: {
       });
 
       if (isMultipartResponse(response)) {
-        return readDeferStream(response);
+        return readDeferStream(response, undefined, (initial) =>
+          onFetch(initial, response.status, response.statusText),
+        );
       }
       return response.json();
     }
