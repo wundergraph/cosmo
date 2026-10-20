@@ -151,11 +151,14 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
+// The response is undefined for streamed (multipart) responses, which have no single JSON body.
+type OnFetch = (response: unknown, status?: number, statusText?: string) => void;
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   scripts: GraphiQLScripts | undefined,
-  onFetch: any,
+  onFetch: OnFetch,
   url: URL,
   init: RequestInit,
 ) => {
@@ -204,6 +207,8 @@ const graphiQLFetch = async (
       headers,
     });
 
+    // A multipart body can't be read as one JSON document, so the response pane stays empty.
+    // The Response goes back to the caller, which streams it with readDeferStream.
     if (isMultipartResponse(response)) {
       onFetch(undefined, response.status, response.statusText);
       return response;
@@ -617,7 +622,7 @@ export const Playground = (input: {
   const [statusText, setStatusText] = useState<string>();
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
+    const onFetch: OnFetch = (response, status, statusText) => {
       setResponse(JSON.stringify(response));
       setStatus(status);
       setStatusText(statusText);
