@@ -19,7 +19,7 @@ export type DeferTimeline = {
 };
 
 // Incremental payloads refer to earlier pending entries by id, so the map must outlive a single part.
-const toPathBased = (payload: V02Payload, pending: Map<string, PendingEntry>): PathBasedPart[] => {
+function toPathBased(payload: V02Payload, pending: Map<string, PendingEntry>): PathBasedPart[] {
   for (const entry of payload.pending ?? []) {
     pending.set(entry.id, { path: entry.path, label: entry.label });
   }
@@ -43,7 +43,7 @@ const toPathBased = (payload: V02Payload, pending: Map<string, PendingEntry>): P
   }
 
   return [];
-};
+}
 
 // onTimeline fires when a labelled part arrives or the state changes, not on every chunk.
 export async function* readDeferStream(
