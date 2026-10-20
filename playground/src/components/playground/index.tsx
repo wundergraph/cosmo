@@ -623,7 +623,8 @@ export const Playground = (input: {
       setStatusText(statusText);
     };
 
-    const toolkit = createGraphiQLFetcher({
+    // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
+    const toolkitFetcher = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
@@ -635,7 +636,7 @@ export const Playground = (input: {
         !!opts?.documentAST &&
         getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
       if (isSubscription || params.operationName === 'IntrospectionQuery') {
-        return toolkit(params, opts);
+        return toolkitFetcher(params, opts);
       }
 
       return runOperation(params, opts?.headers);
