@@ -1245,6 +1245,72 @@ describe('Enum tests', () => {
       expect(itemEnumVal?.subgraphNames.size).toBe(1);
       expect(itemEnumVal?.subgraphNames).toContain(subgraphC.name);
     });
+
+    test('that an Enum and its values preserve their descriptions', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          "Enum description"
+          enum Enum {
+            "Enum.A description"
+            A
+            B
+            """
+            Enum.C description
+            """
+            C
+          }
+          
+          type Query {
+            enums: [Enum]!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [a],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            """Enum description"""
+            enum Enum {
+              """Enum.A description"""
+              A
+              B
+              """Enum.C description"""
+              C
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            """Enum description"""
+            enum Enum {
+              """Enum.A description"""
+              A
+              B
+              """Enum.C description"""
+              C
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+    });
   });
 });
 
