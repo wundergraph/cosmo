@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -28,7 +29,15 @@ export function moveFederatedGraph(
       throw new UnauthorizedError();
     }
 
-    return opts.db.transaction(async (tx) => {
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
+    const result = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
       const orgWebhooks = new OrganizationWebhookService(
@@ -152,6 +161,7 @@ export function moveFederatedGraph(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       // Only call `composeAndDeployFederatedGraph` after all contracts have been moved
@@ -217,5 +227,7 @@ export function moveFederatedGraph(
         compositionWarnings,
       };
     });
+
+    return flushMapperIntoResponse(mapperUpdater, result);
   });
 }
