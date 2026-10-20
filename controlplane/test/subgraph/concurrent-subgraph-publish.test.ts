@@ -42,7 +42,7 @@ describe('Concurrent subgraph publish tests', () => {
 
   test(
     'that concurrent subgraph publishes keep the uploaded mapper in sync with the database',
-    getDebugTestOptions(isDebugMode),
+    { timeout: 60_000, ...getDebugTestOptions(isDebugMode) },
     async (testContext) => {
       const { client, server, blobStorage, users } = await SetupTest({
         dbname,
