@@ -177,6 +177,17 @@ func TestCacheTagHeaderSet(t *testing.T) {
 		require.Equal(t, "user-42", fits.Get("Cache-Tag"))
 		require.Empty(t, fits.Values("Cache-Control"), "only an overflow touches Cache-Control")
 	})
+
+	t.Run("private reads every Cache-Control line", func(t *testing.T) {
+		t.Parallel()
+		c := cfg
+		c.OnOverflow = config.ResponseCacheTagHeaderOverflowPrivate
+		h := newCacheTagHeader(c, nil)
+		header := http.Header{"Cache-Control": {"public, max-age=60", "no-store"}}
+		h.set(context.Background(), header, keys, nil)
+		require.Empty(t, header.Values("Cache-Tag"))
+		require.Equal(t, []string{"public, max-age=60,no-store"}, header.Values("Cache-Control"))
+	})
 }
 
 func TestPrivateCacheControl(t *testing.T) {

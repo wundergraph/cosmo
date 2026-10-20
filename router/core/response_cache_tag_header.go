@@ -62,7 +62,8 @@ func (c *cacheTagHeader) set(ctx context.Context, header http.Header, surrogateK
 				zap.Int("max_bytes", c.MaxBytes), zap.String("on_overflow", string(c.OnOverflow)))
 		}
 		if c.OnOverflow == config.ResponseCacheTagHeaderOverflowPrivate {
-			header.Set(cacheControlKey, privateCacheControl(header.Get(cacheControlKey)))
+			// Every line: propagation Adds, so one may already be set.
+			header.Set(cacheControlKey, privateCacheControl(strings.Join(header.Values(cacheControlKey), ",")))
 			return
 		}
 	}
