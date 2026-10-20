@@ -2143,7 +2143,7 @@ export class FederationFactory {
             };
             const enumValueNodeResult = routerSchemaNodeFromData<EnumValueData>({
               data: enumValueData,
-              description: this.getFederatedGraphNodeDescription(enumValueData),
+              description,
               federatedDirectiveDataByName: this.federatedDirectiveDataByName,
               parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
             });
