@@ -31,7 +31,7 @@ const (
 	errorTypeUnauthorized
 	errorTypeContextCanceled
 	errorTypeContextTimeout
-	errorTypeUpgradeFailed
+	errorTypeSubscriptionConnectionFailed
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
@@ -61,17 +61,18 @@ const (
 	ExtCodeErrBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
 	ExtCodeErrBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
 	ExtCodeErrDeferMultipartNotAccepted     = "DEFER_BAD_HEADER"
+	ExtCodeErrDeferSpecNotSupported         = "DEFER_UNSUPPORTED_SPEC"
 )
 
 // isTerminalSubscriptionError reports whether the given error, when surfaced
 // from the resolver during a subscription, should terminate the stream rather
 // than being delivered inline as a per-update error. These are errors that
-// invalidate the whole subscription (auth reject, upgrade failure, rate limit)
+// invalidate the whole subscription (auth reject, connection failure, rate limit)
 // — continuing to deliver updates after one of these wouldn't be meaningful.
 func isTerminalSubscriptionError(err error) bool {
 	switch getErrorType(err) {
 	case errorTypeUnauthorized,
-		errorTypeUpgradeFailed,
+		errorTypeSubscriptionConnectionFailed,
 		errorTypeInvalidWsSubprotocol,
 		errorTypeRateLimit,
 		errorTypeContextCanceled,
@@ -91,9 +92,9 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr transport.ErrFailedUpgrade
-	if errors.As(err, &upgradeErr) {
-		return errorTypeUpgradeFailed
+	var connectionErr transport.ErrFailedSubscriptionConnection
+	if errors.As(err, &connectionErr) {
+		return errorTypeSubscriptionConnectionFailed
 	}
 	var nErr net.Error
 	if errors.As(err, &nErr) {
@@ -293,6 +294,17 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 
 	if _, err := params.requestErrors.WriteResponse(params.writer); err != nil {
 		if params.logger != nil {
+			if rErrors.IsBrokenPipe(err) {
+				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
+				return
+			}
+			params.logger.Error("Error writing response", zap.Error(err))
+		}
+		return
+	}
+
+	if wgRequestParams.UseSse {
+		if _, err := params.writer.Write([]byte("\n\n")); err != nil && params.logger != nil {
 			if rErrors.IsBrokenPipe(err) {
 				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
 				return

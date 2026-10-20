@@ -363,7 +363,6 @@ func TestForwardHeaders(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, c := range cases {
-				c := c
 				t.Run(c.testName, func(t *testing.T) {
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
@@ -391,7 +390,7 @@ func TestForwardHeaders(t *testing.T) {
 
 					var msg testenv.WebSocketMessage
 					// Must match the 3 in the subscription payload
-					for ii := 0; ii < 3; ii++ {
+					for range 3 {
 						err = conn1.ReadJSON(&msg)
 						require.NoError(t, err)
 						require.JSONEq(t, `{"data":{"headerValue":{"value":"`+headerValue+`"}}}`, string(msg.Payload))
@@ -652,7 +651,6 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, c := range cases {
-				c := c
 				t.Run(c.testName, func(t *testing.T) {
 					header := http.Header{
 						c.headerName: []string{headerValue},
@@ -719,7 +717,6 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, c := range cases {
-				c := c
 				t.Run(c.testName, func(t *testing.T) {
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
@@ -747,7 +744,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 					var msg testenv.WebSocketMessage
 					// Must match the 3 in the subscription payload
-					for ii := 0; ii < 3; ii++ {
+					for range 3 {
 						err = conn1.ReadJSON(&msg)
 						require.NoError(t, err)
 						require.JSONEq(t, `{"data":{"headerValue":{"value":"`+headerValue+`"}}}`, string(msg.Payload))

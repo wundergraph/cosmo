@@ -85,11 +85,11 @@ const COMMON_TOOL_VERSIONS: ToolVersionLanguageMapping = {
 };
 
 // Exact tool versions to be installed for the script, but you can specify a semver range to express compatibility
-const GO_TOOL_VERSIONS: ToolVersionLanguageMapping = {
+export const GO_TOOL_VERSIONS: ToolVersionLanguageMapping = {
   go: {
-    range: '>=1.22.0',
+    range: '>=1.26.0',
     envVar: 'GO_VERSION',
-    scriptVersion: '1.24.1',
+    scriptVersion: '1.26.8',
     versionCommand: 'go',
     versionFlag: 'version',
   },

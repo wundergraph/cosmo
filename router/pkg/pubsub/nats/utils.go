@@ -14,8 +14,8 @@ func isValidNatsSubject(subject string) bool {
 		return false
 	}
 	sfwc := false
-	tokens := strings.Split(subject, tsep)
-	for _, t := range tokens {
+	tokens := strings.SplitSeq(subject, tsep)
+	for t := range tokens {
 		length := len(t)
 		if length == 0 || sfwc {
 			return false

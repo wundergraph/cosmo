@@ -66,7 +66,7 @@ func TestSafelist(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)
@@ -165,7 +165,7 @@ func TestSafelist(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
 				Header:        header,
 			})
 			require.NoError(t, err)

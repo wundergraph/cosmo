@@ -13,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import {
   enrichLogger,
   formatSubgraphType,
@@ -118,38 +119,62 @@ export function updateSubgraph(
       throw new UnauthorizedError();
     }
 
-    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          req.disableResolvabilityValidation,
-        );
+    // The transaction is managed by `SubgraphRepository.update`
+    // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
 
-        return subgraphRepo.update(
-          {
-            targetId: subgraph.targetId,
-            labels: req.labels,
-            unsetLabels: req.unsetLabels ?? false,
-            subscriptionUrl: req.subscriptionUrl,
-            routingUrl: req.routingUrl,
-            subscriptionProtocol:
-              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-            websocketSubprotocol:
-              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-            updatedBy: authContext.userId,
-            readme: req.readme,
-            namespaceId: subgraph.namespaceId,
-          },
-          compositionService,
-        );
-      });
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      req.disableResolvabilityValidation,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
+      mapperUpdater,
+    );
+
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await new SubgraphRepository(logger, opts.db, authContext.organizationId).update(
+        {
+          targetId: subgraph.targetId,
+          labels: req.labels,
+          unsetLabels: req.unsetLabels ?? false,
+          subscriptionUrl: req.subscriptionUrl,
+          routingUrl: req.routingUrl,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+          updatedBy: authContext.userId,
+          readme: req.readme,
+          namespaceId: subgraph.namespaceId,
+        },
+        compositionService,
+      );
+
+    const result = await flushMapperIntoResponse(mapperUpdater, {
+      response: {
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
+      },
+      compositionErrors,
+      deploymentErrors,
+      compositionWarnings,
+    });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -180,7 +205,7 @@ export function updateSubgraph(
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            errors: result.compositionErrors.length > 0 || result.deploymentErrors.length > 0,
             actor_id: authContext.userId,
           },
         },
@@ -188,35 +213,6 @@ export function updateSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        compositionWarnings,
-        deploymentErrors,
-      };
-    }
-
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
-      compositionErrors: [],
-      deploymentErrors: [],
-      compositionWarnings,
-    };
+    return result;
   });
 }

@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.160.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.159.0...@wundergraph/cosmo-connect@0.160.0) (2026-10-14)
+
+### Features
+
+* add proposal status command ([#3164](https://github.com/wundergraph/cosmo/issues/3164)) ([02589dd](https://github.com/wundergraph/cosmo/commit/02589dd0c2f8bd18fa91eebc81d3c8da8b931ac1)) (@alepane21)
+
+## [0.159.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.158.0...@wundergraph/cosmo-connect@0.159.0) (2026-10-06)
+
+### Features
+
+* implement ptq rpc and index schemas ([#3138](https://github.com/wundergraph/cosmo/issues/3138)) ([0cfafef](https://github.com/wundergraph/cosmo/commit/0cfafef170f9c8d45a8a66afbb10cb4d72fc5971)) (@wilsonrivera)
+
+# [0.158.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.157.2...@wundergraph/cosmo-connect@0.158.0) (2026-09-14)
+
+### Features
+
+* add an option to set default headers ([#3208](https://github.com/wundergraph/cosmo/issues/3208)) ([fd12221](https://github.com/wundergraph/cosmo/commit/fd12221ef769fea0920941b47acf151655d82223)) (@JivusAyrus)
+
 ## [0.157.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.157.1...@wundergraph/cosmo-connect@0.157.2) (2026-09-08)
 
 **Note:** Version bump only for package @wundergraph/cosmo-connect

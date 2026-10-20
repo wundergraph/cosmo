@@ -1,0 +1,27 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@tag"])
+
+type Query {
+  employees: [Employee!]!
+  internalReports: [Report!]! @tag(name: "internal")
+  publicAnnouncements: [Announcement!]! @tag(name: "public")
+  newFeature: String @tag(name: "experimental")
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+  name: String!
+  salary: Int! @tag(name: "internal")
+}
+
+type Report @tag(name: "internal") {
+  id: ID!
+  title: String!
+}
+
+type Announcement @tag(name: "public") @tag(name: "experimental") {
+  id: ID!
+  headline: String!
+  newFeature: String! @tag(name: "experimental")
+  secret: String @tag(name: "internal")
+}

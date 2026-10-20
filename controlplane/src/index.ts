@@ -68,6 +68,7 @@ const {
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
   OPENAI_API_KEY,
+  COMPOSITION_MIN_THREADS,
   COMPOSITION_MAX_THREADS,
   REDIS_HOST,
   REDIS_PORT,
@@ -79,6 +80,9 @@ const {
   CDN_BASE_URL,
   SENTRY_ENABLED,
   SENTRY_DSN,
+  PROMPT_TO_QUERY_SERVICE_ENDPOINT,
+  PROMPT_TO_QUERY_HTTP_VERSION,
+  PROMPT_TO_QUERY_TOKEN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -100,6 +104,7 @@ const options: BuildConfig = {
     level: LOG_LEVEL as pino.LevelWithSilent,
   },
   composition: {
+    minThreads: COMPOSITION_MIN_THREADS,
     maxThreads: COMPOSITION_MAX_THREADS,
   },
   openaiAPIKey: OPENAI_API_KEY,
@@ -181,6 +186,11 @@ const options: BuildConfig = {
             ca: REDIS_TLS_CA,
           }
         : undefined,
+  },
+  promptToQuery: {
+    address: PROMPT_TO_QUERY_SERVICE_ENDPOINT,
+    httpVersion: PROMPT_TO_QUERY_HTTP_VERSION,
+    token: PROMPT_TO_QUERY_TOKEN,
   },
 };
 

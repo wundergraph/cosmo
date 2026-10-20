@@ -61,6 +61,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -104,6 +105,7 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
+        "ResponseCache": true,
         "ConnectionStats": true,
         "Network": {
           "Enabled": true
@@ -178,6 +180,9 @@
     "Enabled": true,
     "AllowOrigins": [
       "*"
+    ],
+    "MatchOrigins": [
+      "^https://([a-z0-9-]+\\.)*example\\.com$"
     ],
     "AllowMethods": [
       "HEAD",
@@ -280,6 +285,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
@@ -291,7 +297,8 @@
         "ToolsCall": null,
         "ExecuteGraphQL": null,
         "GetOperationInfo": null,
-        "GetSchema": null
+        "GetSchema": null,
+        "GenerateQuery": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
@@ -649,8 +656,9 @@
   "LogLevel": "info",
   "JSONLog": true,
   "LogServiceName": "my-custom-router",
-  "ShutdownDelay": 15000000000,
+  "ShutdownDelay": 30000000000,
   "GracePeriod": 20000000000,
+  "DrainPeriod": 5000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
@@ -732,7 +740,8 @@
           "Name": "authz",
           "ValuePrefixes": null
         }
-      ]
+      ],
+      "OnError": "continue"
     },
     "IgnoreIntrospection": false
   },
@@ -866,7 +875,6 @@
   },
   "ResponseCache": {
     "Enabled": true,
-    "FallbackTTL": 30000000000,
     "KeyPrefix": "response_cache_test:",
     "Storage": {
       "Provider": "redis",
@@ -882,6 +890,29 @@
         "ListenAddr": "localhost:5027",
         "Path": "/invalidation",
         "SharedKey": "a-shared-key-that-is-long-enough-to-pass"
+      }
+    },
+    "TagHeader": {
+      "Enabled": true,
+      "Name": "Surrogate-Key",
+      "Delimiter": " ",
+      "MaxBytes": 1024
+    },
+    "All": {
+      "Enabled": true,
+      "FallbackTTL": 30000000000,
+      "PrivateID": "request.auth.claims.sub"
+    },
+    "Subgraphs": {
+      "inventory": {
+        "Enabled": false,
+        "FallbackTTL": 0,
+        "PrivateID": ""
+      },
+      "products": {
+        "Enabled": true,
+        "FallbackTTL": 300000000000,
+        "PrivateID": "request.header.Get('X-User-Id')"
       }
     }
   },
@@ -1009,9 +1040,11 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "SSEServerWriteTimeout": 10000000000,
     "EnableDefer": false,
-    "EnableMultiFetch": false,
-    "EnableScheduleFetches": false,
+    "EnableMultiFetch": true,
+    "EnableScheduleFetches": true,
+    "EnableGRPCWireEncoding": true,
     "WebSocketServerReadTimeout": 5000000000,
     "WebSocketServerWriteTimeout": 10000000000,
     "WebSocketServerPollTimeout": 1000000000,
@@ -1039,6 +1072,7 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
+    "DefaultSubprotocol": "graphql-transport-ws",
     "ForwardUpgradeHeaders": {
       "Enabled": true,
       "AllowList": [
@@ -1155,7 +1189,12 @@
     "IgnoredFeatureFlags": [
       "experimental-checkout",
       "ab-test-foo"
-    ]
+    ],
+    "FetchRetry": {
+      "MaxAttempts": 5,
+      "Interval": 1000000000,
+      "MaxDuration": 30000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

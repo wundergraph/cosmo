@@ -1311,3 +1311,35 @@ func (p *ProjectsService) QueryResourceMatrix(ctx context.Context, req *service.
 		},
 	}, nil
 }
+
+// RequireEmployeeWorkAuditById implements projects.ProjectsServiceServer.
+// The @requires field returns a nested object tree whose types carry field resolvers
+// (riskScore, remediation, estimatedHours). Each word of the required expertise becomes a finding.
+func (p *ProjectsService) RequireEmployeeWorkAuditById(_ context.Context, req *service.RequireEmployeeWorkAuditByIdRequest) (*service.RequireEmployeeWorkAuditByIdResponse, error) {
+	results := make([]*service.RequireEmployeeWorkAuditByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		expertise := ctx.GetFields().GetExpertise()
+
+		words := strings.Fields(expertise)
+		findings := make([]*service.WorkAuditFinding, 0, len(words))
+		for i, word := range words {
+			findings = append(findings, &service.WorkAuditFinding{
+				Code:     strings.ToUpper(word),
+				Severity: int32(i + 1),
+			})
+		}
+
+		results = append(results, &service.RequireEmployeeWorkAuditByIdResult{
+			WorkAudit: &service.WorkAudit{
+				Expertise: expertise,
+				Report: &service.WorkAuditReport{
+					GeneratedAt: "2024-01-01T00:00:00Z",
+					Findings:    findings,
+				},
+			},
+		})
+	}
+
+	return &service.RequireEmployeeWorkAuditByIdResponse{Result: results}, nil
+}

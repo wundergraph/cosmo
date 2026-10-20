@@ -5,6 +5,7 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
 import { sentryEnvVariables } from './env.schema.js';
+import { openSpanRegistry } from './tracing.js';
 
 const {
   SENTRY_ENABLED,
@@ -18,7 +19,11 @@ const {
 } = sentryEnvVariables.parse(process.env);
 
 // RPC paths we always trace at 100%, regardless of SENTRY_TRACES_SAMPLE_RATE.
-const ALWAYS_SAMPLE_PATHS = ['/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs'];
+const ALWAYS_SAMPLE_PATHS = [
+  '/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraphs',
+  '/wg.cosmo.platform.v1.PlatformService/PublishFederatedSubgraph',
+  '/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema',
+];
 
 const matchesAlwaysSample = (value: unknown): boolean => {
   if (typeof value !== 'string') {
@@ -64,6 +69,8 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
       nodeProfilingIntegration(),
       pinoIntegration({ log: { levels: ['info', 'warn', 'error'] } }),
     ],
+    // Tracks open spans so an aborted request can end them instead of losing them.
+    openTelemetrySpanProcessors: [openSpanRegistry],
     profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
     sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
     // tracesSampler takes precedence over tracesSampleRate; the sampler falls back to

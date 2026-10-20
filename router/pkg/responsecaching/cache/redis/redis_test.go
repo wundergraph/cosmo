@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,26 +18,44 @@ const testPrefix = "entity:"
 // entryKey and tagIndexKey mirror the namespacing the cache applies, so tests
 // name raw redis keys the same way it does.
 func entryKey(key string) string    { return testPrefix + entryNamespace + key }
-func tagIndexKey(tag string) string { return testPrefix + tagNamespace + tag }
+func tagIndexKey(tag string) string { return (&RedisCache{prefix: testPrefix}).tagKey(tag) }
+
+// rawEntry is value as SetMany stores it, for cases that seed redis by hand.
+func rawEntry(value string) string {
+	return string(enginecache.EncodeItem(enginecache.Item{Value: []byte(value)}))
+}
 
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
 // server itself so tests can inspect raw keys and drive expiry.
 func newTestRedisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
-	return newTestRedisCacheWithHook(t, nil)
+	return newTestRedisCacheWithHook(t)
 }
 
-// newTestRedisCacheWithHook is newTestRedisCache with hook installed on the
-// client, for the cases that have to bend a reply the server would never send
+// newTestRedisCacheWithHook is newTestRedisCache with hooks installed on the
+// client in order, for the cases that have to bend a reply the server would never send
 // on its own.
-func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *miniredis.Miniredis) {
+func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, *miniredis.Miniredis) {
 	t.Helper()
 
 	mr := miniredis.RunT(t)
+	return newTestRedisCacheOn(t, mr, hooks...), mr
+}
 
-	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	if hook != nil {
+// newTestRedisCacheOn builds a cache on its own client against mr, so tests can
+// run two routers on one server.
+func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.Hook) *RedisCache {
+	t.Helper()
+
+	// miniredis interprets every script, so a batch of a thousand items can
+	// take seconds on a loaded CI runner: past go-redis' 3s read timeout.
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr(), ReadTimeout: 30 * time.Second})
+	// Faithful ZSCAN paging unless the test brings its own pager.
+	if !slices.ContainsFunc(hooks, func(h redis.Hook) bool { _, ok := h.(*pagedZScan); return ok }) {
+		hooks = append([]redis.Hook{&pagedZScan{size: invalidationPageSize}}, hooks...)
+	}
+	for _, hook := range hooks {
 		client.AddHook(hook)
 	}
 	c, err := NewRedisCache(t.Context(), client, testPrefix)
@@ -51,7 +70,7 @@ func newTestRedisCacheWithHook(t *testing.T, hook redis.Hook) (*RedisCache, *min
 		require.NoError(t, c.Close())
 	})
 
-	return c, mr
+	return c
 }
 
 // expirePTTL rewrites every PTTL reply to the -2 redis sends for a key that is
@@ -167,6 +186,62 @@ func TestRedisCache(t *testing.T) {
 				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour},
 			}, results)
 		})
+
+		t.Run("surrogateKeys come back with the entry", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newTestRedisCache(t)
+
+			surrogateKeys := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
+			})
+			require.NoError(t, err)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
+			}, results)
+		})
+
+		t.Run("a vary record comes back as a record", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newTestRedisCache(t)
+
+			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Vary: vary, TTL: time.Hour, Tags: []string{"subgraph:accounts"}},
+				{Key: "a+v", Value: []byte("value"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			results, err := c.GetMany(ctx, []string{"a", "a+v"})
+			require.NoError(t, err)
+			// Tagged: expires at its member's score, to the millisecond.
+			record := results["a"]
+			require.InDelta(t, time.Hour, record.TTL, float64(time.Second))
+			record.TTL = time.Hour
+			results["a"] = record
+			require.Equal(t, map[string]enginecache.Item{
+				"a":   {Key: "a", TTL: time.Hour, Vary: vary},
+				"a+v": {Key: "a+v", Value: []byte("value"), TTL: time.Hour},
+			}, results)
+		})
+
+		t.Run("a value not in the entry format fails the batch", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newTestRedisCache(t)
+
+			require.NoError(t, mr.Set(c.entryKey("raw"), `{"id":42}`))
+			mr.SetTTL(c.entryKey("raw"), time.Hour)
+
+			results, err := c.GetMany(ctx, []string{"raw"})
+			require.ErrorIs(t, err, enginecache.ErrEntryFormat)
+			require.Nil(t, results)
+		})
 	})
 
 	t.Run("Close", func(t *testing.T) {
@@ -235,7 +310,9 @@ func TestRedisCache(t *testing.T) {
 
 			stored, err := mr.Get(entryKey("a"))
 			require.NoError(t, err)
-			require.Equal(t, "1", stored)
+			value, _, _, err := enginecache.DecodeEntry(entryBody([]byte(stored)))
+			require.NoError(t, err)
+			require.Equal(t, "1", string(value))
 
 			require.Equal(t, time.Minute, mr.TTL(entryKey("a")))
 			require.Equal(t, 2*time.Minute, mr.TTL(entryKey("b")))
@@ -476,7 +553,7 @@ func TestRedisCache(t *testing.T) {
 
 			// Written straight to redis, bypassing SetMany. The expiry has to be
 			// set by hand too, a key without one is never served.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 			mr.SetTTL(entryKey("a"), time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"a"})
@@ -751,7 +828,7 @@ func TestRedisCache(t *testing.T) {
 			// SetMany refuses an item without a TTL, so a key sitting in the
 			// namespace with no expiry was put there by something else and is
 			// not this cache's to serve.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -769,7 +846,7 @@ func TestRedisCache(t *testing.T) {
 			// PTTL answers in whole milliseconds, so anything shorter rounds
 			// down to nothing left. Seeded by hand because a SetMany of this
 			// TTL would be rounded up to a millisecond on the way out.
-			require.NoError(t, mr.Set(entryKey("a"), "value"))
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
 			mr.SetTTL(entryKey("a"), 500*time.Microsecond)
 
 			results, err := c.GetMany(ctx, []string{"a"})

@@ -103,6 +103,13 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 
 	body, err := io.ReadAll(reader)
 	if err != nil {
+		// GetObject is lazy, so a missing object only surfaces on the first read.
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return nil, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: clientName,
+				Sha256Hash: sha256Hash,
+			}
+		}
 		return nil, err
 	}
 

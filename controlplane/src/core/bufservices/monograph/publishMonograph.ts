@@ -16,6 +16,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -140,33 +141,43 @@ export function publishMonograph(
       authContext,
     });
 
-    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          false,
-        );
+    // The transaction is managed by `SubgraphRepository.update`
+    // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
 
-        return subgraphRepo.update(
-          {
-            targetId: subgraphs[0].targetId,
-            labels: [],
-            unsetLabels: false,
-            schemaSDL: subgraphSchemaSDL,
-            updatedBy: authContext.userId,
-            namespaceId: namespace.id,
-            isV2Graph,
-          },
-          compositionService,
-        );
-      });
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      false,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
+      mapperUpdater,
+    );
+
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await new SubgraphRepository(logger, opts.db, authContext.organizationId).update(
+        {
+          targetId: subgraphs[0].targetId,
+          labels: [],
+          unsetLabels: false,
+          schemaSDL: subgraphSchemaSDL,
+          updatedBy: authContext.userId,
+          namespaceId: namespace.id,
+          isV2Graph,
+        },
+        compositionService,
+      );
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
@@ -215,35 +226,18 @@ export function publishMonograph(
       }
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        deploymentErrors: [],
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

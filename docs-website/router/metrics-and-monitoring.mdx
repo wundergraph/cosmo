@@ -161,13 +161,17 @@ All metrics are tracked along different dimensions. A dimension is an attribute 
 
 * `wg.operation.protocol`: The used protocol `http` , `ws`
 
-* `wg.operation.name`: The name of the operation
+* `wg.operation.name`: The name of the operation. Left out unless the router exports to Cosmo Cloud or the attribute is enabled with the `operation_name` context field, see [Metrics Only Attributes](/router/open-telemetry/custom-attributes#metrics-only-attributes).
 
 * `wg.operation.type`: The type of the operation e.g. `query`
 
 * `wg.client.name`: The client name
 
 * `wg.client.version`: The client version
+
+#### Router specific
+
+* `wg.operation.response_cache.status`: Whether the response was answered by the [response cache](/router/response-cache): `hit`, `partial_hit` or `miss`. Only present on the metrics of the router request, while the response cache is enabled.
 
 **Error identification**
 
@@ -188,6 +192,8 @@ You have two ways to query for errors. Both metrics can be quite useful dependin
 * `wg.subgraph.name`: The name of the subgraph
 
 * `wg.subgraph.id`: The ID of the subgraph
+
+* `wg.response_cache.status`: Whether the fetch was answered by the [response cache](/router/response-cache): `hit`, `partial_hit`, `miss` or `not_cacheable`. Only present while the response cache is enabled.
 
 ### Resource attributes
 
@@ -314,6 +320,42 @@ The provider id as specified in the router configuration
 A generic error type to indicate an error occurred. This is available only for `router.streams.sent.messages` at this moment, as we do not catch message receive errors.
 
 
+### Response Cache Metrics
+We expose metrics for the store of the [response cache](/router/response-cache): its lookups, writes and invalidations, how long they take and how they fail.
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    otlp:
+      response_cache: true
+    prometheus:
+      response_cache: true
+```
+
+#### Metrics
+
+* `router.response_cache.operations`: Counter of calls to the store.
+* `router.response_cache.operation.duration_seconds`: Histogram of the duration of those calls, in seconds.
+* `router.response_cache.keys`: Counter of the entries the store was asked for, found, stored or removed.
+* `router.response_cache.write.ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
+* `router.response_cache.fetches`: Counter of subgraph fetches, by what the cache did for them.
+
+#### Attributes
+
+* `wg.response_cache.provider`: The storage provider, `redis` or `memory`. On every metric.
+* `wg.response_cache.operation`: `lookup`, `write` or `invalidate`. `engine` counts a failure around the store, such as an entry that could not be read.
+* `wg.response_cache.result`: On `router.response_cache.keys`. `found` or `missing` for a lookup, `stored` or `failed` for a write, `removed` for an invalidation.
+* `wg.error.type`: On `router.response_cache.operations`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`. For the `engine` operation `invalid_entry` or `invalid_response`, with the `wg.subgraph.name` it happened for.
+
+`router.response_cache.fetches` carries its own:
+
+* `wg.subgraph.name`: The name of the subgraph.
+* `wg.entity.type`: The type the fetch resolves fields of.
+* `wg.response_cache.status`: `hit`, `partial_hit`, `miss` or `not_cacheable`.
+* `wg.response_cache.store_decision`: `stored`, or the [reason](/router/response-cache#store-decision) the response was not stored.
+
+The other metrics describe the cache as a whole. They are not split by subgraph or operation.
+
 ### Connection Metrics
 
 We also provide lower level metrics which helps track connection and pool metrics. By utilizing these metrics users can figure out when the router's connection pool is full and when connections are misbehaving by for example observing spikes in time to acquire connections. This can be enabled for Open Telemetry or Prometheus via
@@ -348,6 +390,8 @@ We use the following standard dimensions
 
 These metrics break down each outgoing subgraph request into its individual HTTP phases. They are collected per request using Go's `httptrace`, so unlike [Connection Metrics](#connection-metrics) they do not depend on the connection pool dialer. Use them to attribute subgraph latency to DNS resolution, connection setup, the TLS handshake, or the subgraph itself. This is useful for diagnosing issues such as slow DNS lookups.
 
+The histograms record actual outgoing subgraph HTTP requests. When single-flight request deduplication coalesces fetches, only the fetch that sends the subgraph request produces samples. Followers do not independently write the request or consume the origin response body.
+
 <CodeGroup>
   ```bash config.yaml
 telemetry:
@@ -371,7 +415,11 @@ telemetry:
 
 * `router.http.client.time_to_first_request_byte`: Histogram (ms) of the time from the start of the HTTP attempt to writing the first request byte to the subgraph. It includes acquiring the connection: pool wait, or DNS, TCP connect, and TLS handshake for new connections.
 
+* `router.http.client.time_to_last_request_byte`: Histogram (ms) of the duration between the first request-header write callback and a successful request-complete callback from Go's HTTP transport. This approximates the time from the first to the last request byte. Recorded only when both callbacks are observed and the request-complete callback reports no error.
+
 * `router.http.client.time_to_first_byte`: Histogram (ms) of the time from completing the request write to receiving the first response byte from the subgraph.
+
+* `router.http.client.time_to_last_byte`: Histogram (ms) of the duration from receiving the first response byte to consuming the last response byte. Recorded only when a first response byte is observed and the full body is consumed, either to EOF or through the declared `Content-Length`. A response that cannot carry a body completes when its headers have been read.
 
 ## Custom Attributes
 

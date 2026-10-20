@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"net"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(nil, config.StorageProviders{})
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.Nil(t, r.responseCache)
 	})
 
@@ -52,7 +51,7 @@ func TestSetupResponseCache(t *testing.T) {
 			Storage: config.ResponseCacheStorageConfig{Provider: "memcached"},
 		}, config.StorageProviders{})
 
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.Nil(t, r.responseCache)
 	})
 
@@ -63,12 +62,12 @@ func TestSetupResponseCache(t *testing.T) {
 		// every response that needs it, rather than failing once at startup.
 		for _, ttl := range []time.Duration{0, -time.Second} {
 			r := newRouter(&config.ResponseCacheConfiguration{
-				Enabled:     true,
-				FallbackTTL: ttl,
-				Storage:     config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128},
+				Enabled: true,
+				All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: ttl},
+				Storage: config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128},
 			}, config.StorageProviders{})
 
-			err := r.setupResponseCache(context.Background())
+			err := r.setupResponseCache(t.Context())
 			require.ErrorContains(t, err, "fallback_ttl")
 			require.Nil(t, r.responseCache)
 		}
@@ -78,12 +77,12 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
-			Storage:     config.ResponseCacheStorageConfig{Provider: "memcached"},
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			Storage: config.ResponseCacheStorageConfig{Provider: "memcached"},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, `storage provider "memcached" is not supported`)
 		require.Nil(t, r.responseCache)
 	})
@@ -95,11 +94,11 @@ func TestSetupResponseCache(t *testing.T) {
 		// defaults, so the zero value has to mean redis here too. Reading it as
 		// anything else would quietly turn one shared cache into one per replica.
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "no storage provider_id is configured")
 		require.Nil(t, r.responseCache)
 	})
@@ -108,15 +107,15 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderRedis,
 				ProviderID: "not_declared",
 			},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, `unknown redis storage provider "not_declared"`)
 		require.Nil(t, r.responseCache)
 	})
@@ -125,16 +124,115 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 0,
 			},
 		}, config.StorageProviders{})
 
-		err := r.setupResponseCache(context.Background())
+		err := r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "failed to create response cache")
+		require.Nil(t, r.responseCache)
+	})
+
+	t.Run("a bad private_id expression is refused before any store is built", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second, PrivateID: "request.nope"},
+			Storage: config.ResponseCacheStorageConfig{
+				Provider:   config.ResponseCacheStorageProviderMemory,
+				MaxEntries: 128,
+			},
+		}, config.StorageProviders{})
+
+		err := r.setupResponseCache(t.Context())
+		require.ErrorContains(t, err, "private_id")
+		require.Nil(t, r.responseCache)
+	})
+
+	memory := config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128}
+
+	t.Run("a disabled all with an enabled subgraph entry builds a cache", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: false},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
+				"products": {Enabled: true, FallbackTTL: time.Minute},
+			},
+			Storage: memory,
+		}, config.StorageProviders{})
+
+		require.NoError(t, r.setupResponseCache(t.Context()))
+		require.NotNil(t, r.responseCache)
+		require.NoError(t, r.responseCache.Close())
+	})
+
+	t.Run("a disabled all is not asked for a fallback_ttl", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: false, PrivateID: "request.nope"},
+			Storage: memory,
+		}, config.StorageProviders{})
+
+		require.NoError(t, r.setupResponseCache(t.Context()), "nothing under all is looked at while it is off")
+		require.NoError(t, r.responseCache.Close())
+	})
+
+	t.Run("an enabled subgraph entry without a fallback_ttl is refused by name", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
+				"products": {Enabled: true},
+			},
+			Storage: memory,
+		}, config.StorageProviders{})
+
+		err := r.setupResponseCache(t.Context())
+		require.ErrorContains(t, err, "response_cache.subgraphs.products.fallback_ttl")
+		require.Nil(t, r.responseCache)
+	})
+
+	t.Run("a disabled subgraph entry is not validated", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
+				"products": {Enabled: false, PrivateID: "request.nope"},
+			},
+			Storage: memory,
+		}, config.StorageProviders{})
+
+		require.NoError(t, r.setupResponseCache(t.Context()))
+		require.NoError(t, r.responseCache.Close())
+	})
+
+	t.Run("a bad subgraph private_id is refused by name", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRouter(&config.ResponseCacheConfiguration{
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
+				"products": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.nope"},
+			},
+			Storage: memory,
+		}, config.StorageProviders{})
+
+		err := r.setupResponseCache(t.Context())
+		require.ErrorContains(t, err, "response_cache.subgraphs.products: response cache private_id")
 		require.Nil(t, r.responseCache)
 	})
 
@@ -142,15 +240,15 @@ func TestSetupResponseCache(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,
 			},
 		}, config.StorageProviders{})
 
-		require.NoError(t, r.setupResponseCache(context.Background()))
+		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.NotNil(t, r.responseCache)
 		require.NoError(t, r.responseCache.Close())
 	})
@@ -163,8 +261,8 @@ func TestSetupResponseCache(t *testing.T) {
 		defer listener.Close()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
-			Enabled:     true,
-			FallbackTTL: 30 * time.Second,
+			Enabled: true,
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,
@@ -177,7 +275,7 @@ func TestSetupResponseCache(t *testing.T) {
 			}},
 		}, config.StorageProviders{})
 
-		err = r.setupResponseCache(context.Background())
+		err = r.setupResponseCache(t.Context())
 		require.ErrorContains(t, err, "failed to bind response cache invalidation server")
 		require.Nil(t, r.responseCacheInvalidationServer)
 		require.Nil(t, r.responseCache, "the cache opened before the failure must be released with it")

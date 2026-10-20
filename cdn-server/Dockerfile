@@ -23,7 +23,7 @@ RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 # use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
 RUN pnpm --filter=./cdn-server --prod deploy --legacy pruned
 
-FROM --platform=${TARGETPLATFORM} node:22.22.2-slim
+FROM node:22.22.2-slim
 
 WORKDIR /app
 

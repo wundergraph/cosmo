@@ -8,6 +8,7 @@ import {
 import {
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
+  type IncompatibleSharedEnumErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
   type InvalidCustomDirectiveErrorParams,
@@ -30,6 +31,7 @@ import {
   ARGUMENT,
   FIELD,
   FIELD_PATH,
+  FROM_CONTEXT,
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
@@ -124,9 +126,46 @@ export function incompatibleInputValueDefaultValuesError(
   );
 }
 
-export function incompatibleSharedEnumError(parentName: string): Error {
+function enumValuesBySubgraphMessage(valuesBySubgraphName: Map<SubgraphName, Array<string>>): string {
+  let message = '';
+  for (const [subgraphName, values] of valuesBySubgraphName) {
+    message += `  Subgraph "${subgraphName}": "` + values.join(QUOTATION_JOIN) + `"\n`;
+  }
+  return message;
+}
+
+export function incompatibleSharedEnumError({
+  inputCoordsBySubgraphName,
+  missingValueNamesBySubgraphName,
+  outputCoordsBySubgraphName,
+  typeName,
+}: IncompatibleSharedEnumErrorParams): Error {
+  let message =
+    `Enum "${typeName}" is used as both an input and output but is inconsistently defined across inclusive subgraphs.\n` +
+    ` The following subgraph` +
+    (missingValueNamesBySubgraphName.size > 1 ? `s do` : ` does`) +
+    ` not define every Enum Value:\n` +
+    enumValuesBySubgraphMessage(missingValueNamesBySubgraphName);
+  if (inputCoordsBySubgraphName.size > 0) {
+    message +=
+      ` The Enum is used as an input in the following subgraph` +
+      (inputCoordsBySubgraphName.size > 1 ? 's' : '') +
+      `:\n` +
+      enumValuesBySubgraphMessage(inputCoordsBySubgraphName);
+  }
+  if (outputCoordsBySubgraphName.size > 0) {
+    message +=
+      ` The Enum is used as an output in the following subgraph` +
+      (outputCoordsBySubgraphName.size > 1 ? 's' : '') +
+      `:\n` +
+      enumValuesBySubgraphMessage(outputCoordsBySubgraphName);
+  }
   return new Error(
-    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs. To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from the Enum values in the origin subgraph.`,
+    message +
+      `To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive` +
+      ` in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time` +
+      ` without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from` +
+      ` the Enum values in the origin subgraph.`,
   );
 }
 
@@ -585,6 +624,25 @@ export function invalidInterfaceImplementationError(
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
+      if (invalidFieldImplementation.interfaceContextCoords.size > 0) {
+        message +=
+          `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.interfaceContextCoords].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+      if (invalidFieldImplementation.implementationContextCoords.size > 0) {
+        message +=
+          `   "@${FROM_CONTEXT}" cannot be defined on the implementation of the Interface field` +
+          ` "${interfaceName}.${fieldName}".\n` +
+          `    The following argument` +
+          (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
+          ` "@${FROM_CONTEXT}": "` +
+          [...invalidFieldImplementation.implementationContextCoords].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
       if (invalidFieldImplementation.isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
@@ -623,6 +681,27 @@ export function invalidRequiredInputValueError(
       ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
+}
+
+export function requiredContextArgumentError(
+  coords: string,
+  fromContextSubgraphNames: Array<string>,
+  requiredSubgraphNames: Array<string>,
+): Error {
+  return new Error(
+    `The ${ARGUMENT} "${coords}" is invalid because:\n` +
+      ` It defines "@${FROM_CONTEXT}" in the following subgraph` +
+      (fromContextSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      fromContextSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` However, this argument is required in the following subgraph` +
+      (requiredSubgraphNames.length > 1 ? 's' : '') +
+      ': "' +
+      requiredSubgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must be optional in any subgraph that references it.\n`,
+  );
 }
 
 export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {

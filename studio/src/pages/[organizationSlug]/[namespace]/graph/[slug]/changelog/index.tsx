@@ -1,4 +1,5 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useParams } from 'next/navigation';
 import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
 import { Changelog } from '@/components/changelog/changelog';
 import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
@@ -71,6 +72,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const {
     namespace: { name: namespace },
   } = useWorkspace();
+  const { slug: graphName } = useParams<{ slug: string }>();
 
   const graphData = useContext(GraphContext);
 
@@ -87,7 +89,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const { data, isLoading, isSuccess, error, refetch } = useQuery(
     getFederatedGraphChangelog,
     {
-      name: router.query.slug as string,
+      name: graphName,
       namespace,
       pagination: {
         limit,
