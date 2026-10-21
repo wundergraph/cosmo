@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
 import { suggestDefers } from './analysis';
@@ -24,6 +24,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: 
 
   const [probeFailures, setProbeFailures] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
+  // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
+  const runId = useRef(0);
+
+  useEffect(() => {
+    runId.current += 1;
+    setRunning(false);
+  }, [query, routingUrl]);
 
   const parsed = useMemo(() => parseQuery(query), [query]);
   const doc = parsed?.doc;
@@ -44,9 +51,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: 
     if (!controller) {
       return;
     }
+    const id = ++runId.current;
     setRunning(true);
     try {
       const results = await probeRootFields(routingUrl, query);
+      if (id !== runId.current) {
+        return;
+      }
       const measured: Record<string, number> = {};
       const failures: Record<string, string> = {};
       for (const [name, result] of Object.entries(results)) {
@@ -59,9 +70,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: 
       controller.setLatencies(measured);
       setProbeFailures(failures);
     } catch {
-      controller.setLatencies(null);
+      if (id === runId.current) {
+        controller.setLatencies(null);
+      }
     } finally {
-      setRunning(false);
+      if (id === runId.current) {
+        setRunning(false);
+      }
     }
   };
 

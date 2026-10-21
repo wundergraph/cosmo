@@ -1,4 +1,4 @@
-import { getOperation, collectRootFields, parseQuery } from './operation';
+import { collectRootFields, getFragments, getOperation, parseQuery } from './operation';
 
 export type FieldPill = {
   fieldName: string;
@@ -8,13 +8,14 @@ export type FieldPill = {
 };
 
 export const computeFieldPills = (query: string, latencies: Record<string, number>, slowNames: Set<string>) => {
-  const operation = getOperation(parseQuery(query)?.doc);
+  const doc = parseQuery(query)?.doc;
+  const operation = getOperation(doc);
   if (!operation) {
     return [];
   }
 
   const pills: FieldPill[] = [];
-  for (const field of collectRootFields(operation.selectionSet.selections)) {
+  for (const field of collectRootFields(operation.selectionSet.selections, getFragments(doc))) {
     const fieldName = field.alias?.value ?? field.name.value;
     const latencyMs = latencies[fieldName];
     if (latencyMs === undefined || !field.name.loc) {

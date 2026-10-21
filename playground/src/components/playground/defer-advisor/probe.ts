@@ -1,5 +1,5 @@
-import { FieldNode, print } from 'graphql';
-import { collectRootFields, getOperation, parseQuery } from './operation';
+import { ASTNode, FieldNode, FragmentDefinitionNode, print, visit } from 'graphql';
+import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation';
 
 export const PROBE_RUNS = 3;
 
@@ -21,9 +21,30 @@ const timeOnce = async (url: string, query: string): Promise<number> => {
   return elapsed;
 };
 
+// Fragments the field reaches, directly or through other fragments. The probe
+// document must define them or the router rejects it.
+const referencedFragments = (field: FieldNode, fragments: FragmentMap): FragmentDefinitionNode[] => {
+  const found = new Map<string, FragmentDefinitionNode>();
+  const collect = (node: ASTNode) => {
+    visit(node, {
+      FragmentSpread(spread) {
+        const name = spread.name.value;
+        const fragment = fragments.get(name);
+        if (!fragment || found.has(name)) {
+          return;
+        }
+        found.set(name, fragment);
+        collect(fragment);
+      },
+    });
+  };
+  collect(field);
+  return [...found.values()];
+};
+
 // Each field runs alone, so its latency is its own cost.
-const probeField = async (url: string, field: FieldNode): Promise<ProbeResult> => {
-  const query = `{ ${print(field)} }`;
+const probeField = async (url: string, field: FieldNode, fragments: FragmentMap): Promise<ProbeResult> => {
+  const query = [`{ ${print(field)} }`, ...referencedFragments(field, fragments).map((f) => print(f))].join('\n');
   try {
     let total = 0;
     for (let run = 0; run < PROBE_RUNS; run++) {
@@ -36,15 +57,17 @@ const probeField = async (url: string, field: FieldNode): Promise<ProbeResult> =
 };
 
 export const probeRootFields = async (url: string, query: string): Promise<Record<string, ProbeResult>> => {
-  const operation = getOperation(parseQuery(query)?.doc);
+  const doc = parseQuery(query)?.doc;
+  const operation = getOperation(doc);
   if (!operation) {
     return {};
   }
 
+  const fragments = getFragments(doc);
   const results: Record<string, ProbeResult> = {};
-  for (const field of collectRootFields(operation.selectionSet.selections)) {
+  for (const field of collectRootFields(operation.selectionSet.selections, fragments)) {
     const name = field.alias?.value ?? field.name.value;
-    results[name] = await probeField(url, field);
+    results[name] = await probeField(url, field, fragments);
   }
   return results;
 };

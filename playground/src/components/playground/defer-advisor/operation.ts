@@ -1,6 +1,7 @@
 import {
   DocumentNode,
   FieldNode,
+  FragmentDefinitionNode,
   InlineFragmentNode,
   Kind,
   OperationDefinitionNode,
@@ -37,27 +38,81 @@ export const getOperation = (doc: DocumentNode | undefined): OperationDefinition
   return definition?.kind === Kind.OPERATION_DEFINITION ? definition : undefined;
 };
 
-type RootOccurrence = { name: string; deferred: boolean };
+export type FragmentMap = ReadonlyMap<string, FragmentDefinitionNode>;
 
-// `deferred` is true when an enclosing fragment is a @defer.
-export const collectRootOccurrences = (selections: readonly SelectionNode[], deferred = false): RootOccurrence[] =>
+export const getFragments = (doc: DocumentNode | undefined): FragmentMap =>
+  new Map(
+    (doc?.definitions ?? []).flatMap((d) => (d.kind === Kind.FRAGMENT_DEFINITION ? [[d.name.value, d] as const] : [])),
+  );
+
+type RootOccurrence = {
+  name: string;
+  // True when an enclosing fragment is a @defer.
+  deferred: boolean;
+  // False when the field comes through a named fragment spread. Defer edits the
+  // operation body only, so these cannot be deferred from the panel.
+  inBody: boolean;
+};
+
+// `path` holds the fragments being expanded, so a cycle stops instead of recursing.
+const walkOccurrences = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap,
+  deferred: boolean,
+  inBody: boolean,
+  path: ReadonlySet<string>,
+): RootOccurrence[] =>
   selections.flatMap((selection) => {
     if (selection.kind === Kind.FIELD) {
-      return [{ name: selection.alias?.value ?? selection.name.value, deferred }];
+      return [{ name: selection.alias?.value ?? selection.name.value, deferred, inBody }];
     }
     if (selection.kind === Kind.INLINE_FRAGMENT) {
-      return collectRootOccurrences(selection.selectionSet.selections, deferred || isDeferFragment(selection));
+      return walkOccurrences(
+        selection.selectionSet.selections,
+        fragments,
+        deferred || isDeferFragment(selection),
+        inBody,
+        path,
+      );
     }
-    return [];
+    const fragment = fragments.get(selection.name.value);
+    if (selection.kind !== Kind.FRAGMENT_SPREAD || !fragment || path.has(fragment.name.value)) {
+      return [];
+    }
+    return walkOccurrences(
+      fragment.selectionSet.selections,
+      fragments,
+      deferred,
+      false,
+      new Set([...path, fragment.name.value]),
+    );
   });
 
-export const collectRootFields = (selections: readonly SelectionNode[]): FieldNode[] =>
+export const collectRootOccurrences = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap = new Map(),
+): RootOccurrence[] => walkOccurrences(selections, fragments, false, true, new Set());
+
+const walkFields = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap,
+  path: ReadonlySet<string>,
+): FieldNode[] =>
   selections.flatMap((selection) => {
     if (selection.kind === Kind.FIELD) {
       return [selection];
     }
     if (selection.kind === Kind.INLINE_FRAGMENT) {
-      return collectRootFields(selection.selectionSet.selections);
+      return walkFields(selection.selectionSet.selections, fragments, path);
     }
-    return [];
+    const fragment = fragments.get(selection.name.value);
+    if (selection.kind !== Kind.FRAGMENT_SPREAD || !fragment || path.has(fragment.name.value)) {
+      return [];
+    }
+    return walkFields(fragment.selectionSet.selections, fragments, new Set([...path, fragment.name.value]));
   });
+
+export const collectRootFields = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap = new Map(),
+): FieldNode[] => walkFields(selections, fragments, new Set());
