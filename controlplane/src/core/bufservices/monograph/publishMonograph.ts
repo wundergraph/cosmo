@@ -16,6 +16,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -142,6 +143,14 @@ export function publishMonograph(
 
     // The transaction is managed by `SubgraphRepository.update`
     // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -153,6 +162,7 @@ export function publishMonograph(
       false,
       opts.promptToQueryClient,
       opts.billingDefaultPlanId,
+      mapperUpdater,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -216,35 +226,18 @@ export function publishMonograph(
       }
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        deploymentErrors: [],
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

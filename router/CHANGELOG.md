@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.360.1](https://github.com/wundergraph/cosmo/compare/router@0.360.0...router@0.360.1) (2026-10-19)
+
+### Bug Fixes
+
+* **router:** end each defer part with its boundary so parts stream as they complete ([#3378](https://github.com/wundergraph/cosmo/issues/3378)) ([4a672a1](https://github.com/wundergraph/cosmo/commit/4a672a1807c2bafe5a5160912edc17e3f3dab5aa)) (@gausie)
+
+## [0.360.0](https://github.com/wundergraph/cosmo/compare/router@0.359.0...router@0.360.0) (2026-10-19)
+
+### Features
+
+* **router:** add response cache data to request tracing ([#3359](https://github.com/wundergraph/cosmo/issues/3359)) ([6d779dd](https://github.com/wundergraph/cosmo/commit/6d779dd5bdfbdd1e94b0b3fe5139abfcfdd195e1)) (@SkArchon)
+
 ## [0.359.0](https://github.com/wundergraph/cosmo/compare/router@0.358.2...router@0.359.0) (2026-10-15)
 
 ### Features
