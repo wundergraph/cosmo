@@ -29,18 +29,9 @@ const (
 // asked for: a subgraph personalising on a forwarded header, as one that
 // marks its answers private would.
 func privateMoodMiddleware(cacheControl string) func(http.Handler) http.Handler {
-	return func(http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			mood := "HAPPY"
-			if r.Header.Get(privateUserHeader) == "sad" {
-				mood = "SAD"
-			}
-			entity := fmt.Sprintf(`{"__typename":"Employee","currentMood":%q}`, mood)
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Cache-Control", cacheControl)
-			_, _ = fmt.Fprintf(w, `{"data":{"_entities":[%s]}}`, strings.Repeat(entity+",", 9)+entity)
-		})
-	}
+	return moodFrom(cacheControl, "", func(r *http.Request, _ []byte) bool {
+		return r.Header.Get(privateUserHeader) == "sad"
+	})
 }
 
 // privateMoodConfig scopes private answers to the caller named by the header,
