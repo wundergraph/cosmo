@@ -1029,6 +1029,29 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("Expires stands in for max-age beside s-maxage", func(t *testing.T) {
+			t.Parallel()
+			withSMaxAge := func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Cache-Control", "s-maxage=300")
+					w.Header().Set("Expires", time.Now().UTC().Add(time.Minute).Format(http.TimeFormat))
+					handler.ServeHTTP(w, r)
+				})
+			}
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{Middleware: withSMaxAge},
+					Hobbies:   testenv.SubgraphConfig{Middleware: withSMaxAge},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Regexp(t, `^max-age=(5\d|60), s-maxage=300$`, res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		t.Run("an invalid Expires is already expired", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

@@ -873,7 +873,8 @@ func TestExpiresAsMaxAge(t *testing.T) {
 		{name: "past expires", maxAge: -1, sMaxAge: -1, expires: []string{at(-time.Minute)}, wantMaxAge: 0},
 		{name: "invalid expires", maxAge: -1, sMaxAge: -1, expires: []string{"0"}, wantMaxAge: 0},
 		{name: "max-age wins", maxAge: 10, sMaxAge: -1, expires: []string{at(time.Minute)}, wantMaxAge: 10},
-		{name: "s-maxage wins", maxAge: -1, sMaxAge: 10, expires: []string{at(time.Minute)}, wantMaxAge: -1},
+		{name: "s-maxage keeps expires for private caches", maxAge: -1, sMaxAge: 300, expires: []string{at(time.Minute)}, wantMaxAge: 60},
+		{name: "s-maxage keeps invalid expires", maxAge: -1, sMaxAge: 300, expires: []string{"0"}, wantMaxAge: 0},
 		{name: "no expires", maxAge: -1, sMaxAge: -1, wantMaxAge: -1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

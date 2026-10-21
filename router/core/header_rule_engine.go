@@ -1028,10 +1028,11 @@ func parseFreshness(header http.Header) (*cachedirective.ResponseCacheDirectives
 	return dir, nil
 }
 
-// expiresAsMaxAge gives a response without max-age or s-maxage its Expires,
-// less Date, as a max-age. An invalid Expires is already expired (RFC 9111 §5.3).
+// expiresAsMaxAge gives a response without max-age its Expires, less Date, as a
+// max-age; s-maxage only overrides it for shared caches. An invalid Expires is
+// already expired (RFC 9111 §5.3).
 func expiresAsMaxAge(dir *cachedirective.ResponseCacheDirectives, header http.Header) {
-	if dir.MaxAge != -1 || dir.SMaxAge != -1 || len(header.Values(expiresKey)) == 0 {
+	if dir.MaxAge != -1 || len(header.Values(expiresKey)) == 0 {
 		return
 	}
 	expires, err := http.ParseTime(header.Get(expiresKey))
