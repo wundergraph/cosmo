@@ -10,6 +10,7 @@ export const DeferAdvisorPluginContent = () => {
     if (!queryEditor) {
       return;
     }
+    setQuery(queryEditor.getValue());
     const onChange = () => setQuery(queryEditor.getValue());
     queryEditor.on('change', onChange);
     return () => {

@@ -18,6 +18,20 @@ const parsed = (query: string) => {
   return result;
 };
 
+describe('only the first operation is advised', () => {
+  const query = 'query First { pricing } query Second { reviews { text } }';
+
+  test('applyDefer leaves a matching field in a later operation alone', () => {
+    expect(applyDefer(parsed(query), 'reviews', 'reviews')).toBe(query);
+  });
+
+  test('revertDefer ignores a deferred fragment in a later operation', () => {
+    const later = 'query First { pricing } query Second { ... @defer(label: "r") { reviews } }';
+
+    expect(revertDefer(parsed(later), 'r')).toBe(later);
+  });
+});
+
 describe('applyDefer with a field name that is already deferred', () => {
   const query =
     '{ ... @defer(label: "reviews") { reviews(productId: "2") { text } } reviews(productId: "1") { text } }';
