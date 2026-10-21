@@ -92,7 +92,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">
       <div className="flex items-center gap-2">
-        <span className="font-semibold">Defer</span>
+        <span className="font-semibold">Defer Advisor</span>
         {!isMutationOrSubscription && !hasSyntaxError && (
           <div className="ml-auto flex gap-2">
             <Button onClick={analyse} disabled={!canAnalyse}>
