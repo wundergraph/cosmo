@@ -22,6 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -637,6 +638,24 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 			response.Extensions = &Extensions{
 				Authorization: buf.Bytes(),
 			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
+		}
+	case errorTypeDeliveryGuarantee:
+		var guaranteeErr *datasource.DeliveryGuaranteeError
+		if !errors.As(err, &guaranteeErr) {
+			response.Errors[0].Message = "Internal server error"
+			break
+		}
+		supported := make([]string, 0, len(guaranteeErr.Supported))
+		for _, g := range guaranteeErr.Supported {
+			supported = append(supported, string(g))
+		}
+		response.Errors[0].Message = guaranteeErr.Message
+		response.Errors[0].Extensions = &Extensions{
+			Code:        guaranteeErr.Code,
+			CosmoCursor: &CosmoCursorExtension{Supported: supported},
 		}
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response

@@ -227,5 +227,5 @@ func TestKafkaEngineDataSourceFactorySubscriptionInputDeliveryGuaranteeMode(t *t
 
 	var subscriptionConfig SubscriptionEventConfiguration
 	require.NoError(t, json.Unmarshal([]byte(subscriptionInput), &subscriptionConfig))
-	require.Equal(t, datasource.DeliveryGuaranteeModeCursor, subscriptionConfig.DeliveryGuaranteeMode)
+	require.Equal(t, datasource.DeliveryGuaranteeModeCursor, subscriptionConfig.GuaranteeMode)
 }

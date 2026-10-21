@@ -96,10 +96,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		Provider:              c.providerId,
-		Topics:                c.topics,
-		FieldName:             c.fieldName,
-		DeliveryGuaranteeMode: c.deliveryGuaranteeMode,
+		Provider:      c.providerId,
+		Topics:        c.topics,
+		FieldName:     c.fieldName,
+		GuaranteeMode: c.deliveryGuaranteeMode,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

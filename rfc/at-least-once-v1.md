@@ -50,7 +50,7 @@ sequenceDiagram
     participant Broker
 
     Note over Client,Router: Initial subscription
-    Client->>Router: subscribe (delivery-guarantee: cursor)
+    Client->>Router: subscribe (cosmoDeliveryGuarantee: cursor)
     Router->>Broker: Subscribe()
     Broker-->>Router: event
     Router-->>Client: next { data, extensions.cursor: A }
@@ -405,17 +405,22 @@ graphql-transport-ws and graphql-sse, support metadata on subscription requests.
 - graphql-sse: Specify a free-form map on `payload.extensions` (indirectly via
   [GraphQL-Over-HTTP subscription requests](https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#graphql-over-http-request))
 
-On both subprotocols the client can add the key `delivery-guarantee`. It accepts a comma-separated
+On both subprotocols the client can add the key `cosmoDeliveryGuarantee`. It accepts a comma-separated
 list of capabilities the client supports. Priority is from left to right (highest to lowest). The
-router picks the highest priority guarantee it supports (configurable). The following values are
-allowed
+router picks the highest priority guarantee it supports. Cursors are opted in per subscription
+field through the `deliveryGuarantees` argument of the EDFS subscribe directive. A field that did
+not opt in only supports `at-most-once`. The following values are allowed
 
 - `cursor`
 - `at-most-once`
 
-If `delivery-guarantee` is not specified or its value is null `at-most-once` is used.
+If `cosmoDeliveryGuarantee` is not specified or its value is null `at-most-once` is used.
 
-The value has to be a string.
+The value has to be a non-empty string. Tokens are trimmed and matched case-sensitively, unknown
+tokens are ignored. Any other value is rejected with `DELIVERY_GUARANTEE_INVALID`.
+
+The handshake is evaluated before any user hook runs. Success confirmation (see below) and
+resuming are not part of the first implementation.
 
 ##### Negotiation success
 
@@ -428,16 +433,15 @@ If client and router both agree to use cursors the router will confirm this to t
 
 ##### Negotiation failure
 
-###### DELIVERY_GUARANTEE_UNSUPPORTED
+###### DELIVERY_GUARANTEE_UNSUPPORTED and DELIVERY_GUARANTEE_INVALID
 
 In case the router won't support any guarantees the client listed it will terminate the subscription
-with an error. For both subprotocols two fields can be defined which indicate the nature of the
-error:
+with `DELIVERY_GUARANTEE_UNSUPPORTED`. If the value of `cosmoDeliveryGuarantee` can't be parsed
+(not a string, empty) the subscription is terminated with `DELIVERY_GUARANTEE_INVALID`. For both
+subprotocols the error carries:
 
-- `code`: An error code indicating the reason why the server refused
-- `supported`: A string array with supported guarantees
-
-The only allowed value for `code` to return in this case is `DELIVERY_GUARANTEE_UNSUPPORTED`.
+- `extensions.code`: `DELIVERY_GUARANTEE_UNSUPPORTED` or `DELIVERY_GUARANTEE_INVALID`
+- `extensions.cosmoCursor.supported`: A string array with supported guarantees
 
 Depending on the subprotocol they have to be delivered in different ways.
 
@@ -457,7 +461,7 @@ Example:
       "message": "Subscription requires delivery guarantee 'cursor', which this router cannot provide.",
       "extensions": {
         "code": "DELIVERY_GUARANTEE_UNSUPPORTED",
-        "supported": ["at-most-once"]
+        "cosmoCursor": { "supported": ["at-most-once"] }
       }
     }
   ]
@@ -474,7 +478,7 @@ Example:
 
 ```
 event: next
-data: {"errors":[{"message":"Subscription requires delivery guarantee 'cursor', which this router cannot provide.","extensions":{"code":"DELIVERY_GUARANTEE_UNSUPPORTED", "supported": ["at-most-once"]}}]}
+data: {"errors":[{"message":"Subscription requires delivery guarantee 'cursor', which this router cannot provide.","extensions":{"code":"DELIVERY_GUARANTEE_UNSUPPORTED","cosmoCursor":{"supported":["at-most-once"]}}}]}
 
 event: complete
 data:
@@ -511,11 +515,11 @@ client that stores cursor B has given up its chance to receive the message that 
 
 When a client wants to receive messages where it left off it has to provide the cursor upon
 reconnect. Specifically during handshake the client adds the field `cursor` to `payload.extensions`,
-similar to how it adds `delivery-guarantee`, see [handshake](#client---router-handshake). The value
+similar to how it adds `cosmoDeliveryGuarantee`, see [handshake](#client---router-handshake). The value
 of this field contains the last processed cursor as chosen by the client in
 [wire format](#wire-format).
 
-The `cursor` field is independent of `delivery-guarantee`. A client may choose to resume from a
+The `cursor` field is independent of `cosmoDeliveryGuarantee`. A client may choose to resume from a
 specific event without getting new cursors.
 
 ##### Replay speed
@@ -660,7 +664,7 @@ negotiation confirmation is read back, and how liveness is detected.
 
 The WebSocket binding provides:
 
-- **Cursor negotiation**: the requested `delivery-guarantee` list is injected into
+- **Cursor negotiation**: the requested `cosmoDeliveryGuarantee` list is injected into
   `payload.extensions` on every subscribe, and the router's confirmation (or a
   `DELIVERY_GUARANTEE_UNSUPPORTED` error) is surfaced as a typed result instead of a raw GraphQL
   error, so users can decide whether to fall back to at-most-once or fail loudly.
@@ -697,7 +701,7 @@ execution result, so cursor negotiation, cursor extraction, explicit commit and 
 work exactly as they do over WebSockets. The SSE binding differs in three places:
 
 - **Handshake**: graphql-sse has two modes — one HTTP request per operation, or one shared stream
-  with a reservation. Both send a GraphQL request body on subscribe, so `delivery-guarantee` and
+  with a reservation. Both send a GraphQL request body on subscribe, so `cosmoDeliveryGuarantee` and
   `cursor` go into `extensions` the same way in both.
 - **Negotiation confirmation**: the graphql-sse client never hands the caller the HTTP `Response`,
   so the `x-cosmo-at-least-once-capabilities` header is awkward to read, and on a shared stream it
