@@ -33,9 +33,12 @@ test-no-race:
 test-no-race-fresh: clean-testcache
 	go test $(test_target)
 
+.PHONY: lint lint-fix
 lint:
-	go vet ./...
-	staticcheck ./...
+	../scripts/golangci-lint.sh run
+
+lint-fix:
+	../scripts/golangci-lint.sh run --fix
 
 test-stability:
 	@while $(MAKE) test-fresh; do :; done

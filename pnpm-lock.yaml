@@ -617,8 +617,8 @@ importers:
         specifier: 'catalog:'
         version: 11.0.0(graphql@16.9.0(patch_hash=5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f))
       '@keycloak/keycloak-admin-client':
-        specifier: 26.7.2
-        version: 26.7.2
+        specifier: 26.7.5
+        version: 26.7.5
       '@octokit/webhooks-types':
         specifier: ^7.6.1
         version: 7.6.1
@@ -924,6 +924,9 @@ importers:
       lodash:
         specifier: 'catalog:'
         version: 4.18.1
+      meros:
+        specifier: 1.3.0
+        version: 1.3.0(@types/node@22.17.0)
       monaco-editor:
         specifier: ^0.45.0
         version: 0.45.0
@@ -957,6 +960,9 @@ importers:
       use-debounce:
         specifier: ^10.0.0
         version: 10.0.0(react@18.3.1)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.10
@@ -1018,6 +1024,9 @@ importers:
       vite-plugin-singlefile:
         specifier: ^2.2.0
         version: 2.2.0(rollup@4.59.0)(vite@6.4.3(@types/node@22.17.0)(jiti@2.4.2)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.3))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.17.0)(@vitest/coverage-v8@4.1.11)(jsdom@27.2.0(supports-color@10.2.0))(vite@6.4.3(@types/node@22.17.0)(jiti@2.4.2)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.3))
 
   protographic:
     dependencies:
@@ -3907,8 +3916,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@keycloak/keycloak-admin-client@26.7.2':
-    resolution: {integrity: sha512-pnuUTXVv4dJUBYKofbfniNp9pm+lEGGVnDwXJ6vmHo8wiJiLHRgy8kgmZteqWH5yRX5LR0DvPAVnCCdfGf5Bcg==}
+  '@keycloak/keycloak-admin-client@26.7.5':
+    resolution: {integrity: sha512-C9Bs26mOzEjVDUXe4uO9NRJDXPO7KtG7wYpOkXcZgKWY5Io2YhoUNXu/o72D1d4QWd9qmlAi5qS8EIfhuvxsig==}
     engines: {node: '>=18'}
 
   '@lerna-lite/cli@4.11.4':
@@ -17652,7 +17661,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@keycloak/keycloak-admin-client@26.7.2':
+  '@keycloak/keycloak-admin-client@26.7.5':
     dependencies:
       '@microsoft/kiota-abstractions': 1.0.0-preview.103
       '@microsoft/kiota-http-fetchlibrary': 1.0.0-preview.103

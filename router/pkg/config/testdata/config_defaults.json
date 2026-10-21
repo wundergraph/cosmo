@@ -214,6 +214,7 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
@@ -323,12 +324,14 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": null,
       "IgnoreQueryParamsList": [
         "variables"
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": false,
       "Fields": null
     }
@@ -358,6 +361,7 @@
   "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
+  "DrainPeriod": null,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
@@ -675,7 +679,12 @@
   },
   "SplitConfigPoller": {
     "SkipMissingFeatureFlags": false,
-    "IgnoredFeatureFlags": null
+    "IgnoredFeatureFlags": null,
+    "FetchRetry": {
+      "MaxAttempts": 3,
+      "Interval": 100000000,
+      "MaxDuration": 2000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

@@ -16,11 +16,9 @@ import (
 func buildCacheTagHeader(surrogateKeys []string, delimiter string, maxBytes int) string {
 	usable := make([]string, 0, len(surrogateKeys))
 	for _, surrogateKey := range surrogateKeys {
-		// The delimiter would split it; a control byte would break the header.
-		if surrogateKey == "" || strings.Contains(surrogateKey, delimiter) || !httpguts.ValidHeaderFieldValue(surrogateKey) {
-			continue
+		if usableCacheTag(surrogateKey, delimiter) {
+			usable = append(usable, surrogateKey)
 		}
-		usable = append(usable, surrogateKey)
 	}
 
 	fit := fitCacheTagCount(usable, delimiter, maxBytes)
@@ -30,6 +28,11 @@ func buildCacheTagHeader(surrogateKeys []string, delimiter string, maxBytes int)
 		fit = fitCacheTagCount(usable, delimiter, maxBytes)
 	}
 	return strings.Join(usable[:fit], delimiter)
+}
+
+// usableCacheTag: the delimiter would split it; a control byte would break the header.
+func usableCacheTag(surrogateKey, delimiter string) bool {
+	return surrogateKey != "" && !strings.Contains(surrogateKey, delimiter) && httpguts.ValidHeaderFieldValue(surrogateKey)
 }
 
 func fitCacheTagCount(surrogateKeys []string, delimiter string, maxBytes int) int {

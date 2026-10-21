@@ -52,6 +52,7 @@ const (
 	ProjectsService_RequireEmployeeRecommendedWorkItemsById_FullMethodName        = "/service.ProjectsService/RequireEmployeeRecommendedWorkItemsById"
 	ProjectsService_RequireEmployeeReviewReportById_FullMethodName                = "/service.ProjectsService/RequireEmployeeReviewReportById"
 	ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName        = "/service.ProjectsService/RequireEmployeeTaggedProjectSummaryById"
+	ProjectsService_RequireEmployeeWorkAuditById_FullMethodName                   = "/service.ProjectsService/RequireEmployeeWorkAuditById"
 	ProjectsService_RequireEmployeeWorkItemHandlerInfoById_FullMethodName         = "/service.ProjectsService/RequireEmployeeWorkItemHandlerInfoById"
 	ProjectsService_RequireEmployeeWorkItemInfoById_FullMethodName                = "/service.ProjectsService/RequireEmployeeWorkItemInfoById"
 	ProjectsService_RequireEmployeeWorkItemSpecsInfoById_FullMethodName           = "/service.ProjectsService/RequireEmployeeWorkItemSpecsInfoById"
@@ -71,6 +72,10 @@ const (
 	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName                  = "/service.ProjectsService/ResolveProjectTopPriorityItem"
 	ProjectsService_ResolveTaskIsBlocked_FullMethodName                           = "/service.ProjectsService/ResolveTaskIsBlocked"
 	ProjectsService_ResolveTaskTotalEffort_FullMethodName                         = "/service.ProjectsService/ResolveTaskTotalEffort"
+	ProjectsService_ResolveWorkAuditFindingRemediation_FullMethodName             = "/service.ProjectsService/ResolveWorkAuditFindingRemediation"
+	ProjectsService_ResolveWorkAuditRemediationEstimatedHours_FullMethodName      = "/service.ProjectsService/ResolveWorkAuditRemediationEstimatedHours"
+	ProjectsService_ResolveWorkAuditRiskScore_FullMethodName                      = "/service.ProjectsService/ResolveWorkAuditRiskScore"
+	ProjectsService_ResolveWorkAuditStepEffort_FullMethodName                     = "/service.ProjectsService/ResolveWorkAuditStepEffort"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -117,6 +122,7 @@ type ProjectsServiceClient interface {
 	RequireEmployeeRecommendedWorkItemsById(ctx context.Context, in *RequireEmployeeRecommendedWorkItemsByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error)
 	RequireEmployeeReviewReportById(ctx context.Context, in *RequireEmployeeReviewReportByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeReviewReportByIdResponse, error)
 	RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
+	RequireEmployeeWorkAuditById(ctx context.Context, in *RequireEmployeeWorkAuditByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkAuditByIdResponse, error)
 	RequireEmployeeWorkItemHandlerInfoById(ctx context.Context, in *RequireEmployeeWorkItemHandlerInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error)
 	RequireEmployeeWorkItemInfoById(ctx context.Context, in *RequireEmployeeWorkItemInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkItemInfoByIdResponse, error)
 	RequireEmployeeWorkItemSpecsInfoById(ctx context.Context, in *RequireEmployeeWorkItemSpecsInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkItemSpecsInfoByIdResponse, error)
@@ -136,6 +142,10 @@ type ProjectsServiceClient interface {
 	ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(ctx context.Context, in *ResolveTaskIsBlockedRequest, opts ...grpc.CallOption) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(ctx context.Context, in *ResolveTaskTotalEffortRequest, opts ...grpc.CallOption) (*ResolveTaskTotalEffortResponse, error)
+	ResolveWorkAuditFindingRemediation(ctx context.Context, in *ResolveWorkAuditFindingRemediationRequest, opts ...grpc.CallOption) (*ResolveWorkAuditFindingRemediationResponse, error)
+	ResolveWorkAuditRemediationEstimatedHours(ctx context.Context, in *ResolveWorkAuditRemediationEstimatedHoursRequest, opts ...grpc.CallOption) (*ResolveWorkAuditRemediationEstimatedHoursResponse, error)
+	ResolveWorkAuditRiskScore(ctx context.Context, in *ResolveWorkAuditRiskScoreRequest, opts ...grpc.CallOption) (*ResolveWorkAuditRiskScoreResponse, error)
+	ResolveWorkAuditStepEffort(ctx context.Context, in *ResolveWorkAuditStepEffortRequest, opts ...grpc.CallOption) (*ResolveWorkAuditStepEffortResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -476,6 +486,16 @@ func (c *projectsServiceClient) RequireEmployeeTaggedProjectSummaryById(ctx cont
 	return out, nil
 }
 
+func (c *projectsServiceClient) RequireEmployeeWorkAuditById(ctx context.Context, in *RequireEmployeeWorkAuditByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkAuditByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeWorkAuditByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeWorkAuditById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) RequireEmployeeWorkItemHandlerInfoById(ctx context.Context, in *RequireEmployeeWorkItemHandlerInfoByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RequireEmployeeWorkItemHandlerInfoByIdResponse)
@@ -666,6 +686,46 @@ func (c *projectsServiceClient) ResolveTaskTotalEffort(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *projectsServiceClient) ResolveWorkAuditFindingRemediation(ctx context.Context, in *ResolveWorkAuditFindingRemediationRequest, opts ...grpc.CallOption) (*ResolveWorkAuditFindingRemediationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveWorkAuditFindingRemediationResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveWorkAuditFindingRemediation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveWorkAuditRemediationEstimatedHours(ctx context.Context, in *ResolveWorkAuditRemediationEstimatedHoursRequest, opts ...grpc.CallOption) (*ResolveWorkAuditRemediationEstimatedHoursResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveWorkAuditRemediationEstimatedHoursResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveWorkAuditRemediationEstimatedHours_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveWorkAuditRiskScore(ctx context.Context, in *ResolveWorkAuditRiskScoreRequest, opts ...grpc.CallOption) (*ResolveWorkAuditRiskScoreResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveWorkAuditRiskScoreResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveWorkAuditRiskScore_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveWorkAuditStepEffort(ctx context.Context, in *ResolveWorkAuditStepEffortRequest, opts ...grpc.CallOption) (*ResolveWorkAuditStepEffortResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveWorkAuditStepEffortResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveWorkAuditStepEffort_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -710,6 +770,7 @@ type ProjectsServiceServer interface {
 	RequireEmployeeRecommendedWorkItemsById(context.Context, *RequireEmployeeRecommendedWorkItemsByIdRequest) (*RequireEmployeeRecommendedWorkItemsByIdResponse, error)
 	RequireEmployeeReviewReportById(context.Context, *RequireEmployeeReviewReportByIdRequest) (*RequireEmployeeReviewReportByIdResponse, error)
 	RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
+	RequireEmployeeWorkAuditById(context.Context, *RequireEmployeeWorkAuditByIdRequest) (*RequireEmployeeWorkAuditByIdResponse, error)
 	RequireEmployeeWorkItemHandlerInfoById(context.Context, *RequireEmployeeWorkItemHandlerInfoByIdRequest) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error)
 	RequireEmployeeWorkItemInfoById(context.Context, *RequireEmployeeWorkItemInfoByIdRequest) (*RequireEmployeeWorkItemInfoByIdResponse, error)
 	RequireEmployeeWorkItemSpecsInfoById(context.Context, *RequireEmployeeWorkItemSpecsInfoByIdRequest) (*RequireEmployeeWorkItemSpecsInfoByIdResponse, error)
@@ -729,6 +790,10 @@ type ProjectsServiceServer interface {
 	ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(context.Context, *ResolveTaskIsBlockedRequest) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(context.Context, *ResolveTaskTotalEffortRequest) (*ResolveTaskTotalEffortResponse, error)
+	ResolveWorkAuditFindingRemediation(context.Context, *ResolveWorkAuditFindingRemediationRequest) (*ResolveWorkAuditFindingRemediationResponse, error)
+	ResolveWorkAuditRemediationEstimatedHours(context.Context, *ResolveWorkAuditRemediationEstimatedHoursRequest) (*ResolveWorkAuditRemediationEstimatedHoursResponse, error)
+	ResolveWorkAuditRiskScore(context.Context, *ResolveWorkAuditRiskScoreRequest) (*ResolveWorkAuditRiskScoreResponse, error)
+	ResolveWorkAuditStepEffort(context.Context, *ResolveWorkAuditStepEffortRequest) (*ResolveWorkAuditStepEffortResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -838,6 +903,9 @@ func (UnimplementedProjectsServiceServer) RequireEmployeeReviewReportById(contex
 func (UnimplementedProjectsServiceServer) RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeTaggedProjectSummaryById not implemented")
 }
+func (UnimplementedProjectsServiceServer) RequireEmployeeWorkAuditById(context.Context, *RequireEmployeeWorkAuditByIdRequest) (*RequireEmployeeWorkAuditByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeWorkAuditById not implemented")
+}
 func (UnimplementedProjectsServiceServer) RequireEmployeeWorkItemHandlerInfoById(context.Context, *RequireEmployeeWorkItemHandlerInfoByIdRequest) (*RequireEmployeeWorkItemHandlerInfoByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeWorkItemHandlerInfoById not implemented")
 }
@@ -894,6 +962,18 @@ func (UnimplementedProjectsServiceServer) ResolveTaskIsBlocked(context.Context, 
 }
 func (UnimplementedProjectsServiceServer) ResolveTaskTotalEffort(context.Context, *ResolveTaskTotalEffortRequest) (*ResolveTaskTotalEffortResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveTaskTotalEffort not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveWorkAuditFindingRemediation(context.Context, *ResolveWorkAuditFindingRemediationRequest) (*ResolveWorkAuditFindingRemediationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveWorkAuditFindingRemediation not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveWorkAuditRemediationEstimatedHours(context.Context, *ResolveWorkAuditRemediationEstimatedHoursRequest) (*ResolveWorkAuditRemediationEstimatedHoursResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveWorkAuditRemediationEstimatedHours not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveWorkAuditRiskScore(context.Context, *ResolveWorkAuditRiskScoreRequest) (*ResolveWorkAuditRiskScoreResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveWorkAuditRiskScore not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveWorkAuditStepEffort(context.Context, *ResolveWorkAuditStepEffortRequest) (*ResolveWorkAuditStepEffortResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveWorkAuditStepEffort not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -1510,6 +1590,24 @@ func _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler(srv interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_RequireEmployeeWorkAuditById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeWorkAuditByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeWorkAuditById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeWorkAuditById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeWorkAuditById(ctx, req.(*RequireEmployeeWorkAuditByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_RequireEmployeeWorkItemHandlerInfoById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequireEmployeeWorkItemHandlerInfoByIdRequest)
 	if err := dec(in); err != nil {
@@ -1852,6 +1950,78 @@ func _ProjectsService_ResolveTaskTotalEffort_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_ResolveWorkAuditFindingRemediation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveWorkAuditFindingRemediationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditFindingRemediation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveWorkAuditFindingRemediation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditFindingRemediation(ctx, req.(*ResolveWorkAuditFindingRemediationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveWorkAuditRemediationEstimatedHours_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveWorkAuditRemediationEstimatedHoursRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditRemediationEstimatedHours(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveWorkAuditRemediationEstimatedHours_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditRemediationEstimatedHours(ctx, req.(*ResolveWorkAuditRemediationEstimatedHoursRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveWorkAuditRiskScore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveWorkAuditRiskScoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditRiskScore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveWorkAuditRiskScore_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditRiskScore(ctx, req.(*ResolveWorkAuditRiskScoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveWorkAuditStepEffort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveWorkAuditStepEffortRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditStepEffort(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveWorkAuditStepEffort_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveWorkAuditStepEffort(ctx, req.(*ResolveWorkAuditStepEffortRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1992,6 +2162,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler,
 		},
 		{
+			MethodName: "RequireEmployeeWorkAuditById",
+			Handler:    _ProjectsService_RequireEmployeeWorkAuditById_Handler,
+		},
+		{
 			MethodName: "RequireEmployeeWorkItemHandlerInfoById",
 			Handler:    _ProjectsService_RequireEmployeeWorkItemHandlerInfoById_Handler,
 		},
@@ -2066,6 +2240,22 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveTaskTotalEffort",
 			Handler:    _ProjectsService_ResolveTaskTotalEffort_Handler,
+		},
+		{
+			MethodName: "ResolveWorkAuditFindingRemediation",
+			Handler:    _ProjectsService_ResolveWorkAuditFindingRemediation_Handler,
+		},
+		{
+			MethodName: "ResolveWorkAuditRemediationEstimatedHours",
+			Handler:    _ProjectsService_ResolveWorkAuditRemediationEstimatedHours_Handler,
+		},
+		{
+			MethodName: "ResolveWorkAuditRiskScore",
+			Handler:    _ProjectsService_ResolveWorkAuditRiskScore_Handler,
+		},
+		{
+			MethodName: "ResolveWorkAuditStepEffort",
+			Handler:    _ProjectsService_ResolveWorkAuditStepEffort_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

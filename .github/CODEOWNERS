@@ -13,6 +13,7 @@
 /helm/              @wundergraph/Platform
 /infrastructure/    @wundergraph/Platform
 /keycloak/          @wundergraph/Cosmo
+/.oss-scanner/      @wundergraph/Platform
 /otelcollector/     @wundergraph/Platform
 /patches/           @wundergraph/Cosmo
 /playground/        @wundergraph/Cosmo
@@ -22,6 +23,8 @@
 /router-plugin/     @wundergraph/Router
 /shared/            @wundergraph/Cosmo
 /studio/            @wundergraph/Cosmo
+
+/router/internal/graphiql/graphiql.html
 
 /buf.connect-go.go.gen.yaml     @wundergraph/Router
 /buf.graphqlmetrics.go.gen.yaml @wundergraph/Router

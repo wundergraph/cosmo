@@ -17,6 +17,7 @@ import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import ApolloMigrator from '../../services/ApolloMigrator.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -134,6 +135,14 @@ export function migrateFromApollo(
       }
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     await opts.db.transaction(async (tx) => {
       const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
         fedGraph: {
@@ -159,10 +168,12 @@ export function migrateFromApollo(
         true,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
+    await mapperUpdater.flush();
 
     const migratedGraph = await fedGraphRepo.byName(graph.name, req.namespace);
     if (!migratedGraph) {

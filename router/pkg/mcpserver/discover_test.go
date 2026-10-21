@@ -97,3 +97,74 @@ func TestDiscover(t *testing.T) {
 		assert.Equal(t, "wundergraph-cosmo-graph", serverInfo.Name)
 	})
 }
+
+func TestToolTitle_OmitPrefixOption(t *testing.T) {
+	tests := []struct {
+		name             string
+		options          []func(*Options)
+		expectedToolName string
+		expectedTitle    string
+	}{
+		{
+			name: "default: title and name keep prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(false),
+				WithOmitToolTitlePrefix(false),
+			},
+			expectedToolName: "execute_operation_list_employees",
+			expectedTitle:    "Execute operation ListEmployees",
+		},
+		{
+			name: "omit title prefix only: title has no prefix, name retains prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(false),
+				WithOmitToolTitlePrefix(true),
+			},
+			expectedToolName: "execute_operation_list_employees",
+			expectedTitle:    "ListEmployees",
+		},
+		{
+			name: "omit name prefix only: name has no prefix, title retains prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(true),
+				WithOmitToolTitlePrefix(false),
+			},
+			expectedToolName: "list_employees",
+			expectedTitle:    "Execute operation ListEmployees",
+		},
+		{
+			name: "both enabled: name and title drop prefix",
+			options: []func(*Options){
+				WithOmitToolNamePrefix(true),
+				WithOmitToolTitlePrefix(true),
+			},
+			expectedToolName: "list_employees",
+			expectedTitle:    "ListEmployees",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := newTestSession(t, tt.options...)
+
+			result, err := cs.ListTools(t.Context(), nil)
+			require.NoError(t, err)
+
+			tool := findTool(t, result.Tools, tt.expectedToolName)
+			require.NotNil(t, tool.Annotations)
+			assert.Equal(t, tt.expectedTitle, tool.Annotations.Title)
+		})
+	}
+}
+
+// findTool returns the tool with the specified name from tools.
+func findTool(t *testing.T, tools []*mcp.Tool, name string) *mcp.Tool {
+	t.Helper()
+	for _, tool := range tools {
+		if tool.Name == name {
+			return tool
+		}
+	}
+	t.Fatalf("tool %q not found in %d returned tools", name, len(tools))
+	return nil
+}
