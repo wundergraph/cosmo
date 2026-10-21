@@ -8,7 +8,6 @@ setup-build-tools:
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2026.2.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 	go install github.com/vektra/mockery/v3@v3.3.1
@@ -121,10 +120,13 @@ generate:
 	pnpm generate
 	make generate-go
 
+generate-ptq:
+	pnpm generate:ptq
+
 generate-go:
-	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
+	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/ai --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
-	rm -rf connect-go/wg && buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.connect-go.go.gen.yaml
+	rm -rf connect-go/wg && buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --path proto/wg/cosmo/ai --template buf.connect-go.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev

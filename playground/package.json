@@ -34,7 +34,8 @@
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
     "build:router": "VITE_SINGLE_FILE_OUTPUT=true pnpm build && pnpm copy-html",
-    "format": "prettier -w -c ."
+    "format": "prettier -w -c .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -59,6 +60,7 @@
     "graphql": "catalog:",
     "graphql-ws": "^5.16.0",
     "lodash": "catalog:",
+    "meros": "1.3.0",
     "monaco-editor": "^0.45.0",
     "prettier": "catalog:",
     "prism-react-renderer": "^2.3.0",
@@ -69,7 +71,8 @@
     "react-move-hook": "^0.1.2",
     "react-resizable-panels": "^1.0.5",
     "reactflow": "^11.10.1",
-    "use-debounce": "^10.0.0"
+    "use-debounce": "^10.0.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.10",
@@ -91,7 +94,8 @@
     "vite": "^6.4.3",
     "vite-plugin-dts": "4.5.4",
     "vite-plugin-html": "^3.2.2",
-    "vite-plugin-singlefile": "^2.2.0"
+    "vite-plugin-singlefile": "^2.2.0",
+    "vitest": "catalog:"
   },
   "overrides": {
     "rollup": "4.59.0"

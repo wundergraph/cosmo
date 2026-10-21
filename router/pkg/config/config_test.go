@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 
@@ -11,8 +12,11 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
@@ -26,6 +30,100 @@ router_config_path: "config.json"
 	_, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
+}
+
+func TestDrainPeriod(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unset drain period is derived from shutdown delay and grace period", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 20s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Nil(t, cfg.Config.DrainPeriod)
+		require.Equal(t, 40*time.Second, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit zero disables the drain", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+drain_period: 0s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.NotNil(t, cfg.Config.DrainPeriod)
+		require.Zero(t, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit drain period that fits the shutdown delay", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 30s
+drain_period: 10s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 10*time.Second, cfg.Config.EffectiveDrainPeriod())
+	})
+
+	t.Run("explicit drain period that exceeds the shutdown delay", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 60s
+grace_period: 30s
+drain_period: 31s
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "drain_period (31s) + grace_period (30s) must not exceed shutdown_delay (1m0s)")
+	})
+
+	t.Run("grace period at or above the shutdown delay leaves no drain", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+shutdown_delay: 15s
+grace_period: 30s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Zero(t, cfg.Config.EffectiveDrainPeriod())
+	})
+}
+
+func TestDrainPeriodFromEnv(t *testing.T) {
+	t.Setenv("DRAIN_PERIOD", "5s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
 }
 
 func TestCustomBytesExtension(t *testing.T) {
@@ -175,6 +273,30 @@ engine:
 		require.NoError(t, err)
 		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
 	})
+}
+
+func TestMetricAttributeExpressionConfigLoading(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+telemetry:
+  metrics:
+    attributes:
+      - key: "cache"
+        value_from:
+          expression: "subgraph.response.cache.status"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Len(t, cfg.Config.Telemetry.Metrics.Attributes, 1)
+	attr := cfg.Config.Telemetry.Metrics.Attributes[0]
+	require.Equal(t, "subgraph.response.cache.status", attr.ValueFrom.Expression)
 }
 
 func TestEventsSkipUnavailableProvidersConfigLoading(t *testing.T) {
@@ -708,6 +830,86 @@ execution_config:
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 	})
+
+	t.Run("storage config with fallback storage", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+  fallback_storage:
+    enabled: true
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "cdn", cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.True(t, cfg.Config.ExecutionConfig.FallbackStorage.Enabled)
+		require.Equal(t, "s3", cfg.Config.ExecutionConfig.FallbackStorage.ProviderID)
+	})
+
+	t.Run("cdn storage config without object_path", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  cdn:
+    - url: https://cosmo-cdn.wundergraph.com
+      id: cdn
+
+execution_config:
+  storage:
+    provider_id: cdn
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "cdn", cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.Empty(t, cfg.Config.ExecutionConfig.Storage.ObjectPath)
+	})
+
+	t.Run("fallback storage without primary storage config", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "Pj6opX3288YukriGCzIr"
+      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
+      secure: false
+
+execution_config:
+  fallback_storage:
+    enabled: true
+    provider_id: s3
+    object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Empty(t, cfg.Config.ExecutionConfig.Storage.ProviderID)
+		require.True(t, cfg.Config.ExecutionConfig.FallbackStorage.Enabled)
+		require.Equal(t, "s3", cfg.Config.ExecutionConfig.FallbackStorage.ProviderID)
+	})
 }
 
 func TestS3StorageProviderFromEnv(t *testing.T) {
@@ -832,33 +1034,28 @@ version: "1"
 	require.Equal(t, "/data/backups", fsTwo.Path)
 }
 
+// schemaErrors returns the flat list of jsonschema validation errors as
+// "keywordLocation instanceLocation: message" strings. Property lists are
+// sorted because the validator emits them in map order.
+func schemaErrors(t *testing.T, err error) []string {
+	t.Helper()
+
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+
+	printer := message.NewPrinter(language.English)
+	var out []string
+	for _, u := range js.BasicOutput().Errors {
+		if ap, ok := u.Error.Kind.(*kind.AdditionalProperties); ok {
+			slices.Sort(ap.Properties)
+		}
+		out = append(out, fmt.Sprintf("%s %s: %s", u.KeywordLocation, u.InstanceLocation, u.Error.Kind.LocalizedString(printer)))
+	}
+	return out
+}
+
 func TestInvalidExecutionConfig(t *testing.T) {
 	t.Parallel()
-
-	t.Run("no object_path", func(t *testing.T) {
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-storage_providers:
-  s3:
-    - id: "s3"
-      endpoint: "localhost:10000"
-      bucket: "cosmo"
-      access_key: "Pj6opX3288YukriGCzIr"
-      secret_key: "WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9"
-      secure: false
-
-execution_config:
-  storage:
-    provider_id: s3
-    # Missing object_path
-`)
-		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
-	})
 
 	t.Run("too low watch interval", func(t *testing.T) {
 
@@ -873,9 +1070,12 @@ execution_config:
 `)
 
 		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, []string{
+			"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+			"/properties/execution_config/oneOf/0/properties/file/properties/watch_interval/duration /execution_config/file/watch_interval: duration must be greater or equal than 100ms",
+			"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+			"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file' not allowed",
+		}, schemaErrors(t, err))
 	})
 
 	t.Run("watch interval with watch disabled", func(t *testing.T) {
@@ -890,9 +1090,12 @@ execution_config:
     watch_interval: "1s"
 `)
 		_, err := LoadConfig([]string{f})
-		var js *jsonschema.ValidationError
-		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, []string{
+			"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+			"/properties/execution_config/oneOf/0/properties/file/dependentSchemas/watch_interval/properties/watch/const /execution_config/file/watch: value must be true",
+			"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+			"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file' not allowed",
+		}, schemaErrors(t, err))
 	})
 }
 
@@ -933,15 +1136,12 @@ execution_config:
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
 	_, err := LoadConfig([]string{f})
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.True(t,
-		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
-			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
-		js.Causes[0].Error(),
-	)
+	require.Equal(t, []string{
+		"/properties/execution_config/oneOf /execution_config: oneOf failed, none matched",
+		"/properties/execution_config/oneOf/0/additionalProperties /execution_config: additional properties 'storage' not allowed",
+		"/properties/execution_config/oneOf/1/additionalProperties /execution_config: additional properties 'file' not allowed",
+		"/properties/execution_config/oneOf/2/additionalProperties /execution_config: additional properties 'file', 'storage' not allowed",
+	}, schemaErrors(t, err))
 }
 
 func TestClientHeaderConfig(t *testing.T) {
@@ -2840,5 +3040,94 @@ response_cache:
 `)
 		_, err := LoadConfig([]string{f})
 		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products'")
+	})
+}
+
+func TestSplitConfigPollerFetchRetry(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 3,
+			Interval:    100 * time.Millisecond,
+			MaxDuration: 2 * time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("from yaml", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    max_attempts: 5
+    interval: 250ms
+    max_duration: 1s
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 5,
+			Interval:    250 * time.Millisecond,
+			MaxDuration: time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("from env", func(t *testing.T) {
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_ATTEMPTS", "7")
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_INTERVAL", "50ms")
+		t.Setenv("SPLIT_CONFIG_POLLER_FETCH_RETRY_MAX_DURATION", "3s")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, SplitConfigFetchRetry{
+			MaxAttempts: 7,
+			Interval:    50 * time.Millisecond,
+			MaxDuration: 3 * time.Second,
+		}, cfg.Config.SplitConfigPoller.FetchRetry)
+	})
+
+	t.Run("max_attempts below 1 is rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    max_attempts: 0
+`)
+
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"split_config_poller", "fetch_retry", "max_attempts"}, js.Causes[0].InstanceLocation)
+	})
+
+	t.Run("interval below 1ms is rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+split_config_poller:
+  fetch_retry:
+    interval: 0s
+`)
+
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"split_config_poller", "fetch_retry", "interval"}, js.Causes[0].InstanceLocation)
 	})
 }

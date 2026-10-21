@@ -56,7 +56,7 @@ type Schema struct {
 func main() {
 	routerConfigs := "router-configs"
 	entries, _ := os.ReadDir(routerConfigs)
-	for i := 0; i < len(entries); i++ {
+	for i := range entries {
 		entry := entries[i]
 		if entry.Name() == ".DS_Store" || !entry.IsDir() {
 			continue

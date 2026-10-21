@@ -20,6 +20,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import {
   clamp,
   convertToSubgraphType,
@@ -491,51 +492,63 @@ export function publishFederatedSubgraph(
       }
     }
 
-    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs, subgraphChanged } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          req.disableResolvabilityValidation,
-        );
+    // The transaction is managed by `SubgraphRepository.update`
+    // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
 
-        return subgraphRepo.update(
-          {
-            targetId: subgraph.targetId,
-            labels: subgraph.labels,
-            unsetLabels: false,
-            schemaSDL: subgraphSchemaSDL,
-            updatedBy: authContext.userId,
-            namespaceId: namespace.id,
-            isV2Graph,
-            proto:
-              subgraph.type === 'grpc_plugin'
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      req.disableResolvabilityValidation,
+      opts.promptToQueryClient,
+      opts.billingDefaultPlanId,
+      mapperUpdater,
+    );
+
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs, subgraphChanged } =
+      await subgraphRepo.update(
+        {
+          targetId: subgraph.targetId,
+          labels: subgraph.labels,
+          unsetLabels: false,
+          schemaSDL: subgraphSchemaSDL,
+          updatedBy: authContext.userId,
+          namespaceId: namespace.id,
+          isV2Graph,
+          proto:
+            subgraph.type === 'grpc_plugin'
+              ? {
+                  schema: req.proto?.schema || '',
+                  mappings: req.proto?.mappings || '',
+                  lock: req.proto?.lock || '',
+                  pluginData: {
+                    platforms: req.proto?.platforms || [],
+                    version: req.proto?.version || '',
+                  },
+                }
+              : subgraph.type === 'grpc_service'
                 ? {
                     schema: req.proto?.schema || '',
                     mappings: req.proto?.mappings || '',
                     lock: req.proto?.lock || '',
-                    pluginData: {
-                      platforms: req.proto?.platforms || [],
-                      version: req.proto?.version || '',
-                    },
                   }
-                : subgraph.type === 'grpc_service'
-                  ? {
-                      schema: req.proto?.schema || '',
-                      mappings: req.proto?.mappings || '',
-                      lock: req.proto?.lock || '',
-                    }
-                  : undefined,
-          },
-          compositionService,
-        );
-      });
+                : undefined,
+        },
+        compositionService,
+      );
+
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook

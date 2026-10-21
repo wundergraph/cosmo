@@ -126,7 +126,7 @@ func TestPersistedOperationCacheHitWithIncludeVariableAlsoUsedAsArgument(t *test
 		require.Equal(t, dualUseSkipIncludeExpected, res.Body)
 
 		// Repeated hash-only requests must keep succeeding with the variable intact.
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Repro"`),
 				Variables:     []byte(dualUseSkipIncludeVariables),

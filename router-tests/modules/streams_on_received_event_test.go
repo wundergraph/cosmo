@@ -47,7 +47,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -138,7 +138,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -233,7 +233,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -333,7 +333,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -388,7 +388,7 @@ func TestReceiveHook(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
-			token, err := authServer.Token(map[string]interface{}{
+			token, err := authServer.Token(map[string]any{
 				"sub": "user-2",
 			})
 			require.NoError(t, err)
@@ -496,7 +496,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -587,7 +587,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -679,7 +679,7 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-			Modules: map[string]interface{}{
+			Modules: map[string]any{
 				"streamReceiveModule": customModule,
 			},
 		}
@@ -742,7 +742,7 @@ func TestReceiveHook(t *testing.T) {
 
 			// Collect all 3 events
 			receivedIDs := make([]float64, 0, 3)
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 					require.NoError(t, args.errValue)
 
@@ -868,7 +868,7 @@ func TestFlakyReceiveHookConcurrentHandlers(t *testing.T) {
 
 			cfg := config.Config{
 				Graph: config.Graph{},
-				Modules: map[string]interface{}{
+				Modules: map[string]any{
 					"streamReceiveModule": customModule,
 				},
 			}

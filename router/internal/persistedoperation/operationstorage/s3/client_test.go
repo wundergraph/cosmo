@@ -54,7 +54,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 func TestDecompressAndRead(t *testing.T) {
 	t.Parallel()
 
-	manifest := map[string]interface{}{
+	manifest := map[string]any{
 		"version":  1,
 		"revision": "rev-1",
 		"operations": map[string]string{

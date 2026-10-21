@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -117,7 +118,7 @@ func TestPQLManifest(t *testing.T) {
 			header.Add("graphql-client-name", "my-client")
 
 			// Make multiple requests
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
 					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
@@ -442,7 +443,7 @@ func TestPQLManifest(t *testing.T) {
 		employeesHash := "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"
 		employeesQuery := "query Employees {\n  employees {\n    id\n    }\n}"
 
-		manifestV1, _ := json.Marshal(map[string]interface{}{
+		manifestV1, _ := json.Marshal(map[string]any{
 			"version":     1,
 			"revision":    "rev-v1",
 			"generatedAt": "2024-01-01T00:00:00Z",
@@ -451,7 +452,7 @@ func TestPQLManifest(t *testing.T) {
 			},
 		})
 		// manifestV2 has the same operation but a new revision
-		manifestV2, _ := json.Marshal(map[string]interface{}{
+		manifestV2, _ := json.Marshal(map[string]any{
 			"version":     1,
 			"revision":    "rev-v2",
 			"generatedAt": "2024-01-02T00:00:00Z",
@@ -531,16 +532,16 @@ func TestPQLManifest(t *testing.T) {
 				return manifestFetchCount.Load() >= 2
 			}, 5*time.Second, 50*time.Millisecond)
 
-			// 4. After manifest reload, the operation should still be a cache HIT
-			// because the SHA is the same — no revision in the cache key.
-			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				OperationName: []byte(`"Employees"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
-				Header:        header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, expectedEmployeesBody, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			// 4. The new revision has its own cache entry, populated asynchronously.
+			assert.Eventually(t, func() bool {
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+					Header:        header,
+				})
+				return err == nil && res.Body == expectedEmployeesBody &&
+					res.Response.Header.Get(core.PersistedOperationCacheHeader) == "HIT"
+			}, 5*time.Second, 10*time.Millisecond)
 		})
 	})
 

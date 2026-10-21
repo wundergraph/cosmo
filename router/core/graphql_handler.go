@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -94,6 +95,7 @@ type HandlerOptions struct {
 	HeaderPropagation                        *HeaderPropagation
 
 	ResponseCache             caching.Cache
+	ResponseCacheMetrics      rmetric.ResponseCacheMetricStore
 	ResponseCacheInvalidation config.ResponseCacheInvalidationConfig
 	ResponseCacheTagHeader    config.ResponseCacheTagHeaderConfig
 	ResponseCacheSettings     *ResponseCacheSettings
@@ -124,7 +126,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
 		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
 		responseCacheSettings:                    opts.ResponseCacheSettings,
-		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log),
+		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
 	}
 	return graphQLHandler
 }
@@ -134,17 +136,43 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // either way; this only decides whether anyone finds out that the cache is no
 // longer doing anything.
 
-func newResponseCacheErrorHandler(log *zap.Logger) func(error) {
-	if log == nil {
+func newResponseCacheErrorHandler(log *zap.Logger, metrics rmetric.ResponseCacheMetricStore) func(error) {
+	if log == nil && metrics == nil {
 		return nil
 	}
 
-	sampled := log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
-	}))
+	sampled := zap.NewNop()
+	if log != nil {
+		sampled = log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+			return zapcore.NewSamplerWithOptions(core, time.Second, 1, 0)
+		}))
+	}
 
 	return func(err error) {
+		if metrics != nil {
+			measureResponseCacheEngineError(metrics, err)
+		}
 		sampled.Warn("Response cache degraded, serving from the subgraph instead", zap.Error(err))
+	}
+}
+
+// measureResponseCacheEngineError counts a failure of the engine around the store.
+// A failure of the store itself was counted where it happened.
+func measureResponseCacheEngineError(metrics rmetric.ResponseCacheMetricStore, err error) {
+	var cacheErr *resolve.ResponseCacheError
+	if !errors.As(err, &cacheErr) {
+		metrics.MeasureEngineError(context.Background(), "", rmetric.ResponseCacheErrorOther)
+		return
+	}
+
+	switch cacheErr.Operation {
+	case resolve.ResponseCacheOperationLookup, resolve.ResponseCacheOperationWrite:
+	case resolve.ResponseCacheOperationRead:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorInvalidEntry)
+	case resolve.ResponseCacheOperationCollect:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorInvalidResponse)
+	default:
+		metrics.MeasureEngineError(context.Background(), cacheErr.Subgraph, rmetric.ResponseCacheErrorOther)
 	}
 }
 
@@ -193,6 +221,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithAttributes(reqCtx.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
+	defer func() {
+		if cacheStatus, ok := reqCtx.responseCacheStatus(); ok {
+			graphqlExecutionSpan.SetAttributes(rotel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+		}
+	}()
 
 	resolveCtx := resolve.NewContext(executionContext)
 	resolveCtx.Variables = reqCtx.operation.variables
@@ -240,6 +273,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Subgraph: h.responseCacheInvalidation.Subgraph,
 				Type:     h.responseCacheInvalidation.Type,
 			}
+			if resolveCtx.TracingOptions.Enable {
+				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+				// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+					return synchronous && resolveCtx.SubgraphErrors() == nil
+				})
+			}
 			resolveCtx.SetResponseCache(cacheOpts)
 		}
 	}
@@ -277,9 +317,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 					propagation.m.Lock()
 					defer propagation.m.Unlock()
-					for k, v := range headers {
-						propagation.header[k] = v
-					}
+					maps.Copy(propagation.header, headers)
 				},
 			)
 		}
@@ -313,6 +351,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
 				pw.cacheTagHeader = &h.responseCacheTagHeader
+			}
+			if h.responseCacheStore != nil && h.enableCacheResponseHeaders {
+				pw.responseCacheStatusFor = reqCtx
 			}
 		}
 

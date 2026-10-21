@@ -5,6 +5,7 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
 import { sentryEnvVariables } from './env.schema.js';
+import { openSpanRegistry } from './tracing.js';
 
 const {
   SENTRY_ENABLED,
@@ -68,6 +69,8 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
       nodeProfilingIntegration(),
       pinoIntegration({ log: { levels: ['info', 'warn', 'error'] } }),
     ],
+    // Tracks open spans so an aborted request can end them instead of losing them.
+    openTelemetrySpanProcessors: [openSpanRegistry],
     profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
     sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
     // tracesSampler takes precedence over tracesSampleRate; the sampler falls back to

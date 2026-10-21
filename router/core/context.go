@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -283,6 +284,42 @@ type requestContext struct {
 	customFieldValueRenderer resolve.FieldValueRenderer
 	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
 	forceSha256Compute bool
+	// responseCache counts what the response cache did for the fetches of the request
+	responseCache responseCacheStats
+}
+
+// responseCacheStats is written by concurrent fetches.
+type responseCacheStats struct {
+	fetches     atomic.Int32
+	hits        atomic.Int32
+	partialHits atomic.Int32
+}
+
+func (s *responseCacheStats) record(status resolve.ResponseCacheStatus) {
+	s.fetches.Add(1)
+	switch status {
+	case resolve.ResponseCacheStatusHit:
+		s.hits.Add(1)
+	case resolve.ResponseCacheStatusPartialHit:
+		s.partialHits.Add(1)
+	}
+}
+
+func (c *requestContext) responseCacheStatus() (resolve.ResponseCacheStatus, bool) {
+	if c.operation.opType == OperationTypeSubscription || c.operation.opType == OperationTypeMutation {
+		return resolve.ResponseCacheStatusNotCacheable, false
+	}
+	fetches, hits := c.responseCache.fetches.Load(), c.responseCache.hits.Load()
+	switch {
+	case fetches == 0:
+		return resolve.ResponseCacheStatusNotCacheable, false
+	case hits == fetches:
+		return resolve.ResponseCacheStatusHit, true
+	case hits > 0 || c.responseCache.partialHits.Load() > 0:
+		return resolve.ResponseCacheStatusPartialHit, true
+	default:
+		return resolve.ResponseCacheStatusMiss, true
+	}
 }
 
 type headerBuilder struct {

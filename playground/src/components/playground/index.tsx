@@ -8,6 +8,7 @@ import {
   OperationTypeNode,
   buildClientSchema,
   getIntrospectionQuery,
+  getOperationAST,
   parse,
   validate,
 } from 'graphql';
@@ -16,14 +17,16 @@ import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
-import { cn } from '@/lib/utils';
+import { cn, usesDirective } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import { DeferStatusBadge } from './defer-status-badge';
+import { readDeferStream } from '@/lib/defer-stream';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -147,11 +150,23 @@ type GraphiQLScripts = {
   transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
+const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
+
+const isSubscription = (params: { operationName?: string | null }, opts?: any) =>
+  !!opts?.documentAST &&
+  getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+
+type OnFetch = (response: unknown, status?: number, statusText?: string, defer?: DeferStatus) => void;
+
+type OperationResult = { response: string; status?: number; statusText?: string; defer?: DeferStatus };
+
+const initialResult: OperationResult = { response: '' };
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   scripts: GraphiQLScripts | undefined,
-  onFetch: any,
+  onFetch: OnFetch,
   url: URL,
   init: RequestInit,
 ) => {
@@ -200,11 +215,25 @@ const graphiQLFetch = async (
       headers,
     });
 
+    const isMultipart = isMultipartResponse(response);
+    // An HTTP error says nothing about whether the router would have streamed the query.
+    const deferIgnored = response.ok && usesDirective('defer', requestBody.query) && !isMultipart;
+
+    // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
+    if (isMultipart) {
+      return response;
+    }
+
     const responseData = await response.clone().json();
 
     await executePostScripts('0', requestBody, responseData);
 
-    onFetch(await response.clone().json(), response.status, response.statusText);
+    onFetch(
+      await response.clone().json(),
+      response.status,
+      response.statusText,
+      deferIgnored ? { state: 'disabled' } : undefined,
+    );
     return response;
   } catch (e: any) {
     const customMessage =
@@ -278,7 +307,7 @@ const ResponseToolbar = () => {
     }
   };
 
-  const { status, statusText } = useContext(PlaygroundContext);
+  const { status, statusText, responseDefer } = useContext(PlaygroundContext);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
@@ -290,6 +319,7 @@ const ResponseToolbar = () => {
           {status || statusText}
         </Badge>
       )}
+      <DeferStatusBadge defer={responseDefer} />
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -468,8 +498,6 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
@@ -604,22 +632,51 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
+  const [result, setResult] = useState<OperationResult>(initialResult);
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
+    // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
+    const onFetch: OnFetch = (response, status, statusText, defer) => {
+      setResult((prev) => ({ response: JSON.stringify(response), status, statusText, defer: defer ?? prev.defer }));
     };
 
-    return createGraphiQLFetcher({
+    const clearResponse = () => {
+      setResult(initialResult);
+    };
+
+    // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
+    const toolkitFetcher = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
+
+    return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
+      if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
+        return toolkitFetcher(params, opts);
+      }
+
+      return runOperation(params, opts?.headers);
+    };
+
+    async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      clearResponse();
+      const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
+        body: JSON.stringify(params),
+      });
+
+      if (isMultipartResponse(response)) {
+        return readDeferStream(
+          response,
+          (defer) => setResult((prev) => ({ ...prev, defer })),
+          (initial) => onFetch(initial, response.status, response.statusText),
+        );
+      }
+      return response.json();
+    }
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
@@ -688,8 +745,9 @@ export const Playground = (input: {
         value={{
           graphId: '0',
           tabsState,
-          status,
-          statusText,
+          status: result.status,
+          statusText: result.statusText,
+          responseDefer: result.defer,
           view,
           setView,
         }}
@@ -698,7 +756,7 @@ export const Playground = (input: {
           value={{
             query,
             headers,
-            response,
+            response: result.response,
             subgraphs: [],
             plan,
             planError,
@@ -711,6 +769,10 @@ export const Playground = (input: {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
+            // Makes GraphiQL's introspection query ask for deprecated input fields and arguments.
+            // They are excluded by default, so an input object with only deprecated fields would
+            // come back empty and fail schema building.
+            inputValueDeprecation
             onEditQuery={setQuery}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"

@@ -11,6 +11,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function deleteFeatureFlag(
@@ -66,9 +67,16 @@ export function deleteFeatureFlag(
       throw new UnauthorizedError();
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const auditLogRepo = new AuditLogRepository(tx);
-      const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
@@ -78,6 +86,9 @@ export function deleteFeatureFlag(
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
+        opts.promptToQueryClient,
+        opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       const result = await compositionService.deleteFeatureFlag({
@@ -111,7 +122,7 @@ export function deleteFeatureFlag(
       return result;
     });
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -123,6 +134,6 @@ export function deleteFeatureFlag(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }
