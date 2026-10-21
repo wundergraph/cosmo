@@ -1,4 +1,12 @@
-import { DocumentNode, InlineFragmentNode, Kind, OperationDefinitionNode, parse, SelectionNode } from 'graphql';
+import {
+  DocumentNode,
+  FieldNode,
+  InlineFragmentNode,
+  Kind,
+  OperationDefinitionNode,
+  parse,
+  SelectionNode,
+} from 'graphql';
 
 export const DEFER = 'defer';
 export const LABEL_ARG = 'label';
@@ -39,6 +47,17 @@ export const collectRootOccurrences = (selections: readonly SelectionNode[], def
     }
     if (selection.kind === Kind.INLINE_FRAGMENT) {
       return collectRootOccurrences(selection.selectionSet.selections, deferred || isDeferFragment(selection));
+    }
+    return [];
+  });
+
+export const collectRootFields = (selections: readonly SelectionNode[]): FieldNode[] =>
+  selections.flatMap((selection) => {
+    if (selection.kind === Kind.FIELD) {
+      return [selection];
+    }
+    if (selection.kind === Kind.INLINE_FRAGMENT) {
+      return collectRootFields(selection.selectionSet.selections);
     }
     return [];
   });

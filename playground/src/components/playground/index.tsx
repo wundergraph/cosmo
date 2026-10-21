@@ -636,7 +636,7 @@ export const Playground = (input: {
   const [result, setResult] = useState<OperationResult>(initialResult);
 
   // Memoised: GraphiQL needs stable plugin objects.
-  const plugins = useMemo(() => [explorerPlugin({ showAttribution: false }), createDeferAdvisorPlugin()], []);
+  const plugins = useMemo(() => [explorerPlugin({ showAttribution: false }), createDeferAdvisorPlugin(url)], [url]);
 
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.

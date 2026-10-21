@@ -1,9 +1,9 @@
 import type { GraphiQLPlugin } from '@graphiql/react';
-import { DeferAdvisorIcon } from './defer-advisor-icon';
+import { TbHourglass } from 'react-icons/tb';
 import { DeferAdvisorPluginContent } from './defer-advisor-plugin-content';
 
-export const createDeferAdvisorPlugin = (): GraphiQLPlugin => ({
-  title: 'Defer',
-  icon: DeferAdvisorIcon,
-  content: DeferAdvisorPluginContent,
+export const createDeferAdvisorPlugin = (routingUrl: string): GraphiQLPlugin => ({
+  title: 'Defer Advisor',
+  icon: TbHourglass,
+  content: () => <DeferAdvisorPluginContent routingUrl={routingUrl} />,
 });
