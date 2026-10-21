@@ -9,25 +9,46 @@ import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layo
 import { Button } from '@/components/ui/button';
 import { CLI } from '@/components/ui/cli';
 import { Loader } from '@/components/ui/loader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Toolbar } from '@/components/ui/toolbar';
 import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { docsBaseURL } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format-date';
 import { createDateRange } from '@/lib/insights-helpers';
 import { NextPageWithLayout } from '@/lib/page';
-import { useQuery } from '@connectrpc/connect-query';
+import { useInfiniteQuery, useQuery } from '@connectrpc/connect-query';
 import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { getFederatedGraphChangelog } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { FederatedGraphChangelogOutput } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  getFederatedGraphChangelog,
+  getFeatureFlagsByFederatedGraph,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { endOfDay, formatISO, startOfDay } from 'date-fns';
 import { useRouter } from 'next/router';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { ReactNode, useContext, useEffect, useRef } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 
 const ChangelogToolbar = () => {
+  const router = useRouter();
   const applyParams = useApplyParams();
   const { dateRange, range } = useDateRangeQueryState();
+  const graphData = useContext(GraphContext);
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
+
+  const { data: featureFlagsData } = useQuery(
+    getFeatureFlagsByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+    },
+    {
+      enabled: !!graphData?.graph?.name,
+    },
+  );
+  const featureFlags = featureFlagsData?.featureFlags ?? [];
+  const featureFlagName = (router.query.featureFlag as string) || '';
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
@@ -59,6 +80,31 @@ const ChangelogToolbar = () => {
         align="start"
         calendarDaysLimit={changelogRetention}
       />
+      {featureFlags.length > 0 && (
+        <Select
+          value={featureFlagName}
+          onValueChange={(val) =>
+            applyParams({
+              featureFlag: val || null,
+            })
+          }
+        >
+          {/* A fixed width, so the toolbar doesn't shift with the length of the selected name; long names are truncated */}
+          <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:truncate">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="" title={graphData?.graph?.name} className="[&_p]:max-w-[264px] [&_p]:truncate">
+              {graphData?.graph?.name}
+            </SelectItem>
+            {featureFlags.map(({ id, name }) => (
+              <SelectItem key={id} value={name} title={name} className="[&_p]:max-w-[264px] [&_p]:truncate">
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </Toolbar>
   );
 };
@@ -66,8 +112,6 @@ const ChangelogToolbar = () => {
 const ChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
   const limit = 10;
-  const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
-  const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     namespace: { name: namespace },
@@ -86,14 +130,19 @@ const ChangelogPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const { data, isLoading, isSuccess, error, refetch } = useQuery(
+  // Without a feature flag, the changelog of the base graph is returned
+  const featureFlagName = (router.query.featureFlag as string) || undefined;
+
+  // Each date range and feature flag selection is its own query, so switching between them never mixes their pages
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, error, refetch } = useInfiniteQuery(
     getFederatedGraphChangelog,
     {
       name: graphName,
       namespace,
+      featureFlagName,
       pagination: {
         limit,
-        offset,
+        offset: 0,
       },
       dateRange: {
         start: formatISO(startOfDay(startDate)),
@@ -101,59 +150,59 @@ const ChangelogPage: NextPageWithLayout = () => {
       },
     },
     {
-      enabled: false,
+      pageParamKey: 'pagination',
+      getNextPageParam: (lastPage, allPages) =>
+        lastPage.hasNextPage ? { limit, offset: allPages.length * limit } : undefined,
     },
   );
 
+  const items = data?.pages.flatMap((page) => page.federatedGraphChangelogOutput) ?? [];
+  const lastPage = data?.pages[data.pages.length - 1];
+
   useEffect(() => {
-    if (isSuccess && data) {
-      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
+    // Start a new selection from the top instead of the previous selection's scroll position
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [router.query.dateRange, router.query.range, router.query.featureFlag]);
+
+  useEffect(() => {
+    // The changelog scrolls inside the page layout, not the window
+    const container = scrollRef.current;
+    if (!container) {
+      return;
     }
-  }, [data, isSuccess]);
 
-  useEffect(() => {
-    // We need to fetch from scratch on date change
-    setItems([]);
-    setOffset(0);
-  }, [router.query.dateRange, router.query.range]);
-
-  useEffect(() => {
     const handleScroll = () => {
       if (
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 5 &&
-        !isLoading &&
-        data?.hasNextPage
+        container.scrollTop + container.clientHeight >= container.scrollHeight - 5 &&
+        hasNextPage &&
+        !isFetchingNextPage
       ) {
-        setOffset((prevOffset) => prevOffset + limit);
+        fetchNextPage();
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLoading, data?.hasNextPage]);
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    refetch();
-  }, [refetch, offset, router.query.dateRange, router.query.range]);
-
-  if (items.length === 0 && isLoading) return <Loader fullscreen />;
-
-  if (items.length === 0 && (!data || error || data.response?.code !== EnumStatusCode.OK))
-    return (
-      <GraphPageLayout
-        title="Changelog"
-        subtitle="Keep track of changes made to your federated graph"
-        toolbar={<ChangelogToolbar />}
-        scrollRef={scrollRef}
-      >
-        <EmptyState
-          icon={<ExclamationTriangleIcon />}
-          title="Could not retrieve changelog"
-          description={data?.response?.details || error?.message || 'Please try again'}
-          actions={<Button onClick={() => refetch()}>Retry</Button>}
-        />
-      </GraphPageLayout>
+  let content: ReactNode;
+  if (isLoading) {
+    // Keep the toolbar mounted while a new selection loads, instead of replacing the whole page with a loader
+    content = (
+      <div className="my-24">
+        <Loader />
+      </div>
     );
+  } else if (items.length === 0 && (!lastPage || error || lastPage.response?.code !== EnumStatusCode.OK)) {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve changelog"
+        description={lastPage?.response?.details || error?.message || 'Please try again'}
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
 
   return (
     <GraphPageLayout
@@ -162,7 +211,9 @@ const ChangelogPage: NextPageWithLayout = () => {
       toolbar={<ChangelogToolbar />}
       scrollRef={scrollRef}
     >
-      {items.length === 0 ? (
+      {content ? (
+        content
+      ) : items.length === 0 ? (
         <EmptyState
           icon={<CommandLineIcon />}
           title="Publish schema using the CLI"
@@ -206,7 +257,7 @@ const ChangelogPage: NextPageWithLayout = () => {
 
                         parent.scrollTo({ top: scrollPosition });
                       }}
-                      key={createdAt}
+                      key={id}
                       className="text-left text-muted-foreground hover:text-foreground hover:underline"
                     >
                       {formatDateTime(new Date(createdAt))}
@@ -218,7 +269,12 @@ const ChangelogPage: NextPageWithLayout = () => {
           </div>
           <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
           <Changelog entries={items} />
-          {!data?.hasNextPage && <p className="mx-auto py-12 text-sm font-bold leading-none">End of changelog</p>}
+          {isFetchingNextPage && (
+            <div className="my-12">
+              <Loader />
+            </div>
+          )}
+          {!hasNextPage && <p className="mx-auto py-12 text-sm font-bold leading-none">End of changelog</p>}
         </div>
       )}
     </GraphPageLayout>

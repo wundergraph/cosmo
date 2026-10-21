@@ -781,6 +781,7 @@ message GetFederatedGraphChangelogRequest {
   Pagination pagination = 2;
   DateRange dateRange = 3;
   string namespace = 4;
+  optional string featureFlagName = 5;
 }
 
 message FederatedGraphChangelog{
@@ -796,6 +797,9 @@ message FederatedGraphChangelogOutput{
   string schemaVersionId = 2;
   repeated FederatedGraphChangelog changelogs = 3;
   string compositionId = 4;
+  // Empty for changelogs of the base graph composition
+  string featureFlagId = 5;
+  string featureFlagName = 6;
 }
 
 message GetFederatedGraphChangelogResponse {
