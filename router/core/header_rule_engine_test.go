@@ -857,6 +857,38 @@ func TestSubtractAge(t *testing.T) {
 	}
 }
 
+func TestExpiresAsMaxAge(t *testing.T) {
+	t.Parallel()
+
+	date := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	at := func(d time.Duration) string { return date.Add(d).Format(http.TimeFormat) }
+
+	for _, tc := range []struct {
+		name            string
+		maxAge, sMaxAge cachedirective.DeltaSeconds
+		expires         []string
+		wantMaxAge      cachedirective.DeltaSeconds
+	}{
+		{name: "expires less date", maxAge: -1, sMaxAge: -1, expires: []string{at(time.Minute)}, wantMaxAge: 60},
+		{name: "past expires", maxAge: -1, sMaxAge: -1, expires: []string{at(-time.Minute)}, wantMaxAge: 0},
+		{name: "invalid expires", maxAge: -1, sMaxAge: -1, expires: []string{"0"}, wantMaxAge: 0},
+		{name: "max-age wins", maxAge: 10, sMaxAge: -1, expires: []string{at(time.Minute)}, wantMaxAge: 10},
+		{name: "s-maxage wins", maxAge: -1, sMaxAge: 10, expires: []string{at(time.Minute)}, wantMaxAge: -1},
+		{name: "no expires", maxAge: -1, sMaxAge: -1, wantMaxAge: -1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			header := http.Header{"Date": {at(0)}}
+			if tc.expires != nil {
+				header["Expires"] = tc.expires
+			}
+			dir := &cachedirective.ResponseCacheDirectives{MaxAge: tc.maxAge, SMaxAge: tc.sMaxAge}
+			expiresAsMaxAge(dir, header)
+			assert.Equal(t, tc.wantMaxAge, dir.MaxAge)
+		})
+	}
+}
+
 func TestMarkStale(t *testing.T) {
 	t.Parallel()
 

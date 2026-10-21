@@ -885,7 +885,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
+	if resCacheHeader == "" && len(res.Header.Values(expiresKey)) == 0 && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
 		// Nothing from the subgraph and no default to stand in: the fetch
 		// restricts nothing, so it can't withdraw what others granted either.
 		return
@@ -896,7 +896,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	if err != nil {
 		reqDir = &cachedirective.RequestCacheDirectives{MaxAge: -1, MaxStale: -1, MinFresh: -1}
 	}
-	resDir, err := parseFreshness(resCacheHeader, res.Header.Get("Age"))
+	resDir, err := parseFreshness(res.Header)
 	if err != nil || res.StatusCode >= http.StatusBadRequest {
 		// Unreadable freshness, or a failed fetch, is not cacheable.
 		resDir = noStoreDirectives()
@@ -1009,21 +1009,41 @@ func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter
 	return nil
 }
 
-// parseFreshness parses a response's Cache-Control net of its Age: lifetimes
-// shortened by the time spent upstream, and stale on arrival as no-cache.
 // cacheControlValue joins every Cache-Control line into one list.
 func cacheControlValue(header http.Header) string {
 	return strings.Join(header.Values(cacheControlKey), ", ")
 }
 
-func parseFreshness(cacheControl, age string) (*cachedirective.ResponseCacheDirectives, error) {
-	dir, err := cachedirective.ParseResponseCacheControl(cacheControl)
+// parseFreshness parses a response's Cache-Control, Expires standing in for a
+// missing lifetime, net of its Age: lifetimes shortened by the time spent
+// upstream, and stale on arrival as no-cache.
+func parseFreshness(header http.Header) (*cachedirective.ResponseCacheDirectives, error) {
+	dir, err := cachedirective.ParseResponseCacheControl(cacheControlValue(header))
 	if err != nil {
 		return nil, err
 	}
-	subtractAge(dir, age)
+	expiresAsMaxAge(dir, header)
+	subtractAge(dir, header.Get("Age"))
 	markStale(dir)
 	return dir, nil
+}
+
+// expiresAsMaxAge gives a response without max-age or s-maxage its Expires,
+// less Date, as a max-age. An invalid Expires is already expired (RFC 9111 §5.3).
+func expiresAsMaxAge(dir *cachedirective.ResponseCacheDirectives, header http.Header) {
+	if dir.MaxAge != -1 || dir.SMaxAge != -1 || len(header.Values(expiresKey)) == 0 {
+		return
+	}
+	expires, err := http.ParseTime(header.Get(expiresKey))
+	if err != nil {
+		dir.MaxAge = 0
+		return
+	}
+	date, err := http.ParseTime(header.Get("Date"))
+	if err != nil {
+		date = time.Now()
+	}
+	dir.MaxAge = cachedirective.DeltaSeconds(max(expires.Sub(date)/time.Second, 0))
 }
 
 // subtractAge takes time spent in upstream caches off the freshness lifetimes.

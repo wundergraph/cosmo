@@ -1016,6 +1016,32 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("Expires stands in for max-age under a default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          subgraphsWithExpiresHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Regexp(t, `^max-age=(29\d|300)$`, res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
+		t.Run("an invalid Expires is already expired", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          setSubgraphPropagateHeader("Expires", []string{"0"}, []string{"0"}),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		// Test case for Expires header: earliest expiration wins
 		t.Run("earliest Expires wins", func(t *testing.T) {
 			t.Parallel()
