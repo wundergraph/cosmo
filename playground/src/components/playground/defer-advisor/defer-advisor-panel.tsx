@@ -17,7 +17,7 @@ export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
   const operationCount = doc?.definitions.filter((d) => d.kind === Kind.OPERATION_DEFINITION).length ?? 0;
   const isMutationOrSubscription = operation?.operation === 'mutation' || operation?.operation === 'subscription';
   // A comment-only document fails to parse but has nothing to fix.
-  const hasSyntaxError = doc === undefined && !/^(\s|#[^\n]*)*$/.test(query);
+  const hasSyntaxError = doc === undefined && !query.split('\n').every((line) => /^\s*(#.*)?$/.test(line));
 
   const rows = useMemo(() => summarizeRootFields(parsed), [parsed]);
 
