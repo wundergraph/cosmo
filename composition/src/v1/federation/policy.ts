@@ -133,7 +133,11 @@ function getImplementedInterfaceTypeNames(
  * Normalization does not permit @policy on Interfaces, Interface fields, @interfaceObject types, or fields that define
  * @external, so only Objects and their fields propagate policies to Interfaces.
  */
-export function mergePolicyDirectives({ parentDefinitionDataByTypeName, subgraphs }: MergePolicyDirectivesParams) {
+export function mergePolicyDirectives({
+  concreteTypeNamesByAbstractTypeName,
+  parentDefinitionDataByTypeName,
+  subgraphs,
+}: MergePolicyDirectivesParams) {
   const orPoliciesByCoords = new Map<TypeName | FieldCoords, Array<ORPolicies>>();
   const implementationORPoliciesByCoords = new Map<TypeName | FieldCoords, Array<ORPolicies>>();
   // The values are merged in subgraph name order so that the result does not depend on the order of the subgraphs.
@@ -166,6 +170,31 @@ export function mergePolicyDirectives({ parentDefinitionDataByTypeName, subgraph
               () => [],
             ).push(fieldORPolicies);
           }
+          continue;
+        }
+        // An @interfaceObject field is also a field of every implementation and of their other interfaces.
+        // For example, if the @interfaceObject "A" is implemented by "Object", which also implements "B", the
+        // policies of "A.field" are propagated to "Object.field" and "B.field".
+        const otherInterfaceTypeNames = new Set<TypeName>();
+        for (const implementationTypeName of concreteTypeNamesByAbstractTypeName.get(parentData.name) ?? []) {
+          getValueOrDefault(
+            implementationORPoliciesByCoords,
+            `${implementationTypeName}.${fieldData.name}`,
+            () => [],
+          ).push(fieldORPolicies);
+          for (const interfaceTypeName of getImplementedInterfaceTypeNames(
+            parentDefinitionDataByTypeName,
+            implementationTypeName,
+          ) ?? []) {
+            if (interfaceTypeName !== parentData.name) {
+              otherInterfaceTypeNames.add(interfaceTypeName);
+            }
+          }
+        }
+        for (const interfaceTypeName of otherInterfaceTypeNames) {
+          getValueOrDefault(implementationORPoliciesByCoords, `${interfaceTypeName}.${fieldData.name}`, () => []).push(
+            fieldORPolicies,
+          );
         }
       }
     }
