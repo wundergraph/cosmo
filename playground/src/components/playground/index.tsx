@@ -17,15 +17,16 @@ import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
-import { cn } from '@/lib/utils';
+import { cn, usesDirective } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -155,9 +156,9 @@ const isSubscription = (params: { operationName?: string | null }, opts?: any) =
   !!opts?.documentAST &&
   getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
 
-type OnFetch = (response: unknown, status?: number, statusText?: string) => void;
+type OnFetch = (response: unknown, status?: number, statusText?: string, defer?: DeferStatus) => void;
 
-type OperationResult = { response: string; status?: number; statusText?: string };
+type OperationResult = { response: string; status?: number; statusText?: string; defer?: DeferStatus };
 
 const initialResult: OperationResult = { response: '' };
 
@@ -214,8 +215,12 @@ const graphiQLFetch = async (
       headers,
     });
 
+    const isMultipart = isMultipartResponse(response);
+    // An HTTP error says nothing about whether the router would have streamed the query.
+    const deferIgnored = response.ok && usesDirective('defer', requestBody.query) && !isMultipart;
+
     // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
-    if (isMultipartResponse(response)) {
+    if (isMultipart) {
       return response;
     }
 
@@ -223,7 +228,12 @@ const graphiQLFetch = async (
 
     await executePostScripts('0', requestBody, responseData);
 
-    onFetch(await response.clone().json(), response.status, response.statusText);
+    onFetch(
+      await response.clone().json(),
+      response.status,
+      response.statusText,
+      deferIgnored ? { state: 'disabled' } : undefined,
+    );
     return response;
   } catch (e: any) {
     const customMessage =
@@ -297,7 +307,7 @@ const ResponseToolbar = () => {
     }
   };
 
-  const { status, statusText } = useContext(PlaygroundContext);
+  const { status, statusText, responseDefer } = useContext(PlaygroundContext);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
@@ -309,6 +319,7 @@ const ResponseToolbar = () => {
           {status || statusText}
         </Badge>
       )}
+      <DeferStatusBadge defer={responseDefer} />
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -624,8 +635,9 @@ export const Playground = (input: {
   const [result, setResult] = useState<OperationResult>(initialResult);
 
   const fetcher = useMemo(() => {
-    const onFetch: OnFetch = (response, status, statusText) => {
-      setResult({ response: JSON.stringify(response), status, statusText });
+    // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
+    const onFetch: OnFetch = (response, status, statusText, defer) => {
+      setResult((prev) => ({ response: JSON.stringify(response), status, statusText, defer: defer ?? prev.defer }));
     };
 
     const clearResponse = () => {
@@ -657,8 +669,10 @@ export const Playground = (input: {
       });
 
       if (isMultipartResponse(response)) {
-        return readDeferStream(response, undefined, (initial) =>
-          onFetch(initial, response.status, response.statusText),
+        return readDeferStream(
+          response,
+          (defer) => setResult((prev) => ({ ...prev, defer })),
+          (initial) => onFetch(initial, response.status, response.statusText),
         );
       }
       return response.json();
@@ -733,6 +747,7 @@ export const Playground = (input: {
           tabsState,
           status: result.status,
           statusText: result.statusText,
+          responseDefer: result.defer,
           view,
           setView,
         }}

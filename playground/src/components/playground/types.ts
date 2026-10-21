@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { DeferTimeline } from '@/lib/defer-stream';
 
 type TabState = {
   id: string;
@@ -18,11 +19,14 @@ export type TabsState = {
 
 export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
 
+export type DeferStatus = { state: 'disabled' } | DeferTimeline;
+
 type PlaygroundContextType = {
   graphId: string;
   tabsState: TabsState;
   status?: number;
   statusText?: string;
+  responseDefer?: DeferStatus;
   view: PlaygroundView;
   setView: (val: PlaygroundView) => void;
 };
