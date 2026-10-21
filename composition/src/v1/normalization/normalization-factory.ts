@@ -155,6 +155,8 @@ import {
   oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
+  policyOnExternalFieldErrorMessage,
+  policyOnInterfaceErrorMessage,
   selfImplementationError,
   semanticNonNullArgumentErrorMessage,
   semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
@@ -332,6 +334,7 @@ import {
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PARTIAL_CACHE_LOAD,
+  POLICY,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -390,6 +393,7 @@ import {
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
   type HandleOverrideDirectiveParams,
+  type HandlePolicyDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
@@ -651,6 +655,7 @@ export class NormalizationFactory {
     const isField = isFieldData(data);
     const isListSize = directiveName === LIST_SIZE;
     const isOverride = directiveName === OVERRIDE;
+    const isPolicy = directiveName === POLICY;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
     const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
     if (!directiveNode.arguments || directiveNode.arguments.length < 1) {
@@ -781,6 +786,9 @@ export class NormalizationFactory {
         undefinedRequiredArgumentsErrorMessage(directiveName, requiredArgumentNames, undefinedArgumentNames),
       );
     }
+    if (isPolicy) {
+      this.handlePolicyDirective({ data, errorMessages, parentTypeName });
+    }
     if (errorMessages.length > 0 || !isRequiresScopes) {
       return errorMessages;
     }
@@ -798,6 +806,23 @@ export class NormalizationFactory {
       fieldAuthData.originalData.requiredScopes.push(...requiredScopes);
     }
     return errorMessages;
+  }
+
+  handlePolicyDirective({ data, errorMessages, parentTypeName }: HandlePolicyDirectiveParams) {
+    if (isFieldData(data)) {
+      if (data.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
+        errorMessages.push(policyOnExternalFieldErrorMessage());
+      } else if (this.parentDefinitionDataByTypeName.get(parentTypeName)?.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+        errorMessages.push(policyOnInterfaceErrorMessage());
+      }
+      return;
+    }
+    if (
+      data.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+      (data.kind === Kind.OBJECT_TYPE_DEFINITION && data.directivesByName.has(INTERFACE_OBJECT))
+    ) {
+      errorMessages.push(policyOnInterfaceErrorMessage());
+    }
   }
 
   handleComposeDirective(node: ComposeDirectiveNode): void {
