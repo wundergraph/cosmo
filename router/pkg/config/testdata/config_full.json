@@ -590,6 +590,7 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": [
         {
           "Key": "hello",
@@ -618,6 +619,7 @@
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": true,
       "Fields": [
         {
