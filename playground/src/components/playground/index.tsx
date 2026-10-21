@@ -152,7 +152,15 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
+const isSubscription = (params: { operationName?: string | null }, opts?: any) =>
+  !!opts?.documentAST &&
+  getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+
 type OnFetch = (response: unknown, status?: number, statusText?: string, defer?: DeferStatus) => void;
+
+type OperationResult = { response: string; status?: number; statusText?: string; defer?: DeferStatus };
+
+const initialResult: OperationResult = { response: '' };
 
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
@@ -490,8 +498,6 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
@@ -626,26 +632,16 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
-  const [responseDefer, setResponseDefer] = useState<DeferStatus>();
+  const [result, setResult] = useState<OperationResult>(initialResult);
 
   const fetcher = useMemo(() => {
-    // The first-part callback from readDeferStream calls this without a defer, so only write it when given.
+    // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
     const onFetch: OnFetch = (response, status, statusText, defer) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
-      if (defer) {
-        setResponseDefer(defer);
-      }
+      setResult((prev) => ({ response: JSON.stringify(response), status, statusText, defer: defer ?? prev.defer }));
     };
 
     const clearResponse = () => {
-      setResponse('');
-      setStatus(undefined);
-      setStatusText(undefined);
-      setResponseDefer(undefined);
+      setResult(initialResult);
     };
 
     // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
@@ -657,10 +653,7 @@ export const Playground = (input: {
     });
 
     return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
-      const isSubscription =
-        !!opts?.documentAST &&
-        getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
-      if (isSubscription || params.operationName === 'IntrospectionQuery') {
+      if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
         return toolkitFetcher(params, opts);
       }
 
@@ -676,8 +669,10 @@ export const Playground = (input: {
       });
 
       if (isMultipartResponse(response)) {
-        return readDeferStream(response, setResponseDefer, (initial) =>
-          onFetch(initial, response.status, response.statusText),
+        return readDeferStream(
+          response,
+          (defer) => setResult((prev) => ({ ...prev, defer })),
+          (initial) => onFetch(initial, response.status, response.statusText),
         );
       }
       return response.json();
@@ -750,9 +745,9 @@ export const Playground = (input: {
         value={{
           graphId: '0',
           tabsState,
-          status,
-          statusText,
-          responseDefer,
+          status: result.status,
+          statusText: result.statusText,
+          responseDefer: result.defer,
           view,
           setView,
         }}
@@ -761,7 +756,7 @@ export const Playground = (input: {
           value={{
             query,
             headers,
-            response,
+            response: result.response,
             subgraphs: [],
             plan,
             planError,
