@@ -896,7 +896,11 @@
       "Enabled": true,
       "Name": "Surrogate-Key",
       "Delimiter": " ",
-      "MaxBytes": 1024
+      "Tiers": [
+        "cache_tag"
+      ],
+      "MaxBytes": 1024,
+      "OnOverflow": "private"
     },
     "All": {
       "Enabled": true,

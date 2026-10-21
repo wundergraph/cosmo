@@ -565,7 +565,9 @@ response_cache:
     enabled: true
     name: 'Surrogate-Key'
     delimiter: ' '
+    tiers: [cache_tag]
     max_bytes: 1024
+    on_overflow: private
   all:
     enabled: true
     fallback_ttl: 30s

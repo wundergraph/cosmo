@@ -468,7 +468,13 @@
       "Enabled": false,
       "Name": "Cache-Tag",
       "Delimiter": ",",
-      "MaxBytes": 16384
+      "Tiers": [
+        "subgraph",
+        "type",
+        "cache_tag"
+      ],
+      "MaxBytes": 16384,
+      "OnOverflow": "truncate"
     },
     "All": {
       "Enabled": true,

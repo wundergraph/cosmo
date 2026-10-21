@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -8,9 +9,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 // responseCacheTagHeaderOptions is responseCacheOptions with the header on, after
@@ -173,6 +179,115 @@ func TestResponseCacheTagHeader(t *testing.T) {
 		})
 	})
 
+	t.Run("tiers cache_tag sends only declared tags, on a miss and the hit after it", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheTagHeaderOptions(t, func(cfg *config.ResponseCacheConfiguration) {
+				cfg.TagHeader.Tiers = []string{config.ResponseCacheTagTierCacheTag}
+			}),
+			Subgraphs: tagHeaderSubgraphs(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			declared := []string{"moods"}
+			for i := 1; i <= 10; i++ {
+				declared = append(declared, fmt.Sprintf("employee-%d", i))
+			}
+
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.ElementsMatch(t, declared, surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ","))
+
+			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "the second request must be served from the cache")
+			require.Equal(t, first.Response.Header.Get("Cache-Tag"), second.Response.Header.Get("Cache-Tag"),
+				"a hit keeps the tiers it was stored with")
+		})
+	})
+
+	t.Run("no tag of the configured tiers means no header", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheTagHeaderOptions(t, func(cfg *config.ResponseCacheConfiguration) {
+				cfg.TagHeader.Tiers = []string{config.ResponseCacheTagTierCacheTag}
+			}),
+			Subgraphs: tagHeaderSubgraphs(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := `query { employees { id } }`
+			for range 2 {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+				require.Empty(t, res.Response.Header.Values("Cache-Tag"), "employees declares no tags")
+			}
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load(), "caching itself is unaffected")
+		})
+	})
+
+	t.Run("tiers leave the invalidation indexes and endpoint alone", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, addr := makeCacheAsConfig(t)
+		cfg.TagHeader = config.ResponseCacheTagHeaderConfig{
+			Enabled: true, Name: "Cache-Tag", Delimiter: ",", MaxBytes: 16384,
+			Tiers: []string{config.ResponseCacheTagTierCacheTag},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs:     tagHeaderSubgraphs(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.NotContains(t, surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ","), "subgraph-mood")
+
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey, `[{"kind":"subgraph","subgraph":"mood"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Positive(t, count, "the subgraph index is built although the header leaves it out")
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "invalidated, so fetched again")
+		})
+	})
+
+	t.Run("on_overflow private sends no tags and keeps shared caches out", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: responseCacheTagHeaderOptions(t, func(cfg *config.ResponseCacheConfiguration) {
+				cfg.TagHeader.Tiers = []string{config.ResponseCacheTagTierCacheTag}
+				cfg.TagHeader.MaxBytes = len("moods,employee-1")
+				cfg.TagHeader.OnOverflow = config.ResponseCacheTagHeaderOverflowPrivate
+			}),
+			Subgraphs: tagHeaderSubgraphs(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Empty(t, res.Response.Header.Values("Cache-Tag"))
+			cacheControl := res.Response.Header.Get("Cache-Control")
+			require.Contains(t, cacheControl, "private")
+			require.NotContains(t, cacheControl, "public")
+
+			require.Equal(t, map[string]int64{"private": 1}, tagHeaderOverflows(t, metricReader))
+		})
+	})
+
+	t.Run("on_overflow truncate is counted too", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: responseCacheTagHeaderOptions(t, func(cfg *config.ResponseCacheConfiguration) {
+				cfg.TagHeader.MaxBytes = len("subgraph-employees,subgraph-mood")
+			}),
+			Subgraphs: tagHeaderSubgraphs(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Equal(t, "subgraph-employees,subgraph-mood", res.Response.Header.Get("Cache-Tag"))
+			require.Equal(t, map[string]int64{"truncate": 1}, tagHeaderOverflows(t, metricReader))
+		})
+	})
+
 	t.Run("deduplicated inbound requests all carry the header", func(t *testing.T) {
 		t.Parallel()
 
@@ -295,4 +410,21 @@ func TestResponseCacheTagHeader(t *testing.T) {
 			require.Equal(t, first.Response.Header.Get("Cache-Tag"), second.Response.Header.Get("Cache-Tag"))
 		})
 	})
+}
+
+// tagHeaderOverflows sums router.response_cache.cache_tag_header.overflows by on_overflow action.
+func tagHeaderOverflows(t *testing.T, reader *metric.ManualReader) map[string]int64 {
+	t.Helper()
+
+	m := testutils.GetMetricByName(responseCacheScope(t, reader), "router.response_cache.cache_tag_header.overflows")
+	require.NotNil(t, m)
+	sum, ok := m.Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+
+	counts := map[string]int64{}
+	for _, dp := range sum.DataPoints {
+		action, _ := dp.Attributes.Value(otel.WgResponseCacheTagHeaderOverflow)
+		counts[action.AsString()] += dp.Value
+	}
+	return counts
 }
