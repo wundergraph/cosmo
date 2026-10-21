@@ -1,13 +1,13 @@
 import { type ConstDirectiveNode, type ConstValueNode, Kind } from 'graphql';
-import { type FederatedDirectivesData } from '../../schema-building/types/types';
+import { type FederatedDirectivesData, type ParentDefinitionData } from '../../schema-building/types/types';
 import { isParentDataCompositeOutputType } from '../../schema-building/utils';
 import { stringToNameNode } from '../../ast/utils';
 import { getValueOrDefault } from '../../utils/utils';
 import { type DirectiveName, type FieldCoords, type PolicyName, type TypeName } from '../../types/types';
-import { POLICIES, POLICY } from '../../utils/string-constants';
+import { INTERFACE_OBJECT, POLICIES, POLICY } from '../../utils/string-constants';
 import { type ORPolicies } from './types/types';
 import { type MergePolicyDirectivesParams } from './types/params';
-import { addScopes } from '../utils/utils';
+import { addScopes, isObjectDefinitionData } from '../utils/utils';
 
 function getPoliciesKey(orPolicies: ORPolicies): string {
   return JSON.stringify(orPolicies.map((andPolicies) => [...andPolicies]));
@@ -119,38 +119,72 @@ function upsertPolicyDirective(federatedDirectivesData: FederatedDirectivesData,
   ]);
 }
 
+function getImplementedInterfaceTypeNames(
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>,
+  typeName: TypeName,
+): Set<TypeName> | undefined {
+  const parentData = parentDefinitionDataByTypeName.get(typeName);
+  return isObjectDefinitionData(parentData) ? parentData.implementedInterfaceTypeNames : undefined;
+}
+
 /**
- * The @policy values of each coordinate are merged only once all subgraphs have been collected.
+ * The @policy values of each coordinate are merged only once all subgraphs have been federated, because the
+ * policies of implementations are also merged into the interfaces they implement.
  * Normalization does not permit @policy on Interfaces, Interface fields, @interfaceObject types, or fields that define
- * @external, so only Objects and their fields carry policies here.
+ * @external, so only Objects and their fields propagate policies to Interfaces.
  */
 export function mergePolicyDirectives({ parentDefinitionDataByTypeName, subgraphs }: MergePolicyDirectivesParams) {
   const orPoliciesByCoords = new Map<TypeName | FieldCoords, Array<ORPolicies>>();
+  const implementationORPoliciesByCoords = new Map<TypeName | FieldCoords, Array<ORPolicies>>();
   // The values are merged in subgraph name order so that the result does not depend on the order of the subgraphs.
   for (const subgraph of [...subgraphs].sort((a, b) => compareCodeUnits(a.name, b.name))) {
     for (const parentData of subgraph.parentDefinitionDataByTypeName.values()) {
+      const interfaceTypeNames =
+        getImplementedInterfaceTypeNames(parentDefinitionDataByTypeName, parentData.name) ?? [];
       const typeORPolicies = getPolicies(parentData.directivesByName);
       if (typeORPolicies) {
         getValueOrDefault(orPoliciesByCoords, parentData.name, () => []).push(typeORPolicies);
+        for (const interfaceTypeName of interfaceTypeNames) {
+          getValueOrDefault(implementationORPoliciesByCoords, interfaceTypeName, () => []).push(typeORPolicies);
+        }
       }
       if (!isParentDataCompositeOutputType(parentData)) {
         continue;
       }
+      const isInterfaceObject = parentData.directivesByName.has(INTERFACE_OBJECT);
       for (const fieldData of parentData.fieldDataByName.values()) {
         const fieldORPolicies = getPolicies(fieldData.directivesByName);
-        if (fieldORPolicies) {
-          getValueOrDefault(orPoliciesByCoords, fieldData.federatedCoords, () => []).push(fieldORPolicies);
+        if (!fieldORPolicies) {
+          continue;
+        }
+        getValueOrDefault(orPoliciesByCoords, fieldData.federatedCoords, () => []).push(fieldORPolicies);
+        if (!isInterfaceObject) {
+          for (const interfaceTypeName of interfaceTypeNames) {
+            getValueOrDefault(
+              implementationORPoliciesByCoords,
+              `${interfaceTypeName}.${fieldData.name}`,
+              () => [],
+            ).push(fieldORPolicies);
+          }
         }
       }
     }
   }
   for (const parentData of parentDefinitionDataByTypeName.values()) {
-    upsertPolicyDirective(parentData.federatedDirectivesData, orPoliciesByCoords.get(parentData.name) ?? []);
+    upsertPolicyDirective(parentData.federatedDirectivesData, [
+      ...(orPoliciesByCoords.get(parentData.name) ?? []),
+      ...(parentData.kind === Kind.INTERFACE_TYPE_DEFINITION
+        ? (implementationORPoliciesByCoords.get(parentData.name) ?? [])
+        : []),
+    ]);
     if (!isParentDataCompositeOutputType(parentData)) {
       continue;
     }
     for (const fieldData of parentData.fieldDataByName.values()) {
-      upsertPolicyDirective(fieldData.federatedDirectivesData, orPoliciesByCoords.get(fieldData.federatedCoords) ?? []);
+      upsertPolicyDirective(fieldData.federatedDirectivesData, [
+        ...(orPoliciesByCoords.get(fieldData.federatedCoords) ?? []),
+        ...(implementationORPoliciesByCoords.get(fieldData.federatedCoords) ?? []),
+      ]);
     }
   }
 }
