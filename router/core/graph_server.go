@@ -1812,6 +1812,7 @@ func (s *graphServer) buildGraphMux(
 		EngineLoaderHooks:               loaderHooks,
 		HeaderPropagation:               s.headerPropagation,
 		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
+		GraphQLSubscriptionHooks:        s.subscriptionHooks.graphqlLifecycle,
 	}
 
 	if s.responseCache != nil {

@@ -12,6 +12,7 @@ The Cosmo Router can be easily extended by providing custom modules. Modules are
 - `core.EnginePostOriginHandler` Implement a custom handler executed after the request to the subgraph but before the response is passed to the GraphQL engine. This handler is called for every subgraph response. **Use cases:** Logging, Caching.
 - `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration.
 - `core.Cleaner` Implements a Module lifecycle hook that is executed after the server is shutdown. Use it to close connections gracefully or for any other cleanup.
+- `core.SubscriptionOperationStartHandler` and `core.SubscriptionOperationEndHandler` run once per downstream GraphQL subscription over WebSocket or HTTP streaming. Use them for per-subscriber admission, lifecycle tracking, and cleanup. See [GraphQL Subscription Lifecycle Hooks](/router/subscription-operation-hooks).
 
 <Info>
   `*OriginHandler` handlers are called concurrently when your GraphQL operation

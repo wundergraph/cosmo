@@ -2,6 +2,9 @@ module github.com/wundergraph/cosmo/router
 
 go 1.26.0
 
+// Temporary until the subscriber lifecycle callback is released upstream.
+replace github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261019110138-5ed8d1e9b6a3
+
 require (
 	connectrpc.com/connect v1.19.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
