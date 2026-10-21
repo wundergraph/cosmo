@@ -6927,13 +6927,12 @@ func (x *GetOperationContentResponse) GetOperationContent() string {
 }
 
 type GetFederatedGraphChangelogRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Name       string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Pagination *Pagination            `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	DateRange  *DateRange             `protobuf:"bytes,3,opt,name=dateRange,proto3" json:"dateRange,omitempty"`
-	Namespace  string                 `protobuf:"bytes,4,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	// When set, returns the changelog of this feature flag's compositions instead of the base graph's
-	FeatureFlagName *string `protobuf:"bytes,5,opt,name=featureFlagName,proto3,oneof" json:"featureFlagName,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Pagination      *Pagination            `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	DateRange       *DateRange             `protobuf:"bytes,3,opt,name=dateRange,proto3" json:"dateRange,omitempty"`
+	Namespace       string                 `protobuf:"bytes,4,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	FeatureFlagName *string                `protobuf:"bytes,5,opt,name=featureFlagName,proto3,oneof" json:"featureFlagName,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }

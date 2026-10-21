@@ -3370,8 +3370,6 @@ export type GetFederatedGraphChangelogRequest = Message<"wg.cosmo.platform.v1.Ge
   namespace: string;
 
   /**
-   * When set, returns the changelog of this feature flag's compositions instead of the base graph's
-   *
    * @generated from field: optional string featureFlagName = 5;
    */
   featureFlagName?: string | undefined;
