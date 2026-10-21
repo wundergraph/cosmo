@@ -38,6 +38,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@graphiql/react": "0.22.4",
     "@heroicons/react": "^2.0.18",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-checkbox": "^1.0.4",
@@ -58,7 +59,7 @@
     "crypto-js": "^4.2.0",
     "dagre": "^0.8.5",
     "graphql": "catalog:",
-    "graphql-ws": "^5.16.0",
+    "graphql-ws": "6.0.6",
     "lodash": "catalog:",
     "meros": "1.3.0",
     "monaco-editor": "^0.45.0",
