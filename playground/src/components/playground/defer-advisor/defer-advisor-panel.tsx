@@ -5,18 +5,20 @@ import { suggestDefers } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
 import type { QueryEditor } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
-import { probeRootFields } from './probe';
+import { probeRootFields, ProbeRequest } from './probe';
 import { getPillController } from './pills-controller';
 import { summarizeRootFields } from './root-field-summary';
 
 type Props = {
   query: string;
   routingUrl: string;
+  // Called when Analyse is clicked, so the probe uses the current headers and variables.
+  getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
   editor?: QueryEditor | null;
 };
 
-export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: Props) => {
+export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, editor }: Props) => {
   const controller = editor ? getPillController(editor) : null;
 
   const subscribe = useCallback((listener: () => void) => controller?.subscribe(listener) ?? (() => {}), [controller]);
@@ -54,7 +56,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, onQueryChange, editor }: 
     const id = ++runId.current;
     setRunning(true);
     try {
-      const results = await probeRootFields(routingUrl, query);
+      const results = await probeRootFields(routingUrl, query, getRequest());
       if (id !== runId.current) {
         return;
       }

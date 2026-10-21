@@ -1,10 +1,17 @@
 import { useEditorContext } from '@graphiql/react';
 import { useEffect, useState } from 'react';
 import { DeferAdvisorPanel } from './defer-advisor-panel';
+import { parseVariables } from './probe';
 import { getPillController } from './pills-controller';
 
-export const DeferAdvisorPluginContent = ({ routingUrl }: { routingUrl: string }) => {
-  const { queryEditor } = useEditorContext({ nonNull: true });
+export const DeferAdvisorPluginContent = ({
+  routingUrl,
+  getHeaders,
+}: {
+  routingUrl: string;
+  getHeaders: () => Record<string, string>;
+}) => {
+  const { queryEditor, variableEditor } = useEditorContext({ nonNull: true });
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
 
   useEffect(() => {
@@ -23,6 +30,7 @@ export const DeferAdvisorPluginContent = ({ routingUrl }: { routingUrl: string }
     <DeferAdvisorPanel
       query={query}
       routingUrl={routingUrl}
+      getRequest={() => ({ headers: getHeaders(), variables: parseVariables(variableEditor?.getValue() ?? '') })}
       editor={queryEditor}
       onQueryChange={(next) => {
         if (queryEditor) {

@@ -12,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -91,6 +91,14 @@ const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: stri
   }
 
   return headers;
+};
+
+// Shared by normal runs and Defer Advisor probes, so both send the same headers.
+const prepareHeaders = (initialHeaders: Record<string, string>, scripts: GraphiQLScripts | undefined) => {
+  const headers = scripts?.transformHeaders ? scripts.transformHeaders(initialHeaders) : { ...initialHeaders };
+  const substituted = substituteHeadersFromEnv(headers, '0');
+  validateHeaders(substituted);
+  return substituted;
 };
 
 const executeScript = async (code: string | undefined, graphId: string) => {
@@ -172,14 +180,7 @@ const graphiQLFetch = async (
   init: RequestInit,
 ) => {
   try {
-    const initialHeaders = init.headers as Record<string, string>;
-    let headers: Record<string, string> = scripts?.transformHeaders
-      ? scripts.transformHeaders(initialHeaders)
-      : { ...initialHeaders };
-
-    headers = substituteHeadersFromEnv(headers, '0');
-
-    validateHeaders(headers);
+    const headers = prepareHeaders(init.headers as Record<string, string>, scripts);
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -636,7 +637,19 @@ export const Playground = (input: {
   const [result, setResult] = useState<OperationResult>(initialResult);
 
   // Memoised: GraphiQL needs stable plugin objects.
-  const plugins = useMemo(() => [explorerPlugin({ showAttribution: false }), createDeferAdvisorPlugin(url)], [url]);
+  // Read when Analyse is clicked, so the plugin stays stable while the headers and scripts change.
+  const latestRequest = useRef({ headers, scripts: input.scripts });
+  latestRequest.current = { headers, scripts: input.scripts };
+
+  const plugins = useMemo(
+    () => [
+      explorerPlugin({ showAttribution: false }),
+      createDeferAdvisorPlugin(url, () =>
+        prepareHeaders(JSON.parse(latestRequest.current.headers), latestRequest.current.scripts),
+      ),
+    ],
+    [url],
+  );
 
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
