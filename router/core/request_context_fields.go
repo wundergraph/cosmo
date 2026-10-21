@@ -114,12 +114,15 @@ func RouterAccessLogsFieldHandler(
 	return resFields
 }
 
-// accessLogExpressionContext snapshots the request expression context for router
-// access log fields and filters.
+// accessLogExpressionContext lazily snapshots the expression context for router access logs.
+// It is only called sequentially after request handling, so no synchronization is needed.
 func accessLogExpressionContext(reqContext *requestContext) *expr.Context {
-	ctx := reqContext.expressionContext.Clone()
-	ctx.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
-	return ctx
+	if reqContext.accessLogExprContext == nil {
+		ctx := reqContext.expressionContext.Clone()
+		ctx.Request.Error = WrapExprError(ctx.Request.Error)
+		reqContext.accessLogExprContext = ctx
+	}
+	return reqContext.accessLogExprContext
 }
 
 func SubgraphAccessLogsFieldHandler(
