@@ -843,6 +843,7 @@ func TestSubtractAge(t *testing.T) {
 		{name: "stale on arrival is zero", maxAge: 10, sMaxAge: -1, age: "30", wantMaxAge: 0, wantSMaxAge: -1},
 		{name: "absent lifetimes stay absent", maxAge: -1, sMaxAge: -1, age: "5", wantMaxAge: -1, wantSMaxAge: -1},
 		{name: "invalid age is ignored", maxAge: 10, sMaxAge: -1, age: "soon", wantMaxAge: 10, wantSMaxAge: -1},
+		{name: "age list uses the first member", maxAge: 45, sMaxAge: -1, age: "40, 5", wantMaxAge: 5, wantSMaxAge: -1},
 		{name: "no age", maxAge: 10, sMaxAge: -1, wantMaxAge: 10, wantSMaxAge: -1},
 		{name: "overflowing age is stale", maxAge: 10, sMaxAge: -1, age: "99999999999999999999", wantMaxAge: 0, wantSMaxAge: -1},
 	} {

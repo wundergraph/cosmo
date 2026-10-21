@@ -879,8 +879,8 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		return
 	}
 
-	reqCacheHeader := res.Request.Header.Get(cacheControlKey)
-	resCacheHeader := res.Header.Get(cacheControlKey)
+	reqCacheHeader := cacheControlValue(res.Request.Header)
+	resCacheHeader := cacheControlValue(res.Header)
 	expiresHeader, _ := http.ParseTime(res.Header.Get(expiresKey))
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
@@ -1011,6 +1011,11 @@ func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter
 
 // parseFreshness parses a response's Cache-Control net of its Age: lifetimes
 // shortened by the time spent upstream, and stale on arrival as no-cache.
+// cacheControlValue joins every Cache-Control line into one list.
+func cacheControlValue(header http.Header) string {
+	return strings.Join(header.Values(cacheControlKey), ", ")
+}
+
 func parseFreshness(cacheControl, age string) (*cachedirective.ResponseCacheDirectives, error) {
 	dir, err := cachedirective.ParseResponseCacheControl(cacheControl)
 	if err != nil {
@@ -1022,10 +1027,11 @@ func parseFreshness(cacheControl, age string) (*cachedirective.ResponseCacheDire
 }
 
 // subtractAge takes time spent in upstream caches off the freshness lifetimes.
-// An invalid Age is ignored.
+// An invalid Age is ignored; of a list, the first member counts.
 func subtractAge(dir *cachedirective.ResponseCacheDirectives, age string) {
+	first, _, _ := strings.Cut(age, ",")
 	// Out of range parses as the largest value: older than any lifetime.
-	seconds, err := strconv.ParseUint(strings.TrimSpace(age), 10, 31)
+	seconds, err := strconv.ParseUint(strings.TrimSpace(first), 10, 31)
 	if (err != nil && !errors.Is(err, strconv.ErrRange)) || seconds == 0 {
 		return
 	}

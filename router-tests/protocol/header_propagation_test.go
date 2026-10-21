@@ -988,6 +988,19 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("every Cache-Control line is read", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          setSubgraphPropagateHeader("Cache-Control", []string{"public", "max-age=20"}, []string{"public, max-age=60"}),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=20, public", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		t.Run("selects shortest max-age and private vs private", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
