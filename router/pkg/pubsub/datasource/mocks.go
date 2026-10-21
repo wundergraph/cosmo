@@ -762,16 +762,16 @@ func (_c *MockProvider_Startup_Call) RunAndReturn(run func(ctx context.Context) 
 }
 
 // Subscribe provides a mock function for the type MockProvider
-func (_mock *MockProvider) Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error {
-	ret := _mock.Called(ctx, cfg, updater)
+func (_mock *MockProvider) Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, guarantee DeliveryGuarantee, updater SubscriptionEventUpdater) error {
+	ret := _mock.Called(ctx, cfg, guarantee, updater)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Subscribe")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, SubscriptionEventConfiguration, SubscriptionEventUpdater) error); ok {
-		r0 = returnFunc(ctx, cfg, updater)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, SubscriptionEventConfiguration, DeliveryGuarantee, SubscriptionEventUpdater) error); ok {
+		r0 = returnFunc(ctx, cfg, guarantee, updater)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -786,12 +786,13 @@ type MockProvider_Subscribe_Call struct {
 // Subscribe is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cfg SubscriptionEventConfiguration
+//   - guarantee DeliveryGuarantee
 //   - updater SubscriptionEventUpdater
-func (_e *MockProvider_Expecter) Subscribe(ctx interface{}, cfg interface{}, updater interface{}) *MockProvider_Subscribe_Call {
-	return &MockProvider_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, cfg, updater)}
+func (_e *MockProvider_Expecter) Subscribe(ctx interface{}, cfg interface{}, guarantee interface{}, updater interface{}) *MockProvider_Subscribe_Call {
+	return &MockProvider_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, cfg, guarantee, updater)}
 }
 
-func (_c *MockProvider_Subscribe_Call) Run(run func(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater)) *MockProvider_Subscribe_Call {
+func (_c *MockProvider_Subscribe_Call) Run(run func(ctx context.Context, cfg SubscriptionEventConfiguration, guarantee DeliveryGuarantee, updater SubscriptionEventUpdater)) *MockProvider_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -801,14 +802,19 @@ func (_c *MockProvider_Subscribe_Call) Run(run func(ctx context.Context, cfg Sub
 		if args[1] != nil {
 			arg1 = args[1].(SubscriptionEventConfiguration)
 		}
-		var arg2 SubscriptionEventUpdater
+		var arg2 DeliveryGuarantee
 		if args[2] != nil {
-			arg2 = args[2].(SubscriptionEventUpdater)
+			arg2 = args[2].(DeliveryGuarantee)
+		}
+		var arg3 SubscriptionEventUpdater
+		if args[3] != nil {
+			arg3 = args[3].(SubscriptionEventUpdater)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -819,7 +825,7 @@ func (_c *MockProvider_Subscribe_Call) Return(err error) *MockProvider_Subscribe
 	return _c
 }
 
-func (_c *MockProvider_Subscribe_Call) RunAndReturn(run func(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error) *MockProvider_Subscribe_Call {
+func (_c *MockProvider_Subscribe_Call) RunAndReturn(run func(ctx context.Context, cfg SubscriptionEventConfiguration, guarantee DeliveryGuarantee, updater SubscriptionEventUpdater) error) *MockProvider_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }

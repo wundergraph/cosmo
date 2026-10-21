@@ -23,7 +23,7 @@ type Lifecycle interface {
 // to implement the basic functionality
 type Adapter interface {
 	Lifecycle
-	Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error
+	Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, guarantee DeliveryGuarantee, updater SubscriptionEventUpdater) error
 	Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error
 }
 
@@ -102,6 +102,8 @@ type SubscriptionEventConfiguration interface {
 	ProviderID() string
 	ProviderType() ProviderType
 	RootFieldName() string // the root field name of the subscription in the schema
+	// DeliveryGuaranteeMode is the mode declared in the schema for this subscription field.
+	DeliveryGuaranteeMode() DeliveryGuaranteeMode
 }
 
 // PublishEventConfiguration is the interface that all publish event configurations must implement

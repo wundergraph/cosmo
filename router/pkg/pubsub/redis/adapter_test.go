@@ -36,7 +36,7 @@ func TestProviderAdapter_SubscribeWithoutStartupReturnsError(t *testing.T) {
 	}
 
 	require.NotPanics(t, func() {
-		err := adapter.Subscribe(ctx, conf, &noopUpdater{})
+		err := adapter.Subscribe(ctx, conf, datasource.DeliveryGuaranteeAtMostOnce, &noopUpdater{})
 		require.Error(t, err)
 	})
 }
@@ -65,7 +65,7 @@ func TestProviderAdapter_ConnectionCleanupOnUnsubscribe(t *testing.T) {
 		FieldName: "testField",
 	}
 
-	require.NoError(t, adapter.Subscribe(subCtx, conf, &noopUpdater{}))
+	require.NoError(t, adapter.Subscribe(subCtx, conf, datasource.DeliveryGuaranteeAtMostOnce, &noopUpdater{}))
 
 	// Wait for the PSubscribe connection to be established on the Redis server.
 	require.Eventually(t, func() bool {

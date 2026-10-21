@@ -154,7 +154,7 @@ func TestBuildEngineDataSourceFactoryDeliveryGuaranteeMode(t *testing.T) {
 
 			var subscriptionConfig SubscriptionEventConfiguration
 			require.NoError(t, json.Unmarshal([]byte(input), &subscriptionConfig))
-			assert.Equal(t, tt.want, subscriptionConfig.DeliveryGuaranteeMode)
+			assert.Equal(t, tt.want, subscriptionConfig.GuaranteeMode)
 		})
 	}
 }

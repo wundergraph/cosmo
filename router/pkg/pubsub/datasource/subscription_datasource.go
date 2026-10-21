@@ -30,8 +30,21 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
 	var subscriptionConfiguration C
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	return subscriptionConfiguration, err
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
+		return subscriptionConfiguration, err
+	}
+	return subscriptionConfiguration, nil
+}
+
+// ValidateTriggerInput rejects clients whose requested delivery guarantee can't be served.
+// It runs before SubscriptionOnCreate hooks and before a trigger is created.
+func (s *PubSubSubscriptionDataSource[C]) ValidateTriggerInput(_ *resolve.Context, input []byte) error {
+	var subscriptionConfiguration C
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
+		return err
+	}
+	_, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
+	return err
 }
 
 func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error {
@@ -45,6 +58,11 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		return errors.New("invalid subscription configuration")
 	}
 
+	guarantee, err := NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
+	if err != nil {
+		return err
+	}
+
 	logger := s.logger.With(
 		zap.String("component", "subscription_event_updater"),
 		zap.String("provider_id", conf.ProviderID()),
@@ -52,7 +70,7 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
+	return s.pubSub.Subscribe(ctx.Context(), conf, guarantee, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
@@ -91,7 +109,22 @@ func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 }
 
 func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xxhash.Digest) error {
-	return s.triggerHashInput(input, xxh)
+	if err := s.triggerHashInput(input, xxh); err != nil {
+		return err
+	}
+
+	// The negotiated guarantee is part of the trigger identity, so cursor and
+	// at-most-once clients never share a trigger.
+	var subscriptionConfiguration C
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
+		return err
+	}
+	guarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
+	if err != nil {
+		return err
+	}
+	_, err = xxh.WriteString(string(guarantee))
+	return err
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Context, input []byte) (result []byte, err error) {

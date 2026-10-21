@@ -29,6 +29,10 @@ func (c *testSubscriptionEventConfig) RootFieldName() string {
 	return c.fieldName
 }
 
+func (c *testSubscriptionEventConfig) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return DeliveryGuaranteeModeOff
+}
+
 type receivedHooksArgs struct {
 	events []StreamEvent
 	cfg    SubscriptionEventConfiguration
