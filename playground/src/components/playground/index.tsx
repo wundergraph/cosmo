@@ -151,7 +151,15 @@ type GraphiQLScripts = {
 
 const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
 
+const isSubscription = (params: { operationName?: string | null }, opts?: any) =>
+  !!opts?.documentAST &&
+  getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+
 type OnFetch = (response: unknown, status?: number, statusText?: string) => void;
+
+type OperationResult = { response: string; status?: number; statusText?: string };
+
+const initialResult: OperationResult = { response: '' };
 
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
@@ -479,8 +487,6 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
@@ -615,20 +621,15 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
+  const [result, setResult] = useState<OperationResult>(initialResult);
 
   const fetcher = useMemo(() => {
     const onFetch: OnFetch = (response, status, statusText) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
+      setResult({ response: JSON.stringify(response), status, statusText });
     };
 
     const clearResponse = () => {
-      setResponse('');
-      setStatus(undefined);
-      setStatusText(undefined);
+      setResult(initialResult);
     };
 
     // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
@@ -640,10 +641,7 @@ export const Playground = (input: {
     });
 
     return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
-      const isSubscription =
-        !!opts?.documentAST &&
-        getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
-      if (isSubscription || params.operationName === 'IntrospectionQuery') {
+      if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
         return toolkitFetcher(params, opts);
       }
 
@@ -733,8 +731,8 @@ export const Playground = (input: {
         value={{
           graphId: '0',
           tabsState,
-          status,
-          statusText,
+          status: result.status,
+          statusText: result.statusText,
           view,
           setView,
         }}
@@ -743,7 +741,7 @@ export const Playground = (input: {
           value={{
             query,
             headers,
-            response,
+            response: result.response,
             subgraphs: [],
             plan,
             planError,
