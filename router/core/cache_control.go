@@ -47,6 +47,12 @@ func requestRevalidates(directives *cachedirective.RequestCacheDirectives) bool 
 	return directives != nil && (directives.NoCache || directives.MaxAge == 0)
 }
 
+// requestOnlyIfCached reports whether the client accepts only stored answers,
+// and a 504 otherwise (RFC 9111 §5.2.1.7).
+func requestOnlyIfCached(directives *cachedirective.RequestCacheDirectives) bool {
+	return directives != nil && directives.OnlyIfCached
+}
+
 // notCached is a store every lookup for a body misses on. Writes pass through.
 type notCached struct {
 	store caching.Cache

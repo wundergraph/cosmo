@@ -114,6 +114,7 @@ type headerPropagationWriter struct {
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
 	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
+	didCheckOnlyIfCached      bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -152,6 +153,13 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
 		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
 			h.writer.Header().Set(h.cacheTagHeader.Name, value)
+		}
+	}
+	// An only-if-cached request the cache could not answer.
+	if !h.didCheckOnlyIfCached {
+		h.didCheckOnlyIfCached = true
+		if h.resolveCtx.ResponseCacheUnsatisfied() {
+			h.writer.WriteHeader(http.StatusGatewayTimeout)
 		}
 	}
 	return h.writer.Write(p)

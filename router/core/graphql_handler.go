@@ -764,11 +764,12 @@ func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, cac
 			Subgraph: h.responseCacheInvalidation.Subgraph,
 			Type:     h.responseCacheInvalidation.Type,
 		}
+		cacheOpts.OnlyIfCached = requestOnlyIfCached(cacheControl)
 		resolveCtx.SetResponseCache(cacheOpts)
 	}
-	if requestRevalidates(cacheControl) {
-		// The leader of a shared flight may answer from the cache,
-		// so a no-cache request resolves on its own.
+	if requestRevalidates(cacheControl) || requestOnlyIfCached(cacheControl) {
+		// The leader of a shared flight may answer from the cache, or refuse
+		// to fetch, so such a request resolves on its own.
 		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
 	}
 }

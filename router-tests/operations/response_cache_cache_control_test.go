@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -359,6 +361,39 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 			attrs := attribute.NewSet(fetchSpanFor(t, exporter, "mood").Attributes()...)
 			decision, _ := attrs.Value(otel.WgResponseCacheStoreDecision)
 			require.NotEqual(t, "stored", decision.AsString(), "the span reports a write that never happened")
+		})
+	})
+
+	t.Run("only-if-cached answers from the cache or with 504", func(t *testing.T) {
+		t.Parallel()
+		// Every fetch cached: an uncached one would refuse the warm request too.
+		allCached := testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+			Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+		}
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: responseCacheOptions(t, time.Minute),
+			Subgraphs:     allCached,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			onlyIfCached := testenv.GraphQLRequest{Query: moodQuery, Header: http.Header{"Cache-Control": {"only-if-cached"}}}
+			// The router client retries a 504.
+			body, err := json.Marshal(onlyIfCached)
+			require.NoError(t, err)
+			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(body))
+			require.NoError(t, err)
+			req.Header = onlyIfCached.Header.Clone()
+			cold, err := testenv.MakeGraphQLRequestRawFromClient(req, http.DefaultClient)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusGatewayTimeout, cold.Response.StatusCode)
+			require.Contains(t, cold.Body, "only-if-cached")
+			require.Zero(t, xEnv.SubgraphRequestCount.Employees.Load())
+			require.Zero(t, xEnv.SubgraphRequestCount.Mood.Load())
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			warm := xEnv.MakeGraphQLRequestOK(onlyIfCached)
+			require.Equal(t, http.StatusOK, warm.Response.StatusCode)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 		})
 	})
 }
