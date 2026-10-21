@@ -1228,6 +1228,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
                 schema={isLoading ? null : (schema ?? undefined)}
                 storage={graphiqlStorage}
                 onTabChange={setTabsState}
+                // When GraphiQL falls back to introspection, this makes it ask for deprecated input
+                // fields and arguments. They are excluded by default, so an input object with only
+                // deprecated fields would come back empty and fail schema building.
+                inputValueDeprecation
               />
               {isMounted && <PlaygroundPortal />}
             </>
