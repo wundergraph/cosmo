@@ -11,7 +11,8 @@ head_sha=$2
 limit=$3
 merge_base=$(git merge-base "$base_sha" "$head_sha")
 diff_file=$(mktemp)
-trap 'rm -f "$diff_file"' EXIT
+attribute_file=$(mktemp)
+trap 'rm -f "$diff_file" "$attribute_file"' EXIT
 git diff --numstat -z -M "$merge_base" "$head_sha" > "$diff_file"
 
 total=0
@@ -31,8 +32,13 @@ while IFS= read -r -d '' record; do
 
   # Git 2.40 or newer supports --source; ubuntu-latest provides it.
   # Read attributes from the base commit so a PR cannot exempt its own files.
-  attribute=$(git check-attr --source="$base_sha" linguist-generated -- "$path")
-  if [[ $attribute == *': linguist-generated: true' ]]; then
+  git check-attr -z --source="$base_sha" linguist-generated -- "$path" > "$attribute_file"
+  fields=()
+  while IFS= read -r -d '' field; do
+    fields+=("$field")
+  done < "$attribute_file"
+  if (( ${#fields[@]} == 3 )) &&
+    [[ ${fields[0]} == "$path" && ${fields[1]} == linguist-generated && ${fields[2]} == true ]]; then
     generated_files=$((generated_files + 1))
     continue
   fi
