@@ -15,6 +15,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -124,6 +125,14 @@ export function deleteFederatedSubgraph(
       }
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -200,6 +209,7 @@ export function deleteFederatedSubgraph(
           req.disableResolvabilityValidation,
           opts.promptToQueryClient,
           opts.billingDefaultPlanId,
+          mapperUpdater,
         );
 
         if (subgraph.isFeatureSubgraph) {
@@ -314,7 +324,7 @@ export function deleteFederatedSubgraph(
       }
     }
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -327,6 +337,6 @@ export function deleteFederatedSubgraph(
       compositionErrors,
       compositionWarnings,
       proposalMatchMessage,
-    };
+    });
   });
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -11,13 +12,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	"go.uber.org/zap"
 )
 
 const ResponseCacheInvalidationSharedKeyMinLength = 32
 
-func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, invalidator responsecaching.Invalidator) (*http.Server, error) {
+// NewServer serves invalidation on its own listener. corsOpts, the router's CORS
+// settings, lets the playground send requests; nil serves no CORS headers.
+func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, invalidator responsecaching.Invalidator, corsOpts *cors.Config) (*http.Server, error) {
 	if cfg.Endpoint.SharedKey == "" {
 		return nil, errors.New("response cache invalidation is enabled but no shared_key is set")
 	}
@@ -40,6 +44,14 @@ func NewServer(logger *zap.Logger, cfg config.ResponseCacheInvalidationConfig, i
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
+	if corsOpts != nil && corsOpts.Enabled {
+		opts := *corsOpts
+		// Authorization is a header the caller sets; cookies are never needed.
+		opts.AllowCredentials = false
+		opts.AllowMethods = append(slices.Clone(opts.AllowMethods), http.MethodPost)
+		opts.AllowHeaders = append(slices.Clone(opts.AllowHeaders), "Authorization", "Content-Type")
+		r.Use(cors.New(opts))
+	}
 	r.Handle(cfg.Endpoint.Path, NewHandler(logger, invalidator, cfg))
 
 	svr := &http.Server{

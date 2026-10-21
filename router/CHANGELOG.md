@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.360.1](https://github.com/wundergraph/cosmo/compare/router@0.360.0...router@0.360.1) (2026-10-19)
+
+### Bug Fixes
+
+* **router:** end each defer part with its boundary so parts stream as they complete ([#3378](https://github.com/wundergraph/cosmo/issues/3378)) ([4a672a1](https://github.com/wundergraph/cosmo/commit/4a672a1807c2bafe5a5160912edc17e3f3dab5aa)) (@gausie)
+
+## [0.360.0](https://github.com/wundergraph/cosmo/compare/router@0.359.0...router@0.360.0) (2026-10-19)
+
+### Features
+
+* **router:** add response cache data to request tracing ([#3359](https://github.com/wundergraph/cosmo/issues/3359)) ([6d779dd](https://github.com/wundergraph/cosmo/commit/6d779dd5bdfbdd1e94b0b3fe5139abfcfdd195e1)) (@SkArchon)
+
+## [0.359.0](https://github.com/wundergraph/cosmo/compare/router@0.358.2...router@0.359.0) (2026-10-15)
+
+### Features
+
+* execution config reload on truncated body ([#3365](https://github.com/wundergraph/cosmo/issues/3365)) ([4879bb5](https://github.com/wundergraph/cosmo/commit/4879bb547802dae3b1e35f71e6a8af2165c01009)) (@alepane21)
+
+## [0.358.2](https://github.com/wundergraph/cosmo/compare/router@0.358.1...router@0.358.2) (2026-10-14)
+
+### Bug Fixes
+
+* handle graceful draining of keep alive connections during shutdown ([#3356](https://github.com/wundergraph/cosmo/issues/3356)) ([9b436e7](https://github.com/wundergraph/cosmo/commit/9b436e7cf700a4c335e70a027acd402a07478466)) (@Noroth)
+
 ## [0.358.1](https://github.com/wundergraph/cosmo/compare/router@0.358.0...router@0.358.1) (2026-10-13)
 
 ### Bug Fixes

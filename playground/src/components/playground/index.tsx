@@ -8,6 +8,7 @@ import {
   OperationTypeNode,
   buildClientSchema,
   getIntrospectionQuery,
+  getOperationAST,
   parse,
   validate,
 } from 'graphql';
@@ -23,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
@@ -147,11 +149,23 @@ type GraphiQLScripts = {
   transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
+const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
+
+const isSubscription = (params: { operationName?: string | null }, opts?: any) =>
+  !!opts?.documentAST &&
+  getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+
+type OnFetch = (response: unknown, status?: number, statusText?: string) => void;
+
+type OperationResult = { response: string; status?: number; statusText?: string };
+
+const initialResult: OperationResult = { response: '' };
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   scripts: GraphiQLScripts | undefined,
-  onFetch: any,
+  onFetch: OnFetch,
   url: URL,
   init: RequestInit,
 ) => {
@@ -199,6 +213,11 @@ const graphiQLFetch = async (
       ...init,
       headers,
     });
+
+    // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
+    if (isMultipartResponse(response)) {
+      return response;
+    }
 
     const responseData = await response.clone().json();
 
@@ -468,8 +487,6 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
@@ -604,22 +621,48 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
+  const [result, setResult] = useState<OperationResult>(initialResult);
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
+    const onFetch: OnFetch = (response, status, statusText) => {
+      setResult({ response: JSON.stringify(response), status, statusText });
     };
 
-    return createGraphiQLFetcher({
+    const clearResponse = () => {
+      setResult(initialResult);
+    };
+
+    // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
+    const toolkitFetcher = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
+
+    return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
+      if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
+        return toolkitFetcher(params, opts);
+      }
+
+      return runOperation(params, opts?.headers);
+    };
+
+    async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      clearResponse();
+      const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
+        body: JSON.stringify(params),
+      });
+
+      if (isMultipartResponse(response)) {
+        return readDeferStream(response, undefined, (initial) =>
+          onFetch(initial, response.status, response.statusText),
+        );
+      }
+      return response.json();
+    }
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
@@ -688,8 +731,8 @@ export const Playground = (input: {
         value={{
           graphId: '0',
           tabsState,
-          status,
-          statusText,
+          status: result.status,
+          statusText: result.statusText,
           view,
           setView,
         }}
@@ -698,7 +741,7 @@ export const Playground = (input: {
           value={{
             query,
             headers,
-            response,
+            response: result.response,
             subgraphs: [],
             plan,
             planError,

@@ -421,6 +421,7 @@ import {
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
+  type ValidateArgumentParams,
   type ValidateOneOfDirectiveParams,
 } from './types/params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
@@ -535,28 +536,31 @@ export class NormalizationFactory {
     };
   }
 
-  validateArguments(fieldData: FieldData, parentKind: Kind) {
-    for (const argumentData of fieldData.argumentDataByName.values()) {
+  validateArguments({ data, parentKind }: ValidateArgumentParams) {
+    for (const argumentData of data.argumentDataByName.values()) {
       const namedTypeName = getTypeNodeNamedTypeName(argumentData.type);
       if (BASE_SCALARS.has(namedTypeName)) {
         argumentData.namedTypeKind = Kind.SCALAR_TYPE_DEFINITION;
         continue;
       }
+
       const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
       if (!namedTypeData) {
         // undefined types are handled elsewhere
         continue;
       }
+
       if (isInputNodeKind(namedTypeData.kind)) {
         argumentData.namedTypeKind = namedTypeData.kind;
         sanitizeDefaultValue({ data: argumentData, namedTypeData, node: argumentData.node });
         continue;
       }
+
       this.errors.push(
         invalidNamedTypeError({
           data: argumentData,
           namedTypeData,
-          nodeType: `${kindToNodeType(parentKind)} field argument`,
+          nodeType: `${kindToNodeType(parentKind)} ${parentKind === Kind.DIRECTIVE_DEFINITION ? '' : 'field '}argument`,
         }),
       );
     }
@@ -4588,6 +4592,14 @@ export class NormalizationFactory {
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       this.validateDirectives(parentData, parentTypeName);
     }
+    for (const [name, data] of this.directiveDefinitionDataByName) {
+      // In-built directive arguments are pre-validated
+      if (!this.customDirectiveDefinitionByName.has(name)) {
+        continue;
+      }
+
+      this.validateArguments({ data, parentKind: Kind.DIRECTIVE_DEFINITION });
+    }
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
     }
@@ -4679,7 +4691,7 @@ export class NormalizationFactory {
             }
 
             // Arguments can only be fully validated once all parents types are known
-            this.validateArguments(fieldData, parentData.kind);
+            this.validateArguments({ data: fieldData, parentKind: parentData.kind });
             // Base Scalars have already been set
             if (fieldData.namedTypeKind !== Kind.NULL) {
               continue;
