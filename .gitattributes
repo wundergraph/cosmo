@@ -2,6 +2,7 @@
 **/package-lock.json linguist-generated=true
 **/go.sum linguist-generated=true
 playground/index.html linguist-generated=true
+router/internal/graphiql/graphiql.html linguist-generated=true
 
 # Protobuf compiler output.
 **/*.pb.go linguist-generated=true
