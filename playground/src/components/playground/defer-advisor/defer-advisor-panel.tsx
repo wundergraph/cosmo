@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
-import { suggestDefers } from './analysis';
+import { slowFieldNames } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
 import type { QueryEditor } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
@@ -44,10 +44,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
   const rows = useMemo(() => summarizeRootFields(parsed), [parsed]);
 
-  const slowNames = useMemo(
-    () => new Set(latencies ? suggestDefers(latencies).map((s) => s.fieldName) : []),
-    [latencies],
-  );
+  const slowNames = useMemo(() => (latencies ? slowFieldNames(latencies) : new Set<string>()), [latencies]);
 
   const analyse = async () => {
     if (!controller) {
@@ -84,6 +81,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
   const clear = () => {
     controller?.setLatencies(null);
+    setProbeFailures({});
   };
 
   const deferField = (name: string) => {
@@ -104,7 +102,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
   const emptyNotice =
     query.trim() === '' ? 'Write a query to see its root fields here.' : 'No root fields to show here.';
 
-  const canAnalyse = !!controller && !running && !isMutationOrSubscription && !hasSyntaxError && rows.length > 0;
+  const canAnalyse = !!controller && !running && rows.length > 0;
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">

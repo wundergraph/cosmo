@@ -1,4 +1,4 @@
-import { suggestDefers } from './analysis';
+import { slowFieldNames } from './analysis';
 import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
@@ -69,7 +69,7 @@ export class PillController {
       return;
     }
 
-    const slowNames = new Set(suggestDefers(this.latencies).map((s) => s.fieldName));
+    const slowNames = slowFieldNames(this.latencies);
     try {
       this.clear = renderPills(this.editor, computeFieldPills(text, this.latencies, slowNames));
     } catch {}

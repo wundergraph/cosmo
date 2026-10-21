@@ -27,6 +27,8 @@ export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldR
     fragmentCounts.get(label) === 1 && fieldsUnder(label).size === 1 && !nestedLabels.has(label);
   const labelsFor = (name: string) => [...new Set(deferred.filter((d) => d.field === name).map((d) => d.label))];
 
+  const hasUndeferred = new Set(occurrences.filter((o) => !o.deferred).map((o) => o.name));
+
   return names
     .map((name) => ({
       name,
@@ -34,5 +36,5 @@ export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldR
       deferredLabels: labelsFor(name),
       eagerLabels: labelsFor(name).filter(isSoleFragment),
     }))
-    .filter((row) => occurrences.some((o) => o.name === row.name && !o.deferred) || row.deferredLabels.length > 0);
+    .filter((row) => hasUndeferred.has(row.name) || row.deferredLabels.length > 0);
 };

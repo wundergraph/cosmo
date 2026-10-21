@@ -639,7 +639,9 @@ export const Playground = (input: {
   // Memoised: GraphiQL needs stable plugin objects.
   // Read when Analyse is clicked, so the plugin stays stable while the headers and scripts change.
   const latestRequest = useRef({ headers, scripts: input.scripts });
-  latestRequest.current = { headers, scripts: input.scripts };
+  useEffect(() => {
+    latestRequest.current = { headers, scripts: input.scripts };
+  }, [headers, input.scripts]);
 
   const plugins = useMemo(
     () => [
