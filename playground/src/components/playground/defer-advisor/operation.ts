@@ -7,21 +7,18 @@ export const findDeferDirective = (node: InlineFragmentNode) => node.directives?
 
 export const isDeferFragment = (node: InlineFragmentNode) => findDeferDirective(node) !== undefined;
 
-let lastParse: { query: string; doc: DocumentNode } | undefined;
+export type ParsedQuery = { text: string; doc: DocumentNode };
 
-export const parseQuery = (query: string): DocumentNode => {
-  if (lastParse?.query === query) {
-    return lastParse.doc;
-  }
-  const doc = parse(query);
-  lastParse = { query, doc };
-  return doc;
-};
+let lastParse: ParsedQuery | undefined;
 
 // Half-typed queries fail to parse; that is expected.
-export const safeParseQuery = (query: string): DocumentNode | undefined => {
+export const parseQuery = (query: string): ParsedQuery | undefined => {
+  if (lastParse?.text === query) {
+    return lastParse;
+  }
   try {
-    return parseQuery(query);
+    lastParse = { text: query, doc: parse(query) };
+    return lastParse;
   } catch {
     return undefined;
   }

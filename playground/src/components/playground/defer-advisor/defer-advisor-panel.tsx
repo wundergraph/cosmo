@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
-import { getOperation, safeParseQuery } from './operation';
+import { getOperation, parseQuery } from './operation';
 import { summarizeRootFields } from './root-field-summary';
 
 type Props = {
@@ -11,18 +11,29 @@ type Props = {
 };
 
 export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
-  const doc = useMemo(() => safeParseQuery(query), [query]);
+  const parsed = useMemo(() => parseQuery(query), [query]);
+  const doc = parsed?.doc;
   const operation = useMemo(() => getOperation(doc), [doc]);
   const operationCount = doc?.definitions.filter((d) => d.kind === Kind.OPERATION_DEFINITION).length ?? 0;
   const isMutationOrSubscription = operation?.operation === 'mutation' || operation?.operation === 'subscription';
   // A comment-only document fails to parse but has nothing to fix.
   const hasSyntaxError = doc === undefined && !/^(\s|#[^\n]*)*$/.test(query);
 
-  const rows = useMemo(() => summarizeRootFields(query), [query]);
+  const rows = useMemo(() => summarizeRootFields(parsed), [parsed]);
 
   const deferField = (name: string) => {
-    const label = makeUniqueLabel(name, new Set(listDeferLabels(query)));
-    onQueryChange(applyDefer(query, name, label));
+    if (!parsed) {
+      return;
+    }
+    const label = makeUniqueLabel(name, new Set(listDeferLabels(parsed)));
+    onQueryChange(applyDefer(parsed, name, label));
+  };
+
+  const revertLabel = (label: string) => {
+    if (!parsed) {
+      return;
+    }
+    onQueryChange(revertDefer(parsed, label));
   };
 
   const emptyNotice =
@@ -71,7 +82,7 @@ export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
                         variant="secondary"
                         size="sm"
                         className="whitespace-nowrap"
-                        onClick={() => onQueryChange(revertDefer(query, label))}
+                        onClick={() => revertLabel(label)}
                       >
                         {eagerLabels.length > 1 ? `Eager ${label}` : 'Eager'}
                       </Button>

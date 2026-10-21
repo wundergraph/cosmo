@@ -6,7 +6,7 @@ import {
   getOperation,
   isDeferFragment,
   LABEL_ARG,
-  parseQuery,
+  ParsedQuery,
 } from './operation';
 
 type DeferredField = { label: string; field: string };
@@ -27,9 +27,9 @@ export const makeUniqueLabel = (base: string, existing: Set<string>) => {
   return `${base}_${i}`;
 };
 
-const collectLabels = (query: string): Set<string> => {
+const collectLabels = (parsed: ParsedQuery): Set<string> => {
   const labels = new Set<string>();
-  visit(parseQuery(query), {
+  visit(parsed.doc, {
     InlineFragment(node) {
       const label = getDeferLabel(node);
       if (label) {
@@ -44,11 +44,11 @@ const collectLabels = (query: string): Set<string> => {
 const isConditionalDefer = (node: InlineFragmentNode) =>
   node.directives?.some((d) => d.name.value === DEFER && d.arguments?.some((a) => a.name.value === 'if')) ?? false;
 
-const rootSelections = (query: string): readonly SelectionNode[] =>
-  getOperation(parseQuery(query))?.selectionSet.selections ?? [];
+const rootSelections = (parsed: ParsedQuery): readonly SelectionNode[] =>
+  getOperation(parsed.doc)?.selectionSet.selections ?? [];
 
 /** Stops at fields: a defer under a field is out of reach. */
-const reachableDeferFragments = (query: string): InlineFragmentNode[] => {
+const reachableDeferFragments = (parsed: ParsedQuery): InlineFragmentNode[] => {
   const result: InlineFragmentNode[] = [];
   const walk = (selections: readonly SelectionNode[]) => {
     for (const selection of selections) {
@@ -61,11 +61,11 @@ const reachableDeferFragments = (query: string): InlineFragmentNode[] => {
       walk(selection.selectionSet.selections);
     }
   };
-  walk(rootSelections(query));
+  walk(rootSelections(parsed));
   return result;
 };
 
-const findUndeferredRootField = (query: string, fieldName: string): FieldNode | undefined => {
+const findUndeferredRootField = (parsed: ParsedQuery, fieldName: string): FieldNode | undefined => {
   const walk = (selections: readonly SelectionNode[]): FieldNode | undefined => {
     for (const selection of selections) {
       if (selection.kind === Kind.FIELD && (selection.alias?.value ?? selection.name.value) === fieldName) {
@@ -80,17 +80,18 @@ const findUndeferredRootField = (query: string, fieldName: string): FieldNode | 
     }
     return undefined;
   };
-  return walk(rootSelections(query));
+  return walk(rootSelections(parsed));
 };
 
 /** Splices the text, so comments and formatting survive a click. */
-export const applyDefer = (query: string, fieldName: string, label: string): string => {
-  const field = findUndeferredRootField(query, fieldName);
+export const applyDefer = (parsed: ParsedQuery, fieldName: string, label: string): string => {
+  const field = findUndeferredRootField(parsed, fieldName);
   if (!field?.loc) {
-    return query;
+    return parsed.text;
   }
   const { start, end } = field.loc;
-  return `${query.slice(0, start)}... @defer(label: "${label}") { ${query.slice(start, end)} }${query.slice(end)}`;
+  const { text } = parsed;
+  return `${text.slice(0, start)}... @defer(label: "${label}") { ${text.slice(start, end)} }${text.slice(end)}`;
 };
 
 const removeText = (query: string, start: number, end: number): string => `${query.slice(0, start)}${query.slice(end)}`;
@@ -120,15 +121,15 @@ const revertOne = (query: string, target: InlineFragmentNode): string => {
   return unwrapFragment(query, target);
 };
 
-export const revertDefer = (query: string, label: string): string => {
-  const target = reachableDeferFragments(query).find((f) => getDeferLabel(f) === label);
-  return target ? revertOne(query, target) : query;
+export const revertDefer = (parsed: ParsedQuery, label: string): string => {
+  const target = reachableDeferFragments(parsed).find((f) => getDeferLabel(f) === label);
+  return target ? revertOne(parsed.text, target) : parsed.text;
 };
 
 /** Eager needs one fragment per label: reverting removes every fragment with that label. */
-export const countDeferFragmentsByLabel = (query: string): Map<string, number> => {
+export const countDeferFragmentsByLabel = (parsed: ParsedQuery): Map<string, number> => {
   const counts = new Map<string, number>();
-  for (const fragment of reachableDeferFragments(query)) {
+  for (const fragment of reachableDeferFragments(parsed)) {
     const label = getDeferLabel(fragment);
     if (label) {
       counts.set(label, (counts.get(label) ?? 0) + 1);
@@ -138,7 +139,7 @@ export const countDeferFragmentsByLabel = (query: string): Map<string, number> =
 };
 
 /** No Eager for nested defers: reverting one leaves its field deferred. */
-export const listNestedDeferLabels = (query: string): Set<string> => {
+export const listNestedDeferLabels = (parsed: ParsedQuery): Set<string> => {
   const nested = new Set<string>();
   const walk = (selections: readonly SelectionNode[], insideDefer: boolean) => {
     for (const selection of selections) {
@@ -153,14 +154,14 @@ export const listNestedDeferLabels = (query: string): Set<string> => {
       walk(selection.selectionSet.selections, insideDefer || isDefer);
     }
   };
-  walk(rootSelections(query), false);
+  walk(rootSelections(parsed), false);
   return nested;
 };
 
-export const listDeferLabels = (query: string): string[] => [...collectLabels(query)];
+export const listDeferLabels = (parsed: ParsedQuery): string[] => [...collectLabels(parsed)];
 
-export const listDeferredFields = (query: string): DeferredField[] =>
-  reachableDeferFragments(query).flatMap((fragment) => {
+export const listDeferredFields = (parsed: ParsedQuery): DeferredField[] =>
+  reachableDeferFragments(parsed).flatMap((fragment) => {
     const label = getDeferLabel(fragment);
     if (!label) {
       return [];

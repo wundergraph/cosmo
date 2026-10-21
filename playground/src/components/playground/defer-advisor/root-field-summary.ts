@@ -1,5 +1,5 @@
 import { countDeferFragmentsByLabel, listDeferredFields, listNestedDeferLabels } from './defer-transform';
-import { collectRootOccurrences, getOperation, safeParseQuery } from './operation';
+import { collectRootOccurrences, getOperation, ParsedQuery } from './operation';
 
 type RootFieldRow = {
   name: string;
@@ -9,20 +9,20 @@ type RootFieldRow = {
   eagerLabels: string[];
 };
 
-export const summarizeRootFields = (query: string): RootFieldRow[] => {
-  const operation = getOperation(safeParseQuery(query));
-  if (!operation) {
+export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldRow[] => {
+  const operation = getOperation(parsed?.doc);
+  if (!parsed || !operation) {
     return [];
   }
 
   const occurrences = collectRootOccurrences(operation.selectionSet.selections);
-  const deferred = listDeferredFields(query);
+  const deferred = listDeferredFields(parsed);
   const names = [...new Set(occurrences.map((o) => o.name))];
 
   // A label can list a field name twice, so compare distinct names.
-  const fragmentCounts = countDeferFragmentsByLabel(query);
+  const fragmentCounts = countDeferFragmentsByLabel(parsed);
   const fieldsUnder = (label: string) => new Set(deferred.filter((d) => d.label === label).map((d) => d.field));
-  const nestedLabels = listNestedDeferLabels(query);
+  const nestedLabels = listNestedDeferLabels(parsed);
   const isSoleFragment = (label: string) =>
     fragmentCounts.get(label) === 1 && fieldsUnder(label).size === 1 && !nestedLabels.has(label);
   const labelsFor = (name: string) => [...new Set(deferred.filter((d) => d.field === name).map((d) => d.label))];
