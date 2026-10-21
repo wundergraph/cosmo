@@ -769,6 +769,10 @@ export const Playground = (input: {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
+            // Makes GraphiQL's introspection query ask for deprecated input fields and arguments.
+            // They are excluded by default, so an input object with only deprecated fields would
+            // come back empty and fail schema building.
+            inputValueDeprecation
             onEditQuery={setQuery}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
