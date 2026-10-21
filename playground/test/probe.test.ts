@@ -7,7 +7,7 @@ const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
 type SentRequest = { query: string; variables: Record<string, unknown>; headers: Record<string, string> };
 
 const captureRequests = async (run: () => Promise<unknown>): Promise<SentRequest[]> => {
-  const fetchMock = vi.fn(async () => ({ json: async () => ({ data: {} }) }));
+  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ data: {} }) }));
   vi.stubGlobal('fetch', fetchMock);
   await run();
   return fetchMock.mock.calls.map(([, init]) => {
@@ -109,5 +109,16 @@ describe('probe headers', () => {
       }),
     );
     expect(sent[0]?.headers).toEqual({ 'content-type': 'application/graphql' });
+  });
+});
+
+describe('probe HTTP status', () => {
+  test('a non-2xx response fails the field even when its body has no errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 401, statusText: 'Unauthorized', json: async () => ({ data: {} }) })),
+    );
+    const results = await probeRootFields('http://router', 'query { a }');
+    expect(results.a).toEqual({ ok: false, reason: 'HTTP 401 Unauthorized' });
   });
 });

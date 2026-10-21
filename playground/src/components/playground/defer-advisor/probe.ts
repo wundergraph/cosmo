@@ -31,6 +31,10 @@ const timeOnce = async (
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify({ query, variables }),
   });
+  // A 401 or 429 can carry a JSON body with no errors array, which would otherwise count as a measurement.
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
   const body = await response.json();
   const elapsed = performance.now() - started;
 
