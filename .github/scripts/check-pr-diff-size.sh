@@ -12,7 +12,7 @@ limit=$3
 merge_base=$(git merge-base "$base_sha" "$head_sha")
 diff_file=$(mktemp)
 trap 'rm -f "$diff_file"' EXIT
-git diff --numstat -z -M "$merge_base" "$head_sha" > "$diff_file"
+git diff --no-ext-diff --no-textconv --numstat -z -M "$merge_base" "$head_sha" > "$diff_file"
 
 total=0
 generated_files=0
