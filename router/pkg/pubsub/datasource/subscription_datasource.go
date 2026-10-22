@@ -37,25 +37,35 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input [
 	return subscriptionConfiguration, nil
 }
 
-// ValidateTriggerInput rejects clients whose requested delivery guarantee can't be served.
+// ValidateDeliveryGuarantee rejects clients whose requested delivery guarantee can't be served and
+// returns the guarantee negotiated for the client.
 // It runs before SubscriptionOnCreate hooks and before a trigger is created.
 // It gets the context of the subscribing client, unlike Start, which only gets the context
 // of the first subscriber of a trigger.
-func (s *PubSubSubscriptionDataSource[C]) ValidateTriggerInput(ctx *resolve.Context, input []byte) error {
+func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve.Context, input []byte) (string, error) {
 	var subscriptionConfiguration C
 	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
-		return err
-	}
-	guarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
-	if err != nil {
-		return err
-	}
-	if guarantee != DeliveryGuaranteeCursor {
-		return nil
+		return "", err
 	}
 
-	// Resolve the cursor binding up front, so a client that can't be issued cursors
-	// fails before it receives any event.
+	availableGuarantee := subscriptionConfiguration.DeliveryGuaranteeMode()
+	negotiatedGuarantee, err := NegotiateDeliveryGuarantee(availableGuarantee, input)
+	if err != nil {
+		return "", err
+	}
+
+	if negotiatedGuarantee == DeliveryGuaranteeCursor {
+		if err := s.validateCursorBinding(ctx, subscriptionConfiguration); err != nil {
+			return "", err
+		}
+	}
+
+	return string(negotiatedGuarantee), nil
+}
+
+// validateCursorBinding resolves the cursor binding up front, so a client that can't be
+// issued cursors fails before it receives any event.
+func (s *PubSubSubscriptionDataSource[C]) validateCursorBinding(ctx *resolve.Context, subscriptionConfiguration C) error {
 	unsatisfiable := &DeliveryGuaranteeError{
 		Code:      DeliveryGuaranteeErrorCodeUnsatisfiable,
 		Supported: SupportedDeliveryGuarantees(subscriptionConfiguration.DeliveryGuaranteeMode()),
@@ -64,7 +74,8 @@ func (s *PubSubSubscriptionDataSource[C]) ValidateTriggerInput(ctx *resolve.Cont
 	if !s.cursors.Enabled() {
 		return unsatisfiable
 	}
-	_, err = newCursorBinding(ctx.Context(), s.cursors.SubscriberBinding, subscriptionConfiguration)
+
+	_, err := newCursorBinding(ctx.Context(), s.cursors.SubscriberBinding, subscriptionConfiguration)
 	if err != nil {
 		if guaranteeErr, ok := errors.AsType[*DeliveryGuaranteeError](err); ok {
 			if guaranteeErr.Supported == nil {
@@ -149,21 +160,13 @@ func (s *PubSubSubscriptionDataSource[C]) SetCursors(cursors Cursors) {
 }
 
 func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xxhash.Digest) error {
-	if err := s.triggerHashInput(input, xxh); err != nil {
-		return err
-	}
+	return s.triggerHashInput(input, xxh)
+}
 
-	// The negotiated guarantee is part of the trigger identity, so cursor and
-	// at-most-once clients never share a trigger.
-	var subscriptionConfiguration C
-	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
-		return err
-	}
-	guarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
-	if err != nil {
-		return err
-	}
-	_, err = xxh.WriteString(string(guarantee))
+// HashTriggerDeliveryGuarantee adds the negotiated guarantee to the trigger identity, so cursor and
+// at-most-once clients never share a trigger.
+func (s *PubSubSubscriptionDataSource[C]) HashTriggerDeliveryGuarantee(negotiated string, xxh *xxhash.Digest) error {
+	_, err := xxh.WriteString(negotiated)
 	return err
 }
 
