@@ -47,13 +47,15 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		return
 	}
 
-	// Cursors are bound to a single client, so they can't be broadcast.
+	// If no OnReceiveEvents handlers are registered and no cursors are enabled the message
+	// we want to send to subscription clients is identical for everyone on the trigger.
+	// In this case we use the engines broadcast ability.
 	if len(s.hooks.OnReceiveEvents.Handlers) == 0 && !s.cursors.Enabled() {
 		for _, event := range events {
 			if event == nil {
 				continue
 			}
-			s.eventUpdater.Update(event.GetData(), nil)
+			s.eventUpdater.Update(event.GetData(), nil) // broadcast to all
 		}
 		return
 	}
@@ -216,16 +218,13 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 }
 
 // cursorMetadata issues the cursor of an event for a single subscriber.
-// It returns nil metadata if cursors are disabled or the event has no position.
+// It returns nil metadata if cursors are disabled or the event has no position, e.g. events created by hooks;
+// such events are sent without a cursor.
 func (s *subscriptionEventUpdater) cursorMetadata(subscriptionCtx context.Context, subID resolve.SubscriptionIdentifier, event StreamEvent) (*resolve.SubscriptionUpdateMetadata, error) {
 	if !s.cursors.Enabled() {
 		return nil, nil
 	}
-	positioned, ok := event.(PositionedStreamEvent)
-	if !ok {
-		return nil, nil
-	}
-	position := positioned.CursorPosition()
+	position := event.Cursor()
 	if position == nil {
 		return nil, nil
 	}

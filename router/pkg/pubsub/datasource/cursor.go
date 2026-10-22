@@ -129,14 +129,6 @@ func (c Cursors) Enabled() bool {
 	return c.Codec != nil && c.SubscriberBinding != nil
 }
 
-// PositionedStreamEvent is a stream event that knows its position in the broker.
-type PositionedStreamEvent interface {
-	StreamEvent
-	// CursorPosition returns a cursor carrying the provider id and the position of the event,
-	// or nil if the event has no position. IssuedAt and ClientBinding are set when the cursor is issued.
-	CursorPosition() *streamsv1.Cursor
-}
-
 // CursorTopicsProvider is implemented by subscription configurations of providers that support cursors.
 // The topics are part of requestData, so a cursor can't be resumed on different topics.
 type CursorTopicsProvider interface {
