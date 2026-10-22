@@ -12,8 +12,21 @@ export class PillController {
   private writing = false;
   private readonly listeners = new Set<() => void>();
 
+  private readonly onChange = () => this.onEditorChange();
+
   constructor(private readonly editor: QueryEditor) {
-    editor.on('change', () => this.onEditorChange());
+    editor.on('change', this.onChange);
+  }
+
+  // The controller is cached per editor, so whoever owns it must dispose it, or the listener outlives its UI.
+  dispose() {
+    this.editor.off('change', this.onChange);
+    if (this.frame !== undefined) {
+      cancelAnimationFrame(this.frame);
+      this.frame = undefined;
+    }
+    this.clear?.();
+    this.clear = undefined;
   }
 
   writeQuery(text: string) {
