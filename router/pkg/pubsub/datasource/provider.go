@@ -102,7 +102,7 @@ type SubscriptionEventConfiguration interface {
 	ProviderID() string
 	ProviderType() ProviderType
 	RootFieldName() string // the root field name of the subscription in the schema
-	// DeliveryGuaranteeMode is the mode declared in the schema for this subscription field.
+	// DeliveryGuaranteeMode is the message delivery mode declared in the schema for this subscription field.
 	DeliveryGuaranteeMode() DeliveryGuaranteeMode
 }
 
