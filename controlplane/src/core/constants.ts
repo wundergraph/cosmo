@@ -58,3 +58,6 @@ export const organizationSchema = z.object({
 export const defaultRetentionLimitInDays = 7;
 
 export const graphTokenFeatures: FeatureIds[] = ['split-config-loading', 'prompt-to-query'];
+
+// Max number of federated graphs processed concurrently during a schema check (composition, traffic inspection, etc.)
+export const schemaCheckConcurrency = 5;

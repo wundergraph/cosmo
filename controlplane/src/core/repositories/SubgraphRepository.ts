@@ -12,6 +12,7 @@ import { addDays } from 'date-fns';
 import { and, arrayOverlaps, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, SQL } from 'drizzle-orm';
 import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import pLimit from 'p-limit';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
 import { CompositionOptions } from '@wundergraph/composition';
@@ -71,6 +72,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { traced } from '../tracing.js';
+import { schemaCheckConcurrency } from '../constants.js';
 import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import {
@@ -2448,14 +2450,24 @@ export class SubgraphRepository {
 
     // Map federated graph ID to schema check federated graph ID for later use
     const fedGraphIdToCheckFedGraphId = new Map<string, string>();
-    for (const graph of federatedGraphs) {
-      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, graph.id, limit);
-      fedGraphIdToCheckFedGraphId.set(graph.id, checkFederatedGraphId);
-      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
-        schemaCheckFederatedGraphId: checkFederatedGraphId,
-        checkSubgraphIds: [schemaCheckSubgraphId],
-      });
-    }
+    const concurrencyLimit = pLimit(schemaCheckConcurrency);
+    await Promise.all(
+      federatedGraphs.map((graph) =>
+        concurrencyLimit(async () => {
+          const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
+            schemaCheckID,
+            graph.id,
+            limit,
+          );
+
+          fedGraphIdToCheckFedGraphId.set(graph.id, checkFederatedGraphId);
+          await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+            schemaCheckFederatedGraphId: checkFederatedGraphId,
+            checkSubgraphIds: [schemaCheckSubgraphId],
+          });
+        }),
+      ),
+    );
 
     let proposalMatchMessage: string | undefined;
     if (namespace.enableProposals && !isTargetCheck) {
@@ -2606,22 +2618,37 @@ export class SubgraphRepository {
       }>
     >();
 
-    for (const graph of federatedGraphs) {
+    // For a brand-new subgraph, only federated graphs whose label matchers match the new subgraph's labels are composed.
+    // The lookup is identical for every graph, so resolve it once up front.
+    let fedGraphIdsMatchingNewSubgraph: Set<string> | undefined;
+    if (!isFeatureSubgraphCheck && !subgraph && federatedGraphs.length > 0) {
+      const fedGraphsMatching = await fedGraphRepo.bySubgraphLabels({
+        labels: labels || [],
+        namespaceId: namespace.id,
+        excludeContracts: true,
+      });
+
+      fedGraphIdsMatchingNewSubgraph = new Set(fedGraphsMatching.map((fg) => fg.id));
+    }
+
+    const buildCompositionPlan = async (graph: FederatedGraphDTO) => {
       if (graph.contract) {
-        continue;
+        return;
       }
 
       if (isFeatureSubgraphCheck && subgraph) {
         const flagsForGraph = flagsByFedGraphId.get(graph.id) ?? [];
         if (flagsForGraph.length === 0) {
-          continue;
+          return;
         }
+
         const plan = await featureFlagRepo.getSubgraphsToComposeForFeatureSubgraphCheck({
           featureSubgraphId: subgraph.id,
           proposedSchemaSDL: newSchemaSDL,
           flags: flagsForGraph,
           federatedGraphTargetId: graph.targetId,
         });
+
         subgraphsToComposeByFedGraphId.set(
           graph.id,
           plan.map((entry) => ({ ...entry, checkSubgraphIds: [schemaCheckSubgraphId] })),
@@ -2632,6 +2659,10 @@ export class SubgraphRepository {
         // the subgraph being checked, and append a synthetic DTO for a brand-new subgraph that does
         // not exist yet. Any subgraph that still has no schema (unpublished and not the one being
         // checked) is dropped below before composing.
+        if (fedGraphIdsMatchingNewSubgraph && !fedGraphIdsMatchingNewSubgraph.has(graph.id)) {
+          return;
+        }
+
         const baseSubgraphsForGraph = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
         });
@@ -2641,15 +2672,7 @@ export class SubgraphRepository {
           : [...baseSubgraphsForGraph];
 
         if (!subgraph) {
-          // For a brand-new subgraph: check label match, then append a synthetic DTO.
-          const fedGraphsMatching = await fedGraphRepo.bySubgraphLabels({
-            labels: labels || [],
-            namespaceId: graph.namespaceId,
-            excludeContracts: true,
-          });
-          if (!fedGraphsMatching.some((fg) => fg.id === graph.id)) {
-            continue;
-          }
+          // For a brand-new subgraph (label match already verified above): append a synthetic DTO.
           baseSubgraphsWithProposedSDL.push({
             id: '',
             name: subgraphName,
@@ -2692,7 +2715,9 @@ export class SubgraphRepository {
           plan.map((entry) => ({ ...entry, checkSubgraphIds: [schemaCheckSubgraphId] })),
         );
       }
-    }
+    };
+
+    await Promise.all(federatedGraphs.map((graph) => concurrencyLimit(() => buildCompositionPlan(graph))));
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions,
@@ -2743,10 +2768,20 @@ export class SubgraphRepository {
 
     const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string; featureFlag: string }> = [];
 
-    for (const composedGraph of composedGraphs) {
+    // Inspects a single composition (federated graph diff + client traffic). Every composition is independent,
+    // so they run concurrently and the results are merged afterward in the original composition order.
+    const inspectComposedGraph = async (composedGraph: (typeof composedGraphs)[number]) => {
       const featureFlagName = composedGraph.featureFlagName ?? '';
+      const result = {
+        compositionErrors: [] as PlainMessage<CompositionError>[],
+        compositionWarnings: [] as PlainMessage<CompositionWarning>[],
+        composedSchemaBreakingChanges: [] as typeof composedSchemaBreakingChanges,
+        inspectedOperations: [] as InspectorOperationResult[],
+        hasClientTraffic: false,
+      };
+
       for (const error of composedGraph.errors) {
-        compositionErrors.push({
+        result.compositionErrors.push({
           message: error.message,
           federatedGraphName: composedGraph.name,
           namespace: composedGraph.namespace,
@@ -2755,7 +2790,7 @@ export class SubgraphRepository {
       }
 
       for (const warning of composedGraph.warnings) {
-        compositionWarnings.push({
+        result.compositionWarnings.push({
           message: warning.message,
           federatedGraphName: composedGraph.name,
           namespace: composedGraph.namespace,
@@ -2825,7 +2860,7 @@ export class SubgraphRepository {
 
               // Add each breaking change with the federated graph name
               for (const change of uniqueFedGraphBreakingChanges) {
-                composedSchemaBreakingChanges.push({
+                result.composedSchemaBreakingChanges.push({
                   ...change,
                   federatedGraphName: composedGraph.name,
                   featureFlag: featureFlagName,
@@ -2837,14 +2872,14 @@ export class SubgraphRepository {
       }
 
       /*
-          We don't collect operation usage when
-          1. we have composition errors
-          2. when we don't have any inspectable changes.
-          3. When user wants to skip the traffic check altogether
-          That means any breaking change is really breaking
-          */
+        We don't collect operation usage when
+        1. we have composition errors
+        2. when we don't have any inspectable changes.
+        3. When user wants to skip the traffic check altogether
+        That means any breaking change is really breaking
+      */
       if (composedGraph.errors.length > 0 || skipTrafficCheck || !subgraph) {
-        continue;
+        return result;
       }
 
       // Inspect subgraph-level changes with subgraphId filter
@@ -2863,14 +2898,14 @@ export class SubgraphRepository {
             namespaceId: namespace.id,
           });
 
-          hasClientTraffic = hasClientTraffic || subgraphOverrideCheck.hasUnsafeClientTraffic;
+          result.hasClientTraffic = result.hasClientTraffic || subgraphOverrideCheck.hasUnsafeClientTraffic;
 
           // Store operation usage for subgraph changes
           await schemaCheckRepo.createOperationUsage(subgraphOverrideCheck.result, composedGraph.id);
 
           // Collect inspected operations
           for (const resultElement of subgraphOverrideCheck.result.values()) {
-            inspectedOperations.push(...resultElement);
+            result.inspectedOperations.push(...resultElement);
           }
         }
       }
@@ -2891,48 +2926,59 @@ export class SubgraphRepository {
             namespaceId: namespace.id,
           });
 
-          hasClientTraffic = hasClientTraffic || fedGraphOverrideCheck.hasUnsafeClientTraffic;
+          result.hasClientTraffic = result.hasClientTraffic || fedGraphOverrideCheck.hasUnsafeClientTraffic;
 
           // Store operation usage for federated graph changes
           await schemaCheckRepo.createOperationUsage(fedGraphOverrideCheck.result, composedGraph.id);
 
           // Collect inspected operations
           for (const resultElement of fedGraphOverrideCheck.result.values()) {
-            inspectedOperations.push(...resultElement);
+            result.inspectedOperations.push(...resultElement);
           }
         }
       }
-    }
 
-    const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
-      schemaCheckID,
-      newSchemaSDL,
-      namespaceId: namespace.id,
-      isLintingEnabled: namespace.enableLinting,
-      schemaCheckSubgraphId,
-    });
-
-    let graphPruningIssues: SchemaGraphPruningIssues = {
-      warnings: [],
-      errors: [],
+      return result;
     };
 
-    if (subgraph) {
-      graphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
-        newGraphQLSchema,
-        schemaCheckID,
-        subgraph,
-        namespaceID: namespace.id,
-        organizationID: this.organizationId,
-        isGraphPruningEnabled: namespace.enableGraphPruning,
-        schemaChanges,
-        chClient,
-        fedGraphRepo,
-        subgraphRepo,
-        rangeInDays: limit,
-        schemaCheckSubgraphId,
-      });
+    const inspectionResults = await Promise.all(
+      composedGraphs.map((composedGraph) => concurrencyLimit(() => inspectComposedGraph(composedGraph))),
+    );
+
+    for (const result of inspectionResults) {
+      compositionErrors.push(...result.compositionErrors);
+      compositionWarnings.push(...result.compositionWarnings);
+      composedSchemaBreakingChanges.push(...result.composedSchemaBreakingChanges);
+      inspectedOperations.push(...result.inspectedOperations);
+      hasClientTraffic = hasClientTraffic || result.hasClientTraffic;
     }
+
+    // Linting and graph pruning are independent of each other, so run them concurrently
+    const [lintIssues, graphPruningIssues]: [SchemaLintIssues, SchemaGraphPruningIssues] = await Promise.all([
+      schemaLintRepo.performSchemaLintCheck({
+        schemaCheckID,
+        newSchemaSDL,
+        namespaceId: namespace.id,
+        isLintingEnabled: namespace.enableLinting,
+        schemaCheckSubgraphId,
+      }),
+      subgraph
+        ? schemaGraphPruningRepo.performSchemaGraphPruningCheck({
+            newGraphQLSchema,
+            schemaCheckID,
+            subgraph,
+            namespaceID: namespace.id,
+            organizationID: this.organizationId,
+            isGraphPruningEnabled: namespace.enableGraphPruning,
+            schemaChanges,
+            chClient,
+            fedGraphRepo,
+            subgraphRepo,
+            rangeInDays: limit,
+            schemaCheckSubgraphId,
+          })
+        : { warnings: [], errors: [] },
+    ]);
 
     // Execute the subgraph check extension webhook
     const sceResult = await webhookService.sendSubgraphCheckExtension({
