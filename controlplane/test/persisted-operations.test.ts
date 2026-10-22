@@ -302,8 +302,8 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      // 3 keys: routerconfig + operation + manifest
-      expect(storageKeys.length).toBe(3);
+      // 4 keys: routerconfig + routerconfig manifest + operation + operation manifest
+      expect(storageKeys.length).toBe(4);
       const operationKey = storageKeys.find((key) => key.includes(`/${id}.json`));
       expect(operationKey).toBeDefined();
       const keyComponents = operationKey!.split('/');
@@ -342,7 +342,7 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      expect(storageKeys.length).toBe(3);
+      expect(storageKeys.length).toBe(4);
 
       // The client name should be escaped in the storage key
       const operationKey = storageKeys.find((key) => key.includes(`/${id}.json`));
@@ -391,7 +391,7 @@ describe('Persisted operations', (ctx) => {
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
-      expect(blobStorage.keys().length).toBe(3);
+      expect(blobStorage.keys().length).toBe(4);
 
       const deleteFederatedGraphResp = await client.deleteFederatedGraph({
         name: fedGraphName,

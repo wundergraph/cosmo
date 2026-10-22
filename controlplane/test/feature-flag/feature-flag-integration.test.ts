@@ -68,6 +68,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -139,6 +140,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -208,6 +210,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -265,6 +268,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -349,6 +353,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -433,6 +438,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -486,6 +492,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -566,6 +573,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -670,6 +678,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -776,6 +785,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -979,6 +989,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1026,6 +1037,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1103,6 +1115,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1379,6 +1392,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1475,6 +1489,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1548,6 +1563,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1611,6 +1627,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1675,6 +1692,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1736,6 +1754,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
@@ -1796,6 +1815,7 @@ describe('Feature flag integration tests', () => {
         const { client, server, blobStorage } = await SetupTest({
           dbname,
           chClient,
+          enableSplitConfigLoadingByDefault: false,
         });
         testContext.onTestFinished(() => server.close());
 
