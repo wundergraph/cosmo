@@ -142,6 +142,8 @@ export interface FederatedGraphChangelogDTO {
     createdAt: string;
   }[];
   compositionId: string;
+  featureFlagId: string;
+  featureFlagName: string;
 }
 
 export interface ProtoSubgraph {
@@ -669,6 +671,7 @@ export interface GraphCompositionDTO {
   deploymentError?: string;
   routerCompatibilityVersion: string;
   isFeatureFlagComposition: boolean;
+  featureFlagId?: string;
   featureFlagName?: string;
 }
 

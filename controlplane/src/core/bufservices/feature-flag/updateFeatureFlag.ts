@@ -12,6 +12,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidLabels, normalizeLabels } from '../../util.js';
 
 export function updateFeatureFlag(
@@ -153,6 +154,14 @@ export function updateFeatureFlag(
       excludeDisabled: true,
     });
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings, notFoundError } = await opts.db.transaction(
       async (tx) => {
         const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
@@ -205,6 +214,7 @@ export function updateFeatureFlag(
           req.disableResolvabilityValidation,
           opts.promptToQueryClient,
           opts.billingDefaultPlanId,
+          mapperUpdater,
         );
 
         const compositionResult = await compositionService.composeAndDeployFeatureFlag({
@@ -233,7 +243,7 @@ export function updateFeatureFlag(
       };
     }
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -246,6 +256,6 @@ export function updateFeatureFlag(
       deploymentErrors,
       compositionWarnings,
       hasChanged: true,
-    };
+    });
   });
 }

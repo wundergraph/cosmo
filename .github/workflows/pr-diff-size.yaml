@@ -1,0 +1,43 @@
+name: Check PR diff size
+
+# Use pull_request_target to run the base repository workflow and script, never PR code.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-diff-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-diff-size-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check non-generated lines
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MAX_CHANGED_LINES: 1000
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr-diff-size-head"
+          if [ "$(git rev-parse refs/remotes/origin/pr-diff-size-head)" != "$HEAD_SHA" ]; then
+            echo "::error::The PR head changed. Rerun this check on the latest commit."
+            exit 1
+          fi
+          bash .github/scripts/check-pr-diff-size.sh "$BASE_SHA" "$HEAD_SHA" "$MAX_CHANGED_LINES"

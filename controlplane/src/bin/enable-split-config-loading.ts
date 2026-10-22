@@ -6,14 +6,17 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { S3Client } from '@aws-sdk/client-s3';
 import { and, eq } from 'drizzle-orm';
 import { validate } from 'uuid';
+import Redlock from 'redlock';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import * as schema from '../db/schema.js';
 import { FederatedGraphRepository } from '../core/repositories/FederatedGraphRepository.js';
 import { FeatureFlagRepository } from '../core/repositories/FeatureFlagRepository.js';
 import { CompositionService } from '../core/services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../core/services/RouterConfigMapperUpdater.js';
 import { createS3ClientConfig, extractS3BucketName } from '../core/util.js';
 import { DualBlobStorage, S3BlobStorage } from '../core/blobstorage/index.js';
+import { createRedisConnections } from '../core/plugins/redis.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -27,6 +30,7 @@ const {
   cdnBaseUrl,
   admissionJwtSecret,
   defaultPlan,
+  redis,
 } = getConfig();
 
 const organizationId = process.env.ORGANIZATION_ID || '';
@@ -51,6 +55,15 @@ try {
   queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
+  const { redisLock, lockAdapter } = await createRedisConnections({
+    host: redis.host!,
+    port: Number(redis.port),
+    password: redis.password,
+    tls: redis.tls,
+  });
+
+  await redisLock.connect();
+
   // Assume the given organization id is a comma-separated list of uuids and process each valid id one at a time
   for (const orgId of organizationId.split(',')) {
     if (orgId.length === 0 || !validate(orgId)) {
@@ -58,8 +71,10 @@ try {
       continue;
     }
 
-    await enableFeatureForOrganization(db, orgId);
+    await enableFeatureForOrganization(db, lockAdapter, orgId);
   }
+
+  await redisLock.quit();
 } catch (e) {
   console.error(e);
   // eslint-disable-next-line unicorn/no-process-exit
@@ -93,7 +108,11 @@ function getS3Storage() {
   return new DualBlobStorage(primaryBlobStorage, failoverBlobStorage);
 }
 
-async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema>, organizationId: string) {
+async function enableFeatureForOrganization(
+  db: PostgresJsDatabase<typeof schema>,
+  lockAdapter: Redlock,
+  organizationId: string,
+) {
   const orgRepo = new OrganizationRepository(logger, db);
 
   const org = await orgRepo.byId(organizationId);
@@ -115,6 +134,8 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
 
   console.log(`Recomposing federated graphs using 'split-config-loading' for organization "${org.name}"`);
 
+  const blobStorage = getS3Storage();
+  const mapperUpdater = new RouterConfigMapperUpdater(db, lockAdapter, org.id, logger, blobStorage);
   await db.transaction(async (tx) => {
     // Initialize the composition service
     const compositionService = new CompositionService(
@@ -125,12 +146,13 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
         cdnBaseUrl: cdnBaseUrl ?? '',
         webhookJWTSecret: admissionJwtSecret ?? '',
       },
-      getS3Storage(),
+      blobStorage,
       undefined,
       webhookProxyUrl,
       true,
       undefined,
       defaultPlan,
+      mapperUpdater,
     );
 
     // Recompose all federated graphs
@@ -188,6 +210,13 @@ async function enableFeatureForOrganization(db: PostgresJsDatabase<typeof schema
       }
     }
   });
+
+  const mapperErrors = await mapperUpdater.flush();
+  for (const { federatedGraphName, namespace, message } of mapperErrors) {
+    console.error(
+      `Failed to update the mapper of federated graph ${federatedGraphName} in namespace ${namespace}: ${message}`,
+    );
+  }
 
   console.log(
     `All federated graphs and feature flags recomposed using 'split-config-loading' for organization "${org.name}"`,
