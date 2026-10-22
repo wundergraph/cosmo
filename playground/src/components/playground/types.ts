@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { DeferTimeline } from '@/lib/defer-stream';
+import { ResponseCacheTrace } from './response-cache-trace';
 
 type TabState = {
   id: string;
@@ -84,6 +85,7 @@ export type ARTFetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+  responseCache?: ResponseCacheTrace;
 };
 
 export type Representation = {
