@@ -141,4 +141,13 @@ describe('probe HTTP status', () => {
     const results = await probeRootFields('http://router', 'query { a }');
     expect(results.a).toEqual({ ok: false, reason: 'HTTP 401 Unauthorized' });
   });
+
+  test('a 2xx body that is not a GraphQL response fails the field', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: async () => 'not graphql' })),
+    );
+    const results = await probeRootFields('http://router', 'query { a }');
+    expect(results.a.ok).toBe(false);
+  });
 });

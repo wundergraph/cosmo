@@ -19,6 +19,9 @@ export type ProbeRequest = {
 
 const variablesSchema = z.record(z.string(), z.unknown());
 
+// Only the errors matter here. A 2xx body that is not a GraphQL object is a failure, not a measurement.
+const responseSchema = z.object({ errors: z.array(z.object({ message: z.string() })).optional() });
+
 // The variables pane is free text while typing. A broken pane probes without values,
 // and the router then reports the missing variables for each field.
 export const parseVariables = (text: string): Pick<ProbeRequest, 'variables' | 'variablesError'> => {
@@ -52,11 +55,14 @@ const timeOnce = async (
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
-  const body = await response.json();
+  const body = responseSchema.safeParse(await response.json());
   const elapsed = performance.now() - started;
 
-  if (body?.errors?.length) {
-    throw new Error(String(body.errors[0].message));
+  if (!body.success) {
+    throw new Error('Response is not a GraphQL response');
+  }
+  if (body.data.errors?.length) {
+    throw new Error(body.data.errors[0].message);
   }
   return elapsed;
 };
