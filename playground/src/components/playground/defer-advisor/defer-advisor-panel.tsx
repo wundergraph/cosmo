@@ -29,9 +29,14 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
 
+  // The cleanup also runs on unmount. The controller outlives the panel, so a probe
+  // still in flight would otherwise write its numbers after the panel is gone.
   useEffect(() => {
     runId.current += 1;
     setRunning(false);
+    return () => {
+      runId.current += 1;
+    };
   }, [query, routingUrl]);
 
   const parsed = useMemo(() => parseQuery(query), [query]);
@@ -190,7 +195,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
             </div>
           )}
 
-          {latencies && rows.length > 0 && slowNames.size === 0 && (
+          {latencies && Object.keys(latencies).length > 0 && rows.length > 0 && slowNames.size === 0 && (
             <p className="text-muted-foreground text-sm">No slow fields found. Nothing to defer.</p>
           )}
         </>

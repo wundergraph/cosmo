@@ -3,6 +3,9 @@ import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery 
 
 export const PROBE_RUNS = 3;
 
+// A router that accepts the connection and never answers would otherwise leave Analyse stuck.
+const PROBE_TIMEOUT_MS = 10_000;
+
 type ProbeResult = { ok: true; latencyMs: number } | { ok: false; reason: string };
 
 // What a normal run sends with: the editor headers (already transformed) and variables.
@@ -30,6 +33,7 @@ const timeOnce = async (
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
   });
   // A 401 or 429 can carry a JSON body with no errors array, which would otherwise count as a measurement.
   if (!response.ok) {
