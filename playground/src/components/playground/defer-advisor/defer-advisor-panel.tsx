@@ -4,6 +4,7 @@ import { Button } from '../../ui/button';
 import { slowFieldNames } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
 import { getOperation, parseQuery } from './operation';
+import { DeferAdvisorFailures } from './defer-advisor-failures';
 import type { ProbeRequest } from './probe';
 import type { PillController } from './pills-controller';
 import { summarizeRootFields } from './root-field-summary';
@@ -92,16 +93,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
           {variablesError && <p className="text-destructive text-sm">{variablesError}</p>}
 
-          {latencies && Object.keys(probeFailures).length > 0 && (
-            <div className="rounded border border-destructive/40 p-3 text-sm">
-              <div className="font-medium">Some fields could not be probed</div>
-              {Object.entries(probeFailures).map(([name, reason]) => (
-                <div key={name} className="text-muted-foreground font-mono text-xs">
-                  {name}: {reason}
-                </div>
-              ))}
-            </div>
-          )}
+          {latencies && <DeferAdvisorFailures failures={probeFailures} />}
 
           {rows.length === 0 ? (
             <p className="text-muted-foreground text-sm">{emptyNotice}</p>
