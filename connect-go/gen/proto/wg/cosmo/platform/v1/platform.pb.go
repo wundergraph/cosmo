@@ -6927,13 +6927,14 @@ func (x *GetOperationContentResponse) GetOperationContent() string {
 }
 
 type GetFederatedGraphChangelogRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Pagination    *Pagination            `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	DateRange     *DateRange             `protobuf:"bytes,3,opt,name=dateRange,proto3" json:"dateRange,omitempty"`
-	Namespace     string                 `protobuf:"bytes,4,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Pagination      *Pagination            `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	DateRange       *DateRange             `protobuf:"bytes,3,opt,name=dateRange,proto3" json:"dateRange,omitempty"`
+	Namespace       string                 `protobuf:"bytes,4,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	FeatureFlagName *string                `protobuf:"bytes,5,opt,name=featureFlagName,proto3,oneof" json:"featureFlagName,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetFederatedGraphChangelogRequest) Reset() {
@@ -6990,6 +6991,13 @@ func (x *GetFederatedGraphChangelogRequest) GetDateRange() *DateRange {
 func (x *GetFederatedGraphChangelogRequest) GetNamespace() string {
 	if x != nil {
 		return x.Namespace
+	}
+	return ""
+}
+
+func (x *GetFederatedGraphChangelogRequest) GetFeatureFlagName() string {
+	if x != nil && x.FeatureFlagName != nil {
+		return *x.FeatureFlagName
 	}
 	return ""
 }
@@ -7076,6 +7084,9 @@ type FederatedGraphChangelogOutput struct {
 	SchemaVersionId string                     `protobuf:"bytes,2,opt,name=schemaVersionId,proto3" json:"schemaVersionId,omitempty"`
 	Changelogs      []*FederatedGraphChangelog `protobuf:"bytes,3,rep,name=changelogs,proto3" json:"changelogs,omitempty"`
 	CompositionId   string                     `protobuf:"bytes,4,opt,name=compositionId,proto3" json:"compositionId,omitempty"`
+	// Empty for changelogs of the base graph composition
+	FeatureFlagId   string `protobuf:"bytes,5,opt,name=featureFlagId,proto3" json:"featureFlagId,omitempty"`
+	FeatureFlagName string `protobuf:"bytes,6,opt,name=featureFlagName,proto3" json:"featureFlagName,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -7134,6 +7145,20 @@ func (x *FederatedGraphChangelogOutput) GetChangelogs() []*FederatedGraphChangel
 func (x *FederatedGraphChangelogOutput) GetCompositionId() string {
 	if x != nil {
 		return x.CompositionId
+	}
+	return ""
+}
+
+func (x *FederatedGraphChangelogOutput) GetFeatureFlagId() string {
+	if x != nil {
+		return x.FeatureFlagId
+	}
+	return ""
+}
+
+func (x *FederatedGraphChangelogOutput) GetFeatureFlagName() string {
+	if x != nil {
+		return x.FeatureFlagName
 	}
 	return ""
 }
@@ -35059,14 +35084,16 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x05_name\"\x86\x01\n" +
 	"\x1bGetOperationContentResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12+\n" +
-	"\x11operation_content\x18\x02 \x01(\tR\x10operationContent\"\xd6\x01\n" +
+	"\x11operation_content\x18\x02 \x01(\tR\x10operationContent\"\x99\x02\n" +
 	"!GetFederatedGraphChangelogRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .wg.cosmo.platform.v1.PaginationR\n" +
 	"pagination\x12=\n" +
 	"\tdateRange\x18\x03 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeR\tdateRange\x12\x1c\n" +
-	"\tnamespace\x18\x04 \x01(\tR\tnamespace\"\xa1\x01\n" +
+	"\tnamespace\x18\x04 \x01(\tR\tnamespace\x12-\n" +
+	"\x0ffeatureFlagName\x18\x05 \x01(\tH\x00R\x0ffeatureFlagName\x88\x01\x01B\x12\n" +
+	"\x10_featureFlagName\"\xa1\x01\n" +
 	"\x17FederatedGraphChangelog\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x1e\n" +
@@ -35074,14 +35101,16 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"changeType\x18\x03 \x01(\tR\n" +
 	"changeType\x12$\n" +
 	"\rchangeMessage\x18\x04 \x01(\tR\rchangeMessage\x12\x1c\n" +
-	"\tcreatedAt\x18\x05 \x01(\tR\tcreatedAt\"\xdc\x01\n" +
+	"\tcreatedAt\x18\x05 \x01(\tR\tcreatedAt\"\xac\x02\n" +
 	"\x1dFederatedGraphChangelogOutput\x12\x1c\n" +
 	"\tcreatedAt\x18\x01 \x01(\tR\tcreatedAt\x12(\n" +
 	"\x0fschemaVersionId\x18\x02 \x01(\tR\x0fschemaVersionId\x12M\n" +
 	"\n" +
 	"changelogs\x18\x03 \x03(\v2-.wg.cosmo.platform.v1.FederatedGraphChangelogR\n" +
 	"changelogs\x12$\n" +
-	"\rcompositionId\x18\x04 \x01(\tR\rcompositionId\"\xfd\x01\n" +
+	"\rcompositionId\x18\x04 \x01(\tR\rcompositionId\x12$\n" +
+	"\rfeatureFlagId\x18\x05 \x01(\tR\rfeatureFlagId\x12(\n" +
+	"\x0ffeatureFlagName\x18\x06 \x01(\tR\x0ffeatureFlagName\"\xfd\x01\n" +
 	"\"GetFederatedGraphChangelogResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12y\n" +
 	"\x1dfederatedGraphChangelogOutput\x18\x02 \x03(\v23.wg.cosmo.platform.v1.FederatedGraphChangelogOutputR\x1dfederatedGraphChangelogOutput\x12 \n" +
@@ -39077,6 +39106,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[71].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[72].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[74].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[76].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[81].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[83].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[85].OneofWrappers = []any{}

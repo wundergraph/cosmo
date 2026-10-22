@@ -360,6 +360,7 @@ export class GraphCompositionRepository {
       deploymentError: composition.deploymentError || undefined,
       routerCompatibilityVersion: composition.routerCompatibilityVersion,
       isFeatureFlagComposition: composition.isFeatureFlagComposition,
+      featureFlagId: featureFlagInfo?.id,
       featureFlagName: featureFlagInfo?.name,
     };
   }
