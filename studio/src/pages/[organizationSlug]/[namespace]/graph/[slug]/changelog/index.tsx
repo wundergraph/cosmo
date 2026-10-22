@@ -83,42 +83,40 @@ const ChangelogToolbar = () => {
         align="start"
         calendarDaysLimit={changelogRetention}
       />
-      {featureFlags.length > 0 && (
-        <Select
-          value={featureFlagName ?? BASE_GRAPH_VALUE}
-          onValueChange={(val) => setFeatureFlagName(val === BASE_GRAPH_VALUE ? null : val)}
-        >
-          {/* A fixed width, so the toolbar doesn't shift with the length of the selected name; long names are truncated */}
-          <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:flex [&_p]:items-center">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
+      <Select
+        value={featureFlagName ?? BASE_GRAPH_VALUE}
+        onValueChange={(val) => setFeatureFlagName(val === BASE_GRAPH_VALUE ? null : val)}
+      >
+        {/* A fixed width, so the toolbar doesn't shift with the length of the selected name; long names are truncated */}
+        <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:flex [&_p]:items-center">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={BASE_GRAPH_VALUE}
+            title={graphData?.graph?.name}
+            className="[&_p]:max-w-[264px] [&_p]:truncate"
+          >
+            {graphData?.graph?.name}
+          </SelectItem>
+          {featureFlags.map(({ id, name, isEnabled }) => (
             <SelectItem
-              value={BASE_GRAPH_VALUE}
-              title={graphData?.graph?.name}
-              className="[&_p]:max-w-[264px] [&_p]:truncate"
+              key={id}
+              value={name}
+              title={isEnabled ? name : `${name} (disabled)`}
+              className="[&_p]:flex [&_p]:max-w-[264px] [&_p]:items-center"
             >
-              {graphData?.graph?.name}
+              {/* Only the name is truncated, so the disabled badge stays visible for long names */}
+              <span className="min-w-0 truncate">{name}</span>
+              {!isEnabled && (
+                <Badge variant="destructive" className="ml-2 shrink-0 px-1.5 py-0 text-[10px]">
+                  Disabled
+                </Badge>
+              )}
             </SelectItem>
-            {featureFlags.map(({ id, name, isEnabled }) => (
-              <SelectItem
-                key={id}
-                value={name}
-                title={isEnabled ? name : `${name} (disabled)`}
-                className="[&_p]:flex [&_p]:max-w-[264px] [&_p]:items-center"
-              >
-                {/* Only the name is truncated, so the disabled badge stays visible for long names */}
-                <span className="min-w-0 truncate">{name}</span>
-                {!isEnabled && (
-                  <Badge variant="destructive" className="ml-2 shrink-0 px-1.5 py-0 text-[10px]">
-                    Disabled
-                  </Badge>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+          ))}
+        </SelectContent>
+      </Select>
     </Toolbar>
   );
 };
