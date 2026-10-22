@@ -141,13 +141,8 @@ func (c *RedisCache) Close() error {
 	return c.closeErr
 }
 
-// Ping reaches redis.
-func (c *RedisCache) Ping(ctx context.Context) error {
-	return c.client.Ping(ctx).Err()
-}
-
 // unavailablePrefixes are replies from a redis that is up but cannot serve.
-var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "TRYAGAIN", "MASTERDOWN"}
+var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "MASTERDOWN"}
 
 // IsUnavailable reports whether err means redis cannot be reached or cannot
 // serve, rather than that one command failed.

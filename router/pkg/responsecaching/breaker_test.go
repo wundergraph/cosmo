@@ -42,32 +42,20 @@ func (s *countingStore) Close() error {
 	return nil
 }
 
-// pinger answers pings with up.
-type pinger struct {
-	up    atomic.Bool
-	pings atomic.Int64
-}
-
-func (p *pinger) ping(context.Context) error {
-	p.pings.Add(1)
-	if p.up.Load() {
-		return nil
-	}
-	return errDown
-}
-
-func newTestBreaker(t *testing.T, inner Store, p *pinger, startDown bool) Store {
+func newTestBreaker(t *testing.T, inner Store, probeInterval time.Duration, startDown bool) *breakerStore {
 	t.Helper()
 	s := NewBreakerStore(inner, BreakerOptions{
 		FailureThreshold: 3,
-		ProbeInterval:    5 * time.Millisecond,
-		Ping:             p.ping,
+		ProbeInterval:    probeInterval,
 		IsFailure:        func(err error) bool { return errors.Is(err, errDown) },
 		StartDown:        startDown,
-	})
+	}).(*breakerStore)
 	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
+
+// noProbe keeps the probe from reaching the store during a test.
+const noProbe = time.Hour
 
 func TestBreakerStore(t *testing.T) {
 	t.Parallel()
@@ -79,7 +67,7 @@ func TestBreakerStore(t *testing.T) {
 
 		inner := &countingStore{}
 		inner.fail(errDown)
-		s := newTestBreaker(t, inner, &pinger{}, false)
+		s := newTestBreaker(t, inner, noProbe, false)
 
 		for range 3 {
 			_, err := s.GetMany(ctx, []string{"a"})
@@ -98,7 +86,7 @@ func TestBreakerStore(t *testing.T) {
 		t.Parallel()
 
 		inner := &countingStore{}
-		s := newTestBreaker(t, inner, &pinger{}, false)
+		s := newTestBreaker(t, inner, noProbe, false)
 
 		for range 5 {
 			inner.fail(errDown)
@@ -115,7 +103,7 @@ func TestBreakerStore(t *testing.T) {
 
 		inner := &countingStore{}
 		inner.fail(caching.ErrMissingTTL)
-		s := newTestBreaker(t, inner, &pinger{}, false)
+		s := newTestBreaker(t, inner, noProbe, false)
 
 		for range 5 {
 			require.ErrorIs(t, s.SetMany(ctx, nil), caching.ErrMissingTTL)
@@ -128,7 +116,7 @@ func TestBreakerStore(t *testing.T) {
 
 		inner := &countingStore{}
 		inner.fail(errDown)
-		s := newTestBreaker(t, inner, &pinger{}, false)
+		s := newTestBreaker(t, inner, noProbe, false)
 
 		cancelled, cancel := context.WithCancel(ctx)
 		cancel()
@@ -139,18 +127,27 @@ func TestBreakerStore(t *testing.T) {
 		require.EqualValues(t, 5, inner.calls.Load())
 	})
 
-	t.Run("comes back once a ping succeeds", func(t *testing.T) {
+	t.Run("failed probes mark the store down without any request", func(t *testing.T) {
 		t.Parallel()
 
 		inner := &countingStore{}
-		p := &pinger{}
-		s := newTestBreaker(t, inner, p, true)
+		inner.fail(errDown)
+		s := newTestBreaker(t, inner, time.Millisecond, false)
 
-		_, err := s.GetMany(ctx, nil)
-		require.ErrorIs(t, err, ErrUnavailable)
-		require.Eventually(t, func() bool { return p.pings.Load() >= 2 }, time.Second, time.Millisecond)
+		require.Eventually(t, s.down.Load, time.Second, time.Millisecond)
+	})
 
-		p.up.Store(true)
+	t.Run("comes back once a probe succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		inner := &countingStore{}
+		inner.fail(errDown)
+		s := newTestBreaker(t, inner, time.Millisecond, true)
+
+		require.Eventually(t, func() bool { return inner.calls.Load() >= 2 }, time.Second, time.Millisecond)
+		require.True(t, s.down.Load())
+
+		inner.fail(nil)
 		require.Eventually(t, func() bool {
 			_, err := s.GetMany(ctx, nil)
 			return err == nil
@@ -161,31 +158,34 @@ func TestBreakerStore(t *testing.T) {
 		t.Parallel()
 
 		inner := &countingStore{}
-		s := newTestBreaker(t, inner, &pinger{}, true)
+		s := newTestBreaker(t, inner, noProbe, true)
 
 		_, err := s.GetMany(ctx, nil)
 		require.ErrorIs(t, err, ErrUnavailable)
 		require.Zero(t, inner.calls.Load())
 	})
 
+	t.Run("a non-positive probe interval falls back to the default", func(t *testing.T) {
+		t.Parallel()
+
+		s := newTestBreaker(t, &countingStore{}, 0, false)
+		require.Equal(t, defaultProbeInterval, s.opts.ProbeInterval)
+	})
+
 	t.Run("close stops probing and closes the store", func(t *testing.T) {
 		t.Parallel()
 
 		inner := &countingStore{}
-		p := &pinger{}
 		s := NewBreakerStore(inner, BreakerOptions{
-			FailureThreshold: 1,
-			ProbeInterval:    time.Millisecond,
-			Ping:             p.ping,
-			IsFailure:        func(error) bool { return true },
-			StartDown:        true,
+			ProbeInterval: time.Millisecond,
+			IsFailure:     func(error) bool { return true },
 		})
-		require.Eventually(t, func() bool { return p.pings.Load() > 0 }, time.Second, time.Millisecond)
+		require.Eventually(t, func() bool { return inner.calls.Load() > 0 }, time.Second, time.Millisecond)
 
 		require.NoError(t, s.Close())
 		require.True(t, inner.closed.Load())
-		pings := p.pings.Load()
+		calls := inner.calls.Load()
 		time.Sleep(20 * time.Millisecond)
-		require.Equal(t, pings, p.pings.Load())
+		require.Equal(t, calls, inner.calls.Load())
 	})
 }

@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -17,20 +16,22 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// stallProxy forwards to the test redis until stall, then holds every byte,
-// like a paused or black-holed redis: connections stay open, nothing answers.
-type stallProxy struct {
+// redisProxy forwards to the test redis. Stalled, it holds every byte like a
+// paused or black-holed redis; shut, it drops new connections like a redis
+// that is not up yet.
+type redisProxy struct {
 	ln      net.Listener
+	shut    atomic.Bool
 	stalled chan struct{}
 	once    sync.Once
 	done    chan struct{}
 }
 
-func newStallProxy(t *testing.T) *stallProxy {
+func newRedisProxy(t *testing.T) *redisProxy {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	p := &stallProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
+	p := &redisProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
 	t.Cleanup(func() {
 		close(p.done)
 		_ = ln.Close()
@@ -40,6 +41,10 @@ func newStallProxy(t *testing.T) *stallProxy {
 			client, err := ln.Accept()
 			if err != nil {
 				return
+			}
+			if p.shut.Load() {
+				_ = client.Close()
+				continue
 			}
 			server, err := net.Dial("tcp", responseCacheRedisAddr)
 			if err != nil {
@@ -53,11 +58,11 @@ func newStallProxy(t *testing.T) *stallProxy {
 	return p
 }
 
-func (p *stallProxy) url() string { return "redis://" + p.ln.Addr().String() }
+func (p *redisProxy) url() string { return "redis://" + p.ln.Addr().String() }
 
-func (p *stallProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
+func (p *redisProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
 
-func (p *stallProxy) pipe(dst, src net.Conn) {
+func (p *redisProxy) pipe(dst, src net.Conn) {
 	defer func() { _ = dst.Close() }()
 	buf := make([]byte, 32*1024)
 	for {
@@ -79,55 +84,13 @@ func (p *stallProxy) pipe(dst, src net.Conn) {
 	}
 }
 
-// gateProxy forwards to the test redis while open and drops new connections
-// while shut, like a redis that is not up yet.
-type gateProxy struct {
-	ln   net.Listener
-	open atomic.Bool
-}
-
-func newGateProxy(t *testing.T) *gateProxy {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	p := &gateProxy{ln: ln}
-	t.Cleanup(func() { _ = ln.Close() })
-	go func() {
-		for {
-			client, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			if !p.open.Load() {
-				_ = client.Close()
-				continue
-			}
-			server, err := net.Dial("tcp", responseCacheRedisAddr)
-			if err != nil {
-				_ = client.Close()
-				continue
-			}
-			go pipe(client, server)
-			go pipe(server, client)
-		}
-	}()
-	return p
-}
-
-func (p *gateProxy) url() string { return "redis://" + p.ln.Addr().String() }
-
-func pipe(dst, src net.Conn) {
-	defer func() { _ = dst.Close() }()
-	_, _ = io.Copy(dst, src)
-}
-
 func TestResponseCacheRedisTimeouts(t *testing.T) {
 	t.Parallel()
 
 	t.Run("a stalled redis degrades to the subgraph within the storage timeouts", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newStallProxy(t)
+		proxy := newRedisProxy(t)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.LookupTimeout = 100 * time.Millisecond
 		cfg.Storage.WriteTimeout = 100 * time.Millisecond
@@ -195,7 +158,7 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 	t.Run("a redis that never answers does not hold startup", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newStallProxy(t)
+		proxy := newRedisProxy(t)
 		proxy.stall()
 
 		start := time.Now()
@@ -220,7 +183,7 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 	t.Run("a stalled redis is bypassed once the breaker trips", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newStallProxy(t)
+		proxy := newRedisProxy(t)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.LookupTimeout = 300 * time.Millisecond
 		cfg.Storage.WriteTimeout = 300 * time.Millisecond
@@ -265,7 +228,8 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 	t.Run("a redis down at startup is used once it answers", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newGateProxy(t)
+		proxy := newRedisProxy(t)
+		proxy.shut.Store(true)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
 			Enabled:          true,
@@ -289,7 +253,7 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(query)
 			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "no cache while down")
 
-			proxy.open.Store(true)
+			proxy.shut.Store(false)
 
 			// Back once a request after a write is answered from the cache.
 			require.Eventually(t, func() bool {

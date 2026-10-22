@@ -961,10 +961,11 @@ func TestIsUnavailable(t *testing.T) {
 		client := redis.NewClient(&redis.Options{Addr: mr.Addr(), MaxRetries: -1})
 		cache := NewRedisCache(client, testPrefix)
 		t.Cleanup(func() { _ = cache.Close() })
-		require.NoError(t, cache.Ping(ctx))
+		_, err := cache.GetMany(ctx, []string{"a"})
+		require.NoError(t, err)
 
 		mr.Close()
-		err := cache.Ping(ctx)
+		_, err = cache.GetMany(ctx, []string{"a"})
 		require.Error(t, err)
 		require.True(t, IsUnavailable(err))
 	})
