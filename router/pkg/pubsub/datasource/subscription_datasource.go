@@ -100,24 +100,29 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		return errors.New("invalid subscription configuration")
 	}
 
-	guarantee, err := NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
-	if err != nil {
-		return err
+	negotiatedGuarantee := DeliveryGuarantee(ctx.DeliveryGuarantee())
+	if negotiatedGuarantee == "" {
+		// Hypothetical fallback. In practice the guarantee should already be set by the engine.
+		negotiatedGuarantee, err = NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
+		if err != nil {
+			return err
+		}
 	}
 
 	logger := s.logger.With(
 		zap.String("component", "subscription_event_updater"),
 		zap.String("provider_id", conf.ProviderID()),
 		zap.String("provider_type", string(conf.ProviderType())),
+		zap.String("delivery_guarantee", string(negotiatedGuarantee)),
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
 	eventUpdater := newSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
-	if guarantee == DeliveryGuaranteeCursor {
+	if negotiatedGuarantee == DeliveryGuaranteeCursor {
 		eventUpdater.enableCursors(s.cursors)
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, guarantee, eventUpdater)
+	return s.pubSub.Subscribe(ctx.Context(), conf, negotiatedGuarantee, eventUpdater)
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
