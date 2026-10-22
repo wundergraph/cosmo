@@ -12,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -636,21 +636,21 @@ export const Playground = (input: {
 
   const [result, setResult] = useState<OperationResult>(initialResult);
 
-  // Memoised: GraphiQL needs stable plugin objects.
-  // Read when Analyse is clicked, so the plugin stays stable while the headers and scripts change.
-  const latestRequest = useRef({ headers, scripts: input.scripts });
-  useEffect(() => {
-    latestRequest.current = { headers, scripts: input.scripts };
-  }, [headers, input.scripts]);
+  // Memoised: GraphiQL needs stable plugin objects, so headers live in a ref rather than in the
+  // plugin's dependencies. The ref is written where the headers are edited, not in an effect.
+  const latestHeaders = useRef(headers);
+  const onEditHeaders = useCallback((value: string) => {
+    latestHeaders.current = value;
+    setHeaders(value);
+  }, []);
 
+  // Scripts only change through the prop, so they can be a dependency of the plugin.
   const plugins = useMemo(
     () => [
       explorerPlugin({ showAttribution: false }),
-      createDeferAdvisorPlugin(url, () =>
-        prepareHeaders(JSON.parse(latestRequest.current.headers), latestRequest.current.scripts),
-      ),
+      createDeferAdvisorPlugin(url, () => prepareHeaders(JSON.parse(latestHeaders.current), input.scripts)),
     ],
-    [url],
+    [url, input.scripts],
   );
 
   const fetcher = useMemo(() => {
@@ -797,7 +797,7 @@ export const Playground = (input: {
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-            onEditHeaders={setHeaders}
+            onEditHeaders={onEditHeaders}
             onTabChange={setTabsState}
             plugins={plugins}
             forcedTheme={input.theme}
