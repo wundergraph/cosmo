@@ -15,13 +15,21 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
+	"github.com/cloudflare/backoff"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultFetchRetryMaxAttempts = 3
+	defaultFetchRetryInterval    = 100 * time.Millisecond
+	defaultFetchRetryMaxDuration = 2 * time.Second
 )
 
 // SplitFetcher fetches mapper and individual router configs from the CDN
@@ -34,6 +42,13 @@ type SplitFetcher struct {
 	httpClient          *http.Client
 	logger              *zap.Logger
 	hash                hash.Hash // HMAC-SHA256 for signature validation; nil if no key configured
+
+	// fetchRetryMaxAttempts is how many times a file is fetched before giving up when its
+	// response body is truncated. fetchRetryInterval and fetchRetryMaxDuration configure the
+	// exponential backoff with jitter between attempts.
+	fetchRetryMaxAttempts int
+	fetchRetryInterval    time.Duration
+	fetchRetryMaxDuration time.Duration
 }
 
 // NewSplitFetcher creates a SplitFetcher for the given CDN endpoint and router token.
@@ -64,12 +79,25 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	logger := opts.Logger.With(zap.String("component", "split_config_fetcher"))
 
 	f := &SplitFetcher{
-		cdnURL:              u,
-		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              logger,
+		cdnURL:                u,
+		authenticationToken:   token,
+		federatedGraphID:      url.PathEscape(claims.FederatedGraphID),
+		organizationID:        url.PathEscape(claims.OrganizationID),
+		httpClient:            httpclient.NewRetryableHTTPClient(logger),
+		logger:                logger,
+		fetchRetryMaxAttempts: defaultFetchRetryMaxAttempts,
+		fetchRetryInterval:    defaultFetchRetryInterval,
+		fetchRetryMaxDuration: defaultFetchRetryMaxDuration,
+	}
+
+	if opts.FetchRetryMaxAttempts > 0 {
+		f.fetchRetryMaxAttempts = opts.FetchRetryMaxAttempts
+	}
+	if opts.FetchRetryInterval > 0 {
+		f.fetchRetryInterval = opts.FetchRetryInterval
+	}
+	if opts.FetchRetryMaxDuration > 0 {
+		f.fetchRetryMaxDuration = opts.FetchRetryMaxDuration
 	}
 
 	if opts.SignatureKey != "" {
@@ -77,6 +105,50 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	}
 
 	return f, nil
+}
+
+// fetch calls post and fetches the file again when its response body ends before the
+// length announced by the CDN (io.ErrUnexpectedEOF). The CDN occasionally answers with a 200
+// and a truncated body, which the retryable HTTP client does not retry since the status is fine.
+func (f *SplitFetcher) fetch(ctx context.Context, path string) ([]byte, error) {
+	var lastErr error
+
+	b := backoff.New(f.fetchRetryMaxDuration, f.fetchRetryInterval)
+
+	for attempt := range f.fetchRetryMaxAttempts {
+		if attempt > 0 {
+			// Checked up front so a cancelled context wins even when the jittered wait is ~0.
+			if err := ctx.Err(); err != nil {
+				return nil, errors.Join(lastErr, err)
+			}
+
+			timer := time.NewTimer(b.Duration())
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, errors.Join(lastErr, ctx.Err())
+			case <-timer.C:
+			}
+		}
+
+		body, err := f.post(ctx, path)
+		if err == nil {
+			return body, nil
+		}
+		if !errors.Is(err, io.ErrUnexpectedEOF) {
+			return nil, err
+		}
+
+		lastErr = err
+
+		f.logger.Warn("Truncated response body received from CDN, retrying",
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_attempts", f.fetchRetryMaxAttempts),
+			zap.Error(err),
+		)
+	}
+
+	return nil, lastErr
 }
 
 // post performs an authenticated POST request to the given CDN path, validates the
@@ -183,7 +255,7 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, erro
 	if err != nil {
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
-	body, err := f.post(ctx, path)
+	body, err := f.fetch(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
 	}
@@ -216,7 +288,7 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
 
-	body, err := f.post(ctx, path)
+	body, err := f.fetch(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
 	}

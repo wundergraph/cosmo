@@ -370,10 +370,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			path = responseInfo.Request.URL.Path
 		}
 
-		if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {
-			f.accessLogger.Error(path, fields)
-		} else {
-			f.accessLogger.Info(path, fields)
+		// Only suppress the log. Error recording, metrics and span attributes still run below.
+		if f.accessLogger.ShouldLog(exprCtx, fields) {
+			if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {
+				f.accessLogger.Error(path, fields)
+			} else {
+				f.accessLogger.Info(path, fields)
+			}
 		}
 	}
 
