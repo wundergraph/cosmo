@@ -157,7 +157,8 @@ func ttlToCacheControl(ttl time.Duration, private bool) string {
 		if private {
 			return "private, " + noCache
 		}
-		return noCache
+		// Still public: the merge only keeps public when every fetch says it.
+		return "public, " + noCache
 	}
 	if private {
 		return fmt.Sprintf("private, max-age=%d", maxAge)
@@ -176,7 +177,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 	}
 	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
 
-	origin := headers.Get(cacheControlKey)
+	origin := cacheControlValue(headers)
 	if origin == "" {
 		headers.Set(cacheControlKey, cached)
 		return
