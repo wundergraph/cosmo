@@ -12,6 +12,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 )
@@ -48,11 +49,17 @@ type ProviderAdapter struct {
 }
 
 type PollerOpts struct {
-	providerId string
+	providerId     string
+	trackPositions bool
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
+	var positions map[string]map[int32]*streamsv1.KafkaPartitionOffset
+	if pollerOpts.trackPositions {
+		positions = make(map[string]map[int32]*streamsv1.KafkaPartitionOffset)
+	}
+
 	for {
 		select {
 		case <-ctx.Done(): // Close the poller if the context was canceled (subscription ended, or router shutdown/hot reload)
@@ -74,8 +81,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 						return fetchError.Err
 					}
 
-					var kErr *kerr.Error
-					if errors.As(fetchError.Err, &kErr) {
+					if kErr, ok := errors.AsType[*kerr.Error](fetchError.Err); ok {
 						if !kErr.Retriable {
 							p.logger.Error("unrecoverable fetch error",
 								zap.Error(fetchError.Err),
@@ -109,23 +115,48 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
-				updater.Update([]datasource.StreamEvent{
-					&Event{
-						evt: &MutableEvent{
-							Data:    r.Value,
-							Headers: headers,
-							Key:     r.Key,
-						},
-					},
-				})
+				evt := &MutableEvent{
+					Data:    r.Value,
+					Headers: headers,
+					Key:     r.Key,
+				}
+
+				if positions != nil {
+					partitions, exists := positions[r.Topic]
+					if !exists {
+						partitions = make(map[int32]*streamsv1.KafkaPartitionOffset)
+						positions[r.Topic] = partitions
+					}
+					partitions[r.Partition] = &streamsv1.KafkaPartitionOffset{Epoch: r.LeaderEpoch, Offset: r.Offset}
+					evt.cursor = snapshotKafkaPosition(pollerOpts.providerId, positions)
+				}
+
+				updater.Update([]datasource.StreamEvent{&Event{evt: evt}})
 			}
 		}
 	}
 }
 
+// snapshotKafkaPosition returns a cursor carrying a deep copy of positions,
+// so it stays unchanged while the poller keeps updating positions.
+func snapshotKafkaPosition(providerID string, positions map[string]map[int32]*streamsv1.KafkaPartitionOffset) *streamsv1.Cursor {
+	topics := make(map[string]*streamsv1.KafkaPartitionPositions, len(positions))
+	for topic, partitions := range positions {
+		snapshot := make(map[int32]*streamsv1.KafkaPartitionOffset, len(partitions))
+		for partition, offset := range partitions {
+			snapshot[partition] = &streamsv1.KafkaPartitionOffset{Epoch: offset.Epoch, Offset: offset.Offset}
+		}
+		topics[topic] = &streamsv1.KafkaPartitionPositions{Partitions: snapshot}
+	}
+	return &streamsv1.Cursor{
+		ProviderId: providerID,
+		Position:   &streamsv1.Cursor_Kafka{Kafka: &streamsv1.KafkaCursorPosition{Topics: topics}},
+	}
+}
+
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, _ datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
 		return datasource.NewError("invalid event type for Kafka adapter", nil)
@@ -173,7 +204,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		stop := context.AfterFunc(p.ctx, cancel)
 		defer stop()
 
-		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID()})
+		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{
+			providerId:     conf.ProviderID(),
+			trackPositions: guarantee == datasource.DeliveryGuaranteeCursor,
+		})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))

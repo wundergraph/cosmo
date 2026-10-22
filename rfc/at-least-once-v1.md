@@ -53,10 +53,10 @@ sequenceDiagram
     Client->>Router: subscribe (cosmoDeliveryGuarantee: cursor)
     Router->>Broker: Subscribe()
     Broker-->>Router: event
-    Router-->>Client: next { data, extensions.cursor: A }
+    Router-->>Client: next { data, extensions.streamsCursor: A }
     Note over Client: stores cursor A
     Broker-->>Router: event
-    Router-->>Client: next { data, extensions.cursor: B }
+    Router-->>Client: next { data, extensions.streamsCursor: B }
     Note over Client: stores cursor B
 
     Note over Client,Router: connection drops (network / router restart)
@@ -67,7 +67,7 @@ sequenceDiagram
     Router->>Router: verify HMAC tag, decode position
     Router->>Broker: SubscribeFrom(position B)
     Broker-->>Router: event (position after B)
-    Router-->>Client: next { data, extensions.cursor: C }
+    Router-->>Client: next { data, extensions.streamsCursor: C }
     Note over Client: stores cursor C
 ```
 
@@ -375,6 +375,9 @@ type partitionOffset struct {
 }
 ```
 
+The stored offset is the offset of the **last delivered** record of the partition, not the next one
+to read. Resume adds 1 when it seeks.
+
 ###### Leader epoch
 
 An offset alone does not identify a message. Kafka increments the leader epoch of a partition every
@@ -542,9 +545,14 @@ When a client successfully negotiated to use cursors the server will attach the 
 to each message it sends to the clients subscriptions. It will do so by adding a field to the
 GraphQL [Execution Results](https://spec.graphql.org/September2025/#sec-Execution-Result)
 [`extensions`](https://spec.graphql.org/September2025/#sec-Extensions) field. The field is called
-`cursor`. Its value is the cursor wire format described [here](#wire-format).
+`streamsCursor`. Its value is the cursor wire format described [here](#wire-format).
 
 This works independently of any transport protocol as it relies on the GraphQL spec itself.
+
+Only events that carry a broker position get a cursor. These events are sent without one:
+- events created by hooks through the `eventBuilder`
+- events emitted from `SubscriptionOnStart`
+- events of providers without cursor support
 
 ##### Cursors are cumulative
 
@@ -792,6 +800,18 @@ so the implementation needs to ensure that decoding is done before a hook call a
 after a hook call. The cursor is meant to be immutable on `StreamBeforeEventsDispatch` and
 `OnReceiveEvents`, so a copy must be returned on `Cursor()` call. For `SubscriptionOnCreate` and
 `SubscriptionOnStart` it's mutable.
+
+## Known gaps
+
+- Partitions without delivered records are missing from cursors, so resume needs a fallback for
+  them.
+- Messages can arrive out of order when an `OnReceiveEvents` handler times out, which breaks the
+  [cumulative](#cursors-are-cumulative) order of cursors.
+- The typed `DeliveryGuaranteeError` is replaced by the engine's generic "invalid subscription
+  input" error.
+- The [negotiation success](#negotiation-success) confirmation is not implemented.
+- Events emitted from `SubscriptionOnStart` never carry cursors, because of a limitation of the
+  engine's `StartupHookContext.Updater`.
 
 # Todos
 - [x] Goals / Non-Goals
