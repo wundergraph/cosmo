@@ -13,6 +13,8 @@ export const DeferAdvisorPluginContent = ({
 }) => {
   const { queryEditor, variableEditor } = useEditorContext({ nonNull: true });
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
+  // The controller is cached per editor and outlives this component, so pills survive a tab switch.
+  const controller = queryEditor ? getPillController(queryEditor) : null;
 
   useEffect(() => {
     if (!queryEditor) {
@@ -31,12 +33,8 @@ export const DeferAdvisorPluginContent = ({
       query={query}
       routingUrl={routingUrl}
       getRequest={() => ({ headers: getHeaders(), ...parseVariables(variableEditor?.getValue() ?? '') })}
-      editor={queryEditor}
-      onQueryChange={(next) => {
-        if (queryEditor) {
-          getPillController(queryEditor).writeQuery(next);
-        }
-      }}
+      controller={controller}
+      onQueryChange={(next) => controller?.writeQuery(next)}
     />
   );
 };

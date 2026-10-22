@@ -3,10 +3,9 @@ import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
 import { slowFieldNames } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
-import type { QueryEditor } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
 import { probeRootFields, ProbeRequest } from './probe';
-import { getPillController } from './pills-controller';
+import type { PillController } from './pills-controller';
 import { summarizeRootFields } from './root-field-summary';
 
 type Props = {
@@ -15,12 +14,10 @@ type Props = {
   // Called when Analyse is clicked, so the probe uses the current headers and variables.
   getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
-  editor?: QueryEditor | null;
+  controller: PillController | null;
 };
 
-export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, editor }: Props) => {
-  const controller = editor ? getPillController(editor) : null;
-
+export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, controller }: Props) => {
   const subscribe = useCallback((listener: () => void) => controller?.subscribe(listener) ?? (() => {}), [controller]);
   const latencies = useSyncExternalStore(subscribe, () => controller?.latencies ?? null);
 
