@@ -445,6 +445,15 @@ events:
       handler_timeout: 5s
     before_events_dispatch:
       handler_timeout: 5s
+  delivery_guarantees:
+    cursor_resume:
+      identity_claim: sub
+      keys:
+        - id: 1
+          secret: 'first-secret-at-least-32-bytes-long'
+          expires_at: 2026-12-31T00:00:00Z
+        - id: 2
+          secret: 'second-secret-at-least-32-bytes-long'
 
 engine:
   enable_single_flight: true

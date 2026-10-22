@@ -908,8 +908,29 @@ type EventsConfiguration struct {
 	// connect keeps a resilient client that reconnects in the background, so the affected
 	// fields are only temporarily unavailable and recover without a restart once the broker
 	// becomes reachable again. The rest of the graph keeps serving traffic throughout.
-	SkipUnavailableProviders bool                        `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
-	Handlers                 StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+	SkipUnavailableProviders bool                            `yaml:"skip_unavailable_providers" envDefault:"true" env:"EVENTS_SKIP_UNAVAILABLE_PROVIDERS"`
+	Handlers                 StreamsHandlerConfiguration     `yaml:"handlers,omitempty"`
+	DeliveryGuarantees       DeliveryGuaranteesConfiguration `yaml:"delivery_guarantees,omitempty"`
+}
+
+// DeliveryGuaranteesConfiguration configures the delivery guarantees subscriptions can negotiate.
+// Which fields serve a guarantee is declared in the schema, not here.
+type DeliveryGuaranteesConfiguration struct {
+	CursorResume CursorResumeConfiguration `yaml:"cursor_resume,omitempty"`
+}
+
+type CursorResumeConfiguration struct {
+	// IdentityClaim is the claim of an authenticated request that cursors are bound to.
+	IdentityClaim string `yaml:"identity_claim,omitempty" envDefault:"sub"`
+	// Keys is the keyring cursors are signed with. The router signs with the key with the highest id.
+	Keys []CursorKeyConfiguration `yaml:"keys,omitempty"`
+}
+
+type CursorKeyConfiguration struct {
+	ID     uint8  `yaml:"id"`
+	Secret string `yaml:"secret"`
+	// ExpiresAt stops the key from signing new cursors. It keeps verifying cursors for as long as it is configured.
+	ExpiresAt time.Time `yaml:"expires_at,omitempty"`
 }
 
 type StreamsHandlerConfiguration struct {

@@ -29,6 +29,11 @@ type Cursor struct {
 	ProviderId string `protobuf:"bytes,1,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
 	// The point in time when the cursor got created, as a unix timestamp in milliseconds.
 	IssuedAt int64 `protobuf:"varint,2,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
+	// Keyed fingerprint of the client identity the cursor was issued to:
+	// HMAC-SHA256(HKDF(key[keyID], "cosmo/cursor/client/v1"), clientData)[:16].
+	// It reveals nothing about the identity. On resume the router recomputes it from the
+	// incoming request and rejects the cursor on mismatch. Anonymous clients get one too.
+	ClientBinding []byte `protobuf:"bytes,3,opt,name=client_binding,json=clientBinding,proto3" json:"client_binding,omitempty"`
 	// The provider-specific message position in the broker.
 	// The set field determines the provider type.
 	//
@@ -82,6 +87,13 @@ func (x *Cursor) GetIssuedAt() int64 {
 		return x.IssuedAt
 	}
 	return 0
+}
+
+func (x *Cursor) GetClientBinding() []byte {
+	if x != nil {
+		return x.ClientBinding
+	}
+	return nil
 }
 
 func (x *Cursor) GetPosition() isCursor_Position {
@@ -263,11 +275,12 @@ var File_wg_cosmo_streams_v1_cursor_proto protoreflect.FileDescriptor
 
 const file_wg_cosmo_streams_v1_cursor_proto_rawDesc = "" +
 	"\n" +
-	" wg/cosmo/streams/v1/cursor.proto\x12\x13wg.cosmo.streams.v1\"\x94\x01\n" +
+	" wg/cosmo/streams/v1/cursor.proto\x12\x13wg.cosmo.streams.v1\"\xbb\x01\n" +
 	"\x06Cursor\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x1b\n" +
-	"\tissued_at\x18\x02 \x01(\x03R\bissuedAt\x12@\n" +
+	"\tissued_at\x18\x02 \x01(\x03R\bissuedAt\x12%\n" +
+	"\x0eclient_binding\x18\x03 \x01(\fR\rclientBinding\x12@\n" +
 	"\x05kafka\x18\n" +
 	" \x01(\v2(.wg.cosmo.streams.v1.KafkaCursorPositionH\x00R\x05kafkaB\n" +
 	"\n" +

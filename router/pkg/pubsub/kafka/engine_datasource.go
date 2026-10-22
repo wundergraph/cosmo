@@ -9,14 +9,22 @@ import (
 	"strings"
 
 	goccyjson "github.com/goccy/go-json"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// Event implements datasource.StreamEvent
+// Event implements datasource.StreamEvent and datasource.PositionedStreamEvent
 type Event struct {
 	evt *MutableEvent
+	// position is the position of the event in the broker. It is nil until the adapter tracks positions.
+	position *streamsv1.Cursor
+}
+
+// CursorPosition returns the position of the event in the broker, or nil if it is unknown.
+func (e *Event) CursorPosition() *streamsv1.Cursor {
+	return e.position
 }
 
 func (e *Event) GetData() []byte {
@@ -110,6 +118,11 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 // DeliveryGuaranteeMode returns the delivery guarantee mode declared in the schema
 func (s *SubscriptionEventConfiguration) DeliveryGuaranteeMode() datasource.DeliveryGuaranteeMode {
 	return s.GuaranteeMode
+}
+
+// CursorTopics returns the topics cursors of the subscription are bound to
+func (s *SubscriptionEventConfiguration) CursorTopics() []string {
+	return s.Topics
 }
 
 // publishData is a private type that is used to pass data from the engine to the provider
@@ -251,7 +264,7 @@ func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input
 		return nil, err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		return []byte(`{"__typename": "edfs__PublishResult", "success": false}`), nil
 	}
@@ -267,3 +280,7 @@ var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfigurati
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
 var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)
+
+var _ datasource.PositionedStreamEvent = (*Event)(nil)
+
+var _ datasource.CursorTopicsProvider = (*SubscriptionEventConfiguration)(nil)
