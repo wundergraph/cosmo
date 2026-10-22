@@ -26,11 +26,13 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { endOfDay, formatISO, startOfDay } from 'date-fns';
 import { useRouter } from 'next/router';
+import { useQueryState } from 'nuqs';
 import { ReactNode, useContext, useEffect, useRef } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
 
+const BASE_GRAPH_VALUE = '__base_graph__';
+
 const ChangelogToolbar = () => {
-  const router = useRouter();
   const applyParams = useApplyParams();
   const { dateRange, range } = useDateRangeQueryState();
   const graphData = useContext(GraphContext);
@@ -49,7 +51,7 @@ const ChangelogToolbar = () => {
     },
   );
   const featureFlags = featureFlagsData?.featureFlags ?? [];
-  const featureFlagName = (router.query.featureFlag as string) || '';
+  const [featureFlagName, setFeatureFlagName] = useQueryState('featureFlag');
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
@@ -83,19 +85,19 @@ const ChangelogToolbar = () => {
       />
       {featureFlags.length > 0 && (
         <Select
-          value={featureFlagName}
-          onValueChange={(val) =>
-            applyParams({
-              featureFlag: val || null,
-            })
-          }
+          value={featureFlagName ?? BASE_GRAPH_VALUE}
+          onValueChange={(val) => setFeatureFlagName(val === BASE_GRAPH_VALUE ? null : val)}
         >
           {/* A fixed width, so the toolbar doesn't shift with the length of the selected name; long names are truncated */}
           <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:flex [&_p]:items-center">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="" title={graphData?.graph?.name} className="[&_p]:max-w-[264px] [&_p]:truncate">
+            <SelectItem
+              value={BASE_GRAPH_VALUE}
+              title={graphData?.graph?.name}
+              className="[&_p]:max-w-[264px] [&_p]:truncate"
+            >
               {graphData?.graph?.name}
             </SelectItem>
             {featureFlags.map(({ id, name, isEnabled }) => (
@@ -142,8 +144,8 @@ const ChangelogPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  // Without a feature flag, the changelog of the base graph is returned
-  const featureFlagName = (router.query.featureFlag as string) || undefined;
+  // Without a feature flag, the changelog of the federated graph itself is shown
+  const [featureFlagName] = useQueryState('featureFlag');
 
   // Each date range and feature flag selection is its own query, so switching between them never mixes their pages
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, error, refetch } = useInfiniteQuery(
@@ -151,7 +153,7 @@ const ChangelogPage: NextPageWithLayout = () => {
     {
       name: graphName,
       namespace,
-      featureFlagName,
+      featureFlagName: featureFlagName ?? undefined,
       pagination: {
         limit,
         offset: 0,
@@ -174,7 +176,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   useEffect(() => {
     // Start a new selection from the top instead of the previous selection's scroll position
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [router.query.dateRange, router.query.range, router.query.featureFlag]);
+  }, [router.query.dateRange, router.query.range, featureFlagName]);
 
   useEffect(() => {
     // The changelog scrolls inside the page layout, not the window
