@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
+import { createDeferAdvisorPlugin } from './defer-advisor/defer-advisor-plugin';
 import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
@@ -634,6 +635,9 @@ export const Playground = (input: {
 
   const [result, setResult] = useState<OperationResult>(initialResult);
 
+  // Memoised: GraphiQL needs stable plugin objects.
+  const plugins = useMemo(() => [explorerPlugin({ showAttribution: false }), createDeferAdvisorPlugin()], []);
+
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
     const onFetch: OnFetch = (response, status, statusText, defer) => {
@@ -654,6 +658,7 @@ export const Playground = (input: {
 
     return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
       if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
+        setResult((prev) => ({ ...prev, defer: undefined }));
         return toolkitFetcher(params, opts);
       }
 
@@ -779,11 +784,7 @@ export const Playground = (input: {
 }`}
             onEditHeaders={setHeaders}
             onTabChange={setTabsState}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
+            plugins={plugins}
             forcedTheme={input.theme}
           />
           {isMounted && <PlaygroundPortal />}
