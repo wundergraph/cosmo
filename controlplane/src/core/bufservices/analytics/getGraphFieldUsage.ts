@@ -1,4 +1,5 @@
 import { HandlerContext } from '@connectrpc/connect';
+import { validate as isValidUuid } from 'uuid';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetGraphFieldUsageRequest,
@@ -89,14 +90,17 @@ export function getGraphFieldUsage(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphNames = await subgraphRepo.getSubgraphNameByIds(
-      fieldsData.flatMap((field) => field.subgraphs.map((subgraph) => subgraph.subgraphId)),
+      // A router config composed with wgc numbers its subgraphs, and Postgres rejects a non-UUID id.
+      fieldsData.flatMap((field) =>
+        field.subgraphs.map((subgraph) => subgraph.subgraphId).filter((subgraphId) => isValidUuid(subgraphId)),
+      ),
     );
 
     const fields = fieldsData.map((field) => ({
       typeName: field.typeName,
       fieldName: field.fieldName,
       requestCount: field.requestCount,
-      // A subgraph deleted since the requests has no name, so its counts are left out.
+      // A subgraph deleted since the requests, or reported by a non-UUID id, has no name, so its counts are left out.
       subgraphs: field.subgraphs.flatMap((subgraph) => {
         const subgraphName = subgraphNames[subgraph.subgraphId];
         return subgraphName === undefined

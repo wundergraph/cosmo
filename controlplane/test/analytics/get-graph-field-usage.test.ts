@@ -274,6 +274,32 @@ describe('GetGraphFieldUsage', () => {
     ]);
   });
 
+  test('Should leave out subgraph ids that are not UUIDs, as a router config composed with wgc reports them', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const { fedGraphName, subgraphName } = await createGraph(client);
+    const subgraphId = await readSubgraphId(client, subgraphName);
+    vi.mocked(chClient.queryPromise).mockResolvedValue([
+      { typeName: 'Employee', fieldName: 'id', subgraphIds: ['0'], requestCount: '4' },
+      { typeName: 'Employee', fieldName: 'id', subgraphIds: [subgraphId], requestCount: '6' },
+    ]);
+
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.fields[0]?.requestCount).toBe(BigInt(10));
+    expect(
+      response.fields[0]?.subgraphs.map((subgraph) => ({
+        subgraphId: subgraph.subgraphId,
+        requestCount: subgraph.requestCount,
+      })),
+    ).toEqual([{ subgraphId, requestCount: BigInt(6) }]);
+  });
+
   test('Should use the last 24 hours when no range is given, and still return the retention of the plan', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
