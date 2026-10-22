@@ -37,6 +37,7 @@ func (s *countingStore) SetMany(context.Context, []caching.Item) error { return 
 func (s *countingStore) InvalidateByTags(context.Context, []string) (int, error) {
 	return 0, s.result()
 }
+func (s *countingStore) Probe(context.Context) error { return s.result() }
 func (s *countingStore) Close() error {
 	s.closed.Store(true)
 	return nil
@@ -47,7 +48,6 @@ func newTestBreaker(t *testing.T, inner *countingStore, probeInterval time.Durat
 	s := NewBreakerStore(inner, BreakerOptions{
 		FailureThreshold: 3,
 		ProbeInterval:    probeInterval,
-		Probe:            func(context.Context) error { return inner.result() },
 		IsFailure:        func(err error) bool { return errors.Is(err, errDown) },
 		StartDown:        startDown,
 	}).(*breakerStore)
@@ -186,7 +186,6 @@ func TestBreakerStore(t *testing.T) {
 		inner := &countingStore{}
 		s := NewBreakerStore(inner, BreakerOptions{
 			ProbeInterval: time.Millisecond,
-			Probe:         func(context.Context) error { return inner.result() },
 			IsFailure:     func(error) bool { return true },
 		})
 		require.Eventually(t, func() bool { return inner.calls.Load() > 0 }, time.Second, time.Millisecond)

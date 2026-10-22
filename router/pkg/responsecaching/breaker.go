@@ -24,9 +24,6 @@ type BreakerOptions struct {
 	FailureThreshold int
 	// ProbeInterval is how often the store is probed, up or down.
 	ProbeInterval time.Duration
-	// Probe reaches the store, bounded by ProbeTimeout.
-	Probe        func(ctx context.Context) error
-	ProbeTimeout time.Duration
 	// IsFailure reports whether err means the store is unreachable, not that one call failed.
 	IsFailure func(err error) bool
 	// StartDown starts the store down, e.g. after a failed startup ping.
@@ -94,6 +91,11 @@ func (s *breakerStore) InvalidateByTags(ctx context.Context, tags []string) (int
 	return removed, err
 }
 
+// Probe reaches the store even while it is down.
+func (s *breakerStore) Probe(ctx context.Context) error {
+	return s.inner.Probe(ctx)
+}
+
 func (s *breakerStore) Close() error {
 	s.cancelProbe()
 	<-s.probeDone
@@ -127,9 +129,7 @@ func (s *breakerStore) probe() {
 		case <-ticker.C:
 		}
 
-		ctx, cancel := bound(s.probeCtx, s.opts.ProbeTimeout)
-		err := s.opts.Probe(ctx)
-		cancel()
+		err := s.inner.Probe(s.probeCtx)
 		switch {
 		case s.probeCtx.Err() != nil:
 			return
