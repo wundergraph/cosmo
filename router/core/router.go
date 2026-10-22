@@ -188,6 +188,8 @@ type (
 	}
 
 	AccessLogsConfig struct {
+		Filter                string
+		SubgraphFilter        string
 		Attributes            []config.CustomAttribute
 		Logger                *zap.Logger
 		SubgraphEnabled       bool
@@ -1294,7 +1296,7 @@ func (r *Router) startResponseCacheInvalidationServer(ctx context.Context) error
 		return nil
 	}
 
-	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache)
+	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache, r.corsOptions)
 	if err != nil {
 		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
 	}

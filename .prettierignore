@@ -7,6 +7,7 @@ pnpm-lock.yaml
 # Output
 gen
 dist
+connect/src/wg
 
 # Next.js build output
 .next

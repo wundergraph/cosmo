@@ -9,13 +9,16 @@ import {
   graphCompositionSubgraphs,
   schemaVersion,
   subgraphs,
+  targets,
   users,
 } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 @traced
 export class GraphCompositionRepository {
@@ -409,6 +412,52 @@ export class GraphCompositionRepository {
       .execute();
 
     return [...compositionSubgraphs, ...childCompositionSubgraphs];
+  }
+
+  /**
+   * @param input.schemaVersionIds Composed schema versions of the compositions to read.
+   * @returns A row per feature subgraph per composition, where `schemaVersionId` is the version
+   * that composition froze rather than the latest published one. Feature subgraphs deleted since
+   * the composition are omitted, even though `graph_composition_subgraphs` retains their rows.
+   */
+  public async getFeatureSubgraphsByComposedSchemaVersionIds(input: {
+    schemaVersionIds: string[];
+    organizationId: string;
+    rbac?: RBACEvaluator;
+  }) {
+    if (input.schemaVersionIds.length === 0) {
+      return [];
+    }
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      inArray(graphCompositions.schemaVersionId, input.schemaVersionIds),
+      eq(schemaVersion.organizationId, input.organizationId),
+      eq(graphCompositionSubgraphs.isFeatureSubgraph, true),
+      not(eq(graphCompositionSubgraphs.changeType, 'removed')),
+    ];
+
+    // The query must join targets, which the RBAC conditions gate on.
+    if (!SubgraphRepository.applyRbacConditionsToQuery(input.rbac, conditions)) {
+      return [];
+    }
+
+    return await this.db
+      .select({
+        composedSchemaVersionId: graphCompositions.schemaVersionId,
+        id: graphCompositionSubgraphs.subgraphId,
+        name: graphCompositionSubgraphs.subgraphName,
+        targetId: graphCompositionSubgraphs.subgraphTargetId,
+        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+        routingUrl: subgraphs.routingUrl,
+        subscriptionUrl: subgraphs.subscriptionUrl,
+      })
+      .from(graphCompositionSubgraphs)
+      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .innerJoin(subgraphs, eq(subgraphs.id, graphCompositionSubgraphs.subgraphId))
+      .innerJoin(targets, eq(targets.id, subgraphs.targetId))
+      .where(and(...conditions))
+      .execute();
   }
 
   public async getGraphCompositions({
