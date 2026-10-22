@@ -11,6 +11,12 @@ message Cursor {
   // The point in time when the cursor got created, as a unix timestamp in milliseconds.
   int64 issued_at = 2;
 
+  // Keyed fingerprint of the client identity the cursor was issued to:
+  // HMAC-SHA256(HKDF(key[keyID], "cosmo/cursor/client/v1"), clientData)[:16].
+  // It reveals nothing about the identity. On resume the router recomputes it from the
+  // incoming request and rejects the cursor on mismatch. Anonymous clients get one too.
+  bytes client_binding = 3;
+
   // The provider-specific message position in the broker.
   // The set field determines the provider type.
   oneof position {

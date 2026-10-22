@@ -26,6 +26,7 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 	hooks            Hooks
 	logger           *zap.Logger
 	eventBuilder     EventBuilderFn
+	cursors          Cursors
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
@@ -38,13 +39,43 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input [
 
 // ValidateTriggerInput rejects clients whose requested delivery guarantee can't be served.
 // It runs before SubscriptionOnCreate hooks and before a trigger is created.
-func (s *PubSubSubscriptionDataSource[C]) ValidateTriggerInput(_ *resolve.Context, input []byte) error {
+// It gets the context of the subscribing client, unlike Start, which only gets the context
+// of the first subscriber of a trigger.
+func (s *PubSubSubscriptionDataSource[C]) ValidateTriggerInput(ctx *resolve.Context, input []byte) error {
 	var subscriptionConfiguration C
 	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
 		return err
 	}
-	_, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
-	return err
+	guarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
+	if err != nil {
+		return err
+	}
+	if guarantee != DeliveryGuaranteeCursor {
+		return nil
+	}
+
+	// Resolve the cursor binding up front, so a client that can't be issued cursors
+	// fails before it receives any event.
+	unsatisfiable := &DeliveryGuaranteeError{
+		Code:      DeliveryGuaranteeErrorCodeUnsatisfiable,
+		Supported: SupportedDeliveryGuarantees(subscriptionConfiguration.DeliveryGuaranteeMode()),
+		Message:   "The requested delivery guarantee can't be satisfied",
+	}
+	if !s.cursors.Enabled() {
+		return unsatisfiable
+	}
+	_, err = newCursorBinding(ctx.Context(), s.cursors.SubscriberBinding, subscriptionConfiguration)
+	if err != nil {
+		if guaranteeErr, ok := errors.AsType[*DeliveryGuaranteeError](err); ok {
+			if guaranteeErr.Supported == nil {
+				guaranteeErr.Supported = unsatisfiable.Supported
+			}
+			return guaranteeErr
+		}
+		s.logger.Error("Resolving cursor binding failed", zap.Error(err))
+		return unsatisfiable
+	}
+	return nil
 }
 
 func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error {
@@ -70,7 +101,12 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, guarantee, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
+	eventUpdater := newSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
+	if guarantee == DeliveryGuaranteeCursor {
+		eventUpdater.enableCursors(s.cursors)
+	}
+
+	return s.pubSub.Subscribe(ctx.Context(), conf, guarantee, eventUpdater)
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
@@ -106,6 +142,10 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.Startu
 
 func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
 	s.hooks = hooks
+}
+
+func (s *PubSubSubscriptionDataSource[C]) SetCursors(cursors Cursors) {
+	s.cursors = cursors
 }
 
 func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xxhash.Digest) error {

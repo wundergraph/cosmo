@@ -13,6 +13,7 @@ type SubscriptionDataSource interface {
 	HashTriggerInput(input []byte, xxh *xxhash.Digest) error
 	ValidateTriggerInput(ctx *resolve.Context, input []byte) error
 	SetHooks(hooks Hooks)
+	SetCursors(cursors Cursors)
 }
 
 // EngineDataSourceFactory is the interface that all pubsub data sources must implement.

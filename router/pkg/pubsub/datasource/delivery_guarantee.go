@@ -37,6 +37,13 @@ const (
 const (
 	DeliveryGuaranteeErrorCodeInvalid     = "DELIVERY_GUARANTEE_INVALID"
 	DeliveryGuaranteeErrorCodeUnsupported = "DELIVERY_GUARANTEE_UNSUPPORTED"
+	// DeliveryGuaranteeErrorCodeUnsatisfiable means the router would serve the guarantee but can't for this client.
+	DeliveryGuaranteeErrorCodeUnsatisfiable = "DELIVERY_GUARANTEE_UNSATISFIABLE"
+	// DeliveryGuaranteeErrorCodeCursorInvalid means a cursor is malformed, tampered with,
+	// signed with an unknown key or presented for a different request.
+	DeliveryGuaranteeErrorCodeCursorInvalid = "CURSOR_INVALID"
+	// DeliveryGuaranteeErrorCodeCursorClientMismatch means a cursor was issued to a different client identity.
+	DeliveryGuaranteeErrorCodeCursorClientMismatch = "CURSOR_CLIENT_MISMATCH"
 )
 
 // deliveryGuaranteeExtensionKey is the key in the request extensions a client uses to ask for a guarantee.

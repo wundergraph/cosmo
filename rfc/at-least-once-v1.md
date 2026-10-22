@@ -118,6 +118,10 @@ type Cursor struct {
     // The point in time when the cursor got created,
     // as a unix timestamp in milliseconds.
     IssuedAt int64
+
+    // Keyed fingerprint of the client identity the cursor was issued to,
+    // see [About `clientData`](#about-clientdata).
+    ClientBinding []byte
 }
 
 type ProviderType string
@@ -163,8 +167,8 @@ cursor carries an HMAC-SHA256 tag on its wire foramt, truncated to 16 bytes and 
 router-side secret. The key never leaves the router.
 
 ```
-tag = HMAC-SHA256(key[keyID],
-        "cosmo/cursor/v1" || version || keyID || payload || requestData || clientData
+tag = HMAC-SHA256(tagKey[keyID],
+        "cosmo/cursor/v1" || version || keyID || len(payload) || payload || len(requestData) || requestData
       )[:16]
 ```
 
@@ -172,8 +176,15 @@ tag = HMAC-SHA256(key[keyID],
 2. `version`: cursor version, so a cursor with a different version is considered invalid
 3. `keyID`: id of the signing key, so a cursor with a different key is considered invalid
 4. `payload`: serialized cursor, so a client cannot rewrite its own position, provider or timestamp
-5. `requestData`: information about the request to prevent clients from resuming with a different query
-6. `clientData`: information about the client to prevent a different client from using the same cursor
+5. `requestData`: information about the request to prevent clients from resuming on a different provider or different topics
+
+`clientData`, the information about the client that prevents a different client from using the same
+cursor, is not a separate input. It enters the tag through `ClientBinding`, which is part of the
+signed payload. `payload` and `requestData` are each prefixed with their length as a uvarint, so the
+boundary between them can't be shifted.
+
+Only `version`, `keyID` and the tag travel outside the payload. The domain prefix, `requestData` and
+the length prefixes are tag inputs only: the router recalculates them on resume and never sends them.
 
 The tag needs no protection of its own. If the client changes the payload, the recalculated tag no
 longer matches the carried one. If the client changes the tag, it no longer matches the payload. To
@@ -181,44 +192,70 @@ produce a matching pair the client would need the key, which it does not have.
 
 ##### About `requestData`
 
-`requestData` contains information about the request to prevent clients from resuming with a different query.
-It's never sent to the client. The router recalculates it from the incoming request on resume.
+`requestData` contains information about the request to prevent clients from resuming on a different
+provider or set of topics, where the position in the cursor has no meaning. It's never sent to the
+client. The router recalculates it from the incoming request on resume.
 
-Anything from the operation that influences what events clients receive needs to go in here:
+It covers what the position in the cursor refers to:
 
 - `SubscriptionEventConfiguration.ProviderType()`
 - `SubscriptionEventConfiguration.ProviderID()`
 - alphanumerically sorted list of topics of the subscription (or channels / subjects).
   Each field is seeded with a length-boundary: `"orders" + "event" --> "6orders5event"`
   to prevent collisions.
-- normalized operation document bytes, to prevent a user to replay with a different query
-- canonicalized operation document variables.
-  Variables enter the tag in a canonical form:
-  - Object keys are sorted byte-wise by their decoded name, so that the ordering does not depend on how the client escaped them.
-  - Array order preserved
-  - Insignificant whitespace dropped
-  - Keys and strings re-escaped through a single policy
-  - Numbers emitted verbatim as the client sent them (i.e. `1` != `1.0`)
+
+The operation document and its variables are deliberately not part of `requestData`. A client may
+resume with a different operation, for example after adding a field to its selection set, as long as
+it resolves to the same provider and topics. This is safe because a cursor is a position, not a
+permission: the resumed operation is planned and authorized like a fresh subscription. Variables that
+select topics are still covered indirectly, since they change the resolved topics.
 
 ##### About `clientData`
 
-`clientData` binds a cursor to the identity that was authenticated when it was
-issued, so a cursor that leaks cannot be resumed by somebody else. Like
-`requestData` it is never sent to the client; the router recalculates it from the
-incoming request on resume.
+`clientData` binds a cursor to the identity that was authenticated when it was issued, so a cursor
+that leaks cannot be resumed by somebody else.
 
-`clientData` contains:
+The payload is only base64, so the identity can't be put into it in plain text: `sub`, `iss` or
+`aud` would leak personal data to anyone who sees a cursor. Instead the payload carries a keyed
+fingerprint of it in `ClientBinding`:
 
-1. `Authentication.Authenticator()` — the name of the authenticator that handled
-   the request
-2. the `iss` claim
-3. the `aud` claim, sorted byte-wise when it is an array
-4. the configured identity claim, `sub` by default
+```
+ClientBinding = HMAC-SHA256(clientKey[keyID], clientData)[:16]
+```
 
-Each field is length-prefixed for the same reason the topic list is: without it,
-authenticator `auth` with subject `0123` and authenticator `auth0` with subject
-`123` serialize to the same bytes. The boundary between `requestData` and
-`clientData` in the tag input is framed the same way.
+The fingerprint reveals nothing about the identity. The router recalculates it from the incoming
+request on resume and compares it with `hmac.Equal`. The expected value always comes from the
+incoming request, never from the cursor, so a cursor can't be downgraded from authenticated to
+anonymous or the other way round.
+
+`clientData` is a version byte (`0x01`) followed by a kind byte:
+
+- `0x00` for anonymous clients, i.e. requests without authentication information. Nothing follows,
+  so every anonymous client gets the same fingerprint for a given key.
+- `0x01` for authenticated clients, followed by
+  1. `Authentication.Authenticator()`, the name of the authenticator that handled the request
+  2. the `iss` claim
+  3. the `aud` claim, sorted byte-wise; a single string counts as a list of one, and the list is
+     prefixed with its number of entries
+  4. the configured identity claim, `sub` by default (see [Config](#config))
+
+Each field is prefixed with its length as a uvarint. Without the prefixes, authenticator `auth`
+with subject `0123` and authenticator `auth0` with subject `123` serialize to the same bytes. Claim
+values that are not strings are JSON-encoded. The kind byte keeps an anonymous client apart from an
+authenticated client whose claims are empty.
+
+An authenticated request without the identity claim can't negotiate cursors and fails with
+`DELIVERY_GUARANTEE_UNSATISFIABLE`. Falling back to a weaker binding would hide a misconfiguration.
+The error names the missing claim, and the router logs the authenticator and claim name, never claim
+values. This is rare in practice: `sub` is required in OIDC ID tokens and RFC 9068 access tokens.
+
+For anonymous clients the binding guarantees that an anonymous cursor can't be resumed by an
+authenticated client and vice versa, while `requestData` still ties the cursor to the provider and topics. It
+does not protect two anonymous clients from each other: a leaked anonymous cursor works for any
+anonymous client. That is accepted, because an anonymous subscription is open to everyone anyway and
+a cursor is a position, not a permission. Binding to the IP address or the connection would break
+legitimate reconnects across networks or load balancers, and a client nonce would leak together
+with the cursor.
 
 ##### Verification on resume
 
@@ -236,12 +273,16 @@ place.
 5. compare with `hmac.Equal`, never with `==` or `bytes.Equal`, so the comparison stays constant
    time and the tag cannot be guessed byte by byte
 6. only now decode the payload into the `Cursor` type
-7. reject the cursor if `IssuedAt` is older than the configured maximum resume window
+7. recalculate `ClientBinding` from the identity of the incoming request and compare it with
+   `hmac.Equal`, see [About `clientData`](#about-clientdata)
+8. reject the cursor if `IssuedAt` is older than the configured maximum resume window
 
-Step 7 is what keeps a tag from staying valid forever. Without it a leaked cursor works until the
+Steps 1 to 6 fail with `CURSOR_INVALID`, step 7 with `CURSOR_CLIENT_MISMATCH`.
+
+Step 8 is what keeps a tag from staying valid forever. Without it a leaked cursor works until the
 key is rotated.
 
-Steps 2 and 7 are independent gates, not a fallback for one another. Being inside `max_resume_window`
+Steps 2 and 8 are independent gates, not a fallback for one another. Being inside `max_resume_window`
 never overrides an invalid key: if the key a cursor was signed with is no longer verifiable, the
 cursor is rejected at step 2 regardless of how young `IssuedAt` is. `max_resume_window` only bounds
 how far back an *otherwise-valid* key is willing to look.
@@ -265,8 +306,10 @@ verifiable keys for cursors issued right at the boundary.
 
 The key is configuration, not something a router generates at startup. Two router replicas behind a
 load balancer have to derive the same key, otherwise a resume that lands on another replica fails.
-It is derived from the router secret with HKDF and a `"cosmo/cursor"` label, so the same secret can
-still serve other purposes.
+Two keys are derived from every configured secret with HKDF-SHA256: the tag key with the label
+`"cosmo/cursor/tag/v1"` and the client key with the label `"cosmo/cursor/client/v1"`. Both share the
+`keyID` of their secret, so rotation covers the tag and the client binding alike, and the same secret
+can still serve other purposes.
 
 Note that the tag protects integrity, not confidentiality. The payload is only base64, so anybody
 can read the broker offsets out of a cursor.
@@ -599,15 +642,16 @@ For example Kafka will be a seekable adapter, so there is a concrete type called
 
 ### Config
 
-Everything is configured under `events.delivery-guarantees.cursor-resume`
+Everything is configured under `events.delivery-guarantees.cursor-resume`. There is no switch to
+enable cursors: a field serves them when its schema directive declares `deliveryGuarantees`, and the
+router refuses to load such a schema when no keys are configured.
 
 ```yaml
 events:
   delivery-guarantees:
     cursor-resume:
-      # makes the router advertise cursor capabilities on handshakes.
-      # ignores client handshakes if false.
-      enabled: true # default false
+      # the claim cursors are bound to, see "About clientData".
+      identity_claim: sub # default sub
 
       # how long the router accepts old cursors.
       # note: should not exceed the brokers retention window.

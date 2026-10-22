@@ -3439,6 +3439,53 @@
               }
             }
           }
+        },
+        "delivery_guarantees": {
+          "type": "object",
+          "description": "Configuration for the delivery guarantees subscriptions can negotiate. Which subscription fields serve a guarantee is declared in the schema via the deliveryGuarantees argument of the EDFS subscribe directive.",
+          "additionalProperties": false,
+          "properties": {
+            "cursor_resume": {
+              "type": "object",
+              "description": "Configuration for cursor-based resumption of subscriptions. Required when a subscription field declares the cursor delivery guarantee.",
+              "additionalProperties": false,
+              "properties": {
+                "identity_claim": {
+                  "type": "string",
+                  "description": "The claim of an authenticated request that cursors are bound to. A cursor can only be resumed by a client with the same authenticator, issuer, audience and identity claim. An authenticated request without this claim can't negotiate the cursor guarantee.",
+                  "minLength": 1,
+                  "default": "sub"
+                },
+                "keys": {
+                  "type": "array",
+                  "description": "The keyring cursors are signed with. The router signs new cursors with the key with the highest id that has not expired. Removing a key revokes all cursors signed with it.",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "secret"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "description": "The id of the key. Must be unique within the keyring.",
+                        "minimum": 0,
+                        "maximum": 255
+                      },
+                      "secret": {
+                        "type": "string",
+                        "description": "The secret the key is derived from. All router instances must share the same secrets.",
+                        "minLength": 32
+                      },
+                      "expires_at": {
+                        "type": "string",
+                        "description": "The point in time, as an RFC 3339 timestamp, after which the key no longer signs new cursors. The key still verifies cursors for as long as it is configured.",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
