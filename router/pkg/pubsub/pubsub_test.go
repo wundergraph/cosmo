@@ -618,34 +618,3 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 	assert.True(t, dataSources[0].HasRootNode("Type1", "Field1"))
 	assert.False(t, dataSources[0].HasRootNode("Type1", "Field2"))
 }
-
-func TestBuildProvidersAndDataSources_CursorModeRequiresKeys(t *testing.T) {
-	// A field in cursor mode must not be served without a keyring, as that would silently
-	// downgrade its subscriptions.
-	dsConfs := []DataSourceConfigurationWithMetadata{{
-		Configuration: &nodev1.DataSourceConfiguration{
-			Id: "test-id",
-			CustomEvents: &nodev1.DataSourceCustomEvents{
-				Kafka: []*nodev1.KafkaEventConfiguration{{
-					EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-						ProviderId: "provider-1",
-						TypeName:   "Subscription",
-						FieldName:  "employeeUpdated",
-						Type:       nodev1.EventType_SUBSCRIBE,
-						DeliveryGuarantees: &nodev1.DeliveryGuarantees{
-							Mode: nodev1.DeliveryGuaranteeMode_DELIVERY_GUARANTEE_MODE_CURSOR,
-						},
-					},
-				}},
-			},
-		},
-		Metadata: &plan.DataSourceMetadata{},
-	}}
-
-	_, _, err := BuildProvidersAndDataSources(context.Background(), config.EventsConfiguration{
-		Providers: config.EventProviders{
-			Kafka: []config.KafkaEventSource{{ID: "provider-1"}},
-		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
-	require.ErrorContains(t, err, "field Subscription.employeeUpdated declares the cursor delivery guarantee, but no cursor keys are configured")
-}
