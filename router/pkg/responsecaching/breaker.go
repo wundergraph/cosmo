@@ -19,14 +19,14 @@ const (
 	maxProbeInterval = time.Minute
 )
 
-// probeKeys is what the probe looks up; a miss is a healthy answer.
-var probeKeys = []string{"circuit_breaker_probe"}
-
 type BreakerOptions struct {
 	// FailureThreshold consecutive failures, of requests or probes, mark the store down.
 	FailureThreshold int
 	// ProbeInterval is how often the store is probed, up or down.
 	ProbeInterval time.Duration
+	// Probe reaches the store, bounded by ProbeTimeout.
+	Probe        func(ctx context.Context) error
+	ProbeTimeout time.Duration
 	// IsFailure reports whether err means the store is unreachable, not that one call failed.
 	IsFailure func(err error) bool
 	// StartDown starts the store down, e.g. after a failed startup ping.
@@ -47,8 +47,7 @@ type breakerStore struct {
 }
 
 // NewBreakerStore bypasses inner while it is down: calls fail fast with
-// ErrUnavailable. A background lookup through inner, so bounded by its
-// timeouts, marks it down early and brings it back.
+// ErrUnavailable. A background probe marks it down early and brings it back.
 func NewBreakerStore(inner Store, opts BreakerOptions) Store {
 	if opts.Logger == nil {
 		opts.Logger = zap.NewNop()
@@ -128,7 +127,9 @@ func (s *breakerStore) probe() {
 		case <-ticker.C:
 		}
 
-		_, err := s.inner.GetMany(s.probeCtx, probeKeys)
+		ctx, cancel := bound(s.probeCtx, s.opts.ProbeTimeout)
+		err := s.opts.Probe(ctx)
+		cancel()
 		switch {
 		case s.probeCtx.Err() != nil:
 			return

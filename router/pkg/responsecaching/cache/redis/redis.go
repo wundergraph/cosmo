@@ -141,6 +141,14 @@ func (c *RedisCache) Close() error {
 	return c.closeErr
 }
 
+// probeKey is what Probe checks for; it is never written.
+const probeKey = "circuit_breaker_probe"
+
+// Probe checks for a key, so redis must route and serve it like a read.
+func (c *RedisCache) Probe(ctx context.Context) error {
+	return c.client.Exists(ctx, c.entryKey(probeKey)).Err()
+}
+
 // unavailablePrefixes are replies from a redis that is up but cannot serve.
 var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "MASTERDOWN"}
 

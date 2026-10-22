@@ -961,11 +961,10 @@ func TestIsUnavailable(t *testing.T) {
 		client := redis.NewClient(&redis.Options{Addr: mr.Addr(), MaxRetries: -1})
 		cache := NewRedisCache(client, testPrefix)
 		t.Cleanup(func() { _ = cache.Close() })
-		_, err := cache.GetMany(ctx, []string{"a"})
-		require.NoError(t, err)
+		require.NoError(t, cache.Probe(ctx))
 
 		mr.Close()
-		_, err = cache.GetMany(ctx, []string{"a"})
+		err := cache.Probe(ctx)
 		require.Error(t, err)
 		require.True(t, IsUnavailable(err))
 	})
@@ -980,8 +979,7 @@ func TestIsUnavailable(t *testing.T) {
 
 		for _, reply := range []string{"LOADING Redis is loading the dataset in memory", "CLUSTERDOWN The cluster is down"} {
 			mr.SetError(reply)
-			_, err := cache.GetMany(ctx, []string{"a"})
-			require.True(t, IsUnavailable(err), reply)
+			require.True(t, IsUnavailable(cache.Probe(ctx)), reply)
 		}
 	})
 

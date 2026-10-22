@@ -3504,7 +3504,7 @@
             },
             "circuit_breaker": {
               "type": "object",
-              "description": "Stops calling Redis once it looks down. Every 'probe_interval' the router looks up a probe key, bounded by 'lookup_timeout'. After 'failure_threshold' consecutive failures of requests or probes (timeouts, connection errors, or replies such as LOADING, CLUSTERDOWN and MASTERDOWN), lookups, writes and invalidations fail at once without reaching Redis, so requests go to the subgraphs with no added latency. Redis is used again once a probe succeeds. Invalidations rejected while Redis is down are not replayed, so entries they named are served until their TTL expires. Ignored by the 'memory' provider.",
+              "description": "Stops calling Redis once it looks down. Every 'probe_interval' the router checks Redis for a probe key, bounded by 'lookup_timeout'. After 'failure_threshold' consecutive failures of requests or probes (timeouts, connection errors, or replies such as LOADING, CLUSTERDOWN and MASTERDOWN), lookups, writes and invalidations fail at once without reaching Redis, so requests go to the subgraphs with no added latency. Redis is used again once a probe succeeds. Invalidations rejected while Redis is down are not replayed, so entries they named are served until their TTL expires. Ignored by the 'memory' provider.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {

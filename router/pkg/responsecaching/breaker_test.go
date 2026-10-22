@@ -42,11 +42,12 @@ func (s *countingStore) Close() error {
 	return nil
 }
 
-func newTestBreaker(t *testing.T, inner Store, probeInterval time.Duration, startDown bool) *breakerStore {
+func newTestBreaker(t *testing.T, inner *countingStore, probeInterval time.Duration, startDown bool) *breakerStore {
 	t.Helper()
 	s := NewBreakerStore(inner, BreakerOptions{
 		FailureThreshold: 3,
 		ProbeInterval:    probeInterval,
+		Probe:            func(context.Context) error { return inner.result() },
 		IsFailure:        func(err error) bool { return errors.Is(err, errDown) },
 		StartDown:        startDown,
 	}).(*breakerStore)
@@ -54,7 +55,7 @@ func newTestBreaker(t *testing.T, inner Store, probeInterval time.Duration, star
 	return s
 }
 
-// noProbe keeps the probe from reaching the store during a test.
+// noProbe keeps the probe from running during a test.
 const noProbe = time.Hour
 
 func TestBreakerStore(t *testing.T) {
@@ -185,6 +186,7 @@ func TestBreakerStore(t *testing.T) {
 		inner := &countingStore{}
 		s := NewBreakerStore(inner, BreakerOptions{
 			ProbeInterval: time.Millisecond,
+			Probe:         func(context.Context) error { return inner.result() },
 			IsFailure:     func(error) bool { return true },
 		})
 		require.Eventually(t, func() bool { return inner.calls.Load() > 0 }, time.Second, time.Millisecond)
