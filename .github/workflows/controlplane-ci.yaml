@@ -3,13 +3,13 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - "controlplane/**/*"
-      - "connect/**/*"
-      - "composition/**/*"
-      - "shared/**/*"
-      - ".github/workflows/controlplane-ci.yaml"
-      - ".github/compose/controlplane-ci.yaml"
-      - ".github/scripts/setup-keycloak.sh"
+      - 'controlplane/**/*'
+      - 'connect/**/*'
+      - 'composition/**/*'
+      - 'shared/**/*'
+      - '.github/workflows/controlplane-ci.yaml'
+      - '.github/compose/controlplane-ci.yaml'
+      - '.github/scripts/setup-keycloak.sh'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -20,8 +20,11 @@ env:
   DO_NOT_TRACK: '1'
 
 jobs:
-  build_test:
+  test_shard:
     timeout-minutes: 20
+    strategy:
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -87,14 +90,16 @@ jobs:
         run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
-        run: pnpm run --filter controlplane test:coverage
+        run: |
+          pnpm --filter controlplane exec tsc -p tsconfig.test.json
+          pnpm --filter controlplane exec vitest run --reporter=default --reporter=hanging-process --coverage --shard=${{ matrix.shard }}/3
         env:
-          DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+          DB_URL: 'postgresql://postgres:changeme@localhost:5432/controlplane'
 
       - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: controlplane-tests-coverage
+          artifact-name: controlplane-tests-coverage-${{ matrix.shard }}
           coverage-path: |
             controlplane/coverage/clover.xml
             controlplane/coverage/coverage-final.json
@@ -105,6 +110,19 @@ jobs:
         if: always()
         continue-on-error: true
         run: docker compose --project-name controlplane-ci --file .github/compose/controlplane-ci.yaml down --volumes --remove-orphans
+
+  build_test:
+    name: build_test
+    needs: [test_shard]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shards
+        run: |
+          if [ "${{ needs.test_shard.result }}" != "success" ]; then
+            echo "Test shards did not all succeed."
+            exit 1
+          fi
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -123,4 +141,4 @@ jobs:
           dockerfile: controlplane/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: controlplane
-          image_description: "Cosmo Controlplane"
+          image_description: 'Cosmo Controlplane'
