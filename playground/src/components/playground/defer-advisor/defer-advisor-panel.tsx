@@ -5,6 +5,7 @@ import { slowFieldNames } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
 import { getOperation, parseQuery } from './operation';
 import { DeferAdvisorFailures } from './defer-advisor-failures';
+import { DeferAdvisorLatencies } from './defer-advisor-latencies';
 import type { ProbeRequest } from './probe';
 import type { PillController } from './pills-controller';
 import { summarizeRootFields } from './root-field-summary';
@@ -98,44 +99,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
           {rows.length === 0 ? (
             <p className="text-muted-foreground text-sm">{emptyNotice}</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {rows.map(({ name, undeferred, deferredLabels, eagerLabels }) => {
-                const latency = latencies?.[name];
-                return (
-                  <div key={name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded border p-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-mono text-sm">{name}</div>
-                      {latency !== undefined && (
-                        <div className="text-muted-foreground text-xs">
-                          {latency}ms{slowNames.has(name) ? ' · slow' : ''}
-                        </div>
-                      )}
-                      {deferredLabels.map((label) => (
-                        <div key={label} className="truncate font-mono text-xs">{`@defer(label: "${label}")`}</div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      {undeferred > 0 && (
-                        <Button size="sm" className="whitespace-nowrap" onClick={() => deferField(name)}>
-                          Defer
-                        </Button>
-                      )}
-                      {eagerLabels.map((label) => (
-                        <Button
-                          key={label}
-                          variant="secondary"
-                          size="sm"
-                          className="whitespace-nowrap"
-                          onClick={() => revertLabel(label)}
-                        >
-                          {eagerLabels.length > 1 ? `Eager ${label}` : 'Eager'}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <DeferAdvisorLatencies
+              rows={rows}
+              latencies={latencies}
+              slowNames={slowNames}
+              onDefer={deferField}
+              onRevert={revertLabel}
+            />
           )}
 
           {latencies && Object.keys(latencies).length > 0 && rows.length > 0 && slowNames.size === 0 && (

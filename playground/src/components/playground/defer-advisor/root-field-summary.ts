@@ -1,7 +1,7 @@
 import { countDeferFragmentsByLabel, listDeferredFields, listNestedDeferLabels } from './defer-transform';
 import { collectRootOccurrences, getFragments, getOperation, ParsedQuery } from './operation';
 
-type RootFieldRow = {
+export type RootFieldRow = {
   name: string;
   undeferred: number;
   deferredLabels: string[];
