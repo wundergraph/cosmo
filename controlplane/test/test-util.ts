@@ -411,6 +411,7 @@ export const SetupTest = async function ({
     blobStorage,
     baseAddress: addr,
     keycloakClient,
+    platformWebhooks,
     authenticator,
     mailerClient,
     realm,
