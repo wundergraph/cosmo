@@ -1240,7 +1240,7 @@ type ResponseCacheCircuitBreakerConfig struct {
 	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
 	// FailureThreshold consecutive failures, of requests or probes, mark redis down.
 	FailureThreshold int `yaml:"failure_threshold,omitempty" envDefault:"5" env:"FAILURE_THRESHOLD"`
-	// ProbeInterval is how often redis is probed, up or down.
+	// ProbeInterval is how often redis is probed, up or down; at most 1m.
 	ProbeInterval time.Duration `yaml:"probe_interval,omitempty" envDefault:"1s" env:"PROBE_INTERVAL"`
 }
 

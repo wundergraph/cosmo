@@ -3522,9 +3522,10 @@
                   "type": "string",
                   "format": "go-duration",
                   "default": "1s",
-                  "description": "How often Redis is probed, whether it is up or down. The period is specified as a string with a number and a unit, e.g. 500ms, 1s.",
+                  "description": "How often Redis is probed, whether it is up or down. Only a probe brings Redis back, so it stays bypassed for up to this long after it recovers. The period is specified as a string with a number and a unit, e.g. 500ms, 1s.",
                   "duration": {
-                    "minimum": "10ms"
+                    "minimum": "10ms",
+                    "maximum": "1m"
                   }
                 }
               }

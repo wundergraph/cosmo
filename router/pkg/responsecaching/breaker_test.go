@@ -172,6 +172,13 @@ func TestBreakerStore(t *testing.T) {
 		require.Equal(t, defaultProbeInterval, s.opts.ProbeInterval)
 	})
 
+	t.Run("the probe interval is capped", func(t *testing.T) {
+		t.Parallel()
+
+		s := newTestBreaker(t, &countingStore{}, 10000*time.Second, false)
+		require.Equal(t, maxProbeInterval, s.opts.ProbeInterval)
+	})
+
 	t.Run("close stops probing and closes the store", func(t *testing.T) {
 		t.Parallel()
 

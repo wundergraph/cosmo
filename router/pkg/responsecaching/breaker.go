@@ -13,7 +13,11 @@ import (
 // ErrUnavailable is returned, without reaching the store, while it is down.
 var ErrUnavailable = errors.New("response cache storage is down")
 
-const defaultProbeInterval = time.Second
+const (
+	defaultProbeInterval = time.Second
+	// maxProbeInterval caps how long a recovered store stays bypassed.
+	maxProbeInterval = time.Minute
+)
 
 // probeKeys is what the probe looks up; a miss is a healthy answer.
 var probeKeys = []string{"circuit_breaker_probe"}
@@ -53,6 +57,7 @@ func NewBreakerStore(inner Store, opts BreakerOptions) Store {
 	if opts.ProbeInterval <= 0 {
 		opts.ProbeInterval = defaultProbeInterval
 	}
+	opts.ProbeInterval = min(opts.ProbeInterval, maxProbeInterval)
 
 	s := &breakerStore{inner: inner, opts: opts, probeDone: make(chan struct{})}
 	s.probeCtx, s.cancelProbe = context.WithCancel(context.Background())
