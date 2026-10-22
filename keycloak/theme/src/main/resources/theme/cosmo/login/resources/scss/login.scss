@@ -209,6 +209,22 @@ div.kc-logo-text span {
   }
 }
 
+.complete-account {
+  .card-pf {
+    @apply md:max-w-lg;
+  }
+  .form-group label {
+    @apply text-gray-300;
+  }
+  // Keep the subtitle close to the title, as in the mockup
+  .login-pf-header {
+    @apply mb-0;
+  }
+  .login-pf-header h1 {
+    @apply mb-1;
+  }
+}
+
 #kc-complete-account-terms {
   @apply text-center text-xs text-gray-400;
   a {

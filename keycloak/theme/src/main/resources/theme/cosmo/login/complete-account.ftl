@@ -1,10 +1,10 @@
 <#import "layout-cloud-iam.ftl" as layoutCloudIAM>
-<@layoutCloudIAM.registrationCloudIamLayout displayMessage=false displayInfo=true; section>
+<@layoutCloudIAM.registrationCloudIamLayout bodyClass="complete-account" displayMessage=false displayInfo=true; section>
     <#if section = "header">
         ${msg("completeAccountTitle")}
     <#elseif section = "form">
         <p class="mb-4 text-sm text-gray-400">${msg("completeAccountSubtitle")}</p>
-        <form id="kc-complete-account-form" class="flex flex-col w-full px-2 gap-2" action="${url.loginAction}" method="post">
+        <form id="kc-complete-account-form" class="flex flex-col w-full gap-2" action="${url.loginAction}" method="post">
             <div class="${properties.kcFormGroupClass!}">
                 <label for="company_name" class="${properties.kcLabelClass!}">${msg("completeAccountCompanyName")}</label>
                 <input type="text" id="company_name" name="company_name" maxlength="255" autocomplete="organization"
