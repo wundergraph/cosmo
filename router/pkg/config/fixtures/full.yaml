@@ -554,6 +554,10 @@ response_cache:
     max_entries: 2048
     lookup_timeout: 200ms
     write_timeout: 1s
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+      probe_interval: 2s
   invalidation:
     cache_tag: true
     subgraph: false

@@ -97,6 +97,8 @@ func errorType(err error) string {
 	switch {
 	case errors.Is(err, context.Canceled):
 		return metric.ResponseCacheErrorCanceled
+	case errors.Is(err, ErrUnavailable):
+		return metric.ResponseCacheErrorUnavailable
 	case errors.As(err, &partial):
 		return metric.ResponseCacheErrorPartialWrite
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &netErr) && netErr.Timeout():

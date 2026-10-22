@@ -453,7 +453,12 @@
       "ProviderID": "",
       "MaxEntries": 10000,
       "LookupTimeout": 150000000,
-      "WriteTimeout": 500000000
+      "WriteTimeout": 500000000,
+      "CircuitBreaker": {
+        "Enabled": true,
+        "FailureThreshold": 5,
+        "ProbeInterval": 1000000000
+      }
     },
     "Invalidation": {
       "CacheTag": true,

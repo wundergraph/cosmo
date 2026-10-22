@@ -1387,7 +1387,20 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 
 	// The cache owns the client from here on and closes it with itself, and
 	// Shutdown closes the cache.
-	r.responseCache = responsecaching.NewTimeoutStore(cache, r.responseCacheConfig.Storage.LookupTimeout, r.responseCacheConfig.Storage.WriteTimeout)
+	storage := r.responseCacheConfig.Storage
+	store := responsecaching.NewTimeoutStore(cache, storage.LookupTimeout, storage.WriteTimeout)
+	if breaker := storage.CircuitBreaker; breaker.Enabled {
+		store = responsecaching.NewBreakerStore(store, responsecaching.BreakerOptions{
+			FailureThreshold: breaker.FailureThreshold,
+			ProbeInterval:    breaker.ProbeInterval,
+			Ping:             cache.Ping,
+			IsFailure:        rediscache.IsUnavailable,
+			// Bypass from the start rather than wait out the threshold.
+			StartDown: err != nil,
+			Logger:    r.logger.With(zap.String("storage_provider_id", providerID)),
+		})
+	}
+	r.responseCache = store
 
 	r.logger.Info(
 		"Response cache enabled",
@@ -1398,6 +1411,7 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		zap.String("storage_provider_id", providerID),
 		zap.Duration("lookup_timeout", r.responseCacheConfig.Storage.LookupTimeout),
 		zap.Duration("write_timeout", r.responseCacheConfig.Storage.WriteTimeout),
+		zap.Bool("circuit_breaker", r.responseCacheConfig.Storage.CircuitBreaker.Enabled),
 	)
 
 	return nil

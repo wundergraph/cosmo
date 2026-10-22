@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"sync"
 	"time"
 
@@ -137,4 +139,28 @@ func (c *RedisCache) Close() error {
 		c.closeErr = c.client.Close()
 	})
 	return c.closeErr
+}
+
+// Ping reaches redis.
+func (c *RedisCache) Ping(ctx context.Context) error {
+	return c.client.Ping(ctx).Err()
+}
+
+// unavailablePrefixes are replies from a redis that is up but cannot serve.
+var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "TRYAGAIN", "MASTERDOWN"}
+
+// IsUnavailable reports whether err means redis cannot be reached or cannot
+// serve, rather than that one command failed.
+func IsUnavailable(err error) bool {
+	var netErr net.Error
+	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	for _, prefix := range unavailablePrefixes {
+		if redis.HasErrorPrefix(err, prefix) {
+			return true
+		}
+	}
+	return false
 }

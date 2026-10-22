@@ -45,6 +45,8 @@ const (
 	ResponseCacheErrorPartialWrite    = "partial_write"
 	ResponseCacheErrorInvalidArgument = "invalid_argument"
 	ResponseCacheErrorOther           = "other"
+	// ResponseCacheErrorUnavailable is a call skipped while the storage is down.
+	ResponseCacheErrorUnavailable = "unavailable"
 	// ResponseCacheErrorInvalidEntry is an entry that was found and could not be used.
 	ResponseCacheErrorInvalidEntry = "invalid_entry"
 	// ResponseCacheErrorInvalidResponse is a response that could not be taken apart for the cache.
