@@ -154,7 +154,7 @@ var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "MASTERDOWN"}
 
 // IsUnavailable reports whether err means redis cannot be reached or cannot
 // serve, rather than that one command failed.
-func IsUnavailable(err error) bool {
+func (c *RedisCache) IsUnavailable(err error) bool {
 	var netErr net.Error
 	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) ||
 		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {

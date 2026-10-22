@@ -20,12 +20,11 @@ const (
 )
 
 type BreakerOptions struct {
-	// FailureThreshold consecutive failures, of requests or probes, mark the store down.
+	// FailureThreshold consecutive unavailable errors, of requests or probes,
+	// mark the store down.
 	FailureThreshold int
 	// ProbeInterval is how often the store is probed, up or down.
 	ProbeInterval time.Duration
-	// IsFailure reports whether err means the store is unreachable, not that one call failed.
-	IsFailure func(err error) bool
 	// StartDown starts the store down, e.g. after a failed startup ping.
 	StartDown bool
 	Logger    *zap.Logger
@@ -91,6 +90,11 @@ func (s *breakerStore) InvalidateByTags(ctx context.Context, tags []string) (int
 	return removed, err
 }
 
+// IsUnavailable counts the breaker's own ErrUnavailable as well as the store's.
+func (s *breakerStore) IsUnavailable(err error) bool {
+	return errors.Is(err, ErrUnavailable) || s.inner.IsUnavailable(err)
+}
+
 // Probe reaches the store even while it is down.
 func (s *breakerStore) Probe(ctx context.Context) error {
 	return s.inner.Probe(ctx)
@@ -112,7 +116,7 @@ func (s *breakerStore) observe(ctx context.Context, err error) {
 		}
 	case ctx.Err() != nil:
 		// The caller is gone, which says nothing about the store.
-	case s.opts.IsFailure(err):
+	case s.inner.IsUnavailable(err):
 		s.fail()
 	}
 }
@@ -133,7 +137,7 @@ func (s *breakerStore) probe() {
 		switch {
 		case s.probeCtx.Err() != nil:
 			return
-		case err != nil && s.opts.IsFailure(err):
+		case err != nil && s.inner.IsUnavailable(err):
 			s.fail()
 		default:
 			s.failures.Store(0)

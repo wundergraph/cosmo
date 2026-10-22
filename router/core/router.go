@@ -1393,7 +1393,6 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		store = responsecaching.NewBreakerStore(store, responsecaching.BreakerOptions{
 			FailureThreshold: breaker.FailureThreshold,
 			ProbeInterval:    breaker.ProbeInterval,
-			IsFailure:        rediscache.IsUnavailable,
 			// Bypass from the start rather than wait out the threshold.
 			StartDown: err != nil,
 			Logger:    r.logger.With(zap.String("storage_provider_id", providerID)),
