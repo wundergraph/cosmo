@@ -75,6 +75,7 @@ export function moveSubgraph(
       };
     }
 
+    // Moving takes the subgraph out of the source namespace, so it needs the same rights as deleting it.
     await opts.authorizer.authorize({
       db: opts.db,
       graph: {
@@ -83,6 +84,7 @@ export function moveSubgraph(
       },
       headers: ctx.requestHeader,
       authContext,
+      isDeleteOperation: true,
     });
 
     // The move creates the subgraph in the destination, so it needs the same rights as creating one there.
