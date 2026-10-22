@@ -6,6 +6,7 @@ import { CompositionErrorsBanner } from '@/components/composition-errors-banner'
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
 import { EmptyState } from '@/components/empty-state';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CLI } from '@/components/ui/cli';
 import { Loader } from '@/components/ui/loader';
@@ -90,16 +91,27 @@ const ChangelogToolbar = () => {
           }
         >
           {/* A fixed width, so the toolbar doesn't shift with the length of the selected name; long names are truncated */}
-          <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:truncate">
+          <SelectTrigger className="w-[200px] [&>span]:min-w-0 [&>span]:truncate [&_p]:flex [&_p]:items-center">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="" title={graphData?.graph?.name} className="[&_p]:max-w-[264px] [&_p]:truncate">
               {graphData?.graph?.name}
             </SelectItem>
-            {featureFlags.map(({ id, name }) => (
-              <SelectItem key={id} value={name} title={name} className="[&_p]:max-w-[264px] [&_p]:truncate">
-                {name}
+            {featureFlags.map(({ id, name, isEnabled }) => (
+              <SelectItem
+                key={id}
+                value={name}
+                title={isEnabled ? name : `${name} (disabled)`}
+                className="[&_p]:flex [&_p]:max-w-[264px] [&_p]:items-center"
+              >
+                {/* Only the name is truncated, so the disabled badge stays visible for long names */}
+                <span className="min-w-0 truncate">{name}</span>
+                {!isEnabled && (
+                  <Badge variant="destructive" className="ml-2 shrink-0 px-1.5 py-0 text-[10px]">
+                    Disabled
+                  </Badge>
+                )}
               </SelectItem>
             ))}
           </SelectContent>
