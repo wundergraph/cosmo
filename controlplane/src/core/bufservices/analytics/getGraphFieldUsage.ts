@@ -57,9 +57,10 @@ export function getGraphFieldUsage(
       featureId: 'analytics-retention',
     });
 
+    const analyticsRetentionInDays = analyticsRetention?.limit ?? 7;
     const inputRange = req.range ?? (req.dateRange ? undefined : 24);
     const { range, dateRange: validatedDateRange } = validateDateRanges({
-      limit: analyticsRetention?.limit ?? 7,
+      limit: analyticsRetentionInDays,
       range: inputRange,
       dateRange: req.dateRange,
     });
@@ -113,6 +114,7 @@ export function getGraphFieldUsage(
         start: new Date(startTimestamp * 1000).toISOString(),
         end: new Date(endTimestamp * 1000).toISOString(),
       },
+      analyticsRetentionInDays,
     };
   });
 }

@@ -2401,6 +2401,7 @@ message GetGraphFieldUsageResponse {
   Response response = 1;
   repeated Field fields = 2;
   optional DateRange dateRange = 3; // the window that was queried, after the analytics retention limit
+  optional int32 analyticsRetentionInDays = 4; // the longest window the organization's plan allows
 }
 
 message CreateNamespaceRequest {

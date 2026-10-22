@@ -296,7 +296,7 @@ describe('GetGraphFieldUsage', () => {
     expect(Math.abs(end - toUnixSeconds(new Date()))).toBeLessThanOrEqual(60);
   });
 
-  test('Should limit the range to seven days when the organization has no plan', async (testContext) => {
+  test('Should limit the range to seven days, and return that limit, when the organization has no plan', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
@@ -315,9 +315,10 @@ describe('GetGraphFieldUsage', () => {
     expect(response.dateRange?.start).toBe(queried.start);
     expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(7 * 24 * HOUR_IN_SECONDS);
+    expect(response.analyticsRetentionInDays).toBe(7);
   });
 
-  test('Should limit the range to the analytics retention of the plan', async (testContext) => {
+  test('Should limit the range to the analytics retention of the plan, and return that retention', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient, setupBilling: { plan: 'scale@1' } });
     testContext.onTestFinished(() => server.close());
 
@@ -336,6 +337,7 @@ describe('GetGraphFieldUsage', () => {
     expect(response.dateRange?.start).toBe(queried.start);
     expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(14 * 24 * HOUR_IN_SECONDS);
+    expect(response.analyticsRetentionInDays).toBe(14);
   });
 
   test('Should move the start of a date range to the analytics retention of the plan', async (testContext) => {

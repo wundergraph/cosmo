@@ -21065,12 +21065,13 @@ func (x *GetGraphFieldUsageRequest) GetDateRange() *DateRange {
 }
 
 type GetGraphFieldUsageResponse struct {
-	state         protoimpl.MessageState              `protogen:"open.v1"`
-	Response      *Response                           `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Fields        []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
-	DateRange     *DateRange                          `protobuf:"bytes,3,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"` // the window that was queried, after the analytics retention limit
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState              `protogen:"open.v1"`
+	Response                 *Response                           `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Fields                   []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
+	DateRange                *DateRange                          `protobuf:"bytes,3,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"`                                // the window that was queried, after the analytics retention limit
+	AnalyticsRetentionInDays *int32                              `protobuf:"varint,4,opt,name=analyticsRetentionInDays,proto3,oneof" json:"analyticsRetentionInDays,omitempty"` // the longest window the organization's plan allows
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *GetGraphFieldUsageResponse) Reset() {
@@ -21122,6 +21123,13 @@ func (x *GetGraphFieldUsageResponse) GetDateRange() *DateRange {
 		return x.DateRange
 	}
 	return nil
+}
+
+func (x *GetGraphFieldUsageResponse) GetAnalyticsRetentionInDays() int32 {
+	if x != nil && x.AnalyticsRetentionInDays != nil {
+		return *x.AnalyticsRetentionInDays
+	}
+	return 0
 }
 
 type CreateNamespaceRequest struct {
@@ -36435,11 +36443,12 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tdateRange\x18\x04 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x01R\tdateRange\x88\x01\x01B\b\n" +
 	"\x06_rangeB\f\n" +
 	"\n" +
-	"_dateRange\"\xaf\x04\n" +
+	"_dateRange\"\x8d\x05\n" +
 	"\x1aGetGraphFieldUsageResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12N\n" +
 	"\x06fields\x18\x02 \x03(\v26.wg.cosmo.platform.v1.GetGraphFieldUsageResponse.FieldR\x06fields\x12B\n" +
-	"\tdateRange\x18\x03 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x00R\tdateRange\x88\x01\x01\x1ar\n" +
+	"\tdateRange\x18\x03 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeH\x00R\tdateRange\x88\x01\x01\x12?\n" +
+	"\x18analyticsRetentionInDays\x18\x04 \x01(\x05H\x01R\x18analyticsRetentionInDays\x88\x01\x01\x1ar\n" +
 	"\bSubgraph\x12\x1e\n" +
 	"\n" +
 	"subgraphId\x18\x01 \x01(\tR\n" +
@@ -36452,7 +36461,8 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\frequestCount\x18\x03 \x01(\x03R\frequestCount\x12W\n" +
 	"\tsubgraphs\x18\x04 \x03(\v29.wg.cosmo.platform.v1.GetGraphFieldUsageResponse.SubgraphR\tsubgraphsB\f\n" +
 	"\n" +
-	"_dateRange\",\n" +
+	"_dateRangeB\x1b\n" +
+	"\x19_analyticsRetentionInDays\",\n" +
 	"\x16CreateNamespaceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"U\n" +
 	"\x17CreateNamespaceResponse\x12:\n" +
