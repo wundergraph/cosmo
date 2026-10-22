@@ -20,7 +20,7 @@ env:
   DO_NOT_TRACK: '1'
 
 jobs:
-  build_test:
+  test_shard:
     timeout-minutes: 20
     strategy:
       matrix:
@@ -110,6 +110,19 @@ jobs:
         if: always()
         continue-on-error: true
         run: docker compose --project-name controlplane-ci --file .github/compose/controlplane-ci.yaml down --volumes --remove-orphans
+
+  build_test:
+    name: build_test
+    needs: [test_shard]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shards
+        run: |
+          if [ "${{ needs.test_shard.result }}" != "success" ]; then
+            echo "Test shards did not all succeed."
+            exit 1
+          fi
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
