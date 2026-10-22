@@ -44,21 +44,33 @@ const (
 	invalidInput     = `{"deliveryGuaranteeMode":"cursor","body":{"extensions":{"cosmoDeliveryGuarantee":42}}}`
 )
 
-func TestPubSubSubscriptionDataSource_ValidateTriggerInput(t *testing.T) {
+// validateDeliveryGuarantee drops the negotiated guarantee, for tests that only care about rejection.
+func validateDeliveryGuarantee(ds interface {
+	ValidateDeliveryGuarantee(*resolve.Context, []byte) (string, error)
+}, ctx *resolve.Context, input []byte) error {
+	_, err := ds.ValidateDeliveryGuarantee(ctx, input)
+	return err
+}
+
+func TestPubSubSubscriptionDataSource_ValidateDeliveryGuarantee(t *testing.T) {
 	// Cursor and at-most-once requests are accepted. A cursor request on a field with
 	// guarantees disabled is rejected as unsupported, a malformed value as invalid.
 	ds := newCursorDataSource(t, func(context.Context) (ClientIdentity, error) {
 		return ClientIdentity{}, nil
 	})
 
-	assert.NoError(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(cursorInput)))
-	assert.NoError(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(atMostOnceInput)))
+	negotiated, err := ds.ValidateDeliveryGuarantee(&resolve.Context{}, []byte(cursorInput))
+	require.NoError(t, err)
+	assert.Equal(t, string(DeliveryGuaranteeCursor), negotiated)
+	negotiated, err = ds.ValidateDeliveryGuarantee(&resolve.Context{}, []byte(atMostOnceInput))
+	require.NoError(t, err)
+	assert.Equal(t, string(DeliveryGuaranteeAtMostOnce), negotiated)
 
 	var gErr *DeliveryGuaranteeError
-	require.ErrorAs(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(unsupportedInput)), &gErr)
+	require.ErrorAs(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(unsupportedInput)), &gErr)
 	assert.Equal(t, DeliveryGuaranteeErrorCodeUnsupported, gErr.Code)
 
-	require.ErrorAs(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(invalidInput)), &gErr)
+	require.ErrorAs(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(invalidInput)), &gErr)
 	assert.Equal(t, DeliveryGuaranteeErrorCodeInvalid, gErr.Code)
 }
 
@@ -73,7 +85,7 @@ func newCursorDataSource(t *testing.T, subscriberBinding SubscriberBindingFunc) 
 
 type cursorTestContextKey struct{}
 
-func TestPubSubSubscriptionDataSource_ValidateTriggerInput_CursorBinding(t *testing.T) {
+func TestPubSubSubscriptionDataSource_ValidateDeliveryGuarantee_CursorBinding(t *testing.T) {
 	// A cursor request fails during negotiation if the subscriber can't be issued cursors,
 	// before any trigger exists. At-most-once requests are never affected.
 	t.Run("subscriberBinding gets the context of the subscriber", func(t *testing.T) {
@@ -84,7 +96,7 @@ func TestPubSubSubscriptionDataSource_ValidateTriggerInput_CursorBinding(t *test
 		})
 
 		ctx := resolve.NewContext(context.WithValue(context.Background(), cursorTestContextKey{}, "subscriber"))
-		require.NoError(t, ds.ValidateTriggerInput(ctx, []byte(cursorInput)))
+		require.NoError(t, validateDeliveryGuarantee(ds, ctx, []byte(cursorInput)))
 		assert.Equal(t, "subscriber", got)
 	})
 
@@ -92,11 +104,11 @@ func TestPubSubSubscriptionDataSource_ValidateTriggerInput_CursorBinding(t *test
 		ds := NewPubSubSubscriptionDataSource[*cursorTestConfig](nil, nil, nil, nil)
 
 		var gErr *DeliveryGuaranteeError
-		require.ErrorAs(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(cursorInput)), &gErr)
+		require.ErrorAs(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(cursorInput)), &gErr)
 		assert.Equal(t, DeliveryGuaranteeErrorCodeUnsatisfiable, gErr.Code)
 		assert.Equal(t, []DeliveryGuarantee{DeliveryGuaranteeCursor, DeliveryGuaranteeAtMostOnce}, gErr.Supported)
 
-		assert.NoError(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(atMostOnceInput)))
+		assert.NoError(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(atMostOnceInput)))
 	})
 
 	t.Run("subscriberBinding rejects the client", func(t *testing.T) {
@@ -108,12 +120,12 @@ func TestPubSubSubscriptionDataSource_ValidateTriggerInput_CursorBinding(t *test
 		})
 
 		var gErr *DeliveryGuaranteeError
-		require.ErrorAs(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(cursorInput)), &gErr)
+		require.ErrorAs(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(cursorInput)), &gErr)
 		assert.Equal(t, DeliveryGuaranteeErrorCodeUnsatisfiable, gErr.Code)
 		assert.Equal(t, "missing claim", gErr.Message)
 		assert.Equal(t, []DeliveryGuarantee{DeliveryGuaranteeCursor, DeliveryGuaranteeAtMostOnce}, gErr.Supported)
 
-		assert.NoError(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(atMostOnceInput)))
+		assert.NoError(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(atMostOnceInput)))
 	})
 
 	t.Run("subscriberBinding fails", func(t *testing.T) {
@@ -122,26 +134,25 @@ func TestPubSubSubscriptionDataSource_ValidateTriggerInput_CursorBinding(t *test
 		})
 
 		var gErr *DeliveryGuaranteeError
-		require.ErrorAs(t, ds.ValidateTriggerInput(&resolve.Context{}, []byte(cursorInput)), &gErr)
+		require.ErrorAs(t, validateDeliveryGuarantee(ds, &resolve.Context{}, []byte(cursorInput)), &gErr)
 		assert.Equal(t, DeliveryGuaranteeErrorCodeUnsatisfiable, gErr.Code)
 		assert.NotContains(t, gErr.Message, "internal detail")
 	})
 }
 
-func TestPubSubSubscriptionDataSource_HashTriggerInput_IncludesGuarantee(t *testing.T) {
+func TestPubSubSubscriptionDataSource_HashTriggerDeliveryGuarantee_IncludesGuarantee(t *testing.T) {
 	// Cursor and at-most-once subscribers must not share a trigger, while subscribers with
-	// the same guarantee still do. The provider hash is constant, so any difference must
-	// come from the delivery guarantee.
+	// the same guarantee still do. The hash covers the negotiated delivery guarantee only.
 	ds := newGuaranteeDataSource()
 
-	hash := func(input string) uint64 {
+	hash := func(negotiated string) uint64 {
 		xxh := xxhash.New()
-		require.NoError(t, ds.HashTriggerInput([]byte(input), xxh))
+		require.NoError(t, ds.HashTriggerDeliveryGuarantee(negotiated, xxh))
 		return xxh.Sum64()
 	}
 
-	assert.NotEqual(t, hash(cursorInput), hash(atMostOnceInput))
-	assert.Equal(t, hash(cursorInput), hash(cursorInput))
+	assert.NotEqual(t, hash(string(DeliveryGuaranteeCursor)), hash(string(DeliveryGuaranteeAtMostOnce)))
+	assert.Equal(t, hash(string(DeliveryGuaranteeCursor)), hash(string(DeliveryGuaranteeCursor)))
 }
 
 func TestPubSubSubscriptionDataSource_Start_PassesGuaranteeToAdapter(t *testing.T) {

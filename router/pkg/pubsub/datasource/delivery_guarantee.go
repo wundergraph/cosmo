@@ -72,9 +72,9 @@ func SupportedDeliveryGuarantees(mode DeliveryGuaranteeMode) []DeliveryGuarantee
 // NegotiateDeliveryGuarantee picks the guarantee for a subscription from the field's schema mode
 // and the client's body.extensions.cosmoDeliveryGuarantee value in the subscription input.
 func NegotiateDeliveryGuarantee(mode DeliveryGuaranteeMode, input []byte) (DeliveryGuarantee, error) {
-	supported := SupportedDeliveryGuarantees(mode)
+	supportedGuarantees := SupportedDeliveryGuarantees(mode)
 
-	value, dataType, _, err := jsonparser.Get(input, "body", "extensions", deliveryGuaranteeExtensionKey)
+	requestedGuarantee, dataType, _, err := jsonparser.Get(input, "body", "extensions", deliveryGuaranteeExtensionKey)
 	if err != nil || dataType == jsonparser.Null {
 		// Missing key (or missing body/extensions) and null both mean at-most-once.
 		return DeliveryGuaranteeAtMostOnce, nil
@@ -82,27 +82,27 @@ func NegotiateDeliveryGuarantee(mode DeliveryGuaranteeMode, input []byte) (Deliv
 
 	invalid := &DeliveryGuaranteeError{
 		Code:      DeliveryGuaranteeErrorCodeInvalid,
-		Supported: supported,
+		Supported: supportedGuarantees,
 		Message:   "The requested delivery guarantee is invalid: " + deliveryGuaranteeExtensionKey + " must be a non-empty string",
 	}
 	if dataType != jsonparser.String {
 		return "", invalid
 	}
-	raw, err := jsonparser.ParseString(value)
-	if err != nil || strings.TrimSpace(raw) == "" {
+	parsedRequestedGuarantee, err := jsonparser.ParseString(requestedGuarantee)
+	if err != nil || strings.TrimSpace(parsedRequestedGuarantee) == "" {
 		return "", invalid
 	}
 
-	for _, token := range strings.Split(raw, ",") {
+	for token := range strings.SplitSeq(parsedRequestedGuarantee, ",") {
 		candidate := DeliveryGuarantee(strings.TrimSpace(token))
-		if slices.Contains(supported, candidate) {
+		if slices.Contains(supportedGuarantees, candidate) {
 			return candidate, nil
 		}
 	}
 
 	return "", &DeliveryGuaranteeError{
 		Code:      DeliveryGuaranteeErrorCodeUnsupported,
-		Supported: supported,
+		Supported: supportedGuarantees,
 		Message:   "None of the requested delivery guarantees is supported by this subscription",
 	}
 }
