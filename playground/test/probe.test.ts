@@ -132,6 +132,25 @@ describe('parseVariables', () => {
   });
 });
 
+describe('probe cancellation', () => {
+  test('aborting the signal rejects the in-flight requests', async () => {
+    const abort = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+          }),
+      ),
+    );
+    const pending = probeRootFields('http://router', 'query { a }', undefined, abort.signal);
+    abort.abort();
+    const results = await pending;
+    expect(results.a.ok).toBe(false);
+  });
+});
+
 describe('probe HTTP status', () => {
   test('a non-2xx response fails the field even when its body has no errors', async () => {
     vi.stubGlobal(

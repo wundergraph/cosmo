@@ -43,13 +43,15 @@ const timeOnce = async (
   query: string,
   variables: Record<string, unknown>,
   headers: Record<string, string>,
+  signal: AbortSignal,
 ) => {
   const started = performance.now();
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify({ query, variables }),
-    signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    // The caller's signal lets the panel stop probes when the tab or query changes.
+    signal: AbortSignal.any([AbortSignal.timeout(PROBE_TIMEOUT_MS), signal]),
   });
   // A 401 or 429 can carry a JSON body with no errors array, which would otherwise count as a measurement.
   if (!response.ok) {
@@ -108,6 +110,7 @@ const probeField = async (
   operation: OperationDefinitionNode,
   fragments: FragmentMap,
   request: ProbeRequest,
+  signal: AbortSignal,
 ): Promise<ProbeResult> => {
   const linked = referencedFragments(field, fragments);
   const used = usedVariableNames([field, ...linked]);
@@ -120,7 +123,7 @@ const probeField = async (
   try {
     let total = 0;
     for (let run = 0; run < PROBE_RUNS; run++) {
-      total += await timeOnce(url, query, variables, request.headers);
+      total += await timeOnce(url, query, variables, request.headers, signal);
     }
     return { ok: true, latencyMs: Math.round(total / PROBE_RUNS) };
   } catch (error) {
@@ -132,6 +135,7 @@ export const probeRootFields = async (
   url: string,
   query: string,
   request: ProbeRequest = { headers: {}, variables: {} },
+  signal: AbortSignal = new AbortController().signal,
 ): Promise<Record<string, ProbeResult>> => {
   const doc = parseQuery(query)?.doc;
   const operation = getOperation(doc);
@@ -143,7 +147,7 @@ export const probeRootFields = async (
   const results: Record<string, ProbeResult> = {};
   for (const field of collectRootFields(operation.selectionSet.selections, fragments)) {
     const name = field.alias?.value ?? field.name.value;
-    results[name] = await probeField(url, field, operation, fragments, request);
+    results[name] = await probeField(url, field, operation, fragments, request, signal);
   }
   return results;
 };

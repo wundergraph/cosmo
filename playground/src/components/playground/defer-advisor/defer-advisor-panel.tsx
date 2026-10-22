@@ -32,11 +32,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
   // The cleanup also runs on unmount. The controller outlives the panel, so a probe
   // still in flight would otherwise write its numbers after the panel is gone.
+  const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
     runId.current += 1;
     setRunning(false);
     return () => {
       runId.current += 1;
+      probeAbort.current?.abort();
     };
   }, [query, routingUrl]);
 
@@ -57,11 +59,13 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
       return;
     }
     const id = ++runId.current;
+    const abort = new AbortController();
+    probeAbort.current = abort;
     setRunning(true);
     try {
       const request = getRequest();
       setVariablesError(request.variablesError ?? null);
-      const results = await probeRootFields(routingUrl, query, request);
+      const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
       }
