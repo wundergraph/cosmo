@@ -112,6 +112,9 @@ type headerPropagationWriter struct {
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
 	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
+	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
+	responseCacheStatusFor    *requestContext
+	didSetResponseCacheStatus bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -151,6 +154,10 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
 			h.writer.Header().Set(h.cacheTagHeader.Name, value)
 		}
+	}
+	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
+		h.didSetResponseCacheStatus = true
+		setResponseCacheStatusHeader(h.writer.Header(), h.responseCacheStatusFor)
 	}
 	return h.writer.Write(p)
 }
@@ -892,8 +899,22 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		return
 	}
 
-	reqDir, _ := cachedirective.ParseRequestCacheControl(reqCacheHeader)
-	resDir, _ := cachedirective.ParseResponseCacheControl(resCacheHeader)
+	// The parsers return nil on malformed input.
+	reqDir, err := cachedirective.ParseRequestCacheControl(reqCacheHeader)
+	if err != nil {
+		reqDir = &cachedirective.RequestCacheDirectives{MaxAge: -1, MaxStale: -1, MinFresh: -1}
+	}
+	resDir, err := cachedirective.ParseResponseCacheControl(resCacheHeader)
+	if err != nil {
+		// Unreadable freshness is not cacheable.
+		resDir = &cachedirective.ResponseCacheDirectives{
+			NoStore:              true,
+			MaxAge:               -1,
+			SMaxAge:              -1,
+			StaleIfError:         -1,
+			StaleWhileRevalidate: -1,
+		}
+	}
 	obj := &cachedirective.Object{
 		RespDirectives:         resDir,
 		RespHeaders:            res.Header,
@@ -917,8 +938,9 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 
 	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
-		defaultResponseCache, _ := cachedirective.ParseResponseCacheControl(rule.Default)
-		defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+		}
 	}
 
 	propagation.m.Lock()

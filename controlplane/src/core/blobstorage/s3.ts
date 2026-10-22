@@ -57,11 +57,13 @@ export class S3BlobStorage implements BlobStorage {
 
   async putObject<Metadata extends Record<string, string>>({
     key,
+    abortSignal,
     body,
     contentType,
     metadata,
   }: {
     key: string;
+    abortSignal?: AbortSignal;
     body: Buffer;
     contentType: string;
     version?: string;
@@ -74,7 +76,7 @@ export class S3BlobStorage implements BlobStorage {
       ContentType: contentType,
       Metadata: metadata,
     });
-    const resp = await this.s3Client.send(command);
+    const resp = await this.s3Client.send(command, { abortSignal });
     if (resp.$metadata.httpStatusCode !== 200) {
       throw new Error(`Failed to put object to S3: ${resp}`);
     }

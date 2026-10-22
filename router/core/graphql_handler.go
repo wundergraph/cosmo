@@ -273,6 +273,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Subgraph: h.responseCacheInvalidation.Subgraph,
 				Type:     h.responseCacheInvalidation.Type,
 			}
+			if resolveCtx.TracingOptions.Enable {
+				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+				// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+					return synchronous && resolveCtx.SubgraphErrors() == nil
+				})
+			}
 			resolveCtx.SetResponseCache(cacheOpts)
 		}
 	}
@@ -344,6 +351,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
 				pw.cacheTagHeader = &h.responseCacheTagHeader
+			}
+			if h.responseCacheStore != nil && h.enableCacheResponseHeaders {
+				pw.responseCacheStatusFor = reqCtx
 			}
 		}
 

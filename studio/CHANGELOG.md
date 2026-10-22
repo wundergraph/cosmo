@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.3](https://github.com/wundergraph/cosmo/compare/studio@0.183.2...studio@0.183.3) (2026-10-21)
+
+### Bug Fixes
+
+* introspection for input deprecated fields in the playground ([#3394](https://github.com/wundergraph/cosmo/issues/3394)) ([b7f1b8e](https://github.com/wundergraph/cosmo/commit/b7f1b8ee66913b437cdaad60cfb5a858012d6e82)) (@JivusAyrus)
+
+## [0.183.2](https://github.com/wundergraph/cosmo/compare/studio@0.183.1...studio@0.183.2) (2026-10-19)
+
+**Note:** Version bump only for package studio
+
 ## [0.183.1](https://github.com/wundergraph/cosmo/compare/studio@0.183.0...studio@0.183.1) (2026-10-14)
 
 **Note:** Version bump only for package studio

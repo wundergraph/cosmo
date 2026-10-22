@@ -590,6 +590,7 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": [
         {
           "Key": "hello",
@@ -618,6 +619,7 @@
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": true,
       "Fields": [
         {
@@ -656,8 +658,9 @@
   "LogLevel": "info",
   "JSONLog": true,
   "LogServiceName": "my-custom-router",
-  "ShutdownDelay": 15000000000,
+  "ShutdownDelay": 30000000000,
   "GracePeriod": 20000000000,
+  "DrainPeriod": 5000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
@@ -1188,7 +1191,12 @@
     "IgnoredFeatureFlags": [
       "experimental-checkout",
       "ab-test-foo"
-    ]
+    ],
+    "FetchRetry": {
+      "MaxAttempts": 5,
+      "Interval": 1000000000,
+      "MaxDuration": 30000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

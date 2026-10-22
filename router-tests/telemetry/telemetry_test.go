@@ -9833,6 +9833,10 @@ func TestFlakyTelemetry(t *testing.T) {
 				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(5))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
+				require.Equal(t, codes.Error, testSpan.Status().Code)
+				require.Equal(t, "The total number of fields 5 exceeds the limit allowed (2)", testSpan.Status().Description)
+				require.Len(t, testSpan.Events(), 1)
+				require.Contains(t, testSpan.Events()[0].Attributes, semconv.ExceptionMessage("The total number of fields 5 exceeds the limit allowed (2)"))
 				exporter.Reset()
 
 				failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -9844,8 +9848,10 @@ func TestFlakyTelemetry(t *testing.T) {
 				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(5))
 				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
-				assert.Equal(t, codes.Unset, testSpan2.Status().Code)
-				assert.Equal(t, []sdktrace.Event(nil), testSpan2.Events())
+				assert.Equal(t, codes.Error, testSpan2.Status().Code)
+				assert.Equal(t, "The total number of fields 5 exceeds the limit allowed (2)", testSpan2.Status().Description)
+				require.Len(t, testSpan2.Events(), 1)
+				assert.Contains(t, testSpan2.Events()[0].Attributes, semconv.ExceptionMessage("The total number of fields 5 exceeds the limit allowed (2)"))
 				exporter.Reset()
 
 				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
