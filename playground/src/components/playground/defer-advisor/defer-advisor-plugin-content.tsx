@@ -30,7 +30,7 @@ export const DeferAdvisorPluginContent = ({
     <DeferAdvisorPanel
       query={query}
       routingUrl={routingUrl}
-      getRequest={() => ({ headers: getHeaders(), variables: parseVariables(variableEditor?.getValue() ?? '') })}
+      getRequest={() => ({ headers: getHeaders(), ...parseVariables(variableEditor?.getValue() ?? '') })}
       editor={queryEditor}
       onQueryChange={(next) => {
         if (queryEditor) {

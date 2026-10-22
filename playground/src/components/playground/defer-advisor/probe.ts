@@ -1,4 +1,5 @@
 import { ASTNode, FieldNode, FragmentDefinitionNode, OperationDefinitionNode, print, visit } from 'graphql';
+import { z } from 'zod';
 import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation';
 
 export const PROBE_RUNS = 3;
@@ -9,17 +10,29 @@ const PROBE_TIMEOUT_MS = 10_000;
 type ProbeResult = { ok: true; latencyMs: number } | { ok: false; reason: string };
 
 // What a normal run sends with: the editor headers (already transformed) and variables.
-export type ProbeRequest = { headers: Record<string, string>; variables: Record<string, unknown> };
+// variablesError explains why the variables were dropped, so the panel can say so.
+export type ProbeRequest = {
+  headers: Record<string, string>;
+  variables: Record<string, unknown>;
+  variablesError?: string;
+};
+
+const variablesSchema = z.record(z.string(), z.unknown());
 
 // The variables pane is free text while typing. A broken pane probes without values,
 // and the router then reports the missing variables for each field.
-export const parseVariables = (text: string): Record<string, unknown> => {
+export const parseVariables = (text: string): Pick<ProbeRequest, 'variables' | 'variablesError'> => {
+  let value: unknown;
   try {
-    const value = JSON.parse(text || '{}');
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    value = JSON.parse(text || '{}');
   } catch {
-    return {};
+    return { variables: {}, variablesError: 'Variables are not valid JSON. Probes run without them.' };
   }
+  const parsed = variablesSchema.safeParse(value);
+  if (!parsed.success) {
+    return { variables: {}, variablesError: 'Variables must be a JSON object. Probes run without them.' };
+  }
+  return { variables: parsed.data };
 };
 
 const timeOnce = async (

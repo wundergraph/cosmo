@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { probeRootFields, PROBE_RUNS } from '../src/components/playground/defer-advisor/probe';
+import { parseVariables, probeRootFields, PROBE_RUNS } from '../src/components/playground/defer-advisor/probe';
 
 // graphql's printer breaks selections across lines; compare the shape, not the layout.
 const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
@@ -109,6 +109,26 @@ describe('probe headers', () => {
       }),
     );
     expect(sent[0]?.headers).toEqual({ 'content-type': 'application/graphql' });
+  });
+});
+
+describe('parseVariables', () => {
+  test('keeps a JSON object', () => {
+    expect(parseVariables('{"id":"1"}')).toEqual({ variables: { id: '1' } });
+  });
+
+  test('explains invalid JSON and drops the values', () => {
+    expect(parseVariables('{"id":')).toEqual({
+      variables: {},
+      variablesError: 'Variables are not valid JSON. Probes run without them.',
+    });
+  });
+
+  test('explains a non-object JSON value', () => {
+    expect(parseVariables('[1,2]')).toEqual({
+      variables: {},
+      variablesError: 'Variables must be a JSON object. Probes run without them.',
+    });
   });
 });
 

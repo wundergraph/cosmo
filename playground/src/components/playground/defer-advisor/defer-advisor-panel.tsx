@@ -25,6 +25,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
   const latencies = useSyncExternalStore(subscribe, () => controller?.latencies ?? null);
 
   const [probeFailures, setProbeFailures] = useState<Record<string, string>>({});
+  const [variablesError, setVariablesError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
@@ -58,7 +59,9 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
     const id = ++runId.current;
     setRunning(true);
     try {
-      const results = await probeRootFields(routingUrl, query, getRequest());
+      const request = getRequest();
+      setVariablesError(request.variablesError ?? null);
+      const results = await probeRootFields(routingUrl, query, request);
       if (id !== runId.current) {
         return;
       }
@@ -140,6 +143,8 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
               This document has {operationCount} operations. Defer only reads the first one.
             </p>
           )}
+
+          {variablesError && <p className="text-destructive text-sm">{variablesError}</p>}
 
           {latencies && Object.keys(probeFailures).length > 0 && (
             <div className="rounded border border-destructive/40 p-3 text-sm">
