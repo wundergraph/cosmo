@@ -3501,6 +3501,34 @@
               "duration": {
                 "minimum": "1ms"
               }
+            },
+            "circuit_breaker": {
+              "type": "object",
+              "description": "Stops calling Redis once it looks down. Every 'probe_interval' the router checks Redis for a probe key, bounded by 'lookup_timeout'. After 'failure_threshold' consecutive failures of requests or probes (timeouts, connection errors, or replies such as LOADING, CLUSTERDOWN and MASTERDOWN), lookups, writes and invalidations fail at once without reaching Redis, so requests go to the subgraphs with no added latency. Redis is used again once a probe succeeds. Invalidations rejected while Redis is down are not replayed, so entries they named are served until their TTL expires. Ignored by the 'memory' provider.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the circuit breaker."
+                },
+                "failure_threshold": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 5,
+                  "description": "How many consecutive failed requests or probes mark Redis down. A success resets the count."
+                },
+                "probe_interval": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "default": "1s",
+                  "description": "How often Redis is probed, whether it is up or down. Only a probe brings Redis back, so it stays bypassed for up to this long after it recovers. The period is specified as a string with a number and a unit, e.g. 500ms, 1s.",
+                  "duration": {
+                    "minimum": "10ms",
+                    "maximum": "1m"
+                  }
+                }
+              }
             }
           },
           "if": {

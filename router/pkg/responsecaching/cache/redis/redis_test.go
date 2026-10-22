@@ -948,3 +948,57 @@ func TestRedisCache(t *testing.T) {
 		})
 	})
 }
+
+func TestRedisCacheIsUnavailable(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("a stopped redis is unavailable", func(t *testing.T) {
+		t.Parallel()
+
+		mr := miniredis.RunT(t)
+		client := redis.NewClient(&redis.Options{Addr: mr.Addr(), MaxRetries: -1})
+		cache := NewRedisCache(client, testPrefix)
+		t.Cleanup(func() { _ = cache.Close() })
+		require.NoError(t, cache.Probe(ctx))
+
+		mr.Close()
+		err := cache.Probe(ctx)
+		require.Error(t, err)
+		require.True(t, cache.IsUnavailable(err))
+	})
+
+	t.Run("replies from a redis that cannot serve are unavailable", func(t *testing.T) {
+		t.Parallel()
+
+		mr := miniredis.RunT(t)
+		client := redis.NewClient(&redis.Options{Addr: mr.Addr(), MaxRetries: -1})
+		cache := NewRedisCache(client, testPrefix)
+		t.Cleanup(func() { _ = cache.Close() })
+
+		for _, reply := range []string{"LOADING Redis is loading the dataset in memory", "CLUSTERDOWN The cluster is down"} {
+			mr.SetError(reply)
+			require.True(t, cache.IsUnavailable(cache.Probe(ctx)), reply)
+		}
+	})
+
+	t.Run("other errors are not", func(t *testing.T) {
+		t.Parallel()
+
+		cache := NewRedisCache(redis.NewClient(&redis.Options{}), testPrefix)
+		t.Cleanup(func() { _ = cache.Close() })
+
+		require.False(t, cache.IsUnavailable(redis.Nil))
+		require.False(t, cache.IsUnavailable(replyError("WRONGTYPE Operation against a key holding the wrong kind of value")))
+		require.False(t, cache.IsUnavailable(enginecache.ErrMissingTTL))
+		require.False(t, cache.IsUnavailable(context.Canceled))
+		require.True(t, cache.IsUnavailable(context.DeadlineExceeded))
+	})
+}
+
+// replyError is a redis error reply.
+type replyError string
+
+func (e replyError) Error() string { return string(e) }
+func (replyError) RedisError()     {}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,20 +16,22 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// stallProxy forwards to the test redis until stall, then holds every byte,
-// like a paused or black-holed redis: connections stay open, nothing answers.
-type stallProxy struct {
+// redisProxy forwards to the test redis. Stalled, it holds every byte like a
+// paused or black-holed redis; shut, it drops new connections like a redis
+// that is not up yet.
+type redisProxy struct {
 	ln      net.Listener
+	shut    atomic.Bool
 	stalled chan struct{}
 	once    sync.Once
 	done    chan struct{}
 }
 
-func newStallProxy(t *testing.T) *stallProxy {
+func newRedisProxy(t *testing.T) *redisProxy {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	p := &stallProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
+	p := &redisProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
 	t.Cleanup(func() {
 		close(p.done)
 		_ = ln.Close()
@@ -38,6 +41,10 @@ func newStallProxy(t *testing.T) *stallProxy {
 			client, err := ln.Accept()
 			if err != nil {
 				return
+			}
+			if p.shut.Load() {
+				_ = client.Close()
+				continue
 			}
 			server, err := net.Dial("tcp", responseCacheRedisAddr)
 			if err != nil {
@@ -51,11 +58,11 @@ func newStallProxy(t *testing.T) *stallProxy {
 	return p
 }
 
-func (p *stallProxy) url() string { return "redis://" + p.ln.Addr().String() }
+func (p *redisProxy) url() string { return "redis://" + p.ln.Addr().String() }
 
-func (p *stallProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
+func (p *redisProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
 
-func (p *stallProxy) pipe(dst, src net.Conn) {
+func (p *redisProxy) pipe(dst, src net.Conn) {
 	defer func() { _ = dst.Close() }()
 	buf := make([]byte, 32*1024)
 	for {
@@ -83,7 +90,7 @@ func TestResponseCacheRedisTimeouts(t *testing.T) {
 	t.Run("a stalled redis degrades to the subgraph within the storage timeouts", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newStallProxy(t)
+		proxy := newRedisProxy(t)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.LookupTimeout = 100 * time.Millisecond
 		cfg.Storage.WriteTimeout = 100 * time.Millisecond
@@ -151,7 +158,7 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 	t.Run("a redis that never answers does not hold startup", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newStallProxy(t)
+		proxy := newRedisProxy(t)
 		proxy.stall()
 
 		start := time.Now()
@@ -166,6 +173,95 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 			// 2s ping bound plus startup; unbounded takes over 6s.
 			require.Less(t, time.Since(start), 5*time.Second)
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
+		})
+	})
+}
+
+func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a stalled redis is bypassed once the breaker trips", func(t *testing.T) {
+		t.Parallel()
+
+		proxy := newRedisProxy(t)
+		cfg := responseCacheConfig(t, time.Minute)
+		cfg.Storage.LookupTimeout = 300 * time.Millisecond
+		cfg.Storage.WriteTimeout = 300 * time.Millisecond
+		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: 1,
+			// Stays down for the test.
+			ProbeInterval: time.Hour,
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
+				}),
+				core.WithResponseCache(cfg),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`}
+			warm := xEnv.MakeGraphQLRequestOK(query)
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "warm before stalling")
+
+			proxy.stall()
+
+			// Waits out the lookup timeout, which trips the breaker.
+			start := time.Now()
+			xEnv.MakeGraphQLRequestOK(query)
+			require.GreaterOrEqual(t, time.Since(start), 300*time.Millisecond)
+
+			start = time.Now()
+			res := xEnv.MakeGraphQLRequestOK(query)
+			require.Less(t, time.Since(start), 200*time.Millisecond, "a down redis must not be waited on")
+			require.Equal(t, warm.Body, res.Body)
+			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
+	t.Run("a redis down at startup is used once it answers", func(t *testing.T) {
+		t.Parallel()
+
+		proxy := newRedisProxy(t)
+		proxy.shut.Store(true)
+		cfg := responseCacheConfig(t, time.Minute)
+		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: 5,
+			ProbeInterval:    20 * time.Millisecond,
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
+				}),
+				core.WithResponseCache(cfg),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`}
+			xEnv.MakeGraphQLRequestOK(query)
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "no cache while down")
+
+			proxy.shut.Store(false)
+
+			// Back once a request after a write is answered from the cache.
+			require.Eventually(t, func() bool {
+				xEnv.MakeGraphQLRequestOK(query)
+				before := xEnv.SubgraphRequestCount.Mood.Load()
+				xEnv.MakeGraphQLRequestOK(query)
+				return xEnv.SubgraphRequestCount.Mood.Load() == before
+			}, 5*time.Second, 20*time.Millisecond)
 		})
 	})
 }

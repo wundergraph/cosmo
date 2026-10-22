@@ -153,6 +153,12 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 // Close closes the in memory cache. The error is always nil, ristretto having
 // nothing to fail at on the way down, and is returned only so that this and the
 // redis cache close the same way and can be held behind one interface.
+// Probe always succeeds: there is nothing to reach.
+func (c *InMemoryCache) Probe(context.Context) error { return nil }
+
+// IsUnavailable is always false: there is nothing to reach.
+func (c *InMemoryCache) IsUnavailable(error) bool { return false }
+
 func (c *InMemoryCache) Close() error {
 	c.closeOnce.Do(c.cache.Close)
 	return nil

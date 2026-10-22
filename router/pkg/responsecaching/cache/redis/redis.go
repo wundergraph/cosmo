@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"sync"
 	"time"
 
@@ -137,4 +139,31 @@ func (c *RedisCache) Close() error {
 		c.closeErr = c.client.Close()
 	})
 	return c.closeErr
+}
+
+// probeKey is what Probe checks for; it is never written.
+const probeKey = "circuit_breaker_probe"
+
+// Probe checks for a key, so redis must route and serve it like a read.
+func (c *RedisCache) Probe(ctx context.Context) error {
+	return c.client.Exists(ctx, c.entryKey(probeKey)).Err()
+}
+
+// unavailablePrefixes are replies from a redis that is up but cannot serve.
+var unavailablePrefixes = []string{"LOADING", "CLUSTERDOWN", "MASTERDOWN"}
+
+// IsUnavailable reports whether err means redis cannot be reached or cannot
+// serve, rather than that one command failed.
+func (c *RedisCache) IsUnavailable(err error) bool {
+	var netErr net.Error
+	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	for _, prefix := range unavailablePrefixes {
+		if redis.HasErrorPrefix(err, prefix) {
+			return true
+		}
+	}
+	return false
 }

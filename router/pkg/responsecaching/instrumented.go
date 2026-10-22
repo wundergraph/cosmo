@@ -17,6 +17,11 @@ type Store interface {
 	caching.Cache
 	Invalidator
 	io.Closer
+	// Probe reports whether the store can serve, without touching entries.
+	Probe(ctx context.Context) error
+	// IsUnavailable reports whether err, returned by this store, means it
+	// cannot serve rather than that one call failed.
+	IsUnavailable(err error) bool
 }
 
 type instrumentedStore struct {
@@ -80,6 +85,15 @@ func (s *instrumentedStore) InvalidateByTags(ctx context.Context, tags []string)
 	return removed, err
 }
 
+// Probe is not measured: it is not a cache operation.
+func (s *instrumentedStore) Probe(ctx context.Context) error {
+	return s.inner.Probe(ctx)
+}
+
+func (s *instrumentedStore) IsUnavailable(err error) bool {
+	return s.inner.IsUnavailable(err)
+}
+
 func (s *instrumentedStore) Close() error {
 	return s.inner.Close()
 }
@@ -97,6 +111,8 @@ func errorType(err error) string {
 	switch {
 	case errors.Is(err, context.Canceled):
 		return metric.ResponseCacheErrorCanceled
+	case errors.Is(err, ErrUnavailable):
+		return metric.ResponseCacheErrorUnavailable
 	case errors.As(err, &partial):
 		return metric.ResponseCacheErrorPartialWrite
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &netErr) && netErr.Timeout():
