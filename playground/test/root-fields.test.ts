@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, type TestContext } from 'vitest';
 import {
   getFragments,
   collectRootFields,
@@ -16,26 +16,25 @@ const parsed = (query: string) => {
   return result;
 };
 
-const rootNames = (query: string) => {
+// Takes the test context so a missing operation fails the test with a message instead of throwing.
+const rootNames = (context: TestContext, query: string) => {
   const { doc } = parsed(query);
   const operation = getOperation(doc);
-  if (!operation) {
-    throw new Error('no operation');
-  }
-  return collectRootFields(operation.selectionSet.selections, getFragments(doc)).map((f) => f.name.value);
+  context.expect(operation, 'No operation').toBeTruthy();
+  return collectRootFields(operation?.selectionSet.selections ?? [], getFragments(doc)).map((f) => f.name.value);
 };
 
 describe('root field collection through named fragments', () => {
-  test('includes fields reached through a root fragment spread', () => {
-    expect(rootNames('query { b ...F } fragment F on Query { a }')).toEqual(['b', 'a']);
+  test('includes fields reached through a root fragment spread', (context) => {
+    expect(rootNames(context, 'query { b ...F } fragment F on Query { a }')).toEqual(['b', 'a']);
   });
 
-  test('follows fragments that spread other fragments', () => {
-    expect(rootNames('query { ...F } fragment F on Query { ...G } fragment G on Query { a }')).toEqual(['a']);
+  test('follows fragments that spread other fragments', (context) => {
+    expect(rootNames(context, 'query { ...F } fragment F on Query { ...G } fragment G on Query { a }')).toEqual(['a']);
   });
 
-  test('stops on a fragment cycle instead of recursing forever', () => {
-    expect(rootNames('query { ...F } fragment F on Query { a ...F }')).toEqual(['a']);
+  test('stops on a fragment cycle instead of recursing forever', (context) => {
+    expect(rootNames(context, 'query { ...F } fragment F on Query { a ...F }')).toEqual(['a']);
   });
 
   test('keeps the old behaviour when no fragments are passed', () => {
