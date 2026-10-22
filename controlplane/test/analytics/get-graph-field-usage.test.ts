@@ -274,7 +274,7 @@ describe('GetGraphFieldUsage', () => {
     ]);
   });
 
-  test('Should use the last 24 hours when no range is given', async (testContext) => {
+  test('Should use the last 24 hours when no range is given, and still return the retention of the plan', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
@@ -294,6 +294,7 @@ describe('GetGraphFieldUsage', () => {
     expect(response.dateRange?.end).toBe(queried.end);
     expect(end - start).toBe(24 * HOUR_IN_SECONDS);
     expect(Math.abs(end - toUnixSeconds(new Date()))).toBeLessThanOrEqual(60);
+    expect(response.analyticsRetentionInDays).toBe(7);
   });
 
   test('Should limit the range to seven days, and return that limit, when the organization has no plan', async (testContext) => {
