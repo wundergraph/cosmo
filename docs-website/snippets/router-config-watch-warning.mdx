@@ -6,5 +6,5 @@
   - If the new router fails to start, the process exits. The previous router is not kept running. Causes include an invalid TLS certificate, a port that is already in use, or an execution config that cannot be fetched at reload time.
   - If the configuration file fails to load or validate, the router restarts with the previous configuration.
 
-  In production, roll out router configuration changes by redeploying the router instances. Execution config updates, from the CDN or `execution_config.file.watch`, are not affected and are applied without downtime. See [Config Hot Reload](/router/deployment/config-hot-reload).
+  In production, roll out router configuration changes by redeploying the router instances. Execution config updates, from the CDN or `execution_config.file.watch`, do not restart the router and keep accepting connections. They close long-lived WebSocket and SSE subscriptions, so clients must reconnect. See [Config Hot Reload](/router/deployment/config-hot-reload).
 </Warning>
