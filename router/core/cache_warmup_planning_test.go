@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
@@ -25,9 +25,9 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	const query = `query GetHello { hello }`
 	hash := sha256.Sum256([]byte(query))
 	id := hex.EncodeToString(hash[:])
-	store := pqlmanifest.NewStore(zap.NewNop())
+	store := operationmanifest.NewStore(zap.NewNop())
 	t.Cleanup(store.Close)
-	store.Load(&pqlmanifest.Manifest{
+	store.Load(&operationmanifest.Manifest{
 		Version:    1,
 		Revision:   "one",
 		Operations: map[string]string{id: query},

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
@@ -48,14 +48,14 @@ type Options struct {
 
 	ProviderClient StorageClient
 	APQStore       apq.Store
-	PQLStore       *pqlmanifest.Store
+	PQLStore       *operationmanifest.Store
 }
 
 type Client struct {
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
 	apqStore       apq.Store
-	pqlStore       *pqlmanifest.Store
+	pqlStore       *operationmanifest.Store
 }
 
 func NewClient(opts *Options) (*Client, error) {
@@ -79,7 +79,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 }
 
 // ManifestSnapshot captures the manifest used for cache identity and body lookup.
-func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
+func (c *Client) ManifestSnapshot() *operationmanifest.Manifest {
 	if c == nil || c.pqlStore == nil {
 		return nil
 	}
@@ -89,7 +89,7 @@ func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
 // PersistedOperationWithManifest resolves against the captured manifest, even if it has since reloaded.
 // A nil snapshot uses the storage provider, as before the initial manifest load.
 func (c *Client) PersistedOperationWithManifest(
-	ctx context.Context, clientName, sha256Hash string, manifest *pqlmanifest.Manifest,
+	ctx context.Context, clientName, sha256Hash string, manifest *operationmanifest.Manifest,
 ) ([]byte, bool, error) {
 	if c.APQEnabled() {
 		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
@@ -178,7 +178,7 @@ func (c *Client) ManifestEnabled() bool {
 }
 
 // PQLStore returns the PQL manifest store, or nil if no manifest is configured.
-func (c *Client) PQLStore() *pqlmanifest.Store {
+func (c *Client) PQLStore() *operationmanifest.Store {
 	return c.pqlStore
 }
 
