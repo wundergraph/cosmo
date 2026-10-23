@@ -466,11 +466,21 @@ message RedisEventConfiguration {
   repeated string channels = 2;
 }
 
+enum DeliveryGuaranteeMode {
+  DELIVERY_GUARANTEE_MODE_OFF = 0;
+  DELIVERY_GUARANTEE_MODE_CURSOR = 1;
+}
+
+message DeliveryGuarantees {
+  DeliveryGuaranteeMode mode = 1;
+}
+
 message EngineEventConfiguration {
   string provider_id = 1;
   EventType type = 2;
   string type_name = 3;
   string field_name = 4;
+  DeliveryGuarantees delivery_guarantees = 5;
 }
 
 message DataSourceCustomEvents {
