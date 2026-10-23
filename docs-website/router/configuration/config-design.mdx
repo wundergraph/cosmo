@@ -4,6 +4,8 @@ description: "Designing and structuring configuration files"
 icon: "ruler-combined"
 ---
 
+import RouterConfigWatchWarning from '/snippets/router-config-watch-warning.mdx';
+
 ## Config Design Overview
 
 This section gives you an overview of how the router handles configuration merging and provides guidance on how you can structure your configurations effectively.
@@ -301,6 +303,8 @@ The first approach is generally recommended as it makes the configuration intent
 ### Hot Config Reloading
 
 When you enable [hot config reloading](/router/configuration#config-watcher-hot-reloading), we'll watch all your configuration files for changes. Whenever any configuration changes, we'll reprocess everything and rebuild your final merged configuration.
+
+<RouterConfigWatchWarning />
 
 <Warning>
 The router does not support reloading of .env files at this moment, and any .env change will require you to restart the router.

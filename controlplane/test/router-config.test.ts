@@ -211,7 +211,7 @@ describe('Router Config', (ctx) => {
     expect(tokenResp.response?.code).toBe(EnumStatusCode.OK);
 
     const configBlog = await blobStorage.getObject({
-      key: `${users.adminAliceCompanyA.organizationId}/${graphResponse.graph?.id}/routerconfigs/latest.json`,
+      key: `${users.adminAliceCompanyA.organizationId}/${graphResponse.graph?.id}/manifest/latest.json`,
     });
     const configJsonString = await new Response(configBlog.stream).text();
     const config = routerConfigFromJsonString(configJsonString);
@@ -331,7 +331,7 @@ describe('Router Config', (ctx) => {
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
     const configBlog = await blobStorage.getObject({
-      key: `${users.adminAliceCompanyA.organizationId}/${graph.graph?.id}/routerconfigs/latest.json`,
+      key: `${users.adminAliceCompanyA.organizationId}/${graph.graph?.id}/manifest/latest.json`,
     });
     const configJsonString = await new Response(configBlog.stream).text();
     const config = routerConfigFromJsonString(configJsonString);

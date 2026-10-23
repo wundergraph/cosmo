@@ -188,6 +188,8 @@ type (
 	}
 
 	AccessLogsConfig struct {
+		Filter                string
+		SubgraphFilter        string
 		Attributes            []config.CustomAttribute
 		Logger                *zap.Logger
 		SubgraphEnabled       bool
@@ -1294,7 +1296,7 @@ func (r *Router) startResponseCacheInvalidationServer(ctx context.Context) error
 		return nil
 	}
 
-	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache)
+	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache, r.corsOptions)
 	if err != nil {
 		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
 	}
@@ -2084,6 +2086,15 @@ func (e *concSafeErrorJoiner) Append(err error) {
 
 func (e *concSafeErrorJoiner) ErrOrNil() error {
 	return errors.Join(e.errs...)
+}
+
+// drain makes the router's HTTP server answer every response with "Connection: close" and blocks
+// until its client connections are closed, period has elapsed or ctx is done. It is a no-op when
+// the HTTP server is not running.
+func (r *Router) drain(ctx context.Context, period time.Duration) {
+	if r.httpServer != nil {
+		r.httpServer.drain(ctx, period)
+	}
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.

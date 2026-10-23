@@ -13,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import {
   enrichLogger,
   formatSubgraphType,
@@ -120,6 +121,14 @@ export function updateSubgraph(
 
     // The transaction is managed by `SubgraphRepository.update`
     // Avoid wrapping this code in a transaction so the whole composition and file upload does not block it.
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const compositionService = new CompositionService(
       opts.db,
       authContext.organizationId,
@@ -131,6 +140,7 @@ export function updateSubgraph(
       req.disableResolvabilityValidation,
       opts.promptToQueryClient,
       opts.billingDefaultPlanId,
+      mapperUpdater,
     );
 
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -151,6 +161,20 @@ export function updateSubgraph(
         },
         compositionService,
       );
+
+    const result = await flushMapperIntoResponse(mapperUpdater, {
+      response: {
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
+      },
+      compositionErrors,
+      deploymentErrors,
+      compositionWarnings,
+    });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -181,7 +205,7 @@ export function updateSubgraph(
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            errors: result.compositionErrors.length > 0 || result.deploymentErrors.length > 0,
             actor_id: authContext.userId,
           },
         },
@@ -189,35 +213,6 @@ export function updateSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        compositionWarnings,
-        deploymentErrors,
-      };
-    }
-
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
-      compositionErrors: [],
-      deploymentErrors: [],
-      compositionWarnings,
-    };
+    return result;
   });
 }
