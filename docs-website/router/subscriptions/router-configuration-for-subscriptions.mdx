@@ -109,7 +109,7 @@ These options apply to the router's own WebSocket endpoint (the one clients conn
 | `websocket_server_write_timeout` | `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT` | `10s` | Write timeout for the server-side WebSocket handler. |
 | `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | `1s` | Timeout for the poll loop of the server-side WebSocket handler. |
 | `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. |
-| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `true` | Enables the more efficient poll implementation for the server-side WebSocket handler. Linux and macOS only. Has no effect on upstream subgraph connections. |
+| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `false` | Enables manual netpoll for the server-side WebSocket handler on Linux and macOS. Can introduce head-of-line blocking across connections; use with care. Has no effect on upstream subgraph connections. |
 
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
