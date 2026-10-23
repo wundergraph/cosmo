@@ -459,6 +459,7 @@ export default class AuthUtils {
     if (numberOfOrganizations === 0) {
       // Send a notification to the platform that a new user has been created
       try {
+        const signupDetails = await AuthUtils.#getSignupDetails({ keycloakClient, keycloakRealm, userId, logger });
         await platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
           user_id: userId,
           user_email: userEmail,
@@ -469,6 +470,7 @@ export default class AuthUtils {
           utm_campaign: cookies?.utm_campaign,
           utm_content: cookies?.utm_content,
           utm_term: cookies?.utm_term,
+          ...signupDetails,
         });
       } catch (error: unknown) {
         logger.error(error, 'Failed to send the user registered notification webhook');
@@ -476,6 +478,34 @@ export default class AuthUtils {
     }
 
     return [insertedSession, numberOfOrganizations];
+  }
+
+  /**
+   * Reads the details collected by the "Complete your account" Keycloak required action. A failed lookup must
+   * never block the signup, so it falls back to sending the webhook without them.
+   */
+  static async #getSignupDetails({
+    keycloakClient,
+    keycloakRealm,
+    userId,
+    logger,
+  }: {
+    keycloakClient: Keycloak;
+    keycloakRealm: string;
+    userId: string;
+    logger: FastifyBaseLogger;
+  }): Promise<{ company_name?: string; use_case?: string; current_setup?: string }> {
+    try {
+      const attributes = await keycloakClient.getUserAttributes({ realm: keycloakRealm, userID: userId });
+      return {
+        company_name: attributes.company_name?.[0],
+        use_case: attributes.use_case?.[0],
+        current_setup: attributes.current_setup?.[0],
+      };
+    } catch (error: unknown) {
+      logger.error(error, 'Failed to retrieve the signup details from Keycloak');
+      return {};
+    }
   }
 
   static async #createUserAndSessionIfNeeded({
