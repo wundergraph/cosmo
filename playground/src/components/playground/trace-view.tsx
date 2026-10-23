@@ -32,6 +32,9 @@ export const TraceContext = createContext<{
   planError?: string;
   clientValidationEnabled: boolean;
   setClientValidationEnabled: (val: boolean) => void;
+  cursorsEnabled: boolean;
+  setCursorsEnabled: (val: boolean) => void;
+  endpointUrl: string;
   forcedTheme?: 'light' | 'dark' | undefined;
 }>({
   query: undefined,
@@ -42,6 +45,9 @@ export const TraceContext = createContext<{
   planError: '',
   clientValidationEnabled: true,
   setClientValidationEnabled: () => {},
+  cursorsEnabled: false,
+  setCursorsEnabled: () => {},
+  endpointUrl: '',
   forcedTheme: undefined,
 });
 
