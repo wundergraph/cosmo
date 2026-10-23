@@ -5,6 +5,8 @@ icon: "circle-info"
 sidebarTitle: "Overview"
 ---
 
+import RouterConfigWatchWarning from '/snippets/router-config-watch-warning.mdx';
+
 The router provides three different ways of customization:
 
 1. **Configure the router runtime:** You can specify a for convenience or pass [environment variables](/router/configuration#environment-variables). In both ways, you can configure the global behavior of the router. For a full reference of all available options see below or use your [IDE of choice](/router/configuration#config-validation-and-auto-completion).
@@ -182,6 +184,8 @@ The router is capable of reloading itself using an updated config without a full
 
 - Sending a `SIGHUP` signal to the router process.
 - Configuring the `watch_config` section to automatically check the configuration for changes at regular intervals.
+
+<RouterConfigWatchWarning />
 
 ```yaml config.yaml
 watch_config:
