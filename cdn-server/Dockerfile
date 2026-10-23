@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:22.22.2 AS builder
+FROM --platform=${BUILDPLATFORM} node:22.23.4 AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 # use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
 RUN pnpm --filter=./cdn-server --prod deploy --legacy pruned
 
-FROM node:22.22.2-slim
+FROM node:22.23.4-slim
 
 WORKDIR /app
 

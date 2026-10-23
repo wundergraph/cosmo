@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.257.0...controlplane@0.258.0) (2026-10-23)
+
+### Features
+
+* enable `split-config-loading` by default for new organizations ([#3288](https://github.com/wundergraph/cosmo/issues/3288)) ([ce50105](https://github.com/wundergraph/cosmo/commit/ce501057f0d1af193051db8788cfeaf6aa18447c)) (@wilsonrivera)
+
+### Bug Fixes
+
+* patch October 2026 Node.js security advisories in Cosmo ([#3410](https://github.com/wundergraph/cosmo/issues/3410)) ([9e17bf9](https://github.com/wundergraph/cosmo/commit/9e17bf98e57f24883d10fbc47d2e33ebca35c772)) (@comatory)
+
 ## [0.257.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.256.0...controlplane@0.257.0) (2026-10-22)
 
 ### Features
