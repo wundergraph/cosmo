@@ -107,9 +107,9 @@ These options apply to the router's own WebSocket endpoint (the one clients conn
 |-|-|-|-|
 | `websocket_server_read_timeout` | `ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT` | `5s` | Read timeout for the server-side WebSocket handler. |
 | `websocket_server_write_timeout` | `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT` | `10s` | Write timeout for the server-side WebSocket handler. |
-| `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | `1s` | Timeout for the poll loop of the server-side WebSocket handler. Applies only when `enable_net_poll: true`. |
-| `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. Applies only when `enable_net_poll: true`. |
-| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `false` | Uses a goroutine per connection by default. Explicit `true` enables manual netpoll on Linux and macOS, with goroutine handling as the fallback if unsupported. Has no effect on upstream subgraph connections. |
+| `websocket_server_poll_timeout` | `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` | `1s` | Timeout for the poll loop of the server-side WebSocket handler. |
+| `websocket_server_conn_buffer_size` | `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` | `128` | Buffer size for the poll buffer of the server-side WebSocket handler. Determines how many connections can be handled in one loop. |
+| `enable_net_poll` | `ENGINE_ENABLE_NET_POLL` | `false` | Enables the more efficient poll implementation for the server-side WebSocket handler. Linux and macOS only. Has no effect on upstream subgraph connections. |
 
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
@@ -119,33 +119,3 @@ These options apply to the router's own WebSocket endpoint (the one clients conn
   If you are upgrading from an older release and your configuration sets `websocket_client_poll_timeout`, `websocket_client_read_timeout`, `websocket_client_conn_buffer_size`, or `websocket_client_frame_timeout`, see the [Subscriptions Overhaul migration guide](/router/subscriptions-migration).
 </Note>
 
-### WebSocket default migration and rollout
-
-The default for `engine.enable_net_poll` changes from `true` to `false`. Each server-side WebSocket connection now has its own read goroutine. The manual netpoll implementation remains available through an explicit `true` override. This setting does not affect upstream subgraph connections.
-
-Deployments that omit both the YAML option and `ENGINE_ENABLE_NET_POLL` use goroutines after upgrading to a release containing this change. Deployments explicitly setting `true` remain on manual netpoll and must change configuration to receive the mitigation. Upgrading alone does not change an explicit override.
-
-To select goroutine handling explicitly:
-
-```yaml
-version: "1"
-
-engine:
-  enable_net_poll: false
-```
-
-Alternatively, set `ENGINE_ENABLE_NET_POLL=false`. YAML takes precedence over environment variables, so remove or update any YAML `true` value as well. Restart or roll the router instances to apply the setting. The poll timeout and poll buffer size have no effect while goroutine handling is active.
-
-#### Memory sizing and monitoring
-
-Goroutine handling can use more memory per connected client than manual netpoll. Size memory requests and limits using measured RSS and peak memory at the expected maximum connection and subscription counts. Include headroom for active operations, TLS, garbage collection, and reconnect or resubscription bursts. Do not use a fixed per-connection estimate as a substitute for measuring the deployment's workload.
-
-Canary the exact release and configuration before expanding the rollout. Compare CPU, RSS and peak memory, connection and subscription counts, delivery and heartbeat latency, errors, disconnects, and reconnect behavior against the previous deployment. Exercise idle connections, active fan-out, CPU saturation, slow clients, and reconnect bursts. Record the observation period and success thresholds before rollout.
-
-#### Rollback
-
-Keep the previous router image and configuration available. If a canary exceeds the agreed memory, latency, or error thresholds, stop the rollout and restore the previous validated image with `engine.enable_net_poll: false` where that image supports goroutine handling. Verify the effective YAML and environment configuration after rollback; older releases default to `true`.
-
-<Warning>
-  Setting `engine.enable_net_poll: true` re-enables the manual path and its known cross-connection blocking vulnerability. It is not a security-neutral rollback. Evaluate that exposure with the incident owner before re-enabling it. Prefer a validated release that retains goroutine handling.
-</Warning>

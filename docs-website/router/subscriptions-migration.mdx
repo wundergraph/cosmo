@@ -94,7 +94,7 @@ These keep both their name and their scope:
 
 - `engine.websocket_client_ping_interval`
 - `engine.websocket_client_ping_timeout`
-- `engine.enable_net_poll` (applies to the server-side WebSocket handler only; has no effect on upstream subgraph connections). Its name and scope are unchanged by the overhaul. The current default is `false`; see [WebSocket default migration and rollout](/router/subscriptions/router-configuration-for-subscriptions#websocket-default-migration-and-rollout) for the subsequent default change, explicit overrides, and rollback guidance.
+- `engine.enable_net_poll` (applies to the server-side WebSocket handler only; has no effect on upstream subgraph connections)
 
 <Warning>
   **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
@@ -114,13 +114,12 @@ engine:
   websocket_client_ping_interval: 15s
   websocket_client_ping_timeout: 30s
 
-# Current configuration, including the subsequent goroutine default
+# After
 engine:
-  enable_net_poll: false
+  enable_net_poll: true
   # Server-side WebSocket handler (router accepting clients)
   websocket_server_read_timeout: 5s
   websocket_server_write_timeout: 10s   # previously the misnamed websocket_client_write_timeout
-  # Only used when enable_net_poll is true
   websocket_server_poll_timeout: 1s
   websocket_server_conn_buffer_size: 128
   # Upstream subscription client (router connecting to subgraphs)
