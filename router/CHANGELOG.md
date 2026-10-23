@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.363.0](https://github.com/wundergraph/cosmo/compare/router@0.362.0...router@0.363.0) (2026-10-23)
+
+### Features
+
+* **playground:** show response cache data in the request trace ([#3360](https://github.com/wundergraph/cosmo/issues/3360)) ([de31a2b](https://github.com/wundergraph/cosmo/commit/de31a2b755fa02fcf2af2b5454aebc3368e83a06)) (@SkArchon)
+
+## [0.362.0](https://github.com/wundergraph/cosmo/compare/router@0.361.0...router@0.362.0) (2026-10-22)
+
+### Features
+
+* add simple defer panel (no advice just yet) ([#3393](https://github.com/wundergraph/cosmo/issues/3393)) ([949dfe9](https://github.com/wundergraph/cosmo/commit/949dfe9a183a1ff3a3a972f325c3d5446ef02906)) (@gausie)
+
+### Bug Fixes
+
+* **router:** treat a malformed Cache-Control as no-store ([#3385](https://github.com/wundergraph/cosmo/issues/3385)) ([c253c2a](https://github.com/wundergraph/cosmo/commit/c253c2a62fd24c3b20b2c40e6b3b7d7ad0abcc73)) (@SkArchon)
+
 ## [0.361.0](https://github.com/wundergraph/cosmo/compare/router@0.360.1...router@0.361.0) (2026-10-21)
 
 ### Features

@@ -237,6 +237,9 @@ describe('RouterConfigMapperUpdater', () => {
     await setRouterConfigHash(setup, failingGraph.id, 'failing-hash');
     await setRouterConfigHash(setup, healthyGraph.id, 'healthy-hash');
 
+    // The mapper was already uploaded when the graph was composed
+    const failingGraphMapperBefore = await readBlob(setup.blobStorage, failingGraph.mapperKey);
+
     const originalPutObject = setup.blobStorage.putObject.bind(setup.blobStorage);
     vi.spyOn(setup.blobStorage, 'putObject').mockImplementation((data) => {
       if (data.key === failingGraph.mapperKey) {
@@ -254,7 +257,7 @@ describe('RouterConfigMapperUpdater', () => {
       { federatedGraphName: failingGraph.name, namespace: failingGraph.namespace, message: 'blob storage unavailable' },
     ]);
 
-    expect(setup.blobStorage.keys()).not.toContain(failingGraph.mapperKey);
+    expect(await readBlob(setup.blobStorage, failingGraph.mapperKey)).toBe(failingGraphMapperBefore);
     expect(JSON.parse(await readBlob(setup.blobStorage, healthyGraph.mapperKey))).toStrictEqual({
       '': 'healthy-hash',
     });
@@ -406,6 +409,9 @@ describe('RouterConfigMapperUpdater', () => {
     const graph = await createGraph(setup);
     await setRouterConfigHash(setup, graph.id, 'base-hash');
 
+    // The mapper was already uploaded when the graph was composed
+    const mapperBefore = await readBlob(setup.blobStorage, graph.mapperKey);
+
     const { lockAdapter, using } = mockLockAdapter();
     const putObjectSpy = vi
       .spyOn(setup.blobStorage, 'putObject')
@@ -422,7 +428,7 @@ describe('RouterConfigMapperUpdater', () => {
     // The upload is retried within the lock, but the lock acquisition is not retried
     expect(using).toHaveBeenCalledTimes(1);
     expect(mapperUploads(putObjectSpy)).toHaveLength(3);
-    expect(setup.blobStorage.keys()).not.toContain(graph.mapperKey);
+    expect(await readBlob(setup.blobStorage, graph.mapperKey)).toBe(mapperBefore);
   });
 
   test('that a transient upload failure is retried within the same lock', async (testContext) => {
