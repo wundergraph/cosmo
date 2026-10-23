@@ -215,7 +215,7 @@ describe('GetFederatedGraphSDLByName with a feature flag', () => {
     async (splitConfigEnabled) => {
       const { client, server } = await SetupTest({
         dbname,
-        enabledFeatures: splitConfigEnabled ? ['split-config-loading'] : [],
+        enableSplitConfigLoadingByDefault: splitConfigEnabled,
       });
       onTestFinished(() => server.close());
 
@@ -298,7 +298,7 @@ describe('GetFederatedGraphSDLByName with a feature flag', () => {
     async (splitConfigEnabled) => {
       const { client, server } = await SetupTest({
         dbname,
-        enabledFeatures: splitConfigEnabled ? ['split-config-loading'] : [],
+        enableSplitConfigLoadingByDefault: splitConfigEnabled,
       });
       onTestFinished(() => server.close());
 
