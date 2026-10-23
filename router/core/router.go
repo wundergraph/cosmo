@@ -561,23 +561,24 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
-	if !r.engineExecutionConfiguration.EnableNetPoll {
-		r.logger.Debug("Using goroutine-based WebSocket connection handling.")
-	} else if err := netpoll.Supported(); err != nil {
+	if r.engineExecutionConfiguration.EnableNetPoll {
+		if err := netpoll.Supported(); err != nil {
+			// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
+			r.engineExecutionConfiguration.EnableNetPoll = false
 
-		// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
-		r.engineExecutionConfiguration.EnableNetPoll = false
-
-		if errors.Is(err, netpoll.ErrUnsupported) {
-			r.logger.Warn(
-				"Net poller is only available on Linux and macOS. Falling back to goroutine-based WebSocket connection handling.",
-				zap.Error(err),
-			)
+			if errors.Is(err, netpoll.ErrUnsupported) {
+				r.logger.Warn(
+					"Net poller is only available on Linux and macOS. Falling back to goroutine-based WebSocket connection handling.",
+					zap.Error(err),
+				)
+			} else {
+				r.logger.Warn(
+					"Net poller is not functional in this environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to goroutine-based WebSocket connection handling.",
+					zap.Error(err),
+				)
+			}
 		} else {
-			r.logger.Warn(
-				"Net poller is not functional in this environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to goroutine-based WebSocket connection handling.",
-				zap.Error(err),
-			)
+			r.logger.Warn("Manual WebSocket netpoll is enabled and can introduce head-of-line blocking across connections. Use with care.")
 		}
 	}
 
