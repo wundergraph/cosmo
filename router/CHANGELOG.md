@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.363.0](https://github.com/wundergraph/cosmo/compare/router@0.362.0...router@0.363.0) (2026-10-23)
+
+### Features
+
+* **playground:** show response cache data in the request trace ([#3360](https://github.com/wundergraph/cosmo/issues/3360)) ([de31a2b](https://github.com/wundergraph/cosmo/commit/de31a2b755fa02fcf2af2b5454aebc3368e83a06)) (@SkArchon)
+
 ## [0.362.0](https://github.com/wundergraph/cosmo/compare/router@0.361.0...router@0.362.0) (2026-10-22)
 
 ### Features

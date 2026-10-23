@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.22.2](https://github.com/wundergraph/cosmo/compare/cdn@0.22.1...cdn@0.22.2) (2026-10-23)
+
+### Bug Fixes
+
+* patch October 2026 Node.js security advisories in Cosmo ([#3410](https://github.com/wundergraph/cosmo/issues/3410)) ([9e17bf9](https://github.com/wundergraph/cosmo/commit/9e17bf98e57f24883d10fbc47d2e33ebca35c772)) (@comatory)
+
 ## [0.22.1](https://github.com/wundergraph/cosmo/compare/cdn@0.22.0...cdn@0.22.1) (2026-10-22)
 
 ### Bug Fixes
