@@ -26,6 +26,12 @@ type OpenRequest = {
   collectionId: string;
   /** Refill this tab instead of creating one. Set when healing an empty tab. */
   intoTabId?: string;
+  /**
+   * What the tab held when the refill was asked for. Read here rather than
+   * when the body arrives, so anything typed while the fetch was in flight
+   * fails the comparison in beat three instead of becoming the baseline.
+   */
+  expected?: { query: string; variables: string };
 };
 
 /**
@@ -79,6 +85,7 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
       id: binding.operationId,
       collectionId: binding.collectionId,
       intoTabId: active.id,
+      expected: { query: active.query ?? '', variables: active.variables ?? '' },
     });
     // Keyed on the active tab id, not `tabs`: `tabs` changes on every keystroke,
     // so this would refill a tab the moment the user cleared it themselves.
@@ -113,7 +120,6 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
     };
 
     const intoTabId = openingOperation.intoTabId;
-    const refilled = intoTabId ? tabs.find((tab) => tab.id === intoTabId) : undefined;
 
     setPendingOpen(
       intoTabId
@@ -121,7 +127,7 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
             ...body,
             kind: 'refill',
             targetTabId: intoTabId,
-            expected: { query: refilled?.query ?? '', variables: refilled?.variables ?? '' },
+            expected: openingOperation.expected ?? { query: '', variables: '' },
           }
         : {
             ...body,
@@ -226,7 +232,12 @@ export const useOpenOperation = ({ onOperationMissing }: { onOperationMissing: (
           // Blanked as described above; without this every later open returns here.
           if (!(tabs[index].query ?? '').trim()) {
             changeTab(index);
-            setOpeningOperation({ id: operationId, collectionId, intoTabId: existingTabId });
+            setOpeningOperation({
+              id: operationId,
+              collectionId,
+              intoTabId: existingTabId,
+              expected: { query: tabs[index].query ?? '', variables: tabs[index].variables ?? '' },
+            });
             return;
           }
 
