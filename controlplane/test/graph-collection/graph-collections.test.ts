@@ -1135,40 +1135,39 @@ describe('Graph Collections', () => {
       expect(list.collections[0].isTeamScoped).toBe(true);
     });
 
-    test('A graph viewer is not offered team collections and cannot create one', async () => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
-      onTestFinished(() => server.close());
+    test.each(['graph-viewer', 'organization-viewer'])(
+      'A %s is not offered team collections and cannot create one',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({ dbname });
+        onTestFinished(() => server.close());
 
-      const graphName = genID('fedGraph');
-      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
-      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
-        .id;
+        const graphName = genID('fedGraph');
+        await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
 
-      const asAdmin = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
-      expect(asAdmin.canCreateTeamCollection).toBe(true);
+        const asAdmin = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+        expect(asAdmin.canCreateTeamCollection).toBe(true);
 
-      const graphResponse = await client.getFederatedGraphByName({ name: graphName, namespace: 'default' });
+        const graphResponse = await client.getFederatedGraphByName({ name: graphName, namespace: 'default' });
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(
-          createTestGroup({ role: 'graph-viewer', resources: [graphResponse.graph!.targetId] }),
-        ),
-      });
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role, resources: [graphResponse.graph!.targetId] })),
+        });
 
-      const asViewer = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
-      expect(asViewer.canCreateTeamCollection).toBe(false);
+        const asViewer = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+        expect(asViewer.canCreateTeamCollection).toBe(false);
 
-      // The flag has to agree with what the create call actually permits, or
-      // the UI offers an option that fails on submit.
-      const rejected = await client.createGraphCollection({
-        federatedGraphName: graphName,
-        namespace: 'default',
-        name: 'Team',
-        teamScoped: true,
-      });
-      expect(rejected.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    });
+        // The flag has to agree with what the create call actually permits, or
+        // the UI offers an option that fails on submit.
+        const rejected = await client.createGraphCollection({
+          federatedGraphName: graphName,
+          namespace: 'default',
+          name: 'Team',
+          teamScoped: true,
+        });
+        expect(rejected.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+      },
+    );
 
     test('Can create a collection team-scoped from the start', async () => {
       const { client, server } = await SetupTest({ dbname });
@@ -1363,6 +1362,82 @@ describe('Graph Collections', () => {
       },
     );
 
+    test.each(['graph-viewer', 'organization-viewer'])(
+      'A %s cannot rename, overwrite or delete an operation in a team collection',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({ dbname });
+        onTestFinished(() => server.close());
+
+        const graphName = genID('fedGraph');
+        await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+        const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' }))
+          .graph!.id;
+
+        const collection = await client.createGraphCollection({
+          federatedGraphName: graphName,
+          namespace: 'default',
+          name: 'Team',
+          teamScoped: true,
+        });
+
+        const created = await client.createGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          name: 'Cart',
+          query: QUERY,
+        });
+        expect(created.response?.code).toBe(EnumStatusCode.OK);
+
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role })),
+        });
+
+        // Reading is what the role grants, so the body still comes back.
+        const fetched = await client.getGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          id: created.id,
+        });
+        expect(fetched.response?.code).toBe(EnumStatusCode.OK);
+        expect(fetched.operation?.query).toBe(QUERY);
+
+        const renamed = await client.renameGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          id: created.id,
+          name: 'Nope',
+        });
+        expect(renamed.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+        const updated = await client.updateGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          id: created.id,
+          query: 'query GetCart { cart { bob } }',
+          expectedContentHash: created.contentHash,
+        });
+        expect(updated.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+        const deleted = await client.deleteGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          id: created.id,
+        });
+        expect(deleted.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+        // A refused mutation must leave the stored row exactly as it was.
+        const after = await client.getGraphCollectionOperation({
+          federatedGraphId,
+          collectionId: collection.id,
+          id: created.id,
+        });
+        expect(after.response?.code).toBe(EnumStatusCode.OK);
+        expect(after.operation?.name).toBe('Cart');
+        expect(after.operation?.query).toBe(QUERY);
+      },
+    );
+
     test.each(['graph-viewer', 'organization-viewer'])('A %s cannot share their own collection', async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
@@ -1390,6 +1465,14 @@ describe('Graph Collections', () => {
       // even though creating the private original did not.
       const shared = await client.shareGraphCollection({ federatedGraphId, id: created.id });
       expect(shared.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+      // Scope cannot be walked back, so a refused share has to leave the
+      // collection private rather than half-promoted.
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.response?.code).toBe(EnumStatusCode.OK);
+      expect(list.collections).toHaveLength(1);
+      expect(list.collections[0].name).toBe('Viewer private');
+      expect(list.collections[0].isTeamScoped).toBe(false);
     });
 
     test.each(['graph-viewer', 'organization-viewer'])(
