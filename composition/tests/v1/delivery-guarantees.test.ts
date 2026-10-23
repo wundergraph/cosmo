@@ -63,6 +63,19 @@ describe('deliveryGuarantees tests', () => {
     ]);
   });
 
+  test('that deliveryGuarantees is omitted from the Kafka event configuration if the argument is null', () => {
+    const { configurationDataByTypeName } = normalizeSubgraphSuccess(dgKafkaNull, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(configurationDataByTypeName.get('Subscription')?.events).toStrictEqual([
+      {
+        fieldName: 'entitySubscription',
+        providerId: DEFAULT_EDFS_PROVIDER_ID,
+        providerType: PROVIDER_TYPE_KAFKA,
+        topics: ['entities'],
+        type: 'subscribe',
+      },
+    ]);
+  });
+
   test('that the mode defaults to OFF if deliveryGuarantees is an empty object', () => {
     const { configurationDataByTypeName } = normalizeSubgraphSuccess(dgKafkaEmpty, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(configurationDataByTypeName.get('Subscription')?.events).toStrictEqual([
@@ -269,6 +282,7 @@ function dgKafkaSubgraph(name: string, directiveArguments: string, extraDefiniti
 const dgKafkaNone = dgKafkaSubgraph('dg-kafka-none', '');
 const dgKafkaOff = dgKafkaSubgraph('dg-kafka-off', ', deliveryGuarantees: { mode: OFF }');
 const dgKafkaEmpty = dgKafkaSubgraph('dg-kafka-empty', ', deliveryGuarantees: {}');
+const dgKafkaNull = dgKafkaSubgraph('dg-kafka-null', ', deliveryGuarantees: null');
 const dgKafkaCursor = dgKafkaSubgraph('dg-kafka-cursor', ', deliveryGuarantees: { mode: CURSOR }');
 const dgKafkaNotObject = dgKafkaSubgraph('dg-kafka-not-object', ', deliveryGuarantees: CURSOR');
 const dgKafkaUnknownField = dgKafkaSubgraph(

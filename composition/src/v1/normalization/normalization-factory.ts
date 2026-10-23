@@ -3119,6 +3119,10 @@ export class NormalizationFactory {
     errorMessages: Array<string>,
   ): DeliveryGuaranteeMode | undefined {
     this.usesEdfsDeliveryGuarantees = true;
+    /* The argument is nullable, so an explicit null is equivalent to omitting the argument. */
+    if (argumentNode.value.kind === Kind.NULL) {
+      return OFF_UPPER;
+    }
     if (argumentNode.value.kind !== Kind.OBJECT) {
       errorMessages.push(invalidDeliveryGuaranteesInputErrorMessage);
       return;
