@@ -562,7 +562,7 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	}
 
 	if !r.engineExecutionConfiguration.EnableNetPoll {
-		r.logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
+		r.logger.Debug("Using goroutine-based WebSocket connection handling.")
 	} else if err := netpoll.Supported(); err != nil {
 
 		// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
@@ -570,12 +570,12 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 
 		if errors.Is(err, netpoll.ErrUnsupported) {
 			r.logger.Warn(
-				"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
+				"Net poller is only available on Linux and macOS. Falling back to goroutine-based WebSocket connection handling.",
 				zap.Error(err),
 			)
 		} else {
 			r.logger.Warn(
-				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
+				"Net poller is not functional in this environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to goroutine-based WebSocket connection handling.",
 				zap.Error(err),
 			)
 		}
