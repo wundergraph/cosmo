@@ -6,6 +6,8 @@ import {
   ArgumentSource,
   AuthorizationConfigurationSchema,
   DataSourceCustomEventsSchema,
+  DeliveryGuaranteeMode,
+  DeliveryGuaranteesSchema,
   EngineEventConfigurationSchema,
   EntityInterfaceConfigurationSchema,
   EventType,
@@ -45,6 +47,7 @@ import type {
 
 import {
   ConfigurationData,
+  DeliveryGuarantees as CompositionDeliveryGuarantees,
   FieldConfiguration as CompositionFieldConfiguration,
   NatsEventType as CompositionEventType,
   PROVIDER_TYPE_KAFKA,
@@ -119,6 +122,22 @@ export function addRequiredFields(
   }
 }
 
+function deliveryGuaranteesField(deliveryGuarantees?: CompositionDeliveryGuarantees) {
+  if (!deliveryGuarantees) {
+    return {};
+  }
+  switch (deliveryGuarantees.mode) {
+    case 'CURSOR': {
+      return {
+        deliveryGuarantees: create(DeliveryGuaranteesSchema, { mode: DeliveryGuaranteeMode.CURSOR }),
+      };
+    }
+    case 'OFF': {
+      return {};
+    }
+  }
+}
+
 function eventType(type: CompositionEventType) {
   switch (type) {
     case 'publish': {
@@ -186,6 +205,7 @@ export function configurationDatasToDataSourceConfiguration(
                 providerId: event.providerId,
                 type: eventType(event.type),
                 typeName,
+                ...deliveryGuaranteesField(event.deliveryGuarantees),
               }),
               topics: event.topics,
             }),
