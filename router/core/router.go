@@ -1345,6 +1345,9 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 // setupRedisResponseCache builds a response cache on a redis instance declared
 // under storage_providers.redis.
+// responseCacheStartupPingTimeout bounds the response cache's startup ping.
+const responseCacheStartupPingTimeout = 2 * time.Second
+
 func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 	providerID := r.responseCacheConfig.Storage.ProviderID
 	if providerID == "" {
@@ -1360,29 +1363,33 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		return fmt.Errorf("response cache references unknown redis storage provider %q", providerID)
 	}
 
+	// Bounded: a black-holed redis must not hold startup.
+	pingCtx, cancelPing := context.WithTimeout(ctx, responseCacheStartupPingTimeout)
+	defer cancelPing()
 	client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
 		URLs:           provider.URLs,
 		ClusterEnabled: provider.ClusterEnabled,
 		Logger:         r.logger,
+		Context:        pingCtx,
+		// Own client, so the storage timeouts can cut stalled reads.
+		ContextTimeoutEnabled: true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create redis client for response cache: %w", err)
-	}
-
-	cache, err := rediscache.NewRedisCache(ctx, client, r.responseCacheConfig.KeyPrefix)
-	if err != nil {
-		// Ownership of the client only passes to the cache once there is a cache,
-		// so on this path it is still ours and has to be closed here or it leaks
-		// along with its connection pool.
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
+		// A failed ping still returns the client; only a bad config returns none.
+		if client == nil {
+			return fmt.Errorf("failed to create redis client for response cache: %w", err)
 		}
-		return fmt.Errorf("failed to create response cache: %w", err)
+		// go-redis reconnects on its own; until then lookups miss and writes drop.
+		r.logger.Warn("Redis for the response cache is unreachable, starting without it",
+			zap.String("storage_provider_id", providerID),
+			zap.Error(err),
+		)
 	}
+	cache := rediscache.NewRedisCache(client, r.responseCacheConfig.KeyPrefix)
 
 	// The cache owns the client from here on and closes it with itself, and
 	// Shutdown closes the cache.
-	r.responseCache = cache
+	r.responseCache = responsecaching.NewTimeoutStore(cache, r.responseCacheConfig.Storage.LookupTimeout, r.responseCacheConfig.Storage.WriteTimeout)
 
 	r.logger.Info(
 		"Response cache enabled",
@@ -1391,6 +1398,8 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),
 		zap.String("storage_provider_id", providerID),
+		zap.Duration("lookup_timeout", r.responseCacheConfig.Storage.LookupTimeout),
+		zap.Duration("write_timeout", r.responseCacheConfig.Storage.WriteTimeout),
 	)
 
 	return nil

@@ -3491,6 +3491,24 @@
               "default": 10000,
               "description": "The greatest number of entries the 'memory' provider holds, after which the least valuable are evicted. Entries are counted, not measured, so the memory this costs depends on the size of the cached subgraph responses. Ignored by the 'redis' provider.",
               "examples": [10000]
+            },
+            "lookup_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "150ms",
+              "description": "How long a cache lookup may wait on the storage before it is treated as a miss and the subgraph is asked instead. Bounds request latency when the storage is slow or unresponsive. Ignored by the 'memory' provider. The period is specified as a string with a number and a unit, e.g. 150ms, 1s.",
+              "duration": {
+                "minimum": "1ms"
+              }
+            },
+            "write_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "500ms",
+              "description": "How long storing fetched responses may wait on the storage before the write is abandoned. The response is still served, only not cached. Ignored by the 'memory' provider. The period is specified as a string with a number and a unit, e.g. 500ms, 1s.",
+              "duration": {
+                "minimum": "1ms"
+              }
             }
           },
           "if": {
