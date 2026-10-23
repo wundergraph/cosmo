@@ -19,12 +19,19 @@ export type StreamConfiguration = {
   streamName: string;
 };
 
+export type DeliveryGuaranteeMode = 'OFF' | 'CURSOR';
+
+export type DeliveryGuarantees = {
+  mode: DeliveryGuaranteeMode;
+};
+
 export type KafkaEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'kafka';
   topics: string[];
   type: KafkaEventType;
+  deliveryGuarantees?: DeliveryGuarantees;
 };
 
 export type NatsEventConfiguration = {
