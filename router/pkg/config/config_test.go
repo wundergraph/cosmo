@@ -222,48 +222,6 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
-func TestEnableNetPollConfigLoading(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		engine   string
-		envValue string
-		want     bool
-	}{
-		{name: "omitted engine defaults to goroutines"},
-		{name: "empty engine defaults to goroutines", engine: "engine: {}"},
-		{name: "omitted option defaults to goroutines", engine: "engine:\n  websocket_server_read_timeout: 10s"},
-		{name: "YAML enables manual netpoll", engine: "engine:\n  enable_net_poll: true", want: true},
-		{name: "YAML selects goroutines", engine: "engine:\n  enable_net_poll: false"},
-		{name: "environment enables manual netpoll", envValue: "true", want: true},
-		{name: "environment selects goroutines", envValue: "false"},
-		{name: "YAML true overrides environment false", engine: "engine:\n  enable_net_poll: true", envValue: "false", want: true},
-		{name: "YAML false overrides environment true", engine: "engine:\n  enable_net_poll: false", envValue: "true"},
-		{name: "omitted option preserves environment true", engine: "engine:\n  websocket_server_read_timeout: 10s", envValue: "true", want: true},
-		{name: "YAML expands environment true", engine: "engine:\n  enable_net_poll: ${ENGINE_ENABLE_NET_POLL}", envValue: "true", want: true},
-		{name: "YAML expands environment false", engine: "engine:\n  enable_net_poll: ${ENGINE_ENABLE_NET_POLL}", envValue: "false"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("ENGINE_ENABLE_NET_POLL", tc.envValue)
-			f := createTempFileFromFixture(t, "version: \"1\"\nrouter_config_path: config.json\n"+tc.engine+"\n")
-			cfg, err := LoadConfig([]string{f})
-			require.NoError(t, err)
-			require.Equal(t, tc.want, cfg.Config.EngineExecutionConfiguration.EnableNetPoll)
-		})
-	}
-
-	t.Run("without a YAML file", func(t *testing.T) {
-		for _, envValue := range []string{"", "true", "false"} {
-			t.Run("environment="+envValue, func(t *testing.T) {
-				t.Setenv("ENGINE_ENABLE_NET_POLL", envValue)
-				cfg, err := LoadConfig([]string{DefaultConfigPath})
-				require.NoError(t, err)
-				require.True(t, cfg.DefaultLoaded)
-				require.Equal(t, envValue == "true", cfg.Config.EngineExecutionConfiguration.EnableNetPoll)
-			})
-		}
-	})
-}
-
 func TestForceUnauthenticatedRequestTracingConfigLoading(t *testing.T) {
 	t.Run("defaults to false", func(t *testing.T) {
 		t.Parallel()

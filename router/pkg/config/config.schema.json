@@ -4227,7 +4227,7 @@
         },
         "enable_net_poll": {
           "type": "boolean",
-          "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
+          "description": "Defaults to false, using a goroutine per server-side WebSocket connection. Setting true enables manual netpoll on Linux and macOS, falling back to goroutines if unavailable. Manual netpoll can introduce head-of-line blocking across connections and should be used with care. Does not affect upstream subgraph connections.",
           "default": false
         },
         "enable_multi_fetch": {
