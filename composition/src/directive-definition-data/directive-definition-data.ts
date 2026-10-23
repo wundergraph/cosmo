@@ -18,8 +18,10 @@ import {
   CONTEXT_FIELD_VALUE,
   COST,
   DEFAULT_EDFS_PROVIDER_ID,
+  DELIVERY_GUARANTEES,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
+  EDFS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -480,11 +482,20 @@ export const KAFKA_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
         },
       }),
     ],
+    [
+      DELIVERY_GUARANTEES,
+      newDirectiveArgumentData({
+        directive: `@${EDFS_KAFKA_SUBSCRIBE}`,
+        name: DELIVERY_GUARANTEES,
+        namedTypeKind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+        typeNode: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
+      }),
+    ],
   ]),
   locations: new Set<DirectiveLocation>([FIELD_DEFINITION_UPPER]),
   name: EDFS_KAFKA_SUBSCRIBE,
   node: EDFS_KAFKA_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID]),
+  optionalArgumentNames: new Set<ArgumentName>([PROVIDER_ID, DELIVERY_GUARANTEES]),
   requiredArgumentNames: new Set<ArgumentName>([TOPICS]),
 });
 
