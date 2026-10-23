@@ -25,6 +25,7 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          serviceAccountName: {{ include "controlplane.serviceAccountName" . }}
           containers:
             - name: cleanup-old-data
               securityContext:
