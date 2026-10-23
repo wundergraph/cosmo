@@ -108,12 +108,21 @@ func RouterAccessLogsFieldHandler(
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
 
 	if reqContext != nil {
-		copyContext := reqContext.expressionContext.Clone()
-		copyContext.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
-		resFields = processExpressionAttributes(logger, exprAttributes, resFields, copyContext)
+		resFields = processExpressionAttributes(logger, exprAttributes, resFields, accessLogExpressionContext(reqContext))
 	}
 
 	return resFields
+}
+
+// accessLogExpressionContext lazily snapshots the expression context for router access logs.
+// It is only called sequentially after request handling, so no synchronization is needed.
+func accessLogExpressionContext(reqContext *requestContext) *expr.Context {
+	if reqContext.accessLogExprContext == nil {
+		ctx := reqContext.expressionContext.Clone()
+		ctx.Request.Error = WrapExprError(ctx.Request.Error)
+		reqContext.accessLogExprContext = ctx
+	}
+	return reqContext.accessLogExprContext
 }
 
 func SubgraphAccessLogsFieldHandler(

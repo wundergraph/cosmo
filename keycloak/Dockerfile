@@ -1,14 +1,14 @@
 ARG KEYCLOAK_VERSION=26.7.5
 
-FROM --platform=${BUILDPLATFORM} timbru31/java-node:17-jdk-22 AS themebuilder
+FROM --platform=${BUILDPLATFORM} node:22.23.4-bookworm AS themebuilder
+
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jdk-headless maven && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY ./theme/package*.json .
 
 RUN npm ci
-
-RUN apt-get update && apt-get install -y maven && apt-get clean
 
 COPY ./theme .
 

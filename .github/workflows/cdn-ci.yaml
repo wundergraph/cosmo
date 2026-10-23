@@ -36,7 +36,7 @@ jobs:
         run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn lint
 
       - name: Test
-        run: pnpm run --filter ./cdn-server/cdn test
+        run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn test
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry

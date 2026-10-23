@@ -991,6 +991,7 @@ export class FederatedGraphRepository {
       offset: number;
     },
     dateRange: DateRange,
+    featureFlag?: { id: string; name: string },
   ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
     return this.db.transaction<
       { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined
@@ -1000,6 +1001,17 @@ export class FederatedGraphRepository {
       const { offset, limit } = pagination;
       const { start, end } = dateRange;
 
+      const conditions = and(
+        eq(schemaVersion.targetId, targetId),
+        gt(schemaVersion.createdAt, new Date(start)),
+        lt(schemaVersion.createdAt, new Date(end)),
+        // Feature flag schema versions are the only ones linked to a feature flag; the link is kept even if the
+        // feature flag has been deleted, so those versions are still excluded from the base graph changelog
+        featureFlag
+          ? eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlag.id)
+          : isNull(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      );
+
       // Get all schema version ids which have changelogs
       const schemaVersionIds = (
         await tx
@@ -1007,14 +1019,12 @@ export class FederatedGraphRepository {
             id: schemaVersion.id,
           })
           .from(schemaVersion)
-          .where(
-            and(
-              eq(schemaVersion.targetId, targetId),
-              gt(schemaVersion.createdAt, new Date(start)),
-              lt(schemaVersion.createdAt, new Date(end)),
-            ),
-          )
+          .where(conditions)
           .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
+          .leftJoin(
+            federatedGraphsToFeatureFlagSchemaVersions,
+            eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
+          )
           .orderBy(desc(schemaVersion.createdAt))
           .groupBy(schemaVersion.id)
           .offset(offset)
@@ -1048,13 +1058,11 @@ export class FederatedGraphRepository {
         .select({ id: schemaVersion.id })
         .from(schemaVersion)
         .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
-        .where(
-          and(
-            eq(schemaVersion.targetId, targetId),
-            gt(schemaVersion.createdAt, new Date(start)),
-            lt(schemaVersion.createdAt, new Date(end)),
-          ),
+        .leftJoin(
+          federatedGraphsToFeatureFlagSchemaVersions,
+          eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
         )
+        .where(conditions)
         .orderBy(desc(schemaVersion.createdAt))
         .groupBy(schemaVersion.id)
         .offset(offset + schemaVersions.length)
@@ -1072,6 +1080,8 @@ export class FederatedGraphRepository {
             createdAt: c.createdAt.toString(),
           })),
           compositionId: sv.composition?.id ?? '',
+          featureFlagId: featureFlag?.id ?? '',
+          featureFlagName: featureFlag?.name ?? '',
         });
       }
 
@@ -1123,6 +1133,8 @@ export class FederatedGraphRepository {
         createdAt: c.createdAt.toString(),
       })),
       compositionId: composition.id,
+      featureFlagId: '',
+      featureFlagName: '',
     };
   }
 
