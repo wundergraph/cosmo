@@ -924,6 +924,8 @@ type CursorResumeConfiguration struct {
 	IdentityClaim string `yaml:"identity_claim,omitempty" envDefault:"sub"`
 	// Keys is the keyring cursors are signed with. The router signs with the key with the highest id.
 	Keys []CursorKeyConfiguration `yaml:"keys,omitempty"`
+	// MaxResumeWindow is how long after it was issued a cursor may still be resumed.
+	MaxResumeWindow time.Duration `yaml:"max_resume_window,omitempty" envDefault:"3h"`
 }
 
 type CursorKeyConfiguration struct {

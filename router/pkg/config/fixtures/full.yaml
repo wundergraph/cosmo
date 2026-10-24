@@ -448,6 +448,7 @@ events:
   delivery_guarantees:
     cursor_resume:
       identity_claim: sub
+      max_resume_window: 6h
       keys:
         - id: 1
           secret: 'first-secret-at-least-32-bytes-long'

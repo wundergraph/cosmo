@@ -156,8 +156,8 @@ func cursorRequestData(conf SubscriptionEventConfiguration) ([]byte, error) {
 
 // cursorBinding is what the cursors of a single subscriber are bound to.
 type cursorBinding struct {
-	identity    ClientIdentity
-	requestData []byte
+	identity    ClientIdentity // who is subscribing
+	requestData []byte         // what is being subscribed to
 }
 
 func newCursorBinding(ctx context.Context, subscriberBinding SubscriberBindingFunc, conf SubscriptionEventConfiguration) (cursorBinding, error) {
@@ -193,11 +193,15 @@ type derivedCursorKey struct {
 type CursorCodec struct {
 	// keys are sorted by id, highest first.
 	keys []derivedCursorKey
-	now  func() time.Time
+	// maxResumeWindow is how long after it was issued a cursor may still be resumed.
+	// The zero value means cursors never age out.
+	maxResumeWindow time.Duration
 }
 
 // NewCursorCodec derives the tag and client binding keys of every key of the keyring.
-func NewCursorCodec(keys []CursorKey) (*CursorCodec, error) {
+// maxResumeWindow is how long after it was issued a cursor may still be resumed;
+// zero disables the check.
+func NewCursorCodec(keys []CursorKey, maxResumeWindow time.Duration) (*CursorCodec, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("cursor keyring is empty")
 	}
@@ -228,14 +232,13 @@ func NewCursorCodec(keys []CursorKey) (*CursorCodec, error) {
 
 	slices.SortFunc(derived, func(a, b derivedCursorKey) int { return int(b.id) - int(a.id) })
 
-	return &CursorCodec{keys: derived, now: time.Now}, nil
+	return &CursorCodec{keys: derived, maxResumeWindow: maxResumeWindow}, nil
 }
 
 // signingKey returns the key with the highest id that has not expired yet.
 func (c *CursorCodec) signingKey() (derivedCursorKey, bool) {
-	now := c.now()
 	for _, k := range c.keys {
-		if k.expiresAt.IsZero() || now.Before(k.expiresAt) {
+		if k.expiresAt.IsZero() || time.Now().Before(k.expiresAt) {
 			return k, true
 		}
 	}
@@ -253,6 +256,7 @@ func (c *CursorCodec) key(id uint8) (derivedCursorKey, bool) {
 
 // Issue binds the cursor to the client, signs it over requestData and returns its wire format.
 // The given cursor is not modified, it only has to carry the provider id and position.
+// The wire format is 'version (1 byte) | keyID (1 byte) | payload (n bytes) | tag (16 bytes)'
 func (c *CursorCodec) Issue(cur *streamsv1.Cursor, requestData []byte, id ClientIdentity) (string, error) {
 	key, ok := c.signingKey()
 	if !ok {
@@ -262,7 +266,7 @@ func (c *CursorCodec) Issue(cur *streamsv1.Cursor, requestData []byte, id Client
 	// A shallow copy, as the position is shared by all subscribers of a trigger.
 	payload, err := MarshalCursor(&streamsv1.Cursor{
 		ProviderId:    cur.GetProviderId(),
-		IssuedAt:      c.now().UnixMilli(),
+		IssuedAt:      time.Now().UnixMilli(),
 		ClientBinding: clientBinding(key, id),
 		Position:      cur.GetPosition(),
 	})
@@ -312,6 +316,19 @@ func (c *CursorCodec) Verify(wire string, requestData []byte, id ClientIdentity)
 		return nil, &DeliveryGuaranteeError{
 			Code:    DeliveryGuaranteeErrorCodeCursorClientMismatch,
 			Message: "The cursor was issued to a different client",
+		}
+	}
+
+	// IssuedAt is inside the signed payload, so it can't be moved forward by a client.
+	// The age check is the last step: it only runs on a cursor that is otherwise genuine
+	// and belongs to this client, so an attacker learns nothing from reaching it.
+	if c.maxResumeWindow > 0 {
+		age := time.Since(time.UnixMilli(cur.GetIssuedAt()))
+		if age > c.maxResumeWindow {
+			return nil, &DeliveryGuaranteeError{
+				Code:    DeliveryGuaranteeErrorCodeCursorExpired,
+				Message: "The cursor is older than the maximum resume window",
+			}
 		}
 	}
 

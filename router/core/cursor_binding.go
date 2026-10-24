@@ -28,7 +28,7 @@ func newCursors(cfg config.CursorResumeConfiguration, logger *zap.Logger) (datas
 			ExpiresAt: k.ExpiresAt,
 		})
 	}
-	codec, err := datasource.NewCursorCodec(keys)
+	codec, err := datasource.NewCursorCodec(keys, cfg.MaxResumeWindow)
 	if err != nil {
 		return datasource.Cursors{}, fmt.Errorf("invalid cursor keys: %w", err)
 	}
