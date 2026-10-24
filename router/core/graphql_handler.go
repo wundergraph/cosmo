@@ -418,11 +418,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			switch {
+			case errors.Is(err, context.Canceled):
 				reqCtx.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
-				return
-			} else if errors.Is(err, ErrUnauthorized) {
+			case errors.Is(err, ErrUnauthorized):
 				trackFinalResponseError(resolveCtx.Context(), err)
 				writeRequestErrors(writeRequestErrorsParams{
 					request:           r,
@@ -432,19 +432,24 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					logger:            reqCtx.logger,
 					headerPropagation: h.headerPropagation,
 				})
-				return
+			case getErrorType(err) == errorTypeDeliveryGuarantee:
+				// The subscription was rejected before it started, e.g. because the client asked
+				// for a guarantee this field can't serve or presented a cursor that no longer
+				// resumes. The reason, including its code, belongs in the response.
+				trackFinalResponseError(resolveCtx.Context(), err)
+				h.WriteTerminalError(resolveCtx, err, p.Response.Response, writer)
+			default:
+				reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusInternalServerError,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
 			}
-
-			reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackFinalResponseError(resolveCtx.Context(), err)
-			writeRequestErrors(writeRequestErrorsParams{
-				request:           r,
-				writer:            w,
-				statusCode:        http.StatusInternalServerError,
-				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
-				logger:            reqCtx.logger,
-				headerPropagation: h.headerPropagation,
-			})
 			return
 		}
 	case *plan.DeferResponsePlan:

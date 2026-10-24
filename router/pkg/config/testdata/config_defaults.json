@@ -435,7 +435,8 @@
     "DeliveryGuarantees": {
       "CursorResume": {
         "IdentityClaim": "sub",
-        "Keys": null
+        "Keys": null,
+        "MaxResumeWindow": 10800000000000
       }
     }
   },

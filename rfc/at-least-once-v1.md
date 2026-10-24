@@ -103,38 +103,38 @@ know where to connect and where to resume without any outside context.
 A cursor is a position, not a permission. Presenting a valid cursor never confers authority. The
 resumed operation is planned and authorized exactly as a fresh subscription would be.
 
-```go
-type Cursor struct {
-    // "kafka", "nats-jetstream", etc.
-    // Used to decode Position into a concrete type.
-    ProviderType ProviderType
+The cursor payload is a protobuf message, `wg.cosmo.streams.v1.Cursor`, not a hand-rolled Go
+struct. Protobuf gives the payload a schema, deterministic bytes to sign over, and forward
+compatibility for providers added later.
 
-    // id of the provider as configured in the router yaml
-    ProviderID string
+```proto
+message Cursor {
+  // Id of the provider as configured in the router config.
+  string provider_id = 1;
 
-    // The provider-specific message position in the broker.
-    Position CursorPosition
+  // The point in time when the cursor got created,
+  // as a unix timestamp in milliseconds.
+  int64 issued_at = 2;
 
-    // The point in time when the cursor got created,
-    // as a unix timestamp in milliseconds.
-    IssuedAt int64
+  // Keyed fingerprint of the client identity the cursor was issued to,
+  // see [About `clientData`](#about-clientdata).
+  bytes client_binding = 3;
 
-    // Keyed fingerprint of the client identity the cursor was issued to,
-    // see [About `clientData`](#about-clientdata).
-    ClientBinding []byte
+  // The provider-specific message position in the broker.
+  // The set field determines the provider type.
+  oneof position {
+    KafkaCursorPosition kafka = 10;
+  }
 }
-
-type ProviderType string
-
-var (
-    ProviderTypeKafka ProviderType = "kafka"
-    ProviderTypeNatsJetstream ProviderType = "nats-jetstream" // not implemented in this rfc
-    ProviderTypeRedisStreams ProviderType = "redis-streams" // not implemented in this rfc
-)
 ```
 
-The router can use `ProviderType`, `ProviderID` and `Position` from a specific offset on a specific
-broker.
+There is no separate `ProviderType` field: the set field of the `position` oneof is the provider
+type. A cursor presented to a provider of a different type therefore fails on a plain type
+assertion, and one carrying a position this router build does not know decodes to no position at
+all and is rejected.
+
+The router can use the oneof's provider type, `provider_id` and `position` to resume from a
+specific offset on a specific broker.
 
 #### Wire format
 
@@ -317,19 +317,8 @@ can read the broker offsets out of a cursor.
 #### Cursor Positions
 
 Describing message positions is highly broker specific. Some have offsets, other use indexes, etc.
-Therefore an interface was chosen to abstract it. Any implementation needs to provide a way to
-encode the position into a compact byte sequence and to read that sequence back. This byte sequence
-is used on the cursor on the wire.
-
-```go
-type CursorPosition interface {
-    encoding.BinaryMarshaler
-    encoding.BinaryUnmarshaler
-}
-```
-
-This interface is implemented by all broker adapters on which Cursor-Resume is meant to be
-supported.
+It is therefore abstracted as the `position` oneof of the `Cursor` message: every provider that
+supports Cursor-Resume contributes one message type to it, and protobuf provides the encoding.
 
 ##### Kafka Positions
 
@@ -347,31 +336,26 @@ It's worth remembering that on a GraphQL schema multiple topics can be defined p
 subscription. So all in all for Kafka the message offset needs to be recorded for all partitions of
 all topics of a subscription.
 
-```go
+```proto
 // KafkaCursorPosition can contain multiple topics (key)
 // and each topic can contain multiple partitions (value)
-type KafkaCursorPosition map[string]partitionPositions
-
-func (p KafkaCursorPosition) MarshalBinary() ([]byte, error) {
-    // do marshaling and return it
+message KafkaCursorPosition {
+  // Key = topic name.
+  map<string, KafkaPartitionPositions> topics = 1;
 }
 
-// Pointer receiver, so the map can be filled in place.
-func (p *KafkaCursorPosition) UnmarshalBinary(data []byte) error {
-    // do unmarshaling
+message KafkaPartitionPositions {
+  // Key = partition index.
+  map<int32, KafkaPartitionOffset> partitions = 1;
 }
 
-// List of partitions with a their offsets.
-// Key = partition index, Value = offset of the last delivered message in that partition.
-type partitionPositions map[int32]partitionOffset
-
-type partitionOffset struct {
-    // leader epoch of the partition at the time the message was read,
-    // used for detecting log truncation on resume
-    epoch int32
-
-    // offset of the message in the partition
-    offset int64
+message KafkaPartitionOffset {
+  // Leader epoch of the partition at the time the message was read,
+  // used for detecting log truncation on resume. Kafka uses -1 for an unknown
+  // epoch, so it is zigzag encoded.
+  sint32 epoch = 1;
+  // Offset of the message in the partition.
+  int64 offset = 2;
 }
 ```
 
@@ -392,9 +376,13 @@ offset. If the log was truncated below it, the broker says so and returns the of
 actually ends at now.
 
 That reset is not silently followed: the messages between the two offsets are lost, and resuming
-anyway would look like an uninterrupted stream while quietly breaking the delivery guarantee. A
-truncated cursor fails the subscription with its own error code, the same way a cursor that fails
-verification does, so the gap is visible to the client instead of hidden from it.
+anyway would look like an uninterrupted stream while quietly breaking the delivery guarantee. The
+router logs the truncation and closes the subscription instead.
+
+The client does not yet learn why. Truncation is detected inside the poller, after the subscription
+has started and the handshake is long over, so it has no distinct error code today — the client sees
+the subscription end. It will retry with the same cursor, fail the same way, and eventually get a
+clean `CURSOR_EXPIRED` once the cursor ages past `max_resume_window`.
 
 #### Decoding
 
@@ -403,10 +391,10 @@ of the envelope selects the concretely versioned type the payload is decoded int
 before the payload is touched at all. The cursor cannot carry its own version: the router would have
 to decode it to learn how to decode it.
 
-Within the payload the same applies one level down. `Cursor.Position` is an interface, so the router
-needs a concrete type before it can unmarshal the position bytes, and it takes that from
-`Cursor.ProviderType`. `ProviderType` therefore has to be decoded before `Position`, which means it
-has to be written before `Position` on the wire.
+Within the payload protobuf takes over. The `position` oneof tags the position with its provider
+type, so there is no ordering requirement on the wire and no second decoding step: unmarshaling the
+payload yields a typed position, or no position at all for a provider this router build does not
+know.
 
 ### Transport
 
@@ -565,13 +553,16 @@ client that stores cursor B has given up its chance to receive the message that 
 #### Resuming clients
 
 When a client wants to receive messages where it left off it has to provide the cursor upon
-reconnect. Specifically during handshake the client adds the field `cursor` to `payload.extensions`,
-similar to how it adds `cosmoDeliveryGuarantee`, see [handshake](#client---router-handshake). The value
-of this field contains the last processed cursor as chosen by the client in
-[wire format](#wire-format).
+reconnect. Specifically during handshake the client adds the field `streamsCursor` to
+`payload.extensions`, similar to how it adds `cosmoDeliveryGuarantee`, see
+[handshake](#client---router-handshake). The value of this field contains the last processed cursor
+as chosen by the client in [wire format](#wire-format). It is the same key the router issues cursors
+under in the response extensions, so a client hands back exactly what it received.
 
-The `cursor` field is independent of `cosmoDeliveryGuarantee`. A client may choose to resume from a
-specific event without getting new cursors.
+Resuming **requires** `cosmoDeliveryGuarantee: cursor`.
+Because resuming requires the guarantee, and the guarantee is only offered by a field whose schema
+directive declares `deliveryGuarantees: { mode: CURSOR }`, a cursor can never be presented to a
+subscription that did not opt in.
 
 ##### Replay speed
 
@@ -634,30 +625,33 @@ which extends normal adapters:
 ```go
 type SeekableAdapter interface {
   Adapter
-  SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, position CursorPosition, updater SubscriptionEventUpdater) error
+  SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, cursor *streamsv1.Cursor, updater SubscriptionEventUpdater) error
 }
 ```
 
-An adapter that does not implement `SeekableAdapter` cannot serve the `cursor` guarantee. The router
-finds this out with a type assertion when it plans the subscription, and answers the handshake with
-`DELIVERY_GUARANTEE_UNSUPPORTED` if the assertion fails.
+`SubscribeFrom` takes the whole verified cursor, not just its position. The adapter needs
+`IssuedAt` as well: it is where parts of the subscription the cursor does not cover start, such as
+a Kafka partition that never delivered a record to this client. Passing the cursor also means the
+provider type check is the same type assertion on the `position` oneof the adapter has to do anyway.
 
-`DecodePosition` is used when a cursor needs to be unmarshaled from wire format into a concrete
-type.
+An adapter that does not implement `SeekableAdapter` cannot resume a subscription. The router finds
+this out with a type assertion before the subscription is started, and rejects the client with
+`DELIVERY_GUARANTEE_UNSUPPORTED` if the assertion fails. Verification of the cursor likewise happens
+before a trigger exists, so a cursor that is invalid, expired or bound to another client never
+causes a connection to the broker.
 
-For example Kafka will be a seekable adapter, so there is a concrete type called
-`kafka.SeekableProviderAdapter`, which implements `SeekableAdapter`.
+Kafka's `ProviderAdapter` implements `SeekableAdapter`; NATS and Redis simply do not.
 
 ### Config
 
-Everything is configured under `events.delivery-guarantees.cursor-resume`. There is no switch to
+Everything is configured under `events.delivery_guarantees.cursor_resume`. There is no switch to
 enable cursors: a field serves them when its schema directive declares `deliveryGuarantees`, and the
 router refuses to load such a schema when no keys are configured.
 
 ```yaml
 events:
-  delivery-guarantees:
-    cursor-resume:
+  delivery_guarantees:
+    cursor_resume:
       # the claim cursors are bound to, see "About clientData".
       identity_claim: sub # default sub
 
@@ -675,19 +669,25 @@ events:
         - id: 2
           secret: env:COSMO_CURSOR_KEY_2
 
+      # Not implemented yet, see Known gaps.
       replay:
-        flow-control:
+        flow_control:
           # router-side limit of messages flushed per client per second 
           max_messages_per_second: 100
 
-    
   providers:
     kafka:
       - id: my-kafka
-        delivery-guarantees:
-          disable: # per provider overrides
-            - cursor-resume
+        # Not implemented yet. Per provider overrides.
+        delivery_guarantees:
+          disable:
+            - cursor_resume
 ```
+
+`identity_claim`, `max_resume_window` and `keys` are implemented as described. A key can be dropped
+from the keyring once `expires_at + max_resume_window` has passed: every cursor it signed has aged
+out of the resume window by then, so dropping it earlier revokes cursors that would still have
+resumed.
 
 ### Client Middleware
 
@@ -803,12 +803,24 @@ after a hook call. The cursor is meant to be immutable on `StreamBeforeEventsDis
 
 ## Known gaps
 
+- Truncation has no error code and no client-distinguishable close, see
+  [leader epoch](#leader-epoch). The client retries the same doomed cursor until it ages past
+  `max_resume_window`.
+- Replay pacing is not implemented, see [replay speed](#replay-speed). A resuming client is fed as
+  fast as the broker serves.
+- Every resuming client gets its own trigger, its own broker client and its own poller, because the
+  presented cursor is part of the trigger identity. A reconnect storm after an outage is therefore a
+  resource spike on the router.
+- Resume uses a static partition assignment, so partitions created on an already-assigned topic
+  after the resume are never picked up for the life of that subscription.
+- A partition the cursor never saw resumes at the cursor's `IssuedAt` timestamp. That is a time
+  approximation of where a fresh subscribe would have started, not an exact position.
+- Cursor resume is implemented for Kafka only.
+- There are no automated tests for resume yet.
 - Partitions without delivered records are missing from cursors, so resume needs a fallback for
   them.
 - Messages can arrive out of order when an `OnReceiveEvents` handler times out, which breaks the
   [cumulative](#cursors-are-cumulative) order of cursors.
-- The typed `DeliveryGuaranteeError` is replaced by the engine's generic "invalid subscription
-  input" error.
 - The [negotiation success](#negotiation-success) confirmation is not implemented.
 - Events emitted from `SubscriptionOnStart` never carry cursors, because of a limitation of the
   engine's `StartupHookContext.Updater`.

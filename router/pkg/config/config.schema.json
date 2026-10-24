@@ -3456,6 +3456,11 @@
                   "minLength": 1,
                   "default": "sub"
                 },
+                "max_resume_window": {
+                  "type": "string",
+                  "description": "How long after it was issued a cursor can still be resumed. A client presenting an older cursor is rejected. Specify as a duration string (e.g., '3h', '30m').",
+                  "default": "3h"
+                },
                 "keys": {
                   "type": "array",
                   "description": "The keyring cursors are signed with. The router signs new cursors with the key with the highest id that has not expired. Removing a key revokes all cursors signed with it.",
