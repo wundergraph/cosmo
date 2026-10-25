@@ -322,26 +322,18 @@ func LogLevelHandler(r *http.Request) zapcore.Level {
 		return zapcore.InfoLevel
 	}
 
-	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) && !isCursorRejection(reqContext.error) {
+	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) && !isDeliveryGuaranteeRejection(reqContext.error) {
 		return zapcore.ErrorLevel
 	}
 
 	return zapcore.InfoLevel
 }
 
-// isCursorRejection reports whether err is a client presenting a cursor that can't be resumed,
-// e.g. a malformed, expired or foreign one. That is the client's mistake, not a server failure,
-// so it must not surface as an error log. It is still tracked as a request error in metrics.
-func isCursorRejection(err error) bool {
-	guaranteeErr, ok := errors.AsType[*datasource.DeliveryGuaranteeError](err)
-	if !ok {
-		return false
-	}
-	switch guaranteeErr.Code {
-	case datasource.DeliveryGuaranteeErrorCodeCursorInvalid,
-		datasource.DeliveryGuaranteeErrorCodeCursorClientMismatch,
-		datasource.DeliveryGuaranteeErrorCodeCursorExpired:
-		return true
-	}
-	return false
+// isDeliveryGuaranteeRejection reports whether err is the router turning down a client's delivery
+// guarantee request, e.g. cursors asked for on a subscription that has none, or a malformed,
+// expired or foreign cursor. That is the client's mistake, not a server failure, so it must not
+// surface as an error log. It is still tracked as a request error in metrics.
+func isDeliveryGuaranteeRejection(err error) bool {
+	_, ok := errors.AsType[*datasource.DeliveryGuaranteeError](err)
+	return ok
 }
