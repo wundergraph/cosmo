@@ -40,7 +40,8 @@ type Mutation {
 
 type Subscription {
     employeeUpdated(employeeID: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
-    employeeUpdatedMyKafka(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka", deliveryGuarantees: { mode: CURSOR })
+    employeeUpdatedMyKafka(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+    employeeUpdatedMyKafkaCursors(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka", deliveryGuarantees: { mode: CURSOR })
     employeeUpdatedMyNats(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], providerId: "my-nats")
     employeeUpdatedNatsStream(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
     employeeUpdatedMyRedis(id: Int!): Employee! @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis.{{ args.id }}"], providerId: "my-redis")
