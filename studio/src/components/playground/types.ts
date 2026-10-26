@@ -1,6 +1,7 @@
 import { SHARE_OPTIONS } from '@/lib/constants';
 import { createContext } from 'react';
 import { z } from 'zod';
+import { ResponseCacheTrace } from './response-cache-trace';
 
 export type TabState = {
   id: string;
@@ -84,6 +85,7 @@ export type ARTFetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+  responseCache?: ResponseCacheTrace;
 };
 
 export type Representation = {
