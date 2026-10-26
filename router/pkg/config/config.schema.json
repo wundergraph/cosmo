@@ -1930,6 +1930,12 @@
             "type": "string"
           }
         },
+        "expose_headers": {
+          "type": "array",
+          "description": "The exposed CORS HTTP headers. These are values browser clients are allowed to read from regular responses. Defaults to an empty list.",
+          "default": [],
+          "items": {"type": "string"}
+        },
         "allow_credentials": {
           "type": "boolean",
           "default": true,

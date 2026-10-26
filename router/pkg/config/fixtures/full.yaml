@@ -145,6 +145,8 @@ cors:
     - Origin
     - Content-Length
     - Content-Type
+  expose_headers:
+    - x-trace-id
   allow_credentials: true
   max_age: 5m
 

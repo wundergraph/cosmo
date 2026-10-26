@@ -194,6 +194,9 @@
       "Content-Length",
       "Content-Type"
     ],
+    "ExposeHeaders": [
+      "x-trace-id"
+    ],
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },

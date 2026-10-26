@@ -203,11 +203,13 @@ type Telemetry struct {
 }
 
 type CORS struct {
-	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`
-	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`
-	MatchOrigins     []string      `yaml:"match_origins" env:"CORS_MATCH_ORIGINS" envSeparator:";"`
-	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
-	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
+	Enabled      bool     `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`
+	AllowOrigins []string `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`
+	MatchOrigins []string `yaml:"match_origins" env:"CORS_MATCH_ORIGINS" envSeparator:";"`
+	AllowMethods []string `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
+	AllowHeaders []string `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
+	// ExposeHeaders controls which response headers browser clients may read. Defaults to an empty list.
+	ExposeHeaders    []string      `yaml:"expose_headers" envDefault:"" env:"CORS_EXPOSE_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`
 	MaxAge           time.Duration `yaml:"max_age" envDefault:"5m" env:"CORS_MAX_AGE"`
 }
