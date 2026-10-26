@@ -22,7 +22,8 @@ func tagIndexKey(tag string) string { return (&RedisCache{prefix: testPrefix}).t
 
 // rawEntry is value as SetMany stores it, for cases that seed redis by hand.
 func rawEntry(value string) string {
-	return string(enginecache.EncodeItem(enginecache.Item{Value: []byte(value)}))
+	encoded, _ := enginecache.EncodeItem(enginecache.Item{Value: []byte(value)}) // no keys, can't fail
+	return string(encoded)
 }
 
 // newTestRedisCache returns a cache backed by an in-process Redis, plus the
@@ -192,7 +193,10 @@ func TestRedisCache(t *testing.T) {
 
 			c, _ := newTestRedisCache(t)
 
-			surrogateKeys := []string{"subgraph-accounts", "type-accounts-User", "user-42"}
+			surrogateKeys := []enginecache.SurrogateKey{
+				enginecache.SubgraphSurrogateKey("accounts"), enginecache.TypeSurrogateKey("accounts", "User"),
+				enginecache.DeclaredSurrogateKey("subgraph-other"), enginecache.DeclaredSurrogateKey("user-42"),
+			}
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
@@ -413,6 +417,23 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
 			require.ErrorContains(t, err, "invalid-ttl")
+
+			require.Empty(t, mr.Keys())
+		})
+
+		t.Run("one item with an unknown key tier rejects the whole batch", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newTestRedisCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "before", Value: []byte("1"), TTL: time.Minute, Tags: []string{"t"}},
+				{Key: "bad-tier", Value: []byte("2"), TTL: time.Minute, Tags: []string{"t"},
+					SurrogateKeys: []enginecache.SurrogateKey{{Value: "t", Tier: 255}}},
+				{Key: "after", Value: []byte("3"), TTL: time.Minute},
+			})
+			require.ErrorIs(t, err, enginecache.ErrInvalidSurrogateKeyTier)
+			require.ErrorContains(t, err, "bad-tier")
 
 			require.Empty(t, mr.Keys())
 		})
