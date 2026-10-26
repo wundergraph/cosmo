@@ -349,6 +349,230 @@ graph:
 	})
 }
 
+func TestEventsCursorResumeConfigLoading(t *testing.T) {
+	t.Parallel()
+
+	const secret32 = "0123456789abcdef0123456789abcdef"
+
+	load := func(t *testing.T, cursorResume string) (*LoadResult, error) {
+		t.Helper()
+
+		content := `
+version: "1"
+
+graph:
+  token: "token"
+`
+		if cursorResume != "" {
+			content += `
+events:
+  delivery_guarantees:
+    cursor_resume:
+` + cursorResume
+		}
+		return LoadConfig([]string{createTempFileFromFixture(t, content)})
+	}
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("omitted block applies the defaults and has no keys", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := load(t, "")
+			require.NoError(t, err)
+
+			cursorResume := res.Config.Events.DeliveryGuarantees.CursorResume
+			require.Equal(t, "sub", cursorResume.IdentityClaim)
+			require.Equal(t, 3*time.Hour, cursorResume.MaxResumeWindow)
+			require.Empty(t, cursorResume.Keys)
+		})
+
+		t.Run("minimal key", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := load(t, `
+      keys:
+        - id: 1
+          secret: "`+secret32+`"
+`)
+			require.NoError(t, err)
+
+			keys := res.Config.Events.DeliveryGuarantees.CursorResume.Keys
+			require.Len(t, keys, 1)
+			require.Equal(t, uint8(1), keys[0].ID)
+			require.Equal(t, secret32, keys[0].Secret)
+			require.True(t, keys[0].ExpiresAt.IsZero())
+		})
+
+		t.Run("expires_at as RFC 3339 timestamp", func(t *testing.T) {
+			t.Parallel()
+
+			cases := map[string]time.Time{
+				"2026-12-31T00:00:00Z":      time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC),
+				"2026-12-31T02:00:00+02:00": time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC),
+			}
+			for value, expected := range cases {
+				t.Run(value, func(t *testing.T) {
+					t.Parallel()
+
+					res, err := load(t, `
+      keys:
+        - id: 1
+          secret: "`+secret32+`"
+          expires_at: `+value+`
+`)
+					require.NoError(t, err)
+
+					keys := res.Config.Events.DeliveryGuarantees.CursorResume.Keys
+					require.Len(t, keys, 1)
+					require.True(t, expected.Equal(keys[0].ExpiresAt), "expected %s, got %s", expected, keys[0].ExpiresAt)
+				})
+			}
+		})
+
+		t.Run("multiple keys keep their order", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := load(t, `
+      keys:
+        - id: 2
+          secret: "`+secret32+`"
+        - id: 1
+          secret: "another-`+secret32+`"
+`)
+			require.NoError(t, err)
+
+			keys := res.Config.Events.DeliveryGuarantees.CursorResume.Keys
+			require.Len(t, keys, 2)
+			require.Equal(t, uint8(2), keys[0].ID)
+			require.Equal(t, secret32, keys[0].Secret)
+			require.Equal(t, uint8(1), keys[1].ID)
+			require.Equal(t, "another-"+secret32, keys[1].Secret)
+		})
+
+		t.Run("custom identity_claim", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := load(t, `
+      identity_claim: "https://example.com/user_id"
+`)
+			require.NoError(t, err)
+			require.Equal(t, "https://example.com/user_id", res.Config.Events.DeliveryGuarantees.CursorResume.IdentityClaim)
+		})
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			name         string
+			cursorResume string
+			errContains  string
+		}{
+			{
+				name: "key without id",
+				cursorResume: `
+      keys:
+        - secret: "` + secret32 + `"
+`,
+				errContains: "missing property 'id'",
+			},
+			{
+				name: "key without secret",
+				cursorResume: `
+      keys:
+        - id: 1
+`,
+				errContains: "missing property 'secret'",
+			},
+			{
+				name: "key id below 0",
+				cursorResume: `
+      keys:
+        - id: -1
+          secret: "` + secret32 + `"
+`,
+				errContains: "cannot unmarshal -1 into Go value of type uint8",
+			},
+			{
+				name: "key id above 255",
+				cursorResume: `
+      keys:
+        - id: 256
+          secret: "` + secret32 + `"
+`,
+				errContains: "cannot unmarshal 256 into Go value of type uint8",
+			},
+			{
+				name: "secret one character short of 32",
+				cursorResume: `
+      keys:
+        - id: 1
+          secret: "` + secret32[:31] + `"
+`,
+				errContains: "/keys/0/secret': minLength: got 31, want 32",
+			},
+			{
+				name: "empty secret",
+				cursorResume: `
+      keys:
+        - id: 1
+          secret: ""
+`,
+				errContains: "/keys/0/secret': minLength: got 0, want 32",
+			},
+			{
+				name: "empty identity_claim",
+				cursorResume: `
+      identity_claim: ""
+`,
+				errContains: "/cursor_resume/identity_claim': minLength: got 0, want 1",
+			},
+			{
+				name: "expires_at date without time",
+				cursorResume: `
+      keys:
+        - id: 1
+          secret: "` + secret32 + `"
+          expires_at: "2026-12-31"
+`,
+				errContains: "/keys/0/expires_at': '2026-12-31' is not valid date-time",
+			},
+			{
+				name: "expires_at in a non RFC 3339 format",
+				cursorResume: `
+      keys:
+        - id: 1
+          secret: "` + secret32 + `"
+          expires_at: "31.12.2026"
+`,
+				errContains: "/keys/0/expires_at': '31.12.2026' is not valid date-time",
+			},
+			{
+				name: "expires_at is not a timestamp",
+				cursorResume: `
+      keys:
+        - id: 1
+          secret: "` + secret32 + `"
+          expires_at: "tomorrow"
+`,
+				errContains: "/keys/0/expires_at': 'tomorrow' is not valid date-time",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				_, err := load(t, tc.cursorResume)
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errContains)
+			})
+		}
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()
