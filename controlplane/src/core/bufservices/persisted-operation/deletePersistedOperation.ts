@@ -12,6 +12,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { createBlobStoragePath } from './utils.js';
 import { withPersistedOperationsTransaction } from './transaction.js';
+import { prepareOperationBlobRestore } from './restore.js';
 
 export function deletePersistedOperation(
   opts: RouterOptions,
@@ -71,6 +72,7 @@ export function deletePersistedOperation(
       };
     }
 
+    const restoreBlobs = await prepareOperationBlobRestore(opts.blobStorage, [operation], logger);
     const deletedOperation = await operationsRepo.deletePersistedOperation({
       operationId: req.operationId,
       clientName: req.clientName,
@@ -104,6 +106,7 @@ export function deletePersistedOperation(
         federatedGraphId,
         organizationId,
       });
+      await restoreBlobs();
       throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
     }
 

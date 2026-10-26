@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -15,7 +15,7 @@ import {
   onTestFinished,
   type Mock,
 } from 'vitest';
-import { federatedGraphs } from '../src/db/schema.js';
+import { federatedGraphs, federatedGraphPersistedOperations } from '../src/db/schema.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
@@ -142,21 +142,37 @@ describe('Persisted operations', (ctx) => {
       });
     });
 
-    test.each(['publish', 'operation-delete', 'client-delete'] as const)(
-      'Should roll back %s when manifest upload fails and release the lock',
-      async (action) => {
+    test.each([
+      ['publish', false],
+      ['operation-delete', false],
+      ['client-delete', false],
+      ['operation-delete', true],
+      ['client-delete', true],
+    ] as const)(
+      'Should roll back %s and restore files when manifest upload fails (legacy: %s)',
+      async (action, legacy) => {
         const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
         onTestFinished(() => server.close());
         const fedGraphName = genID('fedGraph');
         await setupFederatedGraph(fedGraphName, client);
-        const base = { fedGraphName, namespace: 'default', clientName: 'web' };
+        const base = { fedGraphName, namespace: 'default', clientName: 'web/mobile %' };
         const publish = () =>
           client.publishPersistedOperations({
             ...base,
-            operations: [{ id: 'shared', contents: 'query { hello }' }],
+            operations: [
+              { id: 'shared', contents: 'query { hello }' },
+              { id: 'second', contents: 'query { __typename }' },
+            ],
           });
         if (action !== 'publish') {
           expect((await publish()).response?.code).toBe(EnumStatusCode.OK);
+        }
+        const operationKeys = blobStorage.keys().filter((key) => /\/(shared|second)\.json$/.test(key));
+        if (legacy) {
+          await server.db
+            .update(federatedGraphPersistedOperations)
+            .set({ operationContent: null })
+            .where(inArray(federatedGraphPersistedOperations.filePath, operationKeys));
         }
         const put = blobStorage.putObject.bind(blobStorage);
         const spy = vi.spyOn(blobStorage, 'putObject').mockImplementation((input) => {
@@ -185,6 +201,15 @@ describe('Persisted operations', (ctx) => {
             operations: [{ id: 'shared', contents: 'query { __typename }' }],
           });
           expect(conflict.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+          for (const key of operationKeys) {
+            const body = key.endsWith('/shared.json') ? 'query { hello }' : 'query { __typename }';
+            expect(JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text())).toEqual({
+              version: 1,
+              body,
+            });
+          }
+          expect((await publish()).operations[0].status).toBe(PublishedOperationStatus.UP_TO_DATE);
+          expect(blobStorage.keys()).toEqual(expect.arrayContaining(operationKeys));
         }
         expect((await mutate()).response?.code).toBe(EnumStatusCode.OK);
       },
@@ -324,6 +349,46 @@ describe('Persisted operations', (ctx) => {
         }
       },
     );
+
+    test('Should return a retryable error when the graph lock wait times out', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+      const graph = await new FederatedGraphRepository(
+        server.log,
+        server.db,
+        users.adminAliceCompanyA.organizationId,
+      ).byName(fedGraphName, 'default');
+      const locked = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const holder = server.db.transaction(async (tx) => {
+        await tx.select().from(federatedGraphs).where(eq(federatedGraphs.id, graph!.id)).for('no key update');
+        locked.resolve();
+        await release.promise;
+      });
+      const publish = () =>
+        client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: [{ id: 'shared', contents: 'query { hello }' }],
+        });
+      const keys = blobStorage.keys();
+      try {
+        await locked.promise;
+        expect((await publish()).response).toMatchObject({
+          code: EnumStatusCode.ERR,
+          details: 'Persisted operations are busy. Please retry.',
+        });
+        expect(blobStorage.keys()).toEqual(keys);
+        expect((await client.getClients({ fedGraphName, namespace: 'default' })).clients).toEqual([]);
+      } finally {
+        release.resolve();
+        await holder;
+      }
+      expect((await publish()).response?.code).toBe(EnumStatusCode.OK);
+    }, 45_000);
 
     test('Should wait for outstanding uploads before rolling back a failed batch', async (testContext) => {
       const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });

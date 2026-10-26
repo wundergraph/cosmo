@@ -13,6 +13,7 @@ import type { BlobStorage } from '../../blobstorage/index.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { withPersistedOperationsTransaction } from './transaction.js';
+import { prepareOperationBlobRestore } from './restore.js';
 
 export function deleteClient(
   opts: RouterOptions,
@@ -65,6 +66,11 @@ export function deleteClient(
       };
     }
 
+    const restoreBlobs = await prepareOperationBlobRestore(
+      opts.blobStorage,
+      await operationsRepo.getPersistedOperations(preview.id),
+      logger,
+    );
     const deletedClient = await operationsRepo.deleteClient(req.clientName);
     if (!deletedClient) {
       return {
@@ -107,6 +113,7 @@ export function deleteClient(
         federatedGraphId,
         organizationId,
       });
+      await restoreBlobs();
       throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
     }
 
