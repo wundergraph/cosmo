@@ -249,20 +249,34 @@ const Entries = ({ fetches }: { fetches: CachedFetch[] }) => {
   );
 };
 
-// The shared key lives for the browser tab only.
+// The shared key lives for the browser tab only, per endpoint origin.
 const sharedKeyStorage = 'cosmo-playground-invalidation-shared-key';
 
-const readSharedKey = () => {
+const originOf = (endpoint: string) => {
   try {
-    return sessionStorage.getItem(sharedKeyStorage) ?? '';
+    return new URL(endpoint).origin;
   } catch {
     return '';
   }
 };
 
-const writeSharedKey = (key: string) => {
+const readSharedKey = (origin: string) => {
+  if (!origin) {
+    return '';
+  }
   try {
-    sessionStorage.setItem(sharedKeyStorage, key);
+    return sessionStorage.getItem(`${sharedKeyStorage}:${origin}`) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const writeSharedKey = (origin: string, key: string) => {
+  if (!origin) {
+    return;
+  }
+  try {
+    sessionStorage.setItem(`${sharedKeyStorage}:${origin}`, key);
   } catch {}
 };
 
@@ -276,7 +290,6 @@ export const ViewResponseCacheInvalidate = ({
 }) => {
   const groups = operationInvalidationRequests(fetches, invalidation);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sharedKey, setSharedKey] = useState(readSharedKey);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<InvalidationResult>();
   // Editable: the advertised URL may not be reachable from this browser.
@@ -284,6 +297,12 @@ export const ViewResponseCacheInvalidate = ({
   useEffect(() => {
     setEndpoint(invalidation?.endpoint ?? '');
   }, [invalidation?.endpoint]);
+  // Never offer one router's key to another.
+  const endpointOrigin = originOf(endpoint);
+  const [sharedKey, setSharedKey] = useState(() => readSharedKey(endpointOrigin));
+  useEffect(() => {
+    setSharedKey(readSharedKey(endpointOrigin));
+  }, [endpointOrigin]);
   // A new response starts a new selection.
   useEffect(() => {
     setSelected(new Set());
@@ -389,7 +408,7 @@ export const ViewResponseCacheInvalidate = ({
                   value={sharedKey}
                   onChange={(e) => {
                     setSharedKey(e.target.value);
-                    writeSharedKey(e.target.value);
+                    writeSharedKey(endpointOrigin, e.target.value);
                   }}
                   className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
