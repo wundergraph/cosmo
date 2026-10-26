@@ -27,7 +27,9 @@ export const TitleLayout = ({
   const [isStarBannerDisabled] = useStarBannerDisabled();
   const isOrganizationDeactivated = !!org?.deactivation;
   const isOrganizationPendingDeletion = !!org?.deletion;
-  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
+  const isOrganizationBillDue = !!org?.billing?.isBillDue;
+  const isBannerDisplayed =
+    isOrganizationDeactivated || isOrganizationPendingDeletion || isOrganizationBillDue || !isStarBannerDisabled;
 
   return (
     <div

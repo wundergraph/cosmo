@@ -1368,6 +1368,7 @@ export const organizationBilling = pgTable(
       }),
     plan: text('plan'),
     stripeCustomerId: text('stripe_customer_id'),
+    isBillDue: boolean('is_bill_due').notNull().default(false),
   },
   (t) => {
     return {

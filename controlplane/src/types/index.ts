@@ -312,6 +312,7 @@ export interface OrganizationDTO {
   billing?: {
     plan: string;
     email?: string;
+    isBillDue?: boolean;
   };
   subscription?: {
     status: string;

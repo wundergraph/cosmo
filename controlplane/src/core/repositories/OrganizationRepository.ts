@@ -286,6 +286,7 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         billing: {
           plan: organizationBilling.plan,
+          isBillDue: organizationBilling.isBillDue,
         },
         subscription: {
           status: billingSubscriptions.status,
@@ -332,6 +333,7 @@ export class OrganizationRepository {
             billing: plan
               ? {
                   plan,
+                  isBillDue: org.billing?.isBillDue ?? false,
                 }
               : undefined,
             subscription: org.subscription

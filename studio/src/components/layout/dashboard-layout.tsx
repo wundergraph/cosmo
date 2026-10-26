@@ -79,6 +79,20 @@ export const OrganizationBanner = () => {
   const org = useCurrentOrganization();
 
   if (!org?.deactivation && !org?.deletion) {
+    if (org?.billing?.isBillDue) {
+      return (
+        <div className="flex w-full bg-destructive text-xs lg:justify-center xl:text-sm">
+          <p className="flex items-center gap-x-2 px-4 py-2">
+            <ExclamationTriangleIcon className="flex-shrink-0" />
+            <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
+              Your account has an unpaid balance and some features may be paused soon. To keep uninterrupted access to
+              Cosmo, please contact your admin.
+            </span>
+          </p>
+        </div>
+      );
+    }
+
     return null;
   }
 
@@ -118,8 +132,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const isApiKeyManager = checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
+  const isOrganizationBillDue = !!user?.currentOrganization?.billing?.isBillDue;
 
-  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
+  const isBannerDisplayed =
+    isOrganizationDeactivated || isOrganizationPendingDeletion || isOrganizationBillDue || !isStarBannerDisabled;
 
   const plans = useQuery(
     getBillingPlans,
