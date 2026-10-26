@@ -8,9 +8,11 @@ import { PlainMessage } from '../../../types/index.js';
 import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import type { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import type { BlobStorage } from '../../blobstorage/index.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { withPersistedOperationsTransaction } from './transaction.js';
 
 export function deleteClient(
   opts: RouterOptions,
@@ -42,67 +44,105 @@ export function deleteClient(
       throw new UnauthorizedError();
     }
 
-    return opts.db.transaction(async (tx) => {
-      const operationsRepo = new OperationsRepository(tx as typeof opts.db, federatedGraph.id);
-      if (!(await operationsRepo.lockPersistedOperations())) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph '${req.fedGraphName}' does not exist`);
-      }
+    return withPersistedOperationsTransaction(opts.db, federatedGraph, (operationsRepo) =>
+      deleteClientOperations(operationsRepo, authContext.organizationId, federatedGraph.id),
+    );
+  });
 
-      const preview = await operationsRepo.previewDeleteClient(req.clientName);
-      if (!preview) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
-            details: `Client '${req.clientName}' does not exist`,
-          },
-          deletedOperationsCount: 0,
-        };
-      }
-
-      const deletedClient = await operationsRepo.deleteClient(req.clientName);
-      if (!deletedClient) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
-            details: `Client '${req.clientName}' does not exist`,
-          },
-          deletedOperationsCount: 0,
-        };
-      }
-
-      if (preview.persistedOperationsCount > 0) {
-        const clientDirectory = `${authContext.organizationId}/${federatedGraph.id}/operations/${encodeURIComponent(req.clientName)}/`;
-        try {
-          await opts.blobStorage.removeDirectory({ key: clientDirectory });
-        } catch (e) {
-          const error = e instanceof Error ? e : new Error('Unknown error');
-          logger.error(error, `Could not delete operations for client ${req.clientName} at ${clientDirectory}`);
-          throw new PublicError(EnumStatusCode.ERR, `Failed to delete operations for client ${req.clientName}`, error);
-        }
-      }
-
-      try {
-        await operationsRepo.generateAndUploadManifest({
-          organizationId: authContext.organizationId,
-          blobStorage: opts.blobStorage,
-          logger,
-        });
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error('Unknown error');
-        logger.error(error, `Failed to regenerate PQL manifest after deleting client ${req.clientName}`, {
-          federatedGraphId: federatedGraph.id,
-          organizationId: authContext.organizationId,
-        });
-        throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
-      }
-
+  async function deleteClientOperations(
+    operationsRepo: OperationsRepository,
+    organizationId: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<DeleteClientResponse>> {
+    const preview = await operationsRepo.previewDeleteClient(req.clientName);
+    if (!preview) {
       return {
         response: {
-          code: EnumStatusCode.OK,
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Client '${req.clientName}' does not exist`,
         },
-        client: deletedClient.client,
-        deletedOperationsCount: preview.persistedOperationsCount,
+        deletedOperationsCount: 0,
       };
-    });
-  });
+    }
+
+    const deletedClient = await operationsRepo.deleteClient(req.clientName);
+    if (!deletedClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Client '${req.clientName}' does not exist`,
+        },
+        deletedOperationsCount: 0,
+      };
+    }
+
+    if (preview.persistedOperationsCount > 0) {
+      const clientDirectory = `${organizationId}/${federatedGraphId}/operations/${encodeURIComponent(req.clientName)}/`;
+      const removedFromBlobStorageMetadata = await removeClientFromBlobStorage(clientDirectory, {
+        storage: opts.blobStorage,
+      });
+
+      if (!removedFromBlobStorageMetadata.ok) {
+        logger.error(
+          removedFromBlobStorageMetadata.error,
+          `Could not delete operations for client ${req.clientName} at ${clientDirectory}`,
+        );
+        throw new PublicError(
+          EnumStatusCode.ERR,
+          `Failed to delete operations for client ${req.clientName}`,
+          removedFromBlobStorageMetadata.error,
+        );
+      }
+    }
+
+    try {
+      await operationsRepo.generateAndUploadManifest({
+        organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, `Failed to regenerate PQL manifest after deleting client ${req.clientName}`, {
+        federatedGraphId,
+        organizationId,
+      });
+      throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
+    }
+
+    return {
+      response: {
+        code: EnumStatusCode.OK,
+      },
+      client: deletedClient.client,
+      deletedOperationsCount: preview.persistedOperationsCount,
+    };
+  }
+}
+
+async function removeClientFromBlobStorage(
+  key: string,
+  {
+    storage,
+  }: {
+    storage: BlobStorage;
+  },
+): Promise<
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      error: Error;
+    }
+> {
+  try {
+    await storage.removeDirectory({ key });
+
+    return { ok: true };
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error('Unknown error');
+
+    return { ok: false, error };
+  }
 }
