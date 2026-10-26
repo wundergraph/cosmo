@@ -12,7 +12,14 @@ import { CLI, CLISteps } from '../ui/cli';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { ARTCustomEdge, FetchFlow, ReactFlowARTFetchNode, ReactFlowARTMultiFetchNode } from './fetch-flow';
 import { FetchWaterfall } from './fetch-waterfall';
+import {
+  collectCachedFetches,
+  parseResponseCacheRequestTrace,
+  parseResponseCacheTrace,
+  ResponseCacheRequestTrace,
+} from './response-cache-trace';
 import { ARTFetchNode, LoadStats, QueryPlan } from './types';
+import { ViewResponseCacheInvalidate, ViewResponseCacheRequest } from './view-response-cache';
 
 const initialPaneWidth = 360;
 
@@ -50,6 +57,8 @@ const Trace = ({
   subgraphs: { id: string; name: string }[];
 }) => {
   const [tree, setTree] = useState<ARTFetchNode>();
+  const [requestCache, setRequestCache] = useState<ResponseCacheRequestTrace>();
+  const cachedFetches = useMemo(() => collectCachedFetches(tree), [tree]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
@@ -104,6 +113,7 @@ const Trace = ({
     let executeDurationSinceStart = 0;
 
     const fetchMap = new Map<string, ARTFetchNode>();
+    let requestCache: ResponseCacheRequestTrace | undefined;
 
     const parseFetch = (fetch: any, parentId?: string): ARTFetchNode | undefined => {
       if (!fetch) return;
@@ -124,6 +134,7 @@ const Trace = ({
         singleFlightUsed: fetch.datasource_load_trace?.single_flight_used,
         singleFlightSharedResponse: fetch.datasource_load_trace?.single_flight_shared_response,
         loadSkipped: fetch.datasource_load_trace?.load_skipped,
+        responseCache: parseResponseCacheTrace(fetch.datasource_load_trace?.response_cache),
         children: [],
       };
 
@@ -262,6 +273,7 @@ const Trace = ({
         singleFlightUsed: fetch.trace?.single_flight_used,
         singleFlightSharedResponse: fetch.trace?.single_flight_shared_response,
         loadSkipped: fetch.trace?.load_skipped,
+        responseCache: parseResponseCacheTrace(fetch.trace?.response_cache),
         children: [],
       };
 
@@ -360,7 +372,8 @@ const Trace = ({
       return fetchNode;
     };
     const parseJsonNew = (json: any, parentId?: string) => {
-      return parseFetchNew(json.fetches, parentId);
+      // A Single root carries its fetch under `fetch`.
+      return parseFetchNew(json.fetches?.fetch || json.fetches, parentId);
     };
 
     try {
@@ -370,6 +383,7 @@ const Trace = ({
       }
 
       gStartTimeNano = BigInt(parsedResponse.extensions.trace.info.trace_start_unix * 1e9);
+      requestCache = parseResponseCacheRequestTrace(parsedResponse.extensions.trace.response_cache);
 
       const parseStats = parsedResponse.extensions.trace.info.parse_stats;
       const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
@@ -473,6 +487,7 @@ const Trace = ({
         children: [parse, normalize, validate, plan, execute],
       } as ARTFetchNode;
 
+      setRequestCache(requestCache);
       setTree(root);
       setNodes(tempNodes);
       setEdges(tempEdges);
@@ -527,6 +542,12 @@ const Trace = ({
               Request
             </span>
             <span>Timing</span>
+            {requestCache && (
+              <span className="ml-auto flex gap-x-2">
+                <ViewResponseCacheRequest trace={requestCache} fetches={cachedFetches} />
+                <ViewResponseCacheInvalidate fetches={cachedFetches} invalidation={requestCache.invalidation} />
+              </span>
+            )}
           </div>
           <hr className="w-full border-input" />
 
@@ -558,6 +579,12 @@ const Trace = ({
 
   return (
     <ReactFlowProvider>
+      {requestCache && (
+        <div className="absolute left-4 top-3 z-30 flex gap-x-2">
+          <ViewResponseCacheRequest trace={requestCache} fetches={cachedFetches} />
+          <ViewResponseCacheInvalidate fetches={cachedFetches} invalidation={requestCache.invalidation} />
+        </div>
+      )}
       <FetchFlow initialEdges={edges} initialNodes={nodes} nodeTypes={nodeTypes} edgeTypes={edgeTypes} />
     </ReactFlowProvider>
   );

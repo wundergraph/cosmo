@@ -252,8 +252,8 @@ github.com/modelcontextprotocol/go-sdk v1.7.0 h1:yqjY2dsbKAC0LSuWZVBMrHgiG8ukXv6
 github.com/modelcontextprotocol/go-sdk v1.7.0/go.mod h1:dL7u98E/zjJTGzEq+j30jQ8K2k1mb6LeAH4inEcSGts=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261019110138-5ed8d1e9b6a3 h1:4HWdKKYTM6oVcJ2aFlW8MEpVUHdPGF/stIZOKIT1mPs=
-github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261019110138-5ed8d1e9b6a3/go.mod h1:2+FpG5/GRCFYw+fU8jmid4bF+362KtCio5Fo7fzNvhU=
+github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261026141220-f41bae2329da h1:0VwoTLBLQljdsxE3U2awzi7A53ONG+Lt6VUqfkxFlaU=
+github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261026141220-f41bae2329da/go.mod h1:2+FpG5/GRCFYw+fU8jmid4bF+362KtCio5Fo7fzNvhU=
 github.com/nats-io/jwt/v2 v2.8.1 h1:V0xpGuD/N8Mi+fQNDynXohVvp7ZztevW5io8CUWlPmU=
 github.com/nats-io/jwt/v2 v2.8.1/go.mod h1:nWnOEEiVMiKHQpnAy4eXlizVEtSfzacZ1Q43LIRavZg=
 github.com/nats-io/nats-server/v2 v2.12.7 h1:prQ9cPiWHcnwfT81Wi5lU9LL8TLY+7pxDru6fQYLCQQ=

@@ -1,0 +1,178 @@
+---
+title: "Collections"
+description: "Save operations you want to come back to, keep them private or share them with everyone who can see the graph, and open them straight into a Playground tab."
+icon: folder-open
+---
+
+A collection is a named group of saved operations that belongs to one federated graph. Open the Collections panel from the icon in the Playground's left sidebar.
+
+<Frame caption="The Collections panel">
+  <img
+    src="/images/studio/collections/panel.png"
+    alt="Collections panel in the Cosmo Playground, with the Collections icon in the left sidebar highlighted"
+    title="Collections panel"
+  />
+</Frame>
+
+Each saved operation stores the query document and its variables. Headers are not stored. Use [default headers](/studio/playground/default-headers) for values that every tab needs.
+
+## Private and team collections
+
+Every collection is one of two kinds, chosen when you create it.
+
+| | **Private** | **Team** |
+| :--- | :--- | :--- |
+| Who can see it | Only you | Everyone who can view the graph |
+| Who can change it | Only you | Everyone who can edit the graph |
+| Can the scope change | Can be shared with the team later | Cannot be made private again |
+
+Collections are grouped by scope in the panel, private first.
+
+Creating a team collection requires write access to the graph. Without it, the scope choice is not offered and every collection you create is private.
+
+## Creating a collection
+
+<Steps>
+  <Step title="Click the + button in the Collections panel header">
+    The New collection dialog opens.
+  </Step>
+  <Step title="Give the collection a name">
+    Names are up to 100 characters and do not have to be unique.
+  </Step>
+  <Step title="Choose who can see it">
+    Private keeps it to yourself. Team shares it with everyone who can see the graph, and cannot be undone.
+  </Step>
+  <Step title="Click Create">
+    The collection appears in the panel under its group.
+  </Step>
+</Steps>
+
+<Frame caption="Creating a collection">
+  <img
+    src="/images/studio/collections/new-collection-dialog.png"
+    alt="New collection dialog, opened from the highlighted plus button in the panel header"
+    title="New collection dialog"
+  />
+</Frame>
+
+## Saving an operation
+
+Write a query in the Playground, then open the save menu in the editor toolbar.
+
+<Frame caption="The save menu in the editor toolbar">
+  <img
+    src="/images/studio/collections/save-menu.png"
+    alt="Playground editor toolbar save menu, with the highlighted save button that opens it"
+    title="Save menu"
+  />
+</Frame>
+
+The menu offers up to three actions:
+
+- **Save** updates the operation the current tab is already bound to. It only appears once the tab holds a saved operation.
+- **Save to collection** (or **Save as** when the tab is already bound) creates a new saved operation.
+- **Persist operation** is unrelated to collections. See [persisted operations](/router/persisted-queries).
+
+Choosing **Save to collection** opens a dialog where you pick the collection and name the operation. The name defaults to the operation name in the document, and the picker lists only collections you can write to.
+
+<Frame caption="Saving an operation into a collection">
+  <img
+    src="/images/studio/collections/save-operation-dialog.png"
+    alt="Save operation dialog with a collection picker and a name field"
+    title="Save operation dialog"
+  />
+</Frame>
+
+A document must be syntactically valid GraphQL to be saved, and variables must be valid JSON. The document is not checked against the schema, so an operation that references a field the graph no longer has still saves and still opens. Queries and variables are limited to 100,000 characters each.
+
+## When someone else saved first
+
+Team collections can be edited by anyone with write access to the graph, so two people can edit the same operation at once. Saving checks the version you opened against the stored one. If they differ, the save is refused and nothing is overwritten.
+
+<Frame caption="A concurrent edit was detected">
+  <img
+    src="/images/studio/collections/save-conflict-dialog.png"
+    alt="Dialog reporting that the operation changed while you were editing it"
+    title="Save conflict dialog"
+  />
+</Frame>
+
+Nothing is merged automatically. You choose:
+
+- **Save as a new operation** keeps your work under a new name and leaves theirs untouched.
+- **Discard mine and reload** replaces your editor with the stored version.
+
+## Sharing a collection with the team
+
+Open the collection's menu and choose **Share with team**. Everyone who can view the graph will see the collection, and everyone who can edit the graph will be able to change its operations.
+
+<Frame caption="Sharing a private collection">
+  <img
+    src="/images/studio/collections/share-dialog.png"
+    alt="Dialog confirming that a collection will be shared with the team"
+    title="Share collection dialog"
+  />
+</Frame>
+
+Sharing cannot be undone. A shared collection cannot be made private again.
+
+## Finding an operation
+
+Search filters collections and their operations by name as you type. A collection whose own name matches keeps all of its operations. A collection matched only through an operation shows just the operations that matched.
+
+<Frame caption="Searching by operation name">
+  <img
+    src="/images/studio/collections/search.png"
+    alt="Collections panel filtered by a search term, with the highlighted search box"
+    title="Searching collections"
+  />
+</Frame>
+
+The button next to the search box sorts the list by **Name** or by **Date created**, newest first. The choice applies to both groups.
+
+<Frame caption="Sorting the list">
+  <img
+    src="/images/studio/collections/sort-menu.png"
+    alt="Sort menu offering Name and Date created, with the highlighted button that opens it"
+    title="Sort menu"
+  />
+</Frame>
+
+## Linking to a collection or an operation
+
+**Copy link** in a collection's or an operation's menu copies a URL that points at it. Opening that link selects the Collections panel, expands the collection, and opens the operation.
+
+The link carries only the collection and operation identifiers, not the contents of your editor, so it stays short and does not leak the tab you happen to have open.
+
+Whoever opens the link still needs access. A link to a private collection, or to a collection on a graph they cannot view, shows a short notice that the collection is unavailable rather than revealing that it exists.
+
+## Renaming and deleting
+
+Both collections and operations have **Rename** and **Delete** in their menus.
+
+- Renaming an operation changes its label in the panel. It does not change the operation name inside the document.
+- Deleting a collection deletes the operations inside it. The confirmation says how many will go with it, and whether the collection is shared with your team.
+
+<Frame caption="Deleting a collection that holds operations">
+  <img
+    src="/images/studio/collections/delete-dialog.png"
+    alt="Confirmation dialog for deleting a collection, listing how many operations go with it"
+    title="Delete collection dialog"
+  />
+</Frame>
+
+Deleting is permanent.
+
+## Permissions
+
+| Action | Required |
+| :--- | :--- |
+| See team collections | Read access to the graph |
+| See a private collection | Being its owner |
+| Create a private collection | Read access to the graph |
+| Create a team collection | Write access to the graph |
+| Edit or delete a team collection, or its operations | Write access to the graph |
+| Edit or delete a private collection, or its operations | Being its owner |
+| Share a private collection with the team | Being its owner, and write access to the graph |
+
+Actions you cannot perform are not shown. A read-only member sees team collections and can open their operations, but gets no save, rename, share or delete controls.

@@ -781,6 +781,7 @@ message GetFederatedGraphChangelogRequest {
   Pagination pagination = 2;
   DateRange dateRange = 3;
   string namespace = 4;
+  optional string featureFlagName = 5;
 }
 
 message FederatedGraphChangelog{
@@ -796,6 +797,9 @@ message FederatedGraphChangelogOutput{
   string schemaVersionId = 2;
   repeated FederatedGraphChangelog changelogs = 3;
   string compositionId = 4;
+  // Empty for changelogs of the base graph composition
+  string featureFlagId = 5;
+  string featureFlagName = 6;
 }
 
 message GetFederatedGraphChangelogResponse {
@@ -2735,10 +2739,24 @@ message GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
   string namespace = 2;
 }
 
+// Feature flags compose independently, so the same feature subgraph can appear once per flag with
+// a different schema_version_id.
+message FeatureSubgraphInFlagComposition {
+  string feature_flag_id = 1;
+  string id = 2;
+  string name = 3;
+  string target_id = 4;
+  // The version that flag's composition used, not the latest published version.
+  string schema_version_id = 5;
+  string routing_url = 6;
+  string subscription_url = 7;
+}
+
 message GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
   Response response = 1;
   // feature flags that are part of the latest valid composition of the federated graph
   repeated FeatureFlag feature_flags = 2;
+  repeated FeatureSubgraphInFlagComposition feature_subgraphs = 3;
 }
 
 message GetFeatureSubgraphsByFederatedGraphRequest {
@@ -2886,6 +2904,166 @@ message UpdatePlaygroundDefaultHeadersRequest {
 }
 
 message UpdatePlaygroundDefaultHeadersResponse {
+  Response response = 1;
+}
+
+// GraphCollections: saved playground operations grouped into collections that
+// belong to one federated graph. A collection is either private to its creator
+// or team-scoped, meaning visible to everyone with access to the graph.
+message GraphCollection {
+  string id = 1;
+  string name = 2;
+  // Derived server-side from private_to_user_id IS NULL.
+  bool isTeamScoped = 3;
+  string createdByEmail = 4;
+  // Whether the caller may mutate this collection, evaluated server-side so
+  // the frontend never re-implements the permission rules.
+  bool canEdit = 5;
+  string createdAt = 6;
+  string updatedAt = 7;
+  repeated GraphCollectionOperationMeta operations = 8;
+}
+
+message GraphCollectionOperationMeta {
+  string id = 1;
+  // The user-assigned label.
+  string name = 2;
+  string updatedAt = 3;
+  string updatedByEmail = 4;
+}
+
+message GraphCollectionOperation {
+  string id = 1;
+  string collectionId = 2;
+  string name = 3;
+  string query = 4;
+  string variables = 5;
+  // Server-computed. Echo this back as expectedContentHash when saving.
+  string contentHash = 6;
+  string updatedAt = 7;
+  string updatedByEmail = 8;
+}
+
+// Enum value names are global in protobuf, so these carry the message prefix.
+enum GraphCollectionSortBy {
+  GRAPH_COLLECTION_SORT_NAME = 0;
+  GRAPH_COLLECTION_SORT_CREATED_AT = 1;
+}
+
+message GetGraphCollectionsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional GraphCollectionSortBy sortBy = 3;
+}
+
+message GetGraphCollectionsResponse {
+  Response response = 1;
+  repeated GraphCollection collections = 2;
+  bool canCreateTeamCollection = 3;
+}
+
+message GetGraphCollectionOperationRequest {
+  string id = 1;
+  string federatedGraphId = 2;
+  string collectionId = 3;
+}
+
+message GetGraphCollectionOperationResponse {
+  Response response = 1;
+  GraphCollectionOperation operation = 2;
+}
+
+message CreateGraphCollectionRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string name = 3;
+  bool teamScoped = 4;
+}
+
+message CreateGraphCollectionResponse {
+  Response response = 1;
+  string id = 2;
+}
+
+message RenameGraphCollectionRequest {
+  string id = 1;
+  string name = 2;
+  string federatedGraphId = 3;
+}
+
+message RenameGraphCollectionResponse {
+  Response response = 1;
+}
+
+// Promotes a private collection to team scope. Irreversible: there is no RPC
+// that returns a team collection to private.
+message ShareGraphCollectionRequest {
+  string id = 1;
+  string federatedGraphId = 2;
+}
+
+message ShareGraphCollectionResponse {
+  Response response = 1;
+}
+
+message DeleteGraphCollectionRequest {
+  string id = 1;
+  string federatedGraphId = 2;
+}
+
+message DeleteGraphCollectionResponse {
+  Response response = 1;
+}
+
+message CreateGraphCollectionOperationRequest {
+  string collectionId = 1;
+  string name = 2;
+  string query = 3;
+  string variables = 4;
+  string federatedGraphId = 5;
+}
+
+message CreateGraphCollectionOperationResponse {
+  Response response = 1;
+  string id = 2;
+  string contentHash = 3;
+}
+
+message UpdateGraphCollectionOperationRequest {
+  string id = 1;
+  string query = 2;
+  string variables = 3;
+  // The content hash the caller loaded. The write is rejected with
+  // ERR_CONFLICT when the stored hash no longer matches, rather than silently
+  // overwriting whoever saved in the meantime.
+  string expectedContentHash = 4;
+  string federatedGraphId = 5;
+  string collectionId = 6;
+}
+
+message UpdateGraphCollectionOperationResponse {
+  Response response = 1;
+  string contentHash = 2;
+}
+
+message RenameGraphCollectionOperationRequest {
+  string id = 1;
+  string name = 2;
+  string federatedGraphId = 3;
+  string collectionId = 4;
+}
+
+message RenameGraphCollectionOperationResponse {
+  Response response = 1;
+}
+
+message DeleteGraphCollectionOperationRequest {
+  string id = 1;
+  string federatedGraphId = 2;
+  string collectionId = 3;
+}
+
+message DeleteGraphCollectionOperationResponse {
   Response response = 1;
 }
 
@@ -3578,6 +3756,18 @@ service PlatformService {
   // Playground default headers
   rpc GetPlaygroundDefaultHeaders(GetPlaygroundDefaultHeadersRequest) returns (GetPlaygroundDefaultHeadersResponse) {}
   rpc UpdatePlaygroundDefaultHeaders(UpdatePlaygroundDefaultHeadersRequest) returns (UpdatePlaygroundDefaultHeadersResponse) {}
+
+  // GraphCollections
+  rpc GetGraphCollections(GetGraphCollectionsRequest) returns (GetGraphCollectionsResponse) {}
+  rpc GetGraphCollectionOperation(GetGraphCollectionOperationRequest) returns (GetGraphCollectionOperationResponse) {}
+  rpc CreateGraphCollection(CreateGraphCollectionRequest) returns (CreateGraphCollectionResponse) {}
+  rpc RenameGraphCollection(RenameGraphCollectionRequest) returns (RenameGraphCollectionResponse) {}
+  rpc ShareGraphCollection(ShareGraphCollectionRequest) returns (ShareGraphCollectionResponse) {}
+  rpc DeleteGraphCollection(DeleteGraphCollectionRequest) returns (DeleteGraphCollectionResponse) {}
+  rpc CreateGraphCollectionOperation(CreateGraphCollectionOperationRequest) returns (CreateGraphCollectionOperationResponse) {}
+  rpc UpdateGraphCollectionOperation(UpdateGraphCollectionOperationRequest) returns (UpdateGraphCollectionOperationResponse) {}
+  rpc RenameGraphCollectionOperation(RenameGraphCollectionOperationRequest) returns (RenameGraphCollectionOperationResponse) {}
+  rpc DeleteGraphCollectionOperation(DeleteGraphCollectionOperationRequest) returns (DeleteGraphCollectionOperationResponse) {}
 
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}

@@ -3,7 +3,7 @@ module github.com/wundergraph/cosmo/router
 go 1.26.0
 
 // Temporary until the subscriber lifecycle callback is released upstream.
-replace github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261019110138-5ed8d1e9b6a3
+replace github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261026141220-f41bae2329da
 
 require (
 	connectrpc.com/connect v1.19.2
@@ -34,7 +34,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.29.0
+	github.com/wundergraph/graphql-go-tools/v2 v2.30.1
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.46.0

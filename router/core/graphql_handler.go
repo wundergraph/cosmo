@@ -126,7 +126,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
-		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
+		responseCacheTagHeader:                   newCacheTagHeader(opts.ResponseCacheTagHeader, opts.ResponseCacheMetrics),
 		responseCacheSettings:                    opts.ResponseCacheSettings,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
 		graphqlSubscriptionHooks:                 opts.GraphQLSubscriptionHooks,
@@ -205,7 +205,7 @@ type GraphQLHandler struct {
 	responseCacheStore        caching.Cache
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
-	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
+	responseCacheTagHeader    cacheTagHeader
 	responseCacheSettings     *ResponseCacheSettings
 	graphqlSubscriptionHooks  []graphqlSubscriptionLifecycleHandler
 

@@ -1,6 +1,6 @@
 {
   "name": "cdn",
-  "version": "0.22.0",
+  "version": "0.22.2",
   "private": true,
   "author": {
     "name": "WunderGraph Maintainers",
@@ -18,7 +18,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "rm -rf dist && tsc",
     "start": "tsx src/index.ts",
-    "lint": "eslint --cache && prettier -c src",
+    "lint": "eslint --cache && prettier -c src test",
+    "test": "vitest run --dir test",
     "format": "prettier -w -c .",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=cdn-server -F tag=$version -F dockerContext=."
   },
@@ -34,6 +35,7 @@
     "eslint": "catalog:",
     "eslint-config-unjs": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

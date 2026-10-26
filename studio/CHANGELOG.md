@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.184.1](https://github.com/wundergraph/cosmo/compare/studio@0.184.0...studio@0.184.1) (2026-10-23)
+
+### Bug Fixes
+
+* patch October 2026 Node.js security advisories in Cosmo ([#3410](https://github.com/wundergraph/cosmo/issues/3410)) ([9e17bf9](https://github.com/wundergraph/cosmo/commit/9e17bf98e57f24883d10fbc47d2e33ebca35c772)) (@comatory)
+
+## [0.184.0](https://github.com/wundergraph/cosmo/compare/studio@0.183.3...studio@0.184.0) (2026-10-22)
+
+### Features
+
+* show feature subgraphs in playground and schema dropdowns ([#3196](https://github.com/wundergraph/cosmo/issues/3196)) ([1a0e5af](https://github.com/wundergraph/cosmo/commit/1a0e5af27cd00feee557918cbafd7a4132826e6b)) (@gausie)
+
+### Bug Fixes
+
+* show feature flag changelogs separately from the base graph in studio ([#3397](https://github.com/wundergraph/cosmo/issues/3397)) ([a860f6c](https://github.com/wundergraph/cosmo/commit/a860f6c6bac07235ac23e5bc7c0ddb21fa2ab270)) (@JivusAyrus)
+* **studio:** patch Next.js security advisories ([#3407](https://github.com/wundergraph/cosmo/issues/3407)) ([53714b4](https://github.com/wundergraph/cosmo/commit/53714b46b357f2ad6c939a882bb6edfdba343e01)) (@comatory)
+
+## [0.183.3](https://github.com/wundergraph/cosmo/compare/studio@0.183.2...studio@0.183.3) (2026-10-21)
+
+### Bug Fixes
+
+* introspection for input deprecated fields in the playground ([#3394](https://github.com/wundergraph/cosmo/issues/3394)) ([b7f1b8e](https://github.com/wundergraph/cosmo/commit/b7f1b8ee66913b437cdaad60cfb5a858012d6e82)) (@JivusAyrus)
+
 ## [0.183.2](https://github.com/wundergraph/cosmo/compare/studio@0.183.1...studio@0.183.2) (2026-10-19)
 
 **Note:** Version bump only for package studio

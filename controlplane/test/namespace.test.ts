@@ -270,7 +270,7 @@ describe('Namespace tests', (ctx) => {
      */
 
     const keys = blobStorage.keys();
-    expect(keys.length).toBe(1);
+    expect(keys.length).toBe(2);
     expect(keys[0]).toContain(graphsAfterDeleteRes.graphs[0].id);
   });
 

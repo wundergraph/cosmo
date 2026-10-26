@@ -280,6 +280,8 @@ type requestContext struct {
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
 	expressionContext expr.Context
+	// accessLogExprContext is shared by the router access log fields and filter after request handling.
+	accessLogExprContext *expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
 	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed

@@ -32,7 +32,7 @@ require (
 	github.com/wundergraph/cosmo/router v0.0.0-20260710155145-803a4bc06d92
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
-	github.com/wundergraph/graphql-go-tools/v2 v2.29.0
+	github.com/wundergraph/graphql-go-tools/v2 v2.30.1
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0
 	go.opentelemetry.io/otel/sdk/metric v1.46.0
@@ -210,5 +210,5 @@ replace (
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
 	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
 	// Temporary until the subscriber lifecycle callback is released upstream.
-	github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261019110138-5ed8d1e9b6a3
+	github.com/wundergraph/graphql-go-tools/v2 => github.com/mwisner/graphql-go-tools/v2 v2.0.0-20261026141220-f41bae2329da
 )

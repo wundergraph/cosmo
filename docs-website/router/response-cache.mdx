@@ -171,9 +171,15 @@ response_cache:
     name: 'Cache-Tag'
     # Separates tags in the value. Fastly expects a space. Default: ,
     delimiter: ','
-    # Largest value emitted, in bytes. Tags that do not fit are dropped
-    # finest first. The default is Cloudflare's limit. Default: 16384.
+    # Tiers the header carries: subgraph, type, cache_tag. Independent of
+    # the invalidation indexes. Default: [subgraph, type, cache_tag].
+    tiers: [subgraph, type, cache_tag]
+    # Largest value emitted, in bytes. The default is Cloudflare's limit.
+    # Default: 16384.
     max_bytes: 16384
+    # When tags do not fit max_bytes: truncate drops the finest, private
+    # sends none and sets Cache-Control: private. Default: truncate.
+    on_overflow: truncate
 ```
 
 `storage` is required when `enabled` is `true`.
@@ -278,7 +284,7 @@ These apply to the current alpha.
 - **Each alias is served all-or-nothing, like a batch.** A warm alias is left out of the next merged request. A cold one is fetched whole.
 - **Only a request that finds every alias warm is a cache hit.** When some aliases are warm and others are not, the router still sends the request for the cold ones.
 - **The reported `Cache-Control` is capped at the warm aliases.** The lifetime reported for a partly warm fetch is the life left on its warm aliases.
-- **Declared cache tags are dropped.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire.
+- **Declared cache tags are dropped.** `apolloEntityCacheTags` is one flat list with nothing to say which alias each entry belongs to. The entries are still indexed by subgraph and type, and invalidation by either still reaches them. Invalidation by cache tag misses them until they expire. With `cache_tag_header.tiers: [cache_tag]`, they add no tag to the header either.
 - **A failed request skips everything that depends on the merged fetch.** When the request for the cold aliases fails to reach the subgraph, the warm aliases keep their cached data and only the cold ones report the failure. Fetches that depend on the merged fetch are skipped as a whole, including those that depend only on a warm alias. Their fields stay `null` without an error of their own.
 
 ## Cache tags
@@ -412,6 +418,20 @@ The `subgraph-` and `type-` prefixes are not reserved. A declared tag such as `s
 Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
 ```
 
+### Choosing tiers
+
+Every tag in the header is one a CDN can purge by. Purging `subgraph-articles` empties everything that subgraph answered from the CDN, and every one of those requests then goes back to the origin. `tiers` limits the header to the tiers you name. They use the names of the `invalidation` indexes: `subgraph`, `type` and `cache_tag`, the last being the declared tags.
+
+```yaml config.yaml
+response_cache:
+  cache_tag_header:
+    enabled: true
+    # Only what subgraphs declared, so no purge reaches a whole subgraph or type.
+    tiers: [cache_tag]
+```
+
+`tiers` is independent of the `invalidation` indexes. The router can keep its subgraph index for its own invalidation without sending `subgraph-` tags to the CDN, and the other way round. A response with no tag of the configured tiers is sent without the header. A declared tag spelled like a generated one, such as `subgraph-products`, still counts as declared.
+
 ### When it is sent
 
 The header is sent on cache hits and misses alike. A hit rebuilds it from what was stored with the entry, so both carry the same value. A fetch that was not cacheable contributes nothing, and a response with no cacheable fetch has no header.
@@ -422,7 +442,12 @@ The header does not depend on the `invalidation` indexes. It is built even when 
 
 ### Size
 
-`max_bytes` caps the header value. When the tags do not fit, they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. A purge by a coarse tag still reaches the response. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`.
+`max_bytes` caps the header value. The default of 16384 bytes is Cloudflare's limit on `Cache-Tag`. When the tags do not fit, `on_overflow` decides:
+
+- `truncate`, the default, groups the tags coarsest first, subgraph then type then declared, and leaves out the finest that do not fit. With every tier sent, a purge by a coarse tag still reaches the response. With `tiers: [cache_tag]` there is no coarse tag, so a purge by a tag that was left out misses the response until the CDN expires it.
+- `private` sends no header and sets `Cache-Control: private`, keeping the rest of its directives. No shared cache holds the response, so none can serve it after a purge would have removed it. The client may still cache it.
+
+Each overflow is logged at debug level and counted by the `router.response_cache.cache_tag_header.overflows` [metric](/router/metrics-and-monitoring#response-cache-metrics), with `wg.response_cache.tag_header_overflow` set to `truncate` or `private`.
 
 A declared tag that contains the delimiter, or a byte not valid in a header, is left out.
 
@@ -602,6 +627,13 @@ The status is also exposed to [template expressions](/router/configuration/templ
 
 * `fetches.*.trace.response_cache` per fetch: the status, the store decision, the keys requested and found, the subgraph `Cache-Control` and `Vary`, and one entry per cache key with what the lookup found and what was written. Entries of a merged fetch carry their response path.
 * `response_cache` for the request: its surrogate keys, what the [`Cache-Tag` header](#cdn-purging) made of them, and which [invalidation](#invalidation) indexes are maintained.
+
+The Request Trace view in the router playground renders it:
+
+* A cache status badge on every fetch the cache was asked about.
+* A **View Cache** dialog per fetch with the store decision, the subgraph `Cache-Control` and every entry: its key, remaining or written TTL, declared tags, surrogate keys and cached value. For a merged fetch it shows how many entries of each path came from the cache.
+* A **Response Cache** dialog for the request. It lists every entry of the operation in one table, the surrogate keys, and what the `Cache-Tag` header made of them, including the keys dropped by `max_bytes`.
+* An **Invalidate** dialog. Pick the subgraphs, types or tags of the entries this response found or wrote, then send one request with the shared key or copy it as `curl`. The `curl` reads the key from `$INVALIDATION_SHARED_KEY`. Sending needs the [invalidation](#invalidation) endpoint enabled. The endpoint field starts with the router's listen address, with `localhost` for an unspecified host. Edit it when the browser reaches the router at another address.
 
 Cached values follow `exclude_output`. `exclude_response_cache` leaves the cache out of the trace.
 

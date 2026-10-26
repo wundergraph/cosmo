@@ -7,7 +7,7 @@ PROTOC_VERSION="${PROTOC_VERSION:-29.3}"
 PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-1.36.5}"
 PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-1.5.1}"
 BUN_VERSION="${BUN_VERSION:-1.2.15}"
-NODE_VERSION="${NODE_VERSION:-22.12.0}"
+NODE_VERSION="${NODE_VERSION:-22.23.4}"
 
 # Language to install tools for (go or ts)
 LANGUAGE="${LANGUAGE}"
@@ -318,4 +318,4 @@ else
     echo
     info_bold "Installation complete!"
     echo
-fi 
+fi
