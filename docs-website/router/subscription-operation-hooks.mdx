@@ -20,16 +20,6 @@ type SubscriptionOperationStartHandler interface {
 type SubscriptionOperationEndHandler interface {
     OnSubscriptionOperationEnd(ctx GraphQLSubscriptionHookContext)
 }
-
-type GraphQLSubscriptionHookContext interface {
-    Request() *http.Request
-    Logger() *zap.Logger
-    Operation() OperationContext
-    Authentication() authentication.Authentication
-    SubscriptionInstanceID() string
-    RootFieldName() string
-    RootFieldArguments() (json.RawMessage, error)
-}
 ```
 
 `SubscriptionInstanceID()` identifies one downstream subscriber. The value is the same in its start and end hooks. `RootFieldName()` is the schema field name, even when the client uses an alias. `Operation()` provides the operation name, type, hash, content, variables, and client name and version through `ClientInfo()`. `Authentication()` provides the authenticated identity and claims when available.
@@ -38,7 +28,7 @@ The start hook runs after request authentication and before subscriber registrat
 
 ## Root-field arguments
 
-`RootFieldArguments()` returns resolved JSON for the selected subscription root field. It handles literal and variable-backed values, aliases, omitted variables, and schema field defaults. For example, `subscription Watch($id: ID!) { alias: documentChanged(documentId: $id) }` provides `{"documentId":"123"}` when `$id` is `"123"`.
+`RootFieldArguments() (json.RawMessage, error)` returns resolved JSON for the selected subscription root field. It handles literal and variable-backed values, aliases, omitted variables, and schema field defaults. For example, `subscription Watch($id: ID!) { alias: documentChanged(documentId: $id) }` provides `{"documentId":"123"}` when `$id` is `"123"`.
 
 Argument resolution is **on demand**. It is cached across modules during one start or end hook invocation, then released. Start and end can each request the arguments; the router does not retain a second full arguments JSON object for the subscription's lifetime. Calling the accessor in both hooks may repeat parsing. It never runs for each subscription message. Handle the returned error and treat the bytes as read-only. Copy or decode only the values your module needs to retain after the hook returns. Arguments can contain sensitive client input, so avoid logging them without redaction.
 
