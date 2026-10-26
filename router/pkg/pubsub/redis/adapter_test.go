@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -97,7 +98,7 @@ func (r *recordingUpdater) Update(events []datasource.StreamEvent) {
 func (r *recordingUpdater) received() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return append([]string(nil), r.payloads...)
+	return slices.Clone(r.payloads)
 }
 
 func TestProviderAdapter_SubscribeUsesChannelsForLiteralNamesAndPatternsForGlobs(t *testing.T) {
@@ -172,6 +173,52 @@ func TestProviderAdapter_SubscribeWithOnlyPatterns(t *testing.T) {
 		return len(updater.received()) == 2
 	}, 2*time.Second, 10*time.Millisecond, "expected the glob and escaped-glob messages")
 	require.ElementsMatch(t, []string{"glob", "escaped-glob"}, updater.received())
+}
+
+func TestProviderAdapter_SubscribeUsesPatternsForEachGlobCharacter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		channel  string
+		match    string
+		nonMatch string
+	}{
+		{name: "star", channel: "orders:*", match: "orders:1", nonMatch: "invoices:1"},
+		{name: "question mark", channel: "orders:?", match: "orders:1", nonMatch: "orders:12"},
+		{name: "character class", channel: "orders:[ab]", match: "orders:a", nonMatch: "orders:c"},
+		// Redis reads a backslash in a pattern as an escape, so `orders:a\b` matches `orders:ab`.
+		{name: "backslash", channel: `orders:a\b`, match: "orders:ab", nonMatch: `orders:a\b`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			redis := miniredis.RunT(t)
+			adapter := newStartedAdapter(t, redis)
+
+			updater := &recordingUpdater{}
+			conf := &SubscriptionEventConfiguration{
+				Provider:  "test-provider",
+				Channels:  []string{tt.channel},
+				FieldName: "testField",
+			}
+			require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+
+			require.Eventually(t, func() bool {
+				return redis.PubSubNumPat() == 1 && len(redis.PubSubChannels("")) == 0
+			}, 2*time.Second, 10*time.Millisecond, "expected one pattern subscription and no channel subscription")
+
+			redis.Publish(tt.nonMatch, "non-match")
+			redis.Publish(tt.match, "match")
+
+			require.Eventually(t, func() bool {
+				return len(updater.received()) == 1
+			}, 2*time.Second, 10*time.Millisecond, "expected the matching message")
+			require.Equal(t, []string{"match"}, updater.received())
+		})
+	}
 }
 
 func TestProviderAdapter_SubscribeWhileRedisIsDownRecoversAfterRestart(t *testing.T) {
