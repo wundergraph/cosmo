@@ -358,7 +358,7 @@ func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []str
 	req := kmsg.NewPtrMetadataRequest()
 	for _, topic := range topics {
 		rt := kmsg.NewMetadataRequestTopic()
-		rt.Topic = kmsg.StringPtr(topic)
+		rt.Topic = new(topic)
 		req.Topics = append(req.Topics, rt)
 	}
 
