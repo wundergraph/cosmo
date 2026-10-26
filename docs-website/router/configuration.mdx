@@ -963,6 +963,8 @@ pyroscope:
 
 Origins in `allow_origins` can use any URL scheme. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
 
+Setting `expose_headers` to `["*"]` exposes all response headers, but browsers only treat `*` as a wildcard for requests without credentials. Because `allow_credentials` defaults to `true`, list the headers explicitly (for example `["X-custom-header"]`) if browser clients send cookies or authorization headers.
+
 ### Regular expression origins
 
 Use `match_origins` to allow origins using [Go regular expressions](https://pkg.go.dev/regexp/syntax). When CORS is enabled, invalid patterns prevent router startup and the error identifies the pattern. Lookarounds and backreferences are not supported.
