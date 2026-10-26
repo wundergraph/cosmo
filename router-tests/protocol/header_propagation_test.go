@@ -927,6 +927,8 @@ func TestHeaderPropagation(t *testing.T) {
 			{name: "a subgraph without Cache-Control does not withdraw public", employees: "public, max-age=120", want: "max-age=120, public"},
 			{name: "the policy default does not withdraw a subgraph's public", policy: "max-age=300", employees: "public, max-age=120", hobbies: "public, max-age=60", want: "max-age=60, public"},
 			{name: "zero max-age is not raised to the policy default", policy: "max-age=300", employees: "max-age=0, public", hobbies: "max-age=60", want: "no-cache"}, // no public: hobbies lacks it
+			{name: "a zero max-age default caps a subgraph's lifetime", policy: "max-age=0", employees: "max-age=600", hobbies: "max-age=600", want: "no-cache"},
+			{name: "a zero s-maxage default caps a subgraph's lifetime", policy: "s-maxage=0", employees: "max-age=600", want: "no-cache"},
 			{name: "s-maxage is kept", policy: "max-age=300", employees: "max-age=120, s-maxage=10", hobbies: "max-age=60", want: "max-age=60, s-maxage=10"},
 			{name: "must-revalidate and proxy-revalidate are kept", policy: "max-age=300", employees: "max-age=120, must-revalidate", hobbies: "max-age=60, proxy-revalidate", want: "max-age=60, must-revalidate, proxy-revalidate"},
 			{name: "field-specific no-cache keeps the lifetime", policy: "max-age=300", employees: `max-age=120, no-cache="Set-Cookie"`, hobbies: `max-age=60, no-cache="X-Token"`, want: `max-age=60, no-cache="Set-Cookie, X-Token"`},

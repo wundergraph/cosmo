@@ -936,6 +936,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
 		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			markStale(defaultResponseCache)
 			// The default stands in for a missing header. Against a fetch's own
 			// header it only caps the lifetime, so it can't withdraw public.
 			if resCacheHeader != "" {
