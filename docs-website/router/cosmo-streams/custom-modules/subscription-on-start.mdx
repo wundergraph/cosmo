@@ -7,6 +7,10 @@ icon: "circle-play"
 The `SubscriptionOnStart` handler is a custom module hook that allows you to intercept and customize the initialization of GraphQL subscriptions.
 This handler is called once when a subscription starts, giving you the opportunity to validate permissions, send initial events, or perform setup logic.
 
+<Info>
+  For start and end notifications tied to each downstream GraphQL subscriber, including individual operations on a shared WebSocket and SSE subscriptions, use the [GraphQL Subscription Lifecycle Hooks](/router/subscription-operation-hooks). The HTTP request context's `Done()` signal is not a per-subscription end signal.
+</Info>
+
 This handler is particularly useful for:
 - **Subscription authentication**: Validate JWT tokens or user permissions before allowing subscriptions
 - **Initial event delivery**: Send welcome messages or current state to new subscribers

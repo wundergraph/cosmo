@@ -1,0 +1,133 @@
+---
+title: "GraphQL Subscription Lifecycle Hooks"
+description: "Run custom module hooks when each downstream GraphQL subscription starts and ends."
+icon: "arrows-rotate"
+---
+
+Implement `SubscriptionOperationStartHandler` and `SubscriptionOperationEndHandler` in a [custom module](/router/custom-modules) to observe the lifecycle of each downstream GraphQL subscription. The hooks work with GraphQL over WebSocket and HTTP streaming, including Server-Sent Events (SSE).
+
+One WebSocket can carry several subscriptions. Several subscribers can also share one upstream trigger. Each downstream subscriber gets its own start and end lifecycle. A WebSocket `complete` message for one operation ends only that operation's subscription.
+
+These hooks are different from the Cosmo Streams [`SubscriptionOnStartHandler`](/router/cosmo-streams/custom-modules/subscription-on-start), which supports stream initialization and event emission. Watching `ctx.Request().Context().Done()` in that handler does not detect the end of an individual subscription on a shared WebSocket connection.
+
+## Interfaces
+
+```go
+type SubscriptionOperationStartHandler interface {
+    OnSubscriptionOperationStart(ctx GraphQLSubscriptionHookContext) error
+}
+
+type SubscriptionOperationEndHandler interface {
+    OnSubscriptionOperationEnd(ctx GraphQLSubscriptionHookContext)
+}
+```
+
+`SubscriptionInstanceID()` identifies one downstream subscriber. The value is the same in its start and end hooks. `RootFieldName()` is the schema field name, even when the client uses an alias. `Operation()` provides the operation name, type, hash, content, variables, and client name and version through `ClientInfo()`. `Authentication()` provides the authenticated identity and claims when available.
+
+The start hook runs after request authentication and before subscriber registration. It can reject that subscription by returning an error. Engine field authorization may run later, so a successful start hook does not mean field authorization has succeeded. The end hook runs after that subscriber is removed, or after setup fails following a successful start. It has no error return. Hooks run in module priority order on start and reverse order on end. A module whose start hook fails does not receive its own end hook; earlier successful modules are unwound.
+
+## Root-field arguments
+
+`RootFieldArguments() (json.RawMessage, error)` returns resolved JSON for the selected subscription root field. It handles literal and variable-backed values, aliases, omitted variables, and schema field defaults. For example, `subscription Watch($id: ID!) { alias: documentChanged(documentId: $id) }` provides `{"documentId":"123"}` when `$id` is `"123"`.
+
+Argument resolution is **on demand**. It is cached across modules during one start or end hook invocation, then released. Start and end can each request the arguments; the router does not retain a second full arguments JSON object for the subscription's lifetime. Calling the accessor in both hooks may repeat parsing. It never runs for each subscription message. Handle the returned error and treat the bytes as read-only. Copy or decode only the values your module needs to retain after the hook returns. Arguments can contain sensitive client input, so avoid logging them without redaction.
+
+## Example: count active subscribers by a selected argument
+
+This module keeps only a compact key per subscriber. It does not retain the full arguments JSON. The count is local to one router process.
+
+```go
+package module
+
+import (
+    "encoding/json"
+    "fmt"
+    "sync"
+
+    "github.com/wundergraph/cosmo/router/core"
+)
+
+type subscriptionKey struct {
+    field      string
+    documentID string
+}
+
+type SubscriberCounter struct {
+    mu           sync.Mutex
+    bySubscriber map[string]subscriptionKey
+    active       map[subscriptionKey]int
+}
+
+func init() {
+    core.RegisterModule(&SubscriberCounter{})
+}
+
+func (*SubscriberCounter) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: "subscriberCounter",
+        New: func() core.Module {
+            return &SubscriberCounter{
+                bySubscriber: make(map[string]subscriptionKey),
+                active:       make(map[subscriptionKey]int),
+            }
+        },
+    }
+}
+
+func (m *SubscriberCounter) OnSubscriptionOperationStart(ctx core.GraphQLSubscriptionHookContext) error {
+    if ctx.RootFieldName() != "documentChanged" {
+        return nil
+    }
+
+    arguments, err := ctx.RootFieldArguments()
+    if err != nil {
+        return fmt.Errorf("resolve subscription arguments: %w", err)
+    }
+    var input struct {
+        DocumentID string `json:"documentId"`
+    }
+    if err := json.Unmarshal(arguments, &input); err != nil {
+        return fmt.Errorf("decode subscription arguments: %w", err)
+    }
+    if input.DocumentID == "" {
+        return fmt.Errorf("documentId is required")
+    }
+
+    key := subscriptionKey{field: ctx.RootFieldName(), documentID: input.DocumentID}
+    m.mu.Lock()
+    m.bySubscriber[ctx.SubscriptionInstanceID()] = key
+    m.active[key]++
+    m.mu.Unlock()
+    return nil
+}
+
+func (m *SubscriberCounter) OnSubscriptionOperationEnd(ctx core.GraphQLSubscriptionHookContext) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    key, ok := m.bySubscriber[ctx.SubscriptionInstanceID()]
+    if !ok {
+        return
+    }
+    delete(m.bySubscriber, ctx.SubscriptionInstanceID())
+    m.active[key]--
+    if m.active[key] == 0 {
+        delete(m.active, key)
+    }
+}
+
+var (
+    _ core.SubscriptionOperationStartHandler = (*SubscriberCounter)(nil)
+    _ core.SubscriptionOperationEndHandler   = (*SubscriberCounter)(nil)
+)
+```
+
+For request-specific diagnostics, a hook can also read `ctx.Operation().Name()`, `ctx.Operation().ClientInfo()`, `ctx.Authentication()`, and selected request headers. Do not log credentials, full claims, or unredacted arguments.
+
+## Lifecycle and performance notes
+
+- Hooks run once per downstream subscriber, not once per WebSocket, upstream trigger, or delivered message.
+- The router calls end at most once within a running process. A process crash cannot run cleanup hooks, so external counts or events need idempotency, expiration, or reconciliation.
+- Keep end hooks prompt. Slow network calls in an end hook can delay subscription teardown; use a bounded asynchronous worker if external I/O is required.
+- Treat `Request()` and `Operation()` as read-only. Do not retain their references after a hook returns.
+- Modules that implement only a start hook do not retain an end callback. Modules that do not implement these interfaces do not pay argument-resolution or per-message hook costs.
