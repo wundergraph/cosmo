@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"go.uber.org/zap"
 )
 
@@ -349,7 +350,7 @@ func TestNewServerRequiresASharedKey(t *testing.T) {
 	cfg := allIndexes()
 	cfg.Endpoint.SharedKey = ""
 
-	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 	require.Error(t, err)
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "shared_key")
@@ -361,7 +362,7 @@ func TestNewServerRejectsShortSharedKey(t *testing.T) {
 	cfg := allIndexes()
 	cfg.Endpoint.SharedKey = "too-short"
 
-	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+	svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 	require.Error(t, err)
 	require.Nil(t, svr)
 	require.Contains(t, err.Error(), "at least 32 characters")
@@ -374,9 +375,38 @@ func TestNewServerRejectsAnInvalidPath(t *testing.T) {
 		cfg := allIndexes()
 		cfg.Endpoint.Path = path
 
-		svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{})
+		svr, err := NewServer(zap.NewNop(), cfg, &recordingInvalidator{}, nil)
 		require.Error(t, err)
 		require.Nil(t, svr)
 		require.Contains(t, err.Error(), "must start with '/'")
 	}
+}
+
+// The playground calls the endpoint from the router's origin, so preflights pass with the router's CORS settings.
+func TestNewServerAllowsCORS(t *testing.T) {
+	t.Parallel()
+
+	corsOpts := &cors.Config{Enabled: true, AllowOrigins: []string{"http://localhost:3002"}, AllowMethods: []string{http.MethodGet}, AllowCredentials: true}
+	svr, err := NewServer(zap.NewNop(), allIndexes(), &recordingInvalidator{}, corsOpts)
+	require.NoError(t, err)
+
+	preflight := func(origin string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodOptions, "/invalidation", nil)
+		r.Header.Set("Origin", origin)
+		r.Header.Set("Access-Control-Request-Method", http.MethodPost)
+		r.Header.Set("Access-Control-Request-Headers", "authorization,content-type")
+		w := httptest.NewRecorder()
+		svr.Handler.ServeHTTP(w, r)
+		return w
+	}
+
+	w := preflight("http://localhost:3002")
+	require.Equal(t, http.StatusNoContent, w.Code)
+	require.Equal(t, "http://localhost:3002", w.Header().Get("Access-Control-Allow-Origin"))
+	require.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), http.MethodPost)
+	require.Contains(t, strings.ToLower(w.Header().Get("Access-Control-Allow-Headers")), "authorization")
+	require.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"), "the key is a header, never a cookie")
+	require.Equal(t, []string{http.MethodGet}, corsOpts.AllowMethods, "router's options are not modified")
+
+	require.Equal(t, http.StatusForbidden, preflight("http://evil.example").Code)
 }

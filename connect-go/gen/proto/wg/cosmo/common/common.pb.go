@@ -44,6 +44,7 @@ const (
 	EnumStatusCode_ERR_BAD_REQUEST                            EnumStatusCode = 17
 	EnumStatusCode_ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL EnumStatusCode = 18
 	EnumStatusCode_WARN_PARTIAL_DATA                          EnumStatusCode = 19
+	EnumStatusCode_ERR_CONFLICT                               EnumStatusCode = 20
 )
 
 // Enum value maps for EnumStatusCode.
@@ -69,6 +70,7 @@ var (
 		17: "ERR_BAD_REQUEST",
 		18: "ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL",
 		19: "WARN_PARTIAL_DATA",
+		20: "ERR_CONFLICT",
 	}
 	EnumStatusCode_value = map[string]int32{
 		"OK":                                         0,
@@ -91,6 +93,7 @@ var (
 		"ERR_BAD_REQUEST":                            17,
 		"ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL": 18,
 		"WARN_PARTIAL_DATA":                          19,
+		"ERR_CONFLICT":                               20,
 	}
 )
 
@@ -226,7 +229,7 @@ var File_wg_cosmo_common_common_proto protoreflect.FileDescriptor
 
 const file_wg_cosmo_common_common_proto_rawDesc = "" +
 	"\n" +
-	"\x1cwg/cosmo/common/common.proto\x12\x0fwg.cosmo.common*\x8b\x04\n" +
+	"\x1cwg/cosmo/common/common.proto\x12\x0fwg.cosmo.common*\x9d\x04\n" +
 	"\x0eEnumStatusCode\x12\x06\n" +
 	"\x02OK\x10\x00\x12\a\n" +
 	"\x03ERR\x10\x01\x12\x11\n" +
@@ -248,7 +251,8 @@ const file_wg_cosmo_common_common_proto_rawDesc = "" +
 	"\x10ERR_UPGRADE_PLAN\x10\x10\x12\x13\n" +
 	"\x0fERR_BAD_REQUEST\x10\x11\x12.\n" +
 	"*ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL\x10\x12\x12\x15\n" +
-	"\x11WARN_PARTIAL_DATA\x10\x13*\x96\x01\n" +
+	"\x11WARN_PARTIAL_DATA\x10\x13\x12\x10\n" +
+	"\fERR_CONFLICT\x10\x14*\x96\x01\n" +
 	"\x1bGraphQLSubscriptionProtocol\x12$\n" +
 	" GRAPHQL_SUBSCRIPTION_PROTOCOL_WS\x10\x00\x12%\n" +
 	"!GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE\x10\x01\x12*\n" +

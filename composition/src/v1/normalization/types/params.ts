@@ -1,9 +1,14 @@
 import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../../types/types';
-import { type CompositeOutputData, type InputObjectDefinitionData } from '../../../schema-building/types/types';
-import { type ConstDirectiveNode, type DocumentNode } from 'graphql';
+import {
+  type CompositeOutputData,
+  type FieldData,
+  type InputObjectDefinitionData,
+} from '../../../schema-building/types/types';
+import { type ConstDirectiveNode, type DocumentNode, type Kind } from 'graphql';
 import type { Subgraph } from '../../../subgraph/types';
 import type { CompositionOptions } from '../../../types/params';
 import type { Graph } from '../../../resolvability-graph/graph';
+import { type DirectiveDefinitionData } from '../../../directive-definition-data/types/types';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;
@@ -64,4 +69,9 @@ export type IsAnyImplementationFieldExternalParams = {
   fieldName: FieldName;
   interfaceTypeName: TypeName;
   isProvides: boolean;
+};
+
+export type ValidateArgumentParams = {
+  data: DirectiveDefinitionData | FieldData;
+  parentKind: Kind;
 };

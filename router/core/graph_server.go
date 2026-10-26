@@ -1398,6 +1398,11 @@ func (s *graphServer) buildGraphMux(
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
 
+		filter, err := requestlogger.NewFilter(s.accessLogsConfig.Filter, exprManager)
+		if err != nil {
+			return nil, fmt.Errorf("failed building router access log filter: %w", err)
+		}
+
 		accessLogAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
 
 		requestLoggerOpts := []requestlogger.Option{
@@ -1409,6 +1414,16 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithLogLevelHandler(LogLevelHandler),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
+		}
+
+		if filter != nil {
+			requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithFilter(func(r *http.Request, fields []zap.Field) bool {
+				var ctx *expr.Context
+				if reqContext := getRequestContext(r.Context()); reqContext != nil {
+					ctx = accessLogExpressionContext(reqContext)
+				}
+				return filter.ShouldLog(s.accessLogsConfig.Logger, ctx, "request", fields)
+			}))
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -1432,11 +1447,17 @@ func (s *graphServer) buildGraphMux(
 				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 			}
 
+			subgraphFilter, err := requestlogger.NewFilter(s.accessLogsConfig.SubgraphFilter, exprManager)
+			if err != nil {
+				return nil, fmt.Errorf("failed building subgraph access log filter: %w", err)
+			}
+
 			subgraphAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
 				s.accessLogsConfig.Logger,
 				requestlogger.SubgraphOptions{
+					Filter:                subgraphFilter,
 					IPAnonymizationConfig: ipAnonConfig,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,

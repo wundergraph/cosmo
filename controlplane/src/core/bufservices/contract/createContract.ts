@@ -12,6 +12,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -26,7 +27,15 @@ export function createContract(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    return opts.db.transaction(async (tx) => {
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
+    const result = await opts.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const auditLogRepo = new AuditLogRepository(tx);
@@ -184,6 +193,7 @@ export function createContract(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       const { deploymentErrors, compositionErrors, compositionWarnings } =
@@ -206,5 +216,7 @@ export function createContract(
         deploymentErrors,
       };
     });
+
+    return flushMapperIntoResponse(mapperUpdater, result);
   });
 }
