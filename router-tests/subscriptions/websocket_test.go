@@ -596,7 +596,11 @@ func TestWebSockets(t *testing.T) {
 	t.Run("subscription with multiple reconnects and netPoll", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableNetPoll = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})

@@ -171,6 +171,17 @@ export default class Keycloak {
     return foundUsers.length === 1 ? foundUsers[0] : undefined;
   }
 
+  public async getUserAttributes({
+    realm,
+    userID,
+  }: {
+    realm?: string;
+    userID: string;
+  }): Promise<Record<string, string[]>> {
+    const user = await this.client.users.findOne({ id: userID, realm: realm || this.realm });
+    return user?.attributes ?? {};
+  }
+
   public async updateKeycloakUser({
     realm,
     id,
