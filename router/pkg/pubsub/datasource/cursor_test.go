@@ -347,6 +347,44 @@ func TestCursorWireFormat(t *testing.T) {
 	})
 }
 
+func TestCursorMaxPayloadSize(t *testing.T) {
+	t.Parallel()
+
+	cursorWithPartitions := func(n int) *streamsv1.Cursor {
+		partitions := make(map[int32]*streamsv1.KafkaPartitionOffset, n)
+		for i := range n {
+			partitions[int32(i)] = &streamsv1.KafkaPartitionOffset{Epoch: 3, Offset: 1 << 40}
+		}
+		cur := testCursor()
+		cur.Position = &streamsv1.Cursor_Kafka{
+			Kafka: &streamsv1.KafkaCursorPosition{
+				Topics: map[string]*streamsv1.KafkaPartitionPositions{"employees": {Partitions: partitions}},
+			},
+		}
+		return cur
+	}
+
+	t.Run("realistic position is issued", func(t *testing.T) {
+		t.Parallel()
+		codec := mustCodec(t, 0, CursorKey{ID: 1, Secret: testSecret(1)})
+
+		wire, err := codec.Issue(cursorWithPartitions(800), testRequestData, testIdentity)
+		require.NoError(t, err)
+
+		_, err = codec.Verify(wire, testRequestData, testIdentity)
+		require.NoError(t, err)
+	})
+
+	t.Run("oversized position is not issued", func(t *testing.T) {
+		t.Parallel()
+		codec := mustCodec(t, 0, CursorKey{ID: 1, Secret: testSecret(1)})
+
+		wire, err := codec.Issue(cursorWithPartitions(5000), testRequestData, testIdentity)
+		require.ErrorIs(t, err, errCursorTooLarge)
+		assert.Empty(t, wire)
+	})
+}
+
 func TestCursorKeyRotation(t *testing.T) {
 	t.Parallel()
 

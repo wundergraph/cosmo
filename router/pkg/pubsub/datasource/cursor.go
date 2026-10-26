@@ -28,6 +28,10 @@ const (
 	cursorHeaderSize = 2
 	// cursorMinSecretSize is the minimum length of a cursor key secret.
 	cursorMinSecretSize = 32
+	// maxCursorPayloadSize is the upper bound for the payload of an issued cursor, about 22 KB base64 encoded on the wire.
+	// A Kafka position needs roughly 20 bytes per partition, so this is a backstop that realistic
+	// subscriptions (up to about 800 partitions in total) never hit.
+	maxCursorPayloadSize = 16 << 10
 
 	cursorTagDomain      = "cosmo/cursor/v1"
 	cursorTagKeyLabel    = "cosmo/cursor/tag/v1"
@@ -42,6 +46,7 @@ const (
 var (
 	errCursorPositionMissing      = errors.New("cursor has no position")
 	errCursorClientBindingMissing = errors.New("cursor has no valid client binding")
+	errCursorTooLarge             = errors.New("cursor payload exceeds the maximum size")
 )
 
 // MarshalCursor serializes a cursor into the payload of the cursor wire format.
@@ -272,6 +277,9 @@ func (c *CursorCodec) Issue(cur *streamsv1.Cursor, requestData []byte, id Client
 	})
 	if err != nil {
 		return "", err
+	}
+	if len(payload) > maxCursorPayloadSize {
+		return "", fmt.Errorf("%w: %d > %d bytes", errCursorTooLarge, len(payload), maxCursorPayloadSize)
 	}
 
 	wire := make([]byte, 0, cursorHeaderSize+len(payload)+cursorTagSize)
