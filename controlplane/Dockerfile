@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:22.22.2 AS builder
+FROM --platform=${BUILDPLATFORM} node:22.23.4 AS builder
 
 ARG TARGETARCH
 
@@ -34,7 +34,7 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
 # use --legacy to keep the previous (pnpm 9) deploy behavior we rely on here.
 RUN pnpm --filter=./controlplane --prod deploy --legacy pruned
 
-FROM node:lts-alpine
+FROM node:22.23.4-alpine
 
 WORKDIR /app
 

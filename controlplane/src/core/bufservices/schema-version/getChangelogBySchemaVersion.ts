@@ -58,7 +58,9 @@ export function getChangelogBySchemaVersion(
         changelogs,
         schemaVersionId: req.schemaVersionId,
         createdAt: changelogs.length === 0 ? '' : changelogs[0].createdAt,
-        compositionId: composition?.id,
+        compositionId: composition.id,
+        featureFlagId: composition.featureFlagId ?? '',
+        featureFlagName: composition.featureFlagName ?? '',
       },
     };
   });

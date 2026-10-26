@@ -14,6 +14,10 @@ There are a few configuration flags that impact this procedure:
 
 * **SHUTDOWN\_DELAY**: Defines the maximum time the router waits before canceling all server resources, such as active client connections, to shut down the process. This setting applies when a shutdown signal (e.g., `SIGTERM`, `SIGINT`, `SIGHUP`) is sent to the process. The default value is 60 seconds.
 
+<Note>
+  `SIGHUP` reloads the router configuration file (`config.yaml`), not the execution config. This reload stops the router before it starts a new one, so it is not zero-downtime and is not recommended for production. See [Config watcher hot reloading](/router/configuration#config-watcher-hot-reloading).
+</Note>
+
 <Info>
   Timeouts can be [configured](/router/configuration) as environment variables and in the config.yaml file.
 </Info>

@@ -36,7 +36,7 @@ overrides:
   react: 18.3.1
   graphql: 16.9.0
   cross-spawn: 7.0.6
-  next: 15.5.24
+  next: 15.5.28
   zod: ^3.25.0
   debug: <4.4.2
   supports-color: <10.2.1
@@ -90,7 +90,7 @@ overrides:
   sigstore: 4.1.1
   engine.io: 6.6.9
   glob@10.x: 10.5.0
-  sharp: 0.35.3
+  sharp: 0.35.5
   eslint-plugin-import: 2.27.5
   eslint-module-utils: 2.8.0
 

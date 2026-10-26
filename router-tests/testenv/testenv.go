@@ -369,6 +369,8 @@ type Config struct {
 	ResponseTraceHeader                config.ResponseTraceHeader
 	Logger                             *zap.Logger
 	AccessLogger                       *zap.Logger
+	AccessLogFilter                    string
+	SubgraphAccessLogFilter            string
 	AccessLogFields                    []config.CustomAttribute
 	MetricOptions                      MetricOptions
 	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
@@ -1387,7 +1389,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:                     true,
+		EnableNetPoll:                     false,
 		EnableSingleFlight:                true,
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
@@ -1489,6 +1491,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 		core.WithDisableUsageTracking(),
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
+			Filter:                testConfig.AccessLogFilter,
+			SubgraphFilter:        testConfig.SubgraphAccessLogFilter,
 			Logger:                testConfig.AccessLogger,
 			Attributes:            testConfig.AccessLogFields,
 			IgnoreQueryParamsList: testConfig.IgnoreQueryParamsList,

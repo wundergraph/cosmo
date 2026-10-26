@@ -87,7 +87,7 @@ The `request` object is a read-only entity that provides details about the incom
 
 The query complexity fields are calculated during validation when `security.complexity_limits` is configured. They remain zero-valued when complexity limits are not configured or a request exits before validation. Use `mode: measure` to collect them without rejecting operations. Aliased root fields are counted in `queryRootFieldAliases`, not `queryRootFields`.
 
-The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
+The serialization of `request.operation.variables` is decided once per request across the whole configuration. If any access log field or filter, metric, telemetry, tracing, or rate-limiter expression references it, it is serialized; otherwise it is skipped.
 
 <Info>
 `request.operation.*` fields are populated during HTTP request handling. They are not available for WebSocket subscription access logs, which reuse the expression context from the initial HTTP upgrade request.
@@ -207,7 +207,7 @@ To optimize performance, the raw response body (`body.raw`) is only included in 
 - `subgraph.response.body.raw` (string): The raw stringified representation of the subgraph response body
 
 <Note>
-This attribute will evaluate to `""` when used outside of `access_logs.subgraphs.fields` expressions. You can find more info about subgraph access log fields [here](/router/access-logs#subgraph-access-log-expressions).
+This attribute will evaluate to `""` when used outside of `access_logs.subgraphs.fields` expressions and `access_logs.subgraphs.filter`. You can find more info about subgraph access log fields [here](/router/access-logs#subgraph-access-log-expressions).
 </Note>
 
 
@@ -281,7 +281,7 @@ To optimize performance, the raw response body (`body.raw`) is only included in 
 - `response.body.raw` (string): The raw stringified representation of the router response body
 
 <Note>
-This attribute will evaluate to `""` when used outside of `access_logs.router.fields` expressions. You can find more info about router access log fields [here](/router/access-logs#expression-fields).
+This attribute will evaluate to `""` when used outside of `access_logs.router.fields` expressions and `access_logs.router.filter`. You can find more info about router access log fields [here](/router/access-logs#expression-fields).
 </Note>
 
 #### Example expressions
@@ -310,3 +310,9 @@ You can use all the [built-in functions](https://expr-lang.org/docs/language-def
 Template Expressions are not a generalized concept within router configuration. This functionality is selectively introduced in areas where it enhances the router's capabilities. You find the supported configuration values on the router [configuration](/router/configuration) documentation page.
 
 If you find a need to enable dynamic configuration, please let us know. Your feedback helps guide future enhancements and feature development.
+
+### Access log filter context
+
+`access_logs.router.filter` and `access_logs.subgraphs.filter` accept boolean expressions using the sources above. They also expose a `log` map of built-in and configured custom fields, after defaults and omission rules have been applied. For example, `log.status >= 500 || log.latency > duration('1s')` filters by HTTP status and elapsed time. `rand()` returns a random value in the range `[0, 1)` for sampling.
+
+The `log` map and `rand()` are only available in access log filters. See [Filter access logs](/router/access-logs#filter-access-logs) for lifecycle rules, field types, sampling examples, and error behavior.
