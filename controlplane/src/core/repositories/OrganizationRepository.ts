@@ -333,7 +333,7 @@ export class OrganizationRepository {
             billing: plan
               ? {
                   plan,
-                  isBillDue: org.billing?.isBillDue ?? false,
+                  isBillDue: Boolean(org.billing?.isBillDue),
                 }
               : undefined,
             subscription: org.subscription
