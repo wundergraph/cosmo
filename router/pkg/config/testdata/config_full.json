@@ -590,6 +590,7 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": [
         {
           "Key": "hello",
@@ -618,6 +619,7 @@
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": true,
       "Fields": [
         {
@@ -896,7 +898,11 @@
       "Enabled": true,
       "Name": "Surrogate-Key",
       "Delimiter": " ",
-      "MaxBytes": 1024
+      "Tiers": [
+        "cache_tag"
+      ],
+      "MaxBytes": 1024,
+      "OnOverflow": "private"
     },
     "All": {
       "Enabled": true,
@@ -1022,7 +1028,7 @@
     "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
-    "EnableNetPoll": true,
+    "EnableNetPoll": false,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,

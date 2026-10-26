@@ -28,11 +28,13 @@ type accessLogger struct {
 }
 
 type SubgraphAccessLogger struct {
+	filter       *Filter
 	accessLogger *accessLogger
 	logger       *zap.Logger
 }
 
 type SubgraphOptions struct {
+	Filter                *Filter
 	IPAnonymizationConfig *IPAnonymizationConfig
 	FieldsHandler         ContextFunc
 	Fields                []zapcore.Field
@@ -42,6 +44,7 @@ type SubgraphOptions struct {
 
 func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *SubgraphAccessLogger {
 	return &SubgraphAccessLogger{
+		filter: opts.Filter,
 		logger: logger.With(zap.String("log_type", "client/subgraph")),
 		accessLogger: &accessLogger{
 			baseFields:            opts.Fields,
@@ -96,6 +99,10 @@ func (h *SubgraphAccessLogger) RequestFields(
 	}
 
 	return fields
+}
+
+func (h *SubgraphAccessLogger) ShouldLog(ctx *expr.Context, fields []zap.Field) bool {
+	return h.filter.ShouldLog(h.logger, ctx, "client/subgraph", fields)
 }
 
 func (h *SubgraphAccessLogger) Info(message string, fields []zap.Field) {

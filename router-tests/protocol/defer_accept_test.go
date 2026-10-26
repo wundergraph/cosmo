@@ -69,7 +69,7 @@ func TestDeferAcceptHeader(t *testing.T) {
 				assert.Equal(t, http.StatusOK, res.StatusCode)
 				assert.Equal(t, `multipart/mixed; boundary="graphql"; incrementalSpec=v0.2`, res.Header.Get("Content-Type"))
 				assert.True(t, strings.HasPrefix(body, "--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":"), body)
-				assert.True(t, strings.HasSuffix(body, "\"hasNext\":false}\r\n\r\n--graphql--"), body)
+				assert.True(t, strings.HasSuffix(body, "\"hasNext\":false}\r\n--graphql\r\n\r\n--graphql--"), body)
 			})
 		})
 	}

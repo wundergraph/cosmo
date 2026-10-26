@@ -295,6 +295,15 @@
           "rpc": "RequireEmployeeOptionalLatestWorkOperationById",
           "request": "RequireEmployeeOptionalLatestWorkOperationByIdRequest",
           "response": "RequireEmployeeOptionalLatestWorkOperationByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "workAudit",
+            "mapped": "work_audit"
+          },
+          "rpc": "RequireEmployeeWorkAuditById",
+          "request": "RequireEmployeeWorkAuditByIdRequest",
+          "response": "RequireEmployeeWorkAuditByIdResponse"
         }
       ]
     },
@@ -1071,6 +1080,101 @@
       ]
     },
     {
+      "type": "WorkAudit",
+      "fieldMappings": [
+        {
+          "original": "expertise",
+          "mapped": "expertise"
+        },
+        {
+          "original": "report",
+          "mapped": "report"
+        },
+        {
+          "original": "riskScore",
+          "mapped": "risk_score",
+          "argumentMappings": [
+            {
+              "original": "weight",
+              "mapped": "weight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "WorkAuditReport",
+      "fieldMappings": [
+        {
+          "original": "generatedAt",
+          "mapped": "generated_at"
+        },
+        {
+          "original": "findings",
+          "mapped": "findings"
+        }
+      ]
+    },
+    {
+      "type": "WorkAuditFinding",
+      "fieldMappings": [
+        {
+          "original": "code",
+          "mapped": "code"
+        },
+        {
+          "original": "severity",
+          "mapped": "severity"
+        },
+        {
+          "original": "remediation",
+          "mapped": "remediation",
+          "argumentMappings": [
+            {
+              "original": "detailed",
+              "mapped": "detailed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "WorkAuditRemediation",
+      "fieldMappings": [
+        {
+          "original": "description",
+          "mapped": "description"
+        },
+        {
+          "original": "steps",
+          "mapped": "steps"
+        },
+        {
+          "original": "estimatedHours",
+          "mapped": "estimated_hours"
+        }
+      ]
+    },
+    {
+      "type": "WorkAuditStep",
+      "fieldMappings": [
+        {
+          "original": "title",
+          "mapped": "title"
+        },
+        {
+          "original": "effort",
+          "mapped": "effort",
+          "argumentMappings": [
+            {
+              "original": "multiplier",
+              "mapped": "multiplier"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "Employee",
       "fieldMappings": [
         {
@@ -1176,6 +1280,10 @@
         {
           "original": "optionalLatestWorkOperation",
           "mapped": "optional_latest_work_operation"
+        },
+        {
+          "original": "workAudit",
+          "mapped": "work_audit"
         },
         {
           "original": "currentWorkload",
@@ -1568,6 +1676,76 @@
       "rpc": "ResolveTaskTotalEffort",
       "request": "ResolveTaskTotalEffortRequest",
       "response": "ResolveTaskTotalEffortResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "WorkAudit",
+        "fieldMapping": {
+          "original": "riskScore",
+          "mapped": "risk_score",
+          "argumentMappings": [
+            {
+              "original": "weight",
+              "mapped": "weight"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveWorkAuditRiskScore",
+      "request": "ResolveWorkAuditRiskScoreRequest",
+      "response": "ResolveWorkAuditRiskScoreResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "WorkAuditFinding",
+        "fieldMapping": {
+          "original": "remediation",
+          "mapped": "remediation",
+          "argumentMappings": [
+            {
+              "original": "detailed",
+              "mapped": "detailed"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveWorkAuditFindingRemediation",
+      "request": "ResolveWorkAuditFindingRemediationRequest",
+      "response": "ResolveWorkAuditFindingRemediationResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "WorkAuditRemediation",
+        "fieldMapping": {
+          "original": "estimatedHours",
+          "mapped": "estimated_hours"
+        }
+      },
+      "rpc": "ResolveWorkAuditRemediationEstimatedHours",
+      "request": "ResolveWorkAuditRemediationEstimatedHoursRequest",
+      "response": "ResolveWorkAuditRemediationEstimatedHoursResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "WorkAuditStep",
+        "fieldMapping": {
+          "original": "effort",
+          "mapped": "effort",
+          "argumentMappings": [
+            {
+              "original": "multiplier",
+              "mapped": "multiplier"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveWorkAuditStepEffort",
+      "request": "ResolveWorkAuditStepEffortRequest",
+      "response": "ResolveWorkAuditStepEffortResponse"
     },
     {
       "type": "LOOKUP_TYPE_RESOLVE",

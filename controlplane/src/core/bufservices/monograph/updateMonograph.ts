@@ -22,6 +22,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 
 export function updateMonograph(
   opts: RouterOptions,
@@ -39,7 +40,15 @@ export function updateMonograph(
       throw new UnauthorizedError();
     }
 
-    return opts.db.transaction(async (tx) => {
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
+    const result = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const auditLogRepo = new AuditLogRepository(tx);
@@ -147,6 +156,7 @@ export function updateMonograph(
         false,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       // Update the federated graph
@@ -223,5 +233,7 @@ export function updateMonograph(
         compositionErrors: [],
       };
     });
+
+    return await flushMapperIntoResponse(mapperUpdater, result);
   });
 }

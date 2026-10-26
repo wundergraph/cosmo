@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -713,4 +714,73 @@ func (p *ProjectsService) ResolveProjectSubProjects(_ context.Context, req *serv
 	}
 
 	return response, nil
+}
+
+// ResolveWorkAuditRiskScore implements projects.ProjectsServiceServer.
+// The risk score is the length of the audited expertise multiplied by the weight argument.
+func (p *ProjectsService) ResolveWorkAuditRiskScore(_ context.Context, req *service.ResolveWorkAuditRiskScoreRequest) (*service.ResolveWorkAuditRiskScoreResponse, error) {
+	weight := req.GetFieldArgs().GetWeight()
+
+	results := make([]*service.ResolveWorkAuditRiskScoreResult, 0, len(req.GetContext()))
+	for _, ctx := range req.GetContext() {
+		results = append(results, &service.ResolveWorkAuditRiskScoreResult{
+			RiskScore: float64(len(ctx.GetExpertise())) * weight,
+		})
+	}
+
+	return &service.ResolveWorkAuditRiskScoreResponse{Result: results}, nil
+}
+
+// ResolveWorkAuditFindingRemediation implements projects.ProjectsServiceServer.
+// The detailed argument adds the severity to the remediation description.
+func (p *ProjectsService) ResolveWorkAuditFindingRemediation(_ context.Context, req *service.ResolveWorkAuditFindingRemediationRequest) (*service.ResolveWorkAuditFindingRemediationResponse, error) {
+	detailed := req.GetFieldArgs().GetDetailed()
+
+	results := make([]*service.ResolveWorkAuditFindingRemediationResult, 0, len(req.GetContext()))
+	for _, ctx := range req.GetContext() {
+		description := fmt.Sprintf("Fix %s", ctx.GetCode())
+		if detailed {
+			description = fmt.Sprintf("%s (severity %d)", description, ctx.GetSeverity())
+		}
+
+		results = append(results, &service.ResolveWorkAuditFindingRemediationResult{
+			Remediation: &service.WorkAuditRemediation{
+				Description: description,
+				Steps: []*service.WorkAuditStep{
+					{Title: fmt.Sprintf("Review %s", ctx.GetCode())},
+					{Title: fmt.Sprintf("Resolve %s", ctx.GetCode())},
+				},
+			},
+		})
+	}
+
+	return &service.ResolveWorkAuditFindingRemediationResponse{Result: results}, nil
+}
+
+// ResolveWorkAuditRemediationEstimatedHours implements projects.ProjectsServiceServer.
+// The estimate is half an hour per character of the remediation description.
+func (p *ProjectsService) ResolveWorkAuditRemediationEstimatedHours(_ context.Context, req *service.ResolveWorkAuditRemediationEstimatedHoursRequest) (*service.ResolveWorkAuditRemediationEstimatedHoursResponse, error) {
+	results := make([]*service.ResolveWorkAuditRemediationEstimatedHoursResult, 0, len(req.GetContext()))
+	for _, ctx := range req.GetContext() {
+		results = append(results, &service.ResolveWorkAuditRemediationEstimatedHoursResult{
+			EstimatedHours: float64(len(ctx.GetDescription())) / 2,
+		})
+	}
+
+	return &service.ResolveWorkAuditRemediationEstimatedHoursResponse{Result: results}, nil
+}
+
+// ResolveWorkAuditStepEffort implements projects.ProjectsServiceServer.
+// The effort is the length of the step title multiplied by the multiplier argument.
+func (p *ProjectsService) ResolveWorkAuditStepEffort(_ context.Context, req *service.ResolveWorkAuditStepEffortRequest) (*service.ResolveWorkAuditStepEffortResponse, error) {
+	multiplier := req.GetFieldArgs().GetMultiplier()
+
+	results := make([]*service.ResolveWorkAuditStepEffortResult, 0, len(req.GetContext()))
+	for _, ctx := range req.GetContext() {
+		results = append(results, &service.ResolveWorkAuditStepEffortResult{
+			Effort: float64(len(ctx.GetTitle())) * multiplier,
+		})
+	}
+
+	return &service.ResolveWorkAuditStepEffortResponse{Result: results}, nil
 }

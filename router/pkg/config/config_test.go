@@ -3131,3 +3131,98 @@ split_config_poller:
 		require.Equal(t, []string{"split_config_poller", "fetch_retry", "interval"}, js.Causes[0].InstanceLocation)
 	})
 }
+
+func TestAccessLogFiltersConfig(t *testing.T) {
+	t.Run("yaml", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+access_logs:
+  enabled: true
+  router:
+    filter: "log.status >= 400"
+  subgraphs:
+    enabled: true
+    filter: "subgraph.name == 'products'"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "log.status >= 400", c.Config.AccessLogs.Router.Filter)
+		require.Equal(t, "subgraph.name == 'products'", c.Config.AccessLogs.Subgraphs.Filter)
+	})
+	t.Run("environment", func(t *testing.T) {
+		t.Setenv("ACCESS_LOGS_ROUTER_FILTER", "request.error != nil")
+		t.Setenv("ACCESS_LOGS_SUBGRAPH_FILTER", "subgraph.request.error != nil")
+		f := createTempFileFromFixture(t, `version: "1"`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "request.error != nil", c.Config.AccessLogs.Router.Filter)
+		require.Equal(t, "subgraph.request.error != nil", c.Config.AccessLogs.Subgraphs.Filter)
+	})
+	t.Run("non string rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+access_logs:
+  router:
+    filter: false
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+	})
+}
+
+func TestResponseCacheTagHeaderConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tiers default to every tier and overflow to truncate", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, []string{"subgraph", "type", "cache_tag"}, cfg.Config.ResponseCache.TagHeader.Tiers)
+		require.Equal(t, ResponseCacheTagHeaderOverflowTruncate, cfg.Config.ResponseCache.TagHeader.OnOverflow)
+	})
+
+	t.Run("tiers replace the default", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+    tiers: [cache_tag]
+    on_overflow: private
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, []string{"cache_tag"}, cfg.Config.ResponseCache.TagHeader.Tiers)
+		require.Equal(t, ResponseCacheTagHeaderOverflowPrivate, cfg.Config.ResponseCache.TagHeader.OnOverflow)
+	})
+
+	for name, fragment := range map[string]string{
+		"an unknown tier":     "tiers: [entity]",
+		"no tiers":            "tiers: []",
+		"a repeated tier":     "tiers: [type, type]",
+		"an unknown overflow": "on_overflow: drop",
+	} {
+		t.Run(name+" fails validation", func(t *testing.T) {
+			t.Parallel()
+
+			f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+    `+fragment+`
+`)
+			_, err := LoadConfig([]string{f})
+			require.ErrorContains(t, err, "/response_cache/cache_tag_header/")
+		})
+	}
+}

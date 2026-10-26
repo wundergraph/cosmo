@@ -1122,6 +1122,10 @@
           "additionalProperties": false,
           "description": "The configuration for the router access logs",
           "properties": {
+            "filter": {
+              "type": "string",
+              "description": "Boolean expression evaluated before emitting an access log. True includes the entry. Empty includes all entries. Evaluation errors preserve the entry. Panic entries are always logged."
+            },
             "fields": {
               "$ref": "#/$defs/context_fields"
             },
@@ -1140,6 +1144,10 @@
           "additionalProperties": false,
           "description": "The configuration for the subgraph access logs",
           "properties": {
+            "filter": {
+              "type": "string",
+              "description": "Boolean expression evaluated before emitting an access log. True includes the entry. Empty includes all entries. Evaluation errors preserve the entry."
+            },
             "enabled": {
               "type": "boolean",
               "description": "Enable the subgraph access logs.",
@@ -3550,7 +3558,7 @@
         },
         "cache_tag_header": {
           "type": "object",
-          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
+          "description": "Returns the cache tags of a response in a header a CDN or reverse proxy can purge by: 'subgraph-{name}' per subgraph touched, 'type-{subgraph}-{type}' per entity type touched, and every tag a subgraph declared in its 'apolloCacheTags' or 'apolloEntityCacheTags' extension, unchanged, limited to 'tiers'. Sent on cache hits and misses alike; fetches that were not cacheable contribute nothing. Independent of the 'invalidation' indexes. Not sent on subscriptions, deferred or batched responses, or responses carrying subgraph errors. Off by default.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -3572,11 +3580,29 @@
               "default": ",",
               "examples": [",", " "]
             },
+            "tiers": {
+              "type": "array",
+              "description": "Which tags the header carries: 'subgraph' for 'subgraph-{name}', 'type' for 'type-{subgraph}-{type}', 'cache_tag' for the tags subgraphs declared. A CDN can purge by every tag it is sent, so leave out the tiers a purge must not reach. Independent of the 'invalidation' indexes, which use the same names. A response with no tag of these tiers gets no header.",
+              "items": {
+                "type": "string",
+                "enum": ["subgraph", "type", "cache_tag"]
+              },
+              "minItems": 1,
+              "uniqueItems": true,
+              "default": ["subgraph", "type", "cache_tag"],
+              "examples": [["cache_tag"]]
+            },
             "max_bytes": {
               "type": "integer",
               "minimum": 1,
-              "description": "The largest header value emitted, in bytes. When the tags do not fit they are grouped coarsest first, subgraph then type then declared, and the finest that do not fit are left out. The default matches Cloudflare's Cache-Tag limit.",
+              "description": "The largest header value emitted, in bytes. When the tags do not fit, 'on_overflow' decides. The default matches Cloudflare's Cache-Tag limit.",
               "default": 16384
+            },
+            "on_overflow": {
+              "type": "string",
+              "enum": ["truncate", "private"],
+              "description": "What a response gets when its tags do not fit 'max_bytes'. 'truncate' groups them coarsest first, subgraph then type then declared, and leaves out the finest that do not fit, so a CDN may hold the response under fewer tags than it has. 'private' sends no header and sets 'Cache-Control: private', so no shared cache holds a response it could not purge. Either way the router.response_cache.cache_tag_header.overflows metric counts it.",
+              "default": "truncate"
             }
           }
         }
@@ -4219,8 +4245,8 @@
         },
         "enable_net_poll": {
           "type": "boolean",
-          "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
-          "default": true
+          "description": "Defaults to false, using a goroutine per server-side WebSocket connection. Setting true enables manual netpoll on Linux and macOS, falling back to goroutines if unavailable. Manual netpoll can introduce head-of-line blocking across connections and should be used with care. Does not affect upstream subgraph connections.",
+          "default": false
         },
         "enable_multi_fetch": {
           "type": "boolean",
