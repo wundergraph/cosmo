@@ -19,7 +19,7 @@ const maxSize = 100_000
 // or the vary name sets of a record.
 type entry struct {
 	value         []byte
-	surrogateKeys []string
+	surrogateKeys []enginecache.SurrogateKey
 	vary          [][]string
 }
 
