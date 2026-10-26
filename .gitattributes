@@ -1,0 +1,15 @@
+**/pnpm-lock.yaml linguist-generated=true
+**/package-lock.json linguist-generated=true
+**/go.sum linguist-generated=true
+playground/index.html linguist-generated=true
+router/internal/graphiql/graphiql.html linguist-generated=true
+
+# Protobuf compiler output.
+**/*.pb.go linguist-generated=true
+**/*_pb.js linguist-generated=true
+**/*_pb.d.ts linguist-generated=true
+**/*_pb.ts linguist-generated=true
+**/*_connect.ts linguist-generated=true
+**/*_connect.js linguist-generated=true
+**/*_connect.d.ts linguist-generated=true
+**/*.connect.go linguist-generated=true

@@ -37,9 +37,37 @@ class S3BlobStorage implements BlobStorage {
         throw new Error(`Failed to retrieve object from S3: ${resp}`);
       }
 
+      const body = resp.Body.transformToWebStream();
+      const expectedLength = resp.ContentLength;
+      let receivedLength = 0;
+
       return {
         metadata: resp.Metadata,
-        stream: resp.Body.transformToWebStream(),
+        // Validate storage bytes before compression, which removes Content-Length.
+        // An early EOF must not become a successfully completed gzip response.
+        stream:
+          expectedLength === undefined
+            ? body
+            : body.pipeThrough(
+                new TransformStream<Uint8Array, Uint8Array>({
+                  transform(chunk, controller) {
+                    receivedLength += chunk.byteLength;
+                    if (receivedLength > expectedLength) {
+                      throw new Error(
+                        `S3 object length mismatch: expected ${expectedLength} bytes, got ${receivedLength}`,
+                      );
+                    }
+                    controller.enqueue(chunk);
+                  },
+                  flush() {
+                    if (receivedLength !== expectedLength) {
+                      throw new Error(
+                        `S3 object length mismatch: expected ${expectedLength} bytes, got ${receivedLength}`,
+                      );
+                    }
+                  },
+                }),
+              ),
       };
     } catch (e: any) {
       if (e instanceof NoSuchKey) {

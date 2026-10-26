@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.363.0](https://github.com/wundergraph/cosmo/compare/router@0.362.0...router@0.363.0) (2026-10-23)
+
+### Features
+
+* **playground:** show response cache data in the request trace ([#3360](https://github.com/wundergraph/cosmo/issues/3360)) ([de31a2b](https://github.com/wundergraph/cosmo/commit/de31a2b755fa02fcf2af2b5454aebc3368e83a06)) (@SkArchon)
+
+## [0.362.0](https://github.com/wundergraph/cosmo/compare/router@0.361.0...router@0.362.0) (2026-10-22)
+
+### Features
+
+* add simple defer panel (no advice just yet) ([#3393](https://github.com/wundergraph/cosmo/issues/3393)) ([949dfe9](https://github.com/wundergraph/cosmo/commit/949dfe9a183a1ff3a3a972f325c3d5446ef02906)) (@gausie)
+
+### Bug Fixes
+
+* **router:** treat a malformed Cache-Control as no-store ([#3385](https://github.com/wundergraph/cosmo/issues/3385)) ([c253c2a](https://github.com/wundergraph/cosmo/commit/c253c2a62fd24c3b20b2c40e6b3b7d7ad0abcc73)) (@SkArchon)
+
+## [0.361.0](https://github.com/wundergraph/cosmo/compare/router@0.360.1...router@0.361.0) (2026-10-21)
+
+### Features
+
+* add filters to router and subgraph logs ([#3369](https://github.com/wundergraph/cosmo/issues/3369)) ([a23bc03](https://github.com/wundergraph/cosmo/commit/a23bc037ac385c8f203129e36aaf29f0a0c097a1)) (@alepane21)
+* show defer status in the response toolbar ([#3380](https://github.com/wundergraph/cosmo/issues/3380)) ([7ded2cf](https://github.com/wundergraph/cosmo/commit/7ded2cf98d2815ef7c7c9ca05f768306c008eff8)) (@gausie)
+* stream deferred router responses in the playground ([#3379](https://github.com/wundergraph/cosmo/issues/3379)) ([a45995c](https://github.com/wundergraph/cosmo/commit/a45995c05917fae2bf20ae5aa243e2b156e2df75)) (@gausie)
+
+### Bug Fixes
+
+* introspection for input deprecated fields in the playground ([#3394](https://github.com/wundergraph/cosmo/issues/3394)) ([b7f1b8e](https://github.com/wundergraph/cosmo/commit/b7f1b8ee66913b437cdaad60cfb5a858012d6e82)) (@JivusAyrus)
+
 ## [0.360.1](https://github.com/wundergraph/cosmo/compare/router@0.360.0...router@0.360.1) (2026-10-19)
 
 ### Bug Fixes

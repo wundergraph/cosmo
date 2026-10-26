@@ -3132,6 +3132,44 @@ split_config_poller:
 	})
 }
 
+func TestAccessLogFiltersConfig(t *testing.T) {
+	t.Run("yaml", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+access_logs:
+  enabled: true
+  router:
+    filter: "log.status >= 400"
+  subgraphs:
+    enabled: true
+    filter: "subgraph.name == 'products'"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "log.status >= 400", c.Config.AccessLogs.Router.Filter)
+		require.Equal(t, "subgraph.name == 'products'", c.Config.AccessLogs.Subgraphs.Filter)
+	})
+	t.Run("environment", func(t *testing.T) {
+		t.Setenv("ACCESS_LOGS_ROUTER_FILTER", "request.error != nil")
+		t.Setenv("ACCESS_LOGS_SUBGRAPH_FILTER", "subgraph.request.error != nil")
+		f := createTempFileFromFixture(t, `version: "1"`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "request.error != nil", c.Config.AccessLogs.Router.Filter)
+		require.Equal(t, "subgraph.request.error != nil", c.Config.AccessLogs.Subgraphs.Filter)
+	})
+	t.Run("non string rejected", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+access_logs:
+  router:
+    filter: false
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+	})
+}
+
 func TestResponseCacheTagHeaderConfig(t *testing.T) {
 	t.Parallel()
 

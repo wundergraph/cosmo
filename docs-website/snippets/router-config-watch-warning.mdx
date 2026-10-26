@@ -1,0 +1,10 @@
+<Warning>
+  Config watcher hot reloading is not recommended for production. A reload, triggered by `watch_config` or by `SIGHUP`, stops the running router before it starts a new one with the updated configuration:
+
+  - The router stops accepting connections until the new router is listening. Clients receive connection errors in the meantime.
+  - In-flight requests have at most `shutdown_delay` to complete. WebSocket and SSE subscriptions are closed.
+  - If the new router fails to start, the process exits. The previous router is not kept running. Causes include an invalid TLS certificate, a port that is already in use, or an execution config that cannot be fetched at reload time.
+  - If the configuration file fails to load or validate, the router restarts with the previous configuration.
+
+  In production, roll out router configuration changes by redeploying the router instances. Execution config updates, from the CDN or `execution_config.file.watch`, do not restart the router and keep accepting connections. They close long-lived WebSocket and SSE subscriptions, so clients must reconnect. See [Config Hot Reload](/router/deployment/config-hot-reload).
+</Warning>

@@ -64,6 +64,74 @@ access_logs:
 ```
 
 
+## Filter access logs
+
+Set `access_logs.router.filter` to a boolean [template expression](/router/configuration/template-expressions). An entry is emitted when its filter returns `true` and its log level is enabled. An omitted or empty filter includes every entry. Use the string `"false"` to suppress all router access log entries except panic entries.
+
+Filtering only controls access log emission. Request execution, responses, tracing, metrics, and panic recovery continue normally. Panic entries bypass the filter and are always logged.
+
+```yaml
+access_logs:
+  enabled: true
+  router:
+    filter: >-
+      log.status >= 500
+      || request.error != nil
+      || log.latency > duration('1s')
+      || rand() < 0.4
+```
+
+This filter includes HTTP responses with status 500 or higher, requests with errors, requests slower than one second, and a random sample of 40% of the remaining requests. `rand()` is available in access log filters and returns a fresh number greater than or equal to zero and less than one for each call. Sampling is independent for each log entry. Use `request.trace.sampled` instead to follow the trace sampling decision.
+
+The environment variable is `ACCESS_LOGS_ROUTER_FILTER`.
+
+### Expression sources
+
+Filters use the same `request` and `response` objects as router log field expressions. Sources do not need to be added to `fields` to be used by a filter. These include request headers, authentication claims and scopes, operation details and variables, bodies, and cache results.
+
+Router filters run after the request completes, when the response and operation results are available. WebSocket logs retain the expression context of the HTTP upgrade, so HTTP operation details are unavailable there.
+
+Referencing bodies, operation variables, or operation SHA-256 hashes in a filter enables the same data collection as referencing them in a field expression. This work occurs even if the filter ultimately suppresses the entry.
+
+GraphQL errors can have HTTP status 200. Use `request.error != nil`, or a `graphql_error_codes` context field read through the `log` map, when filtering for errors instead of relying only on `log.status`.
+
+### Filter by output fields
+
+Filters additionally provide a `log` map containing the built-in and configured custom fields for the entry. Field names match the output keys, including snake case. For example:
+
+- `log.status`, `log.method`, `log.path`, `log.query`, `log.ip`, `log.user_agent`, and `log.latency`.
+- `log.config_version`, `log.log_type`, and any available `log.request_id`, `log.trace_id`, `log.feature_flag`, or `log.batched_request_operation_id`.
+- Custom keys from `request_header`, `context_field`, static defaults, and expressions. Their configured defaults and omission rules are applied before the filter runs.
+
+Fields attached to the logger itself, such as `hostname` and `pid`, are not part of the map. Logger-generated metadata such as the output timestamp, caller, and stack trace is not part of the map either. The `log` map is only available in filters, not in field expressions. It is only built when the filter references `log`.
+
+The map preserves value types. Durations such as `log.latency` are `time.Duration` values, so compare them with `duration('100ms')`. They are converted to seconds only when the log is serialized. IP anonymization and query-parameter exclusions are already applied to `log.ip` and `log.query`.
+
+Missing keys evaluate to `nil`. Optional fields are common: boolean context fields such as `request_error` are omitted when `false`. Compare optional booleans explicitly with `log.key == true` or provide a default with `(log.key ?? false)`. Do not use a missing key directly as a boolean, because the result depends on its position. With `!` or as the left operand of `&&` or `||`, it is an evaluation error and the entry is kept. Alone or as the last operand, it evaluates to `false` and the entry is dropped without a diagnostic. For keys containing punctuation, use bracket notation such as `log['tenant.id']`. If keys are repeated, the last field value is used.
+
+```yaml
+access_logs:
+  enabled: true
+  router:
+    fields:
+      - key: tenant
+        value_from:
+          request_header: X-Tenant
+        default: unknown
+      - key: error_codes
+        value_from:
+          context_field: graphql_error_codes
+    filter: >-
+      log.tenant == 'example'
+      || 'UNAUTHORIZED' in (log.error_codes ?? [])
+```
+
+### Validation and evaluation errors
+
+Filters are compiled when the router starts and on every router configuration reload. Invalid syntax, unknown typed context properties, and statically non-boolean results fail startup. A configuration reload stops the running router before the new configuration is built, so an invalid filter stops the router. Validate filter changes before rolling them out. A filter is only compiled when its access log is enabled.
+
+If evaluation fails because of request data, such as a non-numeric header passed to `int()`, the entry is preserved subject to the configured log level. A diagnostic is logged at debug level, so it is only visible with `access_logs.level: debug`. Guard optional values or provide defaults to avoid repeated evaluation errors.
+
 ## Add stack traces
 
 You have the option of adding stack traces to all error logs. Note that by default even if this feature is disabled panics will contain stack traces.
@@ -445,6 +513,28 @@ access_logs:
 
 Currently the log output will go to the same place as the router access logs. In the future, we may enable configuration of the subgraph access logs to a different log sink. If you need that feature, please discuss it with us.
 
+#### Filter subgraph access logs
+
+Subgraph filtering works like [router access log filtering](#filter-access-logs), with the same expression syntax, `log` field access, sampling, defaults, and error behavior. Configure `access_logs.subgraphs.filter` or the `ACCESS_LOGS_SUBGRAPH_FILTER` environment variable. It operates independently of `access_logs.router.filter`.
+
+This example includes failed fetches, HTTP responses with status 500 or higher, fetches slower than 100 milliseconds, and a random sample of 40% of the remaining fetches:
+
+```yaml
+access_logs:
+  enabled: true
+  subgraphs:
+    enabled: true
+    filter: >-
+      subgraph.request.error != nil
+      || log.status >= 500
+      || subgraph.request.clientTrace.fetchDuration > duration('100ms')
+      || rand() < 0.4
+```
+
+The filter runs after each fetch completes and can use all [subgraph expression sources](#subgraph-access-log-expressions). `request` describes the incoming client request, while `subgraph` describes the current fetch. Use `subgraph.request.error` for fetch errors. The `log` map includes `log.subgraph_name`, `log.subgraph_id`, `log.url`, and configured custom fields. Referencing client timings or response bodies enables their collection without adding them to the output fields.
+
+Filters also run for response cache hits. Use `subgraph.response.cache.status == 'hit'` to select them. A cache hit without an outbound HTTP request has no `log.url`, `log.method`, `log.path`, `log.query`, `log.ip`, or `log.user_agent`; guard these optional fields with a nil check. The completed router response is not available during a subgraph fetch.
+
 #### **Log Format**
 
 Subgraph Access Logs are structured in JSON format. An example log entry is shown below:
@@ -589,9 +679,7 @@ Here’s an explanation of each field’s meaning:
 
 #### **Limitations**
 
-Access log expressions are not supported in the subgraph at this moment.
-
-Additionally, currently the following context fields available in router access logs are **not available** in Subgraph Access Logs:
+The following context fields available in router access logs are **not available** in Subgraph Access Logs:
 
 * `graphql_error_codes`
 

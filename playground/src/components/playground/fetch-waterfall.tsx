@@ -10,6 +10,7 @@ import { ARTFetchNode } from './types';
 import { ViewHeaders } from './view-headers';
 import { ViewInput } from './view-input';
 import { ViewLoadStats } from './view-load-stats';
+import { ResponseCacheBadge, ViewResponseCache } from './view-response-cache';
 import { ViewOutput } from './view-output';
 
 const bigintE3 = BigInt(1e3);
@@ -196,6 +197,9 @@ export const FetchWaterfall = ({
                           <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
                             {fetch.dataSourceName}
                             {statusCode ? <Badge>{statusCode}</Badge> : <div />}
+                            {fetch.responseCache && fetch.responseCache.status !== 'not_cacheable' && (
+                              <ResponseCacheBadge status={fetch.responseCache.status} />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -270,6 +274,10 @@ export const FetchWaterfall = ({
             <Attribute name="single flight used" value={`${fetch.singleFlightUsed}`} />
             <Attribute name="single flight shared response" value={`${fetch.singleFlightSharedResponse}`} />
             <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
+            {fetch.responseCache && <Attribute name="response cache" value={fetch.responseCache.status} />}
+            {fetch.responseCache?.storeDecision && (
+              <Attribute name="store decision" value={fetch.responseCache.storeDecision} />
+            )}
 
             <div className="col-span-full mt-4 flex w-full">
               <div className="z-50 flex w-max items-center gap-8">
@@ -282,6 +290,9 @@ export const FetchWaterfall = ({
                 {(fetch.input || fetch.rawInput) && <ViewInput input={fetch.input} rawInput={fetch.rawInput} />}
                 {fetch.output && <ViewOutput output={fetch.output} />}
                 {fetch.loadStats && <ViewLoadStats loadStats={fetch.loadStats} />}
+                {fetch.responseCache && fetch.responseCache.status !== 'not_cacheable' && (
+                  <ViewResponseCache responseCache={fetch.responseCache} kind={fetch.type} />
+                )}
               </div>
             </div>
           </div>

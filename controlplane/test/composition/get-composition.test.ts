@@ -113,7 +113,7 @@ describe('getCompositions tests', () => {
         namespace,
         startDate: formatISO(subDays(new Date(), 1)),
         endDate: formatISO(addMinutes(new Date(), 1)),
-        excludeFeatureFlagCompositions: true,
+        excludeFeatureFlagCompositions: false,
       });
 
       /**
@@ -123,17 +123,24 @@ describe('getCompositions tests', () => {
        */
       expect(compositionsResp.response?.code).toBe(EnumStatusCode.OK);
       expect(compositionsResp.count).toBe(3);
+      console.log(compositionsResp);
       expect(compositionsResp.compositions).toEqual([
+        // The composition triggered by the feature subgraph update
         expect.objectContaining({
+          isFeatureFlagComposition: true,
           hasMultipleChangedSubgraphs: false,
           triggeredBySubgraphName: 'products-standalone-feature',
         }),
+        // The composition when the feature flag was created
         expect.objectContaining({
-          hasMultipleChangedSubgraphs: false,
-          triggeredBySubgraphName: 'products-standalone-feature',
+          isFeatureFlagComposition: true,
+          hasMultipleChangedSubgraphs: true,
         }),
         // Base composition should have been triggered by multiple subgraphs: `users` and `products-standalone`
-        expect.objectContaining({ hasMultipleChangedSubgraphs: true }),
+        expect.objectContaining({
+          isFeatureFlagComposition: false,
+          hasMultipleChangedSubgraphs: true,
+        }),
       ]);
     },
   );

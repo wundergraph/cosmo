@@ -324,12 +324,14 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": null,
       "IgnoreQueryParamsList": [
         "variables"
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": false,
       "Fields": null
     }

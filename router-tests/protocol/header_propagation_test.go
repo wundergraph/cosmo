@@ -920,6 +920,40 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("malformed subgraph cache control is no-store and does not wedge the operation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
+				Subgraphs:          cacheOptions("max-age=abc, public", "max-age=60"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Twice: a panicking first request used to leave the dedup entry behind.
+				for range 2 {
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					res, err := xEnv.MakeGraphQLRequestWithContext(ctx, testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cancel()
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, res.Response.StatusCode)
+					require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				}
+			})
+		})
+
+		t.Run("malformed policy default is ignored", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=abc"},
+				Subgraphs:          cacheOptions("max-age=120", "max-age=60"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=60", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		// Test case for max-age: shortest max-age wins
 		t.Run("shortest max-age wins", func(t *testing.T) {
 			t.Parallel()

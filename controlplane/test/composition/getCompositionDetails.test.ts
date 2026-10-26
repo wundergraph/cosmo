@@ -332,7 +332,7 @@ describe('getCompositionDetails', () => {
     'that the correct feature subgraphs are marked as added and updated in composition details when split config loading is disabled',
     getDebugTestOptions(isDebugMode),
     async (testContext) => {
-      const { client, server } = await SetupTest({ dbname });
+      const { client, server } = await SetupTest({ dbname, enableSplitConfigLoadingByDefault: false });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();

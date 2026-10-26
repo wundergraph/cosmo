@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -66,6 +67,14 @@ export function recomposeGraph(
       authContext,
     });
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { compositionErrors, compositionWarnings, deploymentErrors } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
@@ -78,10 +87,12 @@ export function recomposeGraph(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph: graph });
     });
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     sendOrgWebhooks({
       authContext,

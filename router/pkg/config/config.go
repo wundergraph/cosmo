@@ -1437,11 +1437,13 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
+	Filter                string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_ROUTER_FILTER"`
 	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
 	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
+	Filter  string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FILTER"`
 	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
 	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }

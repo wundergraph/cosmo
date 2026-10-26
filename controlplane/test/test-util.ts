@@ -12,7 +12,7 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
-import { expect } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest';
 import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
@@ -86,6 +86,7 @@ export const SetupTest = async function ({
   createScimKey,
   setupBilling,
   organizationId,
+  enableSplitConfigLoadingByDefault = true,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -96,6 +97,7 @@ export const SetupTest = async function ({
     plan: 'developer@1' | 'launch@1' | 'scale@1' | 'enterprise';
   };
   organizationId?: UUID;
+  enableSplitConfigLoadingByDefault?: boolean;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -234,6 +236,7 @@ export const SetupTest = async function ({
     createScimKey,
     kcRootGroupId,
     await getKeycloakGroups(realm, keycloakClient, kcRootGroupId),
+    enableSplitConfigLoadingByDefault,
   );
 
   if (enableMultiUsers) {
@@ -258,6 +261,7 @@ export const SetupTest = async function ({
         createScimKey,
         rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, rootGroupId),
+        enableSplitConfigLoadingByDefault,
       );
     }
 
@@ -282,6 +286,7 @@ export const SetupTest = async function ({
         undefined,
         rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, rootGroupId),
+        enableSplitConfigLoadingByDefault,
       );
     }
 
@@ -306,6 +311,7 @@ export const SetupTest = async function ({
         undefined,
         rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, rootGroupId),
+        enableSplitConfigLoadingByDefault,
       );
     }
 
@@ -330,6 +336,7 @@ export const SetupTest = async function ({
         createScimKey,
         rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, rootGroupId),
+        enableSplitConfigLoadingByDefault,
       );
     }
   }
@@ -1088,6 +1095,12 @@ export async function seedBilling(queryConnection: postgres.Sql) {
       })
       .execute();
   }
+}
+
+export async function readBlob(blobStorage: BlobStorage, key: string): Promise<string> {
+  const blob = await blobStorage.getObject({ key });
+  const result = await blob.stream.getReader().read();
+  return result.value.toString();
 }
 
 export const resolvabilitySDLOne = `

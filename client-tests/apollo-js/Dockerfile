@@ -1,5 +1,5 @@
 # Use Node.js LTS version
-FROM node:20-alpine
+FROM node:22.23.4-alpine
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -17,4 +17,4 @@ RUN pnpm install
 COPY . .
 
 # Run tests
-CMD ["pnpm", "test"] 
+CMD ["pnpm", "test"]
