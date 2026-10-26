@@ -1,7 +1,6 @@
-import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { cn } from '@/lib/utils';
 import { Fragment } from 'react';
-import { useStarBannerDisabled } from '@/hooks/use-star-banner-disabled';
+import { useBannerCount } from '@/hooks/use-banner-count';
 
 export interface TitleLayoutProps {
   title: React.ReactNode;
@@ -22,20 +21,14 @@ export const TitleLayout = ({
   children,
   breadcrumbs,
 }: TitleLayoutProps) => {
-  const org = useCurrentOrganization();
-
-  const [isStarBannerDisabled] = useStarBannerDisabled();
-  const isOrganizationDeactivated = !!org?.deactivation;
-  const isOrganizationPendingDeletion = !!org?.deletion;
-  const isOrganizationBillDue = !!org?.billing?.isBillDue;
-  const isBannerDisplayed =
-    isOrganizationDeactivated || isOrganizationPendingDeletion || isOrganizationBillDue || !isStarBannerDisabled;
+  const bannerCount = useBannerCount();
 
   return (
     <div
       className={cn('flex flex-col', {
-        'h-[calc(100vh_-_140px)] lg:h-[calc(100vh_-_36px)]': isBannerDisplayed,
-        'h-[calc(100vh_-_108px)] lg:h-screen': !isBannerDisplayed,
+        'h-[calc(100vh_-_172px)] lg:h-[calc(100vh_-_72px)]': bannerCount === 2,
+        'h-[calc(100vh_-_140px)] lg:h-[calc(100vh_-_36px)]': bannerCount === 1,
+        'h-[calc(100vh_-_108px)] lg:h-screen': bannerCount === 0,
       })}
     >
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
