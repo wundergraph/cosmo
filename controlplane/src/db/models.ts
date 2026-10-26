@@ -66,10 +66,13 @@ export type AuditableType =
   | 'operation_ignore_all_override'
   | 'proposal'
   | 'namespace_sso_mapping'
-  | 'organization_login_methods';
+  | 'organization_login_methods'
+  | 'graph_collection'
+  | 'graph_collection_operation';
 
 export type AuditTargetType =
   | 'organization'
+  | 'graph_collection'
   | 'subgraph'
   | 'federated_graph'
   | 'monograph'
@@ -82,6 +85,8 @@ export type AuditActorType = 'user' | 'system' | 'api_key';
 export type AuditLogAction =
   | 'created'
   | 'updated'
+  | 'renamed'
+  | 'shared'
   | 'deleted'
   | 'queued_deletion'
   | 'restore'
@@ -157,6 +162,14 @@ export type AuditLogFullAction =
   | 'subscription.deleted'
   | 'subscription.canceled'
   | 'subscription.upgraded'
+  | 'graph_collection.created'
+  | 'graph_collection.renamed'
+  | 'graph_collection.deleted'
+  | 'graph_collection.shared'
+  | 'graph_collection_operation.created'
+  | 'graph_collection_operation.updated'
+  | 'graph_collection_operation.renamed'
+  | 'graph_collection_operation.deleted'
   | 'organization_invitation.created'
   | 'organization_invitation.deleted'
   | 'organization.joined'

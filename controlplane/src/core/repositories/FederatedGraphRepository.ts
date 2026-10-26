@@ -559,6 +559,40 @@ export class FederatedGraphRepository {
     ]);
   }
 
+  public async rbacTargetById(federatedGraphId: string): Promise<
+    | {
+        targetId: string;
+        namespaceId: string;
+        creatorUserId?: string;
+        name: string;
+        namespaceName: string;
+      }
+    | undefined
+  > {
+    const [row] = await this.db
+      .select({
+        targetId: targets.id,
+        namespaceId: targets.namespaceId,
+        createdBy: targets.createdBy,
+        name: targets.name,
+        namespaceName: schema.namespaces.name,
+      })
+      .from(schema.federatedGraphs)
+      .innerJoin(targets, eq(targets.id, schema.federatedGraphs.targetId))
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, targets.namespaceId))
+      .where(and(eq(schema.federatedGraphs.id, federatedGraphId), eq(targets.organizationId, this.organizationId)));
+
+    return row
+      ? {
+          targetId: row.targetId,
+          namespaceId: row.namespaceId,
+          creatorUserId: row.createdBy ?? undefined,
+          name: row.name,
+          namespaceName: row.namespaceName,
+        }
+      : undefined;
+  }
+
   public async byId(id: string): Promise<FederatedGraphDTO | undefined> {
     const res = await this.db.query.federatedGraphs.findFirst({
       where: eq(schema.federatedGraphs.id, id),

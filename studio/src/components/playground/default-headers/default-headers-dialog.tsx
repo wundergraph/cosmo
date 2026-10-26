@@ -25,7 +25,7 @@ import {
   updatePlaygroundDefaultHeaders,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useContext, useState } from 'react';
-import { LuLayoutList } from 'react-icons/lu';
+import { PiBracketsCurlyBold } from 'react-icons/pi';
 import { HeaderEditor } from './header-editor';
 
 /** Renders the stored headers as the JSON document the editor holds. */
@@ -138,7 +138,7 @@ export const DefaultHeadersDialog = () => {
             type="button"
             className="flex w-full items-center gap-x-3 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <LuLayoutList className="h-4 w-4 flex-shrink-0" />
+            <PiBracketsCurlyBold className="h-4 w-4 flex-shrink-0" />
             <span className="flex-1">Set up your default headers</span>
             <ChevronRightIcon className="h-4 w-4 flex-shrink-0" />
           </button>
