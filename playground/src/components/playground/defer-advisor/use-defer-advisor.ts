@@ -12,7 +12,7 @@ type Options = {
 export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const [latencies, setLatencies] = useState<Record<string, number> | null>(null);
   const [probeFailures, setProbeFailures] = useState<Record<string, string>>({});
-  const [variablesError, setVariablesError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
@@ -23,7 +23,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     runId.current += 1;
     setLatencies(null);
     setProbeFailures({});
-    setVariablesError(null);
+    setError(null);
     setRunning(false);
     return () => {
       runId.current += 1;
@@ -38,7 +38,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     setRunning(true);
     try {
       const request = getRequest();
-      setVariablesError(request.variablesError ?? null);
+      setError(request.variablesError ?? null);
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
@@ -54,9 +54,10 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
       }
       setLatencies(measured);
       setProbeFailures(failures);
-    } catch {
+    } catch (err) {
       if (id === runId.current) {
         setLatencies(null);
+        setError(err instanceof Error ? err.message : 'Analysis failed');
       }
     } finally {
       if (id === runId.current) {
@@ -68,8 +69,8 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const clear = () => {
     setLatencies(null);
     setProbeFailures({});
-    setVariablesError(null);
+    setError(null);
   };
 
-  return { latencies, probeFailures, variablesError, running, analyse, clear };
+  return { latencies, probeFailures, error, running, analyse, clear };
 };
