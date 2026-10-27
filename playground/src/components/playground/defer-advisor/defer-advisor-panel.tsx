@@ -1,16 +1,30 @@
 import { useMemo } from 'react';
 import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
+import { slowFieldNames } from './analysis';
 import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
 import { getOperation, parseQuery } from './operation';
+import { DeferAdvisorFailures } from './defer-advisor-failures';
+import { DeferAdvisorLatencies } from './defer-advisor-latencies';
+import type { ProbeRequest } from './probe';
 import { summarizeRootFields } from './root-field-summary';
+import { useDeferAdvisor } from './use-defer-advisor';
 
 type Props = {
   query: string;
+  routingUrl: string;
+  // Called when Analyse is clicked, so the probe uses the current headers and variables.
+  getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
 };
 
-export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
+export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange }: Props) => {
+  const { latencies, probeFailures, variablesError, running, analyse, clear } = useDeferAdvisor({
+    query,
+    routingUrl,
+    getRequest,
+  });
+
   const parsed = useMemo(() => parseQuery(query), [query]);
   const doc = parsed?.doc;
   const operation = useMemo(() => getOperation(doc), [doc]);
@@ -20,6 +34,8 @@ export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
   const hasSyntaxError = doc === undefined && !query.split('\n').every((line) => /^\s*(#.*)?$/.test(line));
 
   const rows = useMemo(() => summarizeRootFields(parsed), [parsed]);
+
+  const slowNames = useMemo(() => (latencies ? slowFieldNames(latencies) : new Set<string>()), [latencies]);
 
   const deferField = (name: string) => {
     if (!parsed) {
@@ -39,10 +55,24 @@ export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
   const emptyNotice =
     query.trim() === '' ? 'Write a query to see its root fields here.' : 'No root fields to show here.';
 
+  const canAnalyse = !running && rows.length > 0;
+
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">
       <div className="flex items-center gap-2">
-        <span className="font-semibold">Defer</span>
+        <span className="font-semibold">Defer Advisor</span>
+        {!isMutationOrSubscription && !hasSyntaxError && (
+          <div className="ml-auto flex gap-2">
+            <Button onClick={analyse} disabled={!canAnalyse}>
+              {running ? 'Analysing...' : latencies ? 'Re-analyse' : 'Analyse operation'}
+            </Button>
+            {latencies && (
+              <Button variant="secondary" onClick={clear} disabled={running}>
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {isMutationOrSubscription ? (
@@ -58,39 +88,25 @@ export const DeferAdvisorPanel = ({ query, onQueryChange }: Props) => {
               This document has {operationCount} operations. Defer only reads the first one.
             </p>
           )}
+
+          {variablesError && <p className="text-destructive text-sm">{variablesError}</p>}
+
+          {latencies && <DeferAdvisorFailures failures={probeFailures} />}
+
           {rows.length === 0 ? (
             <p className="text-muted-foreground text-sm">{emptyNotice}</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {rows.map(({ name, undeferred, deferredLabels, eagerLabels }) => (
-                <div key={name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded border p-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-mono text-sm">{name}</div>
-                    {deferredLabels.map((label) => (
-                      <div key={label} className="truncate font-mono text-xs">{`@defer(label: "${label}")`}</div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    {undeferred > 0 && (
-                      <Button size="sm" className="whitespace-nowrap" onClick={() => deferField(name)}>
-                        Defer
-                      </Button>
-                    )}
-                    {eagerLabels.map((label) => (
-                      <Button
-                        key={label}
-                        variant="secondary"
-                        size="sm"
-                        className="whitespace-nowrap"
-                        onClick={() => revertLabel(label)}
-                      >
-                        {eagerLabels.length > 1 ? `Eager ${label}` : 'Eager'}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DeferAdvisorLatencies
+              rows={rows}
+              latencies={latencies}
+              slowNames={slowNames}
+              onDefer={deferField}
+              onRevert={revertLabel}
+            />
+          )}
+
+          {latencies && Object.keys(latencies).length > 0 && rows.length > 0 && slowNames.size === 0 && (
+            <p className="text-muted-foreground text-sm">No slow fields found. Nothing to defer.</p>
           )}
         </>
       )}
