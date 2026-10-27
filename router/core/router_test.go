@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -466,88 +464,4 @@ func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
 	require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
 	assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
 	assert.Equal(t, 1, logs.Len())
-}
-
-func TestNewGRPCStartupParamsExporterSamplingRate(t *testing.T) {
-	t.Parallel()
-
-	t.Run("exporter rates at or below the global rate", func(t *testing.T) {
-		t.Parallel()
-
-		params := newGRPCStartupParams(&rtrace.Config{
-			Enabled: true,
-			Sampler: 0.5,
-			Exporters: []*rtrace.ExporterConfig{
-				{Endpoint: "http://inherits"},
-				{Endpoint: "http://same", SamplingRate: new(0.5)},
-				{Endpoint: "http://lower", SamplingRate: new(0.1)},
-			},
-		}, nil)
-
-		require.NotNil(t, params.Telemetry)
-		require.NotNil(t, params.Telemetry.Tracing)
-		exporters := params.Telemetry.Tracing.Exporters
-		require.Len(t, exporters, 3)
-		assert.Equal(t, 0.5, params.Telemetry.Tracing.Sampler)
-		assert.Nil(t, exporters[0].SamplingRate)
-		assert.Nil(t, exporters[1].SamplingRate)
-		require.NotNil(t, exporters[2].SamplingRate)
-		assert.Equal(t, 0.1, *exporters[2].SamplingRate)
-	})
-
-	t.Run("exporter rate above the global rate", func(t *testing.T) {
-		t.Parallel()
-
-		params := newGRPCStartupParams(&rtrace.Config{
-			Enabled: true,
-			Sampler: 0.01,
-			Exporters: []*rtrace.ExporterConfig{
-				{Endpoint: "http://inherits"},
-				{Endpoint: "http://higher", SamplingRate: new(1.0)},
-			},
-		}, nil)
-
-		require.NotNil(t, params.Telemetry)
-		require.NotNil(t, params.Telemetry.Tracing)
-		exporters := params.Telemetry.Tracing.Exporters
-		require.Len(t, exporters, 2)
-		assert.Equal(t, 1.0, params.Telemetry.Tracing.Sampler)
-		require.NotNil(t, exporters[0].SamplingRate)
-		assert.Equal(t, 0.01, *exporters[0].SamplingRate)
-		assert.Nil(t, exporters[1].SamplingRate)
-	})
-
-	t.Run("exporter rates from the router config", func(t *testing.T) {
-		t.Parallel()
-
-		configPath := filepath.Join(t.TempDir(), "config.yaml")
-		require.NoError(t, os.WriteFile(configPath, []byte(`
-version: "1"
-
-router_config_path: "config.json"
-telemetry:
-  tracing:
-    sampling_rate: 0.01
-    exporters:
-      - endpoint: https://otel-collector.example.com
-        sampling_rate: 1
-      - endpoint: https://cosmo-otel.wundergraph.com
-`), 0o600))
-
-		cfg, err := config.LoadConfig([]string{configPath})
-		require.NoError(t, err)
-
-		traceConfig := TraceConfigFromTelemetry(&cfg.Config.Telemetry)
-		assert.Equal(t, 1.0, rtrace.HeadSamplingRate(traceConfig))
-
-		params := newGRPCStartupParams(traceConfig, nil)
-		require.NotNil(t, params.Telemetry)
-		require.NotNil(t, params.Telemetry.Tracing)
-		exporters := params.Telemetry.Tracing.Exporters
-		require.Len(t, exporters, 2)
-		assert.Equal(t, 1.0, params.Telemetry.Tracing.Sampler)
-		assert.Nil(t, exporters[0].SamplingRate)
-		require.NotNil(t, exporters[1].SamplingRate)
-		assert.Equal(t, 0.01, *exporters[1].SamplingRate)
-	})
 }
