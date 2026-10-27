@@ -1,24 +1,23 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { ProbeRequest, probeRootFields } from './probe';
-import type { PillController } from './pills-controller';
+import { DeferController, initialAnalysis } from './defer-controller';
 
 type Options = {
   query: string;
   routingUrl: string;
-  controller: PillController | null;
+  controller: DeferController | null;
   // Called when Analyse is clicked, so the probe uses the current headers and variables.
   getRequest: () => ProbeRequest;
 };
 
-// Everything the panel needs to run and show a probe. The latencies live on the controller,
-// so they survive the panel unmounting; the rest is local to the panel.
+// The analysis state lives on the controller, so it survives the panel unmounting. This hook only runs probes.
 export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: Options) => {
   const subscribe = useCallback((listener: () => void) => controller?.subscribe(listener) ?? (() => {}), [controller]);
-  const latencies = useSyncExternalStore(subscribe, () => controller?.latencies ?? null);
+  const { latencies, probeFailures, error, running } = useSyncExternalStore(
+    subscribe,
+    () => controller?.snapshot ?? initialAnalysis,
+  );
 
-  const [probeFailures, setProbeFailures] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
 
@@ -27,7 +26,7 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
   const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
     runId.current += 1;
-    setRunning(false);
+    controller?.setRunning(false);
     return () => {
       runId.current += 1;
       probeAbort.current?.abort();
@@ -41,10 +40,9 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
     const id = ++runId.current;
     const abort = new AbortController();
     probeAbort.current = abort;
-    setRunning(true);
     try {
       const request = getRequest();
-      setError(request.variablesError ?? null);
+      controller.startAnalysis(request.variablesError ?? null);
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
@@ -58,25 +56,19 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
           failures[name] = result.reason;
         }
       }
-      controller.setLatencies(measured);
-      setProbeFailures(failures);
+      controller.finishAnalysis(measured, failures);
     } catch (err) {
       if (id === runId.current) {
-        controller.setLatencies(null);
-        setError(err instanceof Error ? err.message : 'Analysis failed');
+        controller.failAnalysis(err instanceof Error ? err.message : 'Analysis failed');
       }
     } finally {
       if (id === runId.current) {
-        setRunning(false);
+        controller.setRunning(false);
       }
     }
   };
 
-  const clear = () => {
-    controller?.setLatencies(null);
-    setProbeFailures({});
-    setError(null);
-  };
+  const clear = () => controller?.clear();
 
   return { latencies, probeFailures, error, running, analyse, clear };
 };

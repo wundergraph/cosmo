@@ -7,7 +7,7 @@ import { getOperation, parseQuery } from './operation';
 import { DeferAdvisorFailures } from './defer-advisor-failures';
 import { DeferAdvisorLatencies } from './defer-advisor-latencies';
 import type { ProbeRequest } from './probe';
-import type { PillController } from './pills-controller';
+import type { DeferController } from './defer-controller';
 import { summarizeRootFields } from './root-field-summary';
 import { useDeferAdvisor } from './use-defer-advisor';
 
@@ -17,7 +17,7 @@ type Props = {
   // Called when Analyse is clicked, so the probe uses the current headers and variables.
   getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
-  controller: PillController | null;
+  controller: DeferController | null;
 };
 
 export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, controller }: Props) => {
@@ -58,14 +58,14 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
   const emptyNotice =
     query.trim() === '' ? 'Write a query to see its root fields here.' : 'No root fields to show here.';
 
-  const canAnalyse = !!controller && !running && rows.length > 0;
+  const canAnalyse = !running && rows.length > 0;
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">
-      <div className="flex items-center gap-2">
-        <span className="font-semibold">Defer Advisor</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold whitespace-nowrap">Defer Advisor</span>
         {!isMutationOrSubscription && !hasSyntaxError && (
-          <div className="ml-auto flex gap-2">
+          <div className="flex flex-wrap gap-2 whitespace-nowrap">
             <Button onClick={analyse} disabled={!canAnalyse}>
               {running ? 'Analysing...' : latencies ? 'Re-analyse' : 'Analyse operation'}
             </Button>

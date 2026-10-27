@@ -2,7 +2,7 @@ import { useEditorContext } from '@graphiql/react';
 import { useEffect, useState } from 'react';
 import { DeferAdvisorPanel } from './defer-advisor-panel';
 import { parseVariables } from './probe';
-import { getPillController } from './pills-controller';
+import { getDeferController } from './defer-controller';
 
 export const DeferAdvisorPluginContent = ({
   routingUrl,
@@ -13,8 +13,8 @@ export const DeferAdvisorPluginContent = ({
 }) => {
   const { queryEditor, variableEditor } = useEditorContext({ nonNull: true });
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
-  // The controller is cached per editor and outlives this component, so pills survive a tab switch.
-  const controller = queryEditor ? getPillController(queryEditor) : null;
+  // The controller is cached per editor and outlives this component, so latencies survive a tab switch.
+  const controller = queryEditor ? getDeferController(queryEditor) : null;
 
   useEffect(() => {
     if (!queryEditor) {
