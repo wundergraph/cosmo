@@ -25,6 +25,9 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
   // still in flight would otherwise write its numbers after the panel is gone.
   const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
+    controller?.invalidateIfUrlChanged(routingUrl);
+  }, [controller, routingUrl]);
+  useEffect(() => {
     runId.current += 1;
     controller?.setRunning(false);
     return () => {
@@ -42,7 +45,7 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
     probeAbort.current = abort;
     try {
       const request = getRequest();
-      controller.startAnalysis(request.variablesError ?? null);
+      controller.startAnalysis(routingUrl, request.variablesError ?? null);
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;

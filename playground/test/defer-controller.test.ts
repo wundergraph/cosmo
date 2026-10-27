@@ -47,4 +47,28 @@ describe('DeferController', () => {
 
     expect(controller.snapshot.latencies).toEqual({ a: 10 });
   });
+
+  test('a manual edit clears a stale error even when there are no latencies', () => {
+    const { editor, asQueryEditor } = fakeEditor();
+    const controller = new DeferController(asQueryEditor);
+    controller.failAnalysis('boom');
+
+    const [, listener] = editor.on.mock.calls[0];
+    listener();
+
+    expect(controller.snapshot.error).toBeNull();
+  });
+
+  test('a routing URL change clears the analysis, the same URL keeps it', () => {
+    const { asQueryEditor } = fakeEditor();
+    const controller = new DeferController(asQueryEditor);
+    controller.startAnalysis('http://a', null);
+    controller.finishAnalysis({ a: 10 }, {});
+
+    controller.invalidateIfUrlChanged('http://a');
+    expect(controller.snapshot.latencies).toEqual({ a: 10 });
+
+    controller.invalidateIfUrlChanged('http://b');
+    expect(controller.snapshot.latencies).toBeNull();
+  });
 });

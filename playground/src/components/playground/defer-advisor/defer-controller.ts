@@ -20,6 +20,7 @@ export class DeferController {
   private clearPills: (() => void) | undefined;
   private frame: number | undefined;
   private writing = false;
+  private analysedUrl: string | undefined;
   private readonly listeners = new Set<() => void>();
 
   private readonly onChange = () => this.onEditorChange();
@@ -49,8 +50,18 @@ export class DeferController {
     }
   }
 
-  startAnalysis(variablesError: string | null) {
+  startAnalysis(routingUrl: string, variablesError: string | null) {
+    this.analysedUrl = routingUrl;
     this.update({ running: true, error: variablesError });
+  }
+
+  // Numbers measured against another endpoint would recommend the wrong defers, so they go.
+  invalidateIfUrlChanged(routingUrl: string) {
+    if (this.analysedUrl === undefined || this.analysedUrl === routingUrl) {
+      return;
+    }
+    this.analysedUrl = undefined;
+    this.clear();
   }
 
   finishAnalysis(latencies: Record<string, number>, probeFailures: Record<string, string>) {
@@ -83,11 +94,13 @@ export class DeferController {
   // A manual edit makes the numbers stale. A write from the panel (defer or revert) keeps them,
   // because the root fields are the same and only the directives moved.
   private onEditorChange() {
-    if (this.state.latencies === null) {
+    if (!this.writing) {
+      if (this.state.latencies !== null || this.state.error !== null) {
+        this.clear();
+      }
       return;
     }
-    if (!this.writing) {
-      this.clear();
+    if (this.state.latencies === null) {
       return;
     }
     this.scheduleRender();
