@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net/http"
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -111,7 +113,8 @@ type headerPropagationWriter struct {
 	didApplyRouterRespHeaders bool
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
-	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
+	cacheTagHeader            *cacheTagHeader
+	didSetCacheTagHeader      bool
 	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
 	responseCacheStatusFor    *requestContext
 	didSetResponseCacheStatus bool
@@ -150,10 +153,13 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
 	}
 	// Not on a response carrying subgraph errors: it was just marked no-store.
-	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
-		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
-			h.writer.Header().Set(h.cacheTagHeader.Name, value)
+	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors && !h.didSetCacheTagHeader {
+		h.didSetCacheTagHeader = true
+		var log *zap.Logger
+		if h.reqCtx != nil {
+			log = h.reqCtx.logger
 		}
+		h.cacheTagHeader.set(h.resolveCtx.Context(), h.writer.Header(), h.resolveCtx.ResponseCacheSurrogateKeys(), log)
 	}
 	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
 		h.didSetResponseCacheStatus = true
@@ -864,10 +870,6 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 }
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
-	propagation.m.Lock()
-	previousCacheControl := propagation.previousCacheControl
-	propagation.m.Unlock()
-
 	ctx := res.Request.Context()
 	tracer := rtrace.TracerFromContext(ctx)
 	commonAttributes := []attribute.KeyValue{
@@ -888,14 +890,15 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		return
 	}
 
-	reqCacheHeader := res.Request.Header.Get(cacheControlKey)
-	resCacheHeader := res.Header.Get(cacheControlKey)
+	reqCacheHeader := cacheControlValue(res.Request.Header)
+	resCacheHeader := cacheControlValue(res.Header)
 	expiresHeader, _ := http.ParseTime(res.Header.Get(expiresKey))
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
-		// There is no default/previous value to set, and since no cache control headers have been set, exit early
+	if resCacheHeader == "" && len(res.Header.Values(expiresKey)) == 0 && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
+		// Nothing from the subgraph and no default to stand in: the fetch
+		// restricts nothing, so it can't withdraw what others granted either.
 		return
 	}
 
@@ -904,16 +907,10 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	if err != nil {
 		reqDir = &cachedirective.RequestCacheDirectives{MaxAge: -1, MaxStale: -1, MinFresh: -1}
 	}
-	resDir, err := cachedirective.ParseResponseCacheControl(resCacheHeader)
-	if err != nil {
-		// Unreadable freshness is not cacheable.
-		resDir = &cachedirective.ResponseCacheDirectives{
-			NoStore:              true,
-			MaxAge:               -1,
-			SMaxAge:              -1,
-			StaleIfError:         -1,
-			StaleWhileRevalidate: -1,
-		}
+	resDir, err := parseFreshness(res.Header)
+	if err != nil || res.StatusCode >= http.StatusBadRequest {
+		// Unreadable freshness, or a failed fetch, is not cacheable.
+		resDir = noStoreDirectives()
 	}
 	obj := &cachedirective.Object{
 		RespDirectives:         resDir,
@@ -939,6 +936,15 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
 		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			markStale(defaultResponseCache)
+			// The default stands in for a missing header. Against a fetch's own
+			// header it only caps the lifetime, so it can't withdraw public.
+			if resCacheHeader != "" {
+				defaultResponseCache.Public = resDir.Public
+			} else {
+				// Nothing of its own: the fetch is as public as the default.
+				resDir.Public = defaultResponseCache.Public
+			}
 			defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
 		}
 	}
@@ -1015,13 +1021,92 @@ func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter
 	return nil
 }
 
+// cacheControlValue joins every Cache-Control line into one list.
+func cacheControlValue(header http.Header) string {
+	return strings.Join(header.Values(cacheControlKey), ", ")
+}
+
+// parseFreshness parses a response's Cache-Control, Expires standing in for a
+// missing lifetime, net of its Age: lifetimes shortened by the time spent
+// upstream, and stale on arrival as no-cache.
+func parseFreshness(header http.Header) (*cachedirective.ResponseCacheDirectives, error) {
+	dir, err := cachedirective.ParseResponseCacheControl(cacheControlValue(header))
+	if err != nil {
+		return nil, err
+	}
+	expiresAsMaxAge(dir, header)
+	subtractAge(dir, header.Get("Age"))
+	markStale(dir)
+	return dir, nil
+}
+
+// expiresAsMaxAge gives a response without max-age its Expires, less Date, as a
+// max-age; s-maxage only overrides it for shared caches. An invalid Expires is
+// already expired (RFC 9111 §5.3).
+func expiresAsMaxAge(dir *cachedirective.ResponseCacheDirectives, header http.Header) {
+	if dir.MaxAge != -1 || len(header.Values(expiresKey)) == 0 {
+		return
+	}
+	expires, err := http.ParseTime(header.Get(expiresKey))
+	if err != nil {
+		dir.MaxAge = 0
+		return
+	}
+	date, err := http.ParseTime(header.Get("Date"))
+	if err != nil {
+		date = time.Now()
+	}
+	dir.MaxAge = cachedirective.DeltaSeconds(max(expires.Sub(date)/time.Second, 0))
+}
+
+// subtractAge takes time spent in upstream caches off the freshness lifetimes.
+// An invalid Age is ignored; of a list, the first member counts.
+func subtractAge(dir *cachedirective.ResponseCacheDirectives, age string) {
+	first, _, _ := strings.Cut(age, ",")
+	// Out of range parses as the largest value: older than any lifetime.
+	seconds, err := strconv.ParseUint(strings.TrimSpace(first), 10, 31)
+	if (err != nil && !errors.Is(err, strconv.ErrRange)) || seconds == 0 {
+		return
+	}
+	for _, lifetime := range []*cachedirective.DeltaSeconds{&dir.MaxAge, &dir.SMaxAge} {
+		if *lifetime > 0 {
+			*lifetime = max(*lifetime-cachedirective.DeltaSeconds(seconds), 0)
+		}
+	}
+}
+
+// markStale makes a zero lifetime a bare no-cache: stale on arrival, and the
+// merge would drop a zero as unset.
+func markStale(dir *cachedirective.ResponseCacheDirectives) {
+	if dir.MaxAge == 0 || dir.SMaxAge == 0 {
+		dir.NoCachePresent, dir.NoCache = true, nil
+	}
+}
+
+func noStoreDirectives() *cachedirective.ResponseCacheDirectives {
+	return &cachedirective.ResponseCacheDirectives{
+		NoStore:              true,
+		MaxAge:               -1,
+		SMaxAge:              -1,
+		StaleIfError:         -1,
+		StaleWhileRevalidate: -1,
+	}
+}
+
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
 	result := cachedirective.Object{
 		RespDirectives: &cachedirective.ResponseCacheDirectives{},
 	}
 	var minMaxAge cachedirective.DeltaSeconds = -1
+	// Shared caches read s-maxage, else max-age.
+	var minShared cachedirective.DeltaSeconds = -1
+	hasSMaxAge := false
 	isPrivate := false
-	isPublic := false
+	// public grants sharing, so it holds only when every policy grants it.
+	isPublic := len(policies) > 0
+	// Field-specific no-cache only bars the named headers; bare no-cache bars all.
+	noCacheFields := cachedirective.FieldNames{}
+	mustRevalidate, proxyRevalidate := false, false
 
 	for _, policy := range policies {
 		// Check no-store and no-cache first
@@ -1030,19 +1115,36 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 			return &result, "no-store"
 		}
 		if policy.RespDirectives.NoCachePresent {
-			result.RespDirectives.NoCachePresent = true
+			if len(policy.RespDirectives.NoCache) == 0 {
+				result.RespDirectives.NoCachePresent = true
+			}
+			for field := range policy.RespDirectives.NoCache {
+				noCacheFields[field] = true
+			}
 		}
+		mustRevalidate = mustRevalidate || policy.RespDirectives.MustRevalidate
+		proxyRevalidate = proxyRevalidate || policy.RespDirectives.ProxyRevalidate
 
 		// Determine the shortest max-age if available
 		if policy.RespDirectives.MaxAge > 0 && (minMaxAge == -1 || policy.RespDirectives.MaxAge < minMaxAge) {
 			minMaxAge = policy.RespDirectives.MaxAge
 		}
 
+		shared := policy.RespDirectives.MaxAge
+		if policy.RespDirectives.SMaxAge > 0 {
+			shared = policy.RespDirectives.SMaxAge
+			hasSMaxAge = true
+		}
+		if shared > 0 && (minShared == -1 || shared < minShared) {
+			minShared = shared
+		}
+
 		// Track if any policy specifies "private"
 		if policy.RespDirectives.PrivatePresent {
 			isPrivate = true
-		} else if policy.RespDirectives.Public {
-			isPublic = true
+		}
+		if !policy.RespDirectives.Public {
+			isPublic = false
 		}
 
 		// Handle expires header comparisons
@@ -1055,15 +1157,39 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	if minMaxAge > 0 {
 		result.RespDirectives.MaxAge = minMaxAge
 	}
+	if hasSMaxAge {
+		result.RespDirectives.SMaxAge = minShared
+	}
 	result.RespDirectives.PrivatePresent = isPrivate
 	result.RespDirectives.Public = isPublic && !isPrivate
+	bareNoCache := result.RespDirectives.NoCachePresent
+	if !bareNoCache && len(noCacheFields) > 0 {
+		// Kept on the result so the next merge still sees them.
+		result.RespDirectives.NoCachePresent, result.RespDirectives.NoCache = true, noCacheFields
+	}
+	result.RespDirectives.MustRevalidate = mustRevalidate
+	result.RespDirectives.ProxyRevalidate = proxyRevalidate
 
 	// Format the final Cache-Control header
 	headerParts := []string{}
-	if result.RespDirectives.NoCachePresent {
+	if bareNoCache {
 		headerParts = append(headerParts, noCache)
-	} else if minMaxAge > 0 {
-		headerParts = append(headerParts, fmt.Sprintf("max-age=%d", minMaxAge))
+	} else {
+		if minMaxAge > 0 {
+			headerParts = append(headerParts, fmt.Sprintf("max-age=%d", minMaxAge))
+		}
+		if hasSMaxAge {
+			headerParts = append(headerParts, fmt.Sprintf("s-maxage=%d", minShared))
+		}
+		if len(noCacheFields) > 0 {
+			headerParts = append(headerParts, fmt.Sprintf("%s=%q", noCache, strings.Join(slices.Sorted(maps.Keys(noCacheFields)), ", ")))
+		}
+		if mustRevalidate {
+			headerParts = append(headerParts, "must-revalidate")
+		}
+		if proxyRevalidate {
+			headerParts = append(headerParts, "proxy-revalidate")
+		}
 	}
 	if isPrivate {
 		headerParts = append(headerParts, "private")

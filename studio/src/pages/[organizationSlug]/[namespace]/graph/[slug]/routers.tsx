@@ -379,7 +379,7 @@ const RoutersPage: NextPageWithLayout = () => {
     state: {
       pagination: {
         pageIndex: 0,
-        pageSize: 100,
+        pageSize: 400,
       },
     },
   });

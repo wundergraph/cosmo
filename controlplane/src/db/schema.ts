@@ -1368,6 +1368,7 @@ export const organizationBilling = pgTable(
       }),
     plan: text('plan'),
     stripeCustomerId: text('stripe_customer_id'),
+    isBillDue: boolean('is_bill_due').notNull().default(false),
   },
   (t) => {
     return {
@@ -2604,6 +2605,82 @@ export const playgroundDefaultHeaders = pgTable(
       uniquePersonalLevel: uniqueIndex('pdh_unique_personal_level')
         .on(t.federatedGraphId, t.userId)
         .where(sql`${t.userId} IS NOT NULL`),
+    };
+  },
+);
+
+export const graphCollections = pgTable(
+  'graph_collections', // gc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    // NULL = team-scoped (visible to everyone with access to the graph).
+    // Set  = private to that user. Scope is derived from this column rather
+    // than stored separately, so the two can never disagree.
+    //
+    // Cascades on purpose: a deleted user's private collections go with them,
+    // while team collections (NULL here) are unaffected.
+    privateToUserId: uuid('private_to_user_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+    // Attribution only. Never affects visibility, and survives promotion to
+    // team scope so the UI can still say who published a collection.
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      federatedGraphIdIndex: index('gc_federated_graph_id_idx').on(t.federatedGraphId),
+      // Serves the list query, which filters by graph and then by
+      // "mine or team-scoped".
+      federatedGraphPrivateToIndex: index('gc_federated_graph_private_to_idx').on(
+        t.federatedGraphId,
+        t.privateToUserId,
+      ),
+    };
+  },
+);
+
+export const graphCollectionOperations = pgTable(
+  'graph_collection_operations', // gco
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collectionId: uuid('collection_id')
+      .notNull()
+      .references(() => graphCollections.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    query: text('query').notNull(),
+    variables: text('variables'),
+    // Server-computed on every write, and used as the save precondition that
+    // detects concurrent edits. Never accepted from a client.
+    contentHash: text('content_hash').notNull(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      collectionIdIndex: index('gco_collection_id_idx').on(t.collectionId),
     };
   },
 );
