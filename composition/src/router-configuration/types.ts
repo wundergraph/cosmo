@@ -6,6 +6,7 @@ import {
   type FieldName,
   type TypeName,
 } from '../types/types';
+import { type CURSOR_UPPER, type OFF_UPPER } from '../utils/string-constants';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
@@ -19,7 +20,7 @@ export type StreamConfiguration = {
   streamName: string;
 };
 
-export type DeliveryGuaranteeMode = 'OFF' | 'CURSOR';
+export type DeliveryGuaranteeMode = typeof OFF_UPPER | typeof CURSOR_UPPER;
 
 export type DeliveryGuarantees = {
   mode: DeliveryGuaranteeMode;
