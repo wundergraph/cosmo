@@ -388,25 +388,41 @@ const ToggleClientValidation = () => {
 
 const ToggleCursors = () => {
   const { cursorsEnabled, setCursorsEnabled } = useContext(TraceContext);
+  const {
+    tabsState: { activeTabIndex, tabs },
+  } = useContext(PlaygroundContext);
+
+  const activeTab = tabs[activeTabIndex];
+  const hasSubscription = subscriptionRootFieldName(activeTab?.query, activeTab?.operationName) !== null;
+
+  let tooltip = cursorsEnabled ? 'Subscription cursors enabled' : 'Subscription cursors disabled';
+  if (!hasSubscription) {
+    tooltip = 'Subscription cursors only apply to Cosmo Streams subscriptions which have enabled it';
+  }
 
   return (
     <Tooltip delayDuration={100}>
+      {/* A disabled button swallows pointer events, so the tooltip hangs off a wrapper. */}
       <TooltipTrigger asChild>
-        <Button
-          onClick={() => setCursorsEnabled(!cursorsEnabled)}
-          variant="ghost"
-          size="icon"
-          className="graphiql-toolbar-button"
-        >
-          <TbBookmarks
-            className={cn('graphiql-toolbar-icon', {
-              'text-success': cursorsEnabled,
-            })}
-          />
-        </Button>
+        <span>
+          <Button
+            onClick={() => setCursorsEnabled(!cursorsEnabled)}
+            disabled={!hasSubscription}
+            variant="ghost"
+            size="icon"
+            className="graphiql-toolbar-button"
+          >
+            <TbBookmarks
+              className={cn('graphiql-toolbar-icon', {
+                'text-success': cursorsEnabled && hasSubscription,
+                'opacity-40': !hasSubscription,
+              })}
+            />
+          </Button>
+        </span>
       </TooltipTrigger>
       <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
-        {cursorsEnabled ? 'Subscription cursors enabled' : 'Subscription cursors disabled'}
+        {tooltip}
       </TooltipContent>
     </Tooltip>
   );
