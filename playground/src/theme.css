@@ -275,11 +275,11 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 }
 
 .defer-pill[data-slow='true'] {
-  background: rgba(239, 68, 68, 0.18);
-  color: rgb(220, 38, 38);
+  background: hsl(var(--destructive) / 0.18);
+  color: hsl(var(--destructive));
 }
 
 .defer-pill[data-slow='false'] {
-  background: rgba(34, 197, 94, 0.18);
-  color: rgb(22, 163, 74);
+  background: hsl(var(--success) / 0.18);
+  color: hsl(var(--success));
 }

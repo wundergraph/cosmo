@@ -61,10 +61,6 @@ export const useDeferAdvisor = ({ query, routingUrl, controller, getRequest }: O
       if (id === runId.current) {
         controller.failAnalysis(err instanceof Error ? err.message : 'Analysis failed');
       }
-    } finally {
-      if (id === runId.current) {
-        controller.setRunning(false);
-      }
     }
   };
 

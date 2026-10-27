@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { QueryEditor } from '../src/components/playground/defer-advisor/defer-pills-render';
 import { DeferController } from '../src/components/playground/defer-advisor/defer-controller';
 
@@ -13,13 +13,8 @@ const fakeEditor = () => {
 };
 
 describe('DeferController', () => {
-  test('dispose removes the change listener it registered', () => {
-    const { editor, asQueryEditor } = fakeEditor();
-    const controller = new DeferController(asQueryEditor);
-    controller.dispose();
-
-    const [, listener] = editor.on.mock.calls[0];
-    expect(editor.off).toHaveBeenCalledWith('change', listener);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   test('a manual edit clears the latencies and failures', () => {

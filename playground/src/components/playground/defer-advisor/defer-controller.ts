@@ -3,7 +3,7 @@ import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
 
-export type AnalysisState = {
+type AnalysisState = {
   latencies: Record<string, number> | null;
   probeFailures: Record<string, string>;
   error: string | null;
@@ -26,17 +26,6 @@ export class DeferController {
 
   constructor(private readonly editor: QueryEditor) {
     editor.on('change', this.onChange);
-  }
-
-  // The controller is cached per editor, so whoever owns it must dispose it, or the listener outlives its UI.
-  dispose() {
-    this.editor.off('change', this.onChange);
-    if (this.frame !== undefined) {
-      cancelAnimationFrame(this.frame);
-      this.frame = undefined;
-    }
-    this.clearPills?.();
-    this.clearPills = undefined;
   }
 
   // Replaced on every change, so useSyncExternalStore sees a new reference exactly when something moved.
@@ -73,6 +62,9 @@ export class DeferController {
   }
 
   setRunning(running: boolean) {
+    if (this.state.running === running) {
+      return;
+    }
     this.update({ running });
   }
 
@@ -116,9 +108,12 @@ export class DeferController {
     this.clearPills = undefined;
 
     const { latencies } = this.state;
+    if (!latencies) {
+      return;
+    }
     const text = this.editor.getValue();
     const operation = getOperation(parseQuery(text)?.doc)?.operation;
-    if (!latencies || (operation !== undefined && operation !== 'query')) {
+    if (operation !== undefined && operation !== 'query') {
       return;
     }
 
