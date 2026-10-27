@@ -9,9 +9,9 @@ export const DeferAdvisorPluginContent = ({
   getHeaders,
 }: {
   routingUrl: string;
-  getHeaders: () => Record<string, string>;
+  getHeaders: (rawHeaders: string) => Record<string, string>;
 }) => {
-  const { queryEditor, variableEditor } = useEditorContext({ nonNull: true });
+  const { queryEditor, variableEditor, headerEditor } = useEditorContext({ nonNull: true });
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
   // The controller is cached per editor and outlives this component, so latencies survive a tab switch.
   const controller = queryEditor ? getDeferController(queryEditor) : null;
@@ -32,7 +32,10 @@ export const DeferAdvisorPluginContent = ({
     <DeferAdvisorPanel
       query={query}
       routingUrl={routingUrl}
-      getRequest={() => ({ headers: getHeaders(), ...parseVariables(variableEditor?.getValue() ?? '') })}
+      getRequest={() => ({
+        headers: getHeaders(headerEditor?.getValue() ?? ''),
+        ...parseVariables(variableEditor?.getValue() ?? ''),
+      })}
       controller={controller}
       onQueryChange={(next) => controller?.writeQuery(next)}
     />

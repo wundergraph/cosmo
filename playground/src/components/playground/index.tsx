@@ -12,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -636,11 +636,7 @@ export const Playground = (input: {
 
   const [result, setResult] = useState<OperationResult>(initialResult);
 
-  // Memoised: GraphiQL needs stable plugin objects, so headers live in a ref rather than in the
-  // plugin's dependencies. The ref is written where the headers are edited, not in an effect.
-  const latestHeaders = useRef(headers);
   const onEditHeaders = useCallback((value: string) => {
-    latestHeaders.current = value;
     setHeaders(value);
   }, []);
 
@@ -649,8 +645,8 @@ export const Playground = (input: {
     () => [
       explorerPlugin({ showAttribution: false }),
       // A blank header pane means no headers, not a JSON parse error.
-      createDeferAdvisorPlugin(url, () =>
-        prepareHeaders(JSON.parse(latestHeaders.current.trim() || '{}'), input.scripts),
+      createDeferAdvisorPlugin(url, (rawHeaders) =>
+        prepareHeaders(JSON.parse(rawHeaders.trim() || '{}'), input.scripts),
       ),
     ],
     [url, input.scripts],
