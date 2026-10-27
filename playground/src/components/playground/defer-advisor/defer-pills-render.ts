@@ -4,26 +4,33 @@ import { FieldPill } from './defer-pills';
 
 export type QueryEditor = NonNullable<EditorContextType['queryEditor']>;
 
+// Parsed once on first use, then cloned. Created lazily so importing this module never touches the DOM.
+let pillTemplate: HTMLTemplateElement | undefined;
+
+const cloneTemplate = (): HTMLElement => {
+  pillTemplate ??= Object.assign(document.createElement('template'), {
+    innerHTML: '<span class="defer-pill"></span>',
+  });
+  const element = pillTemplate.content.firstElementChild?.cloneNode(true);
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Defer pill template did not produce an element');
+  }
+  return element;
+};
+
+const createPillElement = (pill: FieldPill): HTMLElement => {
+  const widget = cloneTemplate();
+  widget.textContent = `${pill.latencyMs}ms`;
+  widget.title = `${pill.fieldName}: ${pill.latencyMs}ms average over ${PROBE_RUNS} runs`;
+  widget.dataset.slow = String(pill.slow);
+  return widget;
+};
+
 export const renderPills = (editor: QueryEditor, pills: FieldPill[]): (() => void) => {
   const doc = editor.getDoc();
-  const markers = pills.map((pill) => {
-    const widget = document.createElement('span');
-    widget.textContent = `${pill.latencyMs}ms`;
-    widget.title = `${pill.fieldName}: ${pill.latencyMs}ms average over ${PROBE_RUNS} runs`;
-    widget.style.cssText = [
-      'margin-left: 6px',
-      'padding: 0 6px',
-      'border-radius: 9999px',
-      'font-size: 11px',
-      'line-height: 16px',
-      'white-space: nowrap',
-      pill.slow
-        ? 'background: rgba(239, 68, 68, 0.18); color: rgb(220, 38, 38)'
-        : 'background: rgba(34, 197, 94, 0.18); color: rgb(22, 163, 74)',
-    ].join(';');
-
-    return editor.setBookmark(doc.posFromIndex(pill.offset), { widget, insertLeft: false });
-  });
+  const markers = pills.map((pill) =>
+    editor.setBookmark(doc.posFromIndex(pill.offset), { widget: createPillElement(pill), insertLeft: false }),
+  );
 
   return () => markers.forEach((marker) => marker.clear());
 };
