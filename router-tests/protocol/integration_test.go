@@ -2004,6 +2004,16 @@ router_config_path: "%s"
 override_routing_url:
   subgraphs:
     employees: "%s"
+# Unlike testenv, a router built from configuration sets the global OpenTelemetry propagator and
+# tracer provider when tracing is enabled, which would leak into the other tests of this package.
+telemetry:
+  tracing:
+    enabled: false
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: false
 headers:
   subgraphs:
     employees:
