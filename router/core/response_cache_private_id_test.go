@@ -94,6 +94,6 @@ func TestTTLToCacheControl(t *testing.T) {
 
 	require.Equal(t, "public, max-age=30", ttlToCacheControl(30*time.Second, false))
 	require.Equal(t, "private, max-age=30", ttlToCacheControl(30*time.Second, true))
-	require.Equal(t, "no-cache", ttlToCacheControl(0, false))
+	require.Equal(t, "public, no-cache", ttlToCacheControl(0, false))
 	require.Equal(t, "private, no-cache", ttlToCacheControl(0, true))
 }
