@@ -1,2 +1,8 @@
 #!/usr/bin/env sh
 pnpm exec lint-staged
+
+# Rebuild the router's playground bundle when necessary (ignoring test and docs changes)
+if git diff --cached --name-only -- playground | grep -v -e '^playground/test/' -e '\.md$' -q; then
+  pnpm --filter @wundergraph/playground run build:router && \
+  git add router/internal/graphiql/graphiql.html
+fi
