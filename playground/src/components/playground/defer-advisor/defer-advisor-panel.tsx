@@ -21,7 +21,7 @@ type Props = {
 };
 
 export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, controller }: Props) => {
-  const { latencies, probeFailures, variablesError, running, analyse, clear } = useDeferAdvisor({
+  const { latencies, probeFailures, error, running, analyse, clear } = useDeferAdvisor({
     query,
     routingUrl,
     controller,
@@ -92,7 +92,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
             </p>
           )}
 
-          {variablesError && <p className="text-destructive text-sm">{variablesError}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           {latencies && <DeferAdvisorFailures failures={probeFailures} />}
 

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.260.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.259.0...controlplane@0.260.0) (2026-10-27)
+
+### Features
+
+* add bill-due flag and unpaid balance banner for organizations ([#3423](https://github.com/wundergraph/cosmo/issues/3423)) ([d8e111a](https://github.com/wundergraph/cosmo/commit/d8e111a126262c67c7aa43e6329b47380dd067f0)) (@JivusAyrus)
+
 ## [0.259.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.258.0...controlplane@0.259.0) (2026-10-27)
 
 ### Features

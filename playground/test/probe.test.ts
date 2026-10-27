@@ -52,6 +52,30 @@ describe('probe documents with named fragments', () => {
   });
 });
 
+describe('probe response keys', () => {
+  test('occurrences that share a response key are probed in one document', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { a: user { id } a: user { name } }'),
+    );
+    expect(sent).toHaveLength(PROBE_RUNS);
+    expect(sent[0]?.query).toBe('{ a: user { id } a: user { name } }');
+  });
+
+  test('a shared response key keeps its named fragment and variable', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields(
+        'http://router',
+        'query($id: ID!) { a: user(id: $id) { ...F } a: user(id: $id) { id } } fragment F on User { name }',
+        { headers: {}, variables: { id: '1' } },
+      ),
+    );
+    expect(sent[0]?.query).toBe(
+      'query($id: ID!) { a: user(id: $id) { ...F } a: user(id: $id) { id } } fragment F on User { name }',
+    );
+    expect(sent[0]?.variables).toEqual({ id: '1' });
+  });
+});
+
 describe('probe variables', () => {
   test('sends the definition and value of a variable the field uses', async () => {
     const sent = await captureRequests(() =>
