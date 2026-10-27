@@ -2,6 +2,7 @@ import { useEditorContext } from '@graphiql/react';
 import { useEffect, useState } from 'react';
 import { DeferAdvisorPanel } from './defer-advisor-panel';
 import { parseVariables } from './probe';
+import { getPillController } from './pills-controller';
 
 export const DeferAdvisorPluginContent = ({
   routingUrl,
@@ -12,6 +13,8 @@ export const DeferAdvisorPluginContent = ({
 }) => {
   const { queryEditor, variableEditor } = useEditorContext({ nonNull: true });
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
+  // The controller is cached per editor and outlives this component, so pills survive a tab switch.
+  const controller = queryEditor ? getPillController(queryEditor) : null;
 
   useEffect(() => {
     if (!queryEditor) {
@@ -30,7 +33,8 @@ export const DeferAdvisorPluginContent = ({
       query={query}
       routingUrl={routingUrl}
       getRequest={() => ({ headers: getHeaders(), ...parseVariables(variableEditor?.getValue() ?? '') })}
-      onQueryChange={(next) => queryEditor?.setValue(next)}
+      controller={controller}
+      onQueryChange={(next) => controller?.writeQuery(next)}
     />
   );
 };

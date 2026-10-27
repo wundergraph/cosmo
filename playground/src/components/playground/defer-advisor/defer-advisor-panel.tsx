@@ -7,6 +7,7 @@ import { getOperation, parseQuery } from './operation';
 import { DeferAdvisorFailures } from './defer-advisor-failures';
 import { DeferAdvisorLatencies } from './defer-advisor-latencies';
 import type { ProbeRequest } from './probe';
+import type { PillController } from './pills-controller';
 import { summarizeRootFields } from './root-field-summary';
 import { useDeferAdvisor } from './use-defer-advisor';
 
@@ -16,12 +17,14 @@ type Props = {
   // Called when Analyse is clicked, so the probe uses the current headers and variables.
   getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
+  controller: PillController | null;
 };
 
-export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange }: Props) => {
+export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, controller }: Props) => {
   const { latencies, probeFailures, variablesError, running, analyse, clear } = useDeferAdvisor({
     query,
     routingUrl,
+    controller,
     getRequest,
   });
 
@@ -55,7 +58,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
   const emptyNotice =
     query.trim() === '' ? 'Write a query to see its root fields here.' : 'No root fields to show here.';
 
-  const canAnalyse = !running && rows.length > 0;
+  const canAnalyse = !!controller && !running && rows.length > 0;
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">
