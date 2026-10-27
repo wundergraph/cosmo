@@ -476,7 +476,7 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 		{
 			name: "a full hit with no life left is no-cache",
 			hit:  true,
-			want: &want{maxAge: -1, noCache: true},
+			want: &want{maxAge: -1, public: true, noCache: true},
 		},
 		{
 			name:    "a partial hit caps a longer origin max-age",
