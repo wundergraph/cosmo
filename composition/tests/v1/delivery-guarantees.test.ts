@@ -8,7 +8,6 @@ import {
   invalidArgumentValueErrorMessage,
   invalidDeliveryGuaranteeModeDefinitionErrorMessage,
   invalidDeliveryGuaranteesDefinitionErrorMessage,
-  invalidDeliveryGuaranteesInputErrorMessage,
   invalidDeliveryGuaranteesInputFieldsErrorMessage,
   invalidDirectiveError,
   invalidEventDirectiveError,
@@ -148,8 +147,8 @@ describe('deliveryGuarantees tests', () => {
 
   test('that an error is returned if deliveryGuarantees is not an object', () => {
     const { errors } = normalizeSubgraphFailure(dgKafkaNotObject, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(errors).toHaveLength(2);
-    expect(errors[1]).toStrictEqual(
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(EDFS_KAFKA_SUBSCRIBE, 'Subscription.entitySubscription', FIRST_ORDINAL, [
         invalidArgumentValueErrorMessage(
           'CURSOR',
@@ -157,11 +156,6 @@ describe('deliveryGuarantees tests', () => {
           'deliveryGuarantees',
           'edfs__DeliveryGuarantees',
         ),
-      ]),
-    );
-    expect(errors[0]).toStrictEqual(
-      invalidEventDirectiveError(EDFS_KAFKA_SUBSCRIBE, 'Subscription.entitySubscription', [
-        invalidDeliveryGuaranteesInputErrorMessage,
       ]),
     );
   });

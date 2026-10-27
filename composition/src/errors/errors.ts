@@ -1330,7 +1330,7 @@ export const invalidEdfsPublishResultObjectErrorMessage =
   ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
 
-export const invalidDeliveryGuaranteesInputErrorMessage =
+const invalidDeliveryGuaranteesInputErrorMessage =
   `The "deliveryGuarantees" argument must be a valid input object with the following form:\n` +
   `  input edfs__DeliveryGuarantees {\n    mode: edfs__DeliveryGuaranteeMode! = OFF\n  }\n` +
   `  enum edfs__DeliveryGuaranteeMode {\n    OFF\n    CURSOR\n  }`;
