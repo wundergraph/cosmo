@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.364.0](https://github.com/wundergraph/cosmo/compare/router@0.363.0...router@0.364.0) (2026-10-27)
+
+### Features
+
+* add operation collections to the studio playground ([#3358](https://github.com/wundergraph/cosmo/issues/3358)) ([f146c7a](https://github.com/wundergraph/cosmo/commit/f146c7ac1eb5bdb47da094a8621d4548ed4b3002)) (@JivusAyrus)
+* **router:** cache_tag_header tiers and on_overflow ([#3389](https://github.com/wundergraph/cosmo/issues/3389)) ([8737bcb](https://github.com/wundergraph/cosmo/commit/8737bcbaf736e748c74043537f4d8c4ece8cb847)) (@SkArchon)
+* **router:** use goroutine WebSocket handling by default ([#3416](https://github.com/wundergraph/cosmo/issues/3416)) ([f388465](https://github.com/wundergraph/cosmo/commit/f38846587d0b48d5afd63aa0596043272d93479c)) (@fiam)
+
+### Bug Fixes
+
+* **router:** use SUBSCRIBE for literal redis channels ([#3370](https://github.com/wundergraph/cosmo/issues/3370)) ([098d291](https://github.com/wundergraph/cosmo/commit/098d291b876ac92505fbc316d2619440d5a190d0)) (@gcsabbagh)
+
 ## [0.363.0](https://github.com/wundergraph/cosmo/compare/router@0.362.0...router@0.363.0) (2026-10-23)
 
 ### Features
