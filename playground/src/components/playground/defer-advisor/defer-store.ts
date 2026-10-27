@@ -1,4 +1,3 @@
-import { slowFieldNames } from './analysis';
 import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
@@ -148,9 +147,8 @@ export class DeferStore {
       return;
     }
 
-    const slowNames = slowFieldNames(latencies);
     try {
-      this.clearPills = renderPills(editor, computeFieldPills(text, latencies, slowNames));
+      this.clearPills = renderPills(editor, computeFieldPills(text, latencies));
     } catch {}
   }
 }
