@@ -3,6 +3,7 @@ package in_memory
 import (
 	"context"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -129,21 +130,22 @@ func TestInMemoryCache(t *testing.T) {
 
 			c := newTestCache(t)
 
-			surrogateKeys := []string{"subgraph-accounts", "user-42"}
+			want := []enginecache.SurrogateKey{enginecache.SubgraphSurrogateKey("accounts"), enginecache.DeclaredSurrogateKey("user-42")}
+			surrogateKeys := slices.Clone(want)
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
 			require.NoError(t, err)
-			surrogateKeys[0] = "changed-after-write"
+			surrogateKeys[0] = enginecache.DeclaredSurrogateKey("changed-after-write")
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, results["a"].SurrogateKeys)
+			require.Equal(t, want, results["a"].SurrogateKeys)
 
-			results["a"].SurrogateKeys[0] = "changed-after-read"
+			results["a"].SurrogateKeys[0] = enginecache.DeclaredSurrogateKey("changed-after-read")
 			again, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].SurrogateKeys)
+			require.Equal(t, want, again["a"].SurrogateKeys)
 		})
 
 		t.Run("a vary record comes back as a record and is not shared", func(t *testing.T) {

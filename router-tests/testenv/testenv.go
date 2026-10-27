@@ -1389,7 +1389,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:                     true,
+		EnableNetPoll:                     false,
 		EnableSingleFlight:                true,
 		EnableInboundRequestDeduplication: false,
 		EnableRequestTracing:              true,
