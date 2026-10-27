@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { ProbeRequest, probeRootFields } from './probe';
 
 type Options = {
@@ -8,12 +8,40 @@ type Options = {
   getRequest: () => ProbeRequest;
 };
 
+type State = {
+  latencies: Record<string, number> | null;
+  probeFailures: Record<string, string>;
+  error: string | null;
+  running: boolean;
+};
+
+type Action =
+  | { type: 'started'; variablesError: string | null }
+  | { type: 'succeeded'; latencies: Record<string, number>; probeFailures: Record<string, string> }
+  | { type: 'failed'; message: string }
+  | { type: 'cleared' }
+  | { type: 'reset' };
+
+const initialState: State = { latencies: null, probeFailures: {}, error: null, running: false };
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case 'started':
+      return { ...state, running: true, error: action.variablesError };
+    case 'succeeded':
+      return { ...state, latencies: action.latencies, probeFailures: action.probeFailures, running: false };
+    case 'failed':
+      return { ...state, latencies: null, error: action.message, running: false };
+    case 'cleared':
+      return { ...state, latencies: null, probeFailures: {}, error: null };
+    case 'reset':
+      return initialState;
+  }
+};
+
 // Everything the panel needs to run and show a probe.
 export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
-  const [latencies, setLatencies] = useState<Record<string, number> | null>(null);
-  const [probeFailures, setProbeFailures] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+  const [{ latencies, probeFailures, error, running }, dispatch] = useReducer(reducer, initialState);
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
 
@@ -21,10 +49,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
     runId.current += 1;
-    setLatencies(null);
-    setProbeFailures({});
-    setError(null);
-    setRunning(false);
+    dispatch({ type: 'reset' });
     return () => {
       runId.current += 1;
       probeAbort.current?.abort();
@@ -35,10 +60,9 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     const id = ++runId.current;
     const abort = new AbortController();
     probeAbort.current = abort;
-    setRunning(true);
     try {
       const request = getRequest();
-      setError(request.variablesError ?? null);
+      dispatch({ type: 'started', variablesError: request.variablesError ?? null });
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
@@ -52,25 +76,15 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
           failures[name] = result.reason;
         }
       }
-      setLatencies(measured);
-      setProbeFailures(failures);
+      dispatch({ type: 'succeeded', latencies: measured, probeFailures: failures });
     } catch (err) {
       if (id === runId.current) {
-        setLatencies(null);
-        setError(err instanceof Error ? err.message : 'Analysis failed');
-      }
-    } finally {
-      if (id === runId.current) {
-        setRunning(false);
+        dispatch({ type: 'failed', message: err instanceof Error ? err.message : 'Analysis failed' });
       }
     }
   };
 
-  const clear = () => {
-    setLatencies(null);
-    setProbeFailures({});
-    setError(null);
-  };
+  const clear = () => dispatch({ type: 'cleared' });
 
   return { latencies, probeFailures, error, running, analyse, clear };
 };
