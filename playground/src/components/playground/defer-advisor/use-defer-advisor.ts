@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { ProbeRequest, probeRootFields } from './probe';
 import { useDefer } from './defer-context';
 
@@ -11,8 +11,7 @@ type Options = {
 
 export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const store = useDefer();
-  const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store]);
-  const { latencies, probeFailures, error, running } = useSyncExternalStore(subscribe, () => store.snapshot);
+  const { latencies, probeFailures, error, running } = useSyncExternalStore(store.subscribe, () => store.snapshot);
 
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
@@ -22,15 +21,12 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
     store.invalidateIfUrlChanged(routingUrl);
-  }, [store, routingUrl]);
-  useEffect(() => {
-    runId.current += 1;
     store.setRunning(false);
     return () => {
       runId.current += 1;
       probeAbort.current?.abort();
     };
-  }, [query, routingUrl]);
+  }, [store, query, routingUrl]);
 
   const analyse = async () => {
     const id = ++runId.current;

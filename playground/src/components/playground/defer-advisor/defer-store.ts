@@ -10,7 +10,7 @@ type AnalysisState = {
   running: boolean;
 };
 
-export const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, error: null, running: false };
+const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, error: null, running: false };
 
 // Lives outside React so the editor's change listener and the pill markers can reach it directly.
 // The editor only exists while GraphiQL is mounted, so the pills component binds it in an effect.

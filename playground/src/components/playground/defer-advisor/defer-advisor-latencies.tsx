@@ -15,6 +15,7 @@ export const DeferAdvisorLatencies = ({ rows, latencies, slowNames, onDefer, onR
   <div className="flex flex-col gap-2">
     {rows.map(({ name, undeferred, deferredLabels, eagerLabels }) => {
       const latency = latencies?.[name];
+      const multipleEager = eagerLabels.length > 1;
       return (
         <div key={name} className="flex flex-col gap-2 rounded border p-3">
           <div className="flex min-h-6 items-center gap-2">
@@ -38,7 +39,7 @@ export const DeferAdvisorLatencies = ({ rows, latencies, slowNames, onDefer, onR
             )}
             {eagerLabels.map((label) => (
               <Button key={label} variant="secondary" size="sm" onClick={() => onRevert(label)}>
-                {eagerLabels.length > 1 ? `Remove Defer ${label}` : 'Remove Defer'}
+                {multipleEager ? `Remove Defer ${label}` : 'Remove Defer'}
               </Button>
             ))}
             {latency !== undefined && (
