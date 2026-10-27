@@ -2204,6 +2204,34 @@ Configuration for Cosmo Streams handlers. Learn more about [Custom Modules for C
 |                      | handlers.on_receive_events.max_concurrent_handlers | <Icon icon="square" /> | The maximum number of concurrent OnReceiveEvents handlers per trigger.                 | 100           |
 |                      | handlers.before_events_dispatch.handler_timeout       | <Icon icon="square" /> | The maximum time to wait for all BeforeEventsDispatch handlers to complete per event-batch. | 5s          |
 
+### Cosmo Streams delivery guarantees
+
+<Warning>
+  Cursors are an **experimental** feature and may change without notice.
+</Warning>
+
+Configuration for the delivery guarantees subscriptions can negotiate. Which subscription fields offer a guarantee is declared in the schema, see [Cursors](/router/cosmo-streams/cursors). Currently only Kafka subscriptions support cursors.
+
+```yaml config.yaml
+events:
+  delivery_guarantees:
+    cursor_resume:
+      identity_claim: sub
+      max_resume_window: 3h
+      keys:
+        - id: 1
+          secret: "${COSMO_CURSOR_KEY_1}"
+```
+
+| Environment Variable | YAML                                                | Required               | Description                                                                                                                                                                                                                                    | Default Value |
+| :------------------- | :-------------------------------------------------- | :--------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+|                      | delivery_guarantees.cursor_resume.identity_claim    | <Icon icon="square" /> | The claim of the authenticated request that cursors are bound to. A cursor can only be resumed by a client with the same authenticator, issuer, audience and identity claim value. An authenticated request without this claim can't use cursors. | sub           |
+|                      | delivery_guarantees.cursor_resume.max_resume_window | <Icon icon="square" /> | How long after it was issued a cursor can still be resumed. Older cursors are rejected. Specify as a duration string, e.g. `30m` or `6h`.                                                                                                      | 3h            |
+|                      | delivery_guarantees.cursor_resume.keys              | <Icon icon="square" /> | The keyring cursors are signed with. Required when a subscription field declares the cursor delivery guarantee. The Router signs with the key with the highest `id` that has not expired and verifies with all keys. Removing a key revokes every cursor signed with it. |               |
+|                      | delivery_guarantees.cursor_resume.keys[].id         | <Icon icon="square-check" iconType="solid" /> | Integer from 0 to 255, unique within the keyring.                                                                                                                                                                                              |               |
+|                      | delivery_guarantees.cursor_resume.keys[].secret     | <Icon icon="square-check" iconType="solid" /> | The secret the signing key is derived from, at least 32 characters. All Router instances must share the same secrets.                                                                                                                          |               |
+|                      | delivery_guarantees.cursor_resume.keys[].expires_at | <Icon icon="square" /> | RFC 3339 timestamp after which the key stops signing new cursors. It keeps verifying cursors for as long as it is configured.                                                                                                                  |               |
+
 ## Router Engine Configuration
 
 Configure the GraphQL Execution Engine of the Router.
