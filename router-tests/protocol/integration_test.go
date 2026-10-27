@@ -27,7 +27,9 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1969,5 +1971,109 @@ func TestNullParentSkippedFetch(t *testing.T) {
 			})
 			require.Equal(t, `{"data":{"employee":null}}`, res.Body)
 		})
+	})
+}
+
+// TestCorsExposeHeadersFromConfig builds the router from YAML and environment configuration
+// the way the supervisor does, so it covers the mapping of cors.expose_headers onto the router options,
+// which testenv bypasses by passing core.WithCors directly.
+func TestCorsExposeHeadersFromConfig(t *testing.T) {
+	executionConfigPath, err := filepath.Abs("../testenv/testdata/config.json")
+	require.NoError(t, err)
+
+	// The employees subgraph sends a non-standard response header the router can propagate to the client.
+	subgraph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Trace-Id", "trace-123")
+		_, _ = w.Write([]byte(`{"data":{"employees":[{"id":1}]}}`))
+	}))
+	t.Cleanup(subgraph.Close)
+
+	// request starts a router whose configuration routes the employees subgraph to the test server and
+	// propagates its X-Trace-Id response header, adds the given CORS configuration, and returns its
+	// response to a cross-origin request.
+	request := func(t *testing.T, cors string) *http.Response {
+		t.Helper()
+
+		listenAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+
+		yaml := fmt.Sprintf(`
+version: "1"
+listen_addr: "%s"
+router_config_path: "%s"
+override_routing_url:
+  subgraphs:
+    employees: "%s"
+headers:
+  subgraphs:
+    employees:
+      response:
+        - op: "propagate"
+          algorithm: "last_write"
+          named: "X-Trace-Id"
+%s`, listenAddr, executionConfigPath, subgraph.URL, cors)
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		result, err := config.LoadConfig([]string{path})
+		require.NoError(t, err)
+
+		router, err := core.DefaultRouterFactory(t.Context(), &core.RouterResources{
+			Config: &result.Config,
+			Logger: zap.NewNop(),
+		})
+		require.NoError(t, err)
+		require.NoError(t, router.Start(t.Context()))
+		t.Cleanup(func() { require.NoError(t, router.Shutdown(context.Background())) })
+
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, fmt.Sprintf("http://%s%s", listenAddr, result.Config.GraphQLPath),
+			strings.NewReader(`{"query":"{ employees { id } }"}`))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "http://example.org")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1}]}}`, string(body))
+		require.Equal(t, "*", res.Header.Get("Access-Control-Allow-Origin"))
+		require.Equal(t, "trace-123", res.Header.Get("X-Trace-Id"))
+		return res
+	}
+
+	t.Run("exposes the subgraph header configured in yaml", func(t *testing.T) {
+		res := request(t, `
+cors:
+  expose_headers:
+    - x-trace-id
+`)
+		require.Equal(t, "X-Trace-Id", res.Header.Get("Access-Control-Expose-Headers"))
+	})
+
+	t.Run("exposes the subgraph header configured in the environment", func(t *testing.T) {
+		t.Setenv("CORS_EXPOSE_HEADERS", "x-trace-id")
+
+		res := request(t, "")
+		require.Equal(t, "X-Trace-Id", res.Header.Get("Access-Control-Expose-Headers"))
+	})
+
+	t.Run("exposes the subgraph header with a wildcard to requests without credentials", func(t *testing.T) {
+		res := request(t, `
+cors:
+  expose_headers:
+    - "*"
+`)
+		// Browsers only treat * as a wildcard for requests without credentials.
+		require.Equal(t, "*", res.Header.Get("Access-Control-Expose-Headers"))
+		require.Equal(t, "trace-123", res.Header.Get("X-Trace-Id"))
+	})
+
+	t.Run("does not expose the subgraph header without configuration", func(t *testing.T) {
+		res := request(t, "")
+		require.Empty(t, res.Header.Get("Access-Control-Expose-Headers"))
 	})
 }
