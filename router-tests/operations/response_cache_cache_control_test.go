@@ -52,9 +52,9 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			require.Positive(t, secondMaxAge)
 			require.LessOrEqual(t, secondMaxAge, 60)
 
-			// Nothing else in this request says public: employees falls back to the
-			// default, which does not. So it can only have come from the cache hit.
-			require.Contains(t, cacheControl, "public")
+			// employees falls back to the default, which does not say public, so
+			// the response isn't public even though the cached mood entry is.
+			require.NotContains(t, cacheControl, "public")
 		})
 	})
 
