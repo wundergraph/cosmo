@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -443,4 +446,140 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	// The rest of the values are set to the defaults
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
+}
+
+func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
+	t.Parallel()
+
+	newTraceConfig := func() *rtrace.Config {
+		return &rtrace.Config{
+			Sampler: 1,
+			Exporters: []*rtrace.ExporterConfig{
+				{Endpoint: "https://otel-collector.example.com"},
+				{Endpoint: otelconfig.DefaultEndpoint()},
+			},
+		}
+	}
+
+	t.Run("lowers only the Cosmo Cloud exporter", func(t *testing.T) {
+		t.Parallel()
+
+		core, logs := observer.New(zap.WarnLevel)
+		traceConfig := newTraceConfig()
+		applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
+
+		assert.Equal(t, 1.0, traceConfig.Sampler)
+		assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
+		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
+		assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
+		assert.Equal(t, 1, logs.Len())
+	})
+
+	t.Run("keeps a Cosmo Cloud exporter rate within the limit", func(t *testing.T) {
+		t.Parallel()
+
+		core, logs := observer.New(zap.WarnLevel)
+		traceConfig := newTraceConfig()
+		traceConfig.Exporters[1].SamplingRate = new(0.05)
+		applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
+
+		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
+		assert.Equal(t, 0.05, *traceConfig.Exporters[1].SamplingRate)
+		assert.Zero(t, logs.Len())
+	})
+
+	t.Run("lowers a Cosmo Cloud exporter rate above the limit", func(t *testing.T) {
+		t.Parallel()
+
+		traceConfig := newTraceConfig()
+		traceConfig.Exporters[1].SamplingRate = new(0.5)
+		applyCosmoCloudTraceSamplingLimit(zap.NewNop(), traceConfig, 0.1)
+
+		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
+		assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
+	})
+}
+
+func TestNewGRPCStartupParamsExporterSamplingRate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("exporter rates at or below the global rate", func(t *testing.T) {
+		t.Parallel()
+
+		params := newGRPCStartupParams(&rtrace.Config{
+			Enabled: true,
+			Sampler: 0.5,
+			Exporters: []*rtrace.ExporterConfig{
+				{Endpoint: "http://inherits"},
+				{Endpoint: "http://same", SamplingRate: new(0.5)},
+				{Endpoint: "http://lower", SamplingRate: new(0.1)},
+			},
+		}, nil)
+
+		require.NotNil(t, params.Telemetry)
+		require.NotNil(t, params.Telemetry.Tracing)
+		exporters := params.Telemetry.Tracing.Exporters
+		require.Len(t, exporters, 3)
+		assert.Equal(t, 0.5, params.Telemetry.Tracing.Sampler)
+		assert.Nil(t, exporters[0].SamplingRate)
+		assert.Nil(t, exporters[1].SamplingRate)
+		require.NotNil(t, exporters[2].SamplingRate)
+		assert.Equal(t, 0.1, *exporters[2].SamplingRate)
+	})
+
+	t.Run("exporter rate above the global rate", func(t *testing.T) {
+		t.Parallel()
+
+		params := newGRPCStartupParams(&rtrace.Config{
+			Enabled: true,
+			Sampler: 0.01,
+			Exporters: []*rtrace.ExporterConfig{
+				{Endpoint: "http://inherits"},
+				{Endpoint: "http://higher", SamplingRate: new(1.0)},
+			},
+		}, nil)
+
+		require.NotNil(t, params.Telemetry)
+		require.NotNil(t, params.Telemetry.Tracing)
+		exporters := params.Telemetry.Tracing.Exporters
+		require.Len(t, exporters, 2)
+		assert.Equal(t, 1.0, params.Telemetry.Tracing.Sampler)
+		require.NotNil(t, exporters[0].SamplingRate)
+		assert.Equal(t, 0.01, *exporters[0].SamplingRate)
+		assert.Nil(t, exporters[1].SamplingRate)
+	})
+
+	t.Run("exporter rates from the router config", func(t *testing.T) {
+		t.Parallel()
+
+		configPath := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(configPath, []byte(`
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    sampling_rate: 0.01
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: 1
+      - endpoint: https://cosmo-otel.wundergraph.com
+`), 0o600))
+
+		cfg, err := config.LoadConfig([]string{configPath})
+		require.NoError(t, err)
+
+		traceConfig := TraceConfigFromTelemetry(&cfg.Config.Telemetry)
+		assert.Equal(t, 1.0, rtrace.HeadSamplingRate(traceConfig))
+
+		params := newGRPCStartupParams(traceConfig, nil)
+		require.NotNil(t, params.Telemetry)
+		require.NotNil(t, params.Telemetry.Tracing)
+		exporters := params.Telemetry.Tracing.Exporters
+		require.Len(t, exporters, 2)
+		assert.Equal(t, 1.0, params.Telemetry.Tracing.Sampler)
+		assert.Nil(t, exporters[0].SamplingRate)
+		require.NotNil(t, exporters[1].SamplingRate)
+		assert.Equal(t, 0.01, *exporters[1].SamplingRate)
+	})
 }

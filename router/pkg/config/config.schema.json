@@ -1332,6 +1332,12 @@
                       "type": "string"
                     }
                   },
+                  "sampling_rate": {
+                    "type": "number",
+                    "description": "The sampling rate for the traces sent to this exporter. It can be higher or lower than the global sampling rate. Defaults to the global sampling rate.",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
                   "batch_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",

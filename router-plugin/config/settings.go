@@ -51,6 +51,8 @@ type Exporter struct {
 	ExportTimeout time.Duration        `json:"export_timeout"`
 	Headers       map[string]string    `json:"headers"`
 	HTTPPath      string               `json:"http_path"`
+	// SamplingRate is set when the router samples this exporter below the head rate.
+	SamplingRate *float64 `json:"sampling_rate,omitempty"`
 }
 
 type IPAnonymization struct {

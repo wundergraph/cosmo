@@ -42,6 +42,9 @@ type ExporterConfig struct {
 	// For example
 	// /v1/traces
 	HTTPPath string
+	// SamplingRate overrides the global sampling rate for this exporter. It can
+	// be higher or lower than the global rate. When nil, the global rate applies.
+	SamplingRate *float64
 }
 
 type ExportGraphQLVariables struct {

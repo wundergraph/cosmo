@@ -2152,6 +2152,7 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 	startupConfig := grpccommon.GRPCStartupParams{}
 
 	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
+		headRate := rtrace.HeadSamplingRate(traceConfig)
 		enabledExporters := make([]grpccommon.GRPCExporter, 0)
 		for _, exporter := range traceConfig.Exporters {
 			if exporter != nil && !exporter.Disabled {
@@ -2162,6 +2163,10 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 					ExportTimeout: exporter.ExportTimeout,
 					Headers:       exporter.Headers,
 					HTTPPath:      exporter.HTTPPath,
+				}
+				// Plugins only need a rate when the exporter samples below the head rate.
+				if rate := rtrace.ExporterSamplingRate(traceConfig, exporter); rate < headRate {
+					transformedExporter.SamplingRate = &rate
 				}
 				enabledExporters = append(enabledExporters, transformedExporter)
 			}
@@ -2177,7 +2182,8 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 			Tracing: &grpccommon.GRPCTracing{
 				Exporters:   enabledExporters,
 				Propagators: propagators,
-				Sampler:     traceConfig.Sampler,
+				// Plugins record traces at the same rate as the router.
+				Sampler: headRate,
 			},
 		}
 	}

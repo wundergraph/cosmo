@@ -152,6 +152,36 @@ For a Dynatrace example that exports to Dynatrace and Cosmo Cloud at the same ti
   ```
 </CodeGroup>
 
+### Per-exporter sampling
+
+Each exporter can set its own `sampling_rate`. An exporter without one uses the global `telemetry.tracing.sampling_rate`. An exporter's rate can be higher or lower than the global rate.
+
+Sampling is based on the trace ID, so every exporter receives complete traces. The traces sent to an exporter with a lower rate are a subset of those sent to an exporter with a higher rate.
+
+The router records traces at the highest rate of its enabled exporters. Requests recorded at this rate are marked as sampled in the trace context propagated to subgraphs. The same decision sets `request.trace.sampled` in expressions.
+
+With `parent_based_sampler` enabled, the router records every request whose incoming trace context is marked as sampled, regardless of the configured rates. Per-exporter rates still apply to these traces. An exporter below the highest rate receives only its share of them, so it can miss traces that an upstream service sampled.
+
+On managed plans, the organization's trace sampling limit caps the rate of the Cosmo Cloud exporter. It does not affect other exporters. If the Cosmo Cloud exporter's rate exceeds the limit, the router logs a warning and uses the limit instead.
+
+The following example sends every trace to a self-hosted collector and 1% of them to Cosmo Cloud:
+
+<CodeGroup>
+  ```yaml config.yaml
+  telemetry:
+    tracing:
+      enabled: true
+      sampling_rate: 1
+      exporters:
+        # Self-hosted collector. Uses the global sampling rate.
+        - endpoint: https://otel-collector.example.com
+        # Cosmo Cloud
+        - endpoint: https://cosmo-otel.wundergraph.com
+          headers: {Authorization: Bearer ${MY_AUTH_TOKEN}}
+          sampling_rate: 0.01
+  ```
+</CodeGroup>
+
 ### Trace Propagation
 
 Propagation is the mechanism that allows the movement of data between services and processes. As a user of the router, you will interact with them in the form of headers to pass the trace context across service boundaries. By default, we enable the widely-used [Trace-Context](https://www.w3.org/TR/trace-context/) specification. You can disable or enable different specifications according to your needs.

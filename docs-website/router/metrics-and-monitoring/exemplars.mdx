@@ -48,7 +48,7 @@ With `always_off` (the default), there is no exemplar sampling and no overhead.
 
 With `trace_based` or `always_on`, every eligible measurement runs through the reservoir. This adds work to the metric recording path on each request. The absolute cost is on the order of tens of nanoseconds per measurement. The relative cost of the recording call itself can increase by up to tens of percent. For most workloads this is negligible against the cost of serving a GraphQL request, but it is not zero on high-throughput routers.
 
-`always_on` records exemplars for every measurement. `trace_based` only records for measurements taken inside a sampled trace, so its overhead scales with your trace sampling rate. A low sampling rate keeps the added cost small.
+`always_on` records exemplars for every measurement. `trace_based` only records for measurements taken inside a sampled trace, so its overhead scales with the rate at which the router records traces. With [per-exporter sampling](/router/open-telemetry#per-exporter-sampling), this is the highest exporter rate. A low sampling rate keeps the added cost small.
 
 ### Memory
 
@@ -103,7 +103,7 @@ The default cardinality limit of 2000 streams per instrument is what prevents th
 ### Recommendations
 
 - Start with `trace_based`. It bounds both recording overhead and memory to sampled traces, and every recorded exemplar links to a trace that was actually stored.
-- Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the sampling rate.
+- Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the rate at which the router records traces.
 - Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context. It also fills exemplar reservoirs for every stream regardless of sampling, so its memory cost scales with full cardinality.
 - Keep the cardinality limit in place. The default of 2000 streams per instrument caps exemplar memory to a fixed worst case per histogram. Do not disable it on a router that records exemplars.
 - Control metric cardinality. Use [exclude_metric_labels](/router/metrics-and-monitoring#exclude-certain-metrics-and-labels) and the [cardinality limit](/router/configuration#metrics) to cap the number of metric streams, which directly caps exemplar memory.

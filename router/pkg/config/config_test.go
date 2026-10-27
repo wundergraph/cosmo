@@ -14,6 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -598,6 +599,125 @@ telemetry:
 
 	require.Equal(t, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"}, js.Causes[0].InstanceLocation)
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
+}
+
+func TestTracingSamplingRateFromEnv(t *testing.T) {
+	for _, value := range []string{"NaN", "-0.1", "1.5"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("TRACING_SAMPLING_RATE", value)
+
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+			_, err := LoadConfig([]string{f})
+			assert.ErrorContains(t, err, "telemetry.tracing.sampling_rate ("+value+") must be between 0 and 1")
+		})
+	}
+
+	t.Run("valid rate", func(t *testing.T) {
+		t.Setenv("TRACING_SAMPLING_RATE", "0.25")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		assert.Equal(t, 0.25, cfg.Config.Telemetry.Tracing.SamplingRate)
+	})
+}
+
+func TestTracingExporterSamplingRate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unset exporter rate inherits the global rate", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    sampling_rate: 0.5
+    exporters:
+      - endpoint: https://otel-collector.example.com
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Len(t, cfg.Config.Telemetry.Tracing.Exporters, 1)
+		assert.Nil(t, cfg.Config.Telemetry.Tracing.Exporters[0].SamplingRate)
+	})
+
+	t.Run("exporter rate at or below the global rate", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    sampling_rate: 0.5
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: 0.5
+      - endpoint: https://cosmo-otel.wundergraph.com
+        sampling_rate: 0.01
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		exporters := cfg.Config.Telemetry.Tracing.Exporters
+		require.Len(t, exporters, 2)
+		require.NotNil(t, exporters[0].SamplingRate)
+		require.NotNil(t, exporters[1].SamplingRate)
+		assert.Equal(t, 0.5, *exporters[0].SamplingRate)
+		assert.Equal(t, 0.01, *exporters[1].SamplingRate)
+	})
+
+	t.Run("exporter rate above the global rate", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    sampling_rate: 0.01
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: 1
+      - endpoint: https://cosmo-otel.wundergraph.com
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		exporters := cfg.Config.Telemetry.Tracing.Exporters
+		require.Len(t, exporters, 2)
+		require.NotNil(t, exporters[0].SamplingRate)
+		assert.Equal(t, 1.0, *exporters[0].SamplingRate)
+		assert.Nil(t, exporters[1].SamplingRate)
+	})
+
+	t.Run("exporter rate outside of the valid range", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: 1.5
+`)
+		_, err := LoadConfig([]string{f})
+		assert.ErrorContains(t, err, "/telemetry/tracing/exporters/0/sampling_rate")
+	})
 }
 
 func TestLoadFullConfig(t *testing.T) {

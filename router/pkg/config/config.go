@@ -61,6 +61,7 @@ type TracingExporter struct {
 	Endpoint              string              `yaml:"endpoint,omitempty"`
 	HTTPPath              string              `yaml:"path,omitempty" envDefault:"/v1/traces"`
 	Headers               map[string]string   `yaml:"headers,omitempty"`
+	SamplingRate          *float64            `yaml:"sampling_rate,omitempty"`
 	TracingExporterConfig `yaml:",inline"`
 }
 
@@ -1885,6 +1886,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
+	}
+
+	// Environment variables bypass the JSON schema, so the range of the global sampling rate is checked
+	// here. The negated comparison also rejects NaN.
+	if rate := cfg.Config.Telemetry.Tracing.SamplingRate; !(rate >= 0 && rate <= 1) {
+		return nil, fmt.Errorf("telemetry.tracing.sampling_rate (%v) must be between 0 and 1", rate)
 	}
 
 	// The drain runs inside the shutdown delay, so an explicit drain period must leave the grace period

@@ -917,14 +917,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
 			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-					r.logger.Warn(
-						"Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
-				}
+				applyCosmoCloudTraceSamplingLimit(r.logger, r.traceConfig, float64(r.registrationInfo.AccountLimits.TraceSamplingRate))
 			}
 		}
 	}
@@ -3035,6 +3028,23 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	return transport
 }
 
+// applyCosmoCloudTraceSamplingLimit lowers the sampling rate of the Cosmo Cloud
+// exporter to the account limit. Other exporters keep their rates.
+func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.Config, accountLimit float64) {
+	defaultExporter := rtrace.DefaultExporter(traceConfig)
+	if defaultExporter == nil {
+		return
+	}
+	if rate := rtrace.ExporterSamplingRate(traceConfig, defaultExporter); rate > accountLimit {
+		logger.Warn(
+			"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
+			zap.Float64("limit", rate),
+			zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
+		)
+		defaultExporter.SamplingRate = &accountLimit
+	}
+}
+
 func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 	var exporters []*rtrace.ExporterConfig
 	for _, exp := range cfg.Tracing.Exporters {
@@ -3046,6 +3056,7 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 			ExportTimeout: exp.ExportTimeout,
 			Headers:       exp.Headers,
 			HTTPPath:      exp.HTTPPath,
+			SamplingRate:  exp.SamplingRate,
 		})
 	}
 

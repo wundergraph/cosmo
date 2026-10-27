@@ -128,14 +128,19 @@ func initTracer(
 			}
 
 			// Always be sure to batch in production.
-			opts = append(opts,
-				sdktrace.WithBatcher(exporter,
-					sdktrace.WithBatchTimeout(batchTimeout),
-					sdktrace.WithExportTimeout(exportTimeout),
-					sdktrace.WithMaxExportBatchSize(512),
-					sdktrace.WithMaxQueueSize(2048),
-				),
+			var processor sdktrace.SpanProcessor = sdktrace.NewBatchSpanProcessor(exporter,
+				sdktrace.WithBatchTimeout(batchTimeout),
+				sdktrace.WithExportTimeout(exportTimeout),
+				sdktrace.WithMaxExportBatchSize(512),
+				sdktrace.WithMaxQueueSize(2048),
 			)
+
+			// Match the router: this exporter only receives its share of the traces.
+			if exp.SamplingRate != nil {
+				processor = newTraceIDSamplingProcessor(processor, *exp.SamplingRate)
+			}
+
+			opts = append(opts, sdktrace.WithSpanProcessor(processor))
 		}
 	}
 
