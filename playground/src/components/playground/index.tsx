@@ -648,7 +648,10 @@ export const Playground = (input: {
   const plugins = useMemo(
     () => [
       explorerPlugin({ showAttribution: false }),
-      createDeferAdvisorPlugin(url, () => prepareHeaders(JSON.parse(latestHeaders.current), input.scripts)),
+      // A blank header pane means no headers, not a JSON parse error.
+      createDeferAdvisorPlugin(url, () =>
+        prepareHeaders(JSON.parse(latestHeaders.current.trim() || '{}'), input.scripts),
+      ),
     ],
     [url, input.scripts],
   );

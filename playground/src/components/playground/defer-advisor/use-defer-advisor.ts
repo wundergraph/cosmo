@@ -23,6 +23,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     runId.current += 1;
     setLatencies(null);
     setProbeFailures({});
+    setVariablesError(null);
     setRunning(false);
     return () => {
       runId.current += 1;
@@ -67,6 +68,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
   const clear = () => {
     setLatencies(null);
     setProbeFailures({});
+    setVariablesError(null);
   };
 
   return { latencies, probeFailures, variablesError, running, analyse, clear };
