@@ -35,7 +35,7 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
   const rows = useMemo(() => summarizeRootFields(parsed), [parsed]);
 
-  const slowNames = useMemo(() => (latencies ? slowFieldNames(latencies) : new Set<string>()), [latencies]);
+  const slowNames = useMemo(() => slowFieldNames(latencies ?? {}), [latencies]);
 
   const deferField = (name: string) => {
     if (!parsed) {
