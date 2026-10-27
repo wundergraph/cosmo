@@ -120,7 +120,6 @@ import {
   invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidDeliveryGuaranteeModeDefinitionErrorMessage,
   invalidDeliveryGuaranteesDefinitionErrorMessage,
-  invalidDeliveryGuaranteesInputErrorMessage,
   invalidDeliveryGuaranteesInputFieldsErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
@@ -3170,8 +3169,8 @@ export class NormalizationFactory {
     if (argumentNode.value.kind === Kind.NULL) {
       return OFF_UPPER;
     }
+
     if (argumentNode.value.kind !== Kind.OBJECT) {
-      errorMessages.push(invalidDeliveryGuaranteesInputErrorMessage);
       return;
     }
     let mode: DeliveryGuaranteeMode = OFF_UPPER;
