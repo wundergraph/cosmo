@@ -3169,3 +3169,60 @@ access_logs:
 		require.Error(t, err)
 	})
 }
+
+func TestResponseCacheTagHeaderConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tiers default to every tier and overflow to truncate", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, []string{"subgraph", "type", "cache_tag"}, cfg.Config.ResponseCache.TagHeader.Tiers)
+		require.Equal(t, ResponseCacheTagHeaderOverflowTruncate, cfg.Config.ResponseCache.TagHeader.OnOverflow)
+	})
+
+	t.Run("tiers replace the default", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+    tiers: [cache_tag]
+    on_overflow: private
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, []string{"cache_tag"}, cfg.Config.ResponseCache.TagHeader.Tiers)
+		require.Equal(t, ResponseCacheTagHeaderOverflowPrivate, cfg.Config.ResponseCache.TagHeader.OnOverflow)
+	})
+
+	for name, fragment := range map[string]string{
+		"an unknown tier":     "tiers: [entity]",
+		"no tiers":            "tiers: []",
+		"a repeated tier":     "tiers: [type, type]",
+		"an unknown overflow": "on_overflow: drop",
+	} {
+		t.Run(name+" fails validation", func(t *testing.T) {
+			t.Parallel()
+
+			f := createTempFileFromFixture(t, `
+version: "1"
+response_cache:
+  cache_tag_header:
+    enabled: true
+    `+fragment+`
+`)
+			_, err := LoadConfig([]string{f})
+			require.ErrorContains(t, err, "/response_cache/cache_tag_header/")
+		})
+	}
+}
