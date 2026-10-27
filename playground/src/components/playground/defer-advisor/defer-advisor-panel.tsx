@@ -59,10 +59,10 @@ export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto p-4">
-      <div className="flex items-center gap-2">
-        <span className="font-semibold">Defer Advisor</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold whitespace-nowrap">Defer Advisor</span>
         {!isMutationOrSubscription && !hasSyntaxError && (
-          <div className="ml-auto flex gap-2">
+          <div className="flex flex-wrap gap-2 whitespace-nowrap">
             <Button onClick={analyse} disabled={!canAnalyse}>
               {running ? 'Analysing...' : latencies ? 'Re-analyse' : 'Analyse operation'}
             </Button>
