@@ -71,7 +71,7 @@ const timeOnce = async (
 
 // Fragments the field reaches, directly or through other fragments. The probe
 // document must define them or the router rejects it.
-const referencedFragments = (field: FieldNode, fragments: FragmentMap): FragmentDefinitionNode[] => {
+const referencedFragments = (nodes: readonly ASTNode[], fragments: FragmentMap): FragmentDefinitionNode[] => {
   const found = new Map<string, FragmentDefinitionNode>();
   const collect = (node: ASTNode) => {
     visit(node, {
@@ -86,7 +86,7 @@ const referencedFragments = (field: FieldNode, fragments: FragmentMap): Fragment
       },
     });
   };
-  collect(field);
+  nodes.forEach(collect);
   return [...found.values()];
 };
 
@@ -102,24 +102,24 @@ const usedVariableNames = (nodes: readonly ASTNode[]): Set<string> => {
   return names;
 };
 
-// Each field runs alone, so its latency is its own cost. The probe declares only the
-// variables its field and fragments use; the router rejects undeclared or unused ones.
+// Each response key runs alone, so its latency is its own cost. The probe declares only the
+// variables its fields and fragments use; the router rejects undeclared or unused ones.
 const probeField = async (
   url: string,
-  field: FieldNode,
+  fields: readonly FieldNode[],
   operation: OperationDefinitionNode,
   fragments: FragmentMap,
   request: ProbeRequest,
   signal: AbortSignal,
 ): Promise<ProbeResult> => {
-  const linked = referencedFragments(field, fragments);
-  const used = usedVariableNames([field, ...linked]);
+  const linked = referencedFragments(fields, fragments);
+  const used = usedVariableNames([...fields, ...linked]);
   const definitions = (operation.variableDefinitions ?? []).filter((d) => used.has(d.variable.name.value));
   const declared = new Set(definitions.map((d) => d.variable.name.value));
   const variables = Object.fromEntries(Object.entries(request.variables).filter(([name]) => declared.has(name)));
 
   const head = definitions.length > 0 ? `query(${definitions.map((d) => print(d)).join(', ')}) ` : '';
-  const query = [`${head}{ ${print(field)} }`, ...linked.map((f) => print(f))].join('\n');
+  const query = [`${head}{ ${fields.map((f) => print(f)).join(' ')} }`, ...linked.map((f) => print(f))].join('\n');
   try {
     let total = 0;
     for (let run = 0; run < PROBE_RUNS; run++) {
@@ -144,10 +144,19 @@ export const probeRootFields = async (
   }
 
   const fragments = getFragments(doc);
-  const results: Record<string, ProbeResult> = {};
+  const groups = new Map<string, FieldNode[]>();
   for (const field of collectRootFields(operation.selectionSet.selections, fragments)) {
     const name = field.alias?.value ?? field.name.value;
-    results[name] = await probeField(url, field, operation, fragments, request, signal);
+    const group = groups.get(name);
+    if (group) {
+      group.push(field);
+    } else {
+      groups.set(name, [field]);
+    }
+  }
+  const results: Record<string, ProbeResult> = {};
+  for (const [name, fields] of groups) {
+    results[name] = await probeField(url, fields, operation, fragments, request, signal);
   }
   return results;
 };
