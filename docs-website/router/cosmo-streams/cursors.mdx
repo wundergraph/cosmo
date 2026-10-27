@@ -148,7 +148,7 @@ Each entry of `keys` has these fields:
 | Field | Required | Description |
 | ----- | -------- | ----------- |
 | `id` | yes | Integer from 0 to 255, unique within the keyring. |
-| `secret` | yes | The secret the signing key is derived from, at least 32 bytes. |
+| `secret` | yes | The secret the signing key is derived from, at least 32 characters. |
 | `expires_at` | no | RFC 3339 timestamp after which the key stops **signing** new cursors. The key keeps verifying cursors for as long as it is configured. |
 
 #### Signing keys
@@ -326,12 +326,24 @@ A minimal `graphql-ws` client that stores the cursor and resumes on reconnect:
 ```ts
 import { createClient } from 'graphql-ws';
 
+const MAX_RETRIES = 5;
+const REJECTED_CURSOR_CODES = ['CURSOR_EXPIRED', 'CURSOR_INVALID', 'CURSOR_CLIENT_MISMATCH'];
+
 let lastCursor: string | undefined = loadCursor(); // from durable storage
+let retries = 0;
 
 const client = createClient({
   url: 'wss://router.example.com/graphql',
-  retryAttempts: Infinity,
+  // Disable transparent retries. graphql-ws would replay the original
+  // subscribe message with the cursor it was started with.
+  retryAttempts: 0,
 });
+
+function resubscribe() {
+  if (retries >= MAX_RETRIES) return; // give up, or fall back to a fresh subscription
+  retries++;
+  setTimeout(subscribe, Math.min(1000 * 2 ** retries, 30_000));
+}
 
 function subscribe() {
   client.subscribe(
@@ -347,6 +359,7 @@ function subscribe() {
     },
     {
       next: async (result) => {
+        retries = 0;
         await handle(result.data); // process first ...
         const cursor = result.extensions?.streamsCursor;
         if (typeof cursor === 'string') {
@@ -355,9 +368,17 @@ function subscribe() {
         }
       },
       error: (err) => {
-        // see "Handling errors"
+        // GraphQL errors arrive as an array, connection errors as a CloseEvent or Error.
+        if (Array.isArray(err)) {
+          const rejected = err.some((e) => REJECTED_CURSOR_CODES.includes(e.extensions?.code as string));
+          if (!rejected) return; // other codes need a fix, see "Handling errors"
+          // Never reuse a rejected cursor.
+          lastCursor = undefined;
+          clearCursor();
+        }
+        resubscribe();
       },
-      complete: () => {},
+      complete: resubscribe,
     },
   );
 }
@@ -396,7 +417,7 @@ If the Router can't serve the request, it terminates the subscription with an er
 | `DELIVERY_GUARANTEE_UNSATISFIABLE` | The Router can't provide cursors for this client right now, e.g. a missing key configuration. Contact the operator of the Router. |
 
 <Warning>
-  When the Router detects that Kafka truncated the log since the cursor was issued, the subscription simply ends without a dedicated error code. Retrying with the same cursor fails the same way until it eventually becomes `CURSOR_EXPIRED`. Use a retry limit and fall back to a fresh subscription.
+  When the Router detects that Kafka truncated the log since the cursor was issued, the subscription ends without a dedicated error code. Retrying with the same cursor fails the same way until it eventually becomes `CURSOR_EXPIRED`. Use a retry limit and fall back to a fresh subscription.
 </Warning>
 
 ### Detecting dead connections
