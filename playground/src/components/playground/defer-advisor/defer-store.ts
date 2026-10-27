@@ -2,6 +2,8 @@ import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
 import { getOperation, parseQuery } from './operation';
 
+const DEFER_ORIGIN = 'defer-advisor';
+
 type AnalysisState = {
   latencies: Record<string, number> | null;
   probeFailures: Record<string, string>;
@@ -19,11 +21,10 @@ export class DeferStore {
   private editor: QueryEditor | undefined;
   private clearPills: (() => void) | undefined;
   private frame: number | undefined;
-  private writing = false;
   private analysedUrl: string | undefined;
   private readonly listeners = new Set<() => void>();
 
-  private readonly onChange = () => this.onEditorChange();
+  private readonly onChange = (_editor: unknown, change?: { origin?: string }) => this.onEditorChange(change?.origin);
 
   // Returns the function that detaches the store from the editor.
   bind(editor: QueryEditor): () => void {
@@ -58,12 +59,7 @@ export class DeferStore {
     if (!this.editor) {
       return;
     }
-    this.writing = true;
-    try {
-      this.editor.setValue(text);
-    } finally {
-      this.writing = false;
-    }
+    this.editor.getDoc().replaceRange(text, { line: 0, ch: 0 }, { line: Infinity, ch: Infinity }, DEFER_ORIGIN);
   }
 
   startAnalysis(routingUrl: string, variablesError: string | null) {
@@ -109,8 +105,8 @@ export class DeferStore {
 
   // A manual edit makes the numbers stale. A write from the panel (defer or revert) keeps them,
   // because the root fields are the same and only the directives moved.
-  private onEditorChange() {
-    if (!this.writing) {
+  private onEditorChange(origin: string | undefined) {
+    if (origin !== DEFER_ORIGIN) {
       if (this.state.latencies !== null || this.state.error !== null) {
         this.clear();
       }

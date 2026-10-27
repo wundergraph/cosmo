@@ -3,10 +3,12 @@ import type { QueryEditor } from '../src/components/playground/defer-advisor/def
 import { DeferStore } from '../src/components/playground/defer-advisor/defer-store';
 
 const fakeEditor = () => {
+  const doc = { replaceRange: vi.fn() };
   const editor = {
     on: vi.fn(),
     off: vi.fn(),
     getValue: vi.fn(() => ''),
+    getDoc: vi.fn(() => doc),
     setValue: vi.fn(),
   };
   return { editor, asQueryEditor: editor as unknown as QueryEditor };
@@ -39,7 +41,7 @@ describe('DeferStore', () => {
     const { store, listener } = bound();
     store.finishAnalysis({ a: 10 }, { b: 'boom' });
 
-    listener();
+    listener(null, { origin: '+input' });
 
     expect(store.snapshot.latencies).toBeNull();
     expect(store.snapshot.probeFailures).toEqual({});
@@ -55,8 +57,7 @@ describe('DeferStore', () => {
     const { editor, store, listener } = bound();
     store.finishAnalysis({ a: 10 }, {});
 
-    // The editor fires its change event synchronously inside setValue, which is the case writeQuery exists for.
-    editor.setValue.mockImplementation(() => listener());
+    editor.getDoc().replaceRange.mockImplementation((_text, _from, _to, origin) => listener(null, { origin }));
     store.writeQuery('{ a @defer }');
 
     expect(store.snapshot.latencies).toEqual({ a: 10 });
@@ -66,7 +67,7 @@ describe('DeferStore', () => {
     const { store, listener } = bound();
     store.failAnalysis('boom');
 
-    listener();
+    listener(null, { origin: '+input' });
 
     expect(store.snapshot.error).toBeNull();
   });
