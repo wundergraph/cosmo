@@ -10,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -90,6 +91,14 @@ export function recomposeFeatureFlag(
     }
 
     // Compose and deploy the feature flag
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
@@ -102,6 +111,7 @@ export function recomposeFeatureFlag(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       return compositionService.composeAndDeployFeatureFlag({
@@ -109,6 +119,7 @@ export function recomposeFeatureFlag(
         featureFlag,
       });
     });
+    deploymentErrors.push(...(await mapperUpdater.flush()));
 
     const auditLogRepo = new AuditLogRepository(opts.db);
     await auditLogRepo.addAuditLog({

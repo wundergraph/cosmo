@@ -41,6 +41,58 @@ export const getPlaygroundDefaultHeaders = PlatformService.method.getPlaygroundD
 export const updatePlaygroundDefaultHeaders = PlatformService.method.updatePlaygroundDefaultHeaders;
 
 /**
+ * GraphCollections
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphCollections
+ */
+export const getGraphCollections = PlatformService.method.getGraphCollections;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphCollectionOperation
+ */
+export const getGraphCollectionOperation = PlatformService.method.getGraphCollectionOperation;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateGraphCollection
+ */
+export const createGraphCollection = PlatformService.method.createGraphCollection;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RenameGraphCollection
+ */
+export const renameGraphCollection = PlatformService.method.renameGraphCollection;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.ShareGraphCollection
+ */
+export const shareGraphCollection = PlatformService.method.shareGraphCollection;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteGraphCollection
+ */
+export const deleteGraphCollection = PlatformService.method.deleteGraphCollection;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateGraphCollectionOperation
+ */
+export const createGraphCollectionOperation = PlatformService.method.createGraphCollectionOperation;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateGraphCollectionOperation
+ */
+export const updateGraphCollectionOperation = PlatformService.method.updateGraphCollectionOperation;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RenameGraphCollectionOperation
+ */
+export const renameGraphCollectionOperation = PlatformService.method.renameGraphCollectionOperation;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteGraphCollectionOperation
+ */
+export const deleteGraphCollectionOperation = PlatformService.method.deleteGraphCollectionOperation;
+
+/**
  * Namespaces
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateNamespace

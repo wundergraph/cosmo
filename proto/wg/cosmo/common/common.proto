@@ -23,6 +23,7 @@ enum EnumStatusCode {
   ERR_BAD_REQUEST = 17;
   ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18;
   WARN_PARTIAL_DATA = 19;
+  ERR_CONFLICT = 20;
 }
 
 enum GraphQLSubscriptionProtocol {

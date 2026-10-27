@@ -45,6 +45,7 @@ service ProjectsService {
   rpc RequireEmployeeRecommendedWorkItemsById(RequireEmployeeRecommendedWorkItemsByIdRequest) returns (RequireEmployeeRecommendedWorkItemsByIdResponse) {}
   rpc RequireEmployeeReviewReportById(RequireEmployeeReviewReportByIdRequest) returns (RequireEmployeeReviewReportByIdResponse) {}
   rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
+  rpc RequireEmployeeWorkAuditById(RequireEmployeeWorkAuditByIdRequest) returns (RequireEmployeeWorkAuditByIdResponse) {}
   rpc RequireEmployeeWorkItemHandlerInfoById(RequireEmployeeWorkItemHandlerInfoByIdRequest) returns (RequireEmployeeWorkItemHandlerInfoByIdResponse) {}
   rpc RequireEmployeeWorkItemInfoById(RequireEmployeeWorkItemInfoByIdRequest) returns (RequireEmployeeWorkItemInfoByIdResponse) {}
   rpc RequireEmployeeWorkItemSpecsInfoById(RequireEmployeeWorkItemSpecsInfoByIdRequest) returns (RequireEmployeeWorkItemSpecsInfoByIdResponse) {}
@@ -64,6 +65,10 @@ service ProjectsService {
   rpc ResolveProjectTopPriorityItem(ResolveProjectTopPriorityItemRequest) returns (ResolveProjectTopPriorityItemResponse) {}
   rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
   rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
+  rpc ResolveWorkAuditFindingRemediation(ResolveWorkAuditFindingRemediationRequest) returns (ResolveWorkAuditFindingRemediationResponse) {}
+  rpc ResolveWorkAuditRemediationEstimatedHours(ResolveWorkAuditRemediationEstimatedHoursRequest) returns (ResolveWorkAuditRemediationEstimatedHoursResponse) {}
+  rpc ResolveWorkAuditRiskScore(ResolveWorkAuditRiskScoreRequest) returns (ResolveWorkAuditRiskScoreResponse) {}
+  rpc ResolveWorkAuditStepEffort(ResolveWorkAuditStepEffortRequest) returns (ResolveWorkAuditStepEffortResponse) {}
 }
 
 // Wrapper message for a list of Employee.
@@ -764,6 +769,93 @@ message ResolveTaskTotalEffortResponse {
   repeated ResolveTaskTotalEffortResult result = 1;
 }
 
+message ResolveWorkAuditRiskScoreArgs {
+  double weight = 1;
+}
+
+message ResolveWorkAuditRiskScoreContext {
+  string expertise = 1;
+}
+
+message ResolveWorkAuditRiskScoreRequest {
+  // context provides the resolver context for the field riskScore of type WorkAudit.
+  repeated ResolveWorkAuditRiskScoreContext context = 1;
+  // field_args provides the arguments for the resolver field riskScore of type WorkAudit.
+  ResolveWorkAuditRiskScoreArgs field_args = 2;
+}
+
+message ResolveWorkAuditRiskScoreResult {
+  double risk_score = 1;
+}
+
+message ResolveWorkAuditRiskScoreResponse {
+  repeated ResolveWorkAuditRiskScoreResult result = 1;
+}
+
+message ResolveWorkAuditFindingRemediationArgs {
+  bool detailed = 1;
+}
+
+message ResolveWorkAuditFindingRemediationContext {
+  string code = 1;
+  int32 severity = 2;
+}
+
+message ResolveWorkAuditFindingRemediationRequest {
+  // context provides the resolver context for the field remediation of type WorkAuditFinding.
+  repeated ResolveWorkAuditFindingRemediationContext context = 1;
+  // field_args provides the arguments for the resolver field remediation of type WorkAuditFinding.
+  ResolveWorkAuditFindingRemediationArgs field_args = 2;
+}
+
+message ResolveWorkAuditFindingRemediationResult {
+  WorkAuditRemediation remediation = 1;
+}
+
+message ResolveWorkAuditFindingRemediationResponse {
+  repeated ResolveWorkAuditFindingRemediationResult result = 1;
+}
+
+message ResolveWorkAuditRemediationEstimatedHoursContext {
+  string description = 1;
+}
+
+message ResolveWorkAuditRemediationEstimatedHoursRequest {
+  // context provides the resolver context for the field estimatedHours of type WorkAuditRemediation.
+  repeated ResolveWorkAuditRemediationEstimatedHoursContext context = 1;
+}
+
+message ResolveWorkAuditRemediationEstimatedHoursResult {
+  double estimated_hours = 1;
+}
+
+message ResolveWorkAuditRemediationEstimatedHoursResponse {
+  repeated ResolveWorkAuditRemediationEstimatedHoursResult result = 1;
+}
+
+message ResolveWorkAuditStepEffortArgs {
+  double multiplier = 1;
+}
+
+message ResolveWorkAuditStepEffortContext {
+  string title = 1;
+}
+
+message ResolveWorkAuditStepEffortRequest {
+  // context provides the resolver context for the field effort of type WorkAuditStep.
+  repeated ResolveWorkAuditStepEffortContext context = 1;
+  // field_args provides the arguments for the resolver field effort of type WorkAuditStep.
+  ResolveWorkAuditStepEffortArgs field_args = 2;
+}
+
+message ResolveWorkAuditStepEffortResult {
+  double effort = 1;
+}
+
+message ResolveWorkAuditStepEffortResponse {
+  repeated ResolveWorkAuditStepEffortResult result = 1;
+}
+
 message ResolveEmployeeCurrentWorkloadArgs {
   google.protobuf.BoolValue include_completed = 1;
   google.protobuf.StringValue project_id = 2;
@@ -1264,6 +1356,29 @@ message RequireEmployeeOptionalLatestWorkOperationByIdFields {
   string expertise = 1;
 }
 
+message RequireEmployeeWorkAuditByIdRequest {
+  // RequireEmployeeWorkAuditByIdContext provides the context for the required fields method RequireEmployeeWorkAuditById.
+  repeated RequireEmployeeWorkAuditByIdContext context = 1;
+}
+
+message RequireEmployeeWorkAuditByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeWorkAuditByIdFields fields = 2;
+}
+
+message RequireEmployeeWorkAuditByIdResponse {
+  // RequireEmployeeWorkAuditByIdResult provides the result for the required fields method RequireEmployeeWorkAuditById.
+  repeated RequireEmployeeWorkAuditByIdResult result = 1;
+}
+
+message RequireEmployeeWorkAuditByIdResult {
+  WorkAudit work_audit = 1;
+}
+
+message RequireEmployeeWorkAuditByIdFields {
+  string expertise = 1;
+}
+
 message Project {
   string id = 1;
   string name = 2;
@@ -1528,4 +1643,28 @@ message WorkRejection {
 message WorkSetup {
   string priority = 1;
   EmployeeWorkItem primary_item = 2;
+}
+
+message WorkAudit {
+  string expertise = 1;
+  WorkAuditReport report = 2;
+}
+
+message WorkAuditReport {
+  string generated_at = 1;
+  repeated WorkAuditFinding findings = 2;
+}
+
+message WorkAuditFinding {
+  string code = 1;
+  int32 severity = 2;
+}
+
+message WorkAuditRemediation {
+  string description = 1;
+  repeated WorkAuditStep steps = 2;
+}
+
+message WorkAuditStep {
+  string title = 1;
 }

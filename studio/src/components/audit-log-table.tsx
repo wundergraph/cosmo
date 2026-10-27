@@ -100,7 +100,84 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                 );
               }
 
-              const actionView = (
+              // Collections name the thing acted on before its graph, which the
+              // generic target-then-auditable order below cannot express.
+              const muted = 'text-gray-500 dark:text-gray-400';
+              const subjectName = (
+                <span className="inline-block max-w-md truncate text-primary">{auditableDisplayName}</span>
+              );
+              const inTarget = (noun: string) =>
+                targetDisplayName && (
+                  <>
+                    <span className={muted}>in the {noun}</span>
+                    <span className="text-purple whitespace-nowrap font-mono">{targetDisplayName}</span>
+                  </>
+                );
+              const inNamespace = targetNamespaceDisplayName && (
+                <span className={muted}>of the {targetNamespaceDisplayName} namespace</span>
+              );
+              const lead = (subject: string) => (
+                <span className={muted}>
+                  {capitalize(action.replaceAll('_', ' '))} {subject}
+                </span>
+              );
+
+              const collectionView = (() => {
+                switch (auditAction) {
+                  case 'graph_collection.created':
+                  case 'graph_collection.deleted': {
+                    return (
+                      <>
+                        {lead('collection')}
+                        {subjectName}
+                        {inTarget('graph')}
+                        {inNamespace}
+                      </>
+                    );
+                  }
+                  case 'graph_collection.shared': {
+                    return (
+                      <>
+                        {lead('collection')}
+                        {subjectName}
+                        {inTarget('graph')}
+                        {inNamespace}
+                        <span className={muted}>with the team</span>
+                      </>
+                    );
+                  }
+                  case 'graph_collection_operation.created':
+                  case 'graph_collection_operation.updated':
+                  case 'graph_collection_operation.deleted': {
+                    return (
+                      <>
+                        {lead('operation')}
+                        {subjectName}
+                        {inTarget('collection')}
+                        {inNamespace}
+                      </>
+                    );
+                  }
+                  // A rename records only the new name, so it has to read "... to <name>".
+                  case 'graph_collection.renamed':
+                  case 'graph_collection_operation.renamed': {
+                    return (
+                      <>
+                        {lead(auditAction === 'graph_collection.renamed' ? 'collection' : 'operation')}
+                        {inTarget(auditAction === 'graph_collection.renamed' ? 'graph' : 'collection')}
+                        {inNamespace}
+                        <span className={muted}>to</span>
+                        {subjectName}
+                      </>
+                    );
+                  }
+                  default: {
+                    return null;
+                  }
+                }
+              })();
+
+              const actionView = collectionView ?? (
                 <>
                   <span className="text-gray-500 dark:text-gray-400">{capitalize(action.replaceAll('_', ' '))}</span>
                   {label}

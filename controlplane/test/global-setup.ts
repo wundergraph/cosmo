@@ -55,6 +55,33 @@ export default async function setup() {
     { attempts: 30, baseInterval: 500, maxInterval: 500 },
   );
 
+  // Declare the signup segmentation attributes so Keycloak keeps them (unmanaged attributes are dropped by default)
+  await retryWithBackoff(
+    async () => {
+      const profile = await keycloakClient.client.users.getProfile({ realm: TEST_REALM });
+      const existing = new Set((profile.attributes ?? []).map((attribute) => attribute.name));
+      const missing = ['company_name', 'use_case', 'current_setup'].filter((name) => !existing.has(name));
+      if (missing.length === 0) {
+        return;
+      }
+
+      await keycloakClient.client.users.updateProfile({
+        ...profile,
+        realm: TEST_REALM,
+        attributes: [
+          ...(profile.attributes ?? []),
+          ...missing.map((name) => ({
+            name,
+            displayName: name,
+            permissions: { view: ['admin'], edit: ['admin'] },
+            multivalued: false,
+          })),
+        ],
+      });
+    },
+    { attempts: 10, baseInterval: 1000, maxInterval: 1000 },
+  );
+
   // The client the tests sign users in through. A fresh realm only carries Keycloak's built-in
   // clients, and the obvious candidate (`admin-cli`) issues lightweight access tokens: they omit
   // `sub`, and the userinfo endpoint rejects them from Keycloak 26.6.2 onward, leaving the user

@@ -35,12 +35,45 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 
 .graphiql-history-header,
 .graphiql-doc-explorer-title,
-.doc-explorer-title {
+.doc-explorer-title,
+.graph-collections-header {
   @apply text-2xl font-bold text-foreground;
 }
 
 .doc-explorer-title {
   @apply mb-8;
+}
+
+/* GraphiQL pads the plugin pane 16px on every side. The right edge sits against
+   the editors, and the list adds its own 8px inside that to keep a row's hover
+   highlight off the scrollbar, so 16px here reads as far more space than the
+   left. 4px leaves the scrollbar close to the pane edge without touching it.
+   Matches GraphiQL's own selector specificity and wins on order, since
+   playground.css is imported after graphiql.css in _app.tsx. */
+.graphiql-container .graphiql-plugin {
+  padding-right: var(--px-4);
+}
+
+/* Mirrors .graphiql-doc-explorer-search-input so the Collections search reads
+   as the same control as the one in the Docs panel: a filled, borderless box
+   with a leading icon, rather than studio's bordered Input. */
+.graph-collections-search {
+  align-items: center;
+  background-color: hsla(var(--color-neutral), var(--alpha-background-light));
+  border-radius: var(--border-radius-4);
+  display: flex;
+  padding: var(--px-8) var(--px-12);
+}
+
+.graph-collections-search input {
+  background: transparent;
+  border: none;
+  margin-left: var(--px-4);
+  width: 100%;
+}
+
+.graph-collections-search input:focus {
+  outline: none;
 }
 
 .graphiql-container {

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.15.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.15.5...@wundergraph/cosmo-cdn@0.15.6) (2026-10-22)
+
+### Bug Fixes
+
+* **cdn:** detect truncated storage responses ([#3364](https://github.com/wundergraph/cosmo/issues/3364)) ([e33b383](https://github.com/wundergraph/cosmo/commit/e33b3832c89b56fe1c1adb09f2fd62506c70b693)) (@fiam)
+
 ## [0.15.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.15.4...@wundergraph/cosmo-cdn@0.15.5) (2026-09-14)
 
 **Note:** Version bump only for package @wundergraph/cosmo-cdn

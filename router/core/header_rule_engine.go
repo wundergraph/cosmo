@@ -113,7 +113,11 @@ type headerPropagationWriter struct {
 	didApplyRouterRespHeaders bool
 	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
-	cacheTagHeader            *config.ResponseCacheTagHeaderConfig
+	cacheTagHeader            *cacheTagHeader
+	didSetCacheTagHeader      bool
+	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
+	responseCacheStatusFor    *requestContext
+	didSetResponseCacheStatus bool
 	didCheckOnlyIfCached      bool
 }
 
@@ -150,10 +154,17 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
 	}
 	// Not on a response carrying subgraph errors: it was just marked no-store.
-	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors {
-		if value := buildCacheTagHeader(h.resolveCtx.ResponseCacheSurrogateKeys(), h.cacheTagHeader.Delimiter, h.cacheTagHeader.MaxBytes); value != "" {
-			h.writer.Header().Set(h.cacheTagHeader.Name, value)
+	if h.cacheTagHeader != nil && !h.didSetSubgraphErrors && !h.didSetCacheTagHeader {
+		h.didSetCacheTagHeader = true
+		var log *zap.Logger
+		if h.reqCtx != nil {
+			log = h.reqCtx.logger
 		}
+		h.cacheTagHeader.set(h.resolveCtx.Context(), h.writer.Header(), h.resolveCtx.ResponseCacheSurrogateKeys(), log)
+	}
+	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
+		h.didSetResponseCacheStatus = true
+		setResponseCacheStatusHeader(h.writer.Header(), h.responseCacheStatusFor)
 	}
 	// An only-if-cached request the cache could not answer.
 	if !h.didCheckOnlyIfCached {
@@ -933,6 +944,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
 		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			markStale(defaultResponseCache)
 			// The default stands in for a missing header. Against a fetch's own
 			// header it only caps the lifetime, so it can't withdraw public.
 			if resCacheHeader != "" {

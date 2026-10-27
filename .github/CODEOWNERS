@@ -24,6 +24,8 @@
 /shared/            @wundergraph/Cosmo
 /studio/            @wundergraph/Cosmo
 
+/router/internal/graphiql/graphiql.html
+
 /buf.connect-go.go.gen.yaml     @wundergraph/Router
 /buf.graphqlmetrics.go.gen.yaml @wundergraph/Router
 /buf.router.go.gen.yaml         @wundergraph/Router
