@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.260.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.259.0...controlplane@0.260.0) (2026-10-27)
+
+### Features
+
+* add bill-due flag and unpaid balance banner for organizations ([#3423](https://github.com/wundergraph/cosmo/issues/3423)) ([d8e111a](https://github.com/wundergraph/cosmo/commit/d8e111a126262c67c7aa43e6329b47380dd067f0)) (@JivusAyrus)
+
+## [0.259.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.258.0...controlplane@0.259.0) (2026-10-27)
+
+### Features
+
+* add operation collections to the studio playground ([#3358](https://github.com/wundergraph/cosmo/issues/3358)) ([f146c7a](https://github.com/wundergraph/cosmo/commit/f146c7ac1eb5bdb47da094a8621d4548ed4b3002)) (@JivusAyrus)
+* implement user segmentation in signup flow with Keycloak integration ([#3408](https://github.com/wundergraph/cosmo/issues/3408)) ([85a0cd4](https://github.com/wundergraph/cosmo/commit/85a0cd49dba9e7dab9123fb39718373f02a08c48)) (@JivusAyrus)
+
 ## [0.258.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.257.0...controlplane@0.258.0) (2026-10-23)
 
 ### Features

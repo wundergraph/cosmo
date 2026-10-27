@@ -12,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -25,6 +25,8 @@ import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
 import { createDeferAdvisorPlugin } from './defer-advisor/defer-advisor-plugin';
+import { DeferProvider } from './defer-advisor/defer-context';
+import { DeferPillsSync } from './defer-advisor/defer-pills-sync';
 import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
@@ -91,6 +93,14 @@ const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: stri
   }
 
   return headers;
+};
+
+// Shared by normal runs and Defer Advisor probes, so both send the same headers.
+const prepareHeaders = (initialHeaders: Record<string, string>, scripts: GraphiQLScripts | undefined) => {
+  const headers = scripts?.transformHeaders ? scripts.transformHeaders(initialHeaders) : { ...initialHeaders };
+  const substituted = substituteHeadersFromEnv(headers, '0');
+  validateHeaders(substituted);
+  return substituted;
 };
 
 const executeScript = async (code: string | undefined, graphId: string) => {
@@ -172,14 +182,7 @@ const graphiQLFetch = async (
   init: RequestInit,
 ) => {
   try {
-    const initialHeaders = init.headers as Record<string, string>;
-    let headers: Record<string, string> = scripts?.transformHeaders
-      ? scripts.transformHeaders(initialHeaders)
-      : { ...initialHeaders };
-
-    headers = substituteHeadersFromEnv(headers, '0');
-
-    validateHeaders(headers);
+    const headers = prepareHeaders(init.headers as Record<string, string>, scripts);
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -635,8 +638,21 @@ export const Playground = (input: {
 
   const [result, setResult] = useState<OperationResult>(initialResult);
 
-  // Memoised: GraphiQL needs stable plugin objects.
-  const plugins = useMemo(() => [explorerPlugin({ showAttribution: false }), createDeferAdvisorPlugin()], []);
+  const onEditHeaders = useCallback((value: string) => {
+    setHeaders(value);
+  }, []);
+
+  // Scripts only change through the prop, so they can be a dependency of the plugin.
+  const plugins = useMemo(
+    () => [
+      explorerPlugin({ showAttribution: false }),
+      // A blank header pane means no headers, not a JSON parse error.
+      createDeferAdvisorPlugin(url, (rawHeaders) =>
+        prepareHeaders(JSON.parse(rawHeaders.trim() || '{}'), input.scripts),
+      ),
+    ],
+    [url, input.scripts],
+  );
 
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
@@ -770,23 +786,23 @@ export const Playground = (input: {
             forcedTheme: input.theme,
           }}
         >
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            // Makes GraphiQL's introspection query ask for deprecated input fields and arguments.
-            // They are excluded by default, so an input object with only deprecated fields would
-            // come back empty and fail schema building.
-            inputValueDeprecation
-            onEditQuery={setQuery}
-            defaultHeaders={`{
+          <DeferProvider>
+            <GraphiQL
+              shouldPersistHeaders
+              showPersistHeadersSettings={false}
+              fetcher={fetcher}
+              inputValueDeprecation
+              onEditQuery={setQuery}
+              defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-            onEditHeaders={setHeaders}
-            onTabChange={setTabsState}
-            plugins={plugins}
-            forcedTheme={input.theme}
-          />
+              onEditHeaders={onEditHeaders}
+              onTabChange={setTabsState}
+              plugins={plugins}
+              forcedTheme={input.theme}
+              toolbar={{ additionalComponent: DeferPillsSync }}
+            />
+          </DeferProvider>
           {isMounted && <PlaygroundPortal />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>
