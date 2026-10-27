@@ -1,5 +1,6 @@
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
+import { useEditorContext } from '@graphiql/react';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
 import {
@@ -739,6 +740,23 @@ export const Playground = (input: {
     tabsStateRef.current = tabsState;
   }, [tabsState]);
 
+  // onTabChange does not fire for the tabs GraphiQL restores on mount, so a subscription started
+  // before any tab interaction would find no active tab. This renders inside GraphiQL's provider
+  // and reports the restored state once. GraphiQL takes a single additionalComponent, so it also
+  // renders the defer pills sync.
+  const toolbar = useMemo(
+    () => ({
+      additionalComponent: function ToolbarSync() {
+        const { tabs, activeTabIndex } = useEditorContext({ nonNull: true });
+        useEffect(() => {
+          setTabsState({ tabs, activeTabIndex });
+        }, []);
+        return <DeferPillsSync />;
+      },
+    }),
+    [],
+  );
+
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
     const onFetch: OnFetch = (response, status, statusText, defer) => {
@@ -936,7 +954,7 @@ export const Playground = (input: {
               onTabChange={setTabsState}
               plugins={plugins}
               forcedTheme={input.theme}
-              toolbar={{ additionalComponent: DeferPillsSync }}
+              toolbar={toolbar}
             />
           </DeferProvider>
           {isMounted && <PlaygroundPortal />}
