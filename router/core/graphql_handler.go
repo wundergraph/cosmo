@@ -24,8 +24,6 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
-	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -126,7 +124,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
-		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
+		responseCacheTagHeader:                   newCacheTagHeader(opts.ResponseCacheTagHeader, opts.ResponseCacheMetrics),
 		responseCacheSettings:                    opts.ResponseCacheSettings,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
 	}
@@ -204,7 +202,7 @@ type GraphQLHandler struct {
 	responseCacheStore        caching.Cache
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
-	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
+	responseCacheTagHeader    cacheTagHeader
 	responseCacheSettings     *ResponseCacheSettings
 
 	enableCacheResponseHeaders      bool
@@ -264,7 +262,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 
-	h.configureResponseCache(resolveCtx, reqCtx.cacheControl, reqCtx.expressionContext)
+	h.configureResponseCache(resolveCtx, reqCtx)
 
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
@@ -328,6 +326,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if h.responseCacheStore != nil && h.responseCacheTagHeader.Enabled {
 				pw.cacheTagHeader = &h.responseCacheTagHeader
+			}
+			if h.responseCacheStore != nil && h.enableCacheResponseHeaders {
+				pw.responseCacheStatusFor = reqCtx
 			}
 		}
 
@@ -750,13 +751,14 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 
 // configureResponseCache hands a request's resolve context the response cache,
 // as the request's Cache-Control allows.
-func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, cacheControl *cachedirective.RequestCacheDirectives, exprCtx expr.Context) {
+func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, reqCtx *requestContext) {
+	cacheControl := reqCtx.cacheControl
 	// The graph mux sets settings with the store, or fails to build.
 	if h.responseCacheStore == nil {
 		return
 	}
 	if store := selectCacheStore(h.responseCacheStore, cacheControl); store != nil {
-		cacheOpts := h.responseCacheSettings.options(exprCtx, h.responseCacheErrorHandler)
+		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
 		cacheOpts.Store = store
 		cacheOpts.OnError = h.responseCacheErrorHandler
 		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
@@ -765,6 +767,13 @@ func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, cac
 			Type:     h.responseCacheInvalidation.Type,
 		}
 		cacheOpts.OnlyIfCached = requestOnlyIfCached(cacheControl)
+		if resolveCtx.TracingOptions.Enable {
+			_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+			// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+			cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+				return synchronous && resolveCtx.SubgraphErrors() == nil
+			})
+		}
 		resolveCtx.SetResponseCache(cacheOpts)
 	}
 	if requestRevalidates(cacheControl) || requestOnlyIfCached(cacheControl) {

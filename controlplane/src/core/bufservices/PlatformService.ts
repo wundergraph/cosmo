@@ -132,6 +132,16 @@ import { deletePersistedOperation } from './persisted-operation/deletePersistedO
 import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
 import { previewDeleteClient } from './persisted-operation/previewDeleteClient.js';
 import { deleteClient } from './persisted-operation/deleteClient.js';
+import { createGraphCollection } from './graph-collection/createGraphCollection.js';
+import { createGraphCollectionOperation } from './graph-collection/createGraphCollectionOperation.js';
+import { deleteGraphCollection } from './graph-collection/deleteGraphCollection.js';
+import { deleteGraphCollectionOperation } from './graph-collection/deleteGraphCollectionOperation.js';
+import { getGraphCollectionOperation } from './graph-collection/getGraphCollectionOperation.js';
+import { getGraphCollections } from './graph-collection/getGraphCollections.js';
+import { renameGraphCollection } from './graph-collection/renameGraphCollection.js';
+import { renameGraphCollectionOperation } from './graph-collection/renameGraphCollectionOperation.js';
+import { shareGraphCollection } from './graph-collection/shareGraphCollection.js';
+import { updateGraphCollectionOperation } from './graph-collection/updateGraphCollectionOperation.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundDefaultHeaders } from './playground/getPlaygroundDefaultHeaders.js';
@@ -847,6 +857,36 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return deletePlaygroundScript(opts, req, ctx);
     },
 
+    getGraphCollections: (req, ctx) => {
+      return getGraphCollections(opts, req, ctx);
+    },
+    getGraphCollectionOperation: (req, ctx) => {
+      return getGraphCollectionOperation(opts, req, ctx);
+    },
+    createGraphCollection: (req, ctx) => {
+      return createGraphCollection(opts, req, ctx);
+    },
+    renameGraphCollection: (req, ctx) => {
+      return renameGraphCollection(opts, req, ctx);
+    },
+    shareGraphCollection: (req, ctx) => {
+      return shareGraphCollection(opts, req, ctx);
+    },
+    deleteGraphCollection: (req, ctx) => {
+      return deleteGraphCollection(opts, req, ctx);
+    },
+    createGraphCollectionOperation: (req, ctx) => {
+      return createGraphCollectionOperation(opts, req, ctx);
+    },
+    updateGraphCollectionOperation: (req, ctx) => {
+      return updateGraphCollectionOperation(opts, req, ctx);
+    },
+    renameGraphCollectionOperation: (req, ctx) => {
+      return renameGraphCollectionOperation(opts, req, ctx);
+    },
+    deleteGraphCollectionOperation: (req, ctx) => {
+      return deleteGraphCollectionOperation(opts, req, ctx);
+    },
     getPlaygroundDefaultHeaders: (req, ctx) => {
       return getPlaygroundDefaultHeaders(opts, req, ctx);
     },

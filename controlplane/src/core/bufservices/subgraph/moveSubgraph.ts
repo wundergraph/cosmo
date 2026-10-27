@@ -3,13 +3,14 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlainMessage } from '../../../types/index.js';
-import { PublicError } from '../../errors/errors.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -74,6 +75,7 @@ export function moveSubgraph(
       };
     }
 
+    // Moving takes the subgraph out of the source namespace, so it needs the same rights as deleting it.
     await opts.authorizer.authorize({
       db: opts.db,
       graph: {
@@ -82,13 +84,33 @@ export function moveSubgraph(
       },
       headers: ctx.requestHeader,
       authContext,
+      isDeleteOperation: true,
     });
+
+    // The move creates the subgraph in the destination, so it needs the same rights as creating one there.
+    // This runs before the transaction so a denied move writes nothing.
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const newNamespace = await namespaceRepo.byName(req.newNamespace);
+    if (!newNamespace) {
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
+    }
+
+    if (!authContext.rbac.canCreateSubGraph(newNamespace)) {
+      throw new UnauthorizedError();
+    }
+
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
         const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
         const exists = await subgraphRepo.exists(req.name, req.newNamespace);
         if (exists) {
@@ -96,11 +118,6 @@ export function moveSubgraph(
             EnumStatusCode.ERR_ALREADY_EXISTS,
             `The subgraph "${req.name}" already exists in the namespace "${req.newNamespace}".`,
           );
-        }
-
-        const newNamespace = await namespaceRepo.byName(req.newNamespace);
-        if (!newNamespace) {
-          throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
         }
 
         const compositionService = new CompositionService(
@@ -114,6 +131,7 @@ export function moveSubgraph(
           req.disableResolvabilityValidation,
           opts.promptToQueryClient,
           opts.billingDefaultPlanId,
+          mapperUpdater,
         );
 
         const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
@@ -169,35 +187,18 @@ export function moveSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }
