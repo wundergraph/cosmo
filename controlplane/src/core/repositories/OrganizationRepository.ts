@@ -68,6 +68,7 @@ export class OrganizationRepository {
     organizationSlug: string;
     ownerID: string;
     kcGroupId?: string;
+    enableSplitConfigLoading?: boolean;
   }): Promise<Omit<OrganizationDTO, 'rbac'>> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -94,6 +95,15 @@ export class OrganizationRepository {
       org.billing = {
         plan: this.defaultBillingPlanId,
       };
+    }
+
+    if (input.enableSplitConfigLoading !== false) {
+      // We are accepting `undefined` as `true` to support enabling
+      await this.updateFeature({
+        organizationId: org.id,
+        id: 'split-config-loading',
+        enabled: true,
+      });
     }
 
     return org;
@@ -276,6 +286,7 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         billing: {
           plan: organizationBilling.plan,
+          isBillDue: organizationBilling.isBillDue,
         },
         subscription: {
           status: billingSubscriptions.status,
@@ -322,6 +333,7 @@ export class OrganizationRepository {
             billing: plan
               ? {
                   plan,
+                  isBillDue: Boolean(org.billing?.isBillDue),
                 }
               : undefined,
             subscription: org.subscription

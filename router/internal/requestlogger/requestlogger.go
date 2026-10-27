@@ -55,6 +55,7 @@ type handler struct {
 	logger          *zap.Logger
 	panicLogger     *zap.Logger
 	logLevelHandler func(r *http.Request) zapcore.Level
+	filter          func(r *http.Request, fields []zap.Field) bool
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -63,6 +64,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	}
 
 	return r
+}
+
+// WithFilter suppresses completed request entries for which fn returns false.
+// Panic entries are always logged.
+func WithFilter(fn func(r *http.Request, fields []zap.Field) bool) Option {
+	return func(h *handler) { h.filter = fn }
 }
 
 func WithAttributes(attributes []config.CustomAttribute) Option {
@@ -203,7 +210,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logLevel = h.logLevelHandler(r)
 	}
 
-	h.logger.Log(logLevel, path, append(fields, resFields...)...)
+	fields = append(fields, resFields...)
+	if h.filter == nil || h.filter(r, fields) {
+		h.logger.Log(logLevel, path, fields...)
+	}
 }
 
 func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []zapcore.Field {

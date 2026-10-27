@@ -324,12 +324,14 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": null,
       "IgnoreQueryParamsList": [
         "variables"
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": false,
       "Fields": null
     }
@@ -468,7 +470,13 @@
       "Enabled": false,
       "Name": "Cache-Tag",
       "Delimiter": ",",
-      "MaxBytes": 16384
+      "Tiers": [
+        "subgraph",
+        "type",
+        "cache_tag"
+      ],
+      "MaxBytes": 16384,
+      "OnOverflow": "truncate"
     },
     "All": {
       "Enabled": true,
@@ -541,7 +549,7 @@
     "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
-    "EnableNetPoll": true,
+    "EnableNetPoll": false,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,

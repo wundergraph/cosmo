@@ -84,9 +84,12 @@ describe('Restore Organization', (ctx) => {
     expect(graphRes.response?.code).toBe(EnumStatusCode.OK);
     expect(graphRes.subgraphs.length).toBe(1);
 
-    const graphKey = `${org!.id}/${graphRes.graph?.id}/routerconfigs/latest.json`;
-
-    expect(blobStorage.keys().includes(graphKey)).toEqual(true);
+    expect(blobStorage.keys()).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(`${org!.id}/${graphRes.graph?.id}/manifest/latest.json`),
+        expect.stringContaining(`${org!.id}/${graphRes.graph?.id}/manifest/mapper.json`),
+      ]),
+    );
 
     const worker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
@@ -122,6 +125,11 @@ describe('Restore Organization', (ctx) => {
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).not.toBeNull();
 
-    expect(blobStorage.keys().includes(graphKey)).toEqual(true);
+    expect(blobStorage.keys()).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(`${org!.id}/${graphRes.graph?.id}/manifest/latest.json`),
+        expect.stringContaining(`${org!.id}/${graphRes.graph?.id}/manifest/mapper.json`),
+      ]),
+    );
   });
 });

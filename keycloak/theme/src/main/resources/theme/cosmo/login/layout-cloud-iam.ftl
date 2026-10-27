@@ -37,7 +37,7 @@
         </#if>
     </head>
 
-    <body class="${properties.kcBodyClass!}">
+    <body class="${properties.kcBodyClass!} ${bodyClass}">
     <div class="${properties.kcLoginClass!}">
         <div class="${properties.kcFormCardClass!}">
             <div id="kc-header" class="${properties.kcHeaderClass!}">

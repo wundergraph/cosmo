@@ -6,7 +6,7 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import { directlyProvidedInterfaceFieldError } from '../errors';
+import { type DirectiveArgumentData } from '../../directive-definition-data/types/types';
 
 export type IncompatibleMergedTypesErrorParams = {
   actualType: string;
@@ -16,7 +16,7 @@ export type IncompatibleMergedTypesErrorParams = {
 };
 
 export type InvalidNamedTypeErrorParams = {
-  data: FieldData | InputValueData;
+  data: DirectiveArgumentData | FieldData | InputValueData;
   namedTypeData: ParentDefinitionData;
   nodeType: string;
 };
@@ -41,6 +41,13 @@ export type IncompatibleParentTypeMergeErrorParams = {
   existingData: ParentDefinitionData;
   incomingSubgraphName: SubgraphName;
   incomingNodeType?: string;
+};
+
+export type IncompatibleSharedEnumErrorParams = {
+  inputCoordsBySubgraphName: Map<SubgraphName, Array<string>>;
+  missingValueNamesBySubgraphName: Map<SubgraphName, Array<string>>;
+  outputCoordsBySubgraphName: Map<SubgraphName, Array<string>>;
+  typeName: TypeName;
 };
 
 export type IncompatibleTypeWithProvidesErrorMessageParams = {

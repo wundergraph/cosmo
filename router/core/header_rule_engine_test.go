@@ -123,6 +123,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			policies: []*cachedirective.Object{
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, SMaxAge: 30}},
 				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 20}},
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 90, SMaxAge: 25}},
 			},
 			expectedHeader:     "max-age=20, s-maxage=20",
 			expectedDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 20, SMaxAge: 20},

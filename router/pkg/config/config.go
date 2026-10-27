@@ -484,7 +484,7 @@ type EngineExecutionConfiguration struct {
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers int  `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll          bool `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	EnableNetPoll          bool `envDefault:"false" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
 
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
@@ -1170,10 +1170,32 @@ type ResponseCacheTagHeaderConfig struct {
 	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Name      string `yaml:"name,omitempty" envDefault:"Cache-Tag" env:"NAME"`
 	Delimiter string `yaml:"delimiter,omitempty" envDefault:"," env:"DELIMITER"`
+	// Tiers are the tags the header carries, named like the invalidation
+	// indexes but independent of them.
+	Tiers []string `yaml:"tiers,omitempty" envDefault:"subgraph,type,cache_tag" env:"TIERS"`
 	// MaxBytes caps the header value; tags are packed coarsest first and the
-	// finest that do not fit are left out.
-	MaxBytes int `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
+	// finest that do not fit are left out, or OnOverflow says otherwise.
+	MaxBytes   int                            `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
+	OnOverflow ResponseCacheTagHeaderOverflow `yaml:"on_overflow,omitempty" envDefault:"truncate" env:"ON_OVERFLOW"`
 }
+
+// Tier names of ResponseCacheTagHeaderConfig.Tiers.
+const (
+	ResponseCacheTagTierSubgraph = "subgraph"
+	ResponseCacheTagTierType     = "type"
+	ResponseCacheTagTierCacheTag = "cache_tag"
+)
+
+// ResponseCacheTagHeaderOverflow is what happens when tags do not fit max_bytes.
+type ResponseCacheTagHeaderOverflow string
+
+const (
+	// ResponseCacheTagHeaderOverflowTruncate sends the tags that fit.
+	ResponseCacheTagHeaderOverflowTruncate ResponseCacheTagHeaderOverflow = "truncate"
+	// ResponseCacheTagHeaderOverflowPrivate sends no tags and Cache-Control:
+	// private, so no shared cache holds a response it cannot purge.
+	ResponseCacheTagHeaderOverflowPrivate ResponseCacheTagHeaderOverflow = "private"
+)
 
 // ResponseCacheInvalidationConfig selects which secondary indexes are built
 // over cached entries. Each is independent; all off caches entries untagged.
@@ -1415,11 +1437,13 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
+	Filter                string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_ROUTER_FILTER"`
 	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
 	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
+	Filter  string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FILTER"`
 	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
 	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }

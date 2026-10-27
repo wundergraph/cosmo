@@ -11,8 +11,12 @@ import {
   type AuthorizationData,
   type EntityData,
   type EntityInterfaceFederationData,
+  type EnumDefinitionData,
+  type EnumValueData,
   type InputObjectDefinitionData,
   type FederatedDirectivesData,
+  type FieldData,
+  type InputValueData,
   type ObjectDefinitionData,
   type ParentDefinitionData,
 } from '../../../schema-building/types/types';
@@ -70,9 +74,19 @@ export type FederationFactoryParams = {
   options?: CompositionOptions;
 };
 
+export type HandleIncompatibleSharedEnumParams = {
+  enumData: EnumDefinitionData;
+  inconsistentValueDatas: Array<EnumValueData>;
+};
+
 export type UpsertDirectiveArgumentDataParams = {
   argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
   incomingData: DirectiveArgumentData;
+};
+
+export type UpsertEnumUsageParams = {
+  coords: string;
+  data: DirectiveArgumentData | FieldData | InputValueData;
 };
 
 export type MergeSubscriptionFilterTargetResultParams = {

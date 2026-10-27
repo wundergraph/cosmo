@@ -34,6 +34,7 @@ import { ARTFetchNode, QueryPlanFetchTypeNode } from './types';
 import { ViewHeaders } from './view-headers';
 import { ViewInput } from './view-input';
 import { ViewLoadStats } from './view-load-stats';
+import { ResponseCacheBadge, ViewResponseCache } from './view-response-cache';
 import { ViewOutput } from './view-output';
 
 const getLayoutedElements = (
@@ -185,6 +186,11 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
             Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
           </p>
           <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
+          {data.responseCache && (
+            <p className="flex items-center gap-x-2">
+              Response Cache: <ResponseCacheBadge status={data.responseCache.status} />
+            </p>
+          )}
         </div>
         {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
         <div
@@ -202,6 +208,9 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
           {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
           {data.output && <ViewOutput output={data.output} asChild />}
           {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
+          {data.responseCache && data.responseCache.status !== 'not_cacheable' && (
+            <ViewResponseCache responseCache={data.responseCache} kind={data.type} asChild />
+          )}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />

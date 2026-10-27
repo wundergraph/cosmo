@@ -5,6 +5,7 @@ import {
   GetFederatedGraphChangelogResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -75,7 +76,32 @@ export function getFederatedGraphChangelog(
       };
     }
 
-    const result = await fedgraphRepo.fetchFederatedGraphChangelog(federatedGraph.targetId, req.pagination, dateRange);
+    let featureFlag: { id: string; name: string } | undefined;
+    if (req.featureFlagName) {
+      const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+      featureFlag = await featureFlagRepo.getFeatureFlagByName({
+        featureFlagName: req.featureFlagName,
+        namespaceId: federatedGraph.namespaceId,
+      });
+
+      if (!featureFlag) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `Could not find feature flag ${req.featureFlagName}`,
+          },
+          federatedGraphChangelogOutput: [],
+          hasNextPage: false,
+        };
+      }
+    }
+
+    const result = await fedgraphRepo.fetchFederatedGraphChangelog(
+      federatedGraph.targetId,
+      req.pagination,
+      dateRange,
+      featureFlag,
+    );
 
     if (!result) {
       return {
