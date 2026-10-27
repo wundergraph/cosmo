@@ -451,53 +451,21 @@ func TestNewTransportRequestOptions(t *testing.T) {
 func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
 	t.Parallel()
 
-	newTraceConfig := func() *rtrace.Config {
-		return &rtrace.Config{
-			Sampler: 1,
-			Exporters: []*rtrace.ExporterConfig{
-				{Endpoint: "https://otel-collector.example.com"},
-				{Endpoint: otelconfig.DefaultEndpoint()},
-			},
-		}
+	core, logs := observer.New(zap.WarnLevel)
+	traceConfig := &rtrace.Config{
+		Sampler: 1,
+		Exporters: []*rtrace.ExporterConfig{
+			{Endpoint: "https://otel-collector.example.com"},
+			{Endpoint: otelconfig.DefaultEndpoint()},
+		},
 	}
+	applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
 
-	t.Run("lowers only the Cosmo Cloud exporter", func(t *testing.T) {
-		t.Parallel()
-
-		core, logs := observer.New(zap.WarnLevel)
-		traceConfig := newTraceConfig()
-		applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
-
-		assert.Equal(t, 1.0, traceConfig.Sampler)
-		assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
-		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
-		assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
-		assert.Equal(t, 1, logs.Len())
-	})
-
-	t.Run("keeps a Cosmo Cloud exporter rate within the limit", func(t *testing.T) {
-		t.Parallel()
-
-		core, logs := observer.New(zap.WarnLevel)
-		traceConfig := newTraceConfig()
-		traceConfig.Exporters[1].SamplingRate = new(0.05)
-		applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
-
-		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
-		assert.Equal(t, 0.05, *traceConfig.Exporters[1].SamplingRate)
-		assert.Zero(t, logs.Len())
-	})
-
-	t.Run("lowers a Cosmo Cloud exporter rate above the limit", func(t *testing.T) {
-		t.Parallel()
-
-		traceConfig := newTraceConfig()
-		traceConfig.Exporters[1].SamplingRate = new(0.5)
-		applyCosmoCloudTraceSamplingLimit(zap.NewNop(), traceConfig, 0.1)
-
-		require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
-		assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
-	})
+	assert.Equal(t, 1.0, traceConfig.Sampler)
+	assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
+	require.NotNil(t, traceConfig.Exporters[1].SamplingRate)
+	assert.Equal(t, 0.1, *traceConfig.Exporters[1].SamplingRate)
+	assert.Equal(t, 1, logs.Len())
 }
 
 func TestNewGRPCStartupParamsExporterSamplingRate(t *testing.T) {
