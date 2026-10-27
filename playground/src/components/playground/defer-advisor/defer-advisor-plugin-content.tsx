@@ -2,7 +2,7 @@ import { useEditorContext } from '@graphiql/react';
 import { useEffect, useState } from 'react';
 import { DeferAdvisorPanel } from './defer-advisor-panel';
 import { parseVariables } from './probe';
-import { getDeferController } from './defer-controller';
+import { useDefer } from './defer-context';
 
 export const DeferAdvisorPluginContent = ({
   routingUrl,
@@ -12,9 +12,8 @@ export const DeferAdvisorPluginContent = ({
   getHeaders: (rawHeaders: string) => Record<string, string>;
 }) => {
   const { queryEditor, variableEditor, headerEditor } = useEditorContext({ nonNull: true });
+  const store = useDefer();
   const [query, setQuery] = useState(() => queryEditor?.getValue() ?? '');
-  // The controller is cached per editor and outlives this component, so latencies survive a tab switch.
-  const controller = queryEditor ? getDeferController(queryEditor) : null;
 
   useEffect(() => {
     if (!queryEditor) {
@@ -36,8 +35,7 @@ export const DeferAdvisorPluginContent = ({
         headers: getHeaders(headerEditor?.getValue() ?? ''),
         ...parseVariables(variableEditor?.getValue() ?? ''),
       })}
-      controller={controller}
-      onQueryChange={(next) => controller?.writeQuery(next)}
+      onQueryChange={(next) => store.writeQuery(next)}
     />
   );
 };

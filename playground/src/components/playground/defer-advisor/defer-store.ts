@@ -12,11 +12,12 @@ type AnalysisState = {
 
 export const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, error: null, running: false };
 
-// One per editor. Lives outside React: GraphiQL unmounts plugin content when its tab closes,
-// and the latencies have to survive that and reach both the panel and the editor pills.
-export class DeferController {
+// Lives outside React so the editor's change listener and the pill markers can reach it directly.
+// The editor only exists while GraphiQL is mounted, so the pills component binds it in an effect.
+export class DeferStore {
   private state: AnalysisState = initialAnalysis;
 
+  private editor: QueryEditor | undefined;
   private clearPills: (() => void) | undefined;
   private frame: number | undefined;
   private writing = false;
@@ -25,8 +26,21 @@ export class DeferController {
 
   private readonly onChange = () => this.onEditorChange();
 
-  constructor(private readonly editor: QueryEditor) {
+  // Returns the function that detaches the store from the editor.
+  bind(editor: QueryEditor): () => void {
+    this.editor = editor;
     editor.on('change', this.onChange);
+    this.render();
+    return () => {
+      editor.off('change', this.onChange);
+      if (this.frame !== undefined) {
+        cancelAnimationFrame(this.frame);
+        this.frame = undefined;
+      }
+      this.clearPills?.();
+      this.clearPills = undefined;
+      this.editor = undefined;
+    };
   }
 
   // Replaced on every change, so useSyncExternalStore sees a new reference exactly when something moved.
@@ -42,6 +56,9 @@ export class DeferController {
   };
 
   writeQuery(text: string) {
+    if (!this.editor) {
+      return;
+    }
     this.writing = true;
     try {
       this.editor.setValue(text);
@@ -121,10 +138,11 @@ export class DeferController {
     this.clearPills = undefined;
 
     const { latencies } = this.state;
-    if (!latencies) {
+    const editor = this.editor;
+    if (!latencies || !editor) {
       return;
     }
-    const text = this.editor.getValue();
+    const text = editor.getValue();
     const operation = getOperation(parseQuery(text)?.doc)?.operation;
     if (operation !== undefined && operation !== 'query') {
       return;
@@ -132,18 +150,7 @@ export class DeferController {
 
     const slowNames = slowFieldNames(latencies);
     try {
-      this.clearPills = renderPills(this.editor, computeFieldPills(text, latencies, slowNames));
+      this.clearPills = renderPills(editor, computeFieldPills(text, latencies, slowNames));
     } catch {}
   }
 }
-
-const controllers = new WeakMap<QueryEditor, DeferController>();
-
-export const getDeferController = (editor: QueryEditor): DeferController => {
-  let controller = controllers.get(editor);
-  if (!controller) {
-    controller = new DeferController(editor);
-    controllers.set(editor, controller);
-  }
-  return controller;
-};

@@ -7,7 +7,6 @@ import { getOperation, parseQuery } from './operation';
 import { DeferAdvisorFailures } from './defer-advisor-failures';
 import { DeferAdvisorLatencies } from './defer-advisor-latencies';
 import type { ProbeRequest } from './probe';
-import type { DeferController } from './defer-controller';
 import { summarizeRootFields } from './root-field-summary';
 import { useDeferAdvisor } from './use-defer-advisor';
 
@@ -17,14 +16,12 @@ type Props = {
   // Called when Analyse is clicked, so the probe uses the current headers and variables.
   getRequest: () => ProbeRequest;
   onQueryChange: (query: string) => void;
-  controller: DeferController | null;
 };
 
-export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange, controller }: Props) => {
+export const DeferAdvisorPanel = ({ query, routingUrl, getRequest, onQueryChange }: Props) => {
   const { latencies, probeFailures, error, running, analyse, clear } = useDeferAdvisor({
     query,
     routingUrl,
-    controller,
     getRequest,
   });
 

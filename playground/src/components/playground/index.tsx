@@ -25,6 +25,8 @@ import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
 import { createDeferAdvisorPlugin } from './defer-advisor/defer-advisor-plugin';
+import { DeferProvider } from './defer-advisor/defer-context';
+import { DeferPillsSync } from './defer-advisor/defer-pills-sync';
 import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
@@ -784,23 +786,23 @@ export const Playground = (input: {
             forcedTheme: input.theme,
           }}
         >
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            // Makes GraphiQL's introspection query ask for deprecated input fields and arguments.
-            // They are excluded by default, so an input object with only deprecated fields would
-            // come back empty and fail schema building.
-            inputValueDeprecation
-            onEditQuery={setQuery}
-            defaultHeaders={`{
+          <DeferProvider>
+            <GraphiQL
+              shouldPersistHeaders
+              showPersistHeadersSettings={false}
+              fetcher={fetcher}
+              inputValueDeprecation
+              onEditQuery={setQuery}
+              defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-            onEditHeaders={onEditHeaders}
-            onTabChange={setTabsState}
-            plugins={plugins}
-            forcedTheme={input.theme}
-          />
+              onEditHeaders={onEditHeaders}
+              onTabChange={setTabsState}
+              plugins={plugins}
+              forcedTheme={input.theme}
+              toolbar={{ additionalComponent: DeferPillsSync }}
+            />
+          </DeferProvider>
           {isMounted && <PlaygroundPortal />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>
