@@ -1275,7 +1275,7 @@
             },
             "sampling_rate": {
               "type": "number",
-              "description": "The sampling rate for the traces. The value must be between 0 and 1. The default value is 1.",
+              "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1.",
               "default": 1,
               "minimum": 0,
               "maximum": 1
