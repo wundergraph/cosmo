@@ -208,6 +208,7 @@ type CORS struct {
 	MatchOrigins     []string      `yaml:"match_origins" env:"CORS_MATCH_ORIGINS" envSeparator:";"`
 	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`
+	ExposeHeaders    []string      `yaml:"expose_headers" env:"CORS_EXPOSE_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`
 	MaxAge           time.Duration `yaml:"max_age" envDefault:"5m" env:"CORS_MAX_AGE"`
 }

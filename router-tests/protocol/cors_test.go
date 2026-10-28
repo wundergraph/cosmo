@@ -85,6 +85,51 @@ func TestCors(t *testing.T) {
 		})
 	})
 
+	t.Run("wildcard expose headers exposes non-standard response headers", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCors(&cors.Config{
+					Enabled:         true,
+					AllowAllOrigins: true,
+					ExposeHeaders:   []string{"*"},
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Trace-Id",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+						},
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("X-Trace-Id", "trace-123")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			}, map[string]string{
+				"Origin": "http://example.org",
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "*", res.Response.Header.Get("Access-Control-Expose-Headers"))
+			require.Equal(t, "trace-123", res.Response.Header.Get("X-Trace-Id"))
+		})
+	})
+
 	t.Run("wildcard matching", func(t *testing.T) {
 		t.Parallel()
 		t.Run("matching single wildcard succeeds", func(t *testing.T) {
