@@ -31,12 +31,6 @@ func (s *timeoutStore) SetMany(ctx context.Context, items []caching.Item) error 
 	return s.Store.SetMany(ctx, items)
 }
 
-func (s *timeoutStore) Probe(ctx context.Context) error {
-	ctx, cancel := bound(ctx, s.lookup)
-	defer cancel()
-	return s.Store.Probe(ctx)
-}
-
 // bound is ctx with timeout d, or ctx itself when d is zero.
 func bound(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
 	if d <= 0 {

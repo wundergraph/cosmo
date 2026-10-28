@@ -64,6 +64,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	removed, err := h.invalidator.InvalidateByTags(r.Context(), tags)
+	if errors.Is(err, responsecaching.ErrUnavailable) {
+		// Breaker open: retryable, and already logged by it.
+		h.writeError(w, http.StatusServiceUnavailable, "response cache storage is down, retry later")
+		return
+	}
 	if err != nil {
 		h.logger.Error("Response cache invalidation error",
 			zap.Error(err), zap.Int("removed", removed), zap.Int("tags", len(tags)))

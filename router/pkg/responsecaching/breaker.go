@@ -19,12 +19,23 @@ const (
 	maxProbeInterval = time.Minute
 )
 
+// Prober is what the breaker needs from the store beyond Store.
+type Prober interface {
+	// Probe reports whether the store can serve, without touching entries.
+	Probe(ctx context.Context) error
+	// IsUnavailable reports whether err means the store cannot serve, rather
+	// than that one call failed.
+	IsUnavailable(err error) bool
+}
+
 type BreakerOptions struct {
 	// FailureThreshold consecutive unavailable errors, of requests or probes,
 	// mark the store down.
 	FailureThreshold int
 	// ProbeInterval is how often the store is probed, up or down.
 	ProbeInterval time.Duration
+	// ProbeTimeout bounds each probe; zero leaves it unbounded.
+	ProbeTimeout time.Duration
 	// StartDown starts the store down, e.g. after a failed startup ping.
 	StartDown bool
 	Logger    *zap.Logger
@@ -32,6 +43,7 @@ type BreakerOptions struct {
 
 type breakerStore struct {
 	inner    Store
+	prober   Prober
 	opts     BreakerOptions
 	down     atomic.Bool
 	failures atomic.Int64
@@ -44,7 +56,7 @@ type breakerStore struct {
 
 // NewBreakerStore bypasses inner while it is down: calls fail fast with
 // ErrUnavailable. A background probe marks it down early and brings it back.
-func NewBreakerStore(inner Store, opts BreakerOptions) Store {
+func NewBreakerStore(inner Store, prober Prober, opts BreakerOptions) Store {
 	if opts.Logger == nil {
 		opts.Logger = zap.NewNop()
 	}
@@ -54,7 +66,7 @@ func NewBreakerStore(inner Store, opts BreakerOptions) Store {
 	}
 	opts.ProbeInterval = min(opts.ProbeInterval, maxProbeInterval)
 
-	s := &breakerStore{inner: inner, opts: opts, probeDone: make(chan struct{})}
+	s := &breakerStore{inner: inner, prober: prober, opts: opts, probeDone: make(chan struct{})}
 	s.probeCtx, s.cancelProbe = context.WithCancel(context.Background())
 	if opts.StartDown {
 		s.markDown()
@@ -90,16 +102,6 @@ func (s *breakerStore) InvalidateByTags(ctx context.Context, tags []string) (int
 	return removed, err
 }
 
-// IsUnavailable counts the breaker's own ErrUnavailable as well as the store's.
-func (s *breakerStore) IsUnavailable(err error) bool {
-	return errors.Is(err, ErrUnavailable) || s.inner.IsUnavailable(err)
-}
-
-// Probe reaches the store even while it is down.
-func (s *breakerStore) Probe(ctx context.Context) error {
-	return s.inner.Probe(ctx)
-}
-
 func (s *breakerStore) Close() error {
 	s.cancelProbe()
 	<-s.probeDone
@@ -116,7 +118,7 @@ func (s *breakerStore) observe(ctx context.Context, err error) {
 		}
 	case ctx.Err() != nil:
 		// The caller is gone, which says nothing about the store.
-	case s.inner.IsUnavailable(err):
+	case s.prober.IsUnavailable(err):
 		s.fail()
 	}
 }
@@ -133,17 +135,25 @@ func (s *breakerStore) probe() {
 		case <-ticker.C:
 		}
 
-		err := s.inner.Probe(s.probeCtx)
+		err := s.probeOnce()
 		switch {
 		case s.probeCtx.Err() != nil:
 			return
-		case err != nil && s.inner.IsUnavailable(err):
-			s.fail()
-		default:
+		case err == nil:
 			s.failures.Store(0)
 			s.markUp()
+		case s.prober.IsUnavailable(err):
+			s.fail()
+		default:
+			// Not proof the store is back; state unchanged.
 		}
 	}
+}
+
+func (s *breakerStore) probeOnce() error {
+	ctx, cancel := bound(s.probeCtx, s.opts.ProbeTimeout)
+	defer cancel()
+	return s.prober.Probe(ctx)
 }
 
 func (s *breakerStore) fail() {

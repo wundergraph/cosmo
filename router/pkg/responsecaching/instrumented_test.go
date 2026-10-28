@@ -27,8 +27,6 @@ func (f *fakeStore) SetMany(context.Context, []caching.Item) error { return f.er
 func (f *fakeStore) InvalidateByTags(context.Context, []string) (int, error) {
 	return f.removed, f.err
 }
-func (f *fakeStore) Probe(context.Context) error { return f.err }
-func (f *fakeStore) IsUnavailable(error) bool    { return false }
 func (f *fakeStore) Close() error {
 	f.closed = true
 	return nil

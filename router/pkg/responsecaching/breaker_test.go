@@ -46,7 +46,7 @@ func (s *countingStore) Close() error {
 
 func newTestBreaker(t *testing.T, inner *countingStore, probeInterval time.Duration, startDown bool) *breakerStore {
 	t.Helper()
-	s := NewBreakerStore(inner, BreakerOptions{
+	s := NewBreakerStore(inner, inner, BreakerOptions{
 		FailureThreshold: 3,
 		ProbeInterval:    probeInterval,
 		StartDown:        startDown,
@@ -155,6 +155,17 @@ func TestBreakerStore(t *testing.T) {
 		}, time.Second, time.Millisecond)
 	})
 
+	t.Run("a probe failing for another reason does not bring it back", func(t *testing.T) {
+		t.Parallel()
+
+		inner := &countingStore{}
+		inner.fail(errors.New("BUSY"))
+		s := newTestBreaker(t, inner, time.Millisecond, true)
+
+		require.Eventually(t, func() bool { return inner.calls.Load() >= 3 }, time.Second, time.Millisecond)
+		require.True(t, s.down.Load())
+	})
+
 	t.Run("starting down skips the store at once", func(t *testing.T) {
 		t.Parallel()
 
@@ -184,7 +195,7 @@ func TestBreakerStore(t *testing.T) {
 		t.Parallel()
 
 		inner := &countingStore{}
-		s := NewBreakerStore(inner, BreakerOptions{
+		s := NewBreakerStore(inner, inner, BreakerOptions{
 			ProbeInterval: time.Millisecond,
 		})
 		require.Eventually(t, func() bool { return inner.calls.Load() > 0 }, time.Second, time.Millisecond)

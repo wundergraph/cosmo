@@ -16,12 +16,11 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// redisProxy forwards to the test redis. Stalled, it holds every byte like a
-// paused or black-holed redis; shut, it drops new connections like a redis
-// that is not up yet.
+// redisProxy fronts the test redis: stall hangs it, shut refuses new conns.
 type redisProxy struct {
 	ln      net.Listener
 	shut    atomic.Bool
+	reads   atomic.Int64 // reads with data, either direction
 	stalled chan struct{}
 	once    sync.Once
 	done    chan struct{}
@@ -67,6 +66,9 @@ func (p *redisProxy) pipe(dst, src net.Conn) {
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := src.Read(buf)
+		if n > 0 {
+			p.reads.Add(1)
+		}
 		select {
 		case <-p.stalled:
 			<-p.done // swallow: the peer waits for a reply that never comes
@@ -217,9 +219,9 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(query)
 			require.GreaterOrEqual(t, time.Since(start), 300*time.Millisecond)
 
-			start = time.Now()
+			reads := proxy.reads.Load()
 			res := xEnv.MakeGraphQLRequestOK(query)
-			require.Less(t, time.Since(start), 200*time.Millisecond, "a down redis must not be waited on")
+			require.Equal(t, reads, proxy.reads.Load(), "a down redis must not be sent to")
 			require.Equal(t, warm.Body, res.Body)
 			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Mood.Load())
 		})
