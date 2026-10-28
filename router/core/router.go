@@ -3029,23 +3029,29 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 }
 
 // applyCosmoCloudTraceSamplingLimit lowers the sampling rate of every Cosmo
-// Cloud exporter whose effective rate exceeds the account limit. The effective
-// rate is the lower of the global and the exporter rate. Other exporters keep
-// their rates.
+// Cloud exporter above the account limit to the limit, so the traces recorded
+// because an upstream service sampled them also stay within it. It only warns
+// when the limit lowers the rate of the traces the router samples itself, which
+// is the lower of the global and the exporter rate. Other exporters keep their
+// rates.
 func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.Config, accountLimit float64) {
 	for _, exporter := range traceConfig.Exporters {
 		if !rtrace.IsDefaultExporter(exporter) {
 			continue
 		}
-		if rate := min(traceConfig.Sampler, rtrace.ExporterSamplingRate(exporter)); rate > accountLimit {
+		rate := rtrace.ExporterSamplingRate(exporter)
+		if rate <= accountLimit {
+			continue
+		}
+		if effectiveRate := min(traceConfig.Sampler, rate); effectiveRate > accountLimit {
 			logger.Warn(
 				"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
 				zap.String("endpoint", exporter.Endpoint),
-				zap.Float64("sampling_rate", rate),
+				zap.Float64("sampling_rate", effectiveRate),
 				zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
 			)
-			exporter.SamplingRate = &accountLimit
 		}
+		exporter.SamplingRate = &accountLimit
 	}
 }
 
