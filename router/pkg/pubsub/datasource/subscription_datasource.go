@@ -253,18 +253,6 @@ func (s *PubSubSubscriptionDataSource[C]) HashTriggerInput(input []byte, xxh *xx
 	return s.triggerHashInput(input, xxh)
 }
 
-// HashTriggerDeliveryGuarantee adds the negotiated guarantee and the resume cursor to the trigger
-// identity, so cursor and at-most-once clients never share a trigger, and neither do two clients
-// resuming from different positions: a trigger owns one consumer seeked to one position, so a
-// shared trigger would deliver one client's replay to the other.
-func (s *PubSubSubscriptionDataSource[C]) HashTriggerDeliveryGuarantee(negotiated resolve.NegotiatedDeliveryGuarantee, xxh *xxhash.Digest) error {
-	if _, err := xxh.WriteString(negotiated.Guarantee); err != nil {
-		return err
-	}
-	_, err := xxh.WriteString(negotiated.ResumeToken)
-	return err
-}
-
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnCreate(ctx context.Context, input []byte) (result []byte, err error) {
 	if len(s.hooks.SubscriptionOnCreate.Handlers) == 0 {
 		return input, nil
