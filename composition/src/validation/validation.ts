@@ -19,6 +19,7 @@ import { Kind, print } from 'graphql';
 import {
   BOOLEAN_SCALAR,
   CONTEXT_FIELD_VALUE,
+  EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_DELIVERY_GUARANTEES,
   EXECUTION,
   FEDERATION_POLICY,
@@ -102,10 +103,13 @@ export function isArgumentValueValid({
         // The fields of edfs__DeliveryGuarantees are validated when the event configuration is extracted.
         case EDFS_DELIVERY_GUARANTEES:
         // intentional fallthrough
+        case EDFS_NATS_STREAM_CONFIGURATION:
+        // intentional fallthrough
         case SUBSCRIPTION_FIELD_CONDITION:
         // intentional fallthrough
-        case SUBSCRIPTION_FILTER_CONDITION:
+        case SUBSCRIPTION_FILTER_CONDITION: {
           return argumentValue.kind === Kind.OBJECT;
+        }
         default: {
           const parentData = parentDefinitionDataByTypeName.get(typeNode.name.value);
           if (!parentData) {
