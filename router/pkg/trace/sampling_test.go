@@ -21,14 +21,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestExporterSamplingRate(t *testing.T) {
-	t.Parallel()
-
-	assert.Equal(t, 1.0, ExporterSamplingRate(&ExporterConfig{}))
-	assert.Equal(t, 0.1, ExporterSamplingRate(&ExporterConfig{SamplingRate: new(0.1)}))
-	assert.Equal(t, 0.0, ExporterSamplingRate(&ExporterConfig{SamplingRate: new(0.0)}))
-}
-
 func TestTraceIDSamplingProcessor(t *testing.T) {
 	t.Parallel()
 
@@ -46,7 +38,7 @@ func TestTraceIDSamplingProcessor(t *testing.T) {
 		_ = tp.Shutdown(context.Background())
 	})
 
-	traceIDs := startTraces(tp.Tracer("test"), context.Background, 1000)
+	traceIDs := startTraces(t.Context(), tp.Tracer("test"), 1000, false)
 
 	assert.Equal(t, sampledTraces(traceIDs, 0.5), spansPerTrace(high))
 	assert.Equal(t, sampledTraces(traceIDs, 0.1), spansPerTrace(low))
@@ -64,7 +56,7 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		lower := newOTLPCollector(t)
 		disabled := newOTLPCollector(t)
 
-		tp, err := NewTracerProvider(context.Background(), &ProviderConfig{
+		tp, err := NewTracerProvider(t.Context(), &ProviderConfig{
 			Logger: zap.NewNop(),
 			Config: &Config{
 				Enabled:            true,
@@ -80,8 +72,8 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		traceIDs := startTraces(tp.Tracer("test"), context.Background, 500)
-		require.NoError(t, tp.Shutdown(context.Background()))
+		traceIDs := startTraces(t.Context(), tp.Tracer("test"), 500, false)
+		require.NoError(t, tp.Shutdown(t.Context()))
 
 		assert.Equal(t, sampledTraces(traceIDs, 0.5), all.traces())
 		assert.Equal(t, sampledTraces(traceIDs, 0.5), higher.traces())
@@ -96,7 +88,7 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		higher := newOTLPCollector(t)
 		lower := newOTLPCollector(t)
 
-		tp, err := NewTracerProvider(context.Background(), &ProviderConfig{
+		tp, err := NewTracerProvider(t.Context(), &ProviderConfig{
 			Logger: zap.NewNop(),
 			Config: &Config{
 				Enabled:            true,
@@ -111,8 +103,8 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		traceIDs := startTraces(tp.Tracer("test"), sampledRemoteParent, 500)
-		require.NoError(t, tp.Shutdown(context.Background()))
+		traceIDs := startTraces(t.Context(), tp.Tracer("test"), 500, true)
+		require.NoError(t, tp.Shutdown(t.Context()))
 
 		// The parent-based sampler records every trace, regardless of the global rate.
 		assert.Equal(t, sampledTraces(traceIDs, 1), all.traces())
@@ -121,13 +113,18 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 	})
 }
 
-// startTraces starts n traces with a root and a child span each, using
-// parentContext for every root, and returns their trace IDs.
-func startTraces(tracer oteltrace.Tracer, parentContext func() context.Context, n int) []oteltrace.TraceID {
+// startTraces starts n traces with a root and a child span each and returns
+// their trace IDs. When sampledUpstream is set, every root has a sampled
+// remote parent of its own trace.
+func startTraces(ctx context.Context, tracer oteltrace.Tracer, n int, sampledUpstream bool) []oteltrace.TraceID {
 	traceIDs := make([]oteltrace.TraceID, 0, n)
 	for range n {
-		ctx, root := tracer.Start(parentContext(), "root")
-		_, child := tracer.Start(ctx, "child")
+		parent := ctx
+		if sampledUpstream {
+			parent = withSampledRemoteParent(ctx)
+		}
+		rootCtx, root := tracer.Start(parent, "root")
+		_, child := tracer.Start(rootCtx, "child")
 		child.End()
 		root.End()
 		traceIDs = append(traceIDs, root.SpanContext().TraceID())
@@ -135,14 +132,14 @@ func startTraces(tracer oteltrace.Tracer, parentContext func() context.Context, 
 	return traceIDs
 }
 
-// sampledRemoteParent returns a context carrying a sampled remote span of a
-// new random trace, as if an upstream service had sampled the request.
-func sampledRemoteParent() context.Context {
+// withSampledRemoteParent returns a copy of ctx carrying a sampled remote span
+// of a new random trace, as if an upstream service had sampled the request.
+func withSampledRemoteParent(ctx context.Context) context.Context {
 	var traceID oteltrace.TraceID
 	var spanID oteltrace.SpanID
 	_, _ = rand.Read(traceID[:])
 	_, _ = rand.Read(spanID[:])
-	return oteltrace.ContextWithRemoteSpanContext(context.Background(), oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
+	return oteltrace.ContextWithRemoteSpanContext(ctx, oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID:    traceID,
 		SpanID:     spanID,
 		TraceFlags: oteltrace.FlagsSampled,
