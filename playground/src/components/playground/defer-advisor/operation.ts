@@ -1,4 +1,13 @@
-import { DocumentNode, InlineFragmentNode, Kind, OperationDefinitionNode, parse, SelectionNode } from 'graphql';
+import {
+  DocumentNode,
+  FieldNode,
+  FragmentDefinitionNode,
+  InlineFragmentNode,
+  Kind,
+  OperationDefinitionNode,
+  parse,
+  SelectionNode,
+} from 'graphql';
 
 export const DEFER = 'defer';
 export const LABEL_ARG = 'label';
@@ -29,16 +38,67 @@ export const getOperation = (doc: DocumentNode | undefined): OperationDefinition
   return definition?.kind === Kind.OPERATION_DEFINITION ? definition : undefined;
 };
 
-type RootOccurrence = { name: string; deferred: boolean };
+export type FragmentMap = ReadonlyMap<string, FragmentDefinitionNode>;
 
-// `deferred` is true when an enclosing fragment is a @defer.
-export const collectRootOccurrences = (selections: readonly SelectionNode[], deferred = false): RootOccurrence[] =>
+export const getFragments = (doc: DocumentNode | undefined): FragmentMap =>
+  new Map(
+    (doc?.definitions ?? []).flatMap((d) => (d.kind === Kind.FRAGMENT_DEFINITION ? [[d.name.value, d] as const] : [])),
+  );
+
+type RootField = {
+  field: FieldNode;
+  // True when an enclosing fragment is a @defer.
+  deferred: boolean;
+  // False when the field comes through a named fragment spread. Defer edits the
+  // operation body only, so these cannot be deferred from the panel.
+  inBody: boolean;
+};
+
+// `path` holds the fragments being expanded, so a cycle stops instead of recursing.
+const walkRootFields = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap,
+  deferred: boolean,
+  inBody: boolean,
+  path: ReadonlySet<string>,
+): RootField[] =>
   selections.flatMap((selection) => {
     if (selection.kind === Kind.FIELD) {
-      return [{ name: selection.alias?.value ?? selection.name.value, deferred }];
+      return [{ field: selection, deferred, inBody }];
     }
     if (selection.kind === Kind.INLINE_FRAGMENT) {
-      return collectRootOccurrences(selection.selectionSet.selections, deferred || isDeferFragment(selection));
+      return walkRootFields(
+        selection.selectionSet.selections,
+        fragments,
+        deferred || isDeferFragment(selection),
+        inBody,
+        path,
+      );
     }
-    return [];
+    const fragment = fragments.get(selection.name.value);
+    if (selection.kind !== Kind.FRAGMENT_SPREAD || !fragment || path.has(fragment.name.value)) {
+      return [];
+    }
+    return walkRootFields(
+      fragment.selectionSet.selections,
+      fragments,
+      deferred,
+      false,
+      new Set([...path, fragment.name.value]),
+    );
   });
+
+const rootFields = (selections: readonly SelectionNode[], fragments: FragmentMap): RootField[] =>
+  walkRootFields(selections, fragments, false, true, new Set());
+
+export const collectRootFields = (
+  selections: readonly SelectionNode[],
+  fragments: FragmentMap = new Map(),
+): FieldNode[] => rootFields(selections, fragments).map((root) => root.field);
+
+export const collectRootOccurrences = (selections: readonly SelectionNode[], fragments: FragmentMap = new Map()) =>
+  rootFields(selections, fragments).map(({ field, deferred, inBody }) => ({
+    name: field.alias?.value ?? field.name.value,
+    deferred,
+    inBody,
+  }));

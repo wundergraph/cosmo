@@ -957,10 +957,13 @@ pyroscope:
 | CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the lowercased origin in addition to `allow_origins`. Patterns are compiled as written and matching is unanchored. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
+| CORS_EXPOSE_HEADERS    | expose_headers    | <Icon icon="square" /> | Set this to control the list of response headers browser clients can access. When empty, no `Access-Control-Expose-Headers` header is sent.  | []                                   |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
 
 Origins in `allow_origins` can use any URL scheme. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
+
+Setting `expose_headers` to `["*"]` exposes all response headers, but browsers only treat `*` as a wildcard for requests without credentials. Because `allow_credentials` defaults to `true`, list the headers explicitly (for example `["X-custom-header"]`) if browser clients send cookies or authorization headers.
 
 ### Regular expression origins
 

@@ -2953,7 +2953,7 @@ export class SubgraphRepository {
       hasClientTraffic = hasClientTraffic || result.hasClientTraffic;
     }
 
-    // Linting and graph pruning are independent of each other, so run them concurrently
+    // Linting and graph pruning are independent of each other, we are good to run them concurrently
     const [lintIssues, graphPruningIssues]: [SchemaLintIssues, SchemaGraphPruningIssues] = await Promise.all([
       schemaLintRepo.performSchemaLintCheck({
         schemaCheckID,
