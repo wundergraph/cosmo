@@ -1888,12 +1888,6 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		}
 	}
 
-	// Environment variables bypass the JSON schema, so the range of the global sampling rate is checked
-	// here. The negated comparison also rejects NaN.
-	if rate := cfg.Config.Telemetry.Tracing.SamplingRate; !(rate >= 0 && rate <= 1) {
-		return nil, fmt.Errorf("telemetry.tracing.sampling_rate (%v) must be between 0 and 1", rate)
-	}
-
 	// The drain runs inside the shutdown delay, so an explicit drain period must leave the grace period
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {

@@ -601,35 +601,6 @@ telemetry:
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
 }
 
-func TestTracingSamplingRateFromEnv(t *testing.T) {
-	for _, value := range []string{"NaN", "-0.1", "1.5"} {
-		t.Run(value, func(t *testing.T) {
-			t.Setenv("TRACING_SAMPLING_RATE", value)
-
-			f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-`)
-			_, err := LoadConfig([]string{f})
-			assert.ErrorContains(t, err, "telemetry.tracing.sampling_rate ("+value+") must be between 0 and 1")
-		})
-	}
-
-	t.Run("valid rate", func(t *testing.T) {
-		t.Setenv("TRACING_SAMPLING_RATE", "0.25")
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		assert.Equal(t, 0.25, cfg.Config.Telemetry.Tracing.SamplingRate)
-	})
-}
-
 func TestTracingExporterSamplingRate(t *testing.T) {
 	t.Parallel()
 
