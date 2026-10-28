@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,10 +16,11 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// stallProxy forwards to the test redis until stall, then holds every byte,
-// like a paused or black-holed redis: connections stay open, nothing answers.
+// stallProxy fronts the test redis: stall hangs it, shut refuses new conns.
 type stallProxy struct {
 	ln      net.Listener
+	shut    atomic.Bool
+	reads   atomic.Int64 // reads with data, either direction
 	stalled chan struct{}
 	once    sync.Once
 	done    chan struct{}
@@ -38,6 +40,10 @@ func newStallProxy(t *testing.T) *stallProxy {
 			client, err := ln.Accept()
 			if err != nil {
 				return
+			}
+			if p.shut.Load() {
+				_ = client.Close()
+				continue
 			}
 			server, err := net.Dial("tcp", responseCacheRedisAddr)
 			if err != nil {
@@ -60,6 +66,9 @@ func (p *stallProxy) pipe(dst, src net.Conn) {
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := src.Read(buf)
+		if n > 0 {
+			p.reads.Add(1)
+		}
 		select {
 		case <-p.stalled:
 			<-p.done // swallow: the peer waits for a reply that never comes
@@ -166,6 +175,95 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 			// 2s ping bound plus startup; unbounded takes over 6s.
 			require.Less(t, time.Since(start), 5*time.Second)
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
+		})
+	})
+}
+
+func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a stalled redis is bypassed once the breaker trips", func(t *testing.T) {
+		t.Parallel()
+
+		proxy := newStallProxy(t)
+		cfg := responseCacheConfig(t, time.Minute)
+		cfg.Storage.LookupTimeout = 300 * time.Millisecond
+		cfg.Storage.WriteTimeout = 300 * time.Millisecond
+		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: 1,
+			// Stays down for the test.
+			ProbeInterval: time.Hour,
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
+				}),
+				core.WithResponseCache(cfg),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`}
+			warm := xEnv.MakeGraphQLRequestOK(query)
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "warm before stalling")
+
+			proxy.stall()
+
+			// Waits out the lookup timeout, which trips the breaker.
+			start := time.Now()
+			xEnv.MakeGraphQLRequestOK(query)
+			require.GreaterOrEqual(t, time.Since(start), 300*time.Millisecond)
+
+			reads := proxy.reads.Load()
+			res := xEnv.MakeGraphQLRequestOK(query)
+			require.Equal(t, reads, proxy.reads.Load(), "a down redis must not be sent to")
+			require.Equal(t, warm.Body, res.Body)
+			require.EqualValues(t, 3, xEnv.SubgraphRequestCount.Mood.Load())
+		})
+	})
+
+	t.Run("a redis down at startup is used once it answers", func(t *testing.T) {
+		t.Parallel()
+
+		proxy := newStallProxy(t)
+		proxy.shut.Store(true)
+		cfg := responseCacheConfig(t, time.Minute)
+		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: 5,
+			ProbeInterval:    20 * time.Millisecond,
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
+				}),
+				core.WithResponseCache(cfg),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`}
+			xEnv.MakeGraphQLRequestOK(query)
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load(), "no cache while down")
+
+			proxy.shut.Store(false)
+
+			// Back once a request after a write is answered from the cache.
+			require.Eventually(t, func() bool {
+				xEnv.MakeGraphQLRequestOK(query)
+				before := xEnv.SubgraphRequestCount.Mood.Load()
+				xEnv.MakeGraphQLRequestOK(query)
+				return xEnv.SubgraphRequestCount.Mood.Load() == before
+			}, 5*time.Second, 20*time.Millisecond)
 		})
 	})
 }

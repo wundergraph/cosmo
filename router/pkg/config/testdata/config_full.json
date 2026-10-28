@@ -881,7 +881,12 @@
       "ProviderID": "my_redis",
       "MaxEntries": 2048,
       "LookupTimeout": 200000000,
-      "WriteTimeout": 1000000000
+      "WriteTimeout": 1000000000,
+      "CircuitBreaker": {
+        "Enabled": true,
+        "FailureThreshold": 3,
+        "ProbeInterval": 2000000000
+      }
     },
     "Invalidation": {
       "CacheTag": true,

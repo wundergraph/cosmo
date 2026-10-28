@@ -1232,6 +1232,16 @@ type ResponseCacheStorageConfig struct {
 	// WriteTimeout bounds a storage write on the request path; past it the
 	// write is dropped. Zero or less is unbounded.
 	WriteTimeout time.Duration `yaml:"write_timeout,omitempty" envDefault:"500ms" env:"WRITE_TIMEOUT"`
+	// CircuitBreaker bypasses a down redis until a probe lookup succeeds.
+	CircuitBreaker ResponseCacheCircuitBreakerConfig `yaml:"circuit_breaker,omitempty" envPrefix:"CIRCUIT_BREAKER_"`
+}
+
+type ResponseCacheCircuitBreakerConfig struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	// FailureThreshold consecutive failures, of requests or probes, mark redis down.
+	FailureThreshold int `yaml:"failure_threshold,omitempty" envDefault:"5" env:"FAILURE_THRESHOLD"`
+	// ProbeInterval is how often redis is probed, up or down; at most 1m.
+	ProbeInterval time.Duration `yaml:"probe_interval,omitempty" envDefault:"1s" env:"PROBE_INTERVAL"`
 }
 
 type StorageProviders struct {
