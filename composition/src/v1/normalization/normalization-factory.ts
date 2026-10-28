@@ -194,6 +194,7 @@ import {
   type CachePopulateConfiguration,
   type ConfigurationData,
   type DeliveryGuaranteeMode,
+  type DeliveryGuarantees,
   type Costs,
   type EntityCacheConfiguration,
   type EventConfiguration,
@@ -3115,20 +3116,17 @@ export class NormalizationFactory {
   }
 
   /* Parses the optional "deliveryGuarantees" argument of the @edfs__kafkaSubscribe directive.
-   * Returns the parsed mode, or undefined if the argument value is invalid (an error message is appended).
+   * Returns the delivery guarantees to spread into the configuration. The object is empty unless the mode is CURSOR
+   * (or if the argument value is invalid, in which case an error message is appended).
    */
   getDeliveryGuaranteeMode(
     argumentNode: ConstArgumentNode,
     errorMessages: Array<string>,
-  ): DeliveryGuaranteeMode | undefined {
+  ): DeliveryGuarantees {
     this.usesEdfsDeliveryGuarantees = true;
     /* The argument is nullable, so an explicit null is equivalent to omitting the argument. */
-    if (argumentNode.value.kind === Kind.NULL) {
-      return OFF_UPPER;
-    }
-
     if (argumentNode.value.kind !== Kind.OBJECT) {
-      return;
+      return {};
     }
     let mode: DeliveryGuaranteeMode = OFF_UPPER;
     let invalidModeValue: string | undefined;
@@ -3161,9 +3159,14 @@ export class NormalizationFactory {
           invalidModeValue,
         }),
       );
-      return;
+      return {};
     }
-    return mode;
+
+    if (mode === CURSOR_UPPER) {
+      return { deliveryGuarantees: { mode } };
+    }
+
+    return {};
   }
 
   getKafkaSubscribeConfiguration(
@@ -3174,7 +3177,7 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const topics: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
-    let deliveryGuaranteeMode: DeliveryGuaranteeMode | undefined;
+    let deliveryGuarantees: DeliveryGuarantees = {};
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPICS: {
@@ -3202,7 +3205,7 @@ export class NormalizationFactory {
           break;
         }
         case DELIVERY_GUARANTEES: {
-          deliveryGuaranteeMode = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
+          deliveryGuarantees = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
           break;
         }
       }
@@ -3216,7 +3219,7 @@ export class NormalizationFactory {
       providerType: PROVIDER_TYPE_KAFKA,
       topics: topics,
       type: SUBSCRIBE,
-      ...(deliveryGuaranteeMode === CURSOR_UPPER ? { deliveryGuarantees: { mode: deliveryGuaranteeMode } } : {}),
+      ...deliveryGuarantees,
     };
   }
 
