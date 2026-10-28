@@ -3879,7 +3879,6 @@ export class NormalizationFactory {
       ) {
         errorMessages.push(invalidNatsStreamConfigurationDefinitionErrorMessage);
       }
-      // Inject the correct dependency
       this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
     }
     if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
