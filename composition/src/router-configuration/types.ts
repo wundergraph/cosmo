@@ -22,8 +22,12 @@ export type StreamConfiguration = {
 
 export type DeliveryGuaranteeMode = typeof OFF_UPPER | typeof CURSOR_UPPER;
 
-export type DeliveryGuarantees = {
+export type DeliveryGuaranteesConfiguration = {
   mode: DeliveryGuaranteeMode;
+};
+
+export type DeliveryGuarantees = {
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
 };
 
 export type KafkaEventConfiguration = {
@@ -32,7 +36,7 @@ export type KafkaEventConfiguration = {
   providerType: 'kafka';
   topics: string[];
   type: KafkaEventType;
-  deliveryGuarantees?: DeliveryGuarantees;
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
 };
 
 export type NatsEventConfiguration = {
