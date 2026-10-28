@@ -16,8 +16,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// redisProxy fronts the test redis: stall hangs it, shut refuses new conns.
-type redisProxy struct {
+// faultProxy fronts a TCP server: stall hangs it, shut refuses new conns.
+type faultProxy struct {
 	ln      net.Listener
 	shut    atomic.Bool
 	reads   atomic.Int64 // reads with data, either direction
@@ -26,11 +26,11 @@ type redisProxy struct {
 	done    chan struct{}
 }
 
-func newRedisProxy(t *testing.T) *redisProxy {
+func newFaultProxy(t *testing.T) *faultProxy {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	p := &redisProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
+	p := &faultProxy{ln: ln, stalled: make(chan struct{}), done: make(chan struct{})}
 	t.Cleanup(func() {
 		close(p.done)
 		_ = ln.Close()
@@ -57,11 +57,11 @@ func newRedisProxy(t *testing.T) *redisProxy {
 	return p
 }
 
-func (p *redisProxy) url() string { return "redis://" + p.ln.Addr().String() }
+func (p *faultProxy) url() string { return "redis://" + p.ln.Addr().String() }
 
-func (p *redisProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
+func (p *faultProxy) stall() { p.once.Do(func() { close(p.stalled) }) }
 
-func (p *redisProxy) pipe(dst, src net.Conn) {
+func (p *faultProxy) pipe(dst, src net.Conn) {
 	defer func() { _ = dst.Close() }()
 	buf := make([]byte, 32*1024)
 	for {
@@ -92,7 +92,7 @@ func TestResponseCacheRedisTimeouts(t *testing.T) {
 	t.Run("a stalled redis degrades to the subgraph within the storage timeouts", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newRedisProxy(t)
+		proxy := newFaultProxy(t)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.LookupTimeout = 100 * time.Millisecond
 		cfg.Storage.WriteTimeout = 100 * time.Millisecond
@@ -160,7 +160,7 @@ func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 	t.Run("a redis that never answers does not hold startup", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newRedisProxy(t)
+		proxy := newFaultProxy(t)
 		proxy.stall()
 
 		start := time.Now()
@@ -185,7 +185,7 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 	t.Run("a stalled redis is bypassed once the breaker trips", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newRedisProxy(t)
+		proxy := newFaultProxy(t)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.LookupTimeout = 300 * time.Millisecond
 		cfg.Storage.WriteTimeout = 300 * time.Millisecond
@@ -230,7 +230,7 @@ func TestResponseCacheRedisCircuitBreaker(t *testing.T) {
 	t.Run("a redis down at startup is used once it answers", func(t *testing.T) {
 		t.Parallel()
 
-		proxy := newRedisProxy(t)
+		proxy := newFaultProxy(t)
 		proxy.shut.Store(true)
 		cfg := responseCacheConfig(t, time.Minute)
 		cfg.Storage.CircuitBreaker = config.ResponseCacheCircuitBreakerConfig{
