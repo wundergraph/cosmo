@@ -470,4 +470,14 @@ func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 2, logs.Len())
+
+	// A global rate below the limit already keeps the effective rate of Cosmo Cloud within it.
+	traceConfig = &rtrace.Config{
+		Sampler:   0.05,
+		Exporters: []*rtrace.ExporterConfig{{Endpoint: otelconfig.DefaultEndpoint()}},
+	}
+	applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
+
+	assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
+	assert.Equal(t, 2, logs.Len())
 }

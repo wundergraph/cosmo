@@ -604,7 +604,7 @@ telemetry:
 func TestTracingExporterSamplingRate(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unset exporter rate inherits the global rate", func(t *testing.T) {
+	t.Run("unset exporter rate", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -623,7 +623,7 @@ telemetry:
 		assert.Nil(t, cfg.Config.Telemetry.Tracing.Exporters[0].SamplingRate)
 	})
 
-	t.Run("exporter rate at or below the global rate", func(t *testing.T) {
+	t.Run("exporter rate", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -647,32 +647,6 @@ telemetry:
 		require.NotNil(t, exporters[1].SamplingRate)
 		assert.Equal(t, 0.5, *exporters[0].SamplingRate)
 		assert.Equal(t, 0.01, *exporters[1].SamplingRate)
-	})
-
-	t.Run("exporter rate above the global rate", func(t *testing.T) {
-		t.Parallel()
-
-		// The config loads as written. The tracer provider caps the rate at the global rate.
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-telemetry:
-  tracing:
-    sampling_rate: 0.01
-    exporters:
-      - endpoint: https://otel-collector.example.com
-        sampling_rate: 1
-      - endpoint: https://cosmo-otel.wundergraph.com
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		exporters := cfg.Config.Telemetry.Tracing.Exporters
-		require.Len(t, exporters, 2)
-		require.NotNil(t, exporters[0].SamplingRate)
-		assert.Equal(t, 1.0, *exporters[0].SamplingRate)
-		assert.Nil(t, exporters[1].SamplingRate)
 	})
 
 	t.Run("exporter rate outside of the valid range", func(t *testing.T) {

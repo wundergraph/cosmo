@@ -6,40 +6,20 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// ExporterSamplingRate returns the sampling rate that applies to exp. Exporters
-// without their own rate inherit the global one, and the global rate caps
-// exporter rates above it.
-func ExporterSamplingRate(cfg *Config, exp *ExporterConfig) float64 {
+// ExporterSamplingRate returns the sampling rate of exp. Exporters without
+// their own rate receive every trace the router records.
+func ExporterSamplingRate(exp *ExporterConfig) float64 {
 	if exp.SamplingRate != nil {
-		return min(*exp.SamplingRate, cfg.Sampler)
+		return *exp.SamplingRate
 	}
-	return cfg.Sampler
-}
-
-// HeadSamplingRate returns the rate used to decide whether a trace is recorded.
-// It is the highest rate of the enabled exporters, so that every exporter can
-// receive its share of the traces and no trace is recorded only to be dropped
-// by every exporter. It never exceeds the global rate, which it equals without
-// enabled exporters.
-func HeadSamplingRate(cfg *Config) float64 {
-	highest := -1.0
-	for _, exp := range cfg.Exporters {
-		if exp == nil || exp.Disabled {
-			continue
-		}
-		highest = max(highest, ExporterSamplingRate(cfg, exp))
-	}
-	if highest < 0 {
-		return cfg.Sampler
-	}
-	return highest
+	return 1
 }
 
 // traceIDSamplingProcessor forwards to the wrapped processor only the spans of
 // traces selected by a trace ID ratio. It uses the same decision as the head
-// sampler, so the traces an exporter receives with a lower rate are always a
-// subset of those received by an exporter with a higher rate, and every
-// exporter receives complete traces.
+// sampler, so an exporter receives at most the traces the head sampler records,
+// the traces it receives are a subset of those received by an exporter with a
+// higher rate, and every exporter receives complete traces.
 type traceIDSamplingProcessor struct {
 	sdktrace.SpanProcessor
 	sampler sdktrace.Sampler

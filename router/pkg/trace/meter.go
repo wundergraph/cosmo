@@ -129,16 +129,11 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
-	sampler := config.Config.Sampler
-	if config.MemoryExporter == nil {
-		sampler = HeadSamplingRate(config.Config)
-	}
-
 	if config.Config.ParentBasedSampler {
 		opts = append(opts,
 			sdktrace.WithSampler(
 				sdktrace.ParentBased(
-					sdktrace.TraceIDRatioBased(sampler),
+					sdktrace.TraceIDRatioBased(config.Config.Sampler),
 					// By default, when the parent span is sampled, the child span will be sampled.
 				),
 			),
@@ -146,7 +141,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	} else {
 		opts = append(opts,
 			sdktrace.WithSampler(
-				sdktrace.TraceIDRatioBased(sampler),
+				sdktrace.TraceIDRatioBased(config.Config.Sampler),
 			),
 		)
 	}
@@ -223,18 +218,9 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 					sdktrace.WithMaxQueueSize(2048),
 				)
 
-				if exp.SamplingRate != nil && *exp.SamplingRate > config.Config.Sampler {
-					config.Logger.Warn(
-						"Exporter sampling rate is higher than the global sampling rate. Using the global sampling rate for this exporter instead.",
-						zap.String("endpoint", exp.Endpoint),
-						zap.Float64("sampling_rate", *exp.SamplingRate),
-						zap.Float64("global_sampling_rate", config.Config.Sampler),
-					)
-				}
-
-				// Exporters sampling below the global rate only receive their share of the recorded traces,
-				// including the traces recorded because an upstream service sampled them.
-				if rate := ExporterSamplingRate(config.Config, exp); rate < config.Config.Sampler {
+				// Exporters with a sampling rate only receive the recorded traces selected by it, including the
+				// traces recorded because an upstream service sampled them.
+				if rate := ExporterSamplingRate(exp); rate < 1 {
 					processor = newTraceIDSamplingProcessor(processor, rate)
 				}
 

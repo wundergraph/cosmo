@@ -611,14 +611,14 @@ telemetry:
 
 ### Exporters
 
-| Environment Variable | YAML          | Required               | Description                                                                                                                                                          | Default Value          |
-| -------------------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-|                      | disabled      | <Icon icon="square" /> | bool                                                                                                                                                                 |                        |
-|                      | exporter      | <Icon icon="square" /> | one of: http,grpc                                                                                                                                                    |                        |
-|                      | endpoint      | <Icon icon="square" /> |                                                                                                                                                                      |                        |
-|                      | path          | <Icon icon="square" /> |                                                                                                                                                                      |                        |
-|                      | headers       | <Icon icon="square" /> |                                                                                                                                                                      |                        |
-|                      | sampling_rate | <Icon icon="square" /> | The sampling rate for the traces sent to this exporter, up to the global `sampling_rate`. See [Per-exporter sampling](/router/open-telemetry#per-exporter-sampling). | global `sampling_rate` |
+| Environment Variable | YAML          | Required               | Description                                                                                                                        | Default Value |
+| -------------------- | ------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                      | disabled      | <Icon icon="square" /> | bool                                                                                                                               |               |
+|                      | exporter      | <Icon icon="square" /> | one of: http,grpc                                                                                                                  |               |
+|                      | endpoint      | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | path          | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | headers       | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | sampling_rate | <Icon icon="square" /> | The share of the recorded traces sent to this exporter. See [Per-exporter sampling](/router/open-telemetry#per-exporter-sampling). | 1             |
 
 ### Example YAML config:
 
@@ -637,7 +637,7 @@ telemetry:
         # headers: {Authorization: Bearer <my-token>}
         batch_timeout: 10s
         export_timeout: 30s
-        # Defaults to telemetry.tracing.sampling_rate.
+        # Defaults to 1, every recorded trace.
         sampling_rate: 0.5
 ```
 

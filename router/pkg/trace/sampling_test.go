@@ -18,79 +18,15 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestExporterSamplingRate(t *testing.T) {
 	t.Parallel()
 
-	cfg := &Config{Sampler: 0.5}
-
-	assert.Equal(t, 0.5, ExporterSamplingRate(cfg, &ExporterConfig{}))
-	assert.Equal(t, 0.1, ExporterSamplingRate(cfg, &ExporterConfig{SamplingRate: new(0.1)}))
-	assert.Equal(t, 0.0, ExporterSamplingRate(cfg, &ExporterConfig{SamplingRate: new(0.0)}))
-	assert.Equal(t, 0.5, ExporterSamplingRate(cfg, &ExporterConfig{SamplingRate: new(1.0)}))
-}
-
-func TestHeadSamplingRate(t *testing.T) {
-	t.Parallel()
-
-	t.Run("no exporters keeps the global rate", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, 0.5, HeadSamplingRate(&Config{Sampler: 0.5}))
-	})
-
-	t.Run("an exporter inheriting the global rate keeps it", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, 1.0, HeadSamplingRate(&Config{
-			Sampler: 1,
-			Exporters: []*ExporterConfig{
-				{},
-				{SamplingRate: new(0.01)},
-			},
-		}))
-	})
-
-	t.Run("lowered to the highest exporter rate", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, 0.2, HeadSamplingRate(&Config{
-			Sampler: 1,
-			Exporters: []*ExporterConfig{
-				{SamplingRate: new(0.2)},
-				{SamplingRate: new(0.01)},
-			},
-		}))
-	})
-
-	t.Run("capped at the global rate", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, 0.01, HeadSamplingRate(&Config{
-			Sampler: 0.01,
-			Exporters: []*ExporterConfig{
-				{},
-				{SamplingRate: new(1.0)},
-			},
-		}))
-	})
-
-	t.Run("disabled exporters are ignored", func(t *testing.T) {
-		t.Parallel()
-		assert.Equal(t, 0.01, HeadSamplingRate(&Config{
-			Sampler: 1,
-			Exporters: []*ExporterConfig{
-				{Disabled: true},
-				{SamplingRate: new(0.01)},
-			},
-		}))
-		assert.Equal(t, 0.1, HeadSamplingRate(&Config{
-			Sampler: 0.1,
-			Exporters: []*ExporterConfig{
-				{Disabled: true, SamplingRate: new(1.0)},
-				{},
-			},
-		}))
-	})
+	assert.Equal(t, 1.0, ExporterSamplingRate(&ExporterConfig{}))
+	assert.Equal(t, 0.1, ExporterSamplingRate(&ExporterConfig{SamplingRate: new(0.1)}))
+	assert.Equal(t, 0.0, ExporterSamplingRate(&ExporterConfig{SamplingRate: new(0.0)}))
 }
 
 func TestTraceIDSamplingProcessor(t *testing.T) {
@@ -120,26 +56,25 @@ func TestTraceIDSamplingProcessor(t *testing.T) {
 func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 	t.Parallel()
 
-	t.Run("exporters receive the traces selected by their rate", func(t *testing.T) {
+	t.Run("exporters receive at most the traces the router records", func(t *testing.T) {
 		t.Parallel()
 
-		inherits := newOTLPCollector(t)
-		capped := newOTLPCollector(t)
+		all := newOTLPCollector(t)
+		higher := newOTLPCollector(t)
 		lower := newOTLPCollector(t)
 		disabled := newOTLPCollector(t)
 
-		core, logs := observer.New(zap.WarnLevel)
 		tp, err := NewTracerProvider(context.Background(), &ProviderConfig{
-			Logger: zap.New(core),
+			Logger: zap.NewNop(),
 			Config: &Config{
 				Enabled:            true,
 				Sampler:            0.5,
 				ParentBasedSampler: true,
 				Exporters: []*ExporterConfig{
-					{Endpoint: inherits.url},
-					{Endpoint: capped.url, SamplingRate: new(1.0)},
+					{Endpoint: all.url},
+					{Endpoint: higher.url, SamplingRate: new(0.8)},
 					{Endpoint: lower.url, SamplingRate: new(0.05)},
-					{Endpoint: disabled.url, SamplingRate: new(1.0), Disabled: true},
+					{Endpoint: disabled.url, Disabled: true},
 				},
 			},
 		})
@@ -148,18 +83,17 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		traceIDs := startTraces(tp.Tracer("test"), context.Background, 500)
 		require.NoError(t, tp.Shutdown(context.Background()))
 
-		assert.Equal(t, sampledTraces(traceIDs, 0.5), inherits.traces())
-		// The global rate caps the exporter rate above it, with a warning.
-		assert.Equal(t, sampledTraces(traceIDs, 0.5), capped.traces())
-		assert.Equal(t, 1, logs.FilterField(zap.String("endpoint", capped.url)).Len())
+		assert.Equal(t, sampledTraces(traceIDs, 0.5), all.traces())
+		assert.Equal(t, sampledTraces(traceIDs, 0.5), higher.traces())
 		assert.Equal(t, sampledTraces(traceIDs, 0.05), lower.traces())
 		assert.Empty(t, disabled.traces())
 	})
 
-	t.Run("exporters below the global rate filter traces sampled upstream", func(t *testing.T) {
+	t.Run("exporters apply their rate to traces sampled upstream", func(t *testing.T) {
 		t.Parallel()
 
-		highest := newOTLPCollector(t)
+		all := newOTLPCollector(t)
+		higher := newOTLPCollector(t)
 		lower := newOTLPCollector(t)
 
 		tp, err := NewTracerProvider(context.Background(), &ProviderConfig{
@@ -169,7 +103,8 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 				Sampler:            0.5,
 				ParentBasedSampler: true,
 				Exporters: []*ExporterConfig{
-					{Endpoint: highest.url, SamplingRate: new(0.2)},
+					{Endpoint: all.url},
+					{Endpoint: higher.url, SamplingRate: new(0.8)},
 					{Endpoint: lower.url, SamplingRate: new(0.05)},
 				},
 			},
@@ -179,9 +114,9 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		traceIDs := startTraces(tp.Tracer("test"), sampledRemoteParent, 500)
 		require.NoError(t, tp.Shutdown(context.Background()))
 
-		// The parent-based sampler records every trace, and every exporter
-		// applies its own rate to them, including the one with the highest rate.
-		assert.Equal(t, sampledTraces(traceIDs, 0.2), highest.traces())
+		// The parent-based sampler records every trace, regardless of the global rate.
+		assert.Equal(t, sampledTraces(traceIDs, 1), all.traces())
+		assert.Equal(t, sampledTraces(traceIDs, 0.8), higher.traces())
 		assert.Equal(t, sampledTraces(traceIDs, 0.05), lower.traces())
 	})
 }
