@@ -681,6 +681,8 @@ telemetry:
 	t.Run("exporter rate above the global rate", func(t *testing.T) {
 		t.Parallel()
 
+		// The config loads as written. The tracer provider caps the rate at the global rate.
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 

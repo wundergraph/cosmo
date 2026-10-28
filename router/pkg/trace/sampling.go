@@ -7,19 +7,20 @@ import (
 )
 
 // ExporterSamplingRate returns the sampling rate that applies to exp. Exporters
-// without their own rate inherit the global one.
+// without their own rate inherit the global one, and the global rate caps
+// exporter rates above it.
 func ExporterSamplingRate(cfg *Config, exp *ExporterConfig) float64 {
 	if exp.SamplingRate != nil {
-		return *exp.SamplingRate
+		return min(*exp.SamplingRate, cfg.Sampler)
 	}
 	return cfg.Sampler
 }
 
 // HeadSamplingRate returns the rate used to decide whether a trace is recorded.
-// It is the highest rate of the enabled exporters, which can be above or below
-// the global rate, so that every exporter can receive its share of the traces
-// and no trace is recorded only to be dropped by every exporter. Without
-// enabled exporters it is the global rate.
+// It is the highest rate of the enabled exporters, so that every exporter can
+// receive its share of the traces and no trace is recorded only to be dropped
+// by every exporter. It never exceeds the global rate, which it equals without
+// enabled exporters.
 func HeadSamplingRate(cfg *Config) float64 {
 	highest := -1.0
 	for _, exp := range cfg.Exporters {

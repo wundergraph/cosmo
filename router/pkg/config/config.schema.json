@@ -1334,7 +1334,7 @@
                   },
                   "sampling_rate": {
                     "type": "number",
-                    "description": "The sampling rate for the traces sent to this exporter. It can be higher or lower than the global sampling rate. Defaults to the global sampling rate.",
+                    "description": "The sampling rate for the traces sent to this exporter. Defaults to the global sampling rate, which is also the maximum. A higher rate is lowered to the global rate with a warning.",
                     "minimum": 0,
                     "maximum": 1
                   },

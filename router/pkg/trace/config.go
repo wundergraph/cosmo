@@ -42,8 +42,8 @@ type ExporterConfig struct {
 	// For example
 	// /v1/traces
 	HTTPPath string
-	// SamplingRate overrides the global sampling rate for this exporter. It can
-	// be higher or lower than the global rate. When nil, the global rate applies.
+	// SamplingRate lowers the sampling rate for this exporter. The global rate
+	// caps it and applies when it is nil.
 	SamplingRate *float64
 }
 

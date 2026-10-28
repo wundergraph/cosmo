@@ -224,6 +224,15 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 					sdktrace.WithMaxQueueSize(2048),
 				)
 
+				if exp.SamplingRate != nil && *exp.SamplingRate > config.Config.Sampler {
+					config.Logger.Warn(
+						"Exporter sampling rate is higher than the global sampling rate. Using the global sampling rate for this exporter instead.",
+						zap.String("endpoint", exp.Endpoint),
+						zap.Float64("sampling_rate", *exp.SamplingRate),
+						zap.Float64("global_sampling_rate", config.Config.Sampler),
+					)
+				}
+
 				// Exporters sampling below the head rate only receive their share of the recorded traces.
 				if rate := ExporterSamplingRate(config.Config, exp); rate < headRate {
 					processor = newTraceIDSamplingProcessor(processor, rate)
