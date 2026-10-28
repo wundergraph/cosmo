@@ -31,6 +31,9 @@ func selectCacheStore(store caching.Cache, directives *cachedirective.RequestCac
 		return store
 	}
 	switch revalidate := requestRevalidates(directives); {
+	case revalidate && directives.NoStore && directives.OnlyIfCached:
+		// Nothing stored is acceptable, so every lookup misses and the fetch is refused.
+		return notStored{notCached{store}}
 	case revalidate && directives.NoStore:
 		return nil
 	case revalidate:
