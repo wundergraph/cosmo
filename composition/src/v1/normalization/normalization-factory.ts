@@ -3119,10 +3119,7 @@ export class NormalizationFactory {
    * Returns the delivery guarantees to spread into the configuration. The object is empty unless the mode is CURSOR
    * (or if the argument value is invalid, in which case an error message is appended).
    */
-  getDeliveryGuaranteeMode(
-    argumentNode: ConstArgumentNode,
-    errorMessages: Array<string>,
-  ): DeliveryGuarantees {
+  getDeliveryGuaranteeMode(argumentNode: ConstArgumentNode, errorMessages: Array<string>): DeliveryGuarantees {
     this.usesEdfsDeliveryGuarantees = true;
     /* The argument is nullable, so an explicit null is equivalent to omitting the argument. */
     if (argumentNode.value.kind !== Kind.OBJECT) {
