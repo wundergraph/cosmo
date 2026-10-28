@@ -187,6 +187,22 @@ describe('GetGraphFieldUsage', () => {
     expect(response.fields).toEqual([]);
   });
 
+  test('Should return empty fields when ClickHouse returns no row list', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const { fedGraphName } = await createGraph(client);
+    vi.mocked(chClient.queryPromise).mockResolvedValue('');
+
+    const response = await client.getGraphFieldUsage({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.fields).toEqual([]);
+  });
+
   test('Should return the request count of every field of the graph', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
