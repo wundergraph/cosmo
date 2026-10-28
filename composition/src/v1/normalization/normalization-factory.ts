@@ -3881,24 +3881,6 @@ export class NormalizationFactory {
       }
       // Inject the correct dependency
       this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
-      const result = this.upsertInputObjectByNode(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
-      // The result cannot actually be unsuccessful
-      if (result.success) {
-        for (const fieldNode of EDFS_NATS_STREAM_CONFIGURATION_DEFINITION.fields!) {
-          this.addInputValueDataByNode({
-            fieldName: fieldNode.name.value,
-            isArgument: false,
-            inputValueDataByName: result.data.inputValueDataByName,
-            node: fieldNode,
-            originalParentTypeName: EDFS_NATS_STREAM_CONFIGURATION,
-          });
-        }
-      } else {
-        /* Should never happen, but if somehow it did, an error has already been appended from the
-         * `upsertInputObjectByNode` method.
-         */
-        return;
-      }
     }
     if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
       const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEES);
