@@ -10,7 +10,6 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
-	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -96,12 +95,10 @@ func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve
 	// Verification happens exactly once, here, and the verified cursor travels to Start on the
 	// resolve context. It covers the key, the signature over the request data (provider type,
 	// provider id and topics), the client identity and the resume window.
-	cursor, err := s.cursors.Codec.Verify(resumeToken, binding.requestData, binding.identity)
-	if err != nil {
+	if _, err := s.cursors.Codec.Verify(resumeToken, binding.requestData, binding.identity); err != nil {
 		return zero, err
 	}
 
-	negotiated.ResumePosition = cursor
 	negotiated.ResumeToken = resumeToken
 	return negotiated, nil
 }
@@ -190,9 +187,15 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		eventUpdater.enableCursors(s.cursors)
 	}
 
-	// ResumePosition is the cursor ValidateDeliveryGuarantee already verified for this client.
-	// The trigger id includes the raw cursor, so a trigger that resumes has exactly one position.
-	if cursor, ok := negotiated.ResumePosition.(*streamsv1.Cursor); ok && cursor != nil {
+	if negotiated.ResumeToken != "" {
+		binding, err := s.validateCursorBinding(ctx, conf)
+		if err != nil {
+			return err
+		}
+		cursor, err := s.cursors.Codec.Verify(negotiated.ResumeToken, binding.requestData, binding.identity)
+		if err != nil {
+			return err
+		}
 		seekable, ok := s.pubSub.(SeekableAdapter)
 		if !ok {
 			return &DeliveryGuaranteeError{
