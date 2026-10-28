@@ -1334,7 +1334,7 @@
                   },
                   "sampling_rate": {
                     "type": "number",
-                    "description": "The share of the recorded traces sent to this exporter. The exporter never receives more than the traces selected by the global sampling rate. Defaults to 1, which sends every recorded trace.",
+                    "description": "The share of the recorded traces sent to this exporter. For traces the router samples itself, the effective rate is the lower of this and the global sampling rate. Defaults to 1, which sends every recorded trace.",
                     "minimum": 0,
                     "maximum": 1
                   },

@@ -156,13 +156,13 @@ For a Dynatrace example that exports to Dynatrace and Cosmo Cloud at the same ti
 
 Each exporter can set its own `sampling_rate` to receive only part of the traces the router records. An exporter without one receives every recorded trace.
 
-The global `telemetry.tracing.sampling_rate` decides which requests the router records. An exporter never receives more than these traces, so its effective rate is the lower of the global rate and its own `sampling_rate`. For example, with a global rate of 0.1, an exporter with a `sampling_rate` of 0.05 receives 5% of the traces, and an exporter with a `sampling_rate` of 0.5 receives 10%.
+The global `telemetry.tracing.sampling_rate` decides which traces the router samples itself. An exporter never receives more than these traces, so its effective rate is the lower of the global rate and its own `sampling_rate`. For example, the global rate is 0.1. An exporter with a `sampling_rate` of 0.05 receives 5% of the traces. An exporter with a `sampling_rate` of 0.5 receives 10%.
 
 Sampling is based on the trace ID, so every exporter receives complete traces. The traces sent to an exporter with a lower rate are a subset of those sent to an exporter with a higher rate.
 
-With `parent_based_sampler` enabled, the router also records every request whose incoming trace context is marked as sampled. Each exporter receives its `sampling_rate` share of these traces. An exporter without a `sampling_rate` receives all of them.
+With `parent_based_sampler` enabled, the router also records every request whose incoming trace context is marked as sampled. Each exporter receives its `sampling_rate` share of these traces.
 
-On managed plans, the organization's trace sampling limit caps the `sampling_rate` of every Cosmo Cloud exporter, so the traces sampled upstream also stay within it. It does not affect other exporters or the global rate. If the limit lowers a Cosmo Cloud exporter's effective rate, the router logs a warning.
+Your account's trace sampling limit caps the `sampling_rate` of every Cosmo Cloud exporter, so the traces sampled upstream also stay within it. The limit does not affect other exporters or the global rate. If it lowers a Cosmo Cloud exporter's effective rate, the router logs a warning.
 
 The following example sends every trace to a self-hosted collector and 1% of them to Cosmo Cloud:
 
