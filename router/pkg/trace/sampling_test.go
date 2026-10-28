@@ -156,10 +156,10 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		assert.Empty(t, disabled.traces())
 	})
 
-	t.Run("exporters below the head rate filter traces sampled upstream", func(t *testing.T) {
+	t.Run("exporters below the global rate filter traces sampled upstream", func(t *testing.T) {
 		t.Parallel()
 
-		inherits := newOTLPCollector(t)
+		highest := newOTLPCollector(t)
 		lower := newOTLPCollector(t)
 
 		tp, err := NewTracerProvider(context.Background(), &ProviderConfig{
@@ -169,8 +169,8 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 				Sampler:            0.5,
 				ParentBasedSampler: true,
 				Exporters: []*ExporterConfig{
-					{Endpoint: inherits.url},
-					{Endpoint: lower.url, SamplingRate: new(0.1)},
+					{Endpoint: highest.url, SamplingRate: new(0.2)},
+					{Endpoint: lower.url, SamplingRate: new(0.05)},
 				},
 			},
 		})
@@ -179,10 +179,10 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		traceIDs := startTraces(tp.Tracer("test"), sampledRemoteParent, 500)
 		require.NoError(t, tp.Shutdown(context.Background()))
 
-		// The parent-based sampler records every trace, and only the exporter
-		// below the head rate applies its rate to them.
-		assert.Equal(t, sampledTraces(traceIDs, 1), inherits.traces())
-		assert.Equal(t, sampledTraces(traceIDs, 0.1), lower.traces())
+		// The parent-based sampler records every trace, and every exporter
+		// applies its own rate to them, including the one with the highest rate.
+		assert.Equal(t, sampledTraces(traceIDs, 0.2), highest.traces())
+		assert.Equal(t, sampledTraces(traceIDs, 0.05), lower.traces())
 	})
 }
 

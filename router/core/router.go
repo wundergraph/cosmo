@@ -3028,20 +3028,22 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	return transport
 }
 
-// applyCosmoCloudTraceSamplingLimit lowers the sampling rate of the Cosmo Cloud
-// exporter to the account limit. Other exporters keep their rates.
+// applyCosmoCloudTraceSamplingLimit lowers the sampling rate of every Cosmo
+// Cloud exporter to the account limit. Other exporters keep their rates.
 func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.Config, accountLimit float64) {
-	defaultExporter := rtrace.DefaultExporter(traceConfig)
-	if defaultExporter == nil {
-		return
-	}
-	if rate := rtrace.ExporterSamplingRate(traceConfig, defaultExporter); rate > accountLimit {
-		logger.Warn(
-			"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
-			zap.Float64("limit", rate),
-			zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
-		)
-		defaultExporter.SamplingRate = &accountLimit
+	for _, exporter := range traceConfig.Exporters {
+		if !rtrace.IsDefaultExporter(exporter) {
+			continue
+		}
+		if rate := rtrace.ExporterSamplingRate(traceConfig, exporter); rate > accountLimit {
+			logger.Warn(
+				"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
+				zap.String("endpoint", exporter.Endpoint),
+				zap.Float64("sampling_rate", rate),
+				zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
+			)
+			exporter.SamplingRate = &accountLimit
+		}
 	}
 }
 

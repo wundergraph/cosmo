@@ -2164,8 +2164,8 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 					Headers:       exporter.Headers,
 					HTTPPath:      exporter.HTTPPath,
 				}
-				// Plugins only need a rate when the exporter samples below the head rate.
-				if rate := rtrace.ExporterSamplingRate(traceConfig, exporter); rate < headRate {
+				// Plugins only need a rate when the exporter samples below the global rate.
+				if rate := rtrace.ExporterSamplingRate(traceConfig, exporter); rate < traceConfig.Sampler {
 					transformedExporter.SamplingRate = &rate
 				}
 				enabledExporters = append(enabledExporters, transformedExporter)

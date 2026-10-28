@@ -48,7 +48,7 @@ func TestInitTracerExporterSamplingRates(t *testing.T) {
 	lower := newOTLPCollector(t)
 
 	// The router sends the head rate as the sampler and a rate for every
-	// exporter below it.
+	// exporter below the global rate.
 	tp, err := initTracer(context.Background(), TracingOptions{
 		ServiceName: "test",
 		TracingConfig: &config.Tracing{

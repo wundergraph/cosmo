@@ -160,9 +160,9 @@ Sampling is based on the trace ID, so every exporter receives complete traces. T
 
 The router records traces at the highest rate of its enabled exporters, which is at most the global rate. If every exporter sets a lower rate, the router records fewer traces. Requests recorded at this rate are marked as sampled in the trace context propagated to subgraphs. The same decision sets `request.trace.sampled` in expressions.
 
-With `parent_based_sampler` enabled, the router records every request whose incoming trace context is marked as sampled, regardless of the configured rates. Per-exporter rates still apply to these traces. An exporter below the highest rate receives only its share of them, so it can miss traces that an upstream service sampled.
+With `parent_based_sampler` enabled, the router records every request whose incoming trace context is marked as sampled, regardless of the configured rates. Exporters that use the global rate receive all of these traces. An exporter with a lower `sampling_rate` receives only its share of them, so it can miss traces that an upstream service sampled.
 
-On managed plans, the organization's trace sampling limit caps the rate of the Cosmo Cloud exporter. It does not affect other exporters. If the Cosmo Cloud exporter's rate exceeds the limit, the router logs a warning and uses the limit instead.
+On managed plans, the organization's trace sampling limit caps the rate of every Cosmo Cloud exporter. It does not affect other exporters. If a Cosmo Cloud exporter's rate exceeds the limit, the router logs a warning and uses the limit instead.
 
 The following example sends every trace to a self-hosted collector and 1% of them to Cosmo Cloud:
 

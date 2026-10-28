@@ -19,7 +19,7 @@ An exemplar filter decides which measurements are eligible to record an exemplar
 | `trace_based` | Records exemplars only for measurements taken within the context of a sampled trace. |
 | `always_on` | Records exemplars for all measurements, regardless of trace context. |
 
-`trace_based` is the recommended setting for correlating metrics with traces. Every recorded exemplar points to a trace that was sampled and stored, so the link from a metric to its trace always resolves. `always_on` records exemplars even when no sampled trace is present, which produces exemplars with empty or unsampled trace context.
+`trace_based` is the recommended setting for correlating metrics with traces. Every recorded exemplar points to a sampled trace. The trace is stored by every exporter that samples at the router's highest rate. An exporter with a lower [`sampling_rate`](/router/open-telemetry#per-exporter-sampling) stores only a share of these traces, so some links from a metric to its trace do not resolve there. `always_on` records exemplars even when no sampled trace is present, which produces exemplars with empty or unsampled trace context.
 
 ## Configuration
 
@@ -102,7 +102,7 @@ The default cardinality limit of 2000 streams per instrument is what prevents th
 
 ### Recommendations
 
-- Start with `trace_based`. It bounds both recording overhead and memory to sampled traces, and every recorded exemplar links to a trace that was actually stored.
+- Start with `trace_based`. It bounds both recording overhead and memory to sampled traces, and every recorded exemplar links to a trace stored by the exporters at the highest rate.
 - Keep trace sampling at a moderate rate. The exemplar cost under `trace_based` follows the rate at which the router records traces.
 - Reserve `always_on` for low-throughput or debugging scenarios. It records exemplars even when no sampled trace exists, which raises overhead and produces exemplars with empty or unsampled trace context. It also fills exemplar reservoirs for every stream regardless of sampling, so its memory cost scales with full cardinality.
 - Keep the cardinality limit in place. The default of 2000 streams per instrument caps exemplar memory to a fixed worst case per histogram. Do not disable it on a router that records exemplars.

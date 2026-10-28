@@ -129,10 +129,9 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
-	headRate := HeadSamplingRate(config.Config)
 	sampler := config.Config.Sampler
 	if config.MemoryExporter == nil {
-		sampler = headRate
+		sampler = HeadSamplingRate(config.Config)
 	}
 
 	if config.Config.ParentBasedSampler {
@@ -233,8 +232,9 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 					)
 				}
 
-				// Exporters sampling below the head rate only receive their share of the recorded traces.
-				if rate := ExporterSamplingRate(config.Config, exp); rate < headRate {
+				// Exporters sampling below the global rate only receive their share of the recorded traces,
+				// including the traces recorded because an upstream service sampled them.
+				if rate := ExporterSamplingRate(config.Config, exp); rate < config.Config.Sampler {
 					processor = newTraceIDSamplingProcessor(processor, rate)
 				}
 
