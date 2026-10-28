@@ -143,14 +143,16 @@ describe('Persisted operations', (ctx) => {
     });
 
     test.each([
-      ['publish', false],
-      ['operation-delete', false],
-      ['client-delete', false],
-      ['operation-delete', true],
-      ['client-delete', true],
+      ['publish', false, false],
+      ['operation-delete', false, false],
+      ['client-delete', false, false],
+      ['operation-delete', true, false],
+      ['client-delete', true, false],
+      ['operation-delete', true, true],
+      ['client-delete', true, true],
     ] as const)(
-      'Should roll back %s and restore files when manifest upload fails (legacy: %s)',
-      async (action, legacy) => {
+      'Should roll back %s and restore files when manifest upload fails (legacy: %s, missing file: %s)',
+      async (action, legacy, missingFile) => {
         const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
         onTestFinished(() => server.close());
         const fedGraphName = genID('fedGraph');
@@ -173,6 +175,11 @@ describe('Persisted operations', (ctx) => {
             .update(federatedGraphPersistedOperations)
             .set({ operationContent: null })
             .where(inArray(federatedGraphPersistedOperations.filePath, operationKeys));
+        }
+        const missingKey = operationKeys.find((key) => key.endsWith('/shared.json'));
+        if (missingFile) {
+          await blobStorage.deleteObject({ key: missingKey! });
+          operationKeys.splice(operationKeys.indexOf(missingKey!), 1);
         }
         const put = blobStorage.putObject.bind(blobStorage);
         const spy = vi.spyOn(blobStorage, 'putObject').mockImplementation((input) => {
@@ -210,6 +217,9 @@ describe('Persisted operations', (ctx) => {
           }
           expect((await publish()).operations[0].status).toBe(PublishedOperationStatus.UP_TO_DATE);
           expect(blobStorage.keys()).toEqual(expect.arrayContaining(operationKeys));
+          if (missingFile) {
+            expect(blobStorage.keys()).not.toContain(missingKey);
+          }
         }
         expect((await mutate()).response?.code).toBe(EnumStatusCode.OK);
       },

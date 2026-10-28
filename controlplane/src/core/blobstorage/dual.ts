@@ -1,5 +1,5 @@
 import { traced } from '../tracing.js';
-import type { BlobObject, BlobStorage } from './index.js';
+import { BlobNotFoundError, type BlobObject, type BlobStorage } from './index.js';
 
 /**
  * A BlobStorage implementation that writes to two underlying stores (primary + secondary).
@@ -52,6 +52,9 @@ export class DualBlobStorage implements BlobStorage {
       try {
         return await this.secondary.getObject(data);
       } catch (secondaryError) {
+        if (primaryError instanceof BlobNotFoundError && secondaryError instanceof BlobNotFoundError) {
+          throw new BlobNotFoundError(`Object with key ${data.key} not found in either storage`);
+        }
         throw new AggregateError(
           [primaryError, secondaryError],
           'Both primary and secondary storage failed to get object',

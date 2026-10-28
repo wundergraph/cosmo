@@ -3,6 +3,29 @@ import { expect, test, vi } from 'vitest';
 import { prepareOperationBlobRestore } from '../../src/core/bufservices/persisted-operation/restore.js';
 import { InMemoryBlobStorage } from '../test-util.js';
 
+test('recovery skips missing legacy blobs and still restores the other operations', async () => {
+  const storage = new InMemoryBlobStorage();
+  const restore = await prepareOperationBlobRestore(
+    storage,
+    [
+      { filePath: 'missing', contents: '' },
+      { filePath: 'existing', contents: 'query { hello }' },
+    ],
+    pino({ level: 'silent' }),
+  );
+  await restore();
+  expect(storage.keys()).toEqual(['existing']);
+});
+
+test('recovery preparation propagates storage errors other than missing blobs', async () => {
+  const storage = new InMemoryBlobStorage();
+  const error = new Error('storage unavailable');
+  vi.spyOn(storage, 'getObject').mockRejectedValue(error);
+  await expect(
+    prepareOperationBlobRestore(storage, [{ filePath: 'legacy', contents: '' }], pino({ level: 'silent' })),
+  ).rejects.toBe(error);
+});
+
 test('recovery waits for all writes despite failures and preserves legacy file contents', async () => {
   const storage = new InMemoryBlobStorage();
   const logger = pino({ level: 'silent' });

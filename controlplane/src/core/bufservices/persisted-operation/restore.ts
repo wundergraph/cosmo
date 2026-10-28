@@ -1,7 +1,7 @@
 import pLimit from 'p-limit';
 import type { FastifyBaseLogger } from 'fastify';
 import type { PersistedOperationDTO } from '../../../types/index.js';
-import type { BlobStorage } from '../../blobstorage/index.js';
+import { BlobNotFoundError, type BlobStorage } from '../../blobstorage/index.js';
 
 export async function prepareOperationBlobRestore(
   storage: BlobStorage,
@@ -9,7 +9,7 @@ export async function prepareOperationBlobRestore(
   logger: FastifyBaseLogger,
 ): Promise<() => Promise<void>> {
   const limit = pLimit(25);
-  const backups = await Promise.all(
+  const prepared = await Promise.all(
     operations.map((operation) =>
       limit(async () => ({
         key: operation.filePath,
@@ -21,9 +21,16 @@ export async function prepareOperationBlobRestore(
                 (await storage.getObject({ key: operation.filePath, abortSignal: AbortSignal.timeout(30_000) })).stream,
               ).arrayBuffer(),
             ),
-      })),
+      })).catch((error) => {
+        // An already-missing legacy file must not prevent deleting its registration.
+        if (error instanceof BlobNotFoundError) {
+          return undefined;
+        }
+        throw error;
+      }),
     ),
   );
+  const backups = prepared.filter((backup) => backup !== undefined);
 
   return async () => {
     // Recovery is best-effort, but every write must settle before releasing the graph lock.
