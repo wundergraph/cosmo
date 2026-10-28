@@ -35,13 +35,18 @@ const (
 )
 
 var (
-	kafkaTopics       = []string{"employeeUpdated", "employeeUpdatedTwo"}
-	kafkaRouterConfig = &testenv.Config{
+	kafkaTopics         = []string{"employeeUpdated", "employeeUpdatedTwo"}
+	availableTransports = []subscriptionTransport{subscriptionTransportWS, subscriptionTransportSSE}
+)
+
+// newKafkaRouterConfig returns a fresh config per testenv.Run, because the test environment
+// writes to the config it is given and the tests run in parallel.
+func newKafkaRouterConfig() *testenv.Config {
+	return &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 		EnableKafka:              true,
 	}
-	availableTransports = []subscriptionTransport{subscriptionTransportWS, subscriptionTransportSSE}
-)
+}
 
 func TestCursors_HappyPath(t *testing.T) {
 	t.Parallel()
@@ -60,7 +65,7 @@ func TestCursors_HappyPath(t *testing.T) {
 				t.Run(string(transport), func(t *testing.T) {
 					t.Parallel()
 
-					testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+					testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 						events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 						client := createAndSubscribe(t, xEnv, transport).WithClient("1", nil).Client(0)
 
@@ -102,7 +107,7 @@ func TestCursors_HappyPath(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 					client := createAndSubscribe(t, xEnv, transport).WithClient("1", nil).Client(0)
 
@@ -153,7 +158,7 @@ func TestCursors_HappyPath(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 					client := createAndSubscribe(t, xEnv, transport).WithClient("1", nil).Client(0)
 
@@ -197,7 +202,7 @@ func TestCursors_HappyPath(t *testing.T) {
 
 		// Start two subscriptions on one conn on the router. One wants cursors, the other one not.
 		// Assert that only the first subscription gets the cursor.
-		testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 
 			client := newCursorClient(t, xEnv, subscriptionTransportWS, nil)
@@ -302,7 +307,7 @@ func TestCursors_InvalidCursors(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 
 					client := newCursorClient(t, xEnv, transport, nil)
@@ -366,7 +371,7 @@ func TestCursors_InvalidCursors(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 					client := createAndSubscribe(t, xEnv, transport).WithClient("1", nil).Client(0)
 
@@ -392,19 +397,21 @@ func TestCursors_InvalidCursors(t *testing.T) {
 
 		const maxResumeWindow = time.Second
 
-		windowRouterConfig := &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
-				cfg.DeliveryGuarantees.CursorResume.MaxResumeWindow = maxResumeWindow
-			},
+		newWindowRouterConfig := func() *testenv.Config {
+			return &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+				EnableKafka:              true,
+				ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+					cfg.DeliveryGuarantees.CursorResume.MaxResumeWindow = maxResumeWindow
+				},
+			}
 		}
 
 		for _, transport := range availableTransports {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, windowRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newWindowRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 					client := createAndSubscribe(t, xEnv, transport).WithClient("1", nil).Client(0)
 
@@ -445,7 +452,7 @@ func TestCursors_InvalidCursors(t *testing.T) {
 					t.Run(string(transport), func(t *testing.T) {
 						t.Parallel()
 
-						testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+						testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 							events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 
 							codec, err := datasource.NewCursorCodec([]datasource.CursorKey{fakeKey}, 0)
@@ -487,7 +494,7 @@ func TestCursors_Negotiation(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, kafkaTopics...)
 
 					client := newCursorClient(t, xEnv, transport, nil)
@@ -506,7 +513,7 @@ func TestCursors_Negotiation(t *testing.T) {
 			t.Run(string(transport), func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, kafkaRouterConfig, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, newKafkaRouterConfig(), func(t *testing.T, xEnv *testenv.Environment) {
 					client := newCursorClient(t, xEnv, transport, nil)
 					t.Cleanup(func() { client.close(t) })
 					subscribeQueryWithCursors(t, client, "1", nonEdfsSubscription, "")
