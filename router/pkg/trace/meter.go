@@ -129,11 +129,12 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
+	samplingRate := headSamplingRate(config)
 	if config.Config.ParentBasedSampler {
 		opts = append(opts,
 			sdktrace.WithSampler(
 				sdktrace.ParentBased(
-					sdktrace.TraceIDRatioBased(config.Config.Sampler),
+					sdktrace.TraceIDRatioBased(samplingRate),
 					// By default, when the parent span is sampled, the child span will be sampled.
 				),
 			),
@@ -141,7 +142,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	} else {
 		opts = append(opts,
 			sdktrace.WithSampler(
-				sdktrace.TraceIDRatioBased(config.Config.Sampler),
+				sdktrace.TraceIDRatioBased(samplingRate),
 			),
 		)
 	}

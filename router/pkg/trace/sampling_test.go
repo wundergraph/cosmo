@@ -8,42 +8,19 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/proto"
 )
-
-func TestTraceIDSamplingProcessor(t *testing.T) {
-	t.Parallel()
-
-	high := tracetest.NewInMemoryExporter()
-	low := tracetest.NewInMemoryExporter()
-	none := tracetest.NewInMemoryExporter()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSpanProcessor(newTraceIDSamplingProcessor(sdktrace.NewSimpleSpanProcessor(high), 0.5)),
-		sdktrace.WithSpanProcessor(newTraceIDSamplingProcessor(sdktrace.NewSimpleSpanProcessor(low), 0.1)),
-		sdktrace.WithSpanProcessor(newTraceIDSamplingProcessor(sdktrace.NewSimpleSpanProcessor(none), 0)),
-	)
-	t.Cleanup(func() {
-		_ = tp.Shutdown(context.Background())
-	})
-
-	traceIDs := startTraces(t.Context(), tp.Tracer("test"), 1000, false)
-
-	assert.Equal(t, sampledTraces(traceIDs, 0.5), spansPerTrace(high))
-	assert.Equal(t, sampledTraces(traceIDs, 0.1), spansPerTrace(low))
-	assert.Empty(t, none.GetSpans())
-}
 
 func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 	t.Parallel()
@@ -79,6 +56,44 @@ func TestNewTracerProviderExporterSamplingRates(t *testing.T) {
 		assert.Equal(t, sampledTraces(traceIDs, 0.5), higher.traces())
 		assert.Equal(t, sampledTraces(traceIDs, 0.05), lower.traces())
 		assert.Empty(t, disabled.traces())
+	})
+
+	t.Run("the router samples at most the highest exporter rate", func(t *testing.T) {
+		t.Parallel()
+
+		logCore, logs := observer.New(zap.DebugLevel)
+		tp, err := NewTracerProvider(t.Context(), &ProviderConfig{
+			Logger: zap.New(logCore),
+			Config: &Config{
+				Enabled:            true,
+				Sampler:            1,
+				ParentBasedSampler: true,
+				Exporters: []*ExporterConfig{
+					{Endpoint: newOTLPCollector(t).url, SamplingRate: new(0.3)},
+					{Endpoint: newOTLPCollector(t).url, SamplingRate: new(0.1)},
+					{Endpoint: newOTLPCollector(t).url, Disabled: true},
+				},
+			},
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_ = tp.Shutdown(context.Background())
+		})
+
+		got := make(map[oteltrace.TraceID]bool)
+		for range 500 {
+			_, span := tp.Tracer("test").Start(t.Context(), "root")
+			span.End()
+			got[span.SpanContext().TraceID()] = span.SpanContext().IsSampled()
+		}
+
+		sampled := sampledTraces(slices.Collect(maps.Keys(got)), 0.3)
+		want := make(map[oteltrace.TraceID]bool)
+		for traceID := range got {
+			_, want[traceID] = sampled[traceID]
+		}
+		assert.Equal(t, want, got)
+		assert.Equal(t, 1, logs.FilterMessage("Lowering the trace sampling rate to the highest exporter sampling rate").Len())
 	})
 
 	t.Run("exporters apply their rate to traces sampled upstream", func(t *testing.T) {
@@ -160,14 +175,6 @@ func sampledTraces(traceIDs []oteltrace.TraceID, rate float64) map[oteltrace.Tra
 		if decision == sdktrace.RecordAndSample {
 			result[traceID] = 2
 		}
-	}
-	return result
-}
-
-func spansPerTrace(exporter *tracetest.InMemoryExporter) map[oteltrace.TraceID]int {
-	result := make(map[oteltrace.TraceID]int)
-	for _, span := range exporter.GetSpans() {
-		result[span.SpanContext.TraceID()]++
 	}
 	return result
 }

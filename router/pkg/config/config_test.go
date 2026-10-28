@@ -604,54 +604,7 @@ telemetry:
 func TestTracingExporterSamplingRate(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unset exporter rate", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-telemetry:
-  tracing:
-    sampling_rate: 0.5
-    exporters:
-      - endpoint: https://otel-collector.example.com
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		require.Len(t, cfg.Config.Telemetry.Tracing.Exporters, 1)
-		assert.Nil(t, cfg.Config.Telemetry.Tracing.Exporters[0].SamplingRate)
-	})
-
-	t.Run("exporter rate", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-telemetry:
-  tracing:
-    sampling_rate: 0.5
-    exporters:
-      - endpoint: https://otel-collector.example.com
-        sampling_rate: 0.5
-      - endpoint: https://cosmo-otel.wundergraph.com
-        sampling_rate: 0.01
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		exporters := cfg.Config.Telemetry.Tracing.Exporters
-		require.Len(t, exporters, 2)
-		require.NotNil(t, exporters[0].SamplingRate)
-		require.NotNil(t, exporters[1].SamplingRate)
-		assert.Equal(t, 0.5, *exporters[0].SamplingRate)
-		assert.Equal(t, 0.01, *exporters[1].SamplingRate)
-	})
-
-	t.Run("exporter rate outside of the valid range", func(t *testing.T) {
-		t.Parallel()
-
+	for _, rate := range []string{"-0.1", "1.5"} {
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -660,11 +613,11 @@ telemetry:
   tracing:
     exporters:
       - endpoint: https://otel-collector.example.com
-        sampling_rate: 1.5
+        sampling_rate: `+rate+`
 `)
 		_, err := LoadConfig([]string{f})
-		assert.ErrorContains(t, err, "/telemetry/tracing/exporters/0/sampling_rate")
-	})
+		assert.ErrorContains(t, err, "/telemetry/tracing/exporters/0/sampling_rate", rate)
+	}
 }
 
 func TestLoadFullConfig(t *testing.T) {

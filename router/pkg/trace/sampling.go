@@ -4,6 +4,7 @@ import (
 	"context"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.uber.org/zap"
 )
 
 // ExporterSamplingRate returns the sampling rate of exp. Exporters without
@@ -13,6 +14,32 @@ func ExporterSamplingRate(exp *ExporterConfig) float64 {
 		return *exp.SamplingRate
 	}
 	return 1
+}
+
+// headSamplingRate returns the rate at which the router samples traces itself.
+// It lowers the global rate to the highest exporter rate, so the router does not
+// record traces, or mark subgraph requests as sampled, when no exporter receives them.
+func headSamplingRate(config *ProviderConfig) float64 {
+	rate := config.Config.Sampler
+	if !config.Config.Enabled || config.MemoryExporter != nil {
+		return rate
+	}
+
+	highest := -1.0
+	for _, exp := range config.Config.Exporters {
+		if !exp.Disabled {
+			highest = max(highest, ExporterSamplingRate(exp))
+		}
+	}
+	if highest < 0 || highest >= rate {
+		return rate
+	}
+
+	config.Logger.Debug("Lowering the trace sampling rate to the highest exporter sampling rate",
+		zap.Float64("sampling_rate", rate),
+		zap.Float64("exporter_sampling_rate", highest),
+	)
+	return highest
 }
 
 // traceIDSamplingProcessor forwards to the wrapped processor only the spans of

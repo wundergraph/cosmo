@@ -3043,11 +3043,12 @@ func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.C
 		if rate <= accountLimit {
 			continue
 		}
-		if effectiveRate := min(traceConfig.Sampler, rate); effectiveRate > accountLimit {
+		// The exporter rate is above the limit, so its effective rate only exceeds it when the global rate does.
+		if traceConfig.Sampler > accountLimit {
 			logger.Warn(
 				"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
 				zap.String("endpoint", exporter.Endpoint),
-				zap.Float64("sampling_rate", effectiveRate),
+				zap.Float64("sampling_rate", min(traceConfig.Sampler, rate)),
 				zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
 			)
 		}

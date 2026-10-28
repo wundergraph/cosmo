@@ -457,12 +457,14 @@ func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
 			{Endpoint: otelconfig.DefaultEndpoint()},
 			{Endpoint: otelconfig.DefaultEndpoint(), Exporter: otelconfig.ExporterOTLPGRPC},
 			{Endpoint: otelconfig.DefaultEndpoint(), SamplingRate: new(0.05)},
+			{Endpoint: otelconfig.DefaultEndpoint(), Disabled: true},
 		},
 	}
 	applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
 
 	assert.Equal(t, 1.0, traceConfig.Sampler)
 	assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
+	assert.Nil(t, traceConfig.Exporters[4].SamplingRate)
 	// Every Cosmo Cloud exporter above the limit is lowered to it, and lower rates are kept.
 	for i, want := range map[int]float64{1: 0.1, 2: 0.1, 3: 0.05} {
 		require.NotNil(t, traceConfig.Exporters[i].SamplingRate)
