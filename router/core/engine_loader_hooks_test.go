@@ -617,7 +617,7 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 		{
 			name:  "a cache control policy reads the TTL",
 			rules: &config.HeaderRules{},
-			post:  CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}),
+			post:  CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}, false),
 			want:  "max-age=30, public",
 		},
 		{

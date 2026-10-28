@@ -2868,6 +2868,16 @@ Skips the validation error raised when `null` is supplied for a variable of a no
 | ------------------------------------------------------------- | ------------------------- | ---------------------- | ----------------------------------------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_ENABLED | skip_null_variables_error | <Icon icon="square" /> | Skips the error when a null variable is supplied for a non-nullable type. | false         |
 
+### Apollo Router Compatibility Cache Control Any Public
+
+Changes how [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control) merges `public` across subgraph fetches, matching Apollo Router behavior. By default, the response is `public` only when every fetch that sets `Cache-Control` is `public`. With this flag, one `public` fetch is enough. `private` and `no-store` still win.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends `max-age=60`. By default the router sends `max-age=60`. With this flag it sends `max-age=60, public`.
+
+| Environment Variable                                         | YAML                     | Required               | Description                                          | Default Value |
+| ------------------------------------------------------------ | ------------------------ | ---------------------- | ---------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_ENABLED | cache_control_any_public | <Icon icon="square" /> | Sends `public` when any subgraph fetch is `public`. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2877,6 +2887,8 @@ apollo_router_compatibility_flags:
   replace_invalid_var_errors:
     enabled: true
   skip_null_variables_error:
+    enabled: true
+  cache_control_any_public:
     enabled: true
 ```
 

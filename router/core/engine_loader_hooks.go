@@ -193,7 +193,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 	_, merged := createMostRestrictivePolicy([]*cachedirective.Object{
 		{RespDirectives: originDirectives},
 		{RespDirectives: cachedDirectives},
-	})
+	}, false)
 	headers.Set(cacheControlKey, merged)
 }
 
