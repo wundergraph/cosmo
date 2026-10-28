@@ -165,7 +165,7 @@ describe('deliveryGuarantees tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
       invalidEventDirectiveError(EDFS_KAFKA_SUBSCRIBE, 'Subscription.entitySubscription', [
-        invalidDeliveryGuaranteesInputFieldsErrorMessage([], ['unknown']),
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({ duplicateFieldNames: [], invalidFieldNames: ['unknown'] }),
       ]),
     );
   });
@@ -175,7 +175,11 @@ describe('deliveryGuarantees tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
       invalidEventDirectiveError(EDFS_KAFKA_SUBSCRIBE, 'Subscription.entitySubscription', [
-        invalidDeliveryGuaranteesInputFieldsErrorMessage([], [], '"CURSOR"'),
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({
+          duplicateFieldNames: [],
+          invalidFieldNames: [],
+          invalidModeValue: '"CURSOR"',
+        }),
       ]),
     );
   });
@@ -185,7 +189,11 @@ describe('deliveryGuarantees tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
       invalidEventDirectiveError(EDFS_KAFKA_SUBSCRIBE, 'Subscription.entitySubscription', [
-        invalidDeliveryGuaranteesInputFieldsErrorMessage([], [], 'ALWAYS'),
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({
+          duplicateFieldNames: [],
+          invalidFieldNames: [],
+          invalidModeValue: 'ALWAYS',
+        }),
       ]),
     );
   });
