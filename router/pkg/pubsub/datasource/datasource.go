@@ -11,7 +11,7 @@ type SubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error)
 	Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error
 	HashTriggerInput(input []byte, xxh *xxhash.Digest) error
-	ValidateDeliveryGuarantee(ctx *resolve.Context, input []byte) (resolve.NegotiatedDeliveryGuarantee, error)
+	Negotiate(ctx *resolve.Context, input []byte) (resolve.NegotiatedParams, error)
 	SetHooks(hooks Hooks)
 	SetCursors(cursors Cursors)
 }

@@ -38,12 +38,12 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input [
 	return subscriptionConfiguration, nil
 }
 
-// ValidateDeliveryGuarantee rejects clients whose requested delivery guarantee can't be served,
+// Negotiate rejects clients whose requested delivery guarantee can't be served,
 // verifies the cursor of a resuming client and returns what was negotiated for the client.
 // It gets the context of the subscribing client, unlike Start, which only gets the context
 // of the first subscriber of a trigger.
-func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve.Context, input []byte) (resolve.NegotiatedDeliveryGuarantee, error) {
-	var zero resolve.NegotiatedDeliveryGuarantee
+func (s *PubSubSubscriptionDataSource[C]) Negotiate(ctx *resolve.Context, input []byte) (resolve.NegotiatedParams, error) {
+	var zero resolve.NegotiatedParams
 
 	var subscriptionConfiguration C
 	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
@@ -71,7 +71,8 @@ func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve
 				Message:   "A cursor can only be resumed by a subscription that requests the cursor delivery guarantee",
 			}
 		}
-		return resolve.NegotiatedDeliveryGuarantee{Guarantee: string(negotiatedGuarantee)}, nil
+		negotiatedCursorParams := resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}
+		return resolve.NegotiatedParams{SubscriptionCursor: negotiatedCursorParams}, nil
 	}
 
 	binding, err := s.validateCursorBinding(ctx, subscriptionConfiguration)
@@ -79,7 +80,7 @@ func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve
 		return zero, err
 	}
 
-	negotiated := resolve.NegotiatedDeliveryGuarantee{Guarantee: string(negotiatedGuarantee)}
+	negotiated := resolve.NegotiatedParams{SubscriptionCursor: resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}}
 	if !resuming {
 		return negotiated, nil
 	}
@@ -99,7 +100,7 @@ func (s *PubSubSubscriptionDataSource[C]) ValidateDeliveryGuarantee(ctx *resolve
 		return zero, err
 	}
 
-	negotiated.ResumeToken = resumeToken
+	negotiated.SubscriptionCursor.ResumeToken = resumeToken
 	return negotiated, nil
 }
 
@@ -164,8 +165,8 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		return errors.New("invalid subscription configuration")
 	}
 
-	negotiated := ctx.DeliveryGuarantee()
-	negotiatedGuarantee := DeliveryGuarantee(negotiated.Guarantee)
+	negotiated := ctx.NegotiatedParams()
+	negotiatedGuarantee := DeliveryGuarantee(negotiated.SubscriptionCursor.Guarantee)
 	if negotiatedGuarantee == "" {
 		// Hypothetical fallback. In practice the guarantee should already be set by the engine.
 		negotiatedGuarantee, err = NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
@@ -187,12 +188,12 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		eventUpdater.enableCursors(s.cursors)
 	}
 
-	if negotiated.ResumeToken != "" {
+	if negotiated.SubscriptionCursor.ResumeToken != "" {
 		binding, err := s.validateCursorBinding(ctx, conf)
 		if err != nil {
 			return err
 		}
-		cursor, err := s.cursors.Codec.Verify(negotiated.ResumeToken, binding.requestData, binding.identity)
+		cursor, err := s.cursors.Codec.Verify(negotiated.SubscriptionCursor.ResumeToken, binding.requestData, binding.identity)
 		if err != nil {
 			return err
 		}
