@@ -23,7 +23,6 @@ type GRPCExporter struct {
 	ExportTimeout time.Duration     `json:"export_timeout"`
 	Headers       map[string]string `json:"headers"`
 	HTTPPath      string            `json:"http_path"`
-	SamplingRate  *float64          `json:"sampling_rate,omitempty"`
 }
 
 type GRPCIPAnonymization struct {
