@@ -3155,11 +3155,11 @@ export class NormalizationFactory {
     }
     if (duplicateFieldNames.size > 0 || invalidFieldNames.size > 0 || invalidModeValue !== undefined) {
       errorMessages.push(
-        invalidDeliveryGuaranteesInputFieldsErrorMessage(
-          [...duplicateFieldNames],
-          [...invalidFieldNames],
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({
+          duplicateFieldNames: [...duplicateFieldNames],
+          invalidFieldNames: [...invalidFieldNames],
           invalidModeValue,
-        ),
+        }),
       );
       return;
     }

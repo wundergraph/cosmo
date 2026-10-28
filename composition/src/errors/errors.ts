@@ -1335,11 +1335,15 @@ const invalidDeliveryGuaranteesInputErrorMessage =
   `  input edfs__DeliveryGuarantees {\n    mode: edfs__DeliveryGuaranteeMode! = OFF\n  }\n` +
   `  enum edfs__DeliveryGuaranteeMode {\n    OFF\n    CURSOR\n  }`;
 
-export function invalidDeliveryGuaranteesInputFieldsErrorMessage(
-  duplicateFieldNames: Array<string>,
-  invalidFieldNames: Array<string>,
-  invalidModeValue?: string,
-): string {
+export function invalidDeliveryGuaranteesInputFieldsErrorMessage({
+  duplicateFieldNames,
+  invalidFieldNames,
+  invalidModeValue,
+}: {
+  duplicateFieldNames: Array<string>;
+  invalidFieldNames: Array<string>;
+  invalidModeValue?: string;
+}): string {
   let message = invalidDeliveryGuaranteesInputErrorMessage;
   const errorMessages: Array<string> = [];
   if (duplicateFieldNames.length > 0) {
