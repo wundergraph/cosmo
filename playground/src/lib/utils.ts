@@ -29,6 +29,18 @@ const millisecondFormat = new Intl.NumberFormat('en-US', {
 
 export const formatMs = (ms: number) => millisecondFormat.format(ms);
 
+export const groupBy = <T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> =>
+  items.reduce<Map<K, T[]>>((groups, item) => {
+    const k = key(item);
+    const group = groups.get(k);
+    if (group) {
+      group.push(item);
+    } else {
+      groups.set(k, [item]);
+    }
+    return groups;
+  }, new Map());
+
 // Matches the directive node itself, so a comment or string that mentions @name does not count.
 export const usesDirective = (name: string, query: string) => {
   try {

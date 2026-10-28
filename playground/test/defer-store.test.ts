@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { QueryEditor } from '../src/components/playground/defer-advisor/defer-pills-render';
 import { DeferStore } from '../src/components/playground/defer-advisor/defer-store';
 
@@ -23,6 +23,15 @@ const bound = () => {
 };
 
 describe('DeferStore', () => {
+  beforeEach(() => {
+    // Writes schedule a repaint, which needs a frame callback the Node test environment does not have.
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn(() => 1),
+    );
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -48,12 +57,6 @@ describe('DeferStore', () => {
   });
 
   test('a write from the panel keeps the latencies', () => {
-    // The write schedules a repaint, which needs a frame callback the Node test environment does not have.
-    vi.stubGlobal(
-      'requestAnimationFrame',
-      vi.fn(() => 1),
-    );
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
     const { editor, store, listener } = bound();
     store.finishAnalysis({ a: 10 }, {});
 
@@ -72,9 +75,68 @@ describe('DeferStore', () => {
     expect(store.snapshot.error).toBeNull();
   });
 
+  test('a formatting-only edit keeps the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.startAnalysis('http://a', null, '{ a @defer { b } }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{\n  a @defer {\n    b\n  }\n}  # comment');
+    listener(null, { origin: '+input' });
+
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test('an edit outside the measured fields keeps the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{ a { b } }\n\nfragment Unused on T { x y }');
+    listener(null, { origin: '+input' });
+
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test('an unrelated edit after a panel write keeps the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    // The panel adds @defer inside the measured field, which changes what gets probed.
+    editor.getValue.mockReturnValue('{ a @defer { b } }\n\nfragment Unused on T { x }');
+    listener(null, { origin: 'defer-advisor' });
+
+    editor.getValue.mockReturnValue('{ a @defer { b } }\n\nfragment Unused on T { x y }');
+    listener(null, { origin: '+input' });
+
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test('an edit inside a measured field clears the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{ a { b c } }\n\nfragment Unused on T { x }');
+    listener(null, { origin: '+input' });
+
+    expect(store.snapshot.latencies).toBeNull();
+  });
+
+  test('an edit that changes the query clears the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.startAnalysis('http://a', null, '{ a @defer { b } }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{ a @defer { c } }');
+    listener(null, { origin: '+input' });
+
+    expect(store.snapshot.latencies).toBeNull();
+  });
+
   test('a routing URL change clears the analysis, the same URL keeps it', () => {
     const store = new DeferStore();
-    store.startAnalysis('http://a', null);
+    store.startAnalysis('http://a', null, '{ a }');
     store.finishAnalysis({ a: 10 }, {});
 
     store.invalidateIfUrlChanged('http://a');

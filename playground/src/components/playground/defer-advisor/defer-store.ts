@@ -1,5 +1,6 @@
 import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
+import { measuredInputs } from './probe';
 import { getOperation, parseQuery } from './operation';
 
 const DEFER_ORIGIN = 'defer-advisor';
@@ -22,6 +23,7 @@ export class DeferStore {
   private clearPills: (() => void) | undefined;
   private frame: number | undefined;
   private analysedUrl: string | undefined;
+  private analysedInputs: string | undefined;
   private readonly listeners = new Set<() => void>();
 
   private readonly onChange = (_editor: unknown, change?: { origin?: string }) => this.onEditorChange(change?.origin);
@@ -62,8 +64,9 @@ export class DeferStore {
     this.editor.getDoc().replaceRange(text, { line: 0, ch: 0 }, { line: Infinity, ch: Infinity }, DEFER_ORIGIN);
   }
 
-  startAnalysis(routingUrl: string, variablesError: string | null) {
+  startAnalysis(routingUrl: string, variablesError: string | null, query: string) {
     this.analysedUrl = routingUrl;
+    this.analysedInputs = measuredInputs(query);
     this.update({ running: true, error: variablesError });
   }
 
@@ -103,19 +106,33 @@ export class DeferStore {
     }
   }
 
-  // A manual edit makes the numbers stale. A write from the panel (defer or revert) keeps them,
-  // because the root fields are the same and only the directives moved.
   private onEditorChange(origin: string | undefined) {
-    if (origin !== DEFER_ORIGIN) {
-      if (this.state.latencies !== null || this.state.error !== null) {
-        this.clear();
+    const hasAnalysis = this.state.latencies !== null;
+    if (origin === DEFER_ORIGIN) {
+      // A panel write moves @defer inside measured fields, so the baseline has to follow it.
+      if (hasAnalysis) {
+        this.analysedInputs = this.currentInputs();
+        this.scheduleRender();
       }
       return;
     }
-    if (this.state.latencies === null) {
+    if (hasAnalysis && !this.doesEditInvalidateAnalysis()) {
+      this.scheduleRender();
       return;
     }
-    this.scheduleRender();
+    // Clear the analysis if the query has changed sufficiently
+    if (hasAnalysis || this.state.error !== null) {
+      this.clear();
+    }
+  }
+
+  private currentInputs() {
+    return measuredInputs(this.editor?.getValue() ?? '');
+  }
+
+  private doesEditInvalidateAnalysis(): boolean {
+    const current = this.currentInputs();
+    return current === undefined || current !== this.analysedInputs;
   }
 
   private scheduleRender() {

@@ -34,7 +34,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     probeAbort.current = abort;
     try {
       const request = getRequest();
-      store.startAnalysis(routingUrl, request.variablesError ?? null);
+      store.startAnalysis(routingUrl, request.variablesError ?? null, query);
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;

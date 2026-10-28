@@ -1,5 +1,7 @@
 // Response cache part of ART.
 
+import { groupBy } from '@/lib/utils';
+
 export type ResponseCacheStatus = 'hit' | 'partial_hit' | 'miss' | 'not_cacheable';
 
 export type ResponseCacheInvalidation = {
@@ -232,18 +234,12 @@ export type MergedEntrySummary = {
 
 // mergedEntrySummary is how much of each merged entry came from the cache; empty unless the fetch was merged.
 export const mergedEntrySummary = (trace: ResponseCacheTrace): MergedEntrySummary[] => {
-  const groups = new Map<string, MergedEntrySummary>();
-  for (const entry of trace.entries) {
-    if (!entry.alias) {
-      continue;
-    }
-    const name = entry.path || entry.alias;
-    const group = groups.get(name) ?? { name, total: 0, served: 0 };
-    group.total++;
-    group.served += entry.served ? 1 : 0;
-    groups.set(name, group);
-  }
-  return [...groups.values()];
+  const aliased = trace.entries.filter((entry): entry is ResponseCacheEntry & { alias: string } => !!entry.alias);
+  return [...groupBy(aliased, (entry) => entry.path || entry.alias)].map(([name, group]) => ({
+    name,
+    total: group.length,
+    served: group.filter((entry) => entry.served).length,
+  }));
 };
 
 export type CachedFetch = {
