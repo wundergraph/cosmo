@@ -61,8 +61,6 @@ type beforeEventsDispatchHooks struct {
 	timeout  time.Duration
 }
 
-type ResponseCache = responsecaching.Store
-
 type Config struct {
 	clusterName                     string
 	instanceID                      string
@@ -131,7 +129,7 @@ type Config struct {
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
 	responseCacheConfig             *config.ResponseCacheConfiguration
-	responseCache                   ResponseCache
+	responseCache                   responsecaching.Store
 	responseCacheMetrics            rmetric.ResponseCacheMetricStore
 	responseCacheInvalidationServer *http.Server
 	mcpServer                       *mcpserver.GraphQLSchemaServer
