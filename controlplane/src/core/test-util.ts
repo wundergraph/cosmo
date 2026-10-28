@@ -64,6 +64,7 @@ export async function seedTest(
   createScimKey?: boolean,
   kcRootGroupId?: string,
   kcGroups?: { id: string; name: string }[],
+  enableSplitConfigLoading?: boolean,
 ) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
@@ -87,6 +88,7 @@ export async function seedTest(
       organizationSlug: userTestData.organizationSlug,
       ownerID: userTestData.userId,
       kcGroupId: kcRootGroupId,
+      enableSplitConfigLoading,
     });
 
     for (const groupName of ['admin', 'developer', 'viewer']) {

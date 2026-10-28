@@ -5,6 +5,8 @@ icon: circle-info
 sidebarTitle: Overview
 ---
 
+import RouterConfigWatchWarning from '/snippets/router-config-watch-warning.mdx';
+
 ### Connect to your subgraphs running on localhost from Docker
 
 A common setup for development is running subgraphs on `localhost` and the executing router inside Docker. To avoid requiring additional configuration steps in this environment and to make this setup more ergonomic, when running inside Docker the router will retry requests that fail to connect to a loopback address, sending them to `docker.host.internal` instead.
@@ -14,6 +16,8 @@ This feature is enabled by default, but it can be disabled by setting the enviro
 ### Hot reload the router configuration file
 
 When working on the router configuration without changing router versions, custom modules, etc, it can be helpful to enable hot reloading of the configuration file.
+
+<RouterConfigWatchWarning />
 
 You can enable file watching based hot config reloading using the following configuration:
 

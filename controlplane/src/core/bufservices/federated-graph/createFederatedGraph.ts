@@ -15,6 +15,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -207,6 +208,14 @@ export function createFederatedGraph(
       };
     }
 
+    const mapperUpdater = new RouterConfigMapperUpdater(
+      opts.db,
+      opts.lockAdapter,
+      authContext.organizationId,
+      logger,
+      opts.blobStorage,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
@@ -219,6 +228,7 @@ export function createFederatedGraph(
         req.disableResolvabilityValidation,
         opts.promptToQueryClient,
         opts.billingDefaultPlanId,
+        mapperUpdater,
       );
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
@@ -244,7 +254,7 @@ export function createFederatedGraph(
       authContext.userId,
     );
 
-    return {
+    return flushMapperIntoResponse(mapperUpdater, {
       response: {
         code:
           compositionErrors.length > 0
@@ -256,6 +266,6 @@ export function createFederatedGraph(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
-    };
+    });
   });
 }

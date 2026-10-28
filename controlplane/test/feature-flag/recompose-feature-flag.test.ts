@@ -51,7 +51,7 @@ describe('Recompose feature flag tests', () => {
     'that an error is returned when configuration splitting is not enabled',
     getDebugTestOptions(isDebugMode),
     async (textContext) => {
-      const { client, server } = await SetupTest({ dbname, chClient });
+      const { client, server } = await SetupTest({ dbname, chClient, enableSplitConfigLoadingByDefault: false });
       textContext.onTestFinished(() => server.close());
 
       const labels = [{ key: 'team', value: 'A' }];

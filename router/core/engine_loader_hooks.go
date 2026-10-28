@@ -157,7 +157,8 @@ func ttlToCacheControl(ttl time.Duration, private bool) string {
 		if private {
 			return "private, " + noCache
 		}
-		return noCache
+		// Still public: the merge only keeps public when every fetch says it.
+		return "public, " + noCache
 	}
 	if private {
 		return fmt.Sprintf("private, max-age=%d", maxAge)
@@ -176,7 +177,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 	}
 	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
 
-	origin := headers.Get(cacheControlKey)
+	origin := cacheControlValue(headers)
 	if origin == "" {
 		headers.Set(cacheControlKey, cached)
 		return
@@ -370,10 +371,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			path = responseInfo.Request.URL.Path
 		}
 
-		if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {
-			f.accessLogger.Error(path, fields)
-		} else {
-			f.accessLogger.Info(path, fields)
+		// Only suppress the log. Error recording, metrics and span attributes still run below.
+		if f.accessLogger.ShouldLog(exprCtx, fields) {
+			if responseInfo.Err != nil && !errors.Is(responseInfo.Err, context.Canceled) {
+				f.accessLogger.Error(path, fields)
+			} else {
+				f.accessLogger.Info(path, fields)
+			}
 		}
 	}
 

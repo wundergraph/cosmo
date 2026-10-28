@@ -23,9 +23,12 @@ test-coverage:
 
 test-fresh: clean-testcache test
 
+.PHONY: lint lint-fix
 lint:
-	go vet ./...
-	staticcheck ./...
+	../scripts/golangci-lint.sh run
+
+lint-fix:
+	../scripts/golangci-lint.sh run --fix
 
 clean-testcache:
 	go clean -testcache

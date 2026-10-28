@@ -107,7 +107,7 @@ describe('Contract tests', () => {
     expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
   });
 
   test('that a contract is created for a federated graph with included tags', async (testContext) => {
@@ -161,7 +161,7 @@ describe('Contract tests', () => {
     expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
   });
 
   test('that a contract is created with both excluded and included tags', async (testContext) => {
@@ -218,7 +218,7 @@ describe('Contract tests', () => {
     expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
   });
 
   test('that the exclude tags of a contract are updated', async (testContext) => {
@@ -389,7 +389,7 @@ describe('Contract tests', () => {
     expect(contractGraphResB.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphResB.graph?.readme).toBe('test');
     expect(contractGraphResB.graph?.supportsFederation).toEqual(true);
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
   });
 
   test('that contract tags are updated from exclude to include', async (testContext) => {
@@ -605,7 +605,7 @@ describe('Contract tests', () => {
     });
     expect(contractGraphRes.graph?.contract).toBeDefined();
 
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
 
     await client.deleteFederatedGraph({
       name: fedGraphName,
@@ -1044,7 +1044,7 @@ describe('Contract tests', () => {
       readme: 'test',
     });
 
-    expect(blobStorage.keys().length).toBe(2);
+    expect(blobStorage.keys().length).toBe(4);
 
     const deleteRes = await client.deleteMonograph({
       name: monographName,
@@ -1597,9 +1597,9 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    expect(blobStorage.keys()).toHaveLength(1);
+    expect(blobStorage.keys()).toHaveLength(2);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/manifest/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions, the last of which is failing
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1618,8 +1618,8 @@ describe('Contract tests', () => {
         ` A contract can only be created if its respective source graph has composed successfully.`,
     );
 
-    // There should still only be a single key in storage
-    expect(blobStorage.keys()).toHaveLength(1);
+    // There should be 2 keys in the storage, the mapper and latest
+    expect(blobStorage.keys()).toHaveLength(2);
     // The contract is rejected, so compositions should return ERR_NOT_FOUND and 0 compositions
     await assertNumberOfCompositions(client, contractName, 0, namespace, EnumStatusCode.ERR_NOT_FOUND);
     // The base graph compositions should remain at 2
@@ -1658,9 +1658,9 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    expect(blobStorage.keys()).toHaveLength(1);
+    expect(blobStorage.keys()).toHaveLength(2);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/manifest/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1680,10 +1680,12 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    // There should be two keys (the source graph and the contract)
-    expect(blobStorage.keys()).toHaveLength(2);
-    const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
+    // There should be 4 keys (the mapper and latest for both, source graph and the contract)
+    const storageKeys = blobStorage.keys();
+    expect(storageKeys).toHaveLength(4);
+    expect(storageKeys).toEqual(
+      expect.arrayContaining([expect.stringContaining(`${contractResponse.graph!.id}/manifest/latest.json`)]),
+    );
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -1724,7 +1726,7 @@ describe('Contract tests', () => {
   });
 
   test('that a contract with exclude tags uploads the correct client schema to the router', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
@@ -1754,9 +1756,11 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    expect(blobStorage.keys()).toHaveLength(1);
-    const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
+    let blobStorageKeys = blobStorage.keys();
+    const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${baseGraphResponse.graph!.id}/manifest/latest.json`;
+    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1776,10 +1780,11 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    // There should be two keys in storage (source graph and contract)
-    expect(blobStorage.keys()).toHaveLength(2);
-    const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
+    // There should be four keys in storage (the mapper and latest for the source graph and contract)
+    blobStorageKeys = blobStorage.keys();
+    const contractKey = `${users.adminAliceCompanyA.organizationId}/${contractResponse.graph!.id}/manifest/latest.json`;
+    expect(blobStorageKeys).toHaveLength(4);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([contractKey]));
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -1887,8 +1892,8 @@ describe('Contract tests', () => {
     // There should be a new contract composition
     await assertNumberOfCompositions(client, contractName, 2, namespace);
 
-    // There should still be only two keys
-    expect(blobStorage.keys()).toHaveLength(2);
+    // There should still be only four keys
+    expect(blobStorage.keys()).toHaveLength(4);
 
     const newRawExecutionConfig = await blobStorage.getObject({ key: contractKey });
     expect(newRawExecutionConfig).toBeDefined();
@@ -1983,7 +1988,7 @@ describe('Contract tests', () => {
   });
 
   test('that a contract with include tags uploads the correct client schema to the router', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
@@ -2013,9 +2018,11 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    expect(blobStorage.keys()).toHaveLength(1);
-    const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
+    let blobStorageKeys = blobStorage.keys();
+    const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${baseGraphResponse.graph!.id}/manifest/latest.json`;
+    expect(blobStorageKeys).toHaveLength(2);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -2035,10 +2042,11 @@ describe('Contract tests', () => {
       namespace,
     });
 
-    // There should be two keys in storage (source graph and contract)
-    expect(blobStorage.keys()).toHaveLength(2);
-    const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
+    // There should be four keys in storage (the mapper and latest for the source graph and contract)
+    blobStorageKeys = blobStorage.keys();
+    const contractKey = `${users.adminAliceCompanyA.organizationId}/${contractResponse.graph!.id}/manifest/latest.json`;
+    expect(blobStorageKeys).toHaveLength(4);
+    expect(blobStorageKeys).toEqual(expect.arrayContaining([contractKey]));
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -2143,8 +2151,8 @@ describe('Contract tests', () => {
     // There should be a new contract composition
     await assertNumberOfCompositions(client, contractName, 2, namespace);
 
-    // There should still be only two keys
-    expect(blobStorage.keys()).toHaveLength(2);
+    // There should still be only four keys
+    expect(blobStorage.keys()).toHaveLength(4);
 
     const newRawExecutionConfig = await blobStorage.getObject({ key: contractKey });
     expect(newRawExecutionConfig).toBeDefined();
@@ -2276,15 +2284,14 @@ describe('Contract tests', () => {
       await createFeatureFlag(client, ffName, labels, ['products-standalone-feature'], namespace, true);
 
       /**
-       * We expect the base graph and contract to be composed twice, once for the creation and once when the
-       * feature flag was created
+       * We expect the base graph and contract to be composed once
        */
-      await assertNumberOfCompositions(client, baseGraphName, 2, namespace, EnumStatusCode.OK, true);
-      await assertNumberOfCompositions(client, contractName, 2, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, baseGraphName, 1, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 1, namespace, EnumStatusCode.OK, true);
 
       // We expect to see feature flag to be composed
-      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
-      await assertNumberOfCompositions(client, contractName, 3, namespace);
+      await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+      await assertNumberOfCompositions(client, contractName, 2, namespace);
 
       // Update the feature subgraph
       const updateFeatureSubgraphResp = await client.publishFederatedSubgraph({
@@ -2297,13 +2304,13 @@ describe('Contract tests', () => {
 
       expect(updateFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-      // We expect to see a new composition for both the base graph and contract
-      await assertNumberOfCompositions(client, baseGraphName, 3, namespace, EnumStatusCode.OK, true);
-      await assertNumberOfCompositions(client, contractName, 3, namespace, EnumStatusCode.OK, true);
+      // We expect to not see a new composition for both the base graph and contract
+      await assertNumberOfCompositions(client, baseGraphName, 1, namespace, EnumStatusCode.OK, true);
+      await assertNumberOfCompositions(client, contractName, 1, namespace, EnumStatusCode.OK, true);
 
-      // And also expect a new composition for the feature flag
-      await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
-      await assertNumberOfCompositions(client, contractName, 5, namespace);
+      // But expect a new composition for the feature flag
+      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+      await assertNumberOfCompositions(client, contractName, 3, namespace);
     },
   );
 });

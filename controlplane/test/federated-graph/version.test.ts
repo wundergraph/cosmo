@@ -191,7 +191,7 @@ describe('federated-graph version tests', () => {
 
   describe('set tests', () => {
     test('that an error is returned if an invalid router compatibility version integer is provided', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -215,9 +215,12 @@ describe('federated-graph version tests', () => {
         name: fedGraphName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({
@@ -238,7 +241,7 @@ describe('federated-graph version tests', () => {
     });
 
     test('that an error is returned if an invalid router compatibility version string is provided', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -262,9 +265,12 @@ describe('federated-graph version tests', () => {
         name: fedGraphName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({
@@ -311,9 +317,12 @@ describe('federated-graph version tests', () => {
           name: fedGraphName,
           namespace,
         });
-        expect(blobStorage.keys()).toHaveLength(1);
-        const baseGraphKey = blobStorage.keys()[0];
-        expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+        const blobStorageKeys = blobStorage.keys();
+        expect(blobStorageKeys).toHaveLength(2);
+        expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
         await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
         authenticator.changeUserWithSuppliedContext({
@@ -361,9 +370,12 @@ describe('federated-graph version tests', () => {
         name: fedGraphName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
       authenticator.changeUserWithSuppliedContext({
@@ -439,9 +451,12 @@ describe('federated-graph version tests', () => {
         name: fedGraphName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
       authenticator.changeUserWithSuppliedContext({
@@ -459,7 +474,7 @@ describe('federated-graph version tests', () => {
     });
 
     test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async (testContext) => {
-      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, users } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const namespace = genID('namespace').toLowerCase();
@@ -483,9 +498,12 @@ describe('federated-graph version tests', () => {
         name: fedGraphName,
         namespace,
       });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+      const baseGraphKey = `${users.adminAliceCompanyA.organizationId}/${federatedGraphResponse.graph!.id}/manifest/latest.json`;
+      const blobStorageKeys = blobStorage.keys();
+      expect(blobStorageKeys).toHaveLength(2);
+      expect(blobStorageKeys).toEqual(expect.arrayContaining([baseGraphKey]));
+
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
 
       const response = await client.setGraphRouterCompatibilityVersion({

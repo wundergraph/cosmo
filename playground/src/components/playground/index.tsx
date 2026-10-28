@@ -8,22 +8,28 @@ import {
   OperationTypeNode,
   buildClientSchema,
   getIntrospectionQuery,
+  getOperationAST,
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
-import { cn } from '@/lib/utils';
+import { cn, usesDirective } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import { createDeferAdvisorPlugin } from './defer-advisor/defer-advisor-plugin';
+import { DeferProvider } from './defer-advisor/defer-context';
+import { DeferPillsSync } from './defer-advisor/defer-pills-sync';
+import { DeferStatusBadge } from './defer-status-badge';
+import { readDeferStream } from '@/lib/defer-stream';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -89,6 +95,14 @@ const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: stri
   return headers;
 };
 
+// Shared by normal runs and Defer Advisor probes, so both send the same headers.
+const prepareHeaders = (initialHeaders: Record<string, string>, scripts: GraphiQLScripts | undefined) => {
+  const headers = scripts?.transformHeaders ? scripts.transformHeaders(initialHeaders) : { ...initialHeaders };
+  const substituted = substituteHeadersFromEnv(headers, '0');
+  validateHeaders(substituted);
+  return substituted;
+};
+
 const executeScript = async (code: string | undefined, graphId: string) => {
   if (!code) {
     return;
@@ -147,23 +161,28 @@ type GraphiQLScripts = {
   transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
+const isMultipartResponse = (response: Response) => !!response.headers.get('content-type')?.includes('multipart/');
+
+const isSubscription = (params: { operationName?: string | null }, opts?: any) =>
+  !!opts?.documentAST &&
+  getOperationAST(opts.documentAST, params.operationName ?? undefined)?.operation === 'subscription';
+
+type OnFetch = (response: unknown, status?: number, statusText?: string, defer?: DeferStatus) => void;
+
+type OperationResult = { response: string; status?: number; statusText?: string; defer?: DeferStatus };
+
+const initialResult: OperationResult = { response: '' };
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   scripts: GraphiQLScripts | undefined,
-  onFetch: any,
+  onFetch: OnFetch,
   url: URL,
   init: RequestInit,
 ) => {
   try {
-    const initialHeaders = init.headers as Record<string, string>;
-    let headers: Record<string, string> = scripts?.transformHeaders
-      ? scripts.transformHeaders(initialHeaders)
-      : { ...initialHeaders };
-
-    headers = substituteHeadersFromEnv(headers, '0');
-
-    validateHeaders(headers);
+    const headers = prepareHeaders(init.headers as Record<string, string>, scripts);
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -200,11 +219,25 @@ const graphiQLFetch = async (
       headers,
     });
 
+    const isMultipart = isMultipartResponse(response);
+    // An HTTP error says nothing about whether the router would have streamed the query.
+    const deferIgnored = response.ok && usesDirective('defer', requestBody.query) && !isMultipart;
+
+    // A multipart body has no single JSON document, so runOperation reads it and reports the first part.
+    if (isMultipart) {
+      return response;
+    }
+
     const responseData = await response.clone().json();
 
     await executePostScripts('0', requestBody, responseData);
 
-    onFetch(await response.clone().json(), response.status, response.statusText);
+    onFetch(
+      await response.clone().json(),
+      response.status,
+      response.statusText,
+      deferIgnored ? { state: 'disabled' } : undefined,
+    );
     return response;
   } catch (e: any) {
     const customMessage =
@@ -278,7 +311,7 @@ const ResponseToolbar = () => {
     }
   };
 
-  const { status, statusText } = useContext(PlaygroundContext);
+  const { status, statusText, responseDefer } = useContext(PlaygroundContext);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
@@ -290,6 +323,7 @@ const ResponseToolbar = () => {
           {status || statusText}
         </Badge>
       )}
+      <DeferStatusBadge defer={responseDefer} />
       <Select onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue>
@@ -468,8 +502,6 @@ export const Playground = (input: {
   "X-WG-TRACE" : "true"
 }`);
 
-  const [response, setResponse] = useState<string>('');
-
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
   const [planError, setPlanError] = useState<string>('');
 
@@ -604,22 +636,68 @@ export const Playground = (input: {
     getSchema();
   }, [headers]);
 
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
+  const [result, setResult] = useState<OperationResult>(initialResult);
+
+  const onEditHeaders = useCallback((value: string) => {
+    setHeaders(value);
+  }, []);
+
+  // Scripts only change through the prop, so they can be a dependency of the plugin.
+  const plugins = useMemo(
+    () => [
+      explorerPlugin({ showAttribution: false }),
+      // A blank header pane means no headers, not a JSON parse error.
+      createDeferAdvisorPlugin(url, (rawHeaders) =>
+        prepareHeaders(JSON.parse(rawHeaders.trim() || '{}'), input.scripts),
+      ),
+    ],
+    [url, input.scripts],
+  );
 
   const fetcher = useMemo(() => {
-    const onFetch = (response: any, status?: number, statusText?: string) => {
-      setResponse(JSON.stringify(response));
-      setStatus(status);
-      setStatusText(statusText);
+    // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
+    const onFetch: OnFetch = (response, status, statusText, defer) => {
+      setResult((prev) => ({ response: JSON.stringify(response), status, statusText, defer: defer ?? prev.defer }));
     };
 
-    return createGraphiQLFetcher({
+    const clearResponse = () => {
+      setResult(initialResult);
+    };
+
+    // The GraphiQL toolkit fetcher only handles subscriptions and introspection here.
+    const toolkitFetcher = createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
+
+    return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
+      if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
+        setResult((prev) => ({ ...prev, defer: undefined }));
+        return toolkitFetcher(params, opts);
+      }
+
+      return runOperation(params, opts?.headers);
+    };
+
+    async function runOperation(params: object, extraHeaders?: Record<string, string>) {
+      clearResponse();
+      const response = await graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, new URL(url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, multipart/mixed', ...extraHeaders },
+        body: JSON.stringify(params),
+      });
+
+      if (isMultipartResponse(response)) {
+        return readDeferStream(
+          response,
+          (defer) => setResult((prev) => ({ ...prev, defer })),
+          (initial) => onFetch(initial, response.status, response.statusText),
+        );
+      }
+      return response.json();
+    }
   }, [schema, clientValidationEnabled]);
 
   const [debouncedQuery] = useDebounce(query, 300);
@@ -688,8 +766,9 @@ export const Playground = (input: {
         value={{
           graphId: '0',
           tabsState,
-          status,
-          statusText,
+          status: result.status,
+          statusText: result.statusText,
+          responseDefer: result.defer,
           view,
           setView,
         }}
@@ -698,7 +777,7 @@ export const Playground = (input: {
           value={{
             query,
             headers,
-            response,
+            response: result.response,
             subgraphs: [],
             plan,
             planError,
@@ -707,23 +786,23 @@ export const Playground = (input: {
             forcedTheme: input.theme,
           }}
         >
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            onEditQuery={setQuery}
-            defaultHeaders={`{
+          <DeferProvider>
+            <GraphiQL
+              shouldPersistHeaders
+              showPersistHeadersSettings={false}
+              fetcher={fetcher}
+              inputValueDeprecation
+              onEditQuery={setQuery}
+              defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-            onEditHeaders={setHeaders}
-            onTabChange={setTabsState}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
-            forcedTheme={input.theme}
-          />
+              onEditHeaders={onEditHeaders}
+              onTabChange={setTabsState}
+              plugins={plugins}
+              forcedTheme={input.theme}
+              toolbar={{ additionalComponent: DeferPillsSync }}
+            />
+          </DeferProvider>
           {isMounted && <PlaygroundPortal />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>

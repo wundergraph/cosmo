@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:22.22.2 AS builder
+FROM --platform=${BUILDPLATFORM} node:22.23.4 AS builder
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./composition build
 
-FROM node:lts-alpine
+FROM node:22.23.4-alpine
 
 RUN apk add --no-cache --upgrade bash
 

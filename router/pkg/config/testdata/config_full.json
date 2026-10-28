@@ -285,6 +285,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false,
+    "OmitToolTitlePrefix": false,
     "OAuth": {
       "Enabled": false,
       "JWKS": null,
@@ -589,6 +590,7 @@
       }
     },
     "Router": {
+      "Filter": "",
       "Fields": [
         {
           "Key": "hello",
@@ -617,6 +619,7 @@
       ]
     },
     "Subgraphs": {
+      "Filter": "",
       "Enabled": true,
       "Fields": [
         {
@@ -655,8 +658,9 @@
   "LogLevel": "info",
   "JSONLog": true,
   "LogServiceName": "my-custom-router",
-  "ShutdownDelay": 15000000000,
+  "ShutdownDelay": 30000000000,
   "GracePeriod": 20000000000,
+  "DrainPeriod": 5000000000,
   "PollInterval": 10000000000,
   "PollJitter": 5000000000,
   "HealthCheckPath": "/health",
@@ -894,7 +898,11 @@
       "Enabled": true,
       "Name": "Surrogate-Key",
       "Delimiter": " ",
-      "MaxBytes": 1024
+      "Tiers": [
+        "cache_tag"
+      ],
+      "MaxBytes": 1024,
+      "OnOverflow": "private"
     },
     "All": {
       "Enabled": true,
@@ -1020,7 +1028,7 @@
     "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
-    "EnableNetPoll": true,
+    "EnableNetPoll": false,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -1187,7 +1195,12 @@
     "IgnoredFeatureFlags": [
       "experimental-checkout",
       "ab-test-foo"
-    ]
+    ],
+    "FetchRetry": {
+      "MaxAttempts": 5,
+      "Interval": 1000000000,
+      "MaxDuration": 30000000000
+    }
   },
   "PersistedOperationsConfig": {
     "Disabled": false,

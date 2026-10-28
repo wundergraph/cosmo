@@ -4,6 +4,83 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.364.1](https://github.com/wundergraph/cosmo/compare/router@0.364.0...router@0.364.1) (2026-10-27)
+
+### Bug Fixes
+
+* **router:** cache control policy merge ([#3375](https://github.com/wundergraph/cosmo/issues/3375)) ([ee226ef](https://github.com/wundergraph/cosmo/commit/ee226efa4c029c05bbabda84661b5e444d990be7)) (@SkArchon)
+
+## [0.364.0](https://github.com/wundergraph/cosmo/compare/router@0.363.0...router@0.364.0) (2026-10-27)
+
+### Features
+
+* add operation collections to the studio playground ([#3358](https://github.com/wundergraph/cosmo/issues/3358)) ([f146c7a](https://github.com/wundergraph/cosmo/commit/f146c7ac1eb5bdb47da094a8621d4548ed4b3002)) (@JivusAyrus)
+* **router:** cache_tag_header tiers and on_overflow ([#3389](https://github.com/wundergraph/cosmo/issues/3389)) ([8737bcb](https://github.com/wundergraph/cosmo/commit/8737bcbaf736e748c74043537f4d8c4ece8cb847)) (@SkArchon)
+* **router:** use goroutine WebSocket handling by default ([#3416](https://github.com/wundergraph/cosmo/issues/3416)) ([f388465](https://github.com/wundergraph/cosmo/commit/f38846587d0b48d5afd63aa0596043272d93479c)) (@fiam)
+
+### Bug Fixes
+
+* **router:** use SUBSCRIBE for literal redis channels ([#3370](https://github.com/wundergraph/cosmo/issues/3370)) ([098d291](https://github.com/wundergraph/cosmo/commit/098d291b876ac92505fbc316d2619440d5a190d0)) (@gcsabbagh)
+
+## [0.363.0](https://github.com/wundergraph/cosmo/compare/router@0.362.0...router@0.363.0) (2026-10-23)
+
+### Features
+
+* **playground:** show response cache data in the request trace ([#3360](https://github.com/wundergraph/cosmo/issues/3360)) ([de31a2b](https://github.com/wundergraph/cosmo/commit/de31a2b755fa02fcf2af2b5454aebc3368e83a06)) (@SkArchon)
+
+## [0.362.0](https://github.com/wundergraph/cosmo/compare/router@0.361.0...router@0.362.0) (2026-10-22)
+
+### Features
+
+* add simple defer panel (no advice just yet) ([#3393](https://github.com/wundergraph/cosmo/issues/3393)) ([949dfe9](https://github.com/wundergraph/cosmo/commit/949dfe9a183a1ff3a3a972f325c3d5446ef02906)) (@gausie)
+
+### Bug Fixes
+
+* **router:** treat a malformed Cache-Control as no-store ([#3385](https://github.com/wundergraph/cosmo/issues/3385)) ([c253c2a](https://github.com/wundergraph/cosmo/commit/c253c2a62fd24c3b20b2c40e6b3b7d7ad0abcc73)) (@SkArchon)
+
+## [0.361.0](https://github.com/wundergraph/cosmo/compare/router@0.360.1...router@0.361.0) (2026-10-21)
+
+### Features
+
+* add filters to router and subgraph logs ([#3369](https://github.com/wundergraph/cosmo/issues/3369)) ([a23bc03](https://github.com/wundergraph/cosmo/commit/a23bc037ac385c8f203129e36aaf29f0a0c097a1)) (@alepane21)
+* show defer status in the response toolbar ([#3380](https://github.com/wundergraph/cosmo/issues/3380)) ([7ded2cf](https://github.com/wundergraph/cosmo/commit/7ded2cf98d2815ef7c7c9ca05f768306c008eff8)) (@gausie)
+* stream deferred router responses in the playground ([#3379](https://github.com/wundergraph/cosmo/issues/3379)) ([a45995c](https://github.com/wundergraph/cosmo/commit/a45995c05917fae2bf20ae5aa243e2b156e2df75)) (@gausie)
+
+### Bug Fixes
+
+* introspection for input deprecated fields in the playground ([#3394](https://github.com/wundergraph/cosmo/issues/3394)) ([b7f1b8e](https://github.com/wundergraph/cosmo/commit/b7f1b8ee66913b437cdaad60cfb5a858012d6e82)) (@JivusAyrus)
+
+## [0.360.1](https://github.com/wundergraph/cosmo/compare/router@0.360.0...router@0.360.1) (2026-10-19)
+
+### Bug Fixes
+
+* **router:** end each defer part with its boundary so parts stream as they complete ([#3378](https://github.com/wundergraph/cosmo/issues/3378)) ([4a672a1](https://github.com/wundergraph/cosmo/commit/4a672a1807c2bafe5a5160912edc17e3f3dab5aa)) (@gausie)
+
+## [0.360.0](https://github.com/wundergraph/cosmo/compare/router@0.359.0...router@0.360.0) (2026-10-19)
+
+### Features
+
+* **router:** add response cache data to request tracing ([#3359](https://github.com/wundergraph/cosmo/issues/3359)) ([6d779dd](https://github.com/wundergraph/cosmo/commit/6d779dd5bdfbdd1e94b0b3fe5139abfcfdd195e1)) (@SkArchon)
+
+## [0.359.0](https://github.com/wundergraph/cosmo/compare/router@0.358.2...router@0.359.0) (2026-10-15)
+
+### Features
+
+* execution config reload on truncated body ([#3365](https://github.com/wundergraph/cosmo/issues/3365)) ([4879bb5](https://github.com/wundergraph/cosmo/commit/4879bb547802dae3b1e35f71e6a8af2165c01009)) (@alepane21)
+
+## [0.358.2](https://github.com/wundergraph/cosmo/compare/router@0.358.1...router@0.358.2) (2026-10-14)
+
+### Bug Fixes
+
+* handle graceful draining of keep alive connections during shutdown ([#3356](https://github.com/wundergraph/cosmo/issues/3356)) ([9b436e7](https://github.com/wundergraph/cosmo/commit/9b436e7cf700a4c335e70a027acd402a07478466)) (@Noroth)
+
+## [0.358.1](https://github.com/wundergraph/cosmo/compare/router@0.358.0...router@0.358.1) (2026-10-13)
+
+### Bug Fixes
+
+* race conditions on invalidations leading to dangling entries that cannot be invalidated ([#3322](https://github.com/wundergraph/cosmo/issues/3322)) ([d334142](https://github.com/wundergraph/cosmo/commit/d33414211a709a5d3fb70b4593670af2d941ec8c)) (@SkArchon)
+* **router/mcpserver:** mirror omitToolNamePrefix in Annotations.Title ([#3247](https://github.com/wundergraph/cosmo/issues/3247)) ([ca0011c](https://github.com/wundergraph/cosmo/commit/ca0011ce7a96e0f347da756057e85377c3cd543e)) (@Tyagiquamar)
+
 ## [0.358.0](https://github.com/wundergraph/cosmo/compare/router@0.357.0...router@0.358.0) (2026-10-12)
 
 ### Features

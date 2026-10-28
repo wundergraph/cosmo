@@ -920,6 +920,93 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		for _, tc := range []struct {
+			name, policy, employees, hobbies, want string
+		}{
+			{name: "public only when every subgraph says it", employees: "public, max-age=120", hobbies: "max-age=60", want: "max-age=60"},
+			{name: "a subgraph without Cache-Control does not withdraw public", employees: "public, max-age=120", want: "max-age=120, public"},
+			{name: "the policy default does not withdraw a subgraph's public", policy: "max-age=300", employees: "public, max-age=120", hobbies: "public, max-age=60", want: "max-age=60, public"},
+			{name: "zero max-age is not raised to the policy default", policy: "max-age=300", employees: "max-age=0, public", hobbies: "max-age=60", want: "no-cache"}, // no public: hobbies lacks it
+			{name: "a zero max-age default caps a subgraph's lifetime", policy: "max-age=0", employees: "max-age=600", hobbies: "max-age=600", want: "no-cache"},
+			{name: "a zero s-maxage default caps a subgraph's lifetime", policy: "s-maxage=0", employees: "max-age=600", want: "no-cache"},
+			{name: "s-maxage is kept", policy: "max-age=300", employees: "max-age=120, s-maxage=10", hobbies: "max-age=60", want: "max-age=60, s-maxage=10"},
+			{name: "must-revalidate and proxy-revalidate are kept", policy: "max-age=300", employees: "max-age=120, must-revalidate", hobbies: "max-age=60, proxy-revalidate", want: "max-age=60, must-revalidate, proxy-revalidate"},
+			{name: "field-specific no-cache keeps the lifetime", policy: "max-age=300", employees: `max-age=120, no-cache="Set-Cookie"`, hobbies: `max-age=60, no-cache="X-Token"`, want: `max-age=60, no-cache="Set-Cookie, X-Token"`},
+			{name: "bare no-cache wins over field-specific no-cache", policy: "max-age=300", employees: `max-age=120, no-cache="Set-Cookie"`, hobbies: "no-cache", want: "no-cache"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: tc.policy},
+					Subgraphs:          cacheOptions(tc.employees, tc.hobbies),
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+					require.Equal(t, tc.want, res.Response.Header.Get("Cache-Control"))
+				})
+			})
+		}
+
+		// With or without a Cache-Control of its own, a failed fetch is not cacheable.
+		for _, cacheControl := range []string{"max-age=60, public", ""} {
+			t.Run("a failed subgraph response is no-store: "+cacheControl, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{Middleware: cacheOptions("public, max-age=120", "").Employees.Middleware},
+						Hobbies: testenv.SubgraphConfig{
+							Middleware: func(next http.Handler) http.Handler {
+								return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+									if cacheControl != "" {
+										w.Header().Set("Cache-Control", cacheControl)
+									}
+									next.ServeHTTP(&forcedStatusWriter{ResponseWriter: w, status: http.StatusInternalServerError}, r)
+								})
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+					require.NoError(t, err)
+					require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+				})
+			})
+		}
+
+		t.Run("malformed subgraph cache control is no-store and does not wedge the operation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=300"},
+				Subgraphs:          cacheOptions("max-age=abc, public", "max-age=60"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Twice: a panicking first request used to leave the dedup entry behind.
+				for range 2 {
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					res, err := xEnv.MakeGraphQLRequestWithContext(ctx, testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					cancel()
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, res.Response.StatusCode)
+					require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+				}
+			})
+		})
+
+		t.Run("malformed policy default is ignored", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=abc"},
+				Subgraphs:          cacheOptions("max-age=120", "max-age=60"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=60", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		// Test case for max-age: shortest max-age wins
 		t.Run("shortest max-age wins", func(t *testing.T) {
 			t.Parallel()
@@ -936,6 +1023,19 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("every Cache-Control line is read", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          setSubgraphPropagateHeader("Cache-Control", []string{"public", "max-age=20"}, []string{"public, max-age=60"}),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=20, public", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		t.Run("selects shortest max-age and private vs private", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -948,6 +1048,55 @@ func TestHeaderPropagation(t *testing.T) {
 				cc := res.Response.Header.Get("Cache-Control")
 				require.Equal(t, "max-age=300, private", cc) // Shorter max-age wins
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("Expires stands in for max-age under a default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          subgraphsWithExpiresHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Regexp(t, `^max-age=(29\d|300)$`, res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
+		t.Run("Expires stands in for max-age beside s-maxage", func(t *testing.T) {
+			t.Parallel()
+			withSMaxAge := func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Cache-Control", "s-maxage=300")
+					w.Header().Set("Expires", time.Now().UTC().Add(time.Minute).Format(http.TimeFormat))
+					handler.ServeHTTP(w, r)
+				})
+			}
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{Middleware: withSMaxAge},
+					Hobbies:   testenv.SubgraphConfig{Middleware: withSMaxAge},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Regexp(t, `^max-age=(5\d|60), s-maxage=300$`, res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
+		t.Run("an invalid Expires is already expired", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: "max-age=3600"},
+				Subgraphs:          setSubgraphPropagateHeader("Expires", []string{"0"}, []string{"0"}),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
 			})
 		})
 
@@ -2059,4 +2208,23 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 			require.Equal(t, "token is malformed: token contains an invalid number of segments", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
+}
+
+// forcedStatusWriter answers with status whatever the handler writes.
+type forcedStatusWriter struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (w *forcedStatusWriter) WriteHeader(int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(w.status)
+	}
+}
+
+func (w *forcedStatusWriter) Write(b []byte) (int, error) {
+	w.WriteHeader(w.status)
+	return w.ResponseWriter.Write(b)
 }

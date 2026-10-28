@@ -1087,7 +1087,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(validationCtx, requestContext, expr.BucketQueryComplexity)
 
 		if queryDepthErr != nil {
-			rtrace.AttachErrToSpan(engineValidateSpan, err)
+			rtrace.AttachErrToSpan(engineValidateSpan, queryDepthErr)
 
 			requestContext.operation.validationTime = time.Since(startValidation)
 			requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime

@@ -4,6 +4,51 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.186.0](https://github.com/wundergraph/cosmo/compare/studio@0.185.0...studio@0.186.0) (2026-10-27)
+
+### Features
+
+* add bill-due flag and unpaid balance banner for organizations ([#3423](https://github.com/wundergraph/cosmo/issues/3423)) ([d8e111a](https://github.com/wundergraph/cosmo/commit/d8e111a126262c67c7aa43e6329b47380dd067f0)) (@JivusAyrus)
+
+## [0.185.0](https://github.com/wundergraph/cosmo/compare/studio@0.184.1...studio@0.185.0) (2026-10-27)
+
+### Features
+
+* add operation collections to the studio playground ([#3358](https://github.com/wundergraph/cosmo/issues/3358)) ([f146c7a](https://github.com/wundergraph/cosmo/commit/f146c7ac1eb5bdb47da094a8621d4548ed4b3002)) (@JivusAyrus)
+* set a higher limit to routers showable in studio ([#3412](https://github.com/wundergraph/cosmo/issues/3412)) ([c1f0c00](https://github.com/wundergraph/cosmo/commit/c1f0c008b12128ac81c417feb587ec54b85f42bb)) (@alepane21)
+* **studio:** show response cache data in the request trace ([#3391](https://github.com/wundergraph/cosmo/issues/3391)) ([628788a](https://github.com/wundergraph/cosmo/commit/628788ae7adbec80437492bd16c75f6174b80ab0)) (@SkArchon)
+
+## [0.184.1](https://github.com/wundergraph/cosmo/compare/studio@0.184.0...studio@0.184.1) (2026-10-23)
+
+### Bug Fixes
+
+* patch October 2026 Node.js security advisories in Cosmo ([#3410](https://github.com/wundergraph/cosmo/issues/3410)) ([9e17bf9](https://github.com/wundergraph/cosmo/commit/9e17bf98e57f24883d10fbc47d2e33ebca35c772)) (@comatory)
+
+## [0.184.0](https://github.com/wundergraph/cosmo/compare/studio@0.183.3...studio@0.184.0) (2026-10-22)
+
+### Features
+
+* show feature subgraphs in playground and schema dropdowns ([#3196](https://github.com/wundergraph/cosmo/issues/3196)) ([1a0e5af](https://github.com/wundergraph/cosmo/commit/1a0e5af27cd00feee557918cbafd7a4132826e6b)) (@gausie)
+
+### Bug Fixes
+
+* show feature flag changelogs separately from the base graph in studio ([#3397](https://github.com/wundergraph/cosmo/issues/3397)) ([a860f6c](https://github.com/wundergraph/cosmo/commit/a860f6c6bac07235ac23e5bc7c0ddb21fa2ab270)) (@JivusAyrus)
+* **studio:** patch Next.js security advisories ([#3407](https://github.com/wundergraph/cosmo/issues/3407)) ([53714b4](https://github.com/wundergraph/cosmo/commit/53714b46b357f2ad6c939a882bb6edfdba343e01)) (@comatory)
+
+## [0.183.3](https://github.com/wundergraph/cosmo/compare/studio@0.183.2...studio@0.183.3) (2026-10-21)
+
+### Bug Fixes
+
+* introspection for input deprecated fields in the playground ([#3394](https://github.com/wundergraph/cosmo/issues/3394)) ([b7f1b8e](https://github.com/wundergraph/cosmo/commit/b7f1b8ee66913b437cdaad60cfb5a858012d6e82)) (@JivusAyrus)
+
+## [0.183.2](https://github.com/wundergraph/cosmo/compare/studio@0.183.1...studio@0.183.2) (2026-10-19)
+
+**Note:** Version bump only for package studio
+
+## [0.183.1](https://github.com/wundergraph/cosmo/compare/studio@0.183.0...studio@0.183.1) (2026-10-14)
+
+**Note:** Version bump only for package studio
+
 ## [0.183.0](https://github.com/wundergraph/cosmo/compare/studio@0.182.2...studio@0.183.0) (2026-10-06)
 
 ### Features

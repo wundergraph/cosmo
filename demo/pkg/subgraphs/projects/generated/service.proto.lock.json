@@ -599,6 +599,35 @@
         "priority": 1,
         "primaryItem": 2
       }
+    },
+    "WorkAudit": {
+      "fields": {
+        "expertise": 1,
+        "report": 2
+      }
+    },
+    "WorkAuditReport": {
+      "fields": {
+        "generatedAt": 1,
+        "findings": 2
+      }
+    },
+    "WorkAuditFinding": {
+      "fields": {
+        "code": 1,
+        "severity": 2
+      }
+    },
+    "WorkAuditRemediation": {
+      "fields": {
+        "description": 1,
+        "steps": 2
+      }
+    },
+    "WorkAuditStep": {
+      "fields": {
+        "title": 1
+      }
     }
   },
   "enums": {

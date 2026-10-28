@@ -1,5 +1,22 @@
 extend schema
-@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: [
+      "@authenticated"
+      "@composeDirective"
+      "@external"
+      "@extends"
+      "@inaccessible"
+      "@interfaceObject"
+      "@override"
+      "@provides"
+      "@key"
+      "@requires"
+      "@requiresScopes"
+      "@shareable"
+      "@tag"
+    ]
+  )
 
 schema {
   query: Query
@@ -18,11 +35,10 @@ type Query {
   projectActivities(projectId: ID!): [ProjectActivity!]!
 
   # New query fields with different list patterns
-  projectTags: [String]  # nullable list of nullable strings
-  archivedProjects: [Project]!  # non-nullable list of nullable projects
-  tasksByPriority(projectId: ID!): [[Task]]  # nullable list of nullable lists
-  resourceMatrix(projectId: ID!): [[ProjectResource!]!]!  # non-nullable list of non-nullable lists
-
+  projectTags: [String] # nullable list of nullable strings
+  archivedProjects: [Project]! # non-nullable list of nullable projects
+  tasksByPriority(projectId: ID!): [[Task]] # nullable list of nullable lists
+  resourceMatrix(projectId: ID!): [[ProjectResource!]!]! # non-nullable list of non-nullable lists
   # query to simulate that the service goes down
   killService: Boolean!
   panic: Boolean!
@@ -40,8 +56,8 @@ type Mutation {
 input ProjectInput {
   name: String!
   description: String
-  startDate: String   # ISO date
-  endDate: String     # ISO date
+  startDate: String # ISO date
+  endDate: String # ISO date
   status: ProjectStatus!
 }
 
@@ -49,7 +65,7 @@ input MilestoneInput {
   projectId: ID!
   name: String!
   description: String
-  dueDate: String     # ISO date
+  dueDate: String # ISO date
   status: MilestoneStatus!
 }
 
@@ -82,29 +98,26 @@ type Project implements Node & Timestamped @key(fields: "id") {
   id: ID!
   name: String!
   description: String
-  startDate: String   # ISO date
-  endDate: String     # ISO date
+  startDate: String # ISO date
+  endDate: String # ISO date
   status: ProjectStatus!
   # Federated references:
   teamMembers: [Employee!]!
-  relatedProducts: [Product!]!  # from products subgraph
+  relatedProducts: [Product!]! # from products subgraph
   # Project milestones or checkpoints
-  milestoneIds: [String!]  # Array of milestone identifiers
-
+  milestoneIds: [String!] # Array of milestone identifiers
   # New fields for extended functionality
   milestones: [Milestone!]!
   tasks: [Task!]!
-  progress: Float  # Completion percentage
-
+  progress: Float # Completion percentage
   # New fields with various list patterns for testing
-  tags: [String]  # nullable list of nullable tags
-  alternativeProjects: [Project]  # nullable list of nullable projects
-  dependencies: [Project!]  # nullable list of non-nullable projects
-  resourceGroups: [[ProjectResource!]!]!  # nested lists: non-nullable list of non-nullable lists
-  tasksByPhase: [[Task!]]!  # nested lists: non-nullable list of nullable lists
-  milestoneGroups: [[Milestone]]  # nested lists: nullable list of nullable lists
-  priorityMatrix: [[[Task!]!]!]  # triple nested: non-nullable list of non-nullable lists of non-nullable lists
-
+  tags: [String] # nullable list of nullable tags
+  alternativeProjects: [Project] # nullable list of nullable projects
+  dependencies: [Project!] # nullable list of non-nullable projects
+  resourceGroups: [[ProjectResource!]!]! # nested lists: non-nullable list of non-nullable lists
+  tasksByPhase: [[Task!]]! # nested lists: non-nullable list of nullable lists
+  milestoneGroups: [[Milestone]] # nested lists: nullable list of nullable lists
+  priorityMatrix: [[[Task!]!]!] # triple nested: non-nullable list of non-nullable lists of non-nullable lists
   # Recursive field resolver for project hierarchy
   subProjects(includeArchived: Boolean): [Project!]! @connect__fieldResolver(context: "id name status")
 
@@ -126,16 +139,15 @@ type Milestone implements Node & Timestamped @key(fields: "id") {
   projectId: ID!
   name: String!
   description: String
-  startDate: String   # ISO date (when milestone work starts)
-  endDate: String     # ISO date (milestone due date)
+  startDate: String # ISO date (when milestone work starts)
+  endDate: String # ISO date (milestone due date)
   status: MilestoneStatus!
   completionPercentage: Float
 
   # New fields with different list patterns
-  dependencies: [Milestone]!  # non-nullable list of nullable milestones
-  subtasks: [Task]  # nullable list of nullable tasks
-  reviewers: [Employee!]  # nullable list of non-nullable employees
-
+  dependencies: [Milestone]! # non-nullable list of nullable milestones
+  subtasks: [Task] # nullable list of nullable tasks
+  reviewers: [Employee!] # nullable list of non-nullable employees
   # Computed fields with @connect__fieldResolver
   isAtRisk(threshold: Float): Boolean! @connect__fieldResolver(context: "id endDate status completionPercentage")
   daysUntilDue(fromDate: String): Int @connect__fieldResolver(context: "endDate")
@@ -152,16 +164,14 @@ type Task implements Node & Assignable @key(fields: "id") {
   status: TaskStatus!
   estimatedHours: Float @deprecated(reason: "No more estimations!")
   actualHours: Float
-  createdAt: String   # ISO date
+  createdAt: String # ISO date
   completedAt: String # ISO date
-
   # New fields with different list patterns
-  labels: [String]  # nullable list of nullable labels
-  subtasks: [Task!]  # nullable list of non-nullable subtasks
-  dependencies: [Task]!  # non-nullable list of nullable tasks
-  attachmentUrls: [String!]!  # non-nullable list of non-nullable URLs
-  reviewerIds: [Int]  # nullable list of nullable reviewer IDs
-
+  labels: [String] # nullable list of nullable labels
+  subtasks: [Task!] # nullable list of non-nullable subtasks
+  dependencies: [Task]! # non-nullable list of nullable tasks
+  attachmentUrls: [String!]! # non-nullable list of non-nullable URLs
+  reviewerIds: [Int] # nullable list of nullable reviewer IDs
   # Computed fields with @connect__fieldResolver
   isBlocked(checkDependencies: Boolean): Boolean! @connect__fieldResolver(context: "id status")
   totalEffort(includeSubtasks: Boolean): Float @connect__fieldResolver(context: "id estimatedHours actualHours")
@@ -173,8 +183,8 @@ type ProjectUpdate implements Node {
   updatedById: Int!
   updateType: ProjectUpdateType!
   description: String!
-  timestamp: String!  # ISO date
-  metadata: String    # JSON metadata
+  timestamp: String! # ISO date
+  metadata: String # JSON metadata
 }
 
 # Enums
@@ -284,6 +294,39 @@ type WorkSetup @shareable {
   primaryItem: EmployeeWorkItem!
 }
 
+# Types for field resolvers nested inside a @requires field
+type WorkAudit {
+  expertise: String!
+  report: WorkAuditReport!
+  # Field resolver directly on the @requires return type
+  riskScore(weight: Float!): Float! @connect__fieldResolver(context: "expertise")
+}
+
+type WorkAuditReport {
+  generatedAt: String!
+  findings: [WorkAuditFinding!]!
+}
+
+type WorkAuditFinding {
+  code: String!
+  severity: Int!
+  # Field resolver in a list, two levels below the @requires return type
+  remediation(detailed: Boolean!): WorkAuditRemediation @connect__fieldResolver(context: "code severity")
+}
+
+type WorkAuditRemediation {
+  description: String!
+  steps: [WorkAuditStep!]!
+  # Field resolver nested inside another field resolver
+  estimatedHours: Float! @connect__fieldResolver(context: "description")
+}
+
+type WorkAuditStep {
+  title: String!
+  # Field resolver below a plain field inside of another field resolver
+  effort(multiplier: Float!): Float! @connect__fieldResolver(context: "title")
+}
+
 # Federated types
 type Employee @key(fields: "id") {
   id: Int!
@@ -295,10 +338,9 @@ type Employee @key(fields: "id") {
   completedTasks: [Task!]!
 
   # New fields with different list patterns
-  skills: [String]  # nullable list of nullable skills
-  certifications: [String!]  # nullable list of non-nullable certifications
-  projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
-
+  skills: [String] # nullable list of nullable skills
+  certifications: [String!] # nullable list of non-nullable certifications
+  projectHistory: [[Project!]]! # non-nullable list of nullable lists of non-nullable projects
   # Field requiring expertise from employees subgraph
   taggedProjectSummary: String! @requires(fields: "expertise")
   filteredProjectSummary(tag: String!): String! @requires(fields: "expertise")
@@ -310,17 +352,35 @@ type Employee @key(fields: "id") {
 
   # @requires fields using abstract types
   # Pattern 1: Flat abstract — interface
-  workItemInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } }")
+  workItemInfo: String!
+    @requires(
+      fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } }"
+    )
   # Pattern 2: Flat abstract — union
-  reviewReport: String! @requires(fields: "lastWorkReview { ... on WorkApproval { __typename comment approvedAt } ... on WorkRejection { __typename reason rejectionCode } }")
+  reviewReport: String!
+    @requires(
+      fields: "lastWorkReview { ... on WorkApproval { __typename comment approvedAt } ... on WorkRejection { __typename reason rejectionCode } }"
+    )
   # Pattern 3: Concrete wrapping abstract
-  workSetupSummary: String! @requires(fields: "workSetup { priority primaryItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } } }")
+  workSetupSummary: String!
+    @requires(
+      fields: "workSetup { priority primaryItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } } }"
+    )
   # Pattern 4: Concrete message inside fragment
-  workItemHandlerInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { name } } ... on ManagementWorkItem { handler { name } } }")
+  workItemHandlerInfo: String!
+    @requires(
+      fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { name } } ... on ManagementWorkItem { handler { name } } }"
+    )
   # Pattern 5: Deep concrete nesting inside fragment (specs → metrics)
-  workItemSpecsInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { specs { name metrics { score efficiency } } } ... on ManagementWorkItem { specs { name metrics { score efficiency } } } }")
+  workItemSpecsInfo: String!
+    @requires(
+      fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { specs { name metrics { score efficiency } } } ... on ManagementWorkItem { specs { name metrics { score efficiency } } } }"
+    )
   # Pattern 6: Nested abstract through concrete intermediary (handler → assignedItem)
-  deepWorkItemInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { assignedItem { __typename ... on ManagementWorkItem { name teamSize } ... on TechnicalWorkItem { name codeCount } } } } ... on ManagementWorkItem { handler { name } } }")
+  deepWorkItemInfo: String!
+    @requires(
+      fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { assignedItem { __typename ... on ManagementWorkItem { name teamSize } ... on TechnicalWorkItem { name codeCount } } } } ... on ManagementWorkItem { handler { name } } }"
+    )
 
   # @requires fields returning abstract types
   # Pattern 7: interface return type
@@ -331,6 +391,10 @@ type Employee @key(fields: "id") {
   latestWorkOperation: WorkReviewResult! @requires(fields: "expertise")
   # Pattern 10: nullable union return type
   optionalLatestWorkOperation: WorkReviewResult @requires(fields: "expertise")
+
+  # @requires field returning nested types with field resolvers below it
+  # Path: workAudit -> report -> findings -> remediation -> estimatedHours
+  workAudit: WorkAudit! @requires(fields: "expertise")
 
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
@@ -346,5 +410,5 @@ type Product @key(fields: "upc") {
   projects: [Project!]
 
   # New field with nested lists
-  featureMatrix: [[String]]  # nullable list of nullable lists of nullable features
+  featureMatrix: [[String]] # nullable list of nullable lists of nullable features
 }

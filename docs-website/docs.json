@@ -337,6 +337,7 @@
                 "icon": "rectangle-code",
                 "pages": [
                   "studio/playground",
+                  "studio/playground/collections",
                   "studio/playground/custom-scripts",
                   "studio/playground/shared-playground-state",
                   "studio/playground/default-headers"
@@ -685,7 +686,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status"]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status", "cli/proposal/status"]
               }
             ]
           }

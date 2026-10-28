@@ -1,6 +1,5 @@
 import { JWTVerifyResult, jwtVerify } from 'jose';
 import { Context, Env, Hono, Next, Schema } from 'hono';
-import { stream } from 'hono/streaming';
 
 export const signatureSha256Header = 'X-Signature-SHA256';
 
@@ -150,9 +149,7 @@ const persistedOperation = (storage: BlobStorage) => {
       throw e;
     }
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -212,9 +209,7 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
 
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -243,9 +238,7 @@ const draftRouterConfig = (storage: BlobStorage) => {
     c.header('Content-Type', 'application/json; charset=UTF-8');
     c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -273,9 +266,7 @@ const cacheOperations = (storage: BlobStorage) => {
     c.header('Content-Type', 'application/json; charset=UTF-8');
     c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -327,9 +318,7 @@ const persistedOperationsManifest = (storage: BlobStorage) => {
     }
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -361,9 +350,7 @@ const subgraphChecks = (storage: BlobStorage) => {
     c.header('Content-Type', 'application/json; charset=UTF-8');
     c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 
@@ -414,9 +401,7 @@ const manifestBlob = (storage: BlobStorage, keyBuilder: (orgId: string, graphId:
 
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
-    return stream(c, async (stream) => {
-      await stream.pipe(blobObject.stream);
-    });
+    return c.body(blobObject.stream);
   };
 };
 

@@ -25,8 +25,9 @@ introspection:
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
 log_service_name: 'my-custom-router'
-shutdown_delay: 15s
+shutdown_delay: 30s
 grace_period: 20s
+drain_period: 5s
 poll_interval: 10s
 health_check_path: '/health'
 readiness_check_path: '/health/ready'
@@ -106,6 +107,7 @@ mcp:
   enable_arbitrary_operations: false
   exclude_mutations: false
   omit_tool_name_prefix: false
+  omit_tool_title_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
@@ -448,7 +450,7 @@ engine:
   force_unauthenticated_request_tracing: false
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
-  enable_net_poll: true
+  enable_net_poll: false
   enable_subgraph_fetch_operation_name: true
   enable_defer: false
   websocket_client_write_timeout: 10s
@@ -563,7 +565,9 @@ response_cache:
     enabled: true
     name: 'Surrogate-Key'
     delimiter: ' '
+    tiers: [cache_tag]
     max_bytes: 1024
+    on_overflow: private
   all:
     enabled: true
     fallback_ttl: 30s
@@ -659,6 +663,10 @@ split_config_poller:
   ignored_feature_flags:
     - 'experimental-checkout'
     - 'ab-test-foo'
+  fetch_retry:
+    max_attempts: 5
+    interval: 1s
+    max_duration: 30s
 
 router_config_path: 'latest.json'
 

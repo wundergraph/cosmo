@@ -484,7 +484,7 @@ type EngineExecutionConfiguration struct {
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers int  `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll          bool `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	EnableNetPoll          bool `envDefault:"false" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
 
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
@@ -1170,10 +1170,32 @@ type ResponseCacheTagHeaderConfig struct {
 	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Name      string `yaml:"name,omitempty" envDefault:"Cache-Tag" env:"NAME"`
 	Delimiter string `yaml:"delimiter,omitempty" envDefault:"," env:"DELIMITER"`
+	// Tiers are the tags the header carries, named like the invalidation
+	// indexes but independent of them.
+	Tiers []string `yaml:"tiers,omitempty" envDefault:"subgraph,type,cache_tag" env:"TIERS"`
 	// MaxBytes caps the header value; tags are packed coarsest first and the
-	// finest that do not fit are left out.
-	MaxBytes int `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
+	// finest that do not fit are left out, or OnOverflow says otherwise.
+	MaxBytes   int                            `yaml:"max_bytes,omitempty" envDefault:"16384" env:"MAX_BYTES"`
+	OnOverflow ResponseCacheTagHeaderOverflow `yaml:"on_overflow,omitempty" envDefault:"truncate" env:"ON_OVERFLOW"`
 }
+
+// Tier names of ResponseCacheTagHeaderConfig.Tiers.
+const (
+	ResponseCacheTagTierSubgraph = "subgraph"
+	ResponseCacheTagTierType     = "type"
+	ResponseCacheTagTierCacheTag = "cache_tag"
+)
+
+// ResponseCacheTagHeaderOverflow is what happens when tags do not fit max_bytes.
+type ResponseCacheTagHeaderOverflow string
+
+const (
+	// ResponseCacheTagHeaderOverflowTruncate sends the tags that fit.
+	ResponseCacheTagHeaderOverflowTruncate ResponseCacheTagHeaderOverflow = "truncate"
+	// ResponseCacheTagHeaderOverflowPrivate sends no tags and Cache-Control:
+	// private, so no shared cache holds a response it cannot purge.
+	ResponseCacheTagHeaderOverflowPrivate ResponseCacheTagHeaderOverflow = "private"
+)
 
 // ResponseCacheInvalidationConfig selects which secondary indexes are built
 // over cached entries. Each is independent; all off caches entries untagged.
@@ -1303,6 +1325,17 @@ type SplitConfigPollerRules struct {
 	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
 	// Listed flags are not fetched even when present in the mapper.
 	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+	// FetchRetry controls how a file is fetched again when the CDN response body is truncated.
+	FetchRetry SplitConfigFetchRetry `yaml:"fetch_retry,omitempty" envPrefix:"FETCH_RETRY_"`
+}
+
+type SplitConfigFetchRetry struct {
+	// MaxAttempts is the total number of fetches for a single file, including the first one.
+	MaxAttempts int `yaml:"max_attempts" envDefault:"3" env:"MAX_ATTEMPTS"`
+	// Interval is the base step of the exponential backoff with jitter between attempts.
+	Interval time.Duration `yaml:"interval" envDefault:"100ms" env:"INTERVAL"`
+	// MaxDuration caps the wait between two attempts.
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"2s" env:"MAX_DURATION"`
 }
 
 type ExecutionConfig struct {
@@ -1404,11 +1437,13 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
+	Filter                string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_ROUTER_FILTER"`
 	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
 	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
+	Filter  string            `yaml:"filter,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FILTER"`
 	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false"`
 	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`
 }
@@ -1475,8 +1510,11 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
-	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	// OmitToolTitlePrefix removes the MCP operation prefix from the MCP tool title.
+	// When enabled, "Execute operation GetUser" becomes "GetUser".
+	OmitToolTitlePrefix bool                  `yaml:"omit_tool_title_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_TITLE_PREFIX"`
+	OAuth               MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
@@ -1659,6 +1697,7 @@ type Config struct {
 	LogServiceName                string                      `yaml:"log_service_name" envDefault:"@wundergraph/router" env:"LOG_SERVICE_NAME"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
+	DrainPeriod                   *time.Duration              `yaml:"drain_period,omitempty" env:"DRAIN_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	HealthCheckPath               string                      `yaml:"health_check_path" envDefault:"/health" env:"HEALTH_CHECK_PATH"`
@@ -1736,6 +1775,15 @@ type LoadResult struct {
 // This function loads the configuration files, apply environment variables and validates them with the json schema
 // In case of loading multiple configuration files, we will do the validation step for every configuration
 // and additionally post merging, since validations like oneOf can be bypassed
+// EffectiveDrainPeriod returns how long the router drains keep-alive connections on a real stop.
+// When drain_period is unset, the drain gets the part of shutdown_delay that grace_period leaves.
+func (c *Config) EffectiveDrainPeriod() time.Duration {
+	if c.DrainPeriod != nil {
+		return *c.DrainPeriod
+	}
+	return max(c.ShutdownDelay-c.GracePeriod, 0)
+}
+
 func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
@@ -1836,6 +1884,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
+	}
+
+	// The drain runs inside the shutdown delay, so an explicit drain period must leave the grace period
+	// for the actual shutdown. The derived default always fits.
+	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
+		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
 	}
 
 	// Post-process the config

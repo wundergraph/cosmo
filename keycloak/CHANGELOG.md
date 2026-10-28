@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.16.3...keycloak@0.17.0) (2026-10-27)
+
+### Features
+
+* implement user segmentation in signup flow with Keycloak integration ([#3408](https://github.com/wundergraph/cosmo/issues/3408)) ([85a0cd4](https://github.com/wundergraph/cosmo/commit/85a0cd49dba9e7dab9123fb39718373f02a08c48)) (@JivusAyrus)
+
+## [0.16.3](https://github.com/wundergraph/cosmo/compare/keycloak@0.16.2...keycloak@0.16.3) (2026-10-23)
+
+### Bug Fixes
+
+* patch October 2026 Node.js security advisories in Cosmo ([#3410](https://github.com/wundergraph/cosmo/issues/3410)) ([9e17bf9](https://github.com/wundergraph/cosmo/commit/9e17bf98e57f24883d10fbc47d2e33ebca35c772)) (@comatory)
+
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/keycloak@0.16.1...keycloak@0.16.2) (2026-10-13)
+
+**Note:** Version bump only for package keycloak
+
 ## [0.16.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.16.0...keycloak@0.16.1) (2026-10-06)
 
 **Note:** Version bump only for package keycloak

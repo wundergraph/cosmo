@@ -1,7 +1,10 @@
 import {
+  type ContractTagOptions,
   duplicateEnumValueDefinitionError,
   ENUM,
   type EnumDefinitionData,
+  federateSubgraphsContract,
+  type FederationFailure,
   incompatibleSharedEnumError,
   noBaseDefinitionForExtensionError,
   noDefinedEnumValuesError,
@@ -243,11 +246,11 @@ describe('Enum tests', () => {
           SCHEMA_QUERY_DEFINITION +
             `
         directive @a(enum: Enum!) on FIELD_DEFINITION
-        
+
         enum Enum {
           A
         }
-        
+
         type Query {
           a: ID @a(enum: A)
         }
@@ -264,12 +267,12 @@ describe('Enum tests', () => {
           SCHEMA_QUERY_DEFINITION +
             `
         directive @a(enum: Enum! = A) on FIELD_DEFINITION
-        
+
         enum Enum {
           A
           B
         }
-        
+
         type Query {
           a: ID @a(enum: B)
         }
@@ -288,7 +291,7 @@ describe('Enum tests', () => {
         enum Enum {
           A
         }
-        
+
         type Query {
           a(a: Enum! = A): ID
         }
@@ -307,11 +310,11 @@ describe('Enum tests', () => {
         enum Enum {
           A
         }
-        
+
         input Input {
           a: Enum! = A
         }
-        
+
         type Query {
           a(a: Input!): ID
         }
@@ -482,9 +485,656 @@ describe('Enum tests', () => {
     });
 
     test('that an error is returned if an inconsistent Enum is used as both input and output', () => {
-      const { errors } = federateSubgraphsFailure([subgraphC, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          type Query {
+            dummy: String! @shareable
+          }
+
+          enum Instruction {
+            FIGHT
+            POKEMON
+            ITEM
+          }
+
+          input TrainerBattle {
+            actions: Instruction!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Instruction {
+            FIGHT
+            POKEMON
+          }
+
+          type BattleAction {
+            baseAction: Instruction!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(incompatibleSharedEnumError(parentName));
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['TrainerBattle.actions']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['ITEM']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['BattleAction.baseAction']]]),
+          typeName: parentName,
+        }),
+      );
+    });
+
+    test('that a single error is returned for an Enum regardless of the number of inconsistent Enum Values #1.1', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            a(enum: Enum!): Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+            C
+            D
+          }
+
+          type Query {
+            b: Enum!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a(enum: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['C', 'D']],
+            [subgraphB.name, ['B']],
+          ]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.a']],
+            [subgraphB.name, ['Query.b']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that a single error is returned for an Enum regardless of the number of inconsistent Enum Values #1.2', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            a(enum: Enum!): Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+            C
+            D
+          }
+
+          type Query {
+            b: Enum!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a(enum: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([
+            [subgraphB.name, ['B']],
+            [subgraphA.name, ['C', 'D']],
+          ]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphB.name, ['Query.b']],
+            [subgraphA.name, ['Query.a']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an error is returned for each inconsistent Enum that is used as both input and output', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum EnumOne {
+            A
+            B
+          }
+
+          enum EnumTwo {
+            X
+            Y
+          }
+
+          type Query {
+            a(one: EnumOne!): EnumTwo!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum EnumOne {
+            A
+          }
+
+          enum EnumTwo {
+            X
+          }
+
+          type Query {
+            b(two: EnumTwo!): EnumOne!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(2);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a(one: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['Query.b']]]),
+          typeName: 'EnumOne',
+        }),
+      );
+      expect(errors[1]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['Query.b(two: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['Y']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a']]]),
+          typeName: 'EnumTwo',
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error includes subgraphs that use the Enum as an input, an output, or not at all', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            both(enum: Enum!): Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            unused: String!
+          }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'subgraph-c',
+        `
+          enum Enum {
+            A
+            B
+            C
+          }
+
+          input Input {
+            enum: Enum!
+          }
+
+          type Query {
+            input(input: Input!): String!
+          }
+        `,
+      );
+      const subgraphD = createSubgraph(
+        'subgraph-d',
+        `
+          enum Enum {
+            B
+          }
+
+          type Object {
+            enum: Enum!
+          }
+
+          type Query {
+            output: Object!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure(
+        [subgraphA, subgraphB, subgraphC, subgraphD],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both(enum: ...)']],
+            [subgraphC.name, ['Input.enum']],
+          ]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['C']],
+            [subgraphB.name, ['B', 'C']],
+            [subgraphD.name, ['A', 'C']],
+          ]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both']],
+            [subgraphD.name, ['Object.enum']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that usage of an Enum before its declaration does not affect validation', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+
+        type Query {
+          both(enum: Enum!): Enum!
+        }
+        
+        enum Enum {
+            A
+            B
+          }
+
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            unused: String!
+          }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'subgraph-c',
+        `
+          enum Enum {
+            A
+            B
+            C
+          }
+
+          input Input {
+            enum: Enum!
+          }
+
+          type Query {
+            input(input: Input!): String!
+          }
+        `,
+      );
+      const subgraphD = createSubgraph(
+        'subgraph-d',
+        `
+          enum Enum {
+            B
+          }
+
+          type Object {
+            enum: Enum!
+          }
+
+          type Query {
+            output: Object!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure(
+        [subgraphA, subgraphB, subgraphC, subgraphD],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both(enum: ...)']],
+            [subgraphC.name, ['Input.enum']],
+          ]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['C']],
+            [subgraphB.name, ['B', 'C']],
+            [subgraphD.name, ['A', 'C']],
+          ]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.both']],
+            [subgraphD.name, ['Object.enum']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error includes coordinates shared by multiple subgraphs', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            shared(enum: Enum!): Enum! @shareable
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            shared(enum: Enum!): Enum! @shareable
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.shared(enum: ...)']],
+            [subgraphB.name, ['Query.shared(enum: ...)']],
+          ]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.shared']],
+            [subgraphB.name, ['Query.shared']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error includes executable directive arguments as input usages', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          directive @directive(enum: Enum!) on FIELD
+
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            a: Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          directive @directive(enum: Enum!) on FIELD
+
+          enum Enum {
+            A
+          }
+
+          type Query {
+            b: Enum!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['@directive(enum: ...)']],
+            [subgraphB.name, ['@directive(enum: ...)']],
+          ]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.a']],
+            [subgraphB.name, ['Query.b']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error does not include executable directive arguments after the locations fail to intersect', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          directive @directive(enum: Enum!) on FIELD
+
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            a: Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          directive @directive(enum: Enum!) on QUERY
+
+          enum Enum {
+            A
+            B
+          }
+
+          type Query {
+            b: String!
+          }
+        `,
+      );
+      const subgraphC = createSubgraph(
+        'subgraph-c',
+        `
+          directive @directive(enum: Enum!) on FIELD
+
+          enum Enum {
+            A
+          }
+
+          type Query {
+            c: String!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['@directive(enum: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphC.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a']]]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error does not include inaccessible Enum Values', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          enum Enum {
+            A
+            B
+            C @inaccessible
+          }
+
+          type Query {
+            a(enum: Enum!): Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            b: Enum!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a(enum: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.a']],
+            [subgraphB.name, ['Query.b']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an inconsistent shared Enum error uses the renamed root type coordinates', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          schema {
+            query: MyQuery
+          }
+
+          enum Enum {
+            A
+            B
+          }
+
+          type MyQuery {
+            a(enum: Enum!): Enum!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Enum {
+            A
+          }
+
+          type Query {
+            b: Enum!
+          }
+        `,
+      );
+      const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['Query.a(enum: ...)']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['B']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([
+            [subgraphA.name, ['Query.a']],
+            [subgraphB.name, ['Query.b']],
+          ]),
+          typeName: ENUM,
+        }),
+      );
+    });
+
+    test('that an error is returned if an inconsistent Enum is used as both input and output in a contract', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-a',
+        `
+          type Query {
+            dummy: String! @shareable
+          }
+
+          enum Instruction {
+            FIGHT
+            POKEMON
+            ITEM
+          }
+
+          input TrainerBattle {
+            actions: Instruction!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-b',
+        `
+          enum Instruction {
+            FIGHT
+            POKEMON
+          }
+
+          type BattleAction {
+            baseAction: Instruction!
+          }
+        `,
+      );
+      const contractTagOptions: ContractTagOptions = {
+        tagNamesToExclude: new Set<string>(['exclude']),
+        tagNamesToInclude: new Set<string>(),
+      };
+      const result = federateSubgraphsContract({
+        contractTagOptions,
+        subgraphs: [subgraphA, subgraphB],
+        version: ROUTER_COMPATIBILITY_VERSION_ONE,
+      });
+      expect(result.success).toBe(false);
+      const { errors } = result as FederationFailure;
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        incompatibleSharedEnumError({
+          inputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphA.name, ['TrainerBattle.actions']]]),
+          missingValueNamesBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['ITEM']]]),
+          outputCoordsBySubgraphName: new Map<string, Array<string>>([[subgraphB.name, ['BattleAction.baseAction']]]),
+          typeName: parentName,
+        }),
+      );
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.1', () => {
@@ -595,6 +1245,121 @@ describe('Enum tests', () => {
       expect(itemEnumVal?.subgraphNames.size).toBe(1);
       expect(itemEnumVal?.subgraphNames).toContain(subgraphC.name);
     });
+
+    test('that an Enum preserve its description', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          "Enum description"
+          enum Enum {
+            A
+          }
+          
+          type Query {
+            enums: [Enum]!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [a],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            """Enum description"""
+            enum Enum {
+              A
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            """Enum description"""
+            enum Enum {
+              A
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that Enum values preserve their descriptions', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          enum Enum {
+            "Enum.A description"
+            A
+            B
+            """
+            Enum.C description
+            """
+            C
+          }
+          
+          type Query {
+            enums: [Enum]!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [a],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            enum Enum {
+              """Enum.A description"""
+              A
+              B
+              """Enum.C description"""
+              C
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          `
+            ${SCHEMA_QUERY_DEFINITION}
+            
+            enum Enum {
+              """Enum.A description"""
+              A
+              B
+              """Enum.C description"""
+              C
+            }
+            
+            type Query {
+              enums: [Enum]!
+            }
+          `,
+        ),
+      );
+    });
   });
 });
 
@@ -652,21 +1417,6 @@ const subgraphD = {
       FIGHT
       POKEMON
       ITEM
-    }
-
-    type BattleAction {
-      baseAction: Instruction!
-    }
-  `),
-};
-
-const subgraphE = {
-  name: 'subgraph-e',
-  url: '',
-  definitions: parse(`
-    enum Instruction {
-      FIGHT
-      POKEMON
     }
 
     type BattleAction {
@@ -784,7 +1534,7 @@ const subgraphO: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum {
       A
     }
@@ -798,7 +1548,7 @@ const subgraphP: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum {
       A
     }
@@ -832,7 +1582,7 @@ const subgraphS: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum {
       B
     }
@@ -846,7 +1596,7 @@ const subgraphT: Subgraph = {
     extend enum Enum {
       B
     }
-    
+
     enum Enum {
       A
     }
@@ -868,7 +1618,7 @@ const subgraphV: Subgraph = {
   url: '',
   definitions: parse(`
     enum Enum
-    
+
     extend enum Enum {
       A
     }
@@ -882,7 +1632,7 @@ const subgraphW: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum
   `),
 };
@@ -892,11 +1642,11 @@ const subgraphX: Subgraph = {
   url: '',
   definitions: parse(`
     enum Enum
-    
+
     extend enum Enum {
       A
     }
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -908,9 +1658,9 @@ const subgraphY: Subgraph = {
     extend enum Enum {
       A
     }
-    
+
     enum Enum
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -920,11 +1670,11 @@ const subgraphZ: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     extend enum Enum {
       A
     }
-    
+
     enum Enum
   `),
 };
@@ -936,7 +1686,7 @@ const subgraphAA: Subgraph = {
     enum Enum {
       A
     }
-    
+
     extend enum Enum @tag(name: "name")
   `),
 };
@@ -946,7 +1696,7 @@ const subgraphAB: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     enum Enum {
       A
     }
@@ -970,7 +1720,7 @@ const subgraphAD: Subgraph = {
   url: '',
   definitions: parse(`
     extend enum Enum @tag(name: "name")
-    
+
     extend enum Enum {
       A
     }
@@ -981,11 +1731,11 @@ const subgraphAE = createSubgraph(
   'subgraph-ae',
   `
     directive @a(enum: Enum!) on FIELD_DEFINITION
-    
+
     enum Enum {
       A
     }
-    
+
     type Query {
       a: ID @a(enum: "A")
     }
@@ -996,12 +1746,12 @@ const subgraphAF = createSubgraph(
   'subgraph-af',
   `
     directive @a(enum: Enum! = "A") on FIELD_DEFINITION
-    
+
     enum Enum {
       A
       B
     }
-    
+
     type Query {
       a: ID @a(enum: "B")
     }
@@ -1014,7 +1764,7 @@ const subgraphAG = createSubgraph(
     enum Enum {
       A
     }
-    
+
     type Query {
       a(a: Enum! = "A"): ID
     }
@@ -1027,11 +1777,11 @@ const subgraphAH = createSubgraph(
     enum Enum {
       A
     }
-    
+
     input Input {
       a: Enum! = "A"
     }
-    
+
     type Query {
       a(a: Input!): ID
     }
