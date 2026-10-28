@@ -213,6 +213,7 @@ export class UsageRepository {
     federatedGraphId: string;
     dateRange: DateRange<number>;
   }): Promise<GraphFieldUsage[]> {
+    // The count is a string so it stays exact above 2^53 when the client parses the JSON response.
     const query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
@@ -221,7 +222,7 @@ export class UsageRepository {
         TypeName AS typeName,
         FieldName AS fieldName,
         SubgraphIDs AS subgraphIds,
-        sum(TotalUsages) AS requestCount
+        toString(sum(TotalUsages)) AS requestCount
       FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
       ARRAY JOIN arrayDistinct(TypeNames) AS TypeName
       WHERE Timestamp >= startDate AND Timestamp <= endDate

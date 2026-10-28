@@ -132,19 +132,36 @@ describe('GetGraphFieldUsage', () => {
     expect(chClient.queryPromise).not.toHaveBeenCalled();
   });
 
-  test('Should return ERR when date range is invalid', async (testContext) => {
+  test.each([
+    ['a negative relative range', { range: -1 }],
+    ['a zero relative range', { range: 0 }],
+    ['unparseable explicit dates', { dateRange: { start: 'bad', end: 'bad' } }],
+    ['an empty start date', { dateRange: { start: '', end: formatISO(new Date()) } }],
+    [
+      'reversed explicit dates',
+      { dateRange: { start: formatISO(new Date()), end: formatISO(subHours(new Date(), 24)) } },
+    ],
+    [
+      'reversed explicit dates with a relative range',
+      { range: 24, dateRange: { start: formatISO(new Date()), end: formatISO(subHours(new Date(), 24)) } },
+    ],
+    [
+      'explicit dates outside the retention with a relative range',
+      {
+        range: 24,
+        dateRange: { start: formatISO(subHours(new Date(), 24 * 40)), end: formatISO(subHours(new Date(), 24 * 30)) },
+      },
+    ],
+  ])('Should return ERR without querying ClickHouse for %s', async (_name, input) => {
     const { client, server } = await SetupTest({ dbname, chClient });
-    testContext.onTestFinished(() => server.close());
+    onTestFinished(() => server.close());
 
     const { fedGraphName } = await createGraph(client);
 
     const response = await client.getGraphFieldUsage({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      dateRange: {
-        start: formatISO(new Date()),
-        end: formatISO(subHours(new Date(), 24)),
-      },
+      ...input,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
@@ -200,7 +217,7 @@ describe('GetGraphFieldUsage', () => {
     expect(params?.organizationId).toBe(users.adminAliceCompanyA.organizationId);
     expect(params?.federatedGraphId).toBe(graphId);
     for (const fragment of [
-      'sum(TotalUsages) AS requestCount',
+      'toString(sum(TotalUsages)) AS requestCount',
       'ARRAY JOIN arrayDistinct(TypeNames)',
       'WHERE Timestamp >= startDate AND Timestamp <= endDate',
       'OrganizationID = {organizationId:String}',

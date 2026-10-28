@@ -10233,13 +10233,15 @@ export type GetGraphFieldUsageRequest = Message<"wg.cosmo.platform.v1.GetGraphFi
   namespace: string;
 
   /**
-   * range in hours
+   * range in hours, must be positive, 24 when neither range nor dateRange is set
    *
    * @generated from field: optional int32 range = 3;
    */
   range?: number | undefined;
 
   /**
+   * takes precedence over range, an invalid dateRange is an error and never falls back to range
+   *
    * @generated from field: optional wg.cosmo.platform.v1.DateRange dateRange = 4;
    */
   dateRange?: DateRange | undefined;
@@ -10262,6 +10264,8 @@ export type GetGraphFieldUsageResponse = Message<"wg.cosmo.platform.v1.GetGraphF
   response?: Response | undefined;
 
   /**
+   * only fields that were used in the window, in no defined order
+   *
    * @generated from field: repeated wg.cosmo.platform.v1.GetGraphFieldUsageResponse.Field fields = 2;
    */
   fields: GetGraphFieldUsageResponse_Field[];
@@ -10337,7 +10341,7 @@ export type GetGraphFieldUsageResponse_Field = Message<"wg.cosmo.platform.v1.Get
   requestCount: bigint;
 
   /**
-   * a request resolved by several subgraphs counts for each of them
+   * a request resolved by several subgraphs counts for each of them, deleted or unresolvable subgraphs are left out but stay in requestCount
    *
    * @generated from field: repeated wg.cosmo.platform.v1.GetGraphFieldUsageResponse.Subgraph subgraphs = 4;
    */

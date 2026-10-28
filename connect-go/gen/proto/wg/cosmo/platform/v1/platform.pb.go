@@ -21072,8 +21072,8 @@ type GetGraphFieldUsageRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	FederatedGraphName string                 `protobuf:"bytes,1,opt,name=federatedGraphName,proto3" json:"federatedGraphName,omitempty"`
 	Namespace          string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Range              *int32                 `protobuf:"varint,3,opt,name=range,proto3,oneof" json:"range,omitempty"` // range in hours
-	DateRange          *DateRange             `protobuf:"bytes,4,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"`
+	Range              *int32                 `protobuf:"varint,3,opt,name=range,proto3,oneof" json:"range,omitempty"`        // range in hours, must be positive, 24 when neither range nor dateRange is set
+	DateRange          *DateRange             `protobuf:"bytes,4,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"` // takes precedence over range, an invalid dateRange is an error and never falls back to range
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -21139,7 +21139,7 @@ func (x *GetGraphFieldUsageRequest) GetDateRange() *DateRange {
 type GetGraphFieldUsageResponse struct {
 	state                    protoimpl.MessageState              `protogen:"open.v1"`
 	Response                 *Response                           `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Fields                   []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
+	Fields                   []*GetGraphFieldUsageResponse_Field `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`                                            // only fields that were used in the window, in no defined order
 	DateRange                *DateRange                          `protobuf:"bytes,3,opt,name=dateRange,proto3,oneof" json:"dateRange,omitempty"`                                // the window that was queried, after the analytics retention limit
 	AnalyticsRetentionInDays *int32                              `protobuf:"varint,4,opt,name=analyticsRetentionInDays,proto3,oneof" json:"analyticsRetentionInDays,omitempty"` // the longest window the organization's plan allows
 	unknownFields            protoimpl.UnknownFields
@@ -35504,7 +35504,7 @@ type GetGraphFieldUsageResponse_Field struct {
 	TypeName      string                                 `protobuf:"bytes,1,opt,name=typeName,proto3" json:"typeName,omitempty"`
 	FieldName     string                                 `protobuf:"bytes,2,opt,name=fieldName,proto3" json:"fieldName,omitempty"`
 	RequestCount  int64                                  `protobuf:"varint,3,opt,name=requestCount,proto3" json:"requestCount,omitempty"`
-	Subgraphs     []*GetGraphFieldUsageResponse_Subgraph `protobuf:"bytes,4,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"` // a request resolved by several subgraphs counts for each of them
+	Subgraphs     []*GetGraphFieldUsageResponse_Subgraph `protobuf:"bytes,4,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"` // a request resolved by several subgraphs counts for each of them, deleted or unresolvable subgraphs are left out but stay in requestCount
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

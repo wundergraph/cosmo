@@ -59,14 +59,20 @@ export function getGraphFieldUsage(
     });
 
     const analyticsRetentionInDays = analyticsRetention?.limit ?? 7;
-    const inputRange = req.range ?? (req.dateRange ? undefined : 24);
     const { range, dateRange: validatedDateRange } = validateDateRanges({
       limit: analyticsRetentionInDays,
-      range: inputRange,
+      // Explicit dates never fall back to a relative range, or the caller would get a different window.
+      range: req.dateRange ? undefined : (req.range ?? 24),
       dateRange: req.dateRange,
     });
 
-    if (!range && !validatedDateRange) {
+    const isRelativeRangeValid = range !== undefined && range > 0;
+    const isExplicitRangeValid =
+      validatedDateRange !== undefined &&
+      Number.isFinite(new Date(validatedDateRange.start).getTime()) &&
+      Number.isFinite(new Date(validatedDateRange.end).getTime());
+
+    if (req.dateRange ? !isExplicitRangeValid : !isRelativeRangeValid) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -76,7 +82,7 @@ export function getGraphFieldUsage(
       };
     }
 
-    const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range || 24);
+    const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range);
     const [startTimestamp, endTimestamp] = getDateRange(parsedDateRange);
 
     const fieldsData = await usageRepo.getGraphFieldUsage({
