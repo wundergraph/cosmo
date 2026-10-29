@@ -151,7 +151,6 @@ import {
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
   doesArgumentDefineFromContext,
-  isInputValueDefinedByEveryParentSubgraph,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -2047,7 +2046,7 @@ export class FederationFactory {
         }
         continue;
       }
-      if (isInputValueDefinedByEveryParentSubgraph(fieldData.subgraphNames, inputValueData)) {
+      if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
         argumentNames.push(argumentName);
         const argumentNodeResult = routerSchemaInputValueNodeFromData({
           data: inputValueData,
@@ -2144,7 +2143,7 @@ export class FederationFactory {
         return isTypeRequired(data.type) ? undefined : fromContextCacheTagReferenceErrorMessage(params);
       }
       // A required input value omitted by a subgraph is reported by its own error.
-      if (!isInputValueDefinedByEveryParentSubgraph(parentSubgraphNames, data)) {
+      if (parentSubgraphNames.size !== data.subgraphNames.size) {
         return isTypeRequired(data.type)
           ? undefined
           : partiallyDefinedCacheTagReferenceErrorMessage({ ...params, parentCoords });
@@ -2322,7 +2321,7 @@ export class FederationFactory {
             if (isTypeRequired(inputValueData.type)) {
               requiredFieldNames.add(inputValueName);
             }
-            if (isInputValueDefinedByEveryParentSubgraph(parentDefinitionData.subgraphNames, inputValueData)) {
+            if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               const inputValueNodeResult = routerSchemaInputValueNodeFromData({
                 data: inputValueData,
                 description: this.getFederatedGraphNodeDescription(inputValueData),
