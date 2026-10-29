@@ -34,7 +34,7 @@ export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldR
       name,
       undeferred: occurrences.filter((o) => o.name === name && !o.deferred && o.inBody).length,
       deferredLabels: labelsFor(name),
-      eagerLabels: labelsFor(name).filter(isSoleFragment),
+      eagerLabels: labelsFor(name).filter((label) => isSoleFragment(label)),
     }))
     .filter((row) => hasUndeferred.has(row.name) || row.deferredLabels.length > 0);
 };

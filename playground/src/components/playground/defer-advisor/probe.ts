@@ -17,6 +17,8 @@ export type ProbeRequest = {
   variablesError?: string;
 };
 
+const EMPTY_REQUEST: ProbeRequest = { headers: {}, variables: {} };
+
 const variablesSchema = z.record(z.string(), z.unknown());
 
 // Only the errors matter here. A 2xx body that is not a GraphQL object is a failure, not a measurement.
@@ -86,7 +88,9 @@ const referencedFragments = (nodes: readonly ASTNode[], fragments: FragmentMap):
       },
     });
   };
-  nodes.forEach(collect);
+  for (const node of nodes) {
+    collect(node);
+  }
   return [...found.values()];
 };
 
@@ -134,7 +138,7 @@ const probeField = async (
 export const probeRootFields = async (
   url: string,
   query: string,
-  request: ProbeRequest = { headers: {}, variables: {} },
+  request: ProbeRequest = EMPTY_REQUEST,
   signal: AbortSignal = new AbortController().signal,
 ): Promise<Record<string, ProbeResult>> => {
   const doc = parseQuery(query)?.doc;
