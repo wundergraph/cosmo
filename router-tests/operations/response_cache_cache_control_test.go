@@ -44,7 +44,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			first := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
-			firstMaxAge := maxAgeOf(t, first.Response.Header.Get("Cache-Control"))
+			firstMaxAge := maxAgeFrom(t, first.Response.Header.Get("Cache-Control"))
 			require.Positive(t, firstMaxAge)
 			require.LessOrEqual(t, firstMaxAge, 60, "mood's 60 must beat the 300 default")
 
@@ -55,7 +55,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			// Without the TTL reaching the policy only the 300 default would be left,
 			// and the client would be told to cache five times too long.
 			cacheControl := second.Response.Header.Get("Cache-Control")
-			secondMaxAge := maxAgeOf(t, cacheControl)
+			secondMaxAge := maxAgeFrom(t, cacheControl)
 			require.Positive(t, secondMaxAge)
 			require.LessOrEqual(t, secondMaxAge, 60)
 
@@ -83,7 +83,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			// the entry expires and mood is fetched again at a full ten.
 			require.Eventually(t, func() bool {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
-				return maxAgeOf(t, res.Response.Header.Get("Cache-Control")) <= 8
+				return maxAgeFrom(t, res.Response.Header.Get("Cache-Control")) <= 8
 			}, 6*time.Second, 250*time.Millisecond,
 				"the reported max-age should fall as the cached entry ages")
 
@@ -149,9 +149,9 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 			cc := second.Response.Header.Get("Cache-Control")
-			require.Equal(t, -1, maxAgeOf(t, cc), "a hit makes up no max-age either: %q", cc)
-			require.LessOrEqual(t, sMaxAgeOf(t, cc), 60)
-			require.Greater(t, sMaxAgeOf(t, cc), 0)
+			require.Equal(t, -1, maxAgeFrom(t, cc), "a hit makes up no max-age either: %q", cc)
+			require.LessOrEqual(t, sMaxAgeFrom(t, cc), 60)
+			require.Greater(t, sMaxAgeFrom(t, cc), 0)
 		})
 	})
 
@@ -171,8 +171,8 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 			cc := second.Response.Header.Get("Cache-Control")
-			require.Equal(t, -1, maxAgeOf(t, cc), "%q", cc)
-			require.LessOrEqual(t, sMaxAgeOf(t, cc), 30)
+			require.Equal(t, -1, maxAgeFrom(t, cc), "%q", cc)
+			require.LessOrEqual(t, sMaxAgeFrom(t, cc), 30)
 			require.Contains(t, cc, "public")
 		})
 	})
@@ -192,7 +192,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
-			require.Greater(t, maxAgeOf(t, second.Response.Header.Get("Cache-Control")), 0)
+			require.Greater(t, maxAgeFrom(t, second.Response.Header.Get("Cache-Control")), 0)
 		})
 	})
 
@@ -211,7 +211,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
-			require.LessOrEqual(t, maxAgeOf(t, second.Response.Header.Get("Cache-Control")), 5)
+			require.LessOrEqual(t, maxAgeFrom(t, second.Response.Header.Get("Cache-Control")), 5)
 		})
 	})
 
@@ -288,7 +288,7 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			hit := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
-			require.LessOrEqual(t, maxAgeOf(t, hit.Response.Header.Get("Cache-Control")), 60,
+			require.LessOrEqual(t, maxAgeFrom(t, hit.Response.Header.Get("Cache-Control")), 60,
 				"browsers must not keep it longer than the subgraph's max-age")
 			require.Contains(t, hit.Response.Header.Get("Cache-Control"), "s-maxage=", "shared caches keep the longer life")
 		})
@@ -394,6 +394,16 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 			require.Equal(t, http.StatusOK, warm.Response.StatusCode)
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			// no-cache, no-store bypass the cache: nothing stored is acceptable.
+			req, err = http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(body))
+			require.NoError(t, err)
+			req.Header = http.Header{"Cache-Control": {"only-if-cached, no-cache, no-store"}}
+			bypassed, err := testenv.MakeGraphQLRequestRawFromClient(req, http.DefaultClient)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusGatewayTimeout, bypassed.Response.StatusCode)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 		})
 	})
 }
@@ -413,19 +423,19 @@ func headersMiddleware(pairs ...string) func(http.Handler) http.Handler {
 	}
 }
 
-// maxAgeOf returns the max-age of a Cache-Control header, or -1 when it has none.
-func maxAgeOf(t *testing.T, header string) int {
+// maxAgeFrom returns the max-age of a Cache-Control header, or -1 when it has none.
+func maxAgeFrom(t *testing.T, header string) int {
 	t.Helper()
-	return deltaSecondsOf(t, header, "max-age")
+	return deltaSecondsFrom(t, header, "max-age")
 }
 
-// sMaxAgeOf returns the s-maxage of a Cache-Control header, or -1 when it has none.
-func sMaxAgeOf(t *testing.T, header string) int {
+// sMaxAgeFrom returns the s-maxage of a Cache-Control header, or -1 when it has none.
+func sMaxAgeFrom(t *testing.T, header string) int {
 	t.Helper()
-	return deltaSecondsOf(t, header, "s-maxage")
+	return deltaSecondsFrom(t, header, "s-maxage")
 }
 
-func deltaSecondsOf(t *testing.T, header, directive string) int {
+func deltaSecondsFrom(t *testing.T, header, directive string) int {
 	t.Helper()
 
 	for part := range strings.SplitSeq(header, ",") {

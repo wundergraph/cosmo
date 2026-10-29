@@ -179,7 +179,7 @@ func TestResponseCachePrivate(t *testing.T) {
 			cacheControl := second.Response.Header.Get("Cache-Control")
 			require.Contains(t, cacheControl, "private")
 			require.NotContains(t, cacheControl, "public")
-			maxAge := maxAgeOf(t, cacheControl)
+			maxAge := maxAgeFrom(t, cacheControl)
 			require.Positive(t, maxAge)
 			require.LessOrEqual(t, maxAge, 60, "the entry's remaining life, not the 300 default")
 		})

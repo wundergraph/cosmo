@@ -27,7 +27,6 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
-
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"

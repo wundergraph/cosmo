@@ -585,10 +585,10 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
 				ResponseCache: resolve.ResponseCacheInfo{
-					Status:        cacheStatusOf(tt.hit, tt.partial),
-					StoreDecision: storeDecisionOf(tt.stored),
+					Status:        cacheStatusFor(tt.hit, tt.partial),
+					StoreDecision: storeDecisionFor(tt.stored),
 					StoredTTL:     tt.stored,
-					// Entries written as format 1 were: public, max-age their life.
+					// Public, client keeps the full shared life.
 					ClientTTL: tt.ttl,
 					Public:    tt.hit || tt.partial,
 				},
@@ -771,15 +771,16 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 	}
 }
 
-// cacheStatusOf is the status the engine reports for a fetch.
-func storeDecisionOf(stored time.Duration) caching.StoreDecision {
+// storeDecisionFor is the store decision for a fetch stored with that lifetime.
+func storeDecisionFor(stored time.Duration) caching.StoreDecision {
 	if stored > 0 {
 		return caching.StoreDecisionStored
 	}
 	return caching.StoreDecisionNone
 }
 
-func cacheStatusOf(hit, partial bool) resolve.ResponseCacheStatus {
+// cacheStatusFor is the status the engine reports for a fetch.
+func cacheStatusFor(hit, partial bool) resolve.ResponseCacheStatus {
 	switch {
 	case hit:
 		return resolve.ResponseCacheStatusHit

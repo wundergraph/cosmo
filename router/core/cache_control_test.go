@@ -77,6 +77,13 @@ func TestSelectCacheStore(t *testing.T) {
 		require.Nil(t, selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoStore: true, NoCache: true}))
 	})
 
+	t.Run("only-if-cached with no-cache and no-store misses and does not write", func(t *testing.T) {
+		t.Parallel()
+		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoStore: true, NoCache: true, OnlyIfCached: true})
+		require.IsType(t, notStored{}, got)
+		require.IsType(t, notCached{}, got.(notStored).store)
+	})
+
 	t.Run("no-cache misses but writes to the store", func(t *testing.T) {
 		t.Parallel()
 		got := selectCacheStore(store, &cachedirective.RequestCacheDirectives{NoCache: true})
