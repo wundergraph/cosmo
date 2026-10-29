@@ -21,7 +21,6 @@ export function getOrInitializeEntityCaching(configurationData: ConfigurationDat
     configurationData.entityCaching = {
       cacheInvalidateConfigurations: [],
       cachePopulateConfigurations: [],
-      cacheTagEntityConfigurations: [],
       cacheTagConfigurations: [],
       entityCacheConfigurations: [],
     };

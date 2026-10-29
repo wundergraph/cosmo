@@ -2,11 +2,9 @@ import { describe, expect, test } from 'vitest';
 import {
   blankCacheTagFormatErrorMessage,
   CACHE_TAG,
-  type CacheTagEntityConfiguration,
   type CacheTagConfiguration,
   type ContractTagOptions,
   type EntityCacheConfiguration,
-  type EntityCachingConfiguration,
   FIRST_ORDINAL,
   FORMAT,
   fromContextCacheTagReferenceErrorMessage,
@@ -1396,9 +1394,9 @@ describe('@cacheTag tests', () => {
   });
 
   describe('entity tests', () => {
-    test('that a CacheTagEntityConfiguration is produced for each distinct format', () => {
+    test('that a CacheTagConfiguration is produced for each distinct format', () => {
       expect(
-        getEntityCaching(
+        getCacheTagConfigurations(
           createSubgraph(
             'a',
             `
@@ -1413,16 +1411,16 @@ describe('@cacheTag tests', () => {
           `,
           ),
           'Product',
-        )?.cacheTagEntityConfigurations,
+        ),
       ).toStrictEqual([
         { format: 'product-{$key.id}', typeName: 'Product' },
         { format: 'products', typeName: 'Product' },
-      ] satisfies Array<CacheTagEntityConfiguration>);
+      ] satisfies Array<CacheTagConfiguration>);
     });
 
     test('that a reference can traverse an Object that the key selects', () => {
       expect(
-        getEntityCaching(
+        getCacheTagConfigurations(
           createSubgraph(
             'a',
             `
@@ -1437,10 +1435,10 @@ describe('@cacheTag tests', () => {
           `,
           ),
           'Product',
-        )?.cacheTagEntityConfigurations,
+        ),
       ).toStrictEqual([
         { format: '{$key.organization.id}-{$key.sku}', typeName: 'Product' },
-      ] satisfies Array<CacheTagEntityConfiguration>);
+      ] satisfies Array<CacheTagConfiguration>);
     });
 
     test('that a reference that a key does not select as a leaf field is rejected', () => {
@@ -1474,7 +1472,7 @@ describe('@cacheTag tests', () => {
      */
     test('that a reference must be selected only by every resolvable key', () => {
       expect(
-        getEntityCaching(
+        getCacheTagConfigurations(
           createSubgraph(
             'products',
             `
@@ -1489,10 +1487,8 @@ describe('@cacheTag tests', () => {
           `,
           ),
           'Product',
-        )?.cacheTagEntityConfigurations,
-      ).toStrictEqual([
-        { format: 'product-{$key.id}', typeName: 'Product' },
-      ] satisfies Array<CacheTagEntityConfiguration>);
+        ),
+      ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
     });
 
     test('that a reference that includes a list is rejected', () => {
@@ -1582,7 +1578,7 @@ describe('@cacheTag tests', () => {
     });
 
     // Each subgraph caches its own part of an entity, so its formats apply only to that part.
-    test('that each subgraph retains its own CacheTagEntityConfigurations without a warning', () => {
+    test('that each subgraph retains its own CacheTagConfigurations without a warning', () => {
       const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
         [
           createSubgraph(
@@ -1620,19 +1616,47 @@ describe('@cacheTag tests', () => {
       expect(warnings).toStrictEqual([]);
       expect(
         subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product')?.entityCaching
-          ?.cacheTagEntityConfigurations,
-      ).toStrictEqual([
-        { format: 'product-{$key.id}', typeName: 'Product' },
-      ] satisfies Array<CacheTagEntityConfiguration>);
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
       expect(
         subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product')?.entityCaching
-          ?.cacheTagEntityConfigurations,
-      ).toStrictEqual([
-        { format: 'reviews-{$key.id}', typeName: 'Product' },
-      ] satisfies Array<CacheTagEntityConfiguration>);
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([{ format: 'reviews-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
       expect(
         subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product')?.entityCaching,
       ).toBeUndefined();
+    });
+
+    test('that an overridden entity field leaves the CacheTagConfiguration of the entity intact', () => {
+      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query { product(id: ID!): Product }
+            type Product
+                @key(fields: "id")
+                @cacheTag(format: "product-{$key.id}") {
+              id: ID!
+              name: String!
+              price: Int!
+            }
+          `,
+          ),
+          createSubgraph(
+            'b',
+            `
+            type Product @key(fields: "id") { id: ID! name: String! @override(from: "a") }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
+      expect(configurationData?.fieldNames).toStrictEqual(new Set(['id', 'price']));
+      expect(configurationData?.entityCaching?.cacheTagConfigurations).toStrictEqual([
+        { format: 'product-{$key.id}', typeName: 'Product' },
+      ] satisfies Array<CacheTagConfiguration>);
     });
   });
 
@@ -1683,10 +1707,6 @@ function expectErrorsUnchangedByCacheTag(createSubgraphs: (cacheTag: string) => 
 
 // Returns the CacheTagConfigurations for a type. Entity-caching config is nested under `.entityCaching`.
 function getCacheTagConfigurations(subgraph: Subgraph, typeName: TypeName): Array<CacheTagConfiguration> | undefined {
-  return getEntityCaching(subgraph, typeName)?.cacheTagConfigurations;
-}
-
-function getEntityCaching(subgraph: Subgraph, typeName: TypeName): EntityCachingConfiguration | undefined {
   const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
     subgraph,
     ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1695,5 +1715,5 @@ function getEntityCaching(subgraph: Subgraph, typeName: TypeName): EntityCaching
   expect(warnings).toHaveLength(0);
   const configurationData = configurationDataByTypeName.get(typeName);
   expect(configurationData).toBeDefined();
-  return configurationData!.entityCaching;
+  return configurationData!.entityCaching?.cacheTagConfigurations;
 }
