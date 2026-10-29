@@ -119,7 +119,7 @@ func TestProviderAdapter_SubscribeUsesChannelsForLiteralNamesAndPatternsForGlobs
 		Channels:  []string{"orders:org-1", "invoices:*"},
 		FieldName: "testField",
 	}
-	require.NoError(t, adapter.Subscribe(ctx, conf, updater))
+	require.NoError(t, adapter.Subscribe(ctx, conf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 
 	require.Eventually(t, func() bool {
 		return redis.PubSubNumSub("orders:org-1")["orders:org-1"] == 1 && redis.PubSubNumPat() == 1
@@ -159,7 +159,7 @@ func TestProviderAdapter_SubscribeWithOnlyPatterns(t *testing.T) {
 		Channels:  []string{"invoices:*", `orders:\*`},
 		FieldName: "testField",
 	}
-	require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+	require.NoError(t, adapter.Subscribe(context.Background(), conf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 
 	require.Eventually(t, func() bool {
 		return redis.PubSubNumPat() == 2 && len(redis.PubSubChannels("")) == 0
@@ -204,7 +204,7 @@ func TestProviderAdapter_SubscribeUsesPatternsForEachGlobCharacter(t *testing.T)
 				Channels:  []string{tt.channel},
 				FieldName: "testField",
 			}
-			require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+			require.NoError(t, adapter.Subscribe(context.Background(), conf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 
 			require.Eventually(t, func() bool {
 				return redis.PubSubNumPat() == 1 && len(redis.PubSubChannels("")) == 0
@@ -237,7 +237,7 @@ func TestProviderAdapter_SubscribeWhileRedisIsDownRecoversAfterRestart(t *testin
 	}
 	// go-redis keeps the channels and patterns of a failed subscribe and sends them again on
 	// reconnect, so a short outage must not fail the subscription.
-	require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+	require.NoError(t, adapter.Subscribe(context.Background(), conf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 
 	require.NoError(t, redis.Restart())
 
