@@ -686,7 +686,7 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 			require.Equal(t, first.Body, second.Body)
 			require.Len(t, employees.entityRequests(), 2, "the cold alias was fetched")
 
-			maxAge := maxAgeOf(t, second.Response.Header.Get("Cache-Control"))
+			maxAge := maxAgeFrom(t, second.Response.Header.Get("Cache-Control"))
 			require.Greater(t, maxAge, 0)
 			require.LessOrEqual(t, maxAge, 60,
 				"half of the merged fetch expires with the warm alias, so the origin's longer max-age must not reach the client")

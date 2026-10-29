@@ -125,7 +125,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
 			// public with no max-age: the stored life is for shared caches.
-			sMaxAge := sMaxAgeOf(t, second.Response.Header.Get("Cache-Control"))
+			sMaxAge := sMaxAgeFrom(t, second.Response.Header.Get("Cache-Control"))
 			require.Greater(t, sMaxAge, 60, "all's minute would have been the lifetime otherwise")
 			require.LessOrEqual(t, sMaxAge, 300)
 		})
