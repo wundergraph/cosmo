@@ -124,6 +124,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					StackTrace:    cfg.AccessLogs.AddStacktrace,
 					Pretty:        !cfg.JSONLog,
 				})
+
 				if err != nil {
 					return nil, fmt.Errorf("could not create buffered logger: %w", err)
 				}
@@ -289,6 +290,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 			AllowMethods:     config.CORS.AllowMethods,
 			AllowCredentials: config.CORS.AllowCredentials,
 			AllowHeaders:     config.CORS.AllowHeaders,
+			ExposeHeaders:    config.CORS.ExposeHeaders,
 			MaxAge:           config.CORS.MaxAge,
 		}),
 		WithTLSConfig(config.TLS),

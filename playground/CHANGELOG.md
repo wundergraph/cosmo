@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.16.0...@wundergraph/playground@0.17.0) (2026-10-28)
+
+### Features
+
+* measure defer advisor root field latency and surface in the panel ([#3427](https://github.com/wundergraph/cosmo/issues/3427)) ([2d49f63](https://github.com/wundergraph/cosmo/commit/2d49f63735fecd8fd7d9967f9fa8954f239b7277)) (@gausie)
+* show defer advisor latencies as pills in the query editor ([#3428](https://github.com/wundergraph/cosmo/issues/3428)) ([66dcfe3](https://github.com/wundergraph/cosmo/commit/66dcfe37adf55d3cdc7a92ef5e997e248f881981)) (@gausie)
+
 ## [0.16.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.15.0...@wundergraph/playground@0.16.0) (2026-10-23)
 
 ### Features
