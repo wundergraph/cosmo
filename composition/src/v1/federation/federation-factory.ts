@@ -2098,6 +2098,7 @@ export class FederationFactory {
         continue;
       }
       const cacheTagData = fieldData.cacheTagDataBySubgraphName.get(subgraphName);
+      // An untagged subgraph gets an empty set, so it mismatches a tagged one and the warning names it.
       formatsBySubgraphName.set(subgraphName, cacheTagData?.formats ?? new Set<string>());
       for (const reference of cacheTagData?.references ?? []) {
         const errorMessage = this.getUnavailableCacheTagReferenceErrorMessage(fieldData, subgraphName, reference);
