@@ -434,6 +434,15 @@ func (s *handlerScope) readMultipartBody() error {
 
 	multipartParser := NewMultipartParser(s.h.operationProcessor, s.h.maxUploadFiles, s.h.maxUploadFileSize)
 
+	// Uploaded files are removed when the scope ends to ensure that
+	// this runs after the response is written. It is registered before
+	// parsing, so files written before a parse error are removed as well.
+	s.deferToScopeEnd(func() {
+		if err := multipartParser.RemoveAll(); err != nil {
+			s.requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
+		}
+	})
+
 	body, files, err := multipartParser.Parse(s.r, s.h.getBodyReadBuffer(s.r.ContentLength))
 	s.setExpressionRequestBody(body)
 	if err != nil {
@@ -443,14 +452,6 @@ func (s *handlerScope) readMultipartBody() error {
 	readMultiPartSpan.SetAttributes(
 		otel.HTTPRequestUploadFileCount.Int(len(files)),
 	)
-
-	// Uploaded files are removed when the scope ends to ensure that
-	// this runs after the response is written
-	s.deferToScopeEnd(func() {
-		if err := multipartParser.RemoveAll(); err != nil {
-			s.requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
-		}
-	})
 
 	s.body = body
 	s.files = files
