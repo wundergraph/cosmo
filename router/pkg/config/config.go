@@ -1471,6 +1471,13 @@ type ApolloCompatibilityFlag struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
+// CompatibilityFlags are opt-in deviations from the GraphQL specification that
+// the router offers as migration aids. Each defaults to off.
+type CompatibilityFlags struct {
+	RepairUndeclaredVariables ApolloCompatibilityFlag `yaml:"repair_undeclared_variables" envPrefix:"REPAIR_UNDECLARED_VARIABLES_"`
+	RepairVariableTypes       ApolloCompatibilityFlag `yaml:"repair_variable_types" envPrefix:"REPAIR_VARIABLE_TYPES_"`
+}
+
 type ClientHeader struct {
 	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
@@ -1740,6 +1747,7 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	CompatibilityFlags             CompatibilityFlags              `yaml:"compatibility_flags" envPrefix:"COMPATIBILITY_FLAGS_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`

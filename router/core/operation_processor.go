@@ -81,6 +81,10 @@ type ParsedOperation struct {
 	NormalizationCacheHit bool
 
 	InlineArguments []astnormalization.InlineArgument
+
+	// Names changed by variablesRepairer, kept across normalization cache hits.
+	RepairedVariables []string
+	RetypedVariables  []string
 }
 
 func (o *ParsedOperation) IDString() string {
@@ -135,6 +139,8 @@ type OperationProcessorOptions struct {
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
+	RepairUndeclaredVariables                              bool
+	RepairVariableTypes                                    bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
 }
 
@@ -178,6 +184,8 @@ type parseKit struct {
 	// subject to inline-argument detection. When false, persisted operations are
 	// exempted per run via astnormalization.RunOptions.SkipInlineArguments.
 	inlineArgumentsIncludePersisted bool
+
+	variablesRepairer *variablesRepairer // nil unless a repair flag is enabled
 }
 
 type persistedOperationVariableNames struct {
@@ -819,6 +827,17 @@ func (o *OperationKit) NormalizeOperation(clientName string, isApq bool) (bool, 
 	return o.normalizeNonPersistedOperation()
 }
 
+func (o *OperationKit) repairVariables(report *operationreport.Report) error {
+	if o.kit.variablesRepairer == nil {
+		return nil
+	}
+	o.parsedOperation.RepairedVariables, o.parsedOperation.RetypedVariables = o.kit.variablesRepairer.Repair(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	if report.HasErrors() {
+		return &reportError{report: report}
+	}
+	return nil
+}
+
 func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool) (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// when dealing with APQ requests which have a TTL set, we need to renew the TTL
@@ -839,6 +858,10 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 		}
 	}
 	o.collectInlineArguments(inlineArgsResult)
+
+	if err := o.repairVariables(report); err != nil {
+		return false, err
+	}
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -863,6 +886,8 @@ type NormalizationCacheEntry struct {
 	operationType            string
 	operationDefinitionRef   int
 	inlineArguments          []astnormalization.InlineArgument
+	repairedVariables        []string
+	retypedVariables         []string
 
 	removedSkipIncludeVariableNames []string
 }
@@ -916,6 +941,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 			o.parsedOperation.InlineArguments = entry.inlineArguments
+			o.parsedOperation.RepairedVariables = entry.repairedVariables
+			o.parsedOperation.RetypedVariables = entry.retypedVariables
 
 			// Variables are not cached, so the skip/include variables that normalization
 			// removed have to be stripped from the request variables on every hit. Dual-use
@@ -942,6 +969,10 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 	o.collectInlineArguments(inlineArgsResult)
+
+	if err := o.repairVariables(report); err != nil {
+		return false, err
+	}
 
 	// Normalization removed skip/include variables from the operation and variables. For example,
 	//
@@ -987,6 +1018,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			normalizedRepresentation:        o.parsedOperation.NormalizedRepresentation,
 			operationType:                   o.parsedOperation.Type,
 			inlineArguments:                 o.parsedOperation.InlineArguments,
+			repairedVariables:               o.parsedOperation.RepairedVariables,
+			retypedVariables:                o.parsedOperation.RetypedVariables,
 			removedSkipIncludeVariableNames: removedSkipIncludeVariableNames,
 		}
 		o.cache.normalizationCache.Set(cacheKey, entry, 1)
@@ -1267,6 +1300,8 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
 	o.parsedOperation.InlineArguments = entry.inlineArguments
+	o.parsedOperation.RepairedVariables = entry.repairedVariables
+	o.parsedOperation.RetypedVariables = entry.retypedVariables
 	// We will always only have a single operation definition in the document
 	// Because we removed the unused operations during normalization
 	o.operationDefinitionRef = 0
@@ -1321,6 +1356,8 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		operationType:            o.parsedOperation.Type,
 		operationDefinitionRef:   o.operationDefinitionRef,
 		inlineArguments:          o.parsedOperation.InlineArguments,
+		repairedVariables:        o.parsedOperation.RepairedVariables,
+		retypedVariables:         o.parsedOperation.RetypedVariables,
 	}
 
 	if isApq {
@@ -1684,12 +1721,14 @@ type parseKitOptions struct {
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
+	repairUndeclaredVariables                              bool
+	repairVariableTypes                                    bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
 	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
 
-	return &parseKit{
+	kit := &parseKit{
 		i:                   i,
 		parser:              astparser.NewParser(),
 		doc:                 ast.NewSmallDocument(),
@@ -1713,6 +1752,10 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
 	}
+	if options.repairUndeclaredVariables || options.repairVariableTypes {
+		kit.variablesRepairer = newVariablesRepairer(options.repairUndeclaredVariables, options.repairVariableTypes)
+	}
+	return kit
 }
 
 func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
@@ -1786,6 +1829,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
+			repairUndeclaredVariables:                              opts.RepairUndeclaredVariables,
+			repairVariableTypes:                                    opts.RepairVariableTypes,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

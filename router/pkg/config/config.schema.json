@@ -4725,6 +4725,35 @@
         }
       }
     },
+    "compatibility_flags": {
+      "type": "object",
+      "description": "Deliberate deviations from the GraphQL specification that the router offers as migration aids. Every flag defaults to off. Enable a flag only for as long as the clients that need it are being fixed.",
+      "additionalProperties": false,
+      "properties": {
+        "repair_undeclared_variables": {
+          "type": "object",
+          "description": "Declares variables that an operation references inside a list or input object literal but does not declare, using the type of the position each variable is used in. The value is read from the request variables by name and a missing value becomes null. The router logs a warning for each repaired operation.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "repair_variable_types": {
+          "type": "object",
+          "description": "Replaces the declared type of a variable used inside a list or input object literal, when that type is incompatible with the position, by the type of that position. For example, a variable declared as String used where String!, [String!] or an enum is expected. The value is still validated against the position type. Declarations with default values are left unchanged. The router logs a warning for each repaired operation.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
     "client_header": {
       "type": "object",
       "description": "The configuration to set custom client name and version header.",

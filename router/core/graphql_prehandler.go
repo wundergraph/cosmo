@@ -905,6 +905,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
+	logRepairedVariables(requestContext.logger, operationKit.parsedOperation)
 	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
 		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
@@ -1469,6 +1470,20 @@ func logInlineArguments(logger *zap.Logger, operation *ParsedOperation) {
 	logger.Warn("Inline argument values found in operation; use variables instead",
 		zap.Int("count", len(argumentNames)),
 		zap.Strings("arguments", argumentNames),
+		zap.String("operation_name", operation.Request.OperationName),
+		zap.Uint64("operation_hash", operation.ID),
+	)
+}
+
+// logRepairedVariables emits a warning for every variable declaration that
+// compatibility_flags repaired. It is a no-op when nothing was repaired.
+func logRepairedVariables(logger *zap.Logger, operation *ParsedOperation) {
+	if len(operation.RepairedVariables)+len(operation.RetypedVariables) == 0 {
+		return
+	}
+	logger.Warn("Operation variable declarations were repaired by compatibility_flags. This deviates from the GraphQL specification. Fix the client and disable the flags.",
+		zap.Strings("undeclared", operation.RepairedVariables),
+		zap.Strings("retyped", operation.RetypedVariables),
 		zap.String("operation_name", operation.Request.OperationName),
 		zap.Uint64("operation_hash", operation.ID),
 	)

@@ -1614,6 +1614,8 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		AllowStringLiteralsForEnums:                            s.engineExecutionConfiguration.AllowStringLiteralsForEnums,
+		RepairUndeclaredVariables:                              s.compatibilityFlags.RepairUndeclaredVariables.Enabled,
+		RepairVariableTypes:                                    s.compatibilityFlags.RepairVariableTypes.Enabled,
 		EnableDefer:                                            s.engineExecutionConfiguration.EnableDefer,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 		CostControl:                                            s.securityConfiguration.CostControl,

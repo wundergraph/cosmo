@@ -768,6 +768,14 @@
       "Enabled": false
     }
   },
+  "CompatibilityFlags": {
+    "RepairUndeclaredVariables": {
+      "Enabled": false
+    },
+    "RepairVariableTypes": {
+      "Enabled": false
+    }
+  },
   "ClientHeader": {
     "Name": "",
     "Version": ""
