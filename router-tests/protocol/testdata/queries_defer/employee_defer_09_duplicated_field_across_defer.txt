@@ -6,6 +6,4 @@ Content-Type: application/json
 Content-Type: application/json
 
 {"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"},{"data":{"location":{"language":"German"}},"id":"1","subPath":["details"]}],"completed":[{"id":"1"}],"hasNext":false}
---graphql
-
 --graphql--
