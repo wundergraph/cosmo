@@ -115,7 +115,7 @@ func TestApqAndSafelistErrors(t *testing.T) {
 			Enabled: true,
 		}),
 		WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-			Safelist: config.SafelistConfiguration{
+			Safelist: config.EnableFlag{
 				Enabled: true,
 			},
 		}),

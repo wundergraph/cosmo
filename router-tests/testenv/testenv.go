@@ -1691,8 +1691,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					ResponseCache:   testConfig.MetricOptions.EnableOTLPResponseCacheMetrics,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
-					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
-					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
+					Network:         config.EnableFlag{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.EnableFlag{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},

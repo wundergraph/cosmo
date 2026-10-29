@@ -2189,7 +2189,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -2219,7 +2219,7 @@ func TestWebSockets(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
 					LogUnknown: true,
-					Safelist:   config.SafelistConfiguration{Enabled: true},
+					Safelist:   config.EnableFlag{Enabled: true},
 				}),
 			},
 			LogObservation: testenv.LogObservationConfig{
@@ -2258,7 +2258,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -2288,7 +2288,7 @@ func TestWebSockets(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
 					LogUnknown: true,
-					Safelist:   config.SafelistConfiguration{Enabled: false},
+					Safelist:   config.EnableFlag{Enabled: false},
 				}),
 			},
 			LogObservation: testenv.LogObservationConfig{

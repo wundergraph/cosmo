@@ -176,7 +176,7 @@ func TestPQLManifest(t *testing.T) {
 						PollInterval: 10 * time.Second,
 						PollJitter:   5 * time.Second,
 					},
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -202,7 +202,7 @@ func TestPQLManifest(t *testing.T) {
 						PollInterval: 10 * time.Second,
 						PollJitter:   5 * time.Second,
 					},
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -321,7 +321,7 @@ func TestPQLManifest(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -411,7 +411,7 @@ func TestPQLManifest(t *testing.T) {
 						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
-					Safelist:   config.SafelistConfiguration{Enabled: true},
+					Safelist:   config.EnableFlag{Enabled: true},
 				}),
 			},
 			LogObservation: testenv.LogObservationConfig{

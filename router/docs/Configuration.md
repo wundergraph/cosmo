@@ -22,6 +22,8 @@ This document outlines the conventions used in Cosmo's configuration schema.
 
 When creating a new feature or configuration section, instead of directly making an option like `option_enabled` or `option_disabled`, use an `enabled` or `disabled` sub-option. This leaves room for future sub-options pertaining to the same feature.
 
+If the section has no other options yet, use the shared `EnableFlag` type from `pkg/config/config.go` as the field type and set `envPrefix` on the field. Replace it with a dedicated struct when the section grows more options.
+
 #### Good
 
 ```yaml

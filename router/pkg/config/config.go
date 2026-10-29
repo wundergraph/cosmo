@@ -108,10 +108,6 @@ type CostStats struct {
 	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"ACTUAL_ENABLED"`
 }
 
-type TelemetryCategory struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool                               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	IncludeOperationSha bool                               `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
@@ -154,8 +150,8 @@ type Prometheus struct {
 	GraphqlCache        bool                       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ResponseCache       bool                       `yaml:"response_cache" envDefault:"false" env:"PROMETHEUS_RESPONSE_CACHE"`
 	ConnectionStats     bool                       `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
-	Network             TelemetryCategory          `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
-	Resolver            TelemetryCategory          `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
+	Network             EnableFlag                 `yaml:"network" envPrefix:"PROMETHEUS_NETWORK_"`
+	Resolver            EnableFlag                 `yaml:"resolver" envPrefix:"PROMETHEUS_RESOLVER_"`
 	Streams             bool                       `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats                `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	CostStats           CostStats                  `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
@@ -173,8 +169,8 @@ type MetricsOTLP struct {
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ResponseCache       bool                  `yaml:"response_cache" envDefault:"false" env:"METRICS_OTLP_RESPONSE_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
-	Network             TelemetryCategory     `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
-	Resolver            TelemetryCategory     `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
+	Network             EnableFlag            `yaml:"network" envPrefix:"METRICS_OTLP_NETWORK_"`
+	Resolver            EnableFlag            `yaml:"resolver" envPrefix:"METRICS_OTLP_RESOLVER_"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
@@ -1381,14 +1377,10 @@ type PQLManifestConfig struct {
 type PersistedOperationsConfig struct {
 	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
 	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
-	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
+	Safelist   EnableFlag                       `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
 	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
-}
-
-type SafelistConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type AutomaticPersistedQueriesConfig struct {
@@ -1467,6 +1459,8 @@ type ApolloRouterCompatibilityFlags struct {
 	SkipNullVariablesError  EnableFlag `yaml:"skip_null_variables_error" envPrefix:"SKIP_NULL_VARIABLES_ERROR_"`
 }
 
+// EnableFlag is an opt-in toggle for a configuration section with no other
+// options. The parent field sets envPrefix, so the variable is <PREFIX>ENABLED.
 type EnableFlag struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
@@ -1526,16 +1520,11 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
-	// OutputSchema configures MCP structured tool output (outputSchema + structuredContent).
-	OutputSchema MCPOutputSchemaConfiguration `yaml:"output_schema,omitempty"`
-}
-
-// MCPOutputSchemaConfiguration configures MCP structured tool output (spec revision 2025-06-18):
-// an output schema declared on operation tools and structured content on successful tool
-// results. A tool whose schema cannot be derived stays registered without an output schema.
-// Disabled by default because it increases tools/list and result payload sizes.
-type MCPOutputSchemaConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"MCP_OUTPUT_SCHEMA_ENABLED"`
+	// OutputSchema configures MCP structured tool output (spec revision 2025-06-18):
+	// an output schema declared on operation tools and structured content on successful tool
+	// results. A tool whose schema cannot be derived stays registered without an output schema.
+	// Disabled by default because it increases tools/list and result payload sizes.
+	OutputSchema EnableFlag `yaml:"output_schema,omitempty" envPrefix:"MCP_OUTPUT_SCHEMA_"`
 }
 
 type MCPOAuthConfiguration struct {
