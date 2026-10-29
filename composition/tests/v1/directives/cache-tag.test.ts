@@ -938,6 +938,34 @@ describe('@cacheTag tests', () => {
       expect(warnings).toStrictEqual([]);
     });
 
+    test('that formats with the same placeholders in a different order upon a shared Query field produce a warning', () => {
+      const argumentDefinitions = 'searchKey: String!, region: String!';
+      const { warnings } = federateSubgraphsSuccess(
+        [
+          createProductsSubgraph(
+            'a',
+            '@shareable @cacheTag(format: "products-{$args.searchKey}-{$args.region}")',
+            argumentDefinitions,
+          ),
+          createProductsSubgraph(
+            'b',
+            '@shareable @cacheTag(format: "products-{$args.region}-{$args.searchKey}")',
+            argumentDefinitions,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products-{$args.searchKey}-{$args.region}'])],
+            ['b', new Set(['products-{$args.region}-{$args.searchKey}'])],
+          ]),
+        }),
+      ]);
+    });
+
     test('that formats differing only in the whitespace within a placeholder upon a shared Query field produce no warning', () => {
       const { warnings } = federateSubgraphsSuccess(
         [
