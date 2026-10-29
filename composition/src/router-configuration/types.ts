@@ -139,14 +139,9 @@ export type CachePopulateConfiguration = {
 };
 
 export type CacheTagConfiguration = {
-  fieldName: FieldName;
-  // This is the normalized format; a placeholder contains no whitespace, e.g., "products-{$args.filter.category}".
-  format: string;
-  typeName: TypeName;
-};
-
-export type CacheTagEntityConfiguration = {
-  // A placeholder contains no whitespace, e.g., "product-{$key.id}".
+  // Absent for an entity.
+  fieldName?: FieldName;
+  // This is the normalized format; a placeholder contains no whitespace, e.g., "products-{$args.filter.category}" or "product-{$key.id}".
   format: string;
   typeName: TypeName;
 };
@@ -156,9 +151,7 @@ export type EntityCachingConfiguration = {
   cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations: Array<CachePopulateConfiguration>;
-  // Attached to an entity type's ConfigurationData from @cacheTag.
-  cacheTagEntityConfigurations: Array<CacheTagEntityConfiguration>;
-  // Attached to the Query root type's ConfigurationData from @cacheTag.
+  // Attached to the Query root type's or an entity type's ConfigurationData from @cacheTag.
   cacheTagConfigurations: Array<CacheTagConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;

@@ -196,8 +196,9 @@ export class BatchNormalizer {
 
         const { entityCaching } = configurationData;
         if (entityCaching) {
+          // An entity config has no field name, so it is kept.
           entityCaching.cacheTagConfigurations = entityCaching.cacheTagConfigurations.filter(
-            ({ fieldName }) => !fieldNames.has(fieldName),
+            ({ fieldName }) => fieldName === undefined || !fieldNames.has(fieldName),
           );
         }
       }
