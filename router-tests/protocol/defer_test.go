@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,12 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestDeferTestDataQueries(t *testing.T) {
@@ -56,158 +56,49 @@ func TestDeferTestDataQueries(t *testing.T) {
 
 	for _, group := range groups {
 		t.Run(group, func(t *testing.T) {
+			// Every defer variant must reconstruct the same response. Keep one
+			// expected result per query family instead of a snapshot per variant.
+			expected, err := os.ReadFile(filepath.Join(testDir, group+"_original.json"))
+			require.NoError(t, err)
+
 			for _, name := range groupQueries[group] {
 				t.Run(name, func(t *testing.T) {
 					t.Parallel()
-
-					gMultipart := goldie.New(
-						t,
-						goldie.WithFixtureDir("testdata/queries_defer"),
-						goldie.WithNameSuffix(".txt"),
-						goldie.WithDiffEngine(goldie.ClassicDiff),
-					)
-					gFull := goldie.New(
-						t,
-						goldie.WithFixtureDir("testdata/queries_defer"),
-						goldie.WithNameSuffix(".json"),
-						goldie.WithDiffEngine(goldie.ClassicDiff),
-					)
-
-					testenv.Run(t, &testenv.Config{
-						NoRetryClient: true,
-						ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-							// cfg.Debug.PrintIntermediateQueryPlans = true
-							// cfg.Debug.PrintPlanningPaths = true
-							// cfg.Debug.PrintNodeSuggestions = true
-							// cfg.Debug.PrintOperationTransformations = true
-						},
-					}, func(t *testing.T, xEnv *testenv.Environment) {
-						queryFilePath := filepath.Join(testDir, fmt.Sprintf("%s.graphql", name))
-						t.Cleanup(func() {
-							if t.Failed() {
-								abs, _ := filepath.Abs(queryFilePath)
-								t.Logf("query file: %s", abs)
-							}
-						})
-
-						queryData, err := os.ReadFile(queryFilePath)
+					testenv.Run(t, &testenv.Config{NoRetryClient: true}, func(t *testing.T, xEnv *testenv.Environment) {
+						query, err := os.ReadFile(filepath.Join(testDir, name+".graphql"))
+						require.NoError(t, err)
+						payload, err := json.Marshal(map[string]any{"query": string(query)})
 						require.NoError(t, err)
 
-						payload := map[string]any{"query": string(queryData)}
-						payloadData, err := json.Marshal(payload)
-						require.NoError(t, err)
-
-						req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
+						req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
 						res, err := xEnv.RouterClient.Do(req)
 						require.NoError(t, err)
 						defer func() { require.NoError(t, res.Body.Close()) }()
 						require.Equal(t, http.StatusOK, res.StatusCode)
 
-						// defer could be fully discarded in case query has duplicate field which are not deffered
-						isMultipart := strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed")
-
 						body, err := io.ReadAll(res.Body)
 						require.NoError(t, err)
+						mediaType, params, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
+						require.NoError(t, err)
 
-						skipQueryWithParallelDefers := func() bool {
-							skips := map[string]struct{}{
-								"employee_defer_03_multiple_fields_deferred":                 {},
-								"employee_defer_07_parallel_defers":                          {},
-								"employee_defer_08_defer_nested_object":                      {},
-								"employee_defer_10_extensive_parallel":                       {},
-								"employeeDetails_defer_03_multiple_fields_deferred":          {},
-								"employeeDetails_defer_07_parallel_defers":                   {},
-								"employeeDetails_defer_10_extensive_parallel":                {},
-								"employees_defer_03_multiple_fields_deferred":                {},
-								"employees_defer_07_parallel_defers":                         {},
-								"employees_defer_10_extensive_parallel":                      {},
-								"findEmployees_defer_03_multiple_fields_deferred":            {},
-								"findEmployees_defer_07_parallel_defers":                     {},
-								"findEmployees_defer_10_extensive_parallel":                  {},
-								"findEmployeesNoCriteria_defer_03_multiple_fields_deferred":  {},
-								"findEmployeesNoCriteria_defer_07_parallel_defers":           {},
-								"findEmployeesNoCriteria_defer_10_extensive_parallel":        {},
-								"full_defer_03_multiple_fields_deferred":                     {},
-								"full_defer_07_parallel_defers":                              {},
-								"full_defer_10_extensive_parallel":                           {},
-								"full_defer_11_fragment_around_and_inside":                   {},
-								"products_defer_01_single_defer":                             {},
-								"products_defer_02_single_defer_between_regular":             {},
-								"products_defer_03_multiple_fields_deferred":                 {},
-								"products_defer_04_all_fields_deferred":                      {},
-								"products_defer_05_nested_defer":                             {},
-								"products_defer_06_nested_defer_variation":                   {},
-								"products_defer_07_parallel_defers":                          {},
-								"products_defer_08_defer_nested_object":                      {},
-								"products_defer_09_duplicated_field_across_defer":            {},
-								"products_defer_10_extensive_parallel":                       {},
-								"products_defer_11_fragment_around_and_inside":               {},
-								"products_defer_12_fragment_body_defer":                      {},
-								"products_defer_13_fragment_spread_defer":                    {},
-								"requires_different_depth_defer_03_multiple_fields_deferred": {},
-								"requires_different_depth_defer_07_parallel_defers":          {},
-								"requires_different_depth_defer_10_extensive_parallel":       {},
-								"requires_mood_defer_03_multiple_fields_deferred":            {},
-								"requires_mood_defer_07_parallel_defers":                     {},
-								"requires_mood_defer_10_extensive_parallel":                  {},
-							}
-
-							if _, ok := skips[name]; ok {
-								return true
-							}
-
-							return false
-						}
-
-						// skip because the order of payloads is non-deterministic
-						if !skipQueryWithParallelDefers() {
-							t.Run("raw multipart body", func(t *testing.T) {
-								body := bytes.ReplaceAll(body, []byte("\r\n"), []byte("\n"))
-								gMultipart.Assert(t, name, body)
-							})
-						}
-
-						var actual []byte
-
-						if isMultipart {
-							// Reconstruct the full response from chunks
-							reconstructed, err := reconstructDeferResponse(body)
+						// These two operations only defer fields also selected outside
+						// the fragment, so normalization removes the defer entirely.
+						switch name {
+						case "findEmployees_defer_09_duplicated_field_across_defer",
+							"findEmployeesNoCriteria_defer_09_duplicated_field_across_defer":
+							require.Equal(t, "application/json", mediaType)
+						default:
+							require.Equal(t, "multipart/mixed", mediaType)
+							require.Equal(t, "v0.2", params["incrementalspec"])
+							body, err = reconstructDeferResponse(body, params["boundary"])
 							require.NoError(t, err)
-							actual = normalizeWithKeysSort(t, reconstructed)
-						} else {
-							actual = normalizeWithKeysSort(t, body)
 						}
-
-						t.Run("assert full response", func(t *testing.T) {
-							gFull.Assert(t, name+"_reconstructed", actual)
-						})
-
-						t.Run("compare with response without defer", func(t *testing.T) {
-							expected, err := os.ReadFile(gFull.GoldenFileName(t, group+"_original"))
-							require.NoError(t, err)
-
-							expected = normalizeWithKeysSort(t, expected)
-
-							// manually assert to never update the original when the update flag is specified
-							if diff := goldie.Diff(goldie.ClassicDiff, string(actual), string(expected)); diff != "" {
-								t.Fatal(diff)
-							}
-						})
+						require.JSONEq(t, string(expected), string(body))
 					})
 				})
 			}
 		})
 	}
-}
-
-func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
-	var val map[string]any
-	require.NoError(tb, json.Unmarshal(data, &val))
-
-	out, err := json.MarshalIndent(val, "", "  ")
-	require.NoError(tb, err)
-
-	return out
 }
 
 // reconstructDeferResponse parses a multipart/mixed defer body, merges all
@@ -221,10 +112,17 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 //	             "completed":[{"id":"1","errors":[...]}],"hasNext":false}
 //
 // The merge target of an incremental item is pending[id].path + item.subPath.
-func reconstructDeferResponse(body []byte) ([]byte, error) {
-	parts := parseMultipartParts(body)
+func reconstructDeferResponse(body []byte, boundary string) ([]byte, error) {
+	parts, err := parseMultipartParts(body, boundary)
+	if err != nil {
+		return nil, err
+	}
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no parts in multipart response")
+	}
+
+	if err := validateDeferParts(parts); err != nil {
+		return nil, err
 	}
 
 	var p astjson.Parser
@@ -277,21 +175,10 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 
 			// Build path: "data", then the pending entry's path, then subPath.
 			pathKeys := []string{"data"}
-			if id := item.Get("id"); id != nil {
-				idStr := string(id.GetStringBytes())
-				base, ok := pendingPaths[idStr]
-				if !ok {
-					return nil, fmt.Errorf("incremental item references unknown pending id %q", idStr)
-				}
-				pathKeys = append(pathKeys, base...)
-				for _, seg := range item.GetArray("subPath") {
-					pathKeys = append(pathKeys, pathSegmentKey(seg))
-				}
-			} else {
-				// Legacy format: the full path lives directly on the incremental item.
-				for _, seg := range item.GetArray("path") {
-					pathKeys = append(pathKeys, pathSegmentKey(seg))
-				}
+			// validateDeferParts already checked that the id is active.
+			pathKeys = append(pathKeys, pendingPaths[string(item.GetStringBytes("id"))]...)
+			for _, seg := range item.GetArray("subPath") {
+				pathKeys = append(pathKeys, pathSegmentKey(seg))
 			}
 
 			if err := mergeAtPath(result, patchData, pathKeys); err != nil {
@@ -375,29 +262,133 @@ func appendArrayValues(a, b *astjson.Value) *astjson.Value {
 	return out
 }
 
-// parseMultipartParts splits a multipart/mixed body on the --graphql boundary
-// and returns the raw JSON bytes of each part.
-func parseMultipartParts(body []byte) [][]byte {
-	// Each part is delimited by the --graphql boundary. The first part has no
-	// leading CRLF (the body starts directly with the boundary), so we split on
-	// the boundary itself rather than "\r\n--graphql". Empty leading segments and
-	// the closing "--" terminator are skipped below.
-	boundary := []byte("--graphql")
-	parts := bytes.Split(body, boundary)
-	var result [][]byte
-	for _, part := range parts {
-		if bytes.HasPrefix(part, []byte("--")) {
-			continue
-		}
-		_, jsonBody, found := bytes.Cut(part, []byte("\r\n\r\n"))
-		if !found {
-			continue
-		}
-		jsonBody = bytes.TrimSpace(jsonBody)
-		if len(jsonBody) == 0 {
-			continue
-		}
-		result = append(result, jsonBody)
+// parseMultipartParts uses the same MIME framing a client must read. In
+// particular, an empty final part or a missing closing boundary is an error.
+func parseMultipartParts(body []byte, boundary string) ([][]byte, error) {
+	if boundary == "" {
+		return nil, fmt.Errorf("missing multipart boundary")
 	}
-	return result
+	reader := multipart.NewReader(bytes.NewReader(body), boundary)
+	var parts [][]byte
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			return parts, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read multipart part: %w", err)
+		}
+		mediaType, _, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		if err != nil || mediaType != "application/json" {
+			return nil, fmt.Errorf("part %d has invalid Content-Type %q", len(parts), part.Header.Get("Content-Type"))
+		}
+		payload, err := io.ReadAll(part)
+		if err != nil {
+			return nil, fmt.Errorf("read part %d: %w", len(parts), err)
+		}
+		if !json.Valid(payload) {
+			return nil, fmt.Errorf("part %d is not valid JSON: %q", len(parts), payload)
+		}
+		parts = append(parts, payload)
+	}
+}
+
+// validateDeferParts checks the protocol without fixing the order of parallel
+// fragments, their generated IDs, or how the engine groups patches into parts.
+func validateDeferParts(parts [][]byte) error {
+	seen, pending := map[string]bool{}, map[string]bool{}
+	for i, part := range parts {
+		var payload struct {
+			Data    json.RawMessage `json:"data"`
+			HasNext *bool           `json:"hasNext"`
+			Pending []struct {
+				ID   string            `json:"id"`
+				Path []json.RawMessage `json:"path"`
+			} `json:"pending"`
+			Incremental []struct {
+				ID string `json:"id"`
+			} `json:"incremental"`
+			Completed []struct {
+				ID string `json:"id"`
+			} `json:"completed"`
+		}
+		if err := json.Unmarshal(part, &payload); err != nil {
+			return fmt.Errorf("decode part %d: %w", i, err)
+		}
+		if i == 0 && len(payload.Data) == 0 {
+			return fmt.Errorf("initial part has no data")
+		}
+		for _, entry := range payload.Pending {
+			if entry.ID == "" || seen[entry.ID] || entry.Path == nil {
+				return fmt.Errorf("part %d has invalid or duplicate pending entry %q", i, entry.ID)
+			}
+			seen[entry.ID], pending[entry.ID] = true, true
+		}
+		for _, entry := range payload.Incremental {
+			if !pending[entry.ID] {
+				return fmt.Errorf("part %d patches inactive id %q", i, entry.ID)
+			}
+		}
+		for _, entry := range payload.Completed {
+			if !pending[entry.ID] {
+				return fmt.Errorf("part %d completes inactive id %q", i, entry.ID)
+			}
+			delete(pending, entry.ID)
+		}
+		if payload.HasNext == nil {
+			// With no surviving defer, the initial part is an ordinary result.
+			if len(parts) == 1 && len(pending) == 0 {
+				continue
+			}
+			return fmt.Errorf("part %d is missing hasNext", i)
+		}
+		if *payload.HasNext != (i < len(parts)-1) || *payload.HasNext != (len(pending) > 0) {
+			return fmt.Errorf("part %d has hasNext=%v with %d pending fragments and %d remaining parts", i, *payload.HasNext, len(pending), len(parts)-i-1)
+		}
+	}
+	return nil
+}
+
+func TestDeferResponseValidation(t *testing.T) {
+	t.Parallel()
+
+	const initial = `{"data":{"user":{"id":"1"}},"pending":[{"id":"0","path":["user"]}],"hasNext":true}`
+	const final = `{"incremental":[{"id":"0","data":{"name":"Ada"}}],"completed":[{"id":"0"}],"hasNext":false}`
+	const wire = "--graphql\r\nContent-Type: application/json\r\n\r\n" + initial +
+		"\r\n--graphql\r\nContent-Type: application/json\r\n\r\n" + final + "\r\n--graphql--"
+
+	for _, tc := range []struct {
+		name string
+		body string
+		err  string
+	}{
+		{name: "valid", body: wire},
+		{
+			name: "empty final part",
+			body: strings.TrimSuffix(wire, "--graphql--") + "--graphql\r\nContent-Type: application/json\r\n\r\n\r\n--graphql--",
+			err:  "not valid JSON",
+		},
+		{name: "missing close", body: strings.TrimSuffix(wire, "\r\n--graphql--"), err: "unexpected EOF"},
+		{
+			name: "unknown patch id",
+			body: strings.Replace(wire, `"incremental":[{"id":"0"`, `"incremental":[{"id":"unknown"`, 1),
+			err:  "patches inactive id",
+		},
+		{
+			name: "uncompleted fragment",
+			body: strings.Replace(wire, `,"completed":[{"id":"0"}]`, "", 1),
+			err:  "1 pending fragments",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := reconstructDeferResponse([]byte(tc.body), "graphql")
+			if tc.err != "" {
+				require.ErrorContains(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"user":{"id":"1","name":"Ada"}}}`, string(result))
+		})
+	}
 }
