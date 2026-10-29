@@ -78,6 +78,7 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+	UseGraphQLOverHTTPStatusCodes          bool
 
 	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
 	WaitForCacheWrites func()
@@ -122,18 +123,58 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	useGraphQLOverHTTPStatusCodes          bool
 	waitForCacheWrites                     func()
 }
 
-type httpOperation struct {
-	requestContext     *requestContext
+// handlerScope holds the state of a single request while it passes through the pre handler.
+// The PreHandler only holds the configuration and dependencies shared by all requests.
+type handlerScope struct {
+	h *PreHandler
+
+	// r is the current request. It is replaced whenever its context changes,
+	// e.g. after authentication.
+	r                *http.Request
+	ww               middleware.WrapResponseWriter
+	requestContext   *requestContext
+	requestLogger    *zap.Logger
+	routerSpan       trace.Span
+	operationMetrics *OperationMetrics
+	traceTimings     *art.TraceTimings
+
+	// Set while the request passes through the pre handler
 	body               []byte
 	files              []*httpclient.FileUpload
-	requestLogger      *zap.Logger
-	routerSpan         trace.Span
-	operationMetrics   *OperationMetrics
-	traceTimings       *art.TraceTimings
 	authenticationPass authenticationPass
+
+	scopeEndFuncs []func()
+}
+
+func (h *PreHandler) newHandlerScope(w http.ResponseWriter, r *http.Request) *handlerScope {
+	requestContext := getRequestContext(r.Context())
+
+	return &handlerScope{
+		h: h,
+		r: r,
+		// Wrap the response writer early so that all paths (including early returns
+		// for auth failures, bad requests, etc.) have the actual HTTP status code
+		ww:             middleware.NewWrapResponseWriter(w, r.ProtoMajor),
+		requestContext: requestContext,
+		requestLogger:  requestContext.logger,
+		routerSpan:     trace.SpanFromContext(r.Context()),
+	}
+}
+
+// deferToScopeEnd registers f to run when the scope ends, e.g. after the response is written.
+func (s *handlerScope) deferToScopeEnd(f func()) {
+	s.scopeEndFuncs = append(s.scopeEndFuncs, f)
+}
+
+// end runs the functions registered with deferToScopeEnd. Like defer, they run in reverse order.
+func (s *handlerScope) end() {
+	for _, f := range slices.Backward(s.scopeEndFuncs) {
+		f()
+	}
 }
 
 type authenticationPass int
@@ -192,6 +233,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		useGraphQLOverHTTPStatusCodes:          opts.UseGraphQLOverHTTPStatusCodes,
 		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
@@ -217,290 +259,323 @@ func (h *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s := h.newHandlerScope(w, r)
+		defer s.end()
 
-		var (
-			traceTimings *art.TraceTimings
-		)
+		s.startOperation()
 
-		// Wrap the response w early so that all paths (including early returns
-		// for auth failures, bad requests, etc.) have the actual HTTP status code
-		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-
-		requestContext := getRequestContext(r.Context())
-		requestLogger := requestContext.logger
-
-		routerSpan := trace.SpanFromContext(r.Context())
-
-		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
-
-		requestContext.telemetry.addCommonAttribute(
-			otel.WgClientName.String(clientInfo.Name),
-			otel.WgClientVersion.String(clientInfo.Version),
-			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
-		)
-
-		startAttrs := *requestContext.telemetry.AcquireAttributes()
-		startAttrs = append(startAttrs, requestContext.telemetry.metricAttrs...)
-
-		metrics := h.metrics.StartOperation(
-			requestLogger,
-			r.ContentLength,
-			requestContext.telemetry.metricSliceAttrs,
-			otelmetric.WithAttributeSet(attribute.NewSet(startAttrs...)),
-		)
-
-		requestContext.telemetry.ReleaseAttributes(&startAttrs)
-
-		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
-
-		setTelemetryAttributes(r.Context(), requestContext, expr.BucketDefault)
-
-		requestContext.operation = &operationContext{
-			clientInfo: clientInfo,
-		}
-
-		defer func() {
-			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
-			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
-			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
-
-			if cacheStatus, ok := requestContext.responseCacheStatus(); ok {
-				routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
-				requestContext.expressionContext.Response.Cache.Status = cacheStatus.String()
-			}
-
-			// Read the actual status code from the wrapped response w.
-			// This captures the correct status code for all paths, including early returns.
-			statusCode := ww.Status()
-			writtenBytes := ww.BytesWritten()
-
-			metrics.Finish(
-				requestContext,
-				statusCode,
-				writtenBytes,
-				h.flushTelemetryAfterResponse,
-			)
-
-			if h.flushTelemetryAfterResponse {
-				h.flushMetrics(r.Context(), requestLogger)
-			}
-		}()
-
-		executionOptions, traceOptions, err := h.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
-		if err != nil {
-			requestContext.SetError(err)
+		if err := s.setRequestOptions(); err != nil {
+			s.requestContext.SetError(err)
 			writeRequestErrors(writeRequestErrorsParams{
-				request:           r,
-				writer:            ww,
+				request:           s.r,
+				writer:            s.ww,
 				statusCode:        http.StatusBadRequest,
 				requestErrors:     graphqlerrors.RequestErrorsFromError(err),
-				logger:            requestLogger,
+				logger:            s.requestLogger,
 				headerPropagation: h.headerPropagation,
 			})
 			return
 		}
 
-		requestContext.operation.protocol = OperationProtocolHTTP
-		requestContext.operation.executionOptions = executionOptions
-		requestContext.operation.traceOptions = traceOptions
-		requestContext.cacheControl = parseRequestCacheControl(r.Header)
-
-		if traceOptions.Enable {
-			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
-			traceTimings = art.NewTraceTimings(r.Context())
-		}
-
-		var body []byte
-		var files []*httpclient.FileUpload
-
-		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-			if !h.fileUploadEnabled {
-				requestContext.SetError(&httpGraphqlError{
-					message:    "file upload disabled",
-					statusCode: http.StatusOK,
-				})
-				writeOperationError(r, ww, requestLogger, requestContext.error, h.headerPropagation)
-				return
-			}
-
-			_, readMultiPartSpan := h.tracer.Start(r.Context(), "HTTP - Read Multipart",
-				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-			)
-
-			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
-
-			var err error
-			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
-			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
-				requestContext.expressionContext.Request.Body.Raw = string(body)
-			}
-			if err != nil {
-				requestContext.SetError(err)
-				writeOperationError(r, ww, requestLogger, requestContext.error, h.headerPropagation)
-				readMultiPartSpan.End()
-				return
-			}
-
-			readMultiPartSpan.SetAttributes(
-				otel.HTTPRequestUploadFileCount.Int(len(files)),
-			)
-
-			readMultiPartSpan.End()
-
-			// Cleanup all files. Needs to be called in the pre_handler function to ensure that
-			// defer is called after the response is written
-			defer func() {
-				if err := multipartParser.RemoveAll(); err != nil {
-					requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
-				}
-			}()
-		} else if r.Method == http.MethodPost {
-			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
-				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-			)
-
-			var err error
-			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
-			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
-				requestContext.expressionContext.Request.Body.Raw = string(body)
-			}
-			if err != nil {
-				requestContext.SetError(err)
-
-				// Don't produce errors logs here because it can only be client side errors
-				// e.g. too large body, slow client, aborted connection etc.
-				// The error is logged as debug log in the writeOperationError function
-
-				writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
-				readOperationBodySpan.End()
-				return
-			}
-
-			readOperationBodySpan.End()
-		}
-
-		authenticationPass := authenticationPassNone
-
-		if h.accessController != nil {
-			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
-				trace.WithSpanKind(trace.SpanKindClient),
-				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-			)
-
-			validatedReq, err := h.accessController.Access(ww, r)
-			if err != nil {
-				// Auth failed but introspection queries might be allowed to skip auth.
-				// At this early stage we don't know wether this query is an introspection query or not.
-				// We verify if the operation is allowed to skip auth, remember the result in authMode and continue.
-				// At a later stage, when we know the operation type, we recall this decision, to either reject or allow
-				// the operation based on wether this is an introspection query or not.
-
-				if !h.accessController.skipIntrospectionQueries {
-					// Reject the request since auth has failed
-					// and skipping auth for introspection queries is not allowed,
-					// so it does not matter wether this is an introspection query or not.
-					h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, ww)
-					authenticateSpan.End()
-					return
-				}
-
-				if h.accessController.IntrospectionSecretConfigured() {
-					if !h.accessController.IntrospectionAccess(r, body) {
-						h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, ww)
-						authenticateSpan.End()
-						return
-					}
-					authenticationPass = authenticationPassIntrospectionSecret
-				} else {
-					authenticationPass = authenticationPassSkip
-				}
-			} else {
-				r = validatedReq
-				requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
-				authenticationPass = authenticationPassNormal
-			}
-
-			authenticateSpan.End()
-		}
-
-		setTelemetryAttributes(r.Context(), requestContext, expr.BucketAuth)
-
-		err = h.handleOperation(r, &httpOperation{
-			requestContext:     requestContext,
-			requestLogger:      requestLogger,
-			routerSpan:         routerSpan,
-			operationMetrics:   metrics,
-			traceTimings:       traceTimings,
-			files:              files,
-			body:               body,
-			authenticationPass: authenticationPass,
-		})
-		if err != nil {
-			requestContext.SetError(err)
-			if errors.Is(err, context.Canceled) {
-				// Client disconnections are not server-side errors and should not mark the root span as ERROR
-				// or write error responses (which would produce a 500 status code visible to otelhttp).
-				routerSpan.RecordError(err)
-			} else {
-				// Mark the root span of the router as failed, so we can easily identify failed requests.
-				rtrace.AttachErrToSpan(routerSpan, err)
-				if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
-					// Report the estimated cost in case of errors.
-					// The actual cost is only available for successful requests.
-					requestContext.operation != nil && requestContext.operation.costEstimatedSet {
-					ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
-				}
-			}
-
-			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
+		if err := s.readRequestBody(); err != nil {
+			s.requestContext.SetError(err)
+			// Don't produce error logs here because these are client side errors
+			// e.g. too large body, slow client, aborted connection etc.
+			// The error is logged as debug log in the writeOperationError function
+			writeOperationError(s.r, s.ww, s.requestLogger, err, h.headerPropagation)
 			return
 		}
 
-		if h.waitForCacheWrites != nil {
-			h.waitForCacheWrites()
+		if !s.authenticate() {
+			return
 		}
 
-		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
+		setTelemetryAttributes(s.r.Context(), s.requestContext, expr.BucketAuth)
 
-		if traceOptions.Enable {
-			reqData := &resolve.RequestData{
-				Method:  r.Method,
-				URL:     r.URL.String(),
-				Headers: r.Header,
-				Body: resolve.BodyData{
-					Query:         requestContext.operation.rawContent,
-					OperationName: requestContext.operation.name,
-					Variables:     json.RawMessage(requestContext.operation.variables.String()),
-				},
-			}
-			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
+		if err := s.handleOperation(); err != nil {
+			s.writeHandleOperationError(err)
+			return
 		}
 
-		// The request context needs to be updated with the latest request to ensure that the context is up to date
-		requestContext.request = r
-		requestContext.responseWriter = ww
+		s.prepareRequestForExecution()
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
-		next.ServeHTTP(ww, r)
+		next.ServeHTTP(s.ww, s.r)
 
-		// Mark the root span of the router as failed, so we can easily identify failed requests.
-		// Client disconnections are not server-side errors and should not mark the root span as ERROR.
-		if requestContext.error != nil {
-			contextSpan := trace.SpanFromContext(r.Context())
-
-			if errors.Is(requestContext.error, context.Canceled) {
-				// For disconnects just record the error but don't set the status
-				contextSpan.RecordError(requestContext.error)
-			} else {
-				rtrace.AttachErrToSpan(contextSpan, requestContext.error)
-			}
+		if s.requestContext.error != nil {
+			recordSpanError(trace.SpanFromContext(s.r.Context()), s.requestContext.error)
 		}
 	})
+}
+
+// startOperation adds the client attributes to the telemetry and starts the operation metrics.
+// The metrics are finished when the scope ends.
+func (s *handlerScope) startOperation() {
+	requestContext := s.requestContext
+	clientInfo := NewClientInfoFromRequest(s.r, s.h.clientHeader)
+
+	requestContext.telemetry.addCommonAttribute(
+		otel.WgClientName.String(clientInfo.Name),
+		otel.WgClientVersion.String(clientInfo.Version),
+		otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
+	)
+
+	startAttrs := *requestContext.telemetry.AcquireAttributes()
+	startAttrs = append(startAttrs, requestContext.telemetry.metricAttrs...)
+
+	s.operationMetrics = s.h.metrics.StartOperation(
+		s.requestLogger,
+		s.r.ContentLength,
+		requestContext.telemetry.metricSliceAttrs,
+		otelmetric.WithAttributeSet(attribute.NewSet(startAttrs...)),
+	)
+
+	requestContext.telemetry.ReleaseAttributes(&startAttrs)
+
+	s.routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
+
+	setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketDefault)
+
+	requestContext.operation = &operationContext{
+		clientInfo: clientInfo,
+	}
+
+	s.deferToScopeEnd(s.finishOperation)
+}
+
+// finishOperation records the final attributes and finishes the operation metrics.
+// It runs after the response is written.
+func (s *handlerScope) finishOperation() {
+	requestContext := s.requestContext
+
+	requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
+	requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
+	requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
+
+	if cacheStatus, ok := requestContext.responseCacheStatus(); ok {
+		s.routerSpan.SetAttributes(otel.WgOperationResponseCacheStatus.String(cacheStatus.String()))
+		requestContext.expressionContext.Response.Cache.Status = cacheStatus.String()
+	}
+
+	// Read the actual status code from the wrapped response writer.
+	// This captures the correct status code for all paths, including early returns.
+	s.operationMetrics.Finish(
+		requestContext,
+		s.ww.Status(),
+		s.ww.BytesWritten(),
+		s.h.flushTelemetryAfterResponse,
+	)
+
+	if s.h.flushTelemetryAfterResponse {
+		s.h.flushMetrics(s.r.Context(), s.requestLogger)
+	}
+}
+
+// setRequestOptions parses the execution and trace options of the request.
+func (s *handlerScope) setRequestOptions() error {
+	operation := s.requestContext.operation
+
+	executionOptions, traceOptions, err := s.h.parseExecutionAndTraceOptions(s.r, operation.clientInfo, s.requestLogger)
+	if err != nil {
+		return err
+	}
+
+	operation.protocol = OperationProtocolHTTP
+	operation.executionOptions = executionOptions
+	operation.traceOptions = traceOptions
+	s.requestContext.cacheControl = parseRequestCacheControl(s.r.Header)
+
+	if traceOptions.Enable {
+		s.r = s.r.WithContext(resolve.SetTraceStart(s.r.Context(), traceOptions.EnablePredictableDebugTimings))
+		s.traceTimings = art.NewTraceTimings(s.r.Context())
+	}
+
+	return nil
+}
+
+// readRequestBody reads the GraphQL request body. Multipart requests also set the uploaded
+// files, which are removed when the scope ends.
+func (s *handlerScope) readRequestBody() error {
+	if strings.Contains(s.r.Header.Get("Content-Type"), "multipart/form-data") {
+		if !s.h.fileUploadEnabled {
+			return &httpGraphqlError{
+				message:    "file upload disabled",
+				statusCode: http.StatusOK,
+			}
+		}
+		return s.readMultipartBody()
+	}
+
+	if s.r.Method != http.MethodPost {
+		return nil
+	}
+
+	_, readOperationBodySpan := s.h.tracer.Start(s.r.Context(), "HTTP - Read Body",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(s.requestContext.telemetry.traceAttrs...),
+	)
+	defer readOperationBodySpan.End()
+
+	body, err := s.h.operationProcessor.ReadBody(s.r.Body, s.h.getBodyReadBuffer(s.r.ContentLength))
+	s.setExpressionRequestBody(body)
+	if err != nil {
+		return err
+	}
+
+	s.body = body
+	return nil
+}
+
+func (s *handlerScope) readMultipartBody() error {
+	_, readMultiPartSpan := s.h.tracer.Start(s.r.Context(), "HTTP - Read Multipart",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(s.requestContext.telemetry.traceAttrs...),
+	)
+	defer readMultiPartSpan.End()
+
+	multipartParser := NewMultipartParser(s.h.operationProcessor, s.h.maxUploadFiles, s.h.maxUploadFileSize)
+
+	body, files, err := multipartParser.Parse(s.r, s.h.getBodyReadBuffer(s.r.ContentLength))
+	s.setExpressionRequestBody(body)
+	if err != nil {
+		return err
+	}
+
+	readMultiPartSpan.SetAttributes(
+		otel.HTTPRequestUploadFileCount.Int(len(files)),
+	)
+
+	// Uploaded files are removed when the scope ends to ensure that
+	// this runs after the response is written
+	s.deferToScopeEnd(func() {
+		if err := multipartParser.RemoveAll(); err != nil {
+			s.requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
+		}
+	})
+
+	s.body = body
+	s.files = files
+	return nil
+}
+
+// setExpressionRequestBody is called before the read error is checked, so that users
+// can log the body if it exists in case of an error.
+func (s *handlerScope) setExpressionRequestBody(body []byte) {
+	if s.h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
+		s.requestContext.expressionContext.Request.Body.Raw = string(body)
+	}
+}
+
+// authenticate runs the access controller and sets the authentication pass.
+// It returns false when authentication failed and the error response is already written.
+func (s *handlerScope) authenticate() bool {
+	accessController := s.h.accessController
+	if accessController == nil {
+		s.authenticationPass = authenticationPassNone
+		return true
+	}
+
+	_, authenticateSpan := s.h.tracer.Start(s.r.Context(), "Authenticate",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(s.requestContext.telemetry.traceAttrs...),
+	)
+	defer authenticateSpan.End()
+
+	validatedReq, err := accessController.Access(s.ww, s.r)
+	if err == nil {
+		s.r = validatedReq
+		s.requestContext.expressionContext.Request.Auth = expr.LoadAuth(s.r.Context())
+		s.authenticationPass = authenticationPassNormal
+		return true
+	}
+
+	// Auth failed but introspection queries might be allowed to skip auth.
+	// At this early stage we don't know whether this query is an introspection query or not.
+	// We verify if the operation is allowed to skip auth, remember the result in the authentication pass and continue.
+	// At a later stage, when we know the operation type, we recall this decision, to either reject or allow
+	// the operation based on whether this is an introspection query or not.
+
+	if !accessController.skipIntrospectionQueries {
+		// Skipping auth for introspection queries is not allowed,
+		// so it does not matter whether this is an introspection query or not.
+		s.h.handleAuthenticationFailure(s.requestContext, s.requestLogger, err, s.routerSpan, authenticateSpan, s.r, s.ww)
+		return false
+	}
+
+	if !accessController.IntrospectionSecretConfigured() {
+		s.authenticationPass = authenticationPassSkip
+		return true
+	}
+
+	if !accessController.IntrospectionAccess(s.r, s.body) {
+		s.h.handleAuthenticationFailure(s.requestContext, s.requestLogger, err, s.routerSpan, authenticateSpan, s.r, s.ww)
+		return false
+	}
+
+	s.authenticationPass = authenticationPassIntrospectionSecret
+	return true
+}
+
+// writeHandleOperationError records an error returned by handleOperation and writes it as the response.
+func (s *handlerScope) writeHandleOperationError(err error) {
+	requestContext := s.requestContext
+
+	requestContext.SetError(err)
+	recordSpanError(s.routerSpan, err)
+
+	// Report the estimated cost in case of errors.
+	// The actual cost is only available for successful requests.
+	costControl := s.h.operationProcessor.costControl
+	if !errors.Is(err, context.Canceled) &&
+		costControl != nil && costControl.ExposeHeaders &&
+		requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+		s.ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+	}
+
+	writeOperationError(s.r, s.ww, s.requestLogger, err, s.h.headerPropagation)
+}
+
+// prepareRequestForExecution sets the request that is passed to the next handler
+// and stores it in the request context.
+func (s *handlerScope) prepareRequestForExecution() {
+	requestContext := s.requestContext
+	traceOptions := requestContext.operation.traceOptions
+
+	if s.h.waitForCacheWrites != nil {
+		s.h.waitForCacheWrites()
+	}
+
+	art.SetRequestTracingStats(s.r.Context(), traceOptions, s.traceTimings)
+
+	if traceOptions.Enable {
+		reqData := &resolve.RequestData{
+			Method:  s.r.Method,
+			URL:     s.r.URL.String(),
+			Headers: s.r.Header,
+			Body: resolve.BodyData{
+				Query:         requestContext.operation.rawContent,
+				OperationName: requestContext.operation.name,
+				Variables:     json.RawMessage(requestContext.operation.variables.String()),
+			},
+		}
+		s.r = s.r.WithContext(resolve.SetRequest(s.r.Context(), reqData))
+	}
+
+	// The request context needs to be updated with the latest request to ensure that the context is up to date
+	requestContext.request = s.r
+	requestContext.responseWriter = s.ww
+}
+
+// recordSpanError marks the span as failed, so we can easily identify failed requests.
+// Client disconnections are not server-side errors, so they are only recorded
+// without setting the span status to ERROR.
+func recordSpanError(span trace.Span, err error) {
+	if errors.Is(err, context.Canceled) {
+		span.RecordError(err)
+		return
+	}
+	rtrace.AttachErrToSpan(span, err)
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
@@ -536,7 +611,9 @@ func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) b
 	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOperation) error {
+func (s *handlerScope) handleOperation() error {
+	h := s.h
+
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return err
@@ -553,27 +630,27 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	}()
 
-	requestContext := httpOperation.requestContext
+	requestContext := s.requestContext
 
 	// Handle the case when operation information are provided as GET parameters
-	switch req.Method {
+	switch s.r.Method {
 	case http.MethodGet:
-		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
+		if err := operationKit.UnmarshalOperationFromURL(s.r.URL); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	case http.MethodPost:
-		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
+		if err := operationKit.UnmarshalOperationFromBody(s.body); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid request body: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		// If we have files, we need to set them on the parsed operation
-		if len(httpOperation.files) > 0 {
-			requestContext.operation.files = httpOperation.files
+		if len(s.files) > 0 {
+			requestContext.operation.files = s.files
 		}
 	}
 
@@ -594,7 +671,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
 
-			setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+			setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketSha256)
 
 			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
 		} else {
@@ -607,7 +684,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
 
-			setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+			setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketSha256)
 
 			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
 			if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
@@ -654,7 +731,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	)
 
 	if h.shouldFetchPersistedOperation(operationKit) {
-		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
+		ctx, span := h.tracer.Start(s.r.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
@@ -697,7 +774,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// can do it because manifest cache entries are scoped to the captured revision.
 	// Operations outside a manifest must remain immutable within their storage scope.
 	if !skipParse {
-		parseCtx, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
+		parseCtx, engineParseSpan := h.tracer.Start(s.r.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
@@ -707,7 +784,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
 		}
 
-		httpOperation.traceTimings.StartParse()
+		s.traceTimings.StartParse()
 		startParsing := time.Now()
 
 		err = operationKit.Parse()
@@ -719,7 +796,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			setTelemetryAttributes(parseCtx, requestContext, expr.BucketParsingTime)
 
 			if !requestContext.operation.traceOptions.ExcludeParseStats {
-				httpOperation.traceTimings.EndParse()
+				s.traceTimings.EndParse()
 			}
 
 			engineParseSpan.End()
@@ -732,7 +809,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(parseCtx, requestContext, expr.BucketParsingTime)
 
 		if !requestContext.operation.traceOptions.ExcludeParseStats {
-			httpOperation.traceTimings.EndParse()
+			s.traceTimings.EndParse()
 		}
 
 		engineParseSpan.End()
@@ -749,7 +826,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 
 		// non-introspection queries are only allowed when authenticated via normal authentication
-		if !isIntrospection && httpOperation.authenticationPass != authenticationPassNormal {
+		if !isIntrospection && s.authenticationPass != authenticationPassNormal {
 			return &httpGraphqlError{
 				message:    "unauthorized",
 				statusCode: http.StatusUnauthorized,
@@ -757,11 +834,11 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 
 		// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
-		// note: httpOperation.authMethod is only set when authentication is successful and the config allows such authentication.
+		// note: s.authenticationPass is only set when authentication is successful and the config allows such authentication.
 		if isIntrospection &&
-			httpOperation.authenticationPass != authenticationPassNormal &&
-			httpOperation.authenticationPass != authenticationPassIntrospectionSecret &&
-			httpOperation.authenticationPass != authenticationPassSkip {
+			s.authenticationPass != authenticationPassNormal &&
+			s.authenticationPass != authenticationPassIntrospectionSecret &&
+			s.authenticationPass != authenticationPassSkip {
 			return &httpGraphqlError{
 				message:    "unauthorized",
 				statusCode: http.StatusUnauthorized,
@@ -775,7 +852,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.Name = requestContext.operation.name
 	requestContext.expressionContext.Request.Operation.Type = requestContext.operation.opType
 
-	setTelemetryAttributes(req.Context(), requestContext, expr.BucketNameOrType)
+	setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketNameOrType)
 
 	setExpressionContextClient(requestContext)
 
@@ -786,7 +863,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// Add the batched operation index even if we error out later
 	var batchedOperationIndex string
-	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+	if opIndex, ok := s.r.Context().Value(BatchedOperationId{}).(string); ok {
 		batchedOperationIndex = opIndex
 		attributesAfterParse = append(
 			attributesAfterParse, otel.WgBatchingOperationIndex.String(batchedOperationIndex),
@@ -806,9 +883,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return unsupportedErr
 	}
 
-	httpOperation.routerSpan.SetName(h.spanNameFormatter(req))
+	s.routerSpan.SetName(h.spanNameFormatter(s.r))
 
-	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
+	if s.r.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{
 			message:    "Mutations can only be sent over HTTP POST",
 			statusCode: http.StatusMethodNotAllowed,
@@ -816,7 +893,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	// Set the operation name and type to the operation metrics and the router span as early as possible
-	httpOperation.routerSpan.SetAttributes(attributesAfterParse...)
+	s.routerSpan.SetAttributes(attributesAfterParse...)
 
 	if err := h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
 		return &httpGraphqlError{
@@ -829,13 +906,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		requestContext.operation.persistedID = hash
 		requestContext.expressionContext.Request.Operation.PersistedID = hash
-		setTelemetryAttributes(req.Context(), requestContext, expr.BucketPersistedID)
+		setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketPersistedID)
 
 		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
 
-		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
+		s.routerSpan.SetAttributes(persistedIDAttribute)
 	}
 
 	/**
@@ -843,12 +920,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	 */
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-		httpOperation.traceTimings.StartNormalize()
+		s.traceTimings.StartNormalize()
 	}
 
 	startNormalization := time.Now()
 
-	normalizeCtx, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
+	normalizeCtx, engineNormalizeSpan := h.tracer.Start(s.r.Context(), "Operation - Normalize",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
@@ -862,7 +939,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			httpOperation.traceTimings.EndNormalize()
+			s.traceTimings.EndNormalize()
 		}
 
 		engineNormalizeSpan.End()
@@ -894,7 +971,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			httpOperation.traceTimings.EndNormalize()
+			s.traceTimings.EndNormalize()
 		}
 
 		engineNormalizeSpan.End()
@@ -950,7 +1027,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			httpOperation.traceTimings.EndNormalize()
+			s.traceTimings.EndNormalize()
 		}
 
 		engineNormalizeSpan.End()
@@ -1011,7 +1088,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
+	s.routerSpan.SetAttributes(operationHashAttribute)
 
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
@@ -1020,7 +1097,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			httpOperation.traceTimings.EndNormalize()
+			s.traceTimings.EndNormalize()
 		}
 		engineNormalizeSpan.End()
 		return err
@@ -1036,7 +1113,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketQueryPlanHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-		httpOperation.traceTimings.EndNormalize()
+		s.traceTimings.EndNormalize()
 	}
 
 	// Set the normalized operation on the span
@@ -1052,7 +1129,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	if h.traceExportVariables {
 		// At this stage the variables are normalized
-		httpOperation.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
+		s.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 	}
 
 	/**
@@ -1060,12 +1137,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	 */
 
 	if !requestContext.operation.traceOptions.ExcludeValidateStats {
-		httpOperation.traceTimings.StartValidate()
+		s.traceTimings.StartValidate()
 	}
 
 	startValidation := time.Now()
 
-	validationCtx, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
+	validationCtx, engineValidateSpan := h.tracer.Start(s.r.Context(), "Operation - Validate",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
@@ -1093,7 +1170,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
 			setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
 
-			httpOperation.traceTimings.EndValidate()
+			s.traceTimings.EndValidate()
 
 			engineValidateSpan.End()
 
@@ -1118,7 +1195,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeValidateStats {
-			httpOperation.traceTimings.EndValidate()
+			s.traceTimings.EndValidate()
 		}
 
 		engineValidateSpan.End()
@@ -1138,7 +1215,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
 	setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
 
-	httpOperation.traceTimings.EndValidate()
+	s.traceTimings.EndValidate()
 
 	engineValidateSpan.End()
 
@@ -1150,12 +1227,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// and always plan the operation
 	// this allows us to "write" to the plan
 	if !requestContext.operation.traceOptions.ExcludePlannerStats {
-		httpOperation.traceTimings.StartPlanning()
+		s.traceTimings.StartPlanning()
 	}
 
 	startPlanning := time.Now()
 
-	planCtx, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
+	planCtx, enginePlanSpan := h.tracer.Start(s.r.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
@@ -1170,10 +1247,10 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
-		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
+		s.requestLogger.Debug("failed to plan operation", zap.Error(err))
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
-			httpOperation.traceTimings.EndPlanning()
+			s.traceTimings.EndPlanning()
 		}
 
 		requestContext.operation.planningTime = time.Since(startPlanning)
@@ -1187,7 +1264,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	if !requestContext.operation.traceOptions.ExcludePlannerStats {
-		httpOperation.traceTimings.EndPlanning()
+		s.traceTimings.EndPlanning()
 	}
 
 	requestContext.operation.planningTime = time.Since(startPlanning)
@@ -1206,8 +1283,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	planningAttrs = append(planningAttrs, requestContext.telemetry.metricAttrs...)
 
-	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
-		req.Context(),
+	s.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
+		s.r.Context(),
 		requestContext.operation.planningTime,
 		requestContext.telemetry.metricSliceAttrs,
 		otelmetric.WithAttributeSet(attribute.NewSet(planningAttrs...)),
@@ -1250,7 +1327,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// does not accept that content type, or asks for a format the router does
 	// not produce and would otherwise lose the deferred data silently.
 	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
-		switch verdict, spec := deferAccept(req); verdict {
+		switch verdict, spec := deferAccept(s.r); verdict {
 		case deferAcceptNoMultipart:
 			return NewHttpGraphqlError(
 				"the router received a query with the @defer directive but the client does not accept "+

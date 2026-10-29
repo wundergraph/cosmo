@@ -519,7 +519,8 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
-    "OperationNameLengthLimit": 512
+    "OperationNameLengthLimit": 512,
+    "UseGraphQLOverHTTPStatusCodes": false
   },
   "EngineExecutionConfiguration": {
     "Debug": {

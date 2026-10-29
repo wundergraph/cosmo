@@ -611,6 +611,7 @@ security:
     estimated_list_size: 10
     expose_headers: false
   operation_name_length_limit: 2000
+  use_graphql_over_http_status_codes: true
 persisted_operations:
   safelist:
     enabled: true
