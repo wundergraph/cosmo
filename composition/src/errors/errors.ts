@@ -2311,7 +2311,7 @@ export function invalidCacheTagArgumentTypeErrorMessage({
 }: InvalidCacheTagArgumentTypeErrorParams): string {
   return (
     `The "format" argument references "$args.${reference}", which is of type "${typeString}".` +
-    ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable scalar or Enum.`
+    ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable Scalar or Enum.`
   );
 }
 
