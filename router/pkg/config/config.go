@@ -1450,32 +1450,32 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                          bool                    `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion                    ApolloCompatibilityFlag `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
-	TruncateFloats                     ApolloCompatibilityFlag `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
-	SuppressFetchErrors                ApolloCompatibilityFlag `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
-	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityFlag `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
-	ReplaceInvalidVarErrors            ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
-	ReplaceValidationErrorStatus       ApolloCompatibilityFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
-	SubscriptionMultipartPrintBoundary ApolloCompatibilityFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
-	UseGraphQLValidationFailedStatus   ApolloCompatibilityFlag `yaml:"use_graphql_validation_failed_status" envPrefix:"APOLLO_COMPATIBILITY_USE_GRAPHQL_VALIDATION_FAILED_STATUS_"`
+	EnableAll                          bool       `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    EnableFlag `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
+	TruncateFloats                     EnableFlag `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
+	SuppressFetchErrors                EnableFlag `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
+	ReplaceUndefinedOpFieldErrors      EnableFlag `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
+	ReplaceInvalidVarErrors            EnableFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	ReplaceValidationErrorStatus       EnableFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
+	SubscriptionMultipartPrintBoundary EnableFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
+	UseGraphQLValidationFailedStatus   EnableFlag `yaml:"use_graphql_validation_failed_status" envPrefix:"APOLLO_COMPATIBILITY_USE_GRAPHQL_VALIDATION_FAILED_STATUS_"`
 }
 
 type ApolloRouterCompatibilityFlags struct {
-	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
-	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
-	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
+	ReplaceInvalidVarErrors EnableFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	SubrequestHTTPError     EnableFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError  EnableFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
 }
 
-type ApolloCompatibilityFlag struct {
+type EnableFlag struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 // CompatibilityFlags are opt-in deviations from the GraphQL specification that
 // the router offers as migration aids. Each defaults to off.
 type CompatibilityFlags struct {
-	RepairUndeclaredVariables ApolloCompatibilityFlag `yaml:"repair_undeclared_variables" envPrefix:"REPAIR_UNDECLARED_VARIABLES_"`
-	RepairVariableTypes       ApolloCompatibilityFlag `yaml:"repair_variable_types" envPrefix:"REPAIR_VARIABLE_TYPES_"`
+	RepairUndeclaredVariables EnableFlag `yaml:"repair_undeclared_variables" envPrefix:"REPAIR_UNDECLARED_VARIABLES_"`
+	RepairVariableTypes       EnableFlag `yaml:"repair_variable_types" envPrefix:"REPAIR_VARIABLE_TYPES_"`
 }
 
 type ClientHeader struct {
