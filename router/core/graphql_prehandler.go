@@ -79,6 +79,7 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+	UseGraphQLOverHTTPStatusCodes          bool
 
 	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
 	WaitForCacheWrites func()
@@ -123,6 +124,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	useGraphQLOverHTTPStatusCodes          bool
 	waitForCacheWrites                     func()
 }
 
@@ -232,6 +234,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		useGraphQLOverHTTPStatusCodes:          opts.UseGraphQLOverHTTPStatusCodes,
 		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }

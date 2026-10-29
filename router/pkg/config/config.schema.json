@@ -4026,6 +4026,11 @@
           "default": "512",
           "minimum": 0
         },
+        "use_graphql_over_http_status_codes": {
+          "type": "boolean",
+          "description": "Return the 4xx status codes of the GraphQL over HTTP spec for request errors, for example 403 for blocked operations and 422 for invalid variables. When disabled, most request errors return 200. Some clients treat non-2xx responses as network errors, so check your clients before enabling it.",
+          "default": false
+        },
         "depth_limit": {
           "type": "object",
           "description": "DEPRECATED (move to complexity_limits.depth): The configuration for adding a max depth limit for query (how many nested levels you can have in a query).",
