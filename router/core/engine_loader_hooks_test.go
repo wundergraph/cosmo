@@ -588,7 +588,7 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 					Status:        cacheStatusFor(tt.hit, tt.partial),
 					StoreDecision: storeDecisionFor(tt.stored),
 					StoredTTL:     tt.stored,
-					// Entries written as format 1 were: public, max-age their life.
+					// Public, client keeps the full shared life.
 					ClientTTL: tt.ttl,
 					Public:    tt.hit || tt.partial,
 				},
