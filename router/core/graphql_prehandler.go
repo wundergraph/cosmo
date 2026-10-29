@@ -33,6 +33,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization/uploads"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -611,10 +612,9 @@ func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) b
 	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled
 }
 
+// handleOperation reads, parses, normalizes, validates and plans the operation of the request.
 func (s *handlerScope) handleOperation() error {
-	h := s.h
-
-	operationKit, err := h.operationProcessor.NewKit()
+	operationKit, err := s.h.operationProcessor.NewKit()
 	if err != nil {
 		return err
 	}
@@ -630,9 +630,154 @@ func (s *handlerScope) handleOperation() error {
 
 	}()
 
-	requestContext := s.requestContext
+	if err := s.unmarshalOperation(operationKit); err != nil {
+		return err
+	}
 
-	// Handle the case when operation information are provided as GET parameters
+	if err := s.setOperationSha256(operationKit); err != nil {
+		return err
+	}
+
+	if err := s.setRequestVariables(operationKit); err != nil {
+		return err
+	}
+
+	skipParse, isApq, err := s.loadPersistedOperation(operationKit)
+	if err != nil {
+		return err
+	}
+
+	// If the persistent operation is already in the cache, we skip the parse step
+	// because the operation was already parsed. This is a performance optimization, and we
+	// can do it because manifest cache entries are scoped to the captured revision.
+	// Operations outside a manifest must remain immutable within their storage scope.
+	if !skipParse {
+		if err := s.parseOperation(operationKit); err != nil {
+			return err
+		}
+	}
+
+	if err := s.authorizeIntrospection(operationKit); err != nil {
+		return err
+	}
+
+	if err := s.identifyOperation(operationKit); err != nil {
+		return err
+	}
+
+	validation, err := s.normalizeOperation(operationKit, isApq)
+	if err != nil {
+		return err
+	}
+
+	if err := s.validateOperation(operationKit, validation); err != nil {
+		return err
+	}
+
+	if err := s.planOperation(operationKit); err != nil {
+		return err
+	}
+
+	return s.checkDeferAccept()
+}
+
+// stageKind is one of the stages of handling an operation that are measured with a span,
+// the trace timings and a duration in the request context.
+type stageKind int
+
+const (
+	stageParse stageKind = iota
+	stageNormalize
+	stageValidate
+	stagePlan
+)
+
+var stageSpanNames = [...]string{
+	stageParse:     "Operation - Parse",
+	stageNormalize: "Operation - Normalize",
+	stageValidate:  "Operation - Validate",
+	stagePlan:      "Operation - Plan",
+}
+
+// operationStage measures one stage. It is started with startStage and must be ended with end.
+type operationStage struct {
+	s     *handlerScope
+	kind  stageKind
+	ctx   context.Context
+	span  trace.Span
+	start time.Time
+}
+
+// startStage starts a span for the stage and its trace timings, and starts measuring its
+// duration. The returned stage must be ended with end, or with recordDuration followed by
+// ending its span. spanOptions are added to the default options of the span.
+func (s *handlerScope) startStage(kind stageKind, spanOptions ...trace.SpanStartOption) operationStage {
+	spanOptions = append(spanOptions,
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(s.requestContext.telemetry.traceAttrs...),
+	)
+	ctx, span := s.h.tracer.Start(s.r.Context(), stageSpanNames[kind], spanOptions...)
+
+	// The trace timings are always recorded. Excluded stats are left out
+	// when they are reported, see art.SetRequestTracingStats.
+	switch kind {
+	case stageParse:
+		s.traceTimings.StartParse()
+	case stageNormalize:
+		s.traceTimings.StartNormalize()
+	case stageValidate:
+		s.traceTimings.StartValidate()
+	case stagePlan:
+		s.traceTimings.StartPlanning()
+	}
+
+	return operationStage{s: s, kind: kind, ctx: ctx, span: span, start: time.Now()}
+}
+
+// end records the duration of the stage and ends its span. A non-nil err is attached to the span.
+func (st operationStage) end(err error) {
+	st.recordDuration(err)
+	st.span.End()
+}
+
+// recordDuration records the duration of the stage without ending its span, for stages
+// that set attributes on the span which depend on the duration being recorded.
+// A non-nil err is attached to the span.
+func (st operationStage) recordDuration(err error) {
+	if err != nil {
+		rtrace.AttachErrToSpan(st.span, err)
+	}
+
+	duration := time.Since(st.start)
+	requestContext := st.s.requestContext
+	exprOperation := &requestContext.expressionContext.Request.Operation
+
+	switch st.kind {
+	case stageParse:
+		requestContext.operation.parsingTime = duration
+		exprOperation.ParsingTime = duration
+		setTelemetryAttributes(st.ctx, requestContext, expr.BucketParsingTime)
+		st.s.traceTimings.EndParse()
+	case stageNormalize:
+		requestContext.operation.normalizationTime = duration
+		exprOperation.NormalizationTime = duration
+		setTelemetryAttributes(st.ctx, requestContext, expr.BucketNormalizationTime)
+		st.s.traceTimings.EndNormalize()
+	case stageValidate:
+		requestContext.operation.validationTime = duration
+		exprOperation.ValidationTime = duration
+		setTelemetryAttributes(st.ctx, requestContext, expr.BucketValidationTime)
+		st.s.traceTimings.EndValidate()
+	case stagePlan:
+		requestContext.operation.planningTime = duration
+		exprOperation.PlanningTime = duration
+		setTelemetryAttributes(st.ctx, requestContext, expr.BucketPlanningTime)
+		st.s.traceTimings.EndPlanning()
+	}
+}
+
+// unmarshalOperation reads the operation from the GET parameters or the POST body.
+func (s *handlerScope) unmarshalOperation(operationKit *OperationKit) error {
 	switch s.r.Method {
 	case http.MethodGet:
 		if err := operationKit.UnmarshalOperationFromURL(s.r.URL); err != nil {
@@ -650,7 +795,7 @@ func (s *handlerScope) handleOperation() error {
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(s.files) > 0 {
-			requestContext.operation.files = s.files
+			s.requestContext.operation.files = s.files
 		}
 	}
 
@@ -663,8 +808,15 @@ func (s *handlerScope) handleOperation() error {
 		}
 	}
 
-	// Populate operation telemetry before resolving persisted operations.
-	if h.shouldComputeOperationSha256(operationKit, requestContext) {
+	return nil
+}
+
+// setOperationSha256 populates the operation telemetry with the sha256 hash before
+// persisted operations are resolved, and checks that APQ hashes match the query.
+func (s *handlerScope) setOperationSha256(operationKit *OperationKit) error {
+	requestContext := s.requestContext
+
+	if s.h.shouldComputeOperationSha256(operationKit, requestContext) {
 		if operationKit.hasCustomPersistedOperationID() ||
 			(operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()) {
 			// Preserve the supplied persisted ID in telemetry, including custom IDs.
@@ -687,7 +839,7 @@ func (s *handlerScope) handleOperation() error {
 			setTelemetryAttributes(s.r.Context(), requestContext, expr.BucketSha256)
 
 			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
-			if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
+			if s.h.operationBlocker.safelistEnabled || s.h.operationBlocker.logUnknownOperationsEnabled {
 				if !operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 					// Set the request hash to the parsed hash, to see if it matches a persisted operation
 					operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
@@ -708,6 +860,14 @@ func (s *handlerScope) handleOperation() error {
 		}
 	}
 
+	return nil
+}
+
+// setRequestVariables parses the variables of the request into the request context.
+func (s *handlerScope) setRequestVariables(operationKit *OperationKit) error {
+	requestContext := s.requestContext
+
+	var err error
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
@@ -715,7 +875,7 @@ func (s *handlerScope) handleOperation() error {
 	// even if a later stage fails. It is only serialized when an expression references
 	// request.operation.variables, to avoid the (potentially large) serialization cost on every request.
 	// The value can contain sensitive data, so it should be logged with care.
-	if h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
+	if s.h.exprManager.VisitorManager.IsRequestOperationVariablesUsedInExpressions() {
 		requestContext.expressionContext.Request.Operation.Variables = string(operationKit.parsedOperation.Request.Variables)
 	}
 	if err != nil {
@@ -725,126 +885,110 @@ func (s *handlerScope) handleOperation() error {
 		}
 	}
 
-	var (
-		skipParse bool
-		isApq     bool
+	return nil
+}
+
+// loadPersistedOperation loads the persisted operation, when the request references one
+// or when safelisting or logging unknown operations requires checking it.
+func (s *handlerScope) loadPersistedOperation(operationKit *OperationKit) (skipParse bool, isApq bool, err error) {
+	if !s.h.shouldFetchPersistedOperation(operationKit) {
+		return false, false, nil
+	}
+
+	requestContext := s.requestContext
+
+	ctx, span := s.h.tracer.Start(s.r.Context(), "Load Persisted Operation",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
+	defer span.End()
 
-	if h.shouldFetchPersistedOperation(operationKit) {
-		ctx, span := h.tracer.Start(s.r.Context(), "Load Persisted Operation",
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-		)
-
-		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
-		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
-		if err != nil {
-			span.RecordError(err)
-			if !errors.Is(err, context.Canceled) {
-				rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
-			}
-
-			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
-			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
-				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
-				// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
-				// persisted operation are logged above. We only allow execution to continue
-				// when the request includes a query body (the ad-hoc query to run) and
-				// safelist is not enforced. Hash-only requests without a body have nothing
-				// to execute, so we always return the not-found error in that case. Custom
-				// IDs don't identify their body, so an unknown custom ID is always rejected.
-				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" && !operationKit.hasCustomPersistedOperationID() {
-					err = nil
-				}
-			}
-			if err != nil {
-				span.End()
-				return err
-			}
+	skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
+	span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+	if err != nil {
+		span.RecordError(err)
+		if !errors.Is(err, context.Canceled) {
+			rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
 		}
 
-		span.End()
-
-		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
-		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+		var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+		if s.h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
+			requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+			// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
+			// persisted operation are logged above. We only allow execution to continue
+			// when the request includes a query body (the ad-hoc query to run) and
+			// safelist is not enforced. Hash-only requests without a body have nothing
+			// to execute, so we always return the not-found error in that case. Custom
+			// IDs don't identify their body, so an unknown custom ID is always rejected.
+			if !s.h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" && !operationKit.hasCustomPersistedOperationID() {
+				err = nil
+			}
+		}
+		if err != nil {
+			return false, false, err
+		}
 	}
 
-	// If the persistent operation is already in the cache, we skip the parse step
-	// because the operation was already parsed. This is a performance optimization, and we
-	// can do it because manifest cache entries are scoped to the captured revision.
-	// Operations outside a manifest must remain immutable within their storage scope.
-	if !skipParse {
-		parseCtx, engineParseSpan := h.tracer.Start(s.r.Context(), "Operation - Parse",
-			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-		)
+	requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+	requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 
-		// Set the original operation on the parse span
-		if h.operationContentAttributes {
-			engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
-		}
+	return skipParse, isApq, nil
+}
 
-		s.traceTimings.StartParse()
-		startParsing := time.Now()
+func (s *handlerScope) parseOperation(operationKit *OperationKit) error {
+	stage := s.startStage(stageParse)
 
-		err = operationKit.Parse()
-		if err != nil {
-			rtrace.AttachErrToSpan(engineParseSpan, err)
-
-			requestContext.operation.parsingTime = time.Since(startParsing)
-			requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
-			setTelemetryAttributes(parseCtx, requestContext, expr.BucketParsingTime)
-
-			if !requestContext.operation.traceOptions.ExcludeParseStats {
-				s.traceTimings.EndParse()
-			}
-
-			engineParseSpan.End()
-
-			return err
-		}
-
-		requestContext.operation.parsingTime = time.Since(startParsing)
-		requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
-		setTelemetryAttributes(parseCtx, requestContext, expr.BucketParsingTime)
-
-		if !requestContext.operation.traceOptions.ExcludeParseStats {
-			s.traceTimings.EndParse()
-		}
-
-		engineParseSpan.End()
+	// Set the original operation on the parse span
+	if s.h.operationContentAttributes {
+		stage.span.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
 	}
 
-	if h.accessController != nil {
-		// Based on the authentication result, the introspection config,
-		// and wether this is an introspection query,
-		// we decide here if we need to abort the request or not.
-		isIntrospection, err := operationKit.isIntrospectionQuery()
-		if err != nil {
-			requestContext.logger.Error("failed to check if operation is introspection, treat it like non-introspection operation", zap.Error(err))
-			isIntrospection = false
-		}
+	err := operationKit.Parse()
+	stage.end(err)
 
-		// non-introspection queries are only allowed when authenticated via normal authentication
-		if !isIntrospection && s.authenticationPass != authenticationPassNormal {
-			return &httpGraphqlError{
-				message:    "unauthorized",
-				statusCode: http.StatusUnauthorized,
-			}
-		}
+	return err
+}
 
-		// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
-		// note: s.authenticationPass is only set when authentication is successful and the config allows such authentication.
-		if isIntrospection &&
-			s.authenticationPass != authenticationPassNormal &&
-			s.authenticationPass != authenticationPassIntrospectionSecret &&
-			s.authenticationPass != authenticationPassSkip {
-			return &httpGraphqlError{
-				message:    "unauthorized",
-				statusCode: http.StatusUnauthorized,
-			}
+// authorizeIntrospection decides, based on the authentication result, the introspection
+// config and whether this is an introspection query, if the request is aborted.
+func (s *handlerScope) authorizeIntrospection(operationKit *OperationKit) error {
+	if s.h.accessController == nil {
+		return nil
+	}
+
+	isIntrospection, err := operationKit.isIntrospectionQuery()
+	if err != nil {
+		s.requestContext.logger.Error("failed to check if operation is introspection, treat it like non-introspection operation", zap.Error(err))
+		isIntrospection = false
+	}
+
+	// non-introspection queries are only allowed when authenticated via normal authentication
+	if !isIntrospection && s.authenticationPass != authenticationPassNormal {
+		return &httpGraphqlError{
+			message:    "unauthorized",
+			statusCode: http.StatusUnauthorized,
 		}
 	}
+
+	// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
+	// note: s.authenticationPass is only set when authentication is successful and the config allows such authentication.
+	if isIntrospection &&
+		s.authenticationPass != authenticationPassNormal &&
+		s.authenticationPass != authenticationPassIntrospectionSecret &&
+		s.authenticationPass != authenticationPassSkip {
+		return &httpGraphqlError{
+			message:    "unauthorized",
+			statusCode: http.StatusUnauthorized,
+		}
+	}
+
+	return nil
+}
+
+// identifyOperation sets the operation name, type and persisted ID on the request context
+// and the telemetry. In between, it rejects operations that aren't allowed for this request.
+func (s *handlerScope) identifyOperation(operationKit *OperationKit) error {
+	requestContext := s.requestContext
 
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
@@ -877,13 +1021,13 @@ func (s *handlerScope) handleOperation() error {
 			message:    "Subscriptions aren't supported in batch operations",
 			statusCode: http.StatusBadRequest,
 		}
-		if !h.omitBatchExtensions {
+		if !s.h.omitBatchExtensions {
 			unsupportedErr.extensionCode = ExtCodeErrBatchSubscriptionsUnsupported
 		}
 		return unsupportedErr
 	}
 
-	s.routerSpan.SetName(h.spanNameFormatter(s.r))
+	s.routerSpan.SetName(s.h.spanNameFormatter(s.r))
 
 	if s.r.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{
@@ -895,7 +1039,7 @@ func (s *handlerScope) handleOperation() error {
 	// Set the operation name and type to the operation metrics and the router span as early as possible
 	s.routerSpan.SetAttributes(attributesAfterParse...)
 
-	if err := h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
+	if err := s.h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
@@ -915,39 +1059,29 @@ func (s *handlerScope) handleOperation() error {
 		s.routerSpan.SetAttributes(persistedIDAttribute)
 	}
 
-	/**
-	* Normalize the operation
-	 */
+	return nil
+}
 
-	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-		s.traceTimings.StartNormalize()
-	}
+// operationValidation is the result of validating the operation against the schema.
+// The validation runs during normalization, but its error is reported in the validation stage.
+type operationValidation struct {
+	cacheHit bool
+	err      error
+}
 
-	startNormalization := time.Now()
+// normalizeOperation normalizes the operation and its variables, and remaps the variables.
+func (s *handlerScope) normalizeOperation(operationKit *OperationKit, isApq bool) (operationValidation, error) {
+	requestContext := s.requestContext
 
-	normalizeCtx, engineNormalizeSpan := h.tracer.Start(s.r.Context(), "Operation - Normalize",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-	)
+	stage := s.startStage(stageNormalize)
 
 	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
 	if err != nil {
-		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-
-		requestContext.operation.normalizationTime = time.Since(startNormalization)
-		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
-		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
-
-		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			s.traceTimings.EndNormalize()
-		}
-
-		engineNormalizeSpan.End()
-
-		return err
+		stage.end(err)
+		return operationValidation{}, err
 	}
 
-	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
+	stage.span.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
@@ -956,37 +1090,96 @@ func (s *handlerScope) handleOperation() error {
 	// type (e.g. an enum literal `hello` becomes the string "hello" and would wrongly
 	// satisfy a String argument). The error is surfaced later, on the validation span, so
 	// that the normalization span reflects only normalization.
-	operationValidationCacheHit, operationValidationErr := operationKit.ValidateOperation()
-
-	/**
-	* Normalize the variables
-	 */
+	var validation operationValidation
+	validation.cacheHit, validation.err = operationKit.ValidateOperation()
 
 	cached, uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
-		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-
-		requestContext.operation.normalizationTime = time.Since(startNormalization)
-		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
-		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
-
-		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			s.traceTimings.EndNormalize()
-		}
-
-		engineNormalizeSpan.End()
-		return err
+		stage.end(err)
+		return operationValidation{}, err
 	}
-	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
+	stage.span.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	logInlineArguments(requestContext.logger, operationKit.parsedOperation)
-	if h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
+	if s.h.operationProcessor.parseKitOptions.validateInlineArguments.ReturnInResponseExtensions {
 		requestContext.operation.inlineArguments = inlineArgumentQualifiedNames(operationKit.parsedOperation)
 	}
 
-	// Update file upload paths if they were used in the nested field of the extracted variables.
+	s.updateNestedUploadPaths(uploadsMapping)
+
+	// requestContext.operation.remapVariables map will contain new names as keys and
+	// old names as values - to be able to extract the old values.
+	// It does not rename variables in variables JSON.
+	cached, err = operationKit.RemapVariables(s.h.disableVariablesRemapping)
+	if err != nil {
+		stage.end(err)
+		return operationValidation{}, err
+	}
+
+	stage.span.SetAttributes(otel.WgVariablesRemappingCacheHit.Bool(cached))
+	requestContext.operation.variablesRemappingCacheHit = cached
+	requestContext.expressionContext.Request.Operation.VariablesRemappingCacheHit = cached
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
+	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
+	operationHash := ""
+	if requestContext.operation.hash != 0 {
+		operationHash = requestContext.operation.HashString()
+	}
+
+	if !s.h.disableVariablesRemapping && len(uploadsMapping) > 0 {
+		s.updateRemappedUploadPaths(uploadsMapping)
+	}
+
+	operationHashAttribute := otel.WgOperationHash.String(operationKit.parsedOperation.IDString())
+	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
+	s.routerSpan.SetAttributes(operationHashAttribute)
+
+	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
+	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
+	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
+	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		stage.end(err)
+		return operationValidation{}, err
+	}
+
+	// Set the normalized operation on the span
+	if s.h.operationContentAttributes {
+		stage.span.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+	}
+
+	if operationKit.parsedOperation.IsPersistedOperation {
+		stage.span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+	}
+
+	// The hash attributes are evaluated after the normalization time, because expressions
+	// can use both, but they still belong on the normalize span.
+	stage.recordDuration(nil)
+
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
+	setTelemetryAttributes(stage.ctx, requestContext, expr.BucketHash)
+
+	requestContext.expressionContext.Request.Operation.QueryPlanHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+	setTelemetryAttributes(stage.ctx, requestContext, expr.BucketQueryPlanHash)
+
+	stage.span.End()
+
+	if s.h.traceExportVariables {
+		// At this stage the variables are normalized
+		s.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
+	}
+
+	return validation, nil
+}
+
+// updateNestedUploadPaths updates the file upload paths if they were used in the nested field of the extracted variables.
+func (s *handlerScope) updateNestedUploadPaths(uploadsMapping []uploads.UploadPathMapping) {
+	files := s.requestContext.operation.files
+
 	for mapping := range slices.Values(uploadsMapping) {
 		// If the NewUploadPath is empty, there was no change in the path:
 		// upload was directly passed to the argument. For example, "field(fileArgument: $file)"
@@ -997,7 +1190,7 @@ func (s *handlerScope) handleOperation() error {
 		}
 
 		// Look for the corresponding file that was used in the nested argument.
-		idx := slices.IndexFunc(requestContext.operation.files, func(file *httpclient.FileUpload) bool {
+		idx := slices.IndexFunc(files, func(file *httpclient.FileUpload) bool {
 			// Match upload path passed via slice of FileUpload with the mapping items.
 			return file.VariablePath() == mapping.OriginalUploadPath
 		})
@@ -1012,168 +1205,73 @@ func (s *handlerScope) handleOperation() error {
 		// uploadsMapping containing such an item:
 		// {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"}
 		// In short, "variables.file" should be updated to "variables.a.file".
-		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
+		files[idx].SetVariablePath(mapping.NewUploadPath)
 	}
+}
 
-	// requestContext.operation.remapVariables map will contain new names as keys and
-	// old names as values - to be able to extract the old values.
-	// It does not rename variables in variables JSON.
-	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
-	if err != nil {
-		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+// updateRemappedUploadPaths updates the file upload paths after the variables were remapped.
+// The relative path of the variables has changed, but the files still reference the old upload locations.
+func (s *handlerScope) updateRemappedUploadPaths(uploadsMapping []uploads.UploadPathMapping) {
+	// key `to` is a new variable name
+	// value `from` is an old variable name
+	// we are looping through remapped variables to find a match between old variable name and variable which was holding an upload
+	for to, from := range maps.All(s.requestContext.operation.remapVariables) {
 
-		requestContext.operation.normalizationTime = time.Since(startNormalization)
-		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
-		setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
+		// loop over upload mappings to find a match between variable name and upload variable name
+		for uploadMapping := range slices.Values(uploadsMapping) {
+			if uploadMapping.VariableName != from {
+				continue
+			}
 
-		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			s.traceTimings.EndNormalize()
-		}
+			uploadPath := uploadMapping.NewUploadPath
+			// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+			if uploadPath == "" {
+				uploadPath = uploadMapping.OriginalUploadPath
+			}
 
-		engineNormalizeSpan.End()
-		return err
-	}
-
-	engineNormalizeSpan.SetAttributes(otel.WgVariablesRemappingCacheHit.Bool(cached))
-	requestContext.operation.variablesRemappingCacheHit = cached
-	requestContext.expressionContext.Request.Operation.VariablesRemappingCacheHit = cached
-	requestContext.operation.hash = operationKit.parsedOperation.ID
-	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
-	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
-
-	operationHash := ""
-	if requestContext.operation.hash != 0 {
-		operationHash = requestContext.operation.HashString()
-	}
-
-	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
-		// after variables remapping we need to update the file uploads path because variables relative path has changed
-		// but files still references the old uploads locations
-		// key `to` is a new variable name
-		// value `from` is an old variable name
-		// we are looping through remapped variables to find a match between old variable name and variable which was holding an upload
-		for to, from := range maps.All(requestContext.operation.remapVariables) {
-
-			// loop over upload mappings to find a match between variable name and upload variable name
-			for uploadMapping := range slices.Values(uploadsMapping) {
-				if uploadMapping.VariableName != from {
+			// next step is to compare file upload path with the original upload path from the upload mappings
+			for file := range slices.Values(s.requestContext.operation.files) {
+				if file.VariablePath() != uploadPath {
 					continue
 				}
 
-				uploadPath := uploadMapping.NewUploadPath
-				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
-				if uploadPath == "" {
-					uploadPath = uploadMapping.OriginalUploadPath
-				}
+				// trim old variable name prefix
+				oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+				relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
 
-				// next step is to compare file upload path with the original upload path from the upload mappings
-				for file := range slices.Values(requestContext.operation.files) {
-					if file.VariablePath() != uploadPath {
-						continue
-					}
-
-					// trim old variable name prefix
-					oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
-					relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
-
-					// set new variable name prefix
-					updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
-					file.SetVariablePath(updatedPath)
-				}
+				// set new variable name prefix
+				updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+				file.SetVariablePath(updatedPath)
 			}
 		}
 	}
+}
 
-	operationHashString := operationKit.parsedOperation.IDString()
+// validateOperation checks the complexity limits, the schema validation from the
+// normalization stage and the variables of the operation.
+func (s *handlerScope) validateOperation(operationKit *OperationKit, validation operationValidation) error {
+	requestContext := s.requestContext
 
-	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
-	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-	s.routerSpan.SetAttributes(operationHashAttribute)
-
-	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
-	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
-	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
-	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
-	if err != nil {
-		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			s.traceTimings.EndNormalize()
-		}
-		engineNormalizeSpan.End()
-		return err
-	}
-	requestContext.operation.normalizationTime = time.Since(startNormalization)
-	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
-	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
-
-	requestContext.expressionContext.Request.Operation.Hash = operationHash
-	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
-
-	requestContext.expressionContext.Request.Operation.QueryPlanHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
-	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketQueryPlanHash)
-
-	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-		s.traceTimings.EndNormalize()
-	}
-
-	// Set the normalized operation on the span
-	if h.operationContentAttributes {
-		engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
-	}
-
-	if operationKit.parsedOperation.IsPersistedOperation {
-		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
-	}
-
-	engineNormalizeSpan.End()
-
-	if h.traceExportVariables {
-		// At this stage the variables are normalized
-		s.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
-	}
-
-	/**
-	* Validate the operation
-	 */
-
-	if !requestContext.operation.traceOptions.ExcludeValidateStats {
-		s.traceTimings.StartValidate()
-	}
-
-	startValidation := time.Now()
-
-	validationCtx, engineValidateSpan := h.tracer.Start(s.r.Context(), "Operation - Validate",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-	)
+	stage := s.startStage(stageValidate)
 
 	// Validate that the planned query doesn't exceed the maximum query depth configured
 	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
-	if h.complexityLimits != nil {
+	if s.h.complexityLimits != nil {
 		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity()
 		requestContext.expressionContext.Request.Operation.QueryDepth = complexityCalcs.Depth
-		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
+		stage.span.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
 		requestContext.expressionContext.Request.Operation.QueryTotalFields = complexityCalcs.TotalFields
-		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
+		stage.span.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
 		requestContext.expressionContext.Request.Operation.QueryRootFields = complexityCalcs.RootFields
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
+		stage.span.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
 		requestContext.expressionContext.Request.Operation.QueryRootFieldAliases = complexityCalcs.RootFieldAliases
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
+		stage.span.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
 		requestContext.expressionContext.Request.Operation.QueryComplexityCacheHit = cacheHit
-		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
-		setTelemetryAttributes(validationCtx, requestContext, expr.BucketQueryComplexity)
+		stage.span.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		setTelemetryAttributes(stage.ctx, requestContext, expr.BucketQueryComplexity)
 
 		if queryDepthErr != nil {
-			rtrace.AttachErrToSpan(engineValidateSpan, queryDepthErr)
-
-			requestContext.operation.validationTime = time.Since(startValidation)
-			requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
-			setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
-
-			s.traceTimings.EndValidate()
-
-			engineValidateSpan.End()
-
+			stage.end(queryDepthErr)
 			return queryDepthErr
 		}
 	}
@@ -1182,98 +1280,56 @@ func (s *handlerScope) handleOperation() error {
 	// variable validation, mirroring the GraphQL spec order (ValuesOfCorrectType before
 	// coerced variable values). Its error is surfaced here so it appears on the
 	// validation span rather than the normalization span.
-	err = operationValidationErr
+	err := validation.err
 	if err == nil {
-		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
+		err = operationKit.ValidateOperationVariables(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, s.h.apolloCompatibilityFlags)
 	}
 	if err != nil {
-		rtrace.AttachErrToSpan(engineValidateSpan, err)
-
-		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
-		requestContext.operation.validationTime = time.Since(startValidation)
-		requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
-		setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
-
-		if !requestContext.operation.traceOptions.ExcludeValidateStats {
-			s.traceTimings.EndValidate()
-		}
-
-		engineValidateSpan.End()
-
+		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, s.h.getErrorCodes(err)...)
+		stage.end(err)
 		return err
 	}
 
-	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(operationValidationCacheHit))
+	stage.span.SetAttributes(otel.WgValidationCacheHit.Bool(validation.cacheHit))
 	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
-		engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
+		stage.span.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
 	}
 
-	requestContext.operation.validationTime = time.Since(startValidation)
-	requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
-	setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
+	stage.end(nil)
 
-	s.traceTimings.EndValidate()
+	return nil
+}
 
-	engineValidateSpan.End()
-
-	/**
-	* Plan the operation
-	 */
+// planOperation plans the operation, validates its static cost and records the planning time.
+func (s *handlerScope) planOperation(operationKit *OperationKit) error {
+	requestContext := s.requestContext
 
 	// If the request has a query parameter wg_trace=true we skip the cache
 	// and always plan the operation
 	// this allows us to "write" to the plan
-	if !requestContext.operation.traceOptions.ExcludePlannerStats {
-		s.traceTimings.StartPlanning()
-	}
-
-	startPlanning := time.Now()
-
-	planCtx, enginePlanSpan := h.tracer.Start(s.r.Context(), "Operation - Plan",
-		trace.WithSpanKind(trace.SpanKindInternal),
+	stage := s.startStage(stagePlan,
 		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
-		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
 	planOptions := PlanOptions{
 		ClientInfo:           requestContext.operation.clientInfo,
 		TraceOptions:         requestContext.operation.traceOptions,
 		ExecutionOptions:     requestContext.operation.executionOptions,
-		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
+		TrackSchemaUsageInfo: s.h.trackSchemaUsageInfo,
 	}
 
-	err = h.planner.plan(requestContext.operation, planOptions)
-	if err != nil {
+	if err := s.h.planner.plan(requestContext.operation, planOptions); err != nil {
 		s.requestLogger.Debug("failed to plan operation", zap.Error(err))
-
-		if !requestContext.operation.traceOptions.ExcludePlannerStats {
-			s.traceTimings.EndPlanning()
-		}
-
-		requestContext.operation.planningTime = time.Since(startPlanning)
-		requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
-		setTelemetryAttributes(planCtx, requestContext, expr.BucketPlanningTime)
-
-		rtrace.AttachErrToSpan(enginePlanSpan, err)
-		enginePlanSpan.End()
-
+		stage.end(err)
 		return err
 	}
 
-	if !requestContext.operation.traceOptions.ExcludePlannerStats {
-		s.traceTimings.EndPlanning()
-	}
-
-	requestContext.operation.planningTime = time.Since(startPlanning)
-	requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
-	setTelemetryAttributes(planCtx, requestContext, expr.BucketPlanningTime)
-
 	requestContext.expressionContext.Request.Operation.PlanCacheHit = requestContext.operation.planCacheHit
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
-	enginePlanSpan.End()
+	stage.span.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	stage.end(nil)
 
 	if err := operationKit.ValidateStaticCost(requestContext.operation); err != nil {
 		return err
@@ -1292,60 +1348,78 @@ func (s *handlerScope) handleOperation() error {
 
 	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
 
+	s.exposeQueryPlan(operationKit)
+
+	return nil
+}
+
+// exposeQueryPlan adds the normalized query to the query plan that is returned in the
+// response, and logs the query plan if enabled.
+func (s *handlerScope) exposeQueryPlan(operationKit *OperationKit) {
+	h := s.h
+	operation := s.requestContext.operation
+
 	// we could log the query plan only if query plans are calculated
-	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
-		h.alwaysIncludeQueryPlan {
-
-		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
-		case *plan.SynchronousResponsePlan:
-			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
-		case *plan.DeferResponsePlan:
-			// TODO: handle ART
-		}
-
-		if h.queryPlansLoggingEnabled {
-			var printedPlan string
-			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
-			case *plan.SynchronousResponsePlan:
-				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
-			case *plan.SubscriptionResponsePlan:
-				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
-			case *plan.DeferResponsePlan:
-				// TODO: handle
-			}
-			if h.developmentMode {
-				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
-			} else {
-				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
-			}
-		}
+	if !(h.queryPlansEnabled && operation.executionOptions.IncludeQueryPlanInResponse) && !h.alwaysIncludeQueryPlan {
+		return
 	}
 
-	// A DeferResponsePlan is only produced when the operation contains @defer
-	// (and @defer support is enabled). Such operations stream incremental
-	// payloads as multipart/mixed, so reject the request early if the client
-	// does not accept that content type, or asks for a format the router does
-	// not produce and would otherwise lose the deferred data silently.
-	if _, ok := requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); ok {
-		switch verdict, spec := deferAccept(s.r); verdict {
-		case deferAcceptNoMultipart:
-			return NewHttpGraphqlError(
-				"the router received a query with the @defer directive but the client does not accept "+
-					"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
-					"'Accept: multipart/mixed'",
-				ExtCodeErrDeferMultipartNotAccepted,
-				http.StatusOK,
-			)
-		case deferAcceptUnsupportedSpec:
-			return NewHttpGraphqlError(
-				fmt.Sprintf("the router received a query with the @defer directive but the client requested the "+
-					"incremental delivery format '%s', while the router implements 'incrementalSpec=%s'. "+
-					"Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler",
-					spec, deferIncrementalSpec),
-				ExtCodeErrDeferSpecNotSupported,
-				http.StatusOK,
-			)
-		}
+	switch p := operation.preparedPlan.preparedPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+	case *plan.DeferResponsePlan:
+		// TODO: handle ART
+	}
+
+	if !h.queryPlansLoggingEnabled {
+		return
+	}
+
+	var printedPlan string
+	switch p := operation.preparedPlan.preparedPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.SubscriptionResponsePlan:
+		printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.DeferResponsePlan:
+		// TODO: handle
+	}
+	if h.developmentMode {
+		h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+	} else {
+		h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
+	}
+}
+
+// checkDeferAccept rejects operations with @defer that the client can't receive.
+// A DeferResponsePlan is only produced when the operation contains @defer
+// (and @defer support is enabled). Such operations stream incremental
+// payloads as multipart/mixed, so reject the request early if the client
+// does not accept that content type, or asks for a format the router does
+// not produce and would otherwise lose the deferred data silently.
+func (s *handlerScope) checkDeferAccept() error {
+	if _, ok := s.requestContext.operation.preparedPlan.preparedPlan.(*plan.DeferResponsePlan); !ok {
+		return nil
+	}
+
+	switch verdict, spec := deferAccept(s.r); verdict {
+	case deferAcceptNoMultipart:
+		return NewHttpGraphqlError(
+			"the router received a query with the @defer directive but the client does not accept "+
+				"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+				"'Accept: multipart/mixed'",
+			ExtCodeErrDeferMultipartNotAccepted,
+			http.StatusOK,
+		)
+	case deferAcceptUnsupportedSpec:
+		return NewHttpGraphqlError(
+			fmt.Sprintf("the router received a query with the @defer directive but the client requested the "+
+				"incremental delivery format '%s', while the router implements 'incrementalSpec=%s'. "+
+				"Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler",
+				spec, deferIncrementalSpec),
+			ExtCodeErrDeferSpecNotSupported,
+			http.StatusOK,
+		)
 	}
 
 	return nil
