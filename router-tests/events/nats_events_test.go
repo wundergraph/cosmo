@@ -386,7 +386,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
+						SubscriptionMultipartPrintBoundary: config.EnableFlag{
 							Enabled: false,
 						},
 					}),
@@ -559,7 +559,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
+						SubscriptionMultipartPrintBoundary: config.EnableFlag{
 							Enabled: true,
 						},
 					}),
@@ -597,7 +597,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
+						SubscriptionMultipartPrintBoundary: config.EnableFlag{
 							Enabled: true,
 						},
 					}),

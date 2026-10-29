@@ -22,7 +22,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+					ReplaceInvalidVarErrors: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -52,12 +52,12 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
+					ReplaceValidationErrorStatus: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+					ReplaceInvalidVarErrors: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -106,7 +106,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloCompatibilityFlag{
+					SubrequestHTTPError: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -156,7 +156,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloCompatibilityFlag{
+					SubrequestHTTPError: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -211,7 +211,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloCompatibilityFlag{
+					SubrequestHTTPError: config.EnableFlag{
 						Enabled: false,
 					},
 				}),
@@ -257,7 +257,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloCompatibilityFlag{
+					SubrequestHTTPError: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -322,7 +322,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SkipNullVariablesError: config.ApolloCompatibilityFlag{
+					SkipNullVariablesError: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -366,7 +366,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SkipNullVariablesError: config.ApolloCompatibilityFlag{
+					SkipNullVariablesError: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -424,7 +424,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -453,7 +453,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -482,7 +482,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -555,7 +555,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					TruncateFloats: config.ApolloCompatibilityFlag{
+					TruncateFloats: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -584,7 +584,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					TruncateFloats: config.ApolloCompatibilityFlag{
+					TruncateFloats: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -640,7 +640,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -668,7 +668,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -696,7 +696,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -724,10 +724,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
-					SuppressFetchErrors: config.ApolloCompatibilityFlag{
+					SuppressFetchErrors: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -755,10 +755,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityFlag{
+					ValueCompletion: config.EnableFlag{
 						Enabled: true,
 					},
-					SuppressFetchErrors: config.ApolloCompatibilityFlag{
+					SuppressFetchErrors: config.EnableFlag{
 						Enabled: false,
 					},
 				}),
@@ -812,7 +812,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
+					UseGraphQLValidationFailedStatus: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -848,7 +848,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+					ReplaceInvalidVarErrors: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -868,7 +868,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
+					ReplaceValidationErrorStatus: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -888,10 +888,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+					ReplaceInvalidVarErrors: config.EnableFlag{
 						Enabled: true,
 					},
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
+					ReplaceValidationErrorStatus: config.EnableFlag{
 						Enabled: true,
 					},
 				}),

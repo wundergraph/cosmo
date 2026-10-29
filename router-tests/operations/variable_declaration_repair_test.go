@@ -55,8 +55,8 @@ func TestVariableDeclarationRepair(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithCompatibilityFlags(config.CompatibilityFlags{
-					RepairUndeclaredVariables: config.ApolloCompatibilityFlag{Enabled: true},
-					RepairVariableTypes:       config.ApolloCompatibilityFlag{Enabled: true},
+					RepairUndeclaredVariables: config.EnableFlag{Enabled: true},
+					RepairVariableTypes:       config.EnableFlag{Enabled: true},
 				}),
 			},
 			LogObservation: testenv.LogObservationConfig{
