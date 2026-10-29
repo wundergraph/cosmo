@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.365.2](https://github.com/wundergraph/cosmo/compare/router@0.365.1...router@0.365.2) (2026-10-29)
+
+### Bug Fixes
+
+* **router:** properly handle nullable enums in grpc ([#3449](https://github.com/wundergraph/cosmo/issues/3449)) ([231fe74](https://github.com/wundergraph/cosmo/commit/231fe74a10e867ecb134a953d435c55f9dcae65b)) (@Noroth)
+
 ## [0.365.1](https://github.com/wundergraph/cosmo/compare/router@0.365.0...router@0.365.1) (2026-10-29)
 
 ### Bug Fixes
