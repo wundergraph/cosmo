@@ -1,5 +1,5 @@
-import { countDeferFragmentsByLabel, listDeferredFields, listNestedDeferLabels } from './defer-transform';
-import { collectRootOccurrences, getFragments, getOperation, ParsedQuery } from './operation';
+import { countDeferFragmentsByLabel, listDeferredFields, listNestedDeferLabels } from './defer-transform.js';
+import { collectRootOccurrences, getFragments, getOperation, ParsedQuery } from './operation.js';
 
 export type RootFieldRow = {
   name: string;

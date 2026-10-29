@@ -7,7 +7,7 @@ import {
   isDeferFragment,
   LABEL_ARG,
   ParsedQuery,
-} from './operation';
+} from './operation.js';
 
 type DeferredField = { label: string; field: string };
 

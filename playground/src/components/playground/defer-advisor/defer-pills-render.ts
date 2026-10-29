@@ -1,5 +1,5 @@
 import type { EditorContextType } from '@graphiql/react';
-import { PROBE_RUNS } from './probe';
+import { PROBE_RUNS } from '@wundergraph/cosmo-shared/defer-advisor';
 import { FieldPill } from './defer-pills';
 
 export type QueryEditor = NonNullable<EditorContextType['queryEditor']>;

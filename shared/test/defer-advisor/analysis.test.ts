@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { slowFieldNames } from '../src/components/playground/defer-advisor/analysis';
+import { slowFieldNames } from '../../src/defer-advisor/analysis.js';
 
 describe('slowFieldNames', () => {
   test('flags fields above the fastest one', () => {

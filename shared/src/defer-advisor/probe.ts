@@ -1,6 +1,6 @@
 import { ASTNode, FieldNode, FragmentDefinitionNode, OperationDefinitionNode, print, visit } from 'graphql';
 import { z } from 'zod';
-import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation';
+import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation.js';
 
 export const PROBE_RUNS = 3;
 

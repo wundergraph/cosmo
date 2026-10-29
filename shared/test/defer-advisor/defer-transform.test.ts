@@ -6,9 +6,9 @@ import {
   listDeferredFields,
   makeUniqueLabel,
   revertDefer,
-} from '../src/components/playground/defer-advisor/defer-transform';
-import { parseQuery } from '../src/components/playground/defer-advisor/operation';
-import { summarizeRootFields } from '../src/components/playground/defer-advisor/root-field-summary';
+} from '../../src/defer-advisor/defer-transform.js';
+import { parseQuery } from '../../src/defer-advisor/operation.js';
+import { summarizeRootFields } from '../../src/defer-advisor/root-field-summary.js';
 
 const parsed = (query: string) => {
   const result = parseQuery(query);

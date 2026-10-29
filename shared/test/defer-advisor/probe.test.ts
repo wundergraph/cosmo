@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { parseVariables, probeRootFields, PROBE_RUNS } from '../src/components/playground/defer-advisor/probe';
+import { parseVariables, probeRootFields, PROBE_RUNS } from '../../src/defer-advisor/probe.js';
 
 // graphql's printer breaks selections across lines; compare the shape, not the layout.
 const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
