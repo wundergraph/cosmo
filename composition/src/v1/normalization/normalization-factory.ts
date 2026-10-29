@@ -195,7 +195,7 @@ import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
-  type CacheTagRootFieldConfiguration,
+  type CacheTagConfiguration,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfiguration,
@@ -4564,8 +4564,8 @@ export class NormalizationFactory {
     const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
       newConfigurationData(false, typeName),
     );
-    getOrInitializeEntityCaching(configurationData).cacheTagRootFieldConfigurations.push(
-      ...Array.from(formats, (format): CacheTagRootFieldConfiguration => ({ fieldName, format, typeName })),
+    getOrInitializeEntityCaching(configurationData).cacheTagConfigurations.push(
+      ...Array.from(formats, (format): CacheTagConfiguration => ({ fieldName, format, typeName })),
     );
   }
 

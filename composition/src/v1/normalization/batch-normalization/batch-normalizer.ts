@@ -190,8 +190,8 @@ export class BatchNormalizer {
 
         subtractSet(fieldNames, configurationData.fieldNames);
         if (configurationData.entityCaching) {
-          configurationData.entityCaching.cacheTagRootFieldConfigurations =
-            configurationData.entityCaching.cacheTagRootFieldConfigurations.filter(
+          configurationData.entityCaching.cacheTagConfigurations =
+            configurationData.entityCaching.cacheTagConfigurations.filter(
               ({ fieldName }) => !fieldNames.has(fieldName),
             );
         }
