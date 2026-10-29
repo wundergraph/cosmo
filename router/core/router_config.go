@@ -114,6 +114,7 @@ type Config struct {
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
+	compatibilityFlags              config.CompatibilityFlags
 	storageProviders                config.StorageProviders
 	providerRegistry                *ProviderRegistry
 	demoMode                        bool
@@ -218,6 +219,9 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
 	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
+
+	usage["compatibility_flags_repair_undeclared_variables_enabled"] = c.compatibilityFlags.RepairUndeclaredVariables.Enabled
+	usage["compatibility_flags_repair_variable_types_enabled"] = c.compatibilityFlags.RepairVariableTypes.Enabled
 
 	usage["demo_mode"] = c.demoMode
 

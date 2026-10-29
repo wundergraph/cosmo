@@ -672,6 +672,12 @@ split_config_poller:
 
 router_config_path: 'latest.json'
 
+compatibility_flags:
+  repair_undeclared_variables:
+    enabled: true
+  repair_variable_types:
+    enabled: true
+
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
