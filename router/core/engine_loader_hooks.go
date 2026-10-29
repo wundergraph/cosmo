@@ -148,53 +148,87 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	})
 }
 
-// ttlToCacheControl renders the life a cache hit has left. A TTL of zero is
-// valid and means stale as of now, which is no-cache: max-age=0 would be dropped by
-// the most restrictive algorithm and let a longer default win instead.
-func ttlToCacheControl(ttl time.Duration, private bool) string {
-	maxAge := cache.ToDeltaSeconds(ttl)
-	if maxAge <= 0 {
-		if private {
-			return "private, " + noCache
+// hitDirectives is what a client may be told of a hit: max-age from the
+// subgraph's own max-age, s-maxage from the entries' life when it differs,
+// public only when every entry said so. Shared only entries gave no max-age, so
+// none is made up. Zero is stale, so no-cache.
+func hitDirectives(client, shared time.Duration, private, public, sharedOnly bool) *cachedirective.ResponseCacheDirectives {
+	dir := &cachedirective.ResponseCacheDirectives{
+		MaxAge: -1, SMaxAge: -1, StaleIfError: -1, StaleWhileRevalidate: -1,
+		PrivatePresent: private, Public: public && !private,
+	}
+	sMaxAge := cachedirective.DeltaSeconds(cache.ToDeltaSeconds(shared))
+	if sharedOnly && !private {
+		dir.SMaxAge = max(sMaxAge, 0)
+	} else {
+		dir.MaxAge = max(cachedirective.DeltaSeconds(cache.ToDeltaSeconds(client)), 0)
+		if !private && sMaxAge != dir.MaxAge {
+			dir.SMaxAge = max(sMaxAge, 0)
 		}
-		// Still public: the merge only keeps public when every fetch says it.
-		return "public, " + noCache
 	}
-	if private {
-		return fmt.Sprintf("private, max-age=%d", maxAge)
-	}
-	cacheControl := cache.CacheControlResponse{Public: true, MaxAge: &maxAge}
-	return cacheControl.ToHeaderString()
+	markStale(dir)
+	return dir
 }
 
-// applyResponseCacheLifetime puts the TTL left on the cached entries a fetch was
-// served from into its Cache-Control, where the most restrictive algorithm reads it.
-func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo) {
-	switch info.ResponseCache.Status {
-	case resolve.ResponseCacheStatusHit, resolve.ResponseCacheStatusPartialHit:
-	default:
-		return
+// capStoredLifetimes caps the lifetimes a stored miss's subgraph gave at
+// what was stored, net of Age. With none given, a shareable response gets the
+// stored life as s-maxage, as the engine's caching.Freshness.SharedOnly does;
+// otherwise as max-age.
+func capStoredLifetimes(origin *cachedirective.ResponseCacheDirectives, stored time.Duration) {
+	ttl := cachedirective.DeltaSeconds(cache.ToDeltaSeconds(stored))
+	if origin.MaxAge < 0 {
+		if !origin.PrivatePresent && (origin.SMaxAge >= 0 || origin.Public) {
+			if origin.SMaxAge < 0 {
+				origin.SMaxAge = ttl
+			}
+		} else {
+			origin.MaxAge = ttl
+		}
 	}
-	cached := ttlToCacheControl(info.ResponseCacheTTL, info.ResponseCachePrivate)
+	origin.MaxAge = min(origin.MaxAge, ttl)
+	if origin.SMaxAge >= 0 {
+		origin.SMaxAge = min(origin.SMaxAge, ttl)
+	}
+	markStale(origin)
+}
 
-	origin := cacheControlValue(headers)
-	if origin == "" {
-		headers.Set(cacheControlKey, cached)
+// applyResponseCacheLifetime puts the life of the entries a fetch was served
+// from, or was stored as, into its Cache-Control, where the most restrictive
+// algorithm reads it.
+func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo) {
+	rc := info.ResponseCache
+	hit := rc.Status == resolve.ResponseCacheStatusHit || rc.Status == resolve.ResponseCacheStatusPartialHit
+	stored := rc.StoreDecision == caching.StoreDecisionStored
+	if !hit && !stored {
 		return
 	}
-	originDirectives, err := cachedirective.ParseResponseCacheControl(origin)
-	if err != nil {
-		return
+
+	var policies []*cachedirective.Object
+	// A full hit sent no request, so has no origin header of its own.
+	if raw := cacheControlValue(headers); raw != "" || !hit {
+		origin, err := parseFreshness(headers)
+		if err != nil {
+			return
+		}
+		if !hit {
+			capStoredLifetimes(origin, rc.StoredTTL)
+		}
+		policies = append(policies, &cachedirective.Object{RespDirectives: origin})
 	}
-	cachedDirectives, err := cachedirective.ParseResponseCacheControl(cached)
-	if err != nil {
-		return
+	if hit {
+		client, shared := rc.ClientTTL, info.ResponseCacheTTL
+		if stored {
+			client, shared = min(client, rc.StoredTTL), min(shared, rc.StoredTTL)
+		}
+		policies = append(policies, &cachedirective.Object{
+			RespDirectives: hitDirectives(client, shared, info.ResponseCachePrivate, rc.Public, rc.SharedOnly),
+		})
 	}
-	_, merged := createMostRestrictivePolicy([]*cachedirective.Object{
-		{RespDirectives: originDirectives},
-		{RespDirectives: cachedDirectives},
-	})
+
+	_, merged := createMostRestrictivePolicy(policies)
 	headers.Set(cacheControlKey, merged)
+	// Lifetimes are net of Age now; the policy must not take it off again.
+	headers.Del("Age")
 }
 
 func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
@@ -204,6 +238,15 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	if responseInfo == nil {
 		responseInfo = &resolve.ResponseInfo{}
+	}
+
+	reqContext := getRequestContext(ctx)
+
+	// A no-store request writes nothing, whatever the engine decided.
+	if reqContext != nil && reqContext.cacheControl != nil && reqContext.cacheControl.NoStore &&
+		responseInfo.ResponseCache.StoreDecision == caching.StoreDecisionStored {
+		responseInfo.ResponseCache.StoreDecision = caching.StoreDecisionNone
+		responseInfo.ResponseCache.StoredTTL = 0
 	}
 
 	// Apply response header rules for ALL fetches (primary, entity resolution,
@@ -220,8 +263,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
 	}
-
-	reqContext := getRequestContext(ctx)
 
 	if reqContext == nil {
 		return

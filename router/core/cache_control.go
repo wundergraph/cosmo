@@ -30,15 +30,30 @@ func selectCacheStore(store caching.Cache, directives *cachedirective.RequestCac
 	if store == nil || directives == nil {
 		return store
 	}
-	switch {
-	case directives.NoCache && directives.NoStore:
+	switch revalidate := requestRevalidates(directives); {
+	case revalidate && directives.NoStore && directives.OnlyIfCached:
+		// Nothing stored is acceptable, so every lookup misses and the fetch is refused.
+		return notStored{notCached{store}}
+	case revalidate && directives.NoStore:
 		return nil
-	case directives.NoCache:
+	case revalidate:
 		return notCached{store}
 	case directives.NoStore:
 		return notStored{store}
 	}
 	return store
+}
+
+// requestRevalidates reports whether the client wants a fresh answer: no-cache,
+// or max-age=0, which accepts nothing already stored (RFC 9111 §5.2.1.1).
+func requestRevalidates(directives *cachedirective.RequestCacheDirectives) bool {
+	return directives != nil && (directives.NoCache || directives.MaxAge == 0)
+}
+
+// requestOnlyIfCached reports whether the client accepts only stored answers,
+// and a 504 otherwise (RFC 9111 §5.2.1.7).
+func requestOnlyIfCached(directives *cachedirective.RequestCacheDirectives) bool {
+	return directives != nil && directives.OnlyIfCached
 }
 
 // notCached is a store every lookup for a body misses on. Writes pass through.

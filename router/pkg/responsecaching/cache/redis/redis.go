@@ -119,14 +119,15 @@ func (c *RedisCache) GetMany(ctx context.Context, keys []string) (map[string]cac
 			continue
 		}
 
-		decoded, surrogateKeys, vary, err := caching.DecodeEntry(entryBody(value))
+		item, err := caching.DecodeItem(entryBody(value), ttl)
 		if err != nil {
 			return nil, fmt.Errorf("redis adapter decode %q: %w", key, err)
 		}
 
 		// Keyed by what the caller asked with, not the prefixed key it was
 		// stored under: the namespace is this cache's business, not theirs.
-		results[key] = caching.Item{Key: key, Value: bytes.Clone(decoded), TTL: ttl, SurrogateKeys: surrogateKeys, Vary: vary}
+		item.Key, item.Value = key, bytes.Clone(item.Value)
+		results[key] = item
 	}
 
 	return results, nil

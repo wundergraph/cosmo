@@ -442,7 +442,7 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 	t.Parallel()
 
 	type want struct {
-		// raw is compared verbatim when set, for a header that does not parse.
+		// raw is compared verbatim when set.
 		raw     string
 		maxAge  cachedirective.DeltaSeconds
 		public  bool
@@ -456,9 +456,47 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 		hit     bool          // served entirely from the cache
 		partial bool          // sent without the entries the cache answered
 		ttl     time.Duration // life left on the cached entries
+		stored  time.Duration // life the response was stored with, zero when not stored
 		origin  string        // Cache-Control the subgraph sent
 		want    *want         // nil: no header must be set
 	}{
+		{
+			name:   "a stored public miss reports the stored life to shared caches",
+			stored: 30 * time.Second,
+			origin: "public",
+			want:   &want{raw: "s-maxage=30, public"},
+		},
+		{
+			name:   "a stored miss caps a longer origin max-age",
+			stored: 5 * time.Second,
+			origin: "public, max-age=45",
+			want:   &want{maxAge: 5, public: true},
+		},
+		{
+			name:   "a stored miss does not add public",
+			stored: 30 * time.Second,
+			origin: "max-age=45",
+			want:   &want{maxAge: 30},
+		},
+		{
+			name:   "a stored miss without an origin header is not public",
+			stored: 30 * time.Second,
+			want:   &want{maxAge: 30},
+		},
+		{
+			name:   "a stored miss keeps the origin's private",
+			stored: 30 * time.Second,
+			origin: "private",
+			want:   &want{maxAge: 30, private: true},
+		},
+		{
+			name:    "a partial hit that stored reports the shorter life",
+			partial: true,
+			ttl:     30 * time.Second,
+			stored:  10 * time.Second,
+			origin:  "public, max-age=10",
+			want:    &want{maxAge: 10, public: true},
+		},
 		{
 			name:   "a miss with an origin header leaves it alone",
 			origin: "public, max-age=120",
@@ -547,7 +585,12 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 				ResponseCacheHit: tt.hit,
 				ResponseCacheTTL: tt.ttl,
 				ResponseCache: resolve.ResponseCacheInfo{
-					Status: cacheStatusOf(tt.hit, tt.partial),
+					Status:        cacheStatusFor(tt.hit, tt.partial),
+					StoreDecision: storeDecisionFor(tt.stored),
+					StoredTTL:     tt.stored,
+					// Public, client keeps the full shared life.
+					ClientTTL: tt.ttl,
+					Public:    tt.hit || tt.partial,
 				},
 			})
 
@@ -567,6 +610,77 @@ func TestApplyResponseCacheLifetime(t *testing.T) {
 			require.Equal(t, tt.want.private, got.PrivatePresent, "private")
 			require.Equal(t, tt.want.noStore, got.NoStore, "no-store")
 			require.Equal(t, tt.want.noCache, got.NoCachePresent, "no-cache")
+		})
+	}
+}
+
+// TestStoredResponseCacheLifetime pins the client Cache-Control of a stored
+// miss, and of a hit on what it stored: lifetimes the subgraph gave are capped
+// at what was stored, net of Age, and none it did not give are added.
+func TestStoredResponseCacheLifetime(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		origin   string
+		age      string
+		stored   time.Duration
+		wantMiss string
+		// wantHit is a hit on the entry right after; empty: same as wantMiss.
+		wantHit    string
+		client     time.Duration // the hit's client life
+		sharedOnly bool          // the entry gave no max-age
+	}{
+		{name: "s-maxage alone stays shared", origin: "s-maxage=300", stored: 300 * time.Second, wantMiss: "s-maxage=300", sharedOnly: true},
+		{name: "Age comes off s-maxage", origin: "s-maxage=300", age: "240", stored: 60 * time.Second, wantMiss: "s-maxage=60", sharedOnly: true},
+		{name: "max-age alone stays max-age", origin: "max-age=300", stored: 300 * time.Second, client: 300 * time.Second, wantMiss: "max-age=300"},
+		{name: "Age comes off max-age", origin: "max-age=300", age: "240", stored: 60 * time.Second, client: 60 * time.Second, wantMiss: "max-age=60"},
+		{name: "max-age is capped at s-maxage", origin: "max-age=300, s-maxage=120", stored: 120 * time.Second, client: 120 * time.Second, wantMiss: "max-age=120, s-maxage=120", wantHit: "max-age=120"},
+		{name: "a shorter max-age is kept", origin: "max-age=30, s-maxage=120", age: "20", stored: 100 * time.Second, client: 10 * time.Second, wantMiss: "max-age=10, s-maxage=100"},
+		{name: "a public fallback is shared only", origin: "public", stored: 30 * time.Second, wantMiss: "s-maxage=30, public", wantHit: "s-maxage=30, public", sharedOnly: true},
+		{name: "a private fallback is a max-age", origin: "private", stored: 30 * time.Second, client: 30 * time.Second, wantMiss: "max-age=30, private", wantHit: "max-age=30, private"},
+		{name: "a fallback without public is a max-age", origin: "must-revalidate", stored: 30 * time.Second, client: 30 * time.Second, wantMiss: "max-age=30, must-revalidate", wantHit: "max-age=30"},
+		{name: "field-specific no-cache keeps the lifetime", origin: `public, max-age=60, no-cache="Set-Cookie"`, stored: 60 * time.Second, client: 60 * time.Second, wantMiss: `max-age=60, no-cache="Set-Cookie", public`, wantHit: "max-age=60, public"},
+		{name: "must-revalidate is kept", origin: "max-age=60, must-revalidate", stored: 60 * time.Second, client: 60 * time.Second, wantMiss: "max-age=60, must-revalidate", wantHit: "max-age=60"},
+		{name: "a stale max-age under a live s-maxage is no-cache", origin: "max-age=10, s-maxage=600", age: "30", stored: 570 * time.Second, wantMiss: "no-cache", wantHit: "no-cache"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			miss := http.Header{}
+			miss.Set(cacheControlKey, tt.origin)
+			if tt.age != "" {
+				miss.Set("Age", tt.age)
+			}
+			applyResponseCacheLifetime(miss, &resolve.ResponseInfo{ResponseCache: resolve.ResponseCacheInfo{
+				Status:        resolve.ResponseCacheStatusMiss,
+				StoreDecision: caching.StoreDecisionStored,
+				StoredTTL:     tt.stored,
+			}})
+			require.Equal(t, tt.wantMiss, miss.Get(cacheControlKey), "miss")
+			require.Empty(t, miss.Get("Age"), "Age is netted out")
+
+			o, err := cachedirective.ParseResponseCacheControl(tt.origin)
+			require.NoError(t, err)
+			hit := http.Header{}
+			applyResponseCacheLifetime(hit, &resolve.ResponseInfo{
+				ResponseCacheHit:     true,
+				ResponseCacheTTL:     tt.stored,
+				ResponseCachePrivate: o.PrivatePresent,
+				ResponseCache: resolve.ResponseCacheInfo{
+					Status:     resolve.ResponseCacheStatusHit,
+					ClientTTL:  tt.client,
+					Public:     o.Public,
+					SharedOnly: tt.sharedOnly,
+				},
+			})
+			wantHit := tt.wantHit
+			if wantHit == "" {
+				wantHit = tt.wantMiss
+			}
+			require.Equal(t, wantHit, hit.Get(cacheControlKey), "hit")
 		})
 	}
 }
@@ -646,7 +760,9 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 				ResponseCacheHit: true,
 				ResponseCacheTTL: 30 * time.Second,
 				ResponseCache: resolve.ResponseCacheInfo{
-					Status: resolve.ResponseCacheStatusHit,
+					Status:    resolve.ResponseCacheStatusHit,
+					ClientTTL: 30 * time.Second,
+					Public:    true,
 				},
 			})
 
@@ -655,8 +771,16 @@ func TestOnFinished_ResponseCacheLifetime(t *testing.T) {
 	}
 }
 
-// cacheStatusOf is the status the engine reports for a fetch.
-func cacheStatusOf(hit, partial bool) resolve.ResponseCacheStatus {
+// storeDecisionFor is the store decision for a fetch stored with that lifetime.
+func storeDecisionFor(stored time.Duration) caching.StoreDecision {
+	if stored > 0 {
+		return caching.StoreDecisionStored
+	}
+	return caching.StoreDecisionNone
+}
+
+// cacheStatusFor is the status the engine reports for a fetch.
+func cacheStatusFor(hit, partial bool) resolve.ResponseCacheStatus {
 	switch {
 	case hit:
 		return resolve.ResponseCacheStatusHit

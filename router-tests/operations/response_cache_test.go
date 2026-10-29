@@ -686,7 +686,7 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 			require.Equal(t, first.Body, second.Body)
 			require.Len(t, employees.entityRequests(), 2, "the cold alias was fetched")
 
-			maxAge := maxAgeOf(t, second.Response.Header.Get("Cache-Control"))
+			maxAge := maxAgeFrom(t, second.Response.Header.Get("Cache-Control"))
 			require.Greater(t, maxAge, 0)
 			require.LessOrEqual(t, maxAge, 60,
 				"half of the merged fetch expires with the warm alias, so the origin's longer max-age must not reach the client")
@@ -1222,14 +1222,7 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 // The header is set before the handler runs, because the handler writes the body
 // and a header set after that is a header nobody receives.
 func cacheControlMiddleware(value string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if value != "" {
-				w.Header().Set("Cache-Control", value)
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+	return headersMiddleware("Cache-Control", value)
 }
 
 const responseCacheSharedKey = "a-shared-key-that-is-long-enough-to-pass"

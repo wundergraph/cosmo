@@ -1,6 +1,7 @@
 package core
 
 import (
+	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"net/http"
 	"testing"
 	"time"
@@ -89,11 +90,23 @@ func TestNewResponseCachePrivateID(t *testing.T) {
 	})
 }
 
-func TestTTLToCacheControl(t *testing.T) {
+func TestHitDirectives(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, "public, max-age=30", ttlToCacheControl(30*time.Second, false))
-	require.Equal(t, "private, max-age=30", ttlToCacheControl(30*time.Second, true))
-	require.Equal(t, "public, no-cache", ttlToCacheControl(0, false))
-	require.Equal(t, "private, no-cache", ttlToCacheControl(0, true))
+	hit := func(client, shared time.Duration, private, public, sharedOnly bool) string {
+		_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: hitDirectives(client, shared, private, public, sharedOnly)}})
+		return header
+	}
+	require.Equal(t, "max-age=30, public", hit(30*time.Second, 30*time.Second, false, true, false))
+	require.Equal(t, "max-age=30", hit(30*time.Second, 30*time.Second, false, false, false))
+	require.Equal(t, "max-age=30, private", hit(30*time.Second, 30*time.Second, true, false, false))
+	require.Equal(t, "max-age=30, s-maxage=600, public", hit(30*time.Second, 600*time.Second, false, true, false))
+	require.Equal(t, "max-age=30, private", hit(30*time.Second, 600*time.Second, true, false, false), "s-maxage is for shared caches")
+	require.Equal(t, "no-cache", hit(0, 600*time.Second, false, false, false))
+	require.Equal(t, "no-cache, public", hit(0, 0, false, true, false))
+	require.Equal(t, "no-cache, private", hit(0, 0, true, false, false))
+	require.Equal(t, "s-maxage=60, public", hit(0, 60*time.Second, false, true, true), "shared only: no max-age")
+	require.Equal(t, "s-maxage=60", hit(0, 60*time.Second, false, false, true))
+	require.Equal(t, "no-cache", hit(0, 0, false, false, true))
+	require.Equal(t, "max-age=60, s-maxage=5, public", hit(60*time.Second, 5*time.Second, false, true, false), "a shared-only entry's shorter life caps shared caches")
 }
