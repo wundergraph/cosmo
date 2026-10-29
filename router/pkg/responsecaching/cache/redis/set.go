@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -36,14 +37,33 @@ local now = t[1] * 1000 + math.floor(t[2] / 1000)
 return redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - ARGV[1])
 `
 
+// invalidatedMember holds, at minus its score, when the tag was last
+// invalidated, router clock, ms. Negative: the prune leaves it, the walk skips it.
+const invalidatedMember = "\x00invalidated"
+
+// invalidationSkew is how far apart routers' clocks may be: a write whose fetch
+// began up to this long after an invalidation is dropped as well.
+const invalidationSkew = time.Second
+
+// reservedMember reports a tag set's bookkeeping member. No cache key starts
+// with a NUL byte.
+func reservedMember(member string) bool { return strings.HasPrefix(member, "\x00") }
+
 // addMember adds ARGV[1] to KEYS[1] expiring ARGV[2] ms from now, or raises it
-// there, and returns the walk count held by ARGV[3]. GT: a write landing out
+// there, and returns the walk count held by ARGV[3]. A write whose fetch began
+// at ARGV[5] ms, at or before the invalidation held by ARGV[4], give or take
+// ARGV[6] ms of clock skew, read what that invalidation dropped: it returns -1
+// like a marked member, unlisted. GT: a write landing out
 // of order never lowers a member's score, which would let the prune drop it
 // while a newer entry is alive. A mark stays: only a walk removes it, after
 // deleting its entry, so a write that never lands can't take with it the
 // walk's duty to delete what came before. A marked member returns -1: the walk
 // will drop it, so the write's entry is unlisted.
 const addMember = `
+if tonumber(ARGV[5]) > 0 then
+  local inv = redis.call('ZSCORE', KEYS[1], ARGV[4])
+  if inv and -tonumber(inv) + ARGV[6] >= tonumber(ARGV[5]) then return -1 end
+end
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
 if s and tonumber(s) < 0 then return -1 end
 local t = redis.call('TIME')
@@ -179,7 +199,7 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item 
 	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
 	for _, tag := range item.Tags {
 		tagKey := c.tagKey(tag)
-		add := pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl, walksMember)
+		add := pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl, walksMember, invalidatedMember, item.FetchedAt.UnixMilli(), invalidationSkew.Milliseconds())
 		adds = append(adds, add)
 		cmds = append(cmds, add, pipe.ExpireNX(ctx, tagKey, tagTTL), pipe.ExpireGT(ctx, tagKey, tagTTL))
 	}

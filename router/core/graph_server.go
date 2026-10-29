@@ -83,18 +83,21 @@ type (
 	// All fields are shared between all feature muxes. On shutdown, all graph instances are shutdown.
 	graphServer struct {
 		*Config
-		graphServerCtx          context.Context
-		graphServerCancel       context.CancelFunc
-		routerCtx               context.Context
-		storageProviders        *config.StorageProviders
-		engineStats             statistics.EngineStatistics
-		playgroundHandler       func(http.Handler) http.Handler
-		publicKey               *ecdsa.PublicKey
-		baseTransport           *http.Transport
-		subgraphTransports      map[string]*http.Transport
-		baseOtelAttributes      []attribute.KeyValue
-		baseRouterConfigVersion string
-		mux                     *chi.Mux
+		// responseCacheSubgraphBases maps feature flag subgraphs to the base
+		// subgraphs they replace.
+		responseCacheSubgraphBases map[string]string
+		graphServerCtx             context.Context
+		graphServerCancel          context.CancelFunc
+		routerCtx                  context.Context
+		storageProviders           *config.StorageProviders
+		engineStats                statistics.EngineStatistics
+		playgroundHandler          func(http.Handler) http.Handler
+		publicKey                  *ecdsa.PublicKey
+		baseTransport              *http.Transport
+		subgraphTransports         map[string]*http.Transport
+		baseOtelAttributes         []attribute.KeyValue
+		baseRouterConfigVersion    string
+		mux                        *chi.Mux
 		// graphMuxList contains all graph muxes of this graph server.
 		// It's keyed by mux name (feature flag name or empty string for base graph).
 		graphMuxList            map[string]*graphMux
@@ -373,6 +376,20 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", slices.Sorted(maps.Keys(featureFlagConfigMap))))
 	}
 
+	// Feature flag subgraphs share their base subgraph's cache settings and
+	// invalidation. Flags in order, so a name two flags map differently is
+	// settled the same way every time.
+	if s.responseCache != nil {
+		s.responseCacheSubgraphBases = make(map[string]string)
+		for _, flag := range slices.Sorted(maps.Keys(featureFlagConfigMap)) {
+			for flagged, base := range featureSubgraphBases(response.Config.GetSubgraphs(), featureFlagConfigMap[flag].GetSubgraphs()) {
+				if _, seen := s.responseCacheSubgraphBases[flagged]; !seen {
+					s.responseCacheSubgraphBases[flagged] = base
+				}
+			}
+		}
+	}
+
 	multiGraphHandler, ffReusedMuxes, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
@@ -486,6 +503,9 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	// so a subsequent reload that no longer reuses them will still shut them
 	// down correctly.
 	s.commitReusedMuxes(reusedMuxes)
+
+	// Only once the server is built: a failed reload keeps serving the old one.
+	s.responseCacheSubgraphAliases.Set(s.responseCacheSubgraphBases)
 
 	return s, nil
 }
@@ -1842,7 +1862,7 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 
 		// Compiled with this mux's manager so what the expressions use is recorded.
-		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.logger)
+		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.responseCacheSubgraphBases, s.logger)
 		if err != nil {
 			return nil, err
 		}

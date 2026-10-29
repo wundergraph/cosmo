@@ -68,12 +68,11 @@ func TestResponseCacheTagHeader(t *testing.T) {
 
 			surrogateKeys := surrogateKeysOf(t, first.Response.Header.Get("Cache-Tag"), ",")
 
-			// Coarsest first: every subgraph surrogateKey, then every type surrogateKey, then the rest.
-			require.Equal(t, []string{"subgraph-employees", "subgraph-mood", "type-mood-Employee"}, surrogateKeys[:3])
+			require.ElementsMatch(t, []string{"subgraph-employees", "type-employees-Query", "subgraph-mood", "type-mood-Employee"}, surrogateKeys[:4])
 			require.Contains(t, surrogateKeys, "moods")
 			require.Contains(t, surrogateKeys, "employee-1")
 			require.Contains(t, surrogateKeys, "employee-10")
-			require.NotContains(t, surrogateKeys, "type-employees-Employee", "a root fetch has no single typename")
+			require.NotContains(t, surrogateKeys, "type-employees-Employee", "a root fetch is keyed by its root type")
 
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(),

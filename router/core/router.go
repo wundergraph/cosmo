@@ -1221,6 +1221,7 @@ func (r *Router) setupResponseCache(ctx context.Context) error {
 	if err := validateResponseCacheTagHeader(r.responseCacheConfig.TagHeader); err != nil {
 		return err
 	}
+	r.responseCacheSubgraphAliases = &responsecaching.SubgraphAliases{}
 	var err error
 	switch provider := r.responseCacheConfig.Storage.Provider; provider {
 	case "", config.ResponseCacheStorageProviderRedis:
@@ -1298,7 +1299,7 @@ func (r *Router) startResponseCacheInvalidationServer(ctx context.Context) error
 		return nil
 	}
 
-	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache, r.corsOptions)
+	svr, err := invalidation.NewServer(r.logger, r.responseCacheConfig.Invalidation, r.responseCache, r.responseCacheSubgraphAliases, r.corsOptions)
 	if err != nil {
 		return fmt.Errorf("failed to create response cache invalidation server: %w", err)
 	}

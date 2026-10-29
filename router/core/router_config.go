@@ -140,12 +140,15 @@ type Config struct {
 	responseCache                   ResponseCache
 	responseCacheMetrics            rmetric.ResponseCacheMetricStore
 	responseCacheInvalidationServer *http.Server
-	mcpServer                       *mcpserver.GraphQLSchemaServer
-	connectRPCServer                *connectrpc.Server
-	processStartTime                time.Time
-	developmentMode                 bool
-	healthcheck                     health.Checker
-	accessLogsConfig                *AccessLogsConfig
+	// responseCacheSubgraphAliases maps base subgraphs to the feature flag
+	// subgraphs replacing them, for invalidation.
+	responseCacheSubgraphAliases *responsecaching.SubgraphAliases
+	mcpServer                    *mcpserver.GraphQLSchemaServer
+	connectRPCServer             *connectrpc.Server
+	processStartTime             time.Time
+	developmentMode              bool
+	healthcheck                  health.Checker
+	accessLogsConfig             *AccessLogsConfig
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 	localhostFallbackInsideDocker bool
 	tls                           TlsConfig
