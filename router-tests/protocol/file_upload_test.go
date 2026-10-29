@@ -256,51 +256,6 @@ func TestSingleFileUpload_InvalidFileFormat(t *testing.T) {
 	})
 }
 
-func TestFileUpload_InvalidUploadMap(t *testing.T) {
-	t.Parallel()
-
-	// sendUpload sends a single file in a multipart field named fieldName, with uploadsMap as the map field.
-	sendUpload := func(t *testing.T, xEnv *testenv.Environment, fieldName, uploadsMap string) *testenv.TestResponse {
-		t.Helper()
-
-		operations, err := json.Marshal(testenv.GraphQLRequest{
-			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
-			Variables: []byte(`{"file":null}`),
-		})
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		w := multipart.NewWriter(&body)
-		require.NoError(t, w.WriteField("operations", string(operations)))
-		require.NoError(t, w.WriteField("map", uploadsMap))
-		filePart, err := w.CreateFormFile(fieldName, uuid.NewString())
-		require.NoError(t, err)
-		_, err = filePart.Write([]byte("file content"))
-		require.NoError(t, err)
-		require.NoError(t, w.Close())
-
-		req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), &body)
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", w.FormDataContentType())
-
-		res, err := xEnv.MakeGraphQLRequestRaw(req)
-		require.NoError(t, err)
-		return res
-	}
-
-	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		t.Run("file field without an entry in the upload map", func(t *testing.T) {
-			res := sendUpload(t, xEnv, "1", `{"0": ["variables.file"]}`)
-			require.Equal(t, `{"errors":[{"message":"file \"1\" has no entry in the upload map"}]}`, res.Body)
-		})
-
-		t.Run("empty upload path", func(t *testing.T) {
-			res := sendUpload(t, xEnv, "0", `{"0": [""]}`)
-			require.Equal(t, `{"errors":[{"message":"empty variable name for upload index 0"}]}`, res.Body)
-		})
-	})
-}
-
 func TestSingleFileUpload_NoFileProvided(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -527,9 +482,7 @@ func TestFileUpload_UploadDisabled(t *testing.T) {
 	})
 }
 
-// TestFileUploadPaths verifies that every uploaded file reaches the subgraph under the
-// variable path of the variable it was uploaded for, and not under the path of another file.
-func TestFileUploadPaths(t *testing.T) {
+func TestFileUpload(t *testing.T) {
 	t.Parallel()
 
 	// Go randomizes the iteration order of maps, so each request is sent several times
@@ -538,6 +491,35 @@ func TestFileUploadPaths(t *testing.T) {
 
 	subgraphRequests := make(chan capturedRequest, attempts)
 
+	// sendUpload sends a single file in a multipart field named fieldName, with uploadsMap as the map field.
+	sendUpload := func(t *testing.T, xEnv *testenv.Environment, fieldName, uploadsMap string) *testenv.TestResponse {
+		t.Helper()
+
+		operations, err := json.Marshal(testenv.GraphQLRequest{
+			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
+			Variables: []byte(`{"file":null}`),
+		})
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		w := multipart.NewWriter(&body)
+		require.NoError(t, w.WriteField("operations", string(operations)))
+		require.NoError(t, w.WriteField("map", uploadsMap))
+		filePart, err := w.CreateFormFile(fieldName, uuid.NewString())
+		require.NoError(t, err)
+		_, err = filePart.Write([]byte("file content"))
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), &body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", w.FormDataContentType())
+
+		res, err := xEnv.MakeGraphQLRequestRaw(req)
+		require.NoError(t, err)
+		return res
+	}
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
@@ -545,7 +527,7 @@ func TestFileUploadPaths(t *testing.T) {
 			},
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
-		t.Run("multiple files in a list", func(t *testing.T) {
+		t.Run("sends each file of a list under its own variable path", func(t *testing.T) {
 			for range attempts {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `mutation($files: [Upload!]!) { multipleUpload(files: $files) }`,
@@ -556,8 +538,12 @@ func TestFileUploadPaths(t *testing.T) {
 						{VariablesPath: "variables.files.2", FileContent: []byte("file 2")},
 					},
 				})
+
+				// The mutation succeeds
 				require.JSONEq(t, `{"data":{"multipleUpload":true}}`, res.Body)
 
+				// The subgraph receives every file under the list index it was uploaded for.
+				// The variable is not renamed, so the paths are the same as in the client request.
 				require.Equal(t, map[string]string{
 					"variables.files.0": "file 0",
 					"variables.files.1": "file 1",
@@ -566,7 +552,7 @@ func TestFileUploadPaths(t *testing.T) {
 			}
 		})
 
-		t.Run("files moved into an extracted input variable", func(t *testing.T) {
+		t.Run("keeps each file under its own variable path when normalization moves the files", func(t *testing.T) {
 			// Normalization extracts the inline input object into a new variable, which moves
 			// both files. The files are sent in the opposite order of their use in the query.
 			for range attempts {
@@ -578,13 +564,33 @@ func TestFileUploadPaths(t *testing.T) {
 						{VariablesPath: "variables.first", FileContent: []byte("first")},
 					},
 				})
+
+				// The mutation succeeds
 				require.JSONEq(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
 
+				// The subgraph receives the inline input object as the extracted variable $a.
+				// $first is now at a.nested.file and $second at a.nestedList.0, and each
+				// path must still carry the content that was uploaded for that variable.
 				require.Equal(t, map[string]string{
 					"variables.a.nested.file":  "first",
 					"variables.a.nestedList.0": "second",
 				}, uploadsByPath(t, <-subgraphRequests))
 			}
+		})
+
+		t.Run("rejects the request when a file field has no entry in the upload map", func(t *testing.T) {
+			// The file is sent in field "1", but the upload map only has an entry for "0"
+			res := sendUpload(t, xEnv, "1", `{"0": ["variables.file"]}`)
+
+			// The router rejects the request itself instead of forwarding a file without a path to the subgraph
+			require.Equal(t, `{"errors":[{"message":"file \"1\" has no entry in the upload map"}]}`, res.Body)
+		})
+
+		t.Run("rejects the request when the upload path is empty", func(t *testing.T) {
+			res := sendUpload(t, xEnv, "0", `{"0": [""]}`)
+
+			// The empty path is rejected while parsing the upload map
+			require.Equal(t, `{"errors":[{"message":"empty variable name for upload index 0"}]}`, res.Body)
 		})
 	})
 }
