@@ -2120,11 +2120,7 @@ export class FederationFactory {
   }
 
   // Returns an error message if the value of an "$args" reference is absent from the client or router schema.
-  validateCacheTagReference(
-    fieldData: FieldData,
-    subgraphName: SubgraphName,
-    reference: string,
-  ): string | undefined {
+  validateCacheTagReference(fieldData: FieldData, subgraphName: SubgraphName, reference: string): string | undefined {
     /* The first segment is an argument of the field; each following segment is a field of an Input Object.
      * NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
      * or that traverses a list or a leaf.
