@@ -969,9 +969,9 @@ type WebSocketConfiguration struct {
 	// DefaultSubprotocol is used when the client does not send a Sec-WebSocket-Protocol header. Empty rejects the connection.
 	DefaultSubprotocol string `yaml:"default_subprotocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers" envPrefix:"FORWARD_UPGRADE_HEADERS_"`
+	ForwardUpgradeHeaders ForwardUpgradeAllowList `yaml:"forward_upgrade_headers" envPrefix:"FORWARD_UPGRADE_HEADERS_"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeQueryParams ForwardUpgradeQueryParamsConfiguration `yaml:"forward_upgrade_query_params" envPrefix:"FORWARD_UPGRADE_QUERY_PARAMS_"`
+	ForwardUpgradeQueryParams ForwardUpgradeAllowList `yaml:"forward_upgrade_query_params" envPrefix:"FORWARD_UPGRADE_QUERY_PARAMS_"`
 	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" envDefault:"true" env:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 	// Authentication configuration for the WebSocket Connection
@@ -1000,12 +1000,8 @@ type ForwardToRequestHeadersConfiguration struct {
 	VersionTargetHeader string `yaml:"version_target_header" envDefault:"graphql-client-version" env:"VERSION_TARGET_HEADER"`
 }
 
-type ForwardUpgradeHeadersConfiguration struct {
-	Enabled   bool     `yaml:"enabled" envDefault:"true" env:"ENABLED"`
-	AllowList []string `yaml:"allow_list" envDefault:"Authorization" env:"ALLOW_LIST"`
-}
-
-type ForwardUpgradeQueryParamsConfiguration struct {
+// ForwardUpgradeAllowList toggles forwarding of upgrade-request headers or query params and lists which ones are allowed.
+type ForwardUpgradeAllowList struct {
 	Enabled   bool     `yaml:"enabled" envDefault:"true" env:"ENABLED"`
 	AllowList []string `yaml:"allow_list" envDefault:"Authorization" env:"ALLOW_LIST"`
 }
