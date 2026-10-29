@@ -2,8 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { create } from '@bufbuild/protobuf';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION, Subgraph } from '@wundergraph/composition';
 import {
-  CacheTagEntityConfigurationSchema,
-  CacheTagRootFieldConfigurationSchema,
+  CacheTagConfigurationSchema,
   EntityCachingConfigurationSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -13,7 +12,7 @@ import { createSubgraph, federateSubgraphsSuccess } from '../../composition/test
 import { buildRouterConfig, ComposedSubgraph, SubgraphKind } from '../src';
 
 describe('Entity caching configuration tests', () => {
-  test('that a CacheTagRootFieldConfiguration is produced for each @cacheTag format', () => {
+  test('that a CacheTagConfiguration is produced for each @cacheTag format', () => {
     const routerConfig = buildRouterConfigFromSubgraphs([
       createSubgraph(
         'products',
@@ -29,14 +28,14 @@ describe('Entity caching configuration tests', () => {
     // @cacheTag alone must produce the EntityCachingConfiguration.
     expect(routerConfig.engineConfig?.datasourceConfigurations[0].entityCachingConfiguration).toStrictEqual(
       create(EntityCachingConfigurationSchema, {
-        cacheTagRootFieldConfigurations: [
-          create(CacheTagRootFieldConfigurationSchema, {
+        cacheTagConfigurations: [
+          create(CacheTagConfigurationSchema, {
             typeName: 'Query',
             fieldName: 'product',
             format: 'product-{$args.id}',
           }),
-          create(CacheTagRootFieldConfigurationSchema, { typeName: 'Query', fieldName: 'product', format: 'products' }),
-          create(CacheTagRootFieldConfigurationSchema, {
+          create(CacheTagConfigurationSchema, { typeName: 'Query', fieldName: 'product', format: 'products' }),
+          create(CacheTagConfigurationSchema, {
             typeName: 'Query',
             fieldName: 'products',
             format: 'products',
@@ -46,7 +45,7 @@ describe('Entity caching configuration tests', () => {
     );
   });
 
-  test('that a CacheTagEntityConfiguration is produced for each @cacheTag format upon an entity', () => {
+  test('that a CacheTagConfiguration is produced for each @cacheTag format upon an entity', () => {
     const routerConfig = buildRouterConfigFromSubgraphs([
       createSubgraph(
         'products',
@@ -64,9 +63,9 @@ describe('Entity caching configuration tests', () => {
     // @cacheTag upon an entity alone must produce the EntityCachingConfiguration.
     expect(routerConfig.engineConfig?.datasourceConfigurations[0].entityCachingConfiguration).toStrictEqual(
       create(EntityCachingConfigurationSchema, {
-        cacheTagEntityConfigurations: [
-          create(CacheTagEntityConfigurationSchema, { typeName: 'Product', format: 'product-{$key.id}' }),
-          create(CacheTagEntityConfigurationSchema, { typeName: 'Product', format: 'products' }),
+        cacheTagConfigurations: [
+          create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'product-{$key.id}' }),
+          create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'products' }),
         ],
       }),
     );
