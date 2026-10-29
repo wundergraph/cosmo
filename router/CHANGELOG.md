@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.365.0](https://github.com/wundergraph/cosmo/compare/router@0.364.1...router@0.365.0) (2026-10-28)
+
+### Features
+
+* measure defer advisor root field latency and surface in the panel ([#3427](https://github.com/wundergraph/cosmo/issues/3427)) ([2d49f63](https://github.com/wundergraph/cosmo/commit/2d49f63735fecd8fd7d9967f9fa8954f239b7277)) (@gausie)
+* **router:** add CORS expose_headers in the router configuration ([#3424](https://github.com/wundergraph/cosmo/issues/3424)) ([9779474](https://github.com/wundergraph/cosmo/commit/9779474ac7b3f34384875cfb7432dc60a9a315f1)) (@vdatcu)
+* show defer advisor latencies as pills in the query editor ([#3428](https://github.com/wundergraph/cosmo/issues/3428)) ([66dcfe3](https://github.com/wundergraph/cosmo/commit/66dcfe37adf55d3cdc7a92ef5e997e248f881981)) (@gausie)
+
+### Bug Fixes
+
+* improve the "Field Selection Merging" validator ([#3437](https://github.com/wundergraph/cosmo/issues/3437)) ([c7a1722](https://github.com/wundergraph/cosmo/commit/c7a1722b0480b3bf1f935a04dd6f452160f090eb)) (@ysmolski)
+* incorrect entity filtering for mulitple entity types request with requires ([#3422](https://github.com/wundergraph/cosmo/issues/3422)) ([1d0e7eb](https://github.com/wundergraph/cosmo/commit/1d0e7eb5241983604032ba3cd4ad29d106397606)) (@Noroth)
+
 ## [0.364.1](https://github.com/wundergraph/cosmo/compare/router@0.364.0...router@0.364.1) (2026-10-27)
 
 ### Bug Fixes
