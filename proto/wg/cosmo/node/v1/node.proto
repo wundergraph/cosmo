@@ -103,10 +103,8 @@ message EntityCachingConfiguration {
   repeated CacheInvalidateConfiguration cache_invalidate_configurations = 2;
   // Per-Mutation/Subscription-field cache population configs (from @openfed__cachePopulate)
   repeated CachePopulateConfiguration cache_populate_configurations = 3;
-  // Per-Query-field cache tag formats (from @cacheTag)
-  repeated CacheTagRootFieldConfiguration cache_tag_root_field_configurations = 4;
-  // Per-entity cache tag formats (from @cacheTag)
-  repeated CacheTagEntityConfiguration cache_tag_entity_configurations = 5;
+  // Per-Query-field and per-entity cache tag formats (from @cacheTag)
+  repeated CacheTagConfiguration cache_tag_configurations = 4;
 }
 
 // Per-entity declaration for @openfed__entityCache. Marks a @key entity type as cacheable so the
@@ -143,25 +141,19 @@ message CachePopulateConfiguration {
   string entity_type_name = 4;
 }
 
-// Per-field declaration for @cacheTag, one per distinct format on the field.
-// The format is literal text with "{$args.<path>}" placeholders.
+// Per-Query-field or per-entity declaration for @cacheTag, one per distinct format.
+// The format is literal text with placeholders, which contain no whitespace.
+// Upon a Query field, a placeholder is "{$args.<path>}".
 // A path names a field argument, then optionally nested Input Object fields.
-// Placeholders contain no whitespace.
-message CacheTagRootFieldConfiguration {
-  string type_name = 1;
-  string field_name = 2;
-  string format = 3;
-}
-
-// Per-entity declaration for @cacheTag, one per distinct format on the type.
-// The format is literal text with "{$key.<path>}" placeholders.
+// Upon an entity, a placeholder is "{$key.<path>}".
 // A path names a key field, then optionally fields of a nested key Object; it never includes a list.
 // Every resolvable @key of the type in this subgraph selects each path,
 // so every representation the router sends to this subgraph contains it.
-// Placeholders contain no whitespace.
-message CacheTagEntityConfiguration {
+message CacheTagConfiguration {
   string type_name = 1;
-  string format = 2;
+  // Empty for an entity.
+  string field_name = 2;
+  string format = 3;
 }
 
 message CostConfiguration {
