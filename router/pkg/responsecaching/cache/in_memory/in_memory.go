@@ -18,12 +18,13 @@ const maxSize = 100_000
 // entry is what ristretto holds: the value and the surrogateKeys a hit hands back,
 // or the vary name sets of a record.
 type entry struct {
-	value              []byte
-	surrogateKeys      []enginecache.SurrogateKey
-	vary               [][]string
-	public             bool
-	sharedOnly         bool
-	clientTTLReduction time.Duration
+	value         []byte
+	surrogateKeys []enginecache.SurrogateKey
+	vary          [][]string
+	public        bool
+	sharedOnly    bool
+	// clientTTLGap is TTL less ClientTTL; both count down together.
+	clientTTLGap time.Duration
 }
 
 // cloneSets copies a record's name sets, inner slices included.
@@ -102,14 +103,14 @@ func (c *InMemoryCache) GetMany(ctx context.Context, keys []string) (map[string]
 		}
 
 		results[key] = enginecache.Item{
-			Key:                key,
-			Value:              bytes.Clone(value.value),
-			TTL:                ttl,
-			SurrogateKeys:      slices.Clone(value.surrogateKeys),
-			Vary:               cloneSets(value.vary),
-			Public:             value.public,
-			SharedOnly:         value.sharedOnly,
-			ClientTTLReduction: value.clientTTLReduction,
+			Key:           key,
+			Value:         bytes.Clone(value.value),
+			TTL:           ttl,
+			SurrogateKeys: slices.Clone(value.surrogateKeys),
+			Vary:          cloneSets(value.vary),
+			Public:        value.public,
+			SharedOnly:    value.sharedOnly,
+			ClientTTL:     max(ttl-value.clientTTLGap, 0),
 		}
 	}
 
@@ -147,12 +148,12 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 		// A write ristretto turned away is not there to be found, so indexing
 		// it would leave the tag naming an entry that never existed.
 		stored := entry{
-			value:              bytes.Clone(item.Value),
-			surrogateKeys:      slices.Clone(item.SurrogateKeys),
-			vary:               cloneSets(item.Vary),
-			public:             item.Public,
-			sharedOnly:         item.SharedOnly,
-			clientTTLReduction: item.ClientTTLReduction,
+			value:         bytes.Clone(item.Value),
+			surrogateKeys: slices.Clone(item.SurrogateKeys),
+			vary:          cloneSets(item.Vary),
+			public:        item.Public,
+			sharedOnly:    item.SharedOnly,
+			clientTTLGap:  max(item.TTL-item.ClientTTL, 0),
 		}
 		if !c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
 			continue

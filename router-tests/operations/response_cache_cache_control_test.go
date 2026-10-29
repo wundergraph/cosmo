@@ -394,6 +394,16 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 			require.Equal(t, http.StatusOK, warm.Response.StatusCode)
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
+
+			// no-cache, no-store bypass the cache: nothing stored is acceptable.
+			req, err = http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(body))
+			require.NoError(t, err)
+			req.Header = http.Header{"Cache-Control": {"only-if-cached, no-cache, no-store"}}
+			bypassed, err := testenv.MakeGraphQLRequestRawFromClient(req, http.DefaultClient)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusGatewayTimeout, bypassed.Response.StatusCode)
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Employees.Load())
+			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 		})
 	})
 }

@@ -388,6 +388,7 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	}
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
+	r.corsOptions.ExposeHeaders = stringsx.RemoveDuplicates(r.corsOptions.ExposeHeaders)
 
 	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
@@ -2386,6 +2387,7 @@ func CorsDefaultOptions() *cors.Config {
 			http.MethodPost,
 		},
 		AllowHeaders:     []string{},
+		ExposeHeaders:    []string{},
 		AllowCredentials: false,
 	}
 }
