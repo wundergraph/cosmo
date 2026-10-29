@@ -83,7 +83,7 @@ export type ExternalFieldData = {
 };
 
 export type CacheTagData = {
-  // The canonical form of each valid format.
+  // The normalized form of each valid format.
   formats: Set<string>;
   // The "$args" references of those formats.
   references: Set<string>;

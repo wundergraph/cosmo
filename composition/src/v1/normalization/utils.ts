@@ -43,6 +43,7 @@ import {
 } from '../../errors/errors';
 import {
   BASE_SCALARS,
+  CACHE_TAG_BRACE_REGEXP,
   CACHE_TAG_PLACEHOLDER_REGEXP,
   CACHE_TAG_SEGMENT_REGEXP,
   EDFS_ARGS_REGEXP,
@@ -492,15 +493,15 @@ export function validateArgumentTemplateReferences(
   }
 }
 
-/* Returns the placeholders of a @cacheTag format and its canonical form,
+/* Returns the placeholders of a @cacheTag format and its normalized form,
  * and pushes an error message for each malformed placeholder.
- * The canonical form removes the whitespace within each placeholder,
+ * The normalized form removes the whitespace within each placeholder,
  * so formats that produce the same tags are equal.
  * Whether a placeholder's namespace and reference are valid for the field is checked by the caller.
  */
 export function parseCacheTagFormat(format: string, errorMessages: Array<string>): ParsedCacheTagFormat {
   const placeholders: Array<CacheTagPlaceholder> = [];
-  const canonicalFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment: string, body: string) => {
+  const normalizedFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment: string, body: string) => {
     const match = CACHE_TAG_PLACEHOLDER_REGEXP.exec(body);
     if (!match) {
       errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
@@ -512,10 +513,10 @@ export function parseCacheTagFormat(format: string, errorMessages: Array<string>
     return `{$${placeholder.namespace}.${placeholder.reference}}`;
   });
   // A brace that remains once every placeholder is removed is unpaired.
-  if (/[{}]/.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {
+  if (CACHE_TAG_BRACE_REGEXP.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {
     errorMessages.push(invalidCacheTagBraceErrorMessage(format));
   }
-  return { canonicalFormat, placeholders };
+  return { normalizedFormat, placeholders };
 }
 
 export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefinitionData> {

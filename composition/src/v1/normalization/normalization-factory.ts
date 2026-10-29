@@ -4527,7 +4527,7 @@ export class NormalizationFactory {
         continue;
       }
       const errorMessages: Array<string> = [];
-      const { canonicalFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
+      const { normalizedFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
       for (const { namespace, reference } of placeholders) {
         // Only the "$args" namespace is supported upon a field.
         if (namespace !== ARGS) {
@@ -4552,7 +4552,7 @@ export class NormalizationFactory {
         this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [...new Set(errorMessages)]));
         continue;
       }
-      formats.add(canonicalFormat);
+      formats.add(normalizedFormat);
       for (const { reference } of placeholders) {
         references.add(reference);
       }

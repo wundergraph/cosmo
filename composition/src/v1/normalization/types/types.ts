@@ -227,6 +227,6 @@ export type CacheTagPlaceholder = {
 };
 
 export type ParsedCacheTagFormat = {
-  canonicalFormat: string;
+  normalizedFormat: string;
   placeholders: Array<CacheTagPlaceholder>;
 };

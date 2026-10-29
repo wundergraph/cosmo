@@ -9,7 +9,7 @@ describe('format parsing tests', () => {
   test('that a format without placeholders yields no placeholders', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products',
+      normalizedFormat: 'products',
       placeholders: [],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -18,7 +18,7 @@ describe('format parsing tests', () => {
   test('that a placeholder is parsed into its namespace and reference', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$args.searchKey}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.searchKey}',
+      normalizedFormat: 'products-{$args.searchKey}',
       placeholders: [{ namespace: 'args', reference: 'searchKey' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -27,7 +27,7 @@ describe('format parsing tests', () => {
   test('that whitespace surrounding a placeholder is tolerated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{   $args.searchKey        }', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.searchKey}',
+      normalizedFormat: 'products-{$args.searchKey}',
       placeholders: [{ namespace: 'args', reference: 'searchKey' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -36,7 +36,7 @@ describe('format parsing tests', () => {
   test('that a period-delimited reference is preserved as a path', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$args.filter.category}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.filter.category}',
+      normalizedFormat: 'products-{$args.filter.category}',
       placeholders: [{ namespace: 'args', reference: 'filter.category' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -45,7 +45,7 @@ describe('format parsing tests', () => {
   test('that every placeholder of a format is parsed in order', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('{$args.a}-{$args.b}-{$args.c}', errorMessages)).toStrictEqual({
-      canonicalFormat: '{$args.a}-{$args.b}-{$args.c}',
+      normalizedFormat: '{$args.a}-{$args.b}-{$args.c}',
       placeholders: [
         { namespace: 'args', reference: 'a' },
         { namespace: 'args', reference: 'b' },
@@ -58,7 +58,7 @@ describe('format parsing tests', () => {
   test('that the namespace is returned verbatim rather than validated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$request.id}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$request.id}',
+      normalizedFormat: 'products-{$request.id}',
       placeholders: [{ namespace: 'request', reference: 'id' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -120,7 +120,7 @@ describe('format parsing tests', () => {
   test('that whitespace surrounding the period is tolerated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{ $args . name }', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.name}',
+      normalizedFormat: 'products-{$args.name}',
       placeholders: [{ namespace: 'args', reference: 'name' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -129,7 +129,7 @@ describe('format parsing tests', () => {
   test('that whitespace upon one side of the period is tolerated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('{$args .a}-{$args. b}', errorMessages)).toStrictEqual({
-      canonicalFormat: '{$args.a}-{$args.b}',
+      normalizedFormat: '{$args.a}-{$args.b}',
       placeholders: [
         { namespace: 'args', reference: 'a' },
         { namespace: 'args', reference: 'b' },
@@ -141,7 +141,7 @@ describe('format parsing tests', () => {
   test('that a newline or tab surrounding the period is tolerated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$args\n.\tname}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.name}',
+      normalizedFormat: 'products-{$args.name}',
       placeholders: [{ namespace: 'args', reference: 'name' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -150,7 +150,7 @@ describe('format parsing tests', () => {
   test('that whitespace surrounding each period of a path is removed from the reference', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$args.filter . nested\n.depth}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.filter.nested.depth}',
+      normalizedFormat: 'products-{$args.filter.nested.depth}',
       placeholders: [{ namespace: 'args', reference: 'filter.nested.depth' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -202,7 +202,7 @@ describe('format parsing tests', () => {
   test('that a leading underscore is a valid namespace and path segment', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{$_args._name}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$_args._name}',
+      normalizedFormat: 'products-{$_args._name}',
       placeholders: [{ namespace: '_args', reference: '_name' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -211,7 +211,7 @@ describe('format parsing tests', () => {
   test('that a newline surrounding a placeholder is tolerated', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('products-{\n$args.name\n}', errorMessages)).toStrictEqual({
-      canonicalFormat: 'products-{$args.name}',
+      normalizedFormat: 'products-{$args.name}',
       placeholders: [{ namespace: 'args', reference: 'name' }],
     });
     expect(errorMessages).toStrictEqual([]);
@@ -228,7 +228,7 @@ describe('format parsing tests', () => {
   test('that an identical placeholder repeated in a format is parsed each time', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('{$args.a}-{$args.a}', errorMessages)).toStrictEqual({
-      canonicalFormat: '{$args.a}-{$args.a}',
+      normalizedFormat: '{$args.a}-{$args.a}',
       placeholders: [
         { namespace: 'args', reference: 'a' },
         { namespace: 'args', reference: 'a' },
@@ -237,20 +237,20 @@ describe('format parsing tests', () => {
     expect(errorMessages).toStrictEqual([]);
   });
 
-  test('that text outside a placeholder is retained verbatim in the canonical format', () => {
+  test('that text outside a placeholder is retained verbatim in the normalized format', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat(' tag  one-{ $args.id }\t', errorMessages)).toStrictEqual({
-      canonicalFormat: ' tag  one-{$args.id}\t',
+      normalizedFormat: ' tag  one-{$args.id}\t',
       placeholders: [{ namespace: 'args', reference: 'id' }],
     });
     expect(errorMessages).toStrictEqual([]);
   });
 
   // JavaScript "\\s" matches Unicode whitespace, so it is removed rather than passed to the router.
-  test('that Unicode whitespace within a placeholder is removed from the canonical format', () => {
+  test('that Unicode whitespace within a placeholder is removed from the normalized format', () => {
     const errorMessages: Array<string> = [];
     expect(parseCacheTagFormat('{\u00a0$args\u2028.\u3000id\ufeff}', errorMessages)).toStrictEqual({
-      canonicalFormat: '{$args.id}',
+      normalizedFormat: '{$args.id}',
       placeholders: [{ namespace: 'args', reference: 'id' }],
     });
     expect(errorMessages).toStrictEqual([]);
