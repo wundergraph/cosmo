@@ -34,7 +34,7 @@ jobs:
         run: pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Build workspace dependencies
-        run: pnpm run --filter './playground^...' build
+        run: pnpm run --filter '@wundergraph/playground^...' build
 
       - name: Build for router
         run: pnpm run --filter ./playground build:router
