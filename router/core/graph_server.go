@@ -2341,6 +2341,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	// Reused mux handlers still reference the server that built them. Release
+	// its mux map and routing handlers so they do not retain replaced muxes.
+	clear(s.graphMuxList)
+	s.mux = nil
+
 	// Close idle connections on base and subgraph transports
 	s.baseTransport.CloseIdleConnections()
 	for _, subgraphTransport := range s.subgraphTransports {

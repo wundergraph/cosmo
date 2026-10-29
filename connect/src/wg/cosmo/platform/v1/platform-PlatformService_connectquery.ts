@@ -1000,6 +1000,11 @@ export const getSubgraphMetricsErrorRate = PlatformService.method.getSubgraphMet
 export const getFieldUsage = PlatformService.method.getFieldUsage;
 
 /**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphFieldUsage
+ */
+export const getGraphFieldUsage = PlatformService.method.getGraphFieldUsage;
+
+/**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount
  */
 export const getOrganizationRequestsCount = PlatformService.method.getOrganizationRequestsCount;
