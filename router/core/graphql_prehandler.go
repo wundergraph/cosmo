@@ -295,6 +295,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		// The raw body is not needed anymore once the operation is handled. Release it, because
+		// the scope lives until the request ends, which can take hours for subscriptions.
+		s.body = nil
+
 		s.prepareRequestForExecution()
 
 		// Call the final handler that resolves the operation
