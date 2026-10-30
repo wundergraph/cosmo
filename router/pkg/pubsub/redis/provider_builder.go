@@ -59,12 +59,13 @@ func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventCo
 	}
 
 	return &EngineDataSourceFactory{
-		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
-		eventType:    eventType,
-		channels:     data.GetChannels(),
-		providerId:   providerId,
-		RedisAdapter: provider,
-		logger:       b.logger,
+		fieldName:             data.GetEngineEventConfiguration().GetFieldName(),
+		eventType:             eventType,
+		channels:              data.GetChannels(),
+		providerId:            providerId,
+		RedisAdapter:          provider,
+		logger:                b.logger,
+		deliveryGuaranteeMode: datasource.NewDeliveryGuaranteeMode(data.GetEngineEventConfiguration()),
 	}, nil
 }
 
