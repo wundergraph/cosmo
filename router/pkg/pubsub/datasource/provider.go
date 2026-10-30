@@ -28,6 +28,31 @@ type Adapter interface {
 	Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error
 }
 
+// SeekableAdapter is implemented by adapters that can start a subscription at a position a
+// client already reached, instead of at the head of the stream. Adapters without cursor support
+// simply don't implement it, which is how a resume on such a provider is rejected.
+type SeekableAdapter interface {
+	Adapter
+	// SubscribeFrom subscribes like Subscribe, but delivers everything the broker still holds
+	// after the position in cursor first.
+	SubscribeFrom(ctx context.Context, cfg SubscriptionEventConfiguration, cursor *streamsv1.Cursor, updater SubscriptionEventUpdater) error
+}
+
+// resumeSupporter is implemented by adapters that implement SeekableAdapter only conditionally,
+// like PubSubProvider, which forwards to the adapter it wraps.
+type resumeSupporter interface {
+	supportsCursorResume() bool
+}
+
+// supportsCursorResume reports whether a can start a subscription from a cursor.
+func supportsCursorResume(a Adapter) bool {
+	if r, ok := a.(resumeSupporter); ok {
+		return r.supportsCursorResume()
+	}
+	_, ok := a.(SeekableAdapter)
+	return ok
+}
+
 // Provider is the interface that the PubSub provider must implement
 type Provider interface {
 	Adapter

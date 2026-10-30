@@ -12,6 +12,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/kmsg"
 	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
@@ -21,8 +22,8 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-// Ensure ProviderAdapter implements Adapter
-var _ datasource.Adapter = (*ProviderAdapter)(nil)
+// Ensure ProviderAdapter implements Adapter and can resume a subscription from a cursor.
+var _ datasource.SeekableAdapter = (*ProviderAdapter)(nil)
 
 const (
 	kafkaReceive = "receive"
@@ -51,13 +52,14 @@ type ProviderAdapter struct {
 type PollerOpts struct {
 	providerId     string
 	trackPositions bool
+	resumeFrom     *streamsv1.KafkaCursorPosition
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
 	var positions map[string]map[int32]*streamsv1.KafkaPartitionOffset
 	if pollerOpts.trackPositions {
-		positions = make(map[string]map[int32]*streamsv1.KafkaPartitionOffset)
+		positions = seedPositions(pollerOpts.resumeFrom)
 	}
 
 	for {
@@ -81,8 +83,22 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 						return fetchError.Err
 					}
 
-					var kErr *kerr.Error
-					if errors.As(fetchError.Err, &kErr) {
+					// Data loss means the broker no longer holds the offset the consumer asked
+					// for: the log was truncated, or the records aged out of retention. franz-go
+					// resets the consumer and keeps fetching, which would silently skip records
+					// the client was promised, so the subscription is terminated instead.
+					if lossErr, ok := errors.AsType[*kgo.ErrDataLoss](fetchError.Err); ok {
+						p.logger.Error("data loss on fetch, closing subscription",
+							zap.Error(fetchError.Err),
+							zap.String("topic", lossErr.Topic),
+							zap.Int32("partition", lossErr.Partition),
+							zap.Int64("consumed_to", lossErr.ConsumedTo),
+							zap.Int64("reset_to", lossErr.ResetTo),
+						)
+						return fetchError.Err
+					}
+
+					if kErr, ok := errors.AsType[*kerr.Error](fetchError.Err); ok {
 						if !kErr.Retriable {
 							p.logger.Error("unrecoverable fetch error",
 								zap.Error(fetchError.Err),
@@ -138,6 +154,21 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 	}
 }
 
+// seedPositions returns the tracked positions a resumed subscription starts out with,
+// deep-copied from the cursor it resumes from. A nil position seeds an empty tracker,
+// which is what a fresh subscription uses.
+func seedPositions(from *streamsv1.KafkaCursorPosition) map[string]map[int32]*streamsv1.KafkaPartitionOffset {
+	positions := make(map[string]map[int32]*streamsv1.KafkaPartitionOffset, len(from.GetTopics()))
+	for topic, partitions := range from.GetTopics() {
+		seeded := make(map[int32]*streamsv1.KafkaPartitionOffset, len(partitions.GetPartitions()))
+		for partition, offset := range partitions.GetPartitions() {
+			seeded[partition] = &streamsv1.KafkaPartitionOffset{Epoch: offset.GetEpoch(), Offset: offset.GetOffset()}
+		}
+		positions[topic] = seeded
+	}
+	return positions
+}
+
 // snapshotKafkaPosition returns a cursor carrying a deep copy of positions,
 // so it stays unchanged while the poller keeps updating positions.
 func snapshotKafkaPosition(providerID string, positions map[string]map[int32]*streamsv1.KafkaPartitionOffset) *streamsv1.Cursor {
@@ -175,9 +206,43 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	})
 }
 
+// SubscribeFrom subscribes like Subscribe, but seeks the consumer to the position in cursor,
+// so the client receives everything the broker still holds since it was last delivered to.
+// A subscription that resumes always tracks positions: it negotiated the cursor guarantee to
+// get here, and the cursors it is issued must stay cumulative across reconnects.
+func (p *ProviderAdapter) SubscribeFrom(ctx context.Context, conf datasource.SubscriptionEventConfiguration, cursor *streamsv1.Cursor, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := conf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
+
+	position, ok := cursor.GetPosition().(*streamsv1.Cursor_Kafka)
+	if !ok {
+		// The cursor's signature covers the provider type, so this is unreachable for a verified
+		// cursor. It stays as a guard because the adapter must never seek to a position it did
+		// not produce itself.
+		return &datasource.DeliveryGuaranteeError{
+			Code:    datasource.DeliveryGuaranteeErrorCodeCursorInvalid,
+			Message: "The cursor was not issued for a Kafka provider",
+		}
+	}
+
+	consumeOpts, err := p.buildResumeAssignment(ctx, subConf, cursor.GetIssuedAt(), position.Kafka)
+	if err != nil {
+		return err
+	}
+
+	return p.subscribe(ctx, subConf, updater, consumeOpts, PollerOpts{
+		providerId:     conf.ProviderID(),
+		trackPositions: true,
+		resumeFrom:     position.Kafka,
+	})
+}
+
 // subscribe creates the consumer client of a single subscription and runs its poller until the
 // subscription, the adapter or the application context ends. consumeOpts says what the client
-// consumes and where it starts.
+// consumes and where it starts, which is the only thing that differs between a fresh subscribe
+// and a resume.
 func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater, consumeOpts []kgo.Opt, pollerOpts PollerOpts) error {
 	log := p.logger.With(
 		zap.String("provider_id", subConf.ProviderID()),
@@ -235,6 +300,97 @@ func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEv
 	})
 
 	return nil
+}
+
+// buildResumeAssignment returns the consume options that start every partition of every
+// subscribed topic where the resuming client left off.
+func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *SubscriptionEventConfiguration, issuedAt int64, position *streamsv1.KafkaCursorPosition) ([]kgo.Opt, error) {
+	allPartitions, missingTopics, err := p.fetchTopicPartitions(ctx, subConf.Topics)
+	if err != nil {
+		return nil, datasource.NewError("failed to enumerate topic partitions to resume subscription", err)
+	}
+	for _, topic := range missingTopics {
+		p.logger.Warn("topic does not exist yet, will resume consuming it once it is created",
+			zap.String("provider_id", subConf.ProviderID()),
+			zap.String("topic", topic),
+		)
+	}
+
+	assign := make(map[string]map[int32]kgo.Offset, len(allPartitions))
+	for topic, partitions := range allPartitions {
+		recorded := position.GetTopics()[topic].GetPartitions()
+		partAssign := make(map[int32]kgo.Offset, len(partitions))
+		for _, partition := range partitions {
+			if offset, ok := recorded[partition]; ok {
+				// The recorded offset is the last record delivered to the client, so the resume
+				// starts one past it. The epoch is what lets franz-go detect truncation; records
+				// written in an old message format report -1, which is franz-go's "no epoch"
+				// value and passes through unchanged.
+				partAssign[partition] = kgo.NewOffset().At(offset.GetOffset() + 1).WithEpoch(offset.GetEpoch())
+			} else {
+				// A partition the cursor never saw starts where a fresh subscribe would have
+				// started it, so the client gets neither a gap nor an unbounded replay.
+				partAssign[partition] = kgo.NewOffset().AfterMilli(issuedAt)
+			}
+		}
+		assign[topic] = partAssign
+	}
+
+	opts := []kgo.Opt{kgo.ConsumePartitions(assign)}
+	if len(missingTopics) > 0 {
+		opts = append(opts,
+			kgo.ConsumeTopics(missingTopics...),
+			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(issuedAt)),
+		)
+	}
+
+	return opts, nil
+}
+
+// fetchTopicPartitions enumerates every partition of every given topic with a single metadata
+// request. A topic that does not exist yet (UNKNOWN_TOPIC_OR_PARTITION) is reported through
+// missingTopics instead of failing, so callers can fall back to the tolerant behaviour a fresh subscribe already has.
+func (p *ProviderAdapter) fetchTopicPartitions(ctx context.Context, topics []string) (partitions map[string][]int32, missingTopics []string, err error) {
+	if p.writeClient == nil {
+		return nil, nil, errors.New("kafka client not initialized")
+	}
+
+	req := kmsg.NewPtrMetadataRequest()
+	for _, topic := range topics {
+		rt := kmsg.NewMetadataRequestTopic()
+		rt.Topic = new(topic)
+		req.Topics = append(req.Topics, rt)
+	}
+
+	kresp, err := p.writeClient.Request(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	resp, ok := kresp.(*kmsg.MetadataResponse)
+	if !ok {
+		return nil, nil, fmt.Errorf("unexpected metadata response type %T", kresp)
+	}
+
+	result := make(map[string][]int32, len(resp.Topics))
+	for _, t := range resp.Topics {
+		var topicName string
+		if t.Topic != nil {
+			topicName = *t.Topic
+		}
+		if t.ErrorCode != 0 {
+			if errors.Is(kerr.ErrorForCode(t.ErrorCode), kerr.UnknownTopicOrPartition) {
+				missingTopics = append(missingTopics, topicName)
+				continue
+			}
+			return nil, nil, fmt.Errorf("metadata error for topic %q: %w", topicName, kerr.ErrorForCode(t.ErrorCode))
+		}
+		topicPartitions := make([]int32, 0, len(t.Partitions))
+		for _, part := range t.Partitions {
+			topicPartitions = append(topicPartitions, part.Partition)
+		}
+		result[topicName] = topicPartitions
+	}
+	return result, missingTopics, nil
 }
 
 // Publish publishes the given events to the Kafka topic in a non-blocking way.
