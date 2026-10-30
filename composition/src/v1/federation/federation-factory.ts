@@ -56,7 +56,6 @@ import {
   noQueryRootTypeError,
   oneOfRequiredFieldsError,
   orScopesLimitError,
-  partiallyDefinedCacheTagReferenceErrorMessage,
   semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldError,
@@ -2124,8 +2123,6 @@ export class FederationFactory {
      * NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
      * or that traverses a list or a leaf.
      */
-    let parentCoords = fieldData.federatedCoords;
-    let parentSubgraphNames = fieldData.subgraphNames;
     let inputValueDataByName = fieldData.argumentDataByName;
     for (const name of reference.split(LITERAL_PERIOD)) {
       const data = inputValueDataByName.get(name);
@@ -2138,12 +2135,6 @@ export class FederationFactory {
       if (doesArgumentDefineFromContext(data)) {
         return isTypeRequired(data.type) ? undefined : fromContextCacheTagReferenceErrorMessage(params);
       }
-      // A required input value omitted by a subgraph is reported by its own error.
-      if (parentSubgraphNames.size !== data.subgraphNames.size) {
-        return isTypeRequired(data.type)
-          ? undefined
-          : partiallyDefinedCacheTagReferenceErrorMessage({ ...params, parentCoords });
-      }
       // A required input value declared @inaccessible may have been reported by its own error.
       if (isNodeDataInaccessible(data)) {
         return this.inaccessibleRequiredInputValueErrorByCoords.has(data.federatedCoords)
@@ -2155,8 +2146,6 @@ export class FederationFactory {
       if (namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
         return;
       }
-      parentCoords = namedTypeData.name;
-      parentSubgraphNames = namedTypeData.subgraphNames;
       inputValueDataByName = namedTypeData.inputValueDataByName;
     }
   }

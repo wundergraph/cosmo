@@ -23,7 +23,6 @@ import {
   type ListCacheTagKeyFieldErrorMessageParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
-  type PartiallyDefinedCacheTagReferenceErrorMessageParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
@@ -2371,16 +2370,4 @@ export function fromContextCacheTagReferenceErrorMessage({
   subgraphName,
 }: UnavailableCacheTagReferenceErrorMessageParams): string {
   return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@fromContext".`;
-}
-
-export function partiallyDefinedCacheTagReferenceErrorMessage({
-  coords,
-  parentCoords,
-  reference,
-  subgraphName,
-}: PartiallyDefinedCacheTagReferenceErrorMessageParams): string {
-  return (
-    ` Subgraph "${subgraphName}" references "$args.${reference}",` +
-    ` but "${coords}" is not defined in every subgraph that defines "${parentCoords}".`
-  );
 }

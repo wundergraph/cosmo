@@ -24,7 +24,6 @@ import {
   normalizeSubgraph,
   numberToOrdinal,
   parse,
-  partiallyDefinedCacheTagReferenceErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type SubgraphName,
@@ -1132,8 +1131,8 @@ describe('@cacheTag tests', () => {
       expect(warnings).toStrictEqual([]);
     });
 
-    test('that a reference to an argument omitted by a subgraph that defines the field is rejected', () => {
-      const { errors } = federateSubgraphsFailure(
+    test('that a reference to an argument omitted by a subgraph that defines the field is valid', () => {
+      const { warnings } = federateSubgraphsSuccess(
         [
           createProductsSubgraph(
             'a',
@@ -1144,20 +1143,19 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors).toStrictEqual([
-        unavailableCacheTagReferencesError('Query.products', [
-          partiallyDefinedCacheTagReferenceErrorMessage({
-            coords: 'Query.products(region: ...)',
-            parentCoords: 'Query.products',
-            reference: 'region',
-            subgraphName: 'a',
-          }),
-        ]),
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products-{$args.region}'])],
+            ['b', new Set(['products-{$args.id}'])],
+          ]),
+        }),
       ]);
     });
 
-    test('that a reference to an Input Object field omitted by a subgraph that defines the Input Object is rejected', () => {
-      const { errors } = federateSubgraphsFailure(
+    test('that a reference to an Input Object field omitted by a subgraph that defines the Input Object is valid', () => {
+      const { warnings } = federateSubgraphsSuccess(
         [
           createProductsSubgraph(
             'a',
@@ -1169,15 +1167,14 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors).toStrictEqual([
-        unavailableCacheTagReferencesError('Query.products', [
-          partiallyDefinedCacheTagReferenceErrorMessage({
-            coords: 'Filter.brand',
-            parentCoords: 'Filter',
-            reference: 'filter.brand',
-            subgraphName: 'a',
-          }),
-        ]),
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products-{$args.filter.brand}'])],
+            ['b', new Set()],
+          ]),
+        }),
       ]);
     });
 
