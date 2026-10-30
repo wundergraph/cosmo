@@ -1,0 +1,197 @@
+# Standalone reproduction: no checkout, local Node, or published ports required.
+# docker compose -f compose.yaml run --rm client
+# docker compose -f compose.yaml down --volumes
+name: apollo-client-4-defer
+
+services:
+  compose:
+    image: node:24.22.2-alpine
+    working_dir: /repro
+    configs:
+      - source: schema
+        target: /repro/schema.graphql
+      - source: composition
+        target: /repro/compose.yaml
+    volumes:
+      - graph:/graph
+    command: [sh, -ec, "npx --yes wgc@0.133.4 router compose -i compose.yaml -o /graph/router.json"]
+
+  subgraph:
+    image: node:24.22.2-alpine
+    working_dir: /repro
+    configs:
+      - source: schema
+        target: /repro/schema.graphql
+      - source: subgraph
+        target: /repro/subgraph.mjs
+    command:
+      - sh
+      - -ec
+      - npm install --no-save --no-package-lock @apollo/subgraph@2.12.1 graphql@16.14.2 && node subgraph.mjs
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+
+  router:
+    image: ${ROUTER_IMAGE:-ghcr.io/wundergraph/cosmo/router:0.364.1}
+    depends_on:
+      compose:
+        condition: service_completed_successfully
+      subgraph:
+        condition: service_healthy
+    environment:
+      CONFIG_PATH: /config.yaml
+    configs:
+      - source: router
+        target: /config.yaml
+    volumes:
+      - graph:/graph:ro
+
+  client:
+    image: node:24.22.2-alpine
+    working_dir: /repro
+    depends_on:
+      router:
+        condition: service_started
+    configs:
+      - source: client
+        target: /repro/client.mjs
+    command:
+      - sh
+      - -ec
+      - npm install --no-save --no-package-lock @apollo/client@4.3.5 graphql@16.14.2 rxjs@7.8.2 && node client.mjs
+
+volumes:
+  graph:
+
+configs:
+  schema:
+    content: |
+      type Query { product: Product! }
+      type Product @key(fields: "id") { id: ID! name: String! }
+
+  composition:
+    content: |
+      version: 1
+      subgraphs:
+        - name: products
+          routing_url: http://subgraph:4000/graphql
+          schema:
+            file: /repro/schema.graphql
+
+  router:
+    content: |
+      version: "1"
+      listen_addr: 0.0.0.0:3002
+      execution_config:
+        file:
+          path: /graph/router.json
+      engine:
+        enable_defer: true
+      telemetry:
+        tracing:
+          enabled: false
+        metrics:
+          otlp:
+            enabled: false
+
+  subgraph:
+    content: |
+      import { createServer } from "node:http";
+      import { readFileSync } from "node:fs";
+      import { setTimeout as delay } from "node:timers/promises";
+      import { graphql, parse } from "graphql";
+      import { buildSubgraphSchema } from "@apollo/subgraph";
+
+      const product = { __typename: "Product", id: "1", name: "Router Mug" };
+      const schema = buildSubgraphSchema([{
+        typeDefs: parse(readFileSync("schema.graphql", "utf8")),
+        resolvers: {
+          Query: { product: () => product },
+          Product: {
+            __resolveReference: () => product,
+            name: async () => { await delay(100); return product.name; },
+          },
+        },
+      }]);
+      createServer(async (req, res) => {
+        if (req.url === "/health") { res.end("ok"); return; }
+        try {
+          let body = "";
+          for await (const chunk of req) body += chunk;
+          const { query, variables, operationName } = JSON.parse(body);
+          const result = await graphql({ schema, source: query, variableValues: variables, operationName });
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify(result));
+        } catch (error) {
+          res.writeHead(500);
+          res.end(String(error));
+        }
+      }).listen(4000, "0.0.0.0");
+
+  client:
+    content: |
+      import assert from "node:assert/strict";
+      import { setTimeout as delay } from "node:timers/promises";
+      import { ApolloClient, ApolloLink, HttpLink, InMemoryCache, gql } from "@apollo/client";
+      import { GraphQL17Alpha9Handler } from "@apollo/client/incremental";
+      import { finalize } from "rxjs";
+
+      const uri = "http://router:3002/graphql";
+      const deadline = Date.now() + 30_000;
+      for (;;) {
+        try {
+          const response = await fetch(uri, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ query: "{ __typename }" }),
+          });
+          if (response.ok && (await response.json()).data?.__typename === "Query") break;
+        } catch {}
+        assert.ok(Date.now() < deadline, "router did not become ready");
+        await delay(100);
+      }
+
+      let finish;
+      const done = new Promise(resolve => { finish = resolve; });
+      const tracked = new ApolloLink((operation, forward) => forward(operation).pipe(finalize(finish)));
+      const client = new ApolloClient({
+        link: ApolloLink.from([tracked, new HttpLink({ uri })]),
+        cache: new InMemoryCache(),
+        incrementalHandler: new GraphQL17Alpha9Handler(),
+      });
+      const results = [];
+      const subscription = client.watchQuery({
+        query: gql`query { product { id ... @defer { name } } }`,
+        fetchPolicy: "no-cache",
+      }).subscribe({
+        next: result => {
+          console.log(JSON.stringify({ data: result.data, loading: result.loading, error: result.error?.message }));
+          results.push(result);
+        },
+        error: error => { console.error(error); results.push({ error }); },
+      });
+      const timeout = setTimeout(() => { console.error("FAIL: response timed out"); process.exit(1); }, 30_000);
+      try {
+        await done;
+        // Apollo can report a parse error after delivering the final data.
+        await delay(100);
+        for (const result of results) {
+          if (result.error) throw result.error;
+        }
+        assert.ok(results.some(result => result.data?.product.id === "1" && result.data.product.name === undefined),
+          "expected the initial product before its deferred name");
+        const data = results.at(-1)?.data;
+        assert.equal(data?.product.id, "1");
+        assert.equal(data?.product.name, "Router Mug");
+        console.log("PASS: Apollo received all deferred data without a trailing parse error");
+      } catch (error) {
+        console.error("FAIL:", error.name + ": " + error.message);
+        process.exitCode = 1;
+      } finally {
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+        client.stop();
+      }
