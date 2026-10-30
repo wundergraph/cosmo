@@ -12,6 +12,7 @@ import (
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
@@ -370,9 +371,9 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
-// It also logs additional information about the error. When useSpecStatusCodes is set, classified errors
-// are written with the status code of the GraphQL over HTTP spec instead of their own status code.
-func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, useSpecStatusCodes bool) {
+// It also logs additional information about the error. The status code of classified errors depends on
+// the configured status codes, see graphql_over_http.status_codes.
+func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, statusCodes config.GraphQLOverHTTPStatusCodes) {
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
@@ -391,9 +392,9 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 		})
 	case errors.As(err, &httpErr):
 		statusCode := httpErr.StatusCode()
-		var gqlErr *httpGraphqlError
-		if errors.As(err, &gqlErr) {
-			if useSpecStatusCodes {
+		if gqlErr, ok := errors.AsType[*httpGraphqlError](err); ok {
+			switch statusCodes {
+			case config.GraphQLOverHTTPStatusCodesSpec:
 				if specStatusCode, ok := specStatusCodes[gqlErr.kind]; ok {
 					statusCode = specStatusCode
 				}

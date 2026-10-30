@@ -79,7 +79,7 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
-	UseGraphQLOverHTTPStatusCodes          bool
+	GraphQLOverHTTPStatusCodes             config.GraphQLOverHTTPStatusCodes
 
 	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
 	WaitForCacheWrites func()
@@ -124,7 +124,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
-	useGraphQLOverHTTPStatusCodes          bool
+	graphqlOverHTTPStatusCodes             config.GraphQLOverHTTPStatusCodes
 	waitForCacheWrites                     func()
 }
 
@@ -235,7 +235,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
-		useGraphQLOverHTTPStatusCodes:          opts.UseGraphQLOverHTTPStatusCodes,
+		graphqlOverHTTPStatusCodes:             opts.GraphQLOverHTTPStatusCodes,
 		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
@@ -284,7 +284,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Don't produce error logs here because these are client side errors
 			// e.g. too large body, slow client, aborted connection etc.
 			// The error is logged as debug log in the writeOperationError function
-			writeOperationError(s.r, s.ww, s.requestLogger, err, h.headerPropagation, h.useGraphQLOverHTTPStatusCodes)
+			writeOperationError(s.r, s.ww, s.requestLogger, err, h.headerPropagation, h.graphqlOverHTTPStatusCodes)
 			return
 		}
 
@@ -541,7 +541,7 @@ func (s *handlerScope) writeHandleOperationError(err error) {
 		s.ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
 	}
 
-	writeOperationError(s.r, s.ww, s.requestLogger, err, s.h.headerPropagation, s.h.useGraphQLOverHTTPStatusCodes)
+	writeOperationError(s.r, s.ww, s.requestLogger, err, s.h.headerPropagation, s.h.graphqlOverHTTPStatusCodes)
 }
 
 // prepareRequestForExecution sets the request that is passed to the next handler
@@ -1489,7 +1489,7 @@ func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext,
 	writeOperationError(r, w, requestLogger, &httpGraphqlError{
 		message:    graphqlErr.Error(),
 		statusCode: http.StatusUnauthorized,
-	}, h.headerPropagation, h.useGraphQLOverHTTPStatusCodes)
+	}, h.headerPropagation, h.graphqlOverHTTPStatusCodes)
 }
 
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {

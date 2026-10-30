@@ -64,7 +64,7 @@ const (
 )
 
 // specStatusCodes are the status codes of the GraphQL over HTTP spec for each kind of error.
-// They are only used when security.use_graphql_over_http_status_codes is enabled.
+// They are only used when graphql_over_http.status_codes is set to spec.
 var specStatusCodes = map[errorKind]int{
 	errorKindBlocked:                     http.StatusForbidden,
 	errorKindNotOnSafelist:               http.StatusForbidden,

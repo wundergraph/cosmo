@@ -559,8 +559,6 @@ type SecurityConfiguration struct {
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
-	// UseGraphQLOverHTTPStatusCodes returns the 4xx status codes of the GraphQL over HTTP spec for request errors instead of 200
-	UseGraphQLOverHTTPStatusCodes bool `yaml:"use_graphql_over_http_status_codes" envDefault:"false" env:"SECURITY_USE_GRAPHQL_OVER_HTTP_STATUS_CODES"`
 }
 
 type ParserLimitsConfiguration struct {
@@ -1106,6 +1104,19 @@ type TLSClientCertConfiguration struct {
 	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
 	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSpec returns the 4xx status codes of the GraphQL over HTTP spec for request errors
+	GraphQLOverHTTPStatusCodesSpec GraphQLOverHTTPStatusCodes = "spec"
+)
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
 }
 
 type SubgraphErrorPropagationMode string
@@ -1742,6 +1753,7 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`

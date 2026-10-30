@@ -1000,8 +1000,7 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
-    "OperationNameLengthLimit": 2000,
-    "UseGraphQLOverHTTPStatusCodes": true
+    "OperationNameLengthLimit": 2000
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -1280,6 +1279,9 @@
     "SkipNullVariablesError": {
       "Enabled": false
     }
+  },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "spec"
   },
   "ClientHeader": {
     "Name": "Client-Name",
