@@ -1,7 +1,41 @@
-import { describe, expect, test } from 'vitest';
+import { createServer } from 'node:http';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { describe, expect, test, vi } from 'vitest';
 import { createS3ClientConfig, extractS3BucketName, isVirtualHostStyleUrl } from '../src/core/util.js';
 
 describe('S3 Utils', () => {
+  test('aborts an S3 request when the server never responds', async () => {
+    const started = Promise.withResolvers<void>();
+    const server = createServer(() => started.resolve());
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Expected TCP address');
+    }
+    const client = new S3Client({
+      ...createS3ClientConfig('bucket', {
+        url: `http://user:password@127.0.0.1:${address.port}/bucket`,
+        region: 'us-east-1',
+        forcePathStyle: true,
+      }),
+      maxAttempts: 1,
+    });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const request = expect(
+        client.send(new PutObjectCommand({ Bucket: 'bucket', Key: 'key', Body: 'body' })),
+      ).rejects.toMatchObject({ name: 'TimeoutError' });
+      await started.promise;
+      await vi.advanceTimersByTimeAsync(30_001);
+      await request;
+    } finally {
+      vi.useRealTimers();
+      client.destroy();
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   describe('createS3ClientConfig with forced path style', () => {
     test('that it correctly configures an S3 client for a path-style URL', () => {
       const opts = {
@@ -17,6 +51,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 'https://cosmo-controlplane-bucket.provider.com',
         credentials: {
@@ -42,6 +77,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 'custom-endpoint.com',
         credentials: {
@@ -65,6 +101,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 'https://xxxxxxxxxxxxxxxxxxx.r2.cloudflarestorage.com',
         credentials: {
@@ -92,6 +129,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 'https://s3.amazonaws.com',
         credentials: {
@@ -117,6 +155,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 's3.amazonaws.com',
         credentials: {
@@ -142,6 +181,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'auto',
         endpoint: 'https://minio.east.domain.com',
         credentials: {
@@ -169,6 +209,7 @@ describe('S3 Utils', () => {
       const config = createS3ClientConfig(bucketName, opts);
 
       expect(config).toEqual({
+        requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000, throwOnRequestTimeout: true },
         region: 'us-east-1',
         endpoint: 'https://cosmo-controlplane-bucket.provider.com',
         forcePathStyle: true,

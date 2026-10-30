@@ -5,12 +5,14 @@ import type {
   DeletePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { UnauthorizedError } from '../../errors/errors.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
+import type { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { createBlobStoragePath } from './utils.js';
+import { withPersistedOperationsTransaction } from './transaction.js';
+import { prepareOperationBlobRestore } from './restore.js';
 
 export function deletePersistedOperation(
   opts: RouterOptions,
@@ -46,7 +48,16 @@ export function deletePersistedOperation(
       };
     }
 
-    const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+    return withPersistedOperationsTransaction(opts.db, federatedGraph, (operationsRepo) =>
+      deleteOperation(operationsRepo, authContext.organizationId, federatedGraph.id),
+    );
+  });
+
+  async function deleteOperation(
+    operationsRepo: OperationsRepository,
+    organizationId: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<DeletePersistedOperationResponse>> {
     const operation = await operationsRepo.getPersistedOperation({
       operationId: req.operationId,
       clientName: req.clientName,
@@ -61,14 +72,15 @@ export function deletePersistedOperation(
       };
     }
 
+    const restoreBlobs = await prepareOperationBlobRestore(opts.blobStorage, [operation], logger);
     const deletedOperation = await operationsRepo.deletePersistedOperation({
       operationId: req.operationId,
       clientName: req.clientName,
     });
 
     const path = createBlobStoragePath({
-      organizationId: authContext.organizationId,
-      fedGraphId: federatedGraph.id,
+      organizationId,
+      fedGraphId: federatedGraphId,
       clientName: encodeURIComponent(operation.clientName),
       operationId: operation.operationId,
     });
@@ -79,26 +91,23 @@ export function deletePersistedOperation(
       const error = e instanceof Error ? e : new Error('Unknown error');
       logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
 
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Failed to delete operation ${operation.operationId}`,
-        },
-      };
+      throw new PublicError(EnumStatusCode.ERR, `Failed to delete operation ${operation.operationId}`, error);
     }
 
     try {
       await operationsRepo.generateAndUploadManifest({
-        organizationId: authContext.organizationId,
+        organizationId,
         blobStorage: opts.blobStorage,
         logger,
       });
     } catch (e) {
       const error = e instanceof Error ? e : new Error('Unknown error');
       logger.error(error, `Failed to regenerate PQL manifest after deleting operation ${operation.operationId}`, {
-        federatedGraphId: federatedGraph.id,
-        organizationId: authContext.organizationId,
+        federatedGraphId,
+        organizationId,
       });
+      await restoreBlobs();
+      throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
     }
 
     return {
@@ -114,5 +123,5 @@ export function deletePersistedOperation(
           }
         : undefined,
     };
-  });
+  }
 }

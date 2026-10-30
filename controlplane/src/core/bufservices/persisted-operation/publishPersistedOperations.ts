@@ -14,15 +14,17 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
+import type { DB } from '../../../db/index.js';
 import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import type { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { createBlobStoragePath, formatPersistedOperationIdForError, isValidPersistedOperationId } from './utils.js';
+import { withPersistedOperationsTransaction } from './transaction.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
@@ -165,7 +167,18 @@ export function publishPersistedOperations(
       }
     }
 
-    const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+    return withPersistedOperationsTransaction(opts.db, federatedGraph, (operationsRepo, db) =>
+      publishOperations(operationsRepo, db, userId, organizationId, federatedGraph.id),
+    );
+  });
+
+  async function publishOperations(
+    operationsRepo: OperationsRepository,
+    db: DB,
+    userId: string,
+    organizationId: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<PublishPersistedOperationsResponse>> {
     const clientId = await operationsRepo.registerClient(req.clientName, userId);
 
     const operations: PublishedOperation[] = [];
@@ -184,7 +197,7 @@ export function publishPersistedOperations(
       return !existingHashes.has(hash);
     }).length;
 
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const orgRepo = new OrganizationRepository(logger, db, opts.billingDefaultPlanId);
     const operationsFeature = await orgRepo.getFeature({
       organizationId,
       featureId: 'persisted-operations',
@@ -228,7 +241,7 @@ export function publishPersistedOperations(
       const clientName = encodeURIComponent(req.clientName);
       const path = createBlobStoragePath({
         organizationId,
-        fedGraphId: federatedGraph.id,
+        fedGraphId: federatedGraphId,
         clientName,
         operationId,
       });
@@ -287,17 +300,22 @@ export function publishPersistedOperations(
     };
 
     const limit = pLimit(PARALLEL_PERSISTED_OPERATIONS_LIMIT);
-    const results = await Promise.all(req.operations.map((op) => limit(() => processOperation(op))));
+    // Keep the graph lock until every started upload has settled, even on failure.
+    const settled = await Promise.allSettled(req.operations.map((op) => limit(() => processOperation(op))));
+    const results = settled.map((result) => {
+      if (result.status === 'rejected') {
+        logger.error(result.reason, 'Failed to process persisted operation');
+        throw new PublicError(EnumStatusCode.ERR, 'Failed to process persisted operation');
+      }
+      return result.value;
+    });
 
     const firstError = results.find((r) => r.error !== null);
     if (firstError?.error) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Could not store operation contents for ${firstError.error.operationId} at ${firstError.error.path}`,
-        },
-        operations: [],
-      };
+      throw new PublicError(
+        EnumStatusCode.ERR,
+        `Could not store operation contents for ${firstError.error.operationId} at ${firstError.error.path}`,
+      );
     }
 
     for (const r of results) {
@@ -318,9 +336,10 @@ export function publishPersistedOperations(
     } catch (e) {
       const error = e instanceof Error ? e : new Error('Unknown error');
       logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
-        federatedGraphId: federatedGraph.id,
+        federatedGraphId,
         organizationId,
       });
+      throw new PublicError(EnumStatusCode.ERR, 'Failed to publish persisted operations manifest', error);
     }
 
     return {
@@ -329,5 +348,5 @@ export function publishPersistedOperations(
       },
       operations,
     };
-  });
+  }
 }
