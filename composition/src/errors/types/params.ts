@@ -139,7 +139,3 @@ export type UnavailableCacheTagReferenceErrorMessageParams = {
   reference: string;
   subgraphName: SubgraphName;
 };
-
-export type PartiallyDefinedCacheTagReferenceErrorMessageParams = UnavailableCacheTagReferenceErrorMessageParams & {
-  parentCoords: string;
-};
