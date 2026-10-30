@@ -59,13 +59,7 @@ func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.H
 	for _, hook := range hooks {
 		client.AddHook(hook)
 	}
-	c, err := NewRedisCache(t.Context(), client, testPrefix)
-	if err != nil {
-		// Ownership never transferred, so the client is still the test's to
-		// close before it gives up.
-		require.NoError(t, client.Close())
-		require.NoError(t, err)
-	}
+	c := NewRedisCache(client, testPrefix)
 
 	t.Cleanup(func() {
 		require.NoError(t, c.Close())
@@ -139,36 +133,31 @@ func TestRedisCache(t *testing.T) {
 	t.Run("NewRedisCache", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("rejects a server it cannot reach", func(t *testing.T) {
+		t.Run("a server it cannot reach fails lookups, not construction", func(t *testing.T) {
 			t.Parallel()
 
-			// Nothing is listening here, so construction fails on the ping
-			// rather than leaving a broken cache to be discovered by the first
-			// lookup.
+			// Nothing is listening here. The router starts without redis, so the
+			// cache must too, and report the failure on use.
 			client := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", DialTimeout: time.Second})
-			t.Cleanup(func() {
-				require.NoError(t, client.Close())
-			})
+			c := NewRedisCache(client, testPrefix)
+			t.Cleanup(func() { _ = c.Close() })
 
-			c, err := NewRedisCache(ctx, client, testPrefix)
+			_, err := c.GetMany(ctx, []string{"v1:a"})
 			require.Error(t, err)
-			require.Nil(t, c)
 		})
 
-		t.Run("rejects credentials redis will not take", func(t *testing.T) {
+		t.Run("credentials redis will not take fail lookups", func(t *testing.T) {
 			t.Parallel()
 
 			mr := miniredis.RunT(t)
 			mr.RequireAuth("right")
 
 			client := redis.NewClient(&redis.Options{Addr: mr.Addr(), Password: "wrong"})
-			t.Cleanup(func() {
-				require.NoError(t, client.Close())
-			})
+			c := NewRedisCache(client, testPrefix)
+			t.Cleanup(func() { _ = c.Close() })
 
-			c, err := NewRedisCache(ctx, client, testPrefix)
+			_, err := c.GetMany(ctx, []string{"v1:a"})
 			require.Error(t, err)
-			require.Nil(t, c)
 		})
 
 		t.Run("round trips through redis", func(t *testing.T) {
@@ -257,8 +246,7 @@ func TestRedisCache(t *testing.T) {
 			mr := miniredis.RunT(t)
 			client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
-			c, err := NewRedisCache(ctx, client, testPrefix)
-			require.NoError(t, err)
+			c := NewRedisCache(client, testPrefix)
 			require.NoError(t, c.Close())
 
 			// The client is the cache's to close, so it is gone rather than

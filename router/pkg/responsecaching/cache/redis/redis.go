@@ -47,20 +47,16 @@ func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamesp
 func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace + tag }
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
-// prefix. On success the cache takes ownership of client and closes it in
-// Close, so the caller must not close it independently; if construction fails
-// the client is untouched and closing it stays with the caller.
+// prefix. It does not reach redis: an unreachable one fails each call until it
+// is back, as go-redis reconnects on its own. The cache takes ownership of
+// client and closes it in Close.
 // rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
 // rediscloser.NewRedisCloser can be passed straight in.
-func NewRedisCache(ctx context.Context, client redis.UniversalClient, prefix string) (*RedisCache, error) {
-	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("unable to connect to redis: %w", err)
-	}
-
+func NewRedisCache(client redis.UniversalClient, prefix string) *RedisCache {
 	return &RedisCache{
 		client: client,
 		prefix: prefix,
-	}, nil
+	}
 }
 
 // GetMany implements caching.GetMany.

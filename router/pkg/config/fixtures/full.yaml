@@ -554,6 +554,8 @@ response_cache:
     provider: 'redis'
     provider_id: 'my_redis'
     max_entries: 2048
+    lookup_timeout: 200ms
+    write_timeout: 1s
   invalidation:
     cache_tag: true
     subgraph: false
