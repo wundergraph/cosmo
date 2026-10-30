@@ -370,8 +370,9 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
-// It also logs additional information about the error.
-func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation) {
+// It also logs additional information about the error. When useSpecStatusCodes is set, classified errors
+// are written with the status code of the GraphQL over HTTP spec instead of their own status code.
+func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, useSpecStatusCodes bool) {
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
@@ -389,10 +390,23 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			headerPropagation: propagation,
 		})
 	case errors.As(err, &httpErr):
+		statusCode := httpErr.StatusCode()
+		var gqlErr *httpGraphqlError
+		if errors.As(err, &gqlErr) {
+			if useSpecStatusCodes {
+				if specStatusCode, ok := specStatusCodes[gqlErr.kind]; ok {
+					statusCode = specStatusCode
+				}
+			}
+			// A 405 response must list the allowed methods
+			if gqlErr.kind == errorKindMutationOverGET {
+				w.Header().Set("Allow", http.MethodPost)
+			}
+		}
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
 			writer:            w,
-			statusCode:        httpErr.StatusCode(),
+			statusCode:        statusCode,
 			requestErrors:     requestErrorsFromHttpError(httpErr),
 			logger:            requestLogger,
 			headerPropagation: propagation,

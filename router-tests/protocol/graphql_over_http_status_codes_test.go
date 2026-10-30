@@ -23,23 +23,13 @@ func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 		persistedHash = "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"
 	)
 
-	type testCase struct {
-		name           string
-		request        testenv.GraphQLRequest
-		expectedBody   string
-		expectedStatus int
-	}
-
-	run := func(t *testing.T, xEnv *testenv.Environment, cases []testCase) {
+	// requireStatus sends the request and checks the error body and status code of the response.
+	requireStatus := func(t *testing.T, xEnv *testenv.Environment, request testenv.GraphQLRequest, expectedBody string, expectedStatus int) {
 		t.Helper()
-		for _, tc := range cases {
-			t.Run(tc.name, func(t *testing.T) {
-				res, err := xEnv.MakeGraphQLRequest(tc.request)
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedBody, res.Body)
-				require.Equal(t, tc.expectedStatus, res.Response.StatusCode)
-			})
-		}
+		res, err := xEnv.MakeGraphQLRequest(request)
+		require.NoError(t, err)
+		require.Equal(t, expectedBody, res.Body)
+		require.Equal(t, expectedStatus, res.Response.StatusCode)
 	}
 
 	// blockedBy only matches requests that carry the given X-Block header value,
@@ -68,90 +58,111 @@ func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{Disabled: true}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			run(t, xEnv, []testCase{
-				{
-					name:           "403 for blocked mutation",
-					request:        testenv.GraphQLRequest{Query: mutation, Header: http.Header{"X-Block": []string{"mutation"}}},
-					expectedBody:   `{"errors":[{"message":"operation type 'mutation' is blocked"}]}`,
-					expectedStatus: http.StatusForbidden,
-				},
-				{
-					name: "403 for blocked subscription over SSE",
-					request: testenv.GraphQLRequest{
+			t.Run("403 for blocked mutation", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: mutation, Header: http.Header{"X-Block": []string{"mutation"}}},
+					`{"errors":[{"message":"operation type 'mutation' is blocked"}]}`,
+					http.StatusForbidden,
+				)
+			})
+
+			t.Run("403 for blocked subscription over SSE", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						Query:  `subscription { currentTime { unixTime } }`,
 						Header: http.Header{"X-Block": []string{"subscription"}, "Accept": []string{"text/event-stream"}},
 					},
-					expectedBody:   "event: next\ndata: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}",
-					expectedStatus: http.StatusForbidden,
-				},
-				{
-					name:           "403 for blocked non-persisted operation",
-					request:        testenv.GraphQLRequest{Query: `{ employees { id } }`, Header: http.Header{"X-Block": []string{"non-persisted"}}},
-					expectedBody:   `{"errors":[{"message":"non-persisted operation is blocked"}]}`,
-					expectedStatus: http.StatusForbidden,
-				},
-				{
-					name:           "403 for introspection when disabled",
-					request:        testenv.GraphQLRequest{Query: `{ __schema { __typename } }`},
-					expectedBody:   `{"errors":[{"message":"GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration"}]}`,
-					expectedStatus: http.StatusForbidden,
-				},
-				{
-					name:           "422 for missing operation name with multiple anonymous operations",
-					request:        testenv.GraphQLRequest{Query: `{ employees { id } } { employees { id } }`},
-					expectedBody:   `{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name:           "422 for operation name not found on named operation",
-					request:        testenv.GraphQLRequest{Query: `query Exists { employees { id } }`, OperationName: []byte(`"Missing"`)},
-					expectedBody:   `{"errors":[{"message":"operation with name 'Missing' not found"}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name:           "422 for operation name not found on anonymous operation",
-					request:        testenv.GraphQLRequest{Query: `{ employees { id } }`, OperationName: []byte(`"Missing"`)},
-					expectedBody:   `{"errors":[{"message":"operation with name 'Missing' not found"}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name:           "422 for required variable not provided",
-					request:        testenv.GraphQLRequest{Query: `query Find($criteria: SearchInput!) { findEmployees(criteria: $criteria) { id } }`},
-					expectedBody:   `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name: "422 for variable that cannot be coerced",
-					request: testenv.GraphQLRequest{
+					"event: next\ndata: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}",
+					http.StatusForbidden,
+				)
+			})
+
+			t.Run("403 for blocked non-persisted operation", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `{ employees { id } }`, Header: http.Header{"X-Block": []string{"non-persisted"}}},
+					`{"errors":[{"message":"non-persisted operation is blocked"}]}`,
+					http.StatusForbidden,
+				)
+			})
+
+			t.Run("403 for introspection when disabled", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `{ __schema { __typename } }`},
+					`{"errors":[{"message":"GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration"}]}`,
+					http.StatusForbidden,
+				)
+			})
+
+			t.Run("422 for missing operation name with multiple anonymous operations", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `{ employees { id } } { employees { id } }`},
+					`{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("422 for operation name not found on named operation", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `query Exists { employees { id } }`, OperationName: []byte(`"Missing"`)},
+					`{"errors":[{"message":"operation with name 'Missing' not found"}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("422 for operation name not found on anonymous operation", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `{ employees { id } }`, OperationName: []byte(`"Missing"`)},
+					`{"errors":[{"message":"operation with name 'Missing' not found"}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("422 for required variable not provided", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: `query Find($criteria: SearchInput!) { findEmployees(criteria: $criteria) { id } }`},
+					`{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("422 for variable that cannot be coerced", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						Query:     `query Find($criteria: SearchInput!) { findEmployees(criteria: $criteria) { id } }`,
 						Variables: []byte(`{"criteria":{"nationality":1}}`),
 					},
-					expectedBody:   `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1 at \"criteria.nationality\"; Enum \"Nationality\" cannot represent non-string value: 1."}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name: "422 for persisted query when persisted operations are disabled",
-					request: testenv.GraphQLRequest{
+					`{"errors":[{"message":"Variable \"$criteria\" got invalid value 1 at \"criteria.nationality\"; Enum \"Nationality\" cannot represent non-string value: 1."}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("422 for persisted query when persisted operations are disabled", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"` + persistedHash + `"}}`),
 					},
-					expectedBody:   `{"errors":[{"message":"could not resolve persisted query, feature is not configured"}]}`,
-					expectedStatus: http.StatusUnprocessableEntity,
-				},
-				{
-					name:           "406 for @defer without multipart/mixed in Accept",
-					request:        testenv.GraphQLRequest{Query: deferQuery, Header: http.Header{"Accept": []string{"application/json"}}},
-					expectedBody:   `{"errors":[{"message":"the router received a query with the @defer directive but the client does not accept multipart/mixed HTTP responses. To enable @defer support, add the HTTP header 'Accept: multipart/mixed'","extensions":{"code":"DEFER_BAD_HEADER"}}]}`,
-					expectedStatus: http.StatusNotAcceptable,
-				},
-				{
-					name: "406 for @defer with unsupported incremental delivery format",
-					request: testenv.GraphQLRequest{
+					`{"errors":[{"message":"could not resolve persisted query, feature is not configured"}]}`,
+					http.StatusUnprocessableEntity,
+				)
+			})
+
+			t.Run("406 for @defer without multipart/mixed in Accept", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{Query: deferQuery, Header: http.Header{"Accept": []string{"application/json"}}},
+					`{"errors":[{"message":"the router received a query with the @defer directive but the client does not accept multipart/mixed HTTP responses. To enable @defer support, add the HTTP header 'Accept: multipart/mixed'","extensions":{"code":"DEFER_BAD_HEADER"}}]}`,
+					http.StatusNotAcceptable,
+				)
+			})
+
+			t.Run("406 for @defer with unsupported incremental delivery format", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						Query:  deferQuery,
 						Header: http.Header{"Accept": []string{"multipart/mixed;deferSpec=20220824,application/graphql-response+json,application/json;q=0.9"}},
 					},
-					expectedBody:   `{"errors":[{"message":"the router received a query with the @defer directive but the client requested the incremental delivery format 'deferSpec=20220824', while the router implements 'incrementalSpec=v0.2'. Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler","extensions":{"code":"DEFER_UNSUPPORTED_SPEC"}}]}`,
-					expectedStatus: http.StatusNotAcceptable,
-				},
+					`{"errors":[{"message":"the router received a query with the @defer directive but the client requested the incremental delivery format 'deferSpec=20220824', while the router implements 'incrementalSpec=v0.2'. Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler","extensions":{"code":"DEFER_UNSUPPORTED_SPEC"}}]}`,
+					http.StatusNotAcceptable,
+				)
 			})
 
 			t.Run("415 for multipart request when file upload is disabled", func(t *testing.T) {
@@ -190,27 +201,28 @@ func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			run(t, xEnv, []testCase{
-				{
-					name: "403 for operation not on the safelist",
-					request: testenv.GraphQLRequest{
+			t.Run("403 for operation not on the safelist", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						OperationName: []byte(`"Employees"`),
 						Query:         `query Employees { employees { id details { forename } } }`,
 						Header:        http.Header{"Graphql-Client-Name": []string{"my-client"}},
 					},
-					expectedBody:   `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`,
-					expectedStatus: http.StatusForbidden,
-				},
-				{
-					name: "403 for blocked persisted operation",
-					request: testenv.GraphQLRequest{
+					`{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`,
+					http.StatusForbidden,
+				)
+			})
+
+			t.Run("403 for blocked persisted operation", func(t *testing.T) {
+				requireStatus(t, xEnv,
+					testenv.GraphQLRequest{
 						OperationName: []byte(`"Employees"`),
 						Extensions:    []byte(`{"persistedQuery":{"version":1,"sha256Hash":"` + persistedHash + `"}}`),
 						Header:        http.Header{"Graphql-Client-Name": []string{"my-client"}, "X-Block": []string{"persisted"}},
 					},
-					expectedBody:   `{"errors":[{"message":"persisted operation is blocked"}]}`,
-					expectedStatus: http.StatusForbidden,
-				},
+					`{"errors":[{"message":"persisted operation is blocked"}]}`,
+					http.StatusForbidden,
+				)
 			})
 		})
 	})

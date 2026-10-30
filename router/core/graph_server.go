@@ -1940,6 +1940,7 @@ func (s *graphServer) buildGraphMux(
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
 		WaitForCacheWrites:                     waitForCacheWrites,
+		UseGraphQLOverHTTPStatusCodes:          s.securityConfiguration.UseGraphQLOverHTTPStatusCodes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
