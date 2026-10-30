@@ -105,13 +105,19 @@ const usedVariableNames = (nodes: readonly ASTNode[]): Set<string> => {
 
 // The document one response key is probed with. The probe declares only the variables its fields
 // and fragments use; the router rejects undeclared or unused ones.
-const probeDocument = (fields: readonly FieldNode[], operation: OperationDefinitionNode, fragments: FragmentMap) => {
+type ProbeDocument = { query: string; declaredVariables: Set<string> };
+
+const buildProbeDocument = (
+  fields: readonly FieldNode[],
+  operation: OperationDefinitionNode,
+  fragments: FragmentMap,
+): ProbeDocument => {
   const linked = referencedFragments(fields, fragments);
   const used = usedVariableNames([...fields, ...linked]);
   const definitions = (operation.variableDefinitions ?? []).filter((d) => used.has(d.variable.name.value));
   const head = definitions.length > 0 ? `query(${definitions.map((d) => print(d)).join(', ')}) ` : '';
   const query = [`${head}{ ${fields.map((f) => print(f)).join(' ')} }`, ...linked.map((f) => print(f))].join('\n');
-  return { query, declared: new Set(definitions.map((d) => d.variable.name.value)) };
+  return { query, declaredVariables: new Set(definitions.map((d) => d.variable.name.value)) };
 };
 
 // Keyed by response key.
@@ -121,15 +127,16 @@ const groupRootFields = (operation: OperationDefinitionNode, fragments: Fragment
     (field) => field.alias?.value ?? field.name.value,
   );
 
-// Everything a measurement depends on, as printed probe documents. Two queries with the same
-// value would measure the same thing, so the store keeps its numbers across edits that leave it alone.
+// Everything a measurement depends on, as printed probe documents. Reformatting the query, or
+// editing a fragment no root field spreads, leaves this unchanged, so the store keeps its numbers.
+// Adding a field or an argument changes it, so the store clears them.
 export const measuredInputs = (query: string): string | undefined => {
   const { operation, fragments } = parseOperation(query);
   if (!operation) {
     return undefined;
   }
   return [...groupRootFields(operation, fragments)]
-    .map(([name, fields]) => `${name}: ${probeDocument(fields, operation, fragments).query}`)
+    .map(([name, fields]) => `${name}: ${buildProbeDocument(fields, operation, fragments).query}`)
     .sort()
     .join('\n');
 };
@@ -143,8 +150,10 @@ const probeField = async (
   request: ProbeRequest,
   signal: AbortSignal,
 ): Promise<ProbeResult> => {
-  const { query, declared } = probeDocument(fields, operation, fragments);
-  const variables = Object.fromEntries(Object.entries(request.variables).filter(([name]) => declared.has(name)));
+  const { query, declaredVariables } = buildProbeDocument(fields, operation, fragments);
+  const variables = Object.fromEntries(
+    Object.entries(request.variables).filter(([name]) => declaredVariables.has(name)),
+  );
   try {
     let total = 0;
     for (let run = 0; run < PROBE_RUNS; run++) {
