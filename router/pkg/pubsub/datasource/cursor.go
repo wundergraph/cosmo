@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"context"
 	"crypto/hkdf"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -116,6 +117,64 @@ func (c ClientIdentity) canonical() []byte {
 func appendLengthPrefixed(b, data []byte) []byte {
 	b = binary.AppendUvarint(b, uint64(len(data)))
 	return append(b, data...)
+}
+
+// SubscriberBindingFunc extracts the client identity a subscriber's cursors are bound to from its context.
+// It returns a *DeliveryGuaranteeError if the subscriber can't be issued cursors.
+type SubscriberBindingFunc func(ctx context.Context) (ClientIdentity, error)
+
+// Cursors bundles what a data source needs to issue cursors.
+// A zero value means cursors can't be issued.
+type Cursors struct {
+	Codec             *CursorCodec
+	SubscriberBinding SubscriberBindingFunc
+}
+
+func (c Cursors) Enabled() bool {
+	return c.Codec != nil && c.SubscriberBinding != nil
+}
+
+// CursorTopicsProvider is implemented by subscription configurations of providers that support cursors.
+// The topics are part of requestData, so a cursor can't be resumed on different topics.
+type CursorTopicsProvider interface {
+	CursorTopics() []string
+}
+
+// cursorRequestData returns the requestData a cursor is signed over: the provider type and id,
+// and the sorted topics of the subscription, each length-prefixed.
+func cursorRequestData(conf SubscriptionEventConfiguration) ([]byte, error) {
+	topicsProvider, ok := conf.(CursorTopicsProvider)
+	if !ok {
+		return nil, fmt.Errorf("provider type %s does not support cursors", conf.ProviderType())
+	}
+	topics := slices.Clone(topicsProvider.CursorTopics())
+	slices.Sort(topics)
+
+	b := appendLengthPrefixed(nil, []byte(conf.ProviderType()))
+	b = appendLengthPrefixed(b, []byte(conf.ProviderID()))
+	b = binary.AppendUvarint(b, uint64(len(topics)))
+	for _, topic := range topics {
+		b = appendLengthPrefixed(b, []byte(topic))
+	}
+	return b, nil
+}
+
+// cursorBinding is what the cursors of a single subscriber are bound to.
+type cursorBinding struct {
+	identity    ClientIdentity // who is subscribing
+	requestData []byte         // what is being subscribed to
+}
+
+func newCursorBinding(ctx context.Context, subscriberBinding SubscriberBindingFunc, conf SubscriptionEventConfiguration) (cursorBinding, error) {
+	identity, err := subscriberBinding(ctx)
+	if err != nil {
+		return cursorBinding{}, err
+	}
+	requestData, err := cursorRequestData(conf)
+	if err != nil {
+		return cursorBinding{}, err
+	}
+	return cursorBinding{identity: identity, requestData: requestData}, nil
 }
 
 // CursorKey is a key of the cursor keyring.
