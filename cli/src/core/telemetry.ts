@@ -109,6 +109,7 @@ export const initTelemetry = () => {
     baseUrl: config.baseURL,
     apiKey: config.apiKey,
     proxyUrl,
+    timeoutMs: config.requestTimeoutMs,
   });
 
   // Handle errors silently to not interrupt CLI operations
