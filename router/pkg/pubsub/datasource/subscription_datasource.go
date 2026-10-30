@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -37,8 +38,8 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input [
 	return subscriptionConfiguration, nil
 }
 
-// Negotiate rejects clients whose requested delivery guarantee can't be served
-// and returns what was negotiated for the client.
+// Negotiate rejects clients whose requested delivery guarantee can't be served,
+// verifies the cursor of a resuming client and returns what was negotiated for the client.
 // It gets the context of the subscribing client, unlike Start, which only gets the context
 // of the first subscriber of a trigger.
 func (s *PubSubSubscriptionDataSource[C]) Negotiate(ctx *resolve.Context, input []byte) (resolve.NegotiatedParams, error) {
@@ -49,18 +50,81 @@ func (s *PubSubSubscriptionDataSource[C]) Negotiate(ctx *resolve.Context, input 
 		return zero, err
 	}
 
-	negotiatedGuarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
+	availableGuarantee := subscriptionConfiguration.DeliveryGuaranteeMode()
+	negotiatedGuarantee, err := NegotiateDeliveryGuarantee(availableGuarantee, input)
 	if err != nil {
 		return zero, err
 	}
 
-	if negotiatedGuarantee == DeliveryGuaranteeCursor {
-		if _, err := s.validateCursorBinding(ctx, subscriptionConfiguration); err != nil {
-			return zero, err
+	resumeToken, resuming, err := resumeCursorToken(input)
+	if err != nil {
+		return zero, err
+	}
+
+	if negotiatedGuarantee != DeliveryGuaranteeCursor {
+		// A cursor presented by a client that did not negotiate the cursor guarantee
+		// is rejected rather than honoured.
+		if resuming {
+			return zero, &DeliveryGuaranteeError{
+				Code:      DeliveryGuaranteeErrorCodeUnsupported,
+				Supported: SupportedDeliveryGuarantees(availableGuarantee),
+				Message:   "A cursor can only be resumed by a subscription that requests the cursor delivery guarantee",
+			}
+		}
+		negotiatedCursorParams := resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}
+		return resolve.NegotiatedParams{SubscriptionCursor: negotiatedCursorParams}, nil
+	}
+
+	binding, err := s.validateCursorBinding(ctx, subscriptionConfiguration)
+	if err != nil {
+		return zero, err
+	}
+
+	negotiated := resolve.NegotiatedParams{SubscriptionCursor: resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}}
+	if !resuming {
+		return negotiated, nil
+	}
+
+	if !supportsCursorResume(s.pubSub) {
+		return zero, &DeliveryGuaranteeError{
+			Code:      DeliveryGuaranteeErrorCodeUnsupported,
+			Supported: SupportedDeliveryGuarantees(availableGuarantee),
+			Message:   "This provider can't resume a subscription from a cursor",
 		}
 	}
 
-	return resolve.NegotiatedParams{SubscriptionCursor: resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}}, nil
+	// Verification happens exactly once, here, and the verified cursor travels to Start on the
+	// resolve context. It covers the key, the signature over the request data (provider type,
+	// provider id and topics), the client identity and the resume window.
+	if _, err := s.cursors.Codec.Verify(resumeToken, binding.requestData, binding.identity); err != nil {
+		return zero, err
+	}
+
+	negotiated.SubscriptionCursor.ResumeToken = resumeToken
+	return negotiated, nil
+}
+
+// resumeCursorToken returns the cursor a client presented in body.extensions.streamsCursor.
+// An absent or null key means the client does not resume. Anything that is not a non-empty
+// string is rejected as an invalid cursor rather than ignored.
+func resumeCursorToken(input []byte) (string, bool, error) {
+	value, dataType, _, err := jsonparser.Get(input, "body", "extensions", cursorExtensionKey)
+	if err != nil || dataType == jsonparser.Null {
+		return "", false, nil
+	}
+
+	invalid := &DeliveryGuaranteeError{
+		Code:    DeliveryGuaranteeErrorCodeCursorInvalid,
+		Message: "The cursor is invalid: " + cursorExtensionKey + " must be a non-empty string",
+	}
+	if dataType != jsonparser.String {
+		return "", false, invalid
+	}
+	token, err := jsonparser.ParseString(value)
+	if err != nil || strings.TrimSpace(token) == "" {
+		return "", false, invalid
+	}
+	return token, true, nil
 }
 
 // validateCursorBinding resolves the cursor binding up front, so a client that can't be
@@ -122,6 +186,26 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 	eventUpdater := newSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
 	if negotiatedGuarantee == DeliveryGuaranteeCursor {
 		eventUpdater.enableCursors(s.cursors)
+	}
+
+	if negotiated.SubscriptionCursor.ResumeToken != "" {
+		binding, err := s.validateCursorBinding(ctx, conf)
+		if err != nil {
+			return err
+		}
+		cursor, err := s.cursors.Codec.Verify(negotiated.SubscriptionCursor.ResumeToken, binding.requestData, binding.identity)
+		if err != nil {
+			return err
+		}
+		seekable, ok := s.pubSub.(SeekableAdapter)
+		if !ok {
+			return &DeliveryGuaranteeError{
+				Code:      DeliveryGuaranteeErrorCodeUnsupported,
+				Supported: SupportedDeliveryGuarantees(conf.DeliveryGuaranteeMode()),
+				Message:   "This provider can't resume a subscription from a cursor",
+			}
+		}
+		return seekable.SubscribeFrom(ctx.Context(), conf, cursor, eventUpdater)
 	}
 
 	return s.pubSub.Subscribe(ctx.Context(), conf, negotiatedGuarantee, eventUpdater)
