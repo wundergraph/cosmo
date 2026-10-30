@@ -3,7 +3,10 @@ import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vit
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { eq } from 'drizzle-orm';
+import { pino } from 'pino';
 import { uid } from 'uid';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -161,7 +164,7 @@ describe('API Keys', (ctx) => {
     },
   );
 
-  test('that a hash of the API key is stored', async (testContext) => {
+  test('that only a hash of the API key is stored', async (testContext) => {
     const { client, users, server } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());
 
@@ -179,6 +182,12 @@ describe('API Keys', (ctx) => {
 
     const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
     expect(stored?.keyHash).toBe(createHash('sha256').update(response.apiKey).digest('hex'));
+    expect(stored?.key).toBeNull();
+
+    const authenticator = new ApiKeyAuthenticator(server.db, new OrganizationRepository(pino(), server.db, ''));
+    const authContext = await authenticator.authenticate(response.apiKey);
+    expect(authContext.apiKeyName).toBe(name);
+    await expect(authenticator.authenticate(stored!.keyHash)).rejects.toThrow('Invalid api key');
   });
 
   test('that an "organization-apikey-manager" cannot create API keys with admin role', async (testContext) => {

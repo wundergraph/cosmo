@@ -1256,7 +1256,7 @@ export const apiKeys = pgTable(
       }),
     name: text('name').notNull(),
     key: text('key').unique(),
-    keyHash: text('key_hash').unique(),
+    keyHash: text('key_hash').unique().notNull(),
     groupId: uuid('group_id').references(() => organizationGroups.id, {
       onDelete: 'set null',
     }),
