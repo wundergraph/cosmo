@@ -75,7 +75,7 @@ describe('DeferStore', () => {
 
   test('a formatting-only edit keeps the latencies', () => {
     const { editor, store, listener } = bound();
-    store.startAnalysis('http://a', null, '{ a @defer { b } }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a @defer { b } }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{\n  a @defer {\n    b\n  }\n}  # comment');
@@ -86,7 +86,7 @@ describe('DeferStore', () => {
 
   test('an edit outside the measured fields keeps the latencies', () => {
     const { editor, store, listener } = bound();
-    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a { b } }\n\nfragment Unused on T { x }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{ a { b } }\n\nfragment Unused on T { x y }');
@@ -97,7 +97,7 @@ describe('DeferStore', () => {
 
   test('an unrelated edit after the panel inserts @defer keeps the latencies', () => {
     const { editor, store, listener } = bound();
-    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a { b } }\n\nfragment Unused on T { x }' });
     store.finishAnalysis({ a: 10 }, {});
 
     // The panel adds @defer inside the measured field, which changes what gets probed.
@@ -112,7 +112,7 @@ describe('DeferStore', () => {
 
   test('an edit inside a measured field clears the latencies', () => {
     const { editor, store, listener } = bound();
-    store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a { b } }\n\nfragment Unused on T { x }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{ a { b c } }\n\nfragment Unused on T { x }');
@@ -123,7 +123,7 @@ describe('DeferStore', () => {
 
   test('an edit that changes the query clears the latencies', () => {
     const { editor, store, listener } = bound();
-    store.startAnalysis('http://a', null, '{ a @defer { b } }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a @defer { b } }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{ a @defer { c } }');
@@ -134,7 +134,7 @@ describe('DeferStore', () => {
 
   test('a routing URL change clears the analysis, the same URL keeps it', () => {
     const store = new DeferStore();
-    store.startAnalysis('http://a', null, '{ a }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     store.finishAnalysis({ a: 10 }, {});
 
     store.invalidateIfUrlChanged('http://a');
@@ -146,7 +146,7 @@ describe('DeferStore', () => {
 
   test.each(['variables', 'headers'] as const)('a %s edit clears the latencies', (name) => {
     const editors = bound();
-    editors.store.startAnalysis('http://a', null, '{ a }');
+    editors.store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     editors.store.finishAnalysis({ a: 10 }, {});
 
     editors[name].getValue.mockReturnValue('{ "changed": true }');
@@ -160,7 +160,7 @@ describe('DeferStore', () => {
     const { editor, store, listener } = bound();
     store.setTabs('one', ['one', 'two']);
     editor.getValue.mockReturnValue('{ a }');
-    store.startAnalysis('http://a', null, '{ a }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{ b }');
@@ -180,7 +180,7 @@ describe('DeferStore', () => {
     const { editor, store } = bound();
     editor.getValue.mockReturnValue('{ a }');
     store.setTabs('one', ['one', 'two']);
-    store.startAnalysis('http://a', null, '{ a }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     store.finishAnalysis({ a: 10 }, {});
 
     store.setTabs('two', ['one', 'two']);
@@ -191,7 +191,7 @@ describe('DeferStore', () => {
   test('a programmatic rewrite of the query on the same tab clears the latencies', () => {
     const { editor, store, listener } = bound();
     store.setTabs('one', ['one']);
-    store.startAnalysis('http://a', null, '{ a }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     store.finishAnalysis({ a: 10 }, {});
 
     editor.getValue.mockReturnValue('{ b }');
@@ -205,7 +205,7 @@ describe('DeferStore', () => {
     const { editor, store } = bound();
     editor.getValue.mockReturnValue('{ a }');
     store.setTabs('one', ['one', 'two']);
-    store.startAnalysis('http://a', null, '{ a }');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     store.finishAnalysis({ a: 10 }, {});
 
     store.setTabs('two', ['two']);
@@ -218,7 +218,7 @@ describe('DeferStore', () => {
     const { editor, store } = bound();
     editor.getValue.mockReturnValue('{ a }');
     store.setTabs('one', ['one', 'two']);
-    const tabId = store.startAnalysis('http://a', null, '{ a }');
+    const tabId = store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
 
     store.setTabs('two', ['one', 'two']);
     store.finishAnalysis({ a: 10 }, {}, tabId);
@@ -233,7 +233,7 @@ describe('DeferStore', () => {
     const analyse = (tab: string, query: string, latency: number) => {
       editor.getValue.mockReturnValue(query);
       store.setTabs(tab, ['one', 'two', 'three']);
-      store.startAnalysis('http://a', null, query);
+      store.startAnalysis({ routingUrl: 'http://a', query: query });
       store.finishAnalysis({ [query]: latency }, {});
     };
     analyse('one', '{ a }', 1);

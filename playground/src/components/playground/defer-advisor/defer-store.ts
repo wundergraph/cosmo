@@ -16,6 +16,8 @@ type AnalysisState = {
 
 const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, error: null, running: false };
 
+type AnalysisRequest = { routingUrl: string; query: string; variablesError?: string | null };
+
 type TabAnalysis = {
   state: AnalysisState;
   url: string | undefined;
@@ -103,7 +105,7 @@ export class DeferStore {
     this.editors.query.getDoc().replaceRange(text, { line: 0, ch: 0 }, { line: Infinity, ch: Infinity }, DEFER_ORIGIN);
   }
 
-  startAnalysis(routingUrl: string, variablesError: string | null, query: string): string {
+  startAnalysis({ routingUrl, query, variablesError = null }: AnalysisRequest): string {
     this.current.url = routingUrl;
     this.current.inputs = this.requestInputs(query);
     this.update({ running: true, error: variablesError });

@@ -35,7 +35,7 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     let tabId: string | undefined;
     try {
       const request = getRequest();
-      tabId = store.startAnalysis(routingUrl, request.variablesError ?? null, query);
+      tabId = store.startAnalysis({ routingUrl, query, variablesError: request.variablesError });
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
