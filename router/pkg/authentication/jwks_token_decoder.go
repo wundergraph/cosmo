@@ -193,10 +193,18 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
+
+			// A secret-based JWK can only verify tokens signed with its symmetric algorithm,
+			// so that algorithm is the enforced allow list. This also covers tokens without a
+			// kid, for which the underlying keyfunc verifies against every key in its storage
+			// without cross-checking the token algorithm.
+			if len(c.AllowedAlgorithms) > 0 && !slices.Equal(c.AllowedAlgorithms, []string{c.Algorithm}) {
+				return nil, fmt.Errorf("algorithms %v conflicts with symmetric_algorithm %s for JWK keyid %s", c.AllowedAlgorithms, c.Algorithm, c.KeyId)
+			}
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
-				allowedAlgorithms: c.AllowedAlgorithms,
+				allowedAlgorithms: []string{c.Algorithm},
 				allowedUse:        c.AllowedUse,
 			})
 		}
