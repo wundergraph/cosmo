@@ -2515,6 +2515,7 @@ export class FederationFactory {
     if (this.referencedFederatedDirectiveNames.has(POLICY)) {
       const subgraphs = [...this.internalSubgraphBySubgraphName.values()];
       mergePolicyDirectives({
+        concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         subgraphs,
       });
