@@ -29,6 +29,15 @@ const millisecondFormat = new Intl.NumberFormat('en-US', {
 
 export const formatMs = (ms: number) => millisecondFormat.format(ms);
 
+// Text that isn't valid JSON comes back unchanged.
+export const normaliseJson = (text: string) => {
+  try {
+    return JSON.stringify(JSON.parse(text));
+  } catch {
+    return text;
+  }
+};
+
 export const groupBy = <T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> =>
   items.reduce<Map<K, T[]>>((groups, item) => {
     const k = key(item);

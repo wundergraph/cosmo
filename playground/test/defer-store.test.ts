@@ -37,7 +37,7 @@ describe('DeferStore', () => {
   test('unbinding removes the change listener it registered', () => {
     const { editor, asQueryEditor } = fakeEditor();
     const store = new DeferStore();
-    const unbind = store.bind({ query: asQueryEditor });
+    const unbind = store.bind({ query: asQueryEditor, variables: null, headers: null });
     unbind();
 
     const [, listener] = editor.on.mock.calls[0];
@@ -146,6 +146,7 @@ describe('DeferStore', () => {
 
   test.each(['variables', 'headers'] as const)('a %s edit clears the latencies', (name) => {
     const editors = bound();
+    editors.editor.getValue.mockReturnValue('{ a }');
     editors.store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
     editors.store.finishAnalysis({ a: 10 }, {});
 
@@ -154,6 +155,20 @@ describe('DeferStore', () => {
     listener(null, { origin: '+input' });
 
     expect(editors.store.snapshot.latencies).toBeNull();
+  });
+
+  test.each(['variables', 'headers'] as const)('reformatting the %s keeps the latencies', (name) => {
+    const editors = bound();
+    editors.editor.getValue.mockReturnValue('{ a }');
+    editors[name].getValue.mockReturnValue('{"id":1}');
+    editors.store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
+    editors.store.finishAnalysis({ a: 10 }, {});
+
+    editors[name].getValue.mockReturnValue('{\n  "id": 1\n}');
+    const [, listener] = editors[name].on.mock.calls[0];
+    listener(null, { origin: '+input' });
+
+    expect(editors.store.snapshot.latencies).toEqual({ a: 10 });
   });
 
   test('each tab keeps its own analysis', () => {
