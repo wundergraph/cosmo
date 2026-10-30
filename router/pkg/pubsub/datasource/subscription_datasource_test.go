@@ -29,7 +29,9 @@ func (i incompatibleSubscriptionEventConfiguration) ProviderType() ProviderType 
 	return ProviderTypeNats
 }
 func (i incompatibleSubscriptionEventConfiguration) RootFieldName() string { return "incompatible" }
-
+func (i incompatibleSubscriptionEventConfiguration) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return DeliveryGuaranteeModeOff
+}
 func (t testSubscriptionEventConfiguration) ProviderID() string {
 	return "test-provider"
 }
@@ -40,6 +42,10 @@ func (t testSubscriptionEventConfiguration) ProviderType() ProviderType {
 
 func (t testSubscriptionEventConfiguration) RootFieldName() string {
 	return "testSubscription"
+}
+
+func (t testSubscriptionEventConfiguration) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return DeliveryGuaranteeModeOff
 }
 
 // testSubscriptionDataSourceEventBuilder is a reusable event builder for tests
@@ -104,7 +110,7 @@ func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 	ctx := resolve.NewContext(context.Background())
 	mockUpdater := NewMockSubscriptionUpdater(t)
 
-	mockAdapter.On("Subscribe", ctx.Context(), testConfig, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(nil)
+	mockAdapter.On("Subscribe", ctx.Context(), testConfig, DeliveryGuaranteeAtMostOnce, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(nil)
 
 	err = dataSource.Start(ctx, nil, input, mockUpdater)
 	assert.NoError(t, err)
@@ -147,7 +153,7 @@ func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	expectedError := errors.New("subscription error")
 
-	mockAdapter.On("Subscribe", ctx.Context(), testConfig, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(expectedError)
+	mockAdapter.On("Subscribe", ctx.Context(), testConfig, DeliveryGuaranteeAtMostOnce, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(expectedError)
 
 	err = dataSource.Start(ctx, nil, input, mockUpdater)
 	assert.Error(t, err)

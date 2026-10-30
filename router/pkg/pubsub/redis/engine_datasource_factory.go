@@ -23,11 +23,12 @@ const (
 type EngineDataSourceFactory struct {
 	RedisAdapter datasource.Adapter
 
-	fieldName  string
-	eventType  EventType
-	channels   []string
-	providerId string
-	logger     *zap.Logger
+	fieldName             string
+	eventType             EventType
+	channels              []string
+	providerId            string
+	logger                *zap.Logger
+	deliveryGuaranteeMode datasource.DeliveryGuaranteeMode
 }
 
 func (c *EngineDataSourceFactory) GetFieldName() string {
@@ -106,9 +107,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 // ResolveDataSourceSubscriptionInput builds the input for the subscription data source
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		Provider:  c.providerId,
-		Channels:  c.channels,
-		FieldName: c.fieldName,
+		Provider:      c.providerId,
+		Channels:      c.channels,
+		FieldName:     c.fieldName,
+		GuaranteeMode: c.deliveryGuaranteeMode,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

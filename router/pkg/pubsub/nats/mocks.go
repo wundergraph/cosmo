@@ -278,16 +278,16 @@ func (_c *MockAdapter_Startup_Call) RunAndReturn(run func(ctx context.Context) e
 }
 
 // Subscribe provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
-	ret := _mock.Called(ctx, cfg, updater)
+func (_mock *MockAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
+	ret := _mock.Called(ctx, cfg, guarantee, updater)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Subscribe")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.SubscriptionEventConfiguration, datasource.SubscriptionEventUpdater) error); ok {
-		r0 = returnFunc(ctx, cfg, updater)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.SubscriptionEventConfiguration, datasource.DeliveryGuarantee, datasource.SubscriptionEventUpdater) error); ok {
+		r0 = returnFunc(ctx, cfg, guarantee, updater)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -302,12 +302,13 @@ type MockAdapter_Subscribe_Call struct {
 // Subscribe is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cfg datasource.SubscriptionEventConfiguration
+//   - guarantee datasource.DeliveryGuarantee
 //   - updater datasource.SubscriptionEventUpdater
-func (_e *MockAdapter_Expecter) Subscribe(ctx interface{}, cfg interface{}, updater interface{}) *MockAdapter_Subscribe_Call {
-	return &MockAdapter_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, cfg, updater)}
+func (_e *MockAdapter_Expecter) Subscribe(ctx interface{}, cfg interface{}, guarantee interface{}, updater interface{}) *MockAdapter_Subscribe_Call {
+	return &MockAdapter_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, cfg, guarantee, updater)}
 }
 
-func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater)) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater)) *MockAdapter_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -317,14 +318,19 @@ func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, cfg data
 		if args[1] != nil {
 			arg1 = args[1].(datasource.SubscriptionEventConfiguration)
 		}
-		var arg2 datasource.SubscriptionEventUpdater
+		var arg2 datasource.DeliveryGuarantee
 		if args[2] != nil {
-			arg2 = args[2].(datasource.SubscriptionEventUpdater)
+			arg2 = args[2].(datasource.DeliveryGuarantee)
+		}
+		var arg3 datasource.SubscriptionEventUpdater
+		if args[3] != nil {
+			arg3 = args[3].(datasource.SubscriptionEventUpdater)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -335,7 +341,7 @@ func (_c *MockAdapter_Subscribe_Call) Return(err error) *MockAdapter_Subscribe_C
 	return _c
 }
 
-func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error) *MockAdapter_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }
