@@ -2020,6 +2020,13 @@ func (e *Environment) Shutdown() {
 		}
 	}
 
+	// Flush Kafka before cancelling the environment context, ctx derives from it and would already be cancelled
+	if e.cfg.EnableKafka && e.KafkaClient != nil {
+		if err := e.KafkaClient.Flush(ctx); err != nil {
+			e.t.Logf("could not flush Kafka connection: %s", err)
+		}
+	}
+
 	// Terminate test server resources
 	e.cancel(ErrEnvironmentClosed)
 
@@ -2072,12 +2079,8 @@ func (e *Environment) Shutdown() {
 		}
 	}
 
-	// Flush Kafka connection and close client
+	// Close the Kafka client (flushed above, before the environment context was cancelled)
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
-		err := e.KafkaClient.Flush(ctx)
-		if err != nil {
-			e.t.Logf("could not flush Kafka connection: %s", err)
-		}
 		e.KafkaClient.Close()
 	}
 
