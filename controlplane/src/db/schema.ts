@@ -1255,7 +1255,8 @@ export const apiKeys = pgTable(
         onDelete: 'cascade',
       }),
     name: text('name').notNull(),
-    key: text('key').unique().notNull(),
+    key: text('key').unique(),
+    keyHash: text('key_hash').unique(),
     groupId: uuid('group_id').references(() => organizationGroups.id, {
       onDelete: 'set null',
     }),
