@@ -14,6 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -598,6 +599,25 @@ telemetry:
 
 	require.Equal(t, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"}, js.Causes[0].InstanceLocation)
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
+}
+
+func TestTracingExporterSamplingRate(t *testing.T) {
+	t.Parallel()
+
+	for _, rate := range []string{"-0.1", "1.5"} {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: `+rate+`
+`)
+		_, err := LoadConfig([]string{f})
+		assert.ErrorContains(t, err, "/telemetry/tracing/exporters/0/sampling_rate", rate)
+	}
 }
 
 func TestLoadFullConfig(t *testing.T) {

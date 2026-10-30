@@ -20,6 +20,7 @@
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
           "Headers": {},
+          "SamplingRate": 0.5,
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }

@@ -42,6 +42,9 @@ type ExporterConfig struct {
 	// For example
 	// /v1/traces
 	HTTPPath string
+	// SamplingRate selects the share of the recorded traces sent to this
+	// exporter. When nil, the exporter receives every recorded trace.
+	SamplingRate *float64
 }
 
 type ExportGraphQLVariables struct {
@@ -81,22 +84,27 @@ type Config struct {
 
 func DefaultExporter(cfg *Config) *ExporterConfig {
 	for _, exporter := range cfg.Exporters {
-		if exporter.Disabled {
-			continue
-		}
-		u, err := url.Parse(exporter.Endpoint)
-		if err != nil {
-			continue
-		}
-		u2, err := url.Parse(otelconfig.DefaultEndpoint())
-		if err != nil {
-			continue
-		}
-		if u.Host == u2.Host {
+		if IsDefaultExporter(exporter) {
 			return exporter
 		}
 	}
 	return nil
+}
+
+// IsDefaultExporter reports whether exporter is enabled and sends traces to Cosmo Cloud.
+func IsDefaultExporter(exporter *ExporterConfig) bool {
+	if exporter.Disabled {
+		return false
+	}
+	u, err := url.Parse(exporter.Endpoint)
+	if err != nil {
+		return false
+	}
+	u2, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		return false
+	}
+	return u.Host == u2.Host
 }
 
 // DefaultConfig returns the default config.

@@ -129,11 +129,12 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
+	samplingRate := headSamplingRate(config)
 	if config.Config.ParentBasedSampler {
 		opts = append(opts,
 			sdktrace.WithSampler(
 				sdktrace.ParentBased(
-					sdktrace.TraceIDRatioBased(config.Config.Sampler),
+					sdktrace.TraceIDRatioBased(samplingRate),
 					// By default, when the parent span is sampled, the child span will be sampled.
 				),
 			),
@@ -141,7 +142,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	} else {
 		opts = append(opts,
 			sdktrace.WithSampler(
-				sdktrace.TraceIDRatioBased(config.Config.Sampler),
+				sdktrace.TraceIDRatioBased(samplingRate),
 			),
 		)
 	}
@@ -211,14 +212,20 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 				}
 
 				// Always be sure to batch in production.
-				opts = append(opts,
-					sdktrace.WithBatcher(exporter,
-						sdktrace.WithBatchTimeout(batchTimeout),
-						sdktrace.WithExportTimeout(exportTimeout),
-						sdktrace.WithMaxExportBatchSize(512),
-						sdktrace.WithMaxQueueSize(2048),
-					),
+				var processor sdktrace.SpanProcessor = sdktrace.NewBatchSpanProcessor(exporter,
+					sdktrace.WithBatchTimeout(batchTimeout),
+					sdktrace.WithExportTimeout(exportTimeout),
+					sdktrace.WithMaxExportBatchSize(512),
+					sdktrace.WithMaxQueueSize(2048),
 				)
+
+				// Exporters with a sampling rate only receive the recorded traces selected by it, including the
+				// traces recorded because an upstream service sampled them.
+				if rate := ExporterSamplingRate(exp); rate < 1 {
+					processor = newTraceIDSamplingProcessor(processor, rate)
+				}
+
+				opts = append(opts, sdktrace.WithSpanProcessor(processor))
 			}
 		}
 
