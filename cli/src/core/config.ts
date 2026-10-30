@@ -26,6 +26,9 @@ export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   // environment var first to allow overriding
   apiKey: process.env.COSMO_API_KEY,
+  // paths to PEM files used for mTLS client authentication
+  tlsClientCert: process.env.COSMO_TLS_CLIENT_CERT,
+  tlsClientKey: process.env.COSMO_TLS_CLIENT_KEY,
   kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
   webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
