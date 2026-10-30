@@ -531,7 +531,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
       "DecompressionEnabled": false,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "ReadTimeout": 30000000000,
+      "ReadHeaderTimeout": 5000000000,
+      "IdleTimeout": 90000000000,
+      "WriteTimeout": 120000000000
     },
     "Subgraphs": {
       "products": {

@@ -301,6 +301,11 @@ traffic_shaping:
     max_header_bytes: 4MiB
     decompression_enabled: false
     response_compression_min_size: 4KiB
+    # Client-facing HTTP server timeouts
+    read_timeout: 30s
+    read_header_timeout: 5s
+    idle_timeout: 90s
+    write_timeout: 2m
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
