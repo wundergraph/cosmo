@@ -330,6 +330,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
+			// Cleanup all files. Needs to be called in the pre_handler function to ensure that
+			// defer is called after the response is written. It is registered before parsing,
+			// so files written before a parse error are removed as well.
+			defer func() {
+				if err := multipartParser.RemoveAll(); err != nil {
+					requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
+				}
+			}()
+
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			// We set it before the error so that users could log the body if it exists in case of an error
@@ -348,14 +357,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			)
 
 			readMultiPartSpan.End()
-
-			// Cleanup all files. Needs to be called in the pre_handler function to ensure that
-			// defer is called after the response is written
-			defer func() {
-				if err := multipartParser.RemoveAll(); err != nil {
-					requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
-				}
-			}()
 		} else if r.Method == http.MethodPost {
 			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
 				trace.WithSpanKind(trace.SpanKindInternal),
@@ -935,7 +936,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		// uploadsMapping containing such an item:
 		// {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"}
 		// In short, "variables.file" should be updated to "variables.a.file".
-		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
+		requestContext.operation.files[idx].SetVariablePath(mapping.NewUploadPath)
 	}
 
 	// requestContext.operation.remapVariables map will contain new names as keys and
