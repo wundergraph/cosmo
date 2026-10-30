@@ -238,7 +238,7 @@ export const mergedEntrySummary = (trace: ResponseCacheTrace): MergedEntrySummar
   return [...groupBy(aliased, (entry) => entry.path || entry.alias)].map(([name, group]) => ({
     name,
     total: group.length,
-    served: group.filter((entry) => entry.served).length,
+    served: group.reduce((count, entry) => count + Number(entry.served), 0),
   }));
 };
 
