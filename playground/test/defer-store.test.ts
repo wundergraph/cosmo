@@ -97,7 +97,7 @@ describe('DeferStore', () => {
     expect(store.snapshot.latencies).toEqual({ a: 10 });
   });
 
-  test('an unrelated edit after a panel write keeps the latencies', () => {
+  test('an unrelated edit after the panel inserts @defer keeps the latencies', () => {
     const { editor, store, listener } = bound();
     store.startAnalysis('http://a', null, '{ a { b } }\n\nfragment Unused on T { x }');
     store.finishAnalysis({ a: 10 }, {});
