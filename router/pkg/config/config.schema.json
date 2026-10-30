@@ -4685,6 +4685,19 @@
         }
       }
     },
+    "graphql_over_http": {
+      "type": "object",
+      "description": "Configures how the router follows the GraphQL over HTTP spec.",
+      "additionalProperties": false,
+      "properties": {
+        "status_codes": {
+          "type": "string",
+          "enum": ["legacy", "spec"],
+          "default": "legacy",
+          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'spec' returns the 4xx status codes of the GraphQL over HTTP spec, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'spec'."
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",

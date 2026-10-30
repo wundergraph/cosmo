@@ -79,6 +79,7 @@ type PreHandlerOptions struct {
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
 	SpanNameFormatter                      SpanNameFormatterFunc
+	GraphQLOverHTTPStatusCodes             config.GraphQLOverHTTPStatusCodes
 
 	// WaitForCacheWrites is set when Debug.SynchronousCacheWrites is enabled; it blocks until pending async operation-cache writes are applied.
 	WaitForCacheWrites func()
@@ -123,6 +124,7 @@ type PreHandler struct {
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
 	spanNameFormatter                      SpanNameFormatterFunc
+	graphqlOverHTTPStatusCodes             config.GraphQLOverHTTPStatusCodes
 	waitForCacheWrites                     func()
 }
 
@@ -190,6 +192,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	if spanNameFormatter == nil {
 		spanNameFormatter = DefaultSpanNameFormatter
 	}
+
 	return &PreHandler{
 		log:                                opts.Logger,
 		executor:                           opts.Executor,
@@ -232,6 +235,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
 		spanNameFormatter:                      spanNameFormatter,
+		graphqlOverHTTPStatusCodes:             opts.GraphQLOverHTTPStatusCodes,
 		waitForCacheWrites:                     opts.WaitForCacheWrites,
 	}
 }
@@ -280,7 +284,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Don't produce error logs here because these are client side errors
 			// e.g. too large body, slow client, aborted connection etc.
 			// The error is logged as debug log in the writeOperationError function
-			writeOperationError(s.r, s.ww, s.requestLogger, err, h.headerPropagation)
+			writeOperationError(s.r, s.ww, s.requestLogger, err, h.headerPropagation, h.graphqlOverHTTPStatusCodes)
 			return
 		}
 
@@ -404,6 +408,7 @@ func (s *handlerScope) readRequestBody() error {
 			return &httpGraphqlError{
 				message:    "file upload disabled",
 				statusCode: http.StatusOK,
+				kind:       errorKindFileUploadDisabled,
 			}
 		}
 		return s.readMultipartBody()
@@ -536,7 +541,7 @@ func (s *handlerScope) writeHandleOperationError(err error) {
 		s.ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
 	}
 
-	writeOperationError(s.r, s.ww, s.requestLogger, err, s.h.headerPropagation)
+	writeOperationError(s.r, s.ww, s.requestLogger, err, s.h.headerPropagation, s.h.graphqlOverHTTPStatusCodes)
 }
 
 // prepareRequestForExecution sets the request that is passed to the next handler
@@ -926,6 +931,15 @@ func (s *handlerScope) loadPersistedOperation(operationKit *OperationKit) (skipP
 				err = nil
 			}
 		}
+		// With the safelist, an unknown hash of a query body means the query is not on the safelist
+		if err != nil && s.h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" && errors.As(err, &poNotFoundErr) {
+			err = &httpGraphqlError{
+				message:       "PersistedQueryNotFound",
+				extensionCode: ExtCodeErrPersistedQueryNotFound,
+				statusCode:    http.StatusOK,
+				kind:          errorKindNotOnSafelist,
+			}
+		}
 		if err != nil {
 			return false, false, err
 		}
@@ -1035,6 +1049,7 @@ func (s *handlerScope) identifyOperation(operationKit *OperationKit) error {
 		return &httpGraphqlError{
 			message:    "Mutations can only be sent over HTTP POST",
 			statusCode: http.StatusMethodNotAllowed,
+			kind:       errorKindMutationOverGET,
 		}
 	}
 
@@ -1045,6 +1060,7 @@ func (s *handlerScope) identifyOperation(operationKit *OperationKit) error {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
+			kind:       errorKindBlocked,
 		}
 	}
 
@@ -1406,22 +1422,24 @@ func (s *handlerScope) checkDeferAccept() error {
 
 	switch verdict, spec := deferAccept(s.r); verdict {
 	case deferAcceptNoMultipart:
-		return NewHttpGraphqlError(
-			"the router received a query with the @defer directive but the client does not accept "+
-				"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header "+
+		return &httpGraphqlError{
+			message: "the router received a query with the @defer directive but the client does not accept " +
+				"multipart/mixed HTTP responses. To enable @defer support, add the HTTP header " +
 				"'Accept: multipart/mixed'",
-			ExtCodeErrDeferMultipartNotAccepted,
-			http.StatusOK,
-		)
+			extensionCode: ExtCodeErrDeferMultipartNotAccepted,
+			statusCode:    http.StatusOK,
+			kind:          errorKindInvalidDefer,
+		}
 	case deferAcceptUnsupportedSpec:
-		return NewHttpGraphqlError(
-			fmt.Sprintf("the router received a query with the @defer directive but the client requested the "+
+		return &httpGraphqlError{
+			message: fmt.Sprintf("the router received a query with the @defer directive but the client requested the "+
 				"incremental delivery format '%s', while the router implements 'incrementalSpec=%s'. "+
 				"Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler",
 				spec, deferIncrementalSpec),
-			ExtCodeErrDeferSpecNotSupported,
-			http.StatusOK,
-		)
+			extensionCode: ExtCodeErrDeferSpecNotSupported,
+			statusCode:    http.StatusOK,
+			kind:          errorKindInvalidDefer,
+		}
 	}
 
 	return nil
@@ -1471,7 +1489,7 @@ func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext,
 	writeOperationError(r, w, requestLogger, &httpGraphqlError{
 		message:    graphqlErr.Error(),
 		statusCode: http.StatusUnauthorized,
-	}, h.headerPropagation)
+	}, h.headerPropagation, h.graphqlOverHTTPStatusCodes)
 }
 
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {

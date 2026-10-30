@@ -1280,6 +1280,9 @@
       "Enabled": false
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "spec"
+  },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"

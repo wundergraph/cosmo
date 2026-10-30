@@ -672,6 +672,8 @@ split_config_poller:
 
 router_config_path: 'latest.json'
 
+graphql_over_http:
+  status_codes: spec
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'

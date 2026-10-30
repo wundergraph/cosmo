@@ -2880,6 +2880,53 @@ apollo_router_compatibility_flags:
     enabled: true
 ```
 
+## GraphQL over HTTP
+
+Configures how the router follows the [GraphQL over HTTP spec](https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md).
+
+| Environment Variable           | YAML         | Required               | Description                                                                                                                                  | Default Value |
+| ------------------------------ | ------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| GRAPHQL_OVER_HTTP_STATUS_CODES | status_codes | <Icon icon="square" /> | The status codes for request errors. `legacy` returns 200 for most request errors. `spec` returns the 4xx status codes of the spec. | legacy        |
+
+With `status_codes: spec`, the router returns these status codes for request errors:
+
+| Error                                                                         | Status code |
+| ----------------------------------------------------------------------------- | ----------- |
+| Blocked mutation, subscription, persisted or non-persisted operation          | 403         |
+| Operation not on the safelist                                                 | 403         |
+| Introspection query while introspection is disabled                           | 403         |
+| Operation name missing with multiple operations, or operation name not found  | 422         |
+| Variables missing or not matching their type                                  | 422         |
+| Persisted query sent while persisted operations are disabled                  | 422         |
+| `@defer` without `multipart/mixed` in `Accept`, or with an unsupported format | 406         |
+| `multipart/form-data` request while file upload is disabled                   | 415         |
+
+Other request errors keep their status code.
+The response body is the same in both modes.
+Error responses keep the `Content-Type: application/json` header.
+
+A request with only the hash of an unknown persisted operation returns 200 with `PersistedQueryNotFound` in both modes.
+Clients using automatic persisted queries rely on this response to send the full query.
+
+<Warning>
+  Some clients treat non-2xx responses as network errors.
+  For example, Apollo Client 3 reports them as `networkError` instead of `graphQLErrors`.
+  Check how your clients handle 4xx responses before you use `spec`.
+</Warning>
+
+<Info>
+  Mutations sent over `GET` return 405 with the `Allow: POST` header in both modes.
+</Info>
+
+### Example YAML Configuration
+
+```yaml
+version: "1"
+
+graphql_over_http:
+  status_codes: spec
+```
+
 ## Cache warmer
 
 | Environment Variable                                | YAML                           | Required               | Description                                                                                                                                                                                                                                                                                  | Default Value |

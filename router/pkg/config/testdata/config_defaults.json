@@ -768,6 +768,9 @@
       "Enabled": false
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "legacy"
+  },
   "ClientHeader": {
     "Name": "",
     "Version": ""

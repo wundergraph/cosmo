@@ -1106,6 +1106,19 @@ type TLSClientCertConfiguration struct {
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSpec returns the 4xx status codes of the GraphQL over HTTP spec for request errors
+	GraphQLOverHTTPStatusCodesSpec GraphQLOverHTTPStatusCodes = "spec"
+)
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
+}
+
 type SubgraphErrorPropagationMode string
 
 const (
@@ -1740,6 +1753,7 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
