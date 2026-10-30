@@ -2,11 +2,11 @@ package datasource
 
 import (
 	"context"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +27,10 @@ func (c *testSubscriptionEventConfig) ProviderType() ProviderType {
 
 func (c *testSubscriptionEventConfig) RootFieldName() string {
 	return c.fieldName
+}
+
+func (c *testSubscriptionEventConfig) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return DeliveryGuaranteeModeOff
 }
 
 type receivedHooksArgs struct {
