@@ -5,6 +5,7 @@ import (
 	"iter"
 	"slices"
 
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
@@ -88,6 +89,10 @@ type StreamEvent interface {
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent
+	// Cursor returns the unissued cursor of the event: the provider id and the broker position,
+	// or nil if the event has no position (adapters without cursor support, events created by hooks).
+	// IssuedAt and ClientBinding are set when the cursor is issued to a subscription client.
+	Cursor() *streamsv1.Cursor
 }
 
 // A MutableStreamEvent is a stream event that can be modified.
