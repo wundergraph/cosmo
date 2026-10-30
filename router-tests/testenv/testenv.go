@@ -2542,6 +2542,9 @@ type GraphQLErrorExtensions struct {
 	StatusCode  int            `json:"statusCode"`
 	ServiceName string         `json:"serviceName"`
 	Errors      []GraphQLError `json:"errors"`
+	CosmoCursor *struct {
+		Supported []string `json:"supported"`
+	} `json:"cosmoCursor,omitempty"`
 }
 
 type GraphQLError struct {
