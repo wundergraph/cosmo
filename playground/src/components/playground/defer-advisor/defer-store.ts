@@ -1,6 +1,6 @@
 import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
-import { getOperation, parseQuery } from './operation';
+import { getOperation, parseQuery } from '@wundergraph/cosmo-shared/defer-advisor';
 
 const DEFER_ORIGIN = 'defer-advisor';
 

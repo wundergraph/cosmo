@@ -4,6 +4,7 @@ on:
     paths:
       - 'pnpm-lock.yaml'
       - 'playground/**/*'
+      - 'shared/**/*'
       - '.github/workflows/playground-ci.yaml'
 
 concurrency:
@@ -28,6 +29,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build workspace dependencies
+        run: pnpm run --filter '@wundergraph/playground^...' build
 
       - name: Build for router
         run: pnpm run --filter ./playground build:router

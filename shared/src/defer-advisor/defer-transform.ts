@@ -7,7 +7,7 @@ import {
   isDeferFragment,
   LABEL_ARG,
   ParsedQuery,
-} from './operation';
+} from './operation.js';
 
 type DeferredField = { label: string; field: string };
 
@@ -107,7 +107,10 @@ const unwrapFragment = (query: string, fragment: InlineFragmentNode): string => 
   const head = query.slice(0, loc.start);
   const tail = query.slice(loc.end);
   const left = /\w$/.test(head) && /^\w/.test(inner) ? ' ' : '';
-  const right = inner.includes('#') ? '\n' : /\w$/.test(inner) && /^\w/.test(tail) ? ' ' : '';
+  let right = /\w$/.test(inner) && /^\w/.test(tail) ? ' ' : '';
+  if (inner.includes('#')) {
+    right = '\n';
+  }
   return `${head}${left}${inner}${right}${tail}`;
 };
 
