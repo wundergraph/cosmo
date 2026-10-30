@@ -22,6 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -417,11 +418,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			switch {
+			case errors.Is(err, context.Canceled):
 				reqCtx.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
-				return
-			} else if errors.Is(err, ErrUnauthorized) {
+			case errors.Is(err, ErrUnauthorized):
 				trackFinalResponseError(resolveCtx.Context(), err)
 				writeRequestErrors(writeRequestErrorsParams{
 					request:           r,
@@ -431,19 +432,24 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					logger:            reqCtx.logger,
 					headerPropagation: h.headerPropagation,
 				})
-				return
+			case getErrorType(err) == errorTypeDeliveryGuarantee:
+				// The subscription was rejected before it started, e.g. because the client asked
+				// for a guarantee this field can't serve or presented a cursor that no longer
+				// resumes. The reason, including its code, belongs in the response.
+				trackFinalResponseError(resolveCtx.Context(), err)
+				h.WriteTerminalError(resolveCtx, err, p.Response.Response, writer)
+			default:
+				reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusInternalServerError,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
 			}
-
-			reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackFinalResponseError(resolveCtx.Context(), err)
-			writeRequestErrors(writeRequestErrorsParams{
-				request:           r,
-				writer:            w,
-				statusCode:        http.StatusInternalServerError,
-				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
-				logger:            reqCtx.logger,
-				headerPropagation: h.headerPropagation,
-			})
 			return
 		}
 	case *plan.DeferResponsePlan:
@@ -637,6 +643,24 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 			response.Extensions = &Extensions{
 				Authorization: buf.Bytes(),
 			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
+		}
+	case errorTypeDeliveryGuarantee:
+		var guaranteeErr *datasource.DeliveryGuaranteeError
+		if !errors.As(err, &guaranteeErr) {
+			response.Errors[0].Message = "Internal server error"
+			break
+		}
+		supported := make([]string, 0, len(guaranteeErr.Supported))
+		for _, g := range guaranteeErr.Supported {
+			supported = append(supported, string(g))
+		}
+		response.Errors[0].Message = guaranteeErr.Message
+		response.Errors[0].Extensions = &Extensions{
+			Code:        guaranteeErr.Code,
+			CosmoCursor: &CosmoCursorExtension{Supported: supported},
 		}
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response

@@ -30,8 +30,39 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
 	var subscriptionConfiguration C
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	return subscriptionConfiguration, err
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
+		return subscriptionConfiguration, err
+	}
+	return subscriptionConfiguration, nil
+}
+
+// Negotiate rejects clients whose requested delivery guarantee can't be served
+// and returns what was negotiated for the client.
+// It gets the context of the subscribing client, unlike Start, which only gets the context
+// of the first subscriber of a trigger.
+func (s *PubSubSubscriptionDataSource[C]) Negotiate(ctx *resolve.Context, input []byte) (resolve.NegotiatedParams, error) {
+	var zero resolve.NegotiatedParams
+
+	var subscriptionConfiguration C
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
+		return zero, err
+	}
+
+	negotiatedGuarantee, err := NegotiateDeliveryGuarantee(subscriptionConfiguration.DeliveryGuaranteeMode(), input)
+	if err != nil {
+		return zero, err
+	}
+
+	if negotiatedGuarantee == DeliveryGuaranteeCursor {
+		// The router can't issue cursors yet.
+		return zero, &DeliveryGuaranteeError{
+			Code:      DeliveryGuaranteeErrorCodeUnsatisfiable,
+			Supported: SupportedDeliveryGuarantees(subscriptionConfiguration.DeliveryGuaranteeMode()),
+			Message:   "The requested delivery guarantee can't be satisfied",
+		}
+	}
+
+	return resolve.NegotiatedParams{SubscriptionCursor: resolve.SubscriptionCursorNegotiatedParams{Guarantee: string(negotiatedGuarantee)}}, nil
 }
 
 func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error {
@@ -45,14 +76,26 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		return errors.New("invalid subscription configuration")
 	}
 
+	negotiated := ctx.NegotiatedParams()
+	negotiatedGuarantee := DeliveryGuarantee(negotiated.SubscriptionCursor.Guarantee)
+	if negotiatedGuarantee == "" {
+		// Hypothetical fallback. In practice the guarantee should already be set by the engine.
+		negotiatedGuarantee, err = NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger := s.logger.With(
 		zap.String("component", "subscription_event_updater"),
 		zap.String("provider_id", conf.ProviderID()),
 		zap.String("provider_type", string(conf.ProviderType())),
+		zap.String("delivery_guarantee", string(negotiatedGuarantee)),
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
+	eventUpdater := NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
+	return s.pubSub.Subscribe(ctx.Context(), conf, negotiatedGuarantee, eventUpdater)
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {

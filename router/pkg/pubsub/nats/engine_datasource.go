@@ -87,10 +87,11 @@ type StreamConfiguration struct {
 }
 
 type SubscriptionEventConfiguration struct {
-	Provider            string               `json:"providerId"`
-	Subjects            []string             `json:"subjects"`
-	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
-	FieldName           string               `json:"rootFieldName"`
+	Provider            string                           `json:"providerId"`
+	Subjects            []string                         `json:"subjects"`
+	StreamConfiguration *StreamConfiguration             `json:"streamConfiguration,omitempty"`
+	FieldName           string                           `json:"rootFieldName"`
+	GuaranteeMode       datasource.DeliveryGuaranteeMode `json:"deliveryGuaranteeMode"`
 }
 
 // ProviderID returns the provider ID
@@ -106,6 +107,11 @@ func (s *SubscriptionEventConfiguration) ProviderType() datasource.ProviderType 
 // RootFieldName returns the root field name
 func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
+}
+
+// DeliveryGuaranteeMode returns the delivery guarantee mode declared in the schema
+func (s *SubscriptionEventConfiguration) DeliveryGuaranteeMode() datasource.DeliveryGuaranteeMode {
+	return s.GuaranteeMode
 }
 
 // publishData is a private type that is used to pass data from the engine to the provider
@@ -207,7 +213,12 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, header http.Header, inp
 		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
+	guarantee, err := datasource.NegotiateDeliveryGuarantee(conf.DeliveryGuaranteeMode(), input)
+	if err != nil {
+		return err
+	}
+
+	return s.pubSub.Subscribe(ctx.Context(), conf, guarantee, updater)
 }
 
 type NatsPublishDataSource struct {

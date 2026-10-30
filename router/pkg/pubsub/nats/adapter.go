@@ -87,7 +87,7 @@ func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, _ datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := cfg.(*SubscriptionEventConfiguration)
 	if !ok {
 		return datasource.NewError("subscription event not support by nats provider", nil)
