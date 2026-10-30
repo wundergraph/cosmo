@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { QueryEditor } from '../src/components/playground/defer-advisor/defer-pills-render';
 import { DeferStore } from '../src/components/playground/defer-advisor/defer-store';
@@ -24,26 +25,13 @@ const bound = () => {
   return { editor: query.editor, variables: variables.editor, headers: headers.editor, store, listener };
 };
 
-let frames: FrameRequestCallback[] = [];
-const flushFrames = () => {
-  const pending = frames;
-  frames = [];
-  pending.forEach((frame) => frame(0));
-};
-
 describe('DeferStore', () => {
   beforeEach(() => {
-    // Writes schedule a repaint, which needs a frame callback the Node test environment does not have.
-    frames = [];
-    vi.stubGlobal(
-      'requestAnimationFrame',
-      vi.fn((frame: FrameRequestCallback) => frames.push(frame)),
-    );
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   test('unbinding removes the change listener it registered', () => {
@@ -178,13 +166,13 @@ describe('DeferStore', () => {
     editor.getValue.mockReturnValue('{ b }');
     listener(null, { origin: 'setValue' });
     store.setTabs('two', ['one', 'two']);
-    flushFrames();
+    vi.advanceTimersToNextFrame();
     expect(store.snapshot.latencies).toBeNull();
 
     editor.getValue.mockReturnValue('{ a }');
     listener(null, { origin: 'setValue' });
     store.setTabs('one', ['one', 'two']);
-    flushFrames();
+    vi.advanceTimersToNextFrame();
     expect(store.snapshot.latencies).toEqual({ a: 10 });
   });
 
@@ -208,7 +196,7 @@ describe('DeferStore', () => {
 
     editor.getValue.mockReturnValue('{ b }');
     listener(null, { origin: 'setValue' });
-    flushFrames();
+    vi.advanceTimersToNextFrame();
 
     expect(store.snapshot.latencies).toBeNull();
   });
@@ -256,13 +244,13 @@ describe('DeferStore', () => {
     editor.getValue.mockReturnValue('{ a }');
     listener(null, { origin: 'setValue' });
     store.setTabs('one', ['one', 'three']);
-    flushFrames();
+    vi.advanceTimersToNextFrame();
     expect(store.snapshot.latencies).toEqual({ '{ a }': 1 });
 
     editor.getValue.mockReturnValue('{ c }');
     listener(null, { origin: 'setValue' });
     store.setTabs('three', ['one', 'three']);
-    flushFrames();
+    vi.advanceTimersToNextFrame();
     expect(store.snapshot.latencies).toEqual({ '{ c }': 3 });
   });
 });
