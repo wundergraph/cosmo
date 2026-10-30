@@ -29,6 +29,8 @@ type EngineDataSourceFactory struct {
 	providerId string
 	logger     *zap.Logger
 
+	deliveryGuaranteeMode datasource.DeliveryGuaranteeMode
+
 	withStreamConfiguration   bool
 	consumerName              string
 	streamName                string
@@ -107,9 +109,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		Provider:  c.providerId,
-		Subjects:  c.subjects,
-		FieldName: c.fieldName,
+		Provider:      c.providerId,
+		Subjects:      c.subjects,
+		FieldName:     c.fieldName,
+		GuaranteeMode: c.deliveryGuaranteeMode,
 	}
 	if c.withStreamConfiguration {
 		evtCfg.StreamConfiguration = &StreamConfiguration{
