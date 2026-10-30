@@ -58,6 +58,10 @@ func (c *testSubscriptionConfig) RootFieldName() string {
 	return c.fieldName
 }
 
+func (c *testSubscriptionConfig) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return DeliveryGuaranteeModeOff
+}
+
 type testPublishConfig struct {
 	providerID   string
 	providerType ProviderType
@@ -138,12 +142,12 @@ func TestProvider_Subscribe_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 
-	mockAdapter.On("Subscribe", mock.Anything, config, mockUpdater).Return(nil)
+	mockAdapter.On("Subscribe", mock.Anything, config, DeliveryGuaranteeAtMostOnce, mockUpdater).Return(nil)
 
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
-	err := provider.Subscribe(context.Background(), config, mockUpdater)
+	err := provider.Subscribe(context.Background(), config, DeliveryGuaranteeAtMostOnce, mockUpdater)
 
 	assert.NoError(t, err)
 }
@@ -158,12 +162,12 @@ func TestProvider_Subscribe_Error(t *testing.T) {
 	}
 	expectedError := errors.New("subscription error")
 
-	mockAdapter.On("Subscribe", mock.Anything, config, mockUpdater).Return(expectedError)
+	mockAdapter.On("Subscribe", mock.Anything, config, DeliveryGuaranteeAtMostOnce, mockUpdater).Return(expectedError)
 
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
-	err := provider.Subscribe(context.Background(), config, mockUpdater)
+	err := provider.Subscribe(context.Background(), config, DeliveryGuaranteeAtMostOnce, mockUpdater)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
