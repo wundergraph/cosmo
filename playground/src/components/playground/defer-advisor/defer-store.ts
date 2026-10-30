@@ -16,6 +16,8 @@ const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, err
 
 // Lives outside React so the editor's change listener and the pill markers can reach it directly.
 // The editor only exists while GraphiQL is mounted, so the pills component binds it in an effect.
+type EditEffect = 'rebaseline' | 'keep' | 'clear' | 'none';
+
 export class DeferStore {
   private state: AnalysisState = initialAnalysis;
 
@@ -107,23 +109,32 @@ export class DeferStore {
   }
 
   private onEditorChange(origin: string | undefined) {
-    const hasAnalysis = this.state.latencies !== null;
-    if (origin === DEFER_ORIGIN) {
-      // A panel write moves @defer inside measured fields, so the baseline has to follow it.
-      if (hasAnalysis) {
+    switch (this.determineEditEffect(origin)) {
+      case 'rebaseline':
         this.analysedInputs = this.currentInputs();
         this.scheduleRender();
-      }
-      return;
+        break;
+      case 'keep':
+        this.scheduleRender();
+        break;
+      case 'clear':
+        this.clear();
+        break;
+      case 'none':
+        break;
     }
-    if (hasAnalysis && !this.doesEditInvalidateAnalysis()) {
-      this.scheduleRender();
-      return;
+  }
+
+  private determineEditEffect(origin: string | undefined): EditEffect {
+    // With no latencies there is nothing to keep, but a user edit may have fixed whatever caused the error.
+    if (this.state.latencies === null) {
+      return origin !== DEFER_ORIGIN && this.state.error !== null ? 'clear' : 'none';
     }
-    // Clear the analysis if the query has changed sufficiently
-    if (hasAnalysis || this.state.error !== null) {
-      this.clear();
+    // The panel moves @defer inside measured fields, so the baseline has to follow it.
+    if (origin === DEFER_ORIGIN) {
+      return 'rebaseline';
     }
+    return this.doesEditInvalidateAnalysis() ? 'clear' : 'keep';
   }
 
   private currentInputs() {
