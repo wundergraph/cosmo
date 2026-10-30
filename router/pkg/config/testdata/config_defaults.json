@@ -432,6 +432,13 @@
       "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
+    },
+    "DeliveryGuarantees": {
+      "CursorResume": {
+        "IdentityClaim": "sub",
+        "Keys": null,
+        "MaxResumeWindow": 10800000000000
+      }
     }
   },
   "CacheWarmup": {
