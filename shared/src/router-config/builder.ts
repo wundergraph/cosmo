@@ -19,6 +19,7 @@ import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   CacheInvalidateConfigurationSchema,
   CachePopulateConfigurationSchema,
+  CacheTagConfigurationSchema,
   ConfigurationVariableKind,
   ConfigurationVariableSchema,
   CostConfigurationSchema,
@@ -45,6 +46,7 @@ import type {
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   CachePopulateConfiguration,
+  CacheTagConfiguration,
   EngineConfiguration,
   EntityCacheConfiguration,
   EntityCachingConfiguration,
@@ -102,6 +104,7 @@ function extractEntityCachingConfiguration(
   const entityCacheConfigurations: EntityCacheConfiguration[] = [];
   const cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
   const cachePopulateConfigurations: CachePopulateConfiguration[] = [];
+  const cacheTagConfigurations: CacheTagConfiguration[] = [];
   for (const data of dataByTypeName.values()) {
     if (!data.entityCaching) {
       continue;
@@ -120,7 +123,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cacheInvalidateConfigurations) {
+    for (const config of data.entityCaching.cacheInvalidateConfigurations) {
       cacheInvalidateConfigurations.push(
         create(CacheInvalidateConfigurationSchema, {
           entityTypeName: config.entityTypeName,
@@ -130,7 +133,7 @@ function extractEntityCachingConfiguration(
       );
     }
 
-    for (const config of data.entityCaching?.cachePopulateConfigurations) {
+    for (const config of data.entityCaching.cachePopulateConfigurations) {
       cachePopulateConfigurations.push(
         create(CachePopulateConfigurationSchema, {
           entityTypeName: config.entityTypeName,
@@ -140,16 +143,22 @@ function extractEntityCachingConfiguration(
         }),
       );
     }
+
+    for (const config of data.entityCaching.cacheTagConfigurations) {
+      cacheTagConfigurations.push(create(CacheTagConfigurationSchema, config));
+    }
   }
 
   if (
     entityCacheConfigurations.length > 0 ||
     cacheInvalidateConfigurations.length > 0 ||
-    cachePopulateConfigurations.length > 0
+    cachePopulateConfigurations.length > 0 ||
+    cacheTagConfigurations.length > 0
   ) {
     return create(EntityCachingConfigurationSchema, {
       cacheInvalidateConfigurations,
       cachePopulateConfigurations,
+      cacheTagConfigurations,
       entityCacheConfigurations,
     });
   }
