@@ -4722,6 +4722,17 @@
               "default": false
             }
           }
+        },
+        "cache_control_any_public": {
+          "type": "object",
+          "description": "Merges cache control as public when any fetch is public, unless one is private, similar to Apollo Router. By default, every fetch must be public.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },

@@ -1278,6 +1278,9 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": false
     }
   },
   "ClientHeader": {

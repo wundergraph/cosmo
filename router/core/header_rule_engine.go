@@ -227,6 +227,8 @@ func (f *FileSourceContent) getBufferString() string {
 type PostResponseRules struct {
 	All       []*config.ResponseHeaderRule
 	Subgraphs map[string][]*config.ResponseHeaderRule
+	// AnyPublic merges public when any fetch grants it, not every fetch.
+	AnyPublic bool
 }
 
 func (p *PostResponseRules) hasRules() bool {
@@ -297,7 +299,7 @@ func NewHeaderPropagation(ctx context.Context, logger *zap.Logger, rules *config
 
 // CreateCacheControlPolicyHeaderRules builds cache control rules that run after
 // all user-defined response rules.
-func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy) *PostResponseRules {
+func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy, anyPublic bool) *PostResponseRules {
 	var rules PostResponseRules
 
 	if cacheControl.Enabled {
@@ -322,6 +324,7 @@ func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy)
 	if !rules.hasRules() {
 		return nil
 	}
+	rules.AnyPublic = anyPublic
 	return &rules
 }
 
@@ -961,7 +964,8 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies)
+	anyPublic := h.postResponseRules != nil && h.postResponseRules.AnyPublic
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, anyPublic)
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
@@ -1093,7 +1097,8 @@ func noStoreDirectives() *cachedirective.ResponseCacheDirectives {
 	}
 }
 
-func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
+// With anyPublic, one public policy is enough; otherwise every policy must be public.
+func createMostRestrictivePolicy(policies []*cachedirective.Object, anyPublic bool) (*cachedirective.Object, string) {
 	result := cachedirective.Object{
 		RespDirectives: &cachedirective.ResponseCacheDirectives{},
 	}
@@ -1102,8 +1107,8 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	var minShared cachedirective.DeltaSeconds = -1
 	hasSMaxAge := false
 	isPrivate := false
-	// public grants sharing, so it holds only when every policy grants it.
-	isPublic := len(policies) > 0
+	// public grants sharing, so by default it holds only when every policy grants it.
+	isPublic := !anyPublic && len(policies) > 0
 	// Field-specific no-cache only bars the named headers; bare no-cache bars all.
 	noCacheFields := cachedirective.FieldNames{}
 	mustRevalidate, proxyRevalidate := false, false
@@ -1143,7 +1148,9 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 		if policy.RespDirectives.PrivatePresent {
 			isPrivate = true
 		}
-		if !policy.RespDirectives.Public {
+		if anyPublic {
+			isPublic = isPublic || policy.RespDirectives.Public
+		} else if !policy.RespDirectives.Public {
 			isPublic = false
 		}
 
