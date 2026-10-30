@@ -20,6 +20,7 @@ import {
 import type { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import pLimit from 'p-limit';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
@@ -40,6 +41,7 @@ import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { traced } from '../tracing.js';
+import { schemaCheckConcurrency } from '../constants.js';
 import { PromptToQueryService } from '../services/PromptToQueryService.js';
 import {
   composeGraphsInWorker,
@@ -662,84 +664,128 @@ export class Composer {
       }>
     >;
   }) {
-    const composedGraphs: DeserializedComposedGraph[] = [];
     // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
     const checkSubgraphsByFedGraph = new Map<string, string[]>();
-    for (const graph of graphs) {
-      try {
-        const subgraphsToCompose = subgraphsToComposeByFedGraphId.get(graph.id);
-        if (!subgraphsToCompose || subgraphsToCompose.length === 0) {
-          continue;
-        }
+    const limit = pLimit(schemaCheckConcurrency);
 
-        const checkSubgraphIdSet = new Set<string>();
-        for (const entry of subgraphsToCompose) {
-          for (const id of entry.checkSubgraphIds) {
-            checkSubgraphIdSet.add(id);
-          }
-        }
-        checkSubgraphsByFedGraph.set(graph.id, [...checkSubgraphIdSet]);
+    // Compose each federated graph concurrently, then flatten in the input order so results stay deterministic.
+    const composedGraphsPerGraph = await Promise.all(
+      graphs.map((graph) =>
+        limit(() =>
+          this.composeGraphWithProposedSchemas(
+            graph,
+            subgraphsToComposeByFedGraphId,
+            checkSubgraphsByFedGraph,
+            compositionOptions,
+          ),
+        ),
+      ),
+    );
 
-        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
-        const tagOptionsByContractName = contracts.map((c) => ({
-          contractName: c.downstreamFederatedGraph.target.name,
-          excludeTags: c.excludeTags,
-          includeTags: c.includeTags,
-        }));
-
-        const { results } = await composeGraphsInWorker({
-          federatedGraph: graph,
-          subgraphsToCompose: subgraphsToCompose.map((entry) => ({
-            subgraphs: entry.subgraphs,
-            isFeatureFlagComposition: entry.isFeatureFlagComposition,
-            featureFlagName: entry.featureFlagName,
-            featureFlagId: entry.featureFlagId,
-          })),
-          tagOptionsByContractName,
-          compositionOptions,
-          skipRouterConfig: true,
-        });
-
-        for (const result of results) {
-          const featureFlagMeta = {
-            isFeatureFlagComposition: result.isFeatureFlagComposition,
-            featureFlagId: result.featureFlagId,
-            featureFlagName: result.featureFlagName,
-          };
-
-          composedGraphs.push(deserializeComposedGraphArtifact(graph, result.base, featureFlagMeta));
-
-          // Contract compositions only apply to the base (non-flag) composition result.
-          if (!result.isFeatureFlagComposition) {
-            for (const contractArtifact of result.contracts) {
-              const contractGraph = await this.federatedGraphRepo.byName(
-                contractArtifact.contractName,
-                graph.namespace,
-              );
-              if (!contractGraph) {
-                throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
-              }
-              composedGraphs.push(deserializeComposedGraphArtifact(contractGraph, contractArtifact.artifact));
-            }
-          }
-        }
-      } catch (e: any) {
-        composedGraphs.push({
-          id: graph.id,
-          name: graph.name,
-          namespace: graph.namespace,
-          namespaceId: graph.namespaceId,
-          targetID: graph.targetId,
-          fieldConfigurations: [],
-          errors: [e],
-          subgraphs: [],
-          warnings: [],
-        });
-      }
-    }
     return {
-      composedGraphs,
+      composedGraphs: composedGraphsPerGraph.flat(),
       checkSubgraphsByFedGraph,
     };
+  }
+
+  private async composeGraphWithProposedSchemas(
+    graph: FederatedGraphDTO,
+    subgraphsToComposeByFedGraphId: Map<
+      string,
+      Array<{
+        subgraphs: SubgraphDTO[];
+        isFeatureFlagComposition: boolean;
+        featureFlagName: string;
+        featureFlagId: string;
+        checkSubgraphIds: string[];
+      }>
+    >,
+    checkSubgraphsByFedGraph: Map<string, string[]>,
+    compositionOptions?: CompositionOptions,
+  ): Promise<DeserializedComposedGraph[]> {
+    const composedGraphs: DeserializedComposedGraph[] = [];
+    try {
+      const subgraphsToCompose = subgraphsToComposeByFedGraphId.get(graph.id);
+      if (!subgraphsToCompose || subgraphsToCompose.length === 0) {
+        return composedGraphs;
+      }
+
+      const checkSubgraphIdSet = new Set<string>();
+      for (const entry of subgraphsToCompose) {
+        for (const id of entry.checkSubgraphIds) {
+          checkSubgraphIdSet.add(id);
+        }
+      }
+      checkSubgraphsByFedGraph.set(graph.id, [...checkSubgraphIdSet]);
+
+      const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+      const tagOptionsByContractName = contracts.map((c) => ({
+        contractName: c.downstreamFederatedGraph.target.name,
+        excludeTags: c.excludeTags,
+        includeTags: c.includeTags,
+      }));
+
+      /*
+       * To compose the base graph and feature flags in parallel, we need to send each composition to a new worker.
+       * If we were to send all the graphs and feature flags to a single worker, the composition happens sequentially
+       * instead, which is what we want to avoid.
+       *
+       * Contracts are only composed for the base composition.
+       */
+      const resultsPerEntry = await Promise.all(
+        subgraphsToCompose.map((entry) =>
+          composeGraphsInWorker({
+            federatedGraph: graph,
+            subgraphsToCompose: [
+              {
+                subgraphs: entry.subgraphs,
+                isFeatureFlagComposition: entry.isFeatureFlagComposition,
+                featureFlagName: entry.featureFlagName,
+                featureFlagId: entry.featureFlagId,
+              },
+            ],
+            tagOptionsByContractName: entry.isFeatureFlagComposition ? [] : tagOptionsByContractName,
+            compositionOptions,
+            skipRouterConfig: true,
+          }),
+        ),
+      );
+
+      for (const result of resultsPerEntry.flatMap((r) => r.results)) {
+        const featureFlagMeta = {
+          isFeatureFlagComposition: result.isFeatureFlagComposition,
+          featureFlagId: result.featureFlagId,
+          featureFlagName: result.featureFlagName,
+        };
+
+        composedGraphs.push(deserializeComposedGraphArtifact(graph, result.base, featureFlagMeta));
+
+        // Contract compositions only apply to the base (non-flag) composition result.
+        if (!result.isFeatureFlagComposition) {
+          for (const contractArtifact of result.contracts) {
+            const contractGraph = await this.federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
+            if (!contractGraph) {
+              throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
+            }
+
+            composedGraphs.push(deserializeComposedGraphArtifact(contractGraph, contractArtifact.artifact));
+          }
+        }
+      }
+    } catch (e: any) {
+      composedGraphs.push({
+        id: graph.id,
+        name: graph.name,
+        namespace: graph.namespace,
+        namespaceId: graph.namespaceId,
+        targetID: graph.targetId,
+        fieldConfigurations: [],
+        errors: [e],
+        subgraphs: [],
+        warnings: [],
+      });
+    }
+
+    return composedGraphs;
   }
 }
