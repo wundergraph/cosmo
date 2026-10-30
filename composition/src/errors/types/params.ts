@@ -128,6 +128,17 @@ export type UndefinedCacheTagInputFieldErrorMessageParams = {
   reference: string;
 };
 
+export type UndefinedCacheTagKeyFieldErrorMessageParams = {
+  fieldSets: Array<string>;
+  reference: string;
+};
+
+export type ListCacheTagKeyFieldErrorMessageParams = {
+  listReference: string;
+  reference: string;
+  typeString: string;
+};
+
 export type UntraversableCacheTagReferenceErrorMessageParams = {
   reference: string;
   typeString: string;
@@ -138,8 +149,4 @@ export type UnavailableCacheTagReferenceErrorMessageParams = {
   coords: string;
   reference: string;
   subgraphName: SubgraphName;
-};
-
-export type PartiallyDefinedCacheTagReferenceErrorMessageParams = UnavailableCacheTagReferenceErrorMessageParams & {
-  parentCoords: string;
 };
