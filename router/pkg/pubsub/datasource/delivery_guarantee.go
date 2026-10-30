@@ -52,6 +52,11 @@ const (
 // deliveryGuaranteeExtensionKey is the key in the request extensions a client uses to ask for a guarantee.
 const deliveryGuaranteeExtensionKey = "cosmoDeliveryGuarantee"
 
+// cursorExtensionKey is the key in the request extensions a client presents a cursor under to
+// resume a subscription. It is the same key the router issues cursors under in the response
+// extensions, so a client can hand back what it received unchanged.
+const cursorExtensionKey = "streamsCursor"
+
 // DeliveryGuaranteeError is returned when a client's requested delivery guarantee
 // can't be served.
 type DeliveryGuaranteeError struct {
