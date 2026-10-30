@@ -47,7 +47,7 @@ import type {
 
 import {
   ConfigurationData,
-  DeliveryGuarantees as CompositionDeliveryGuarantees,
+  DeliveryGuaranteesConfiguration,
   FieldConfiguration as CompositionFieldConfiguration,
   NatsEventType as CompositionEventType,
   PROVIDER_TYPE_KAFKA,
@@ -122,7 +122,7 @@ export function addRequiredFields(
   }
 }
 
-function deliveryGuaranteesField(deliveryGuarantees?: CompositionDeliveryGuarantees) {
+function deliveryGuaranteesField(deliveryGuarantees?: DeliveryGuaranteesConfiguration) {
   if (!deliveryGuarantees) {
     return {};
   }
