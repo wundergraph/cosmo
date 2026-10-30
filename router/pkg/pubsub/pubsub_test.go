@@ -72,7 +72,7 @@ func TestBuild_OK(t *testing.T) {
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), false)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), false)
 
 	// Assertions
 	assert.NoError(t, err)
@@ -128,7 +128,7 @@ func TestBuild_ProviderError(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(nil, errors.New("provider error"))
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), false)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), false)
 
 	// Assertions
 	assert.Error(t, err)
@@ -183,7 +183,7 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	mockBuilder.On("TypeID").Return("nats")
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), false)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), false)
 
 	// Assertions
 	assert.Error(t, err)
@@ -253,7 +253,7 @@ func TestBuild_ShouldSkipDataSourcesForMissingProviderWhenSkipEnabled(t *testing
 		Return(mockPubSubProvider, nil)
 
 	// Execute the function with ignoreMissingProviders enabled
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), true)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), true)
 
 	// Assertions: the router does not fail, only the data source for the missing provider is skipped
 	assert.NoError(t, err)
@@ -321,7 +321,7 @@ func TestBuild_ShouldSkipDataSourcesWhenMissingProviderIsFirst(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).
 		Return(mockPubSubProvider, nil)
 
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), true)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), true)
 
 	assert.NoError(t, err)
 	require.Len(t, providers, 1)
@@ -386,7 +386,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 		Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, zap.NewNop(), false)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{}, datasource.Cursors{}, zap.NewNop(), false)
 
 	// Assertions
 	assert.NoError(t, err)
@@ -437,7 +437,7 @@ func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -498,13 +498,13 @@ func TestBuildProvidersAndDataSources_SkipUnavailableProviders(t *testing.T) {
 	}
 
 	// Without the flag, a missing provider prevents the router from starting.
-	_, _, err := BuildProvidersAndDataSources(ctx, eventsConfig, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
+	_, _, err := BuildProvidersAndDataSources(ctx, eventsConfig, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
 	require.Error(t, err)
 	assert.IsType(t, &ProviderNotDefinedError{}, err)
 
 	// With the flag enabled, the router starts and only the affected data source is skipped.
 	eventsConfig.SkipUnavailableProviders = true
-	providers, dataSources, err := BuildProvidersAndDataSources(ctx, eventsConfig, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
+	providers, dataSources, err := BuildProvidersAndDataSources(ctx, eventsConfig, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
 	require.NoError(t, err)
 	require.Len(t, providers, 1)
 	require.Equal(t, "provider-1", providers[0].ID())
@@ -554,7 +554,7 @@ func TestBuildProvidersAndDataSources_Kafka_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -607,7 +607,7 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{}, datasource.Cursors{})
 
 	// Assertions
 	assert.NoError(t, err)

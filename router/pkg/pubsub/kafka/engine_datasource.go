@@ -112,6 +112,11 @@ func (s *SubscriptionEventConfiguration) DeliveryGuaranteeMode() datasource.Deli
 	return s.GuaranteeMode
 }
 
+// CursorTopics returns the topics cursors of the subscription are bound to
+func (s *SubscriptionEventConfiguration) CursorTopics() []string {
+	return s.Topics
+}
+
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
 	Provider  string       `json:"providerId"`
@@ -267,3 +272,5 @@ var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfigurati
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
 var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)
+
+var _ datasource.CursorTopicsProvider = (*SubscriptionEventConfiguration)(nil)
