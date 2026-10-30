@@ -1,6 +1,7 @@
 import { ASTNode, FieldNode, FragmentDefinitionNode, OperationDefinitionNode, print, visit } from 'graphql';
 import { z } from 'zod';
-import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation';
+import { groupBy } from '@/lib/utils';
+import { collectRootFields, FragmentMap, parseOperation } from './operation';
 
 export const PROBE_RUNS = 3;
 
@@ -102,8 +103,45 @@ const usedVariableNames = (nodes: readonly ASTNode[]): Set<string> => {
   return names;
 };
 
-// Each response key runs alone, so its latency is its own cost. The probe declares only the
-// variables its fields and fragments use; the router rejects undeclared or unused ones.
+// The document one response key is probed with. The probe declares only the variables its fields
+// and fragments use; the router rejects undeclared or unused ones.
+type ProbeDocument = { query: string; declaredVariables: Set<string> };
+
+const buildProbeDocument = (
+  fields: readonly FieldNode[],
+  operation: OperationDefinitionNode,
+  fragments: FragmentMap,
+): ProbeDocument => {
+  const linked = referencedFragments(fields, fragments);
+  const used = usedVariableNames([...fields, ...linked]);
+  const definitions = (operation.variableDefinitions ?? []).filter((d) => used.has(d.variable.name.value));
+  const head = definitions.length > 0 ? `query(${definitions.map((d) => print(d)).join(', ')}) ` : '';
+  const query = [`${head}{ ${fields.map((f) => print(f)).join(' ')} }`, ...linked.map((f) => print(f))].join('\n');
+  return { query, declaredVariables: new Set(definitions.map((d) => d.variable.name.value)) };
+};
+
+// Keyed by response key.
+const groupRootFields = (operation: OperationDefinitionNode, fragments: FragmentMap) =>
+  groupBy(
+    collectRootFields(operation.selectionSet.selections, fragments),
+    (field) => field.alias?.value ?? field.name.value,
+  );
+
+// Everything a measurement depends on, as printed probe documents. Reformatting the query, or
+// editing a fragment no root field spreads, leaves this unchanged, so the store keeps its numbers.
+// Adding a field or an argument changes it, so the store clears them.
+export const measuredInputs = (query: string): string | undefined => {
+  const { operation, fragments } = parseOperation(query);
+  if (!operation) {
+    return undefined;
+  }
+  return [...groupRootFields(operation, fragments)]
+    .map(([name, fields]) => `${name}: ${buildProbeDocument(fields, operation, fragments).query}`)
+    .sort()
+    .join('\n');
+};
+
+// Each response key runs alone, so its latency is its own cost.
 const probeField = async (
   url: string,
   fields: readonly FieldNode[],
@@ -112,14 +150,10 @@ const probeField = async (
   request: ProbeRequest,
   signal: AbortSignal,
 ): Promise<ProbeResult> => {
-  const linked = referencedFragments(fields, fragments);
-  const used = usedVariableNames([...fields, ...linked]);
-  const definitions = (operation.variableDefinitions ?? []).filter((d) => used.has(d.variable.name.value));
-  const declared = new Set(definitions.map((d) => d.variable.name.value));
-  const variables = Object.fromEntries(Object.entries(request.variables).filter(([name]) => declared.has(name)));
-
-  const head = definitions.length > 0 ? `query(${definitions.map((d) => print(d)).join(', ')}) ` : '';
-  const query = [`${head}{ ${fields.map((f) => print(f)).join(' ')} }`, ...linked.map((f) => print(f))].join('\n');
+  const { query, declaredVariables } = buildProbeDocument(fields, operation, fragments);
+  const variables = Object.fromEntries(
+    Object.entries(request.variables).filter(([name]) => declaredVariables.has(name)),
+  );
   try {
     let total = 0;
     for (let run = 0; run < PROBE_RUNS; run++) {
@@ -137,25 +171,12 @@ export const probeRootFields = async (
   request: ProbeRequest = { headers: {}, variables: {} },
   signal: AbortSignal = new AbortController().signal,
 ): Promise<Record<string, ProbeResult>> => {
-  const doc = parseQuery(query)?.doc;
-  const operation = getOperation(doc);
+  const { operation, fragments } = parseOperation(query);
   if (!operation) {
     return {};
   }
-
-  const fragments = getFragments(doc);
-  const groups = new Map<string, FieldNode[]>();
-  for (const field of collectRootFields(operation.selectionSet.selections, fragments)) {
-    const name = field.alias?.value ?? field.name.value;
-    const group = groups.get(name);
-    if (group) {
-      group.push(field);
-    } else {
-      groups.set(name, [field]);
-    }
-  }
   const results: Record<string, ProbeResult> = {};
-  for (const [name, fields] of groups) {
+  for (const [name, fields] of groupRootFields(operation, fragments)) {
     results[name] = await probeField(url, fields, operation, fragments, request, signal);
   }
   return results;

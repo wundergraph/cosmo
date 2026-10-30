@@ -1003,6 +1003,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.16
         version: 10.4.19(postcss@8.5.26)
+      jsdom:
+        specifier: ^27.2.0
+        version: 27.2.0(supports-color@10.2.0)
       postcss:
         specifier: 8.5.26
         version: 8.5.26
