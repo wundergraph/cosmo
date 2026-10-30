@@ -541,6 +541,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		subscriptionOnCreateFns[i] = NewPubSubSubscriptionOnCreateHook(fn)
 	}
 
+	cursors, err := newCursors(routerEngineConfig.Events.DeliveryGuarantees.CursorResume, l.logger)
+	if err != nil {
+		return nil, providers, err
+	}
+
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
@@ -569,6 +574,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				Handlers: subscriptionOnCreateFns,
 			},
 		},
+		cursors,
 	)
 	if err != nil {
 		return nil, providers, err

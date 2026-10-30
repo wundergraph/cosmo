@@ -13,14 +13,16 @@ type PlannerConfig[PB ProviderBuilder[P, E], P any, E any] struct {
 	ProviderBuilder PB
 	Event           E
 	Hooks           Hooks
+	Cursors         Cursors
 }
 
-func NewPlannerConfig[PB ProviderBuilder[P, E], P any, E any](providerBuilder PB, event E, providers map[string]Provider, hooks Hooks) *PlannerConfig[PB, P, E] {
+func NewPlannerConfig[PB ProviderBuilder[P, E], P any, E any](providerBuilder PB, event E, providers map[string]Provider, hooks Hooks, cursors Cursors) *PlannerConfig[PB, P, E] {
 	return &PlannerConfig[PB, P, E]{
 		Providers:       providers,
 		ProviderBuilder: providerBuilder,
 		Event:           event,
 		Hooks:           hooks,
+		Cursors:         cursors,
 	}
 }
 

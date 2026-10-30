@@ -862,6 +862,24 @@
       "BeforeEventsDispatch": {
         "HandlerTimeout": 5000000000
       }
+    },
+    "DeliveryGuarantees": {
+      "CursorResume": {
+        "IdentityClaim": "sub",
+        "Keys": [
+          {
+            "ID": 1,
+            "Secret": "first-secret-at-least-32-bytes-long",
+            "ExpiresAt": "2026-12-31T00:00:00Z"
+          },
+          {
+            "ID": 2,
+            "Secret": "second-secret-at-least-32-bytes-long",
+            "ExpiresAt": "0001-01-01T00:00:00Z"
+          }
+        ],
+        "MaxResumeWindow": 21600000000000
+      }
     }
   },
   "CacheWarmup": {
