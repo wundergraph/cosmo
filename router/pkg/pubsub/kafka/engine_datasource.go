@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	goccyjson "github.com/goccy/go-json"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -17,6 +18,14 @@ import (
 // Event implements datasource.StreamEvent
 type Event struct {
 	evt *MutableEvent
+}
+
+// Cursor returns the unissued cursor of the event, or nil if the event has no position in the broker.
+func (e *Event) Cursor() *streamsv1.Cursor {
+	if e.evt == nil {
+		return nil
+	}
+	return e.evt.Cursor()
 }
 
 func (e *Event) GetData() []byte {
@@ -60,6 +69,18 @@ type MutableEvent struct {
 	Key     []byte            `json:"key"`
 	Data    json.RawMessage   `json:"data"`
 	Headers map[string][]byte `json:"headers"`
+	// cursor carries the provider id and the position of the event in the broker.
+	// It is nil if positions aren't tracked or the event was created by a hook.
+	// It is never modified after creation, so clones share it.
+	cursor *streamsv1.Cursor
+}
+
+// Cursor returns the unissued cursor of the event, or nil if the event has no position in the broker.
+func (e *MutableEvent) Cursor() *streamsv1.Cursor {
+	if e == nil {
+		return nil
+	}
+	return e.cursor
 }
 
 func (e *MutableEvent) GetData() []byte {
@@ -256,7 +277,7 @@ func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input
 		return nil, err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		return []byte(`{"__typename": "edfs__PublishResult", "success": false}`), nil
 	}

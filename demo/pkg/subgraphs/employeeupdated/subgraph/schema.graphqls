@@ -1,11 +1,11 @@
 directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
 directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
-directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, deliveryGuarantees: edfs__DeliveryGuarantees) on FIELD_DEFINITION
 directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
 directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
-directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default", deliveryGuarantees: edfs__DeliveryGuarantees) on FIELD_DEFINITION
 directive @edfs__redisPublish(channel: String!, providerId: String! = "default") on FIELD_DEFINITION
-directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default", deliveryGuarantees: edfs__DeliveryGuarantees) on FIELD_DEFINITION
 
 scalar openfed__SubscriptionFilterValue
 
@@ -41,6 +41,8 @@ type Mutation {
 type Subscription {
     employeeUpdated(employeeID: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
     employeeUpdatedMyKafka(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+    employeeUpdatedMyKafkaCursors(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka", deliveryGuarantees: { mode: CURSOR })
+    employeeUpdatedMyKafkaCursorsTwo(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka", deliveryGuarantees: { mode: CURSOR })
     employeeUpdatedMyNats(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], providerId: "my-nats")
     employeeUpdatedNatsStream(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
     employeeUpdatedMyRedis(id: Int!): Employee! @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis.{{ args.id }}"], providerId: "my-redis")
@@ -116,4 +118,13 @@ input edfs__NatsStreamConfiguration {
     consumerInactiveThreshold: Int! = 30
     consumerName: String!
     streamName: String!
+}
+
+enum edfs__DeliveryGuaranteeMode {
+    OFF
+    CURSOR
+}
+
+input edfs__DeliveryGuarantees {
+    mode: edfs__DeliveryGuaranteeMode! = OFF
 }
