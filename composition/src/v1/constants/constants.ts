@@ -168,4 +168,17 @@ export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, 
 
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
 
+// Matches a pair of braces with no brace between them. Group 1 is the text between the braces.
+export const CACHE_TAG_SEGMENT_REGEXP = /{([^{}]*)}/g;
+
+/* Matches the text between the braces of a placeholder, e.g., " $args.filter . category ".
+ * Group 1 is the namespace without the "$", e.g., "args".
+ * Group 2 is the period-delimited reference, e.g., "filter . category".
+ */
+export const CACHE_TAG_PLACEHOLDER_REGEXP =
+  /^\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\.\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\.\s*[a-zA-Z_][a-zA-Z0-9_]*)*)\s*$/;
+
+// Matches an opening or closing brace.
+export const CACHE_TAG_BRACE_REGEXP = /[{}]/;
+
 export const MAX_OR_SCOPES = 16;

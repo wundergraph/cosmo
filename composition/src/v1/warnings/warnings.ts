@@ -1,12 +1,14 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import type {
+  InconsistentCacheTagFormatsWarningParams,
   InvalidRepeatedComposedDirectiveWarningParams,
   OverrideDirectiveLabelArgumentWarningParams,
   ProvidesOnUnionWarningParams,
   ProvidesWithInterfaceFieldSelectionWarningParams,
   SingleFederatedInputFieldOneOfWarningParams,
   SingleSubgraphInputFieldOneOfWarningParams,
+  UnsupportedCacheTagLocationWarningParams,
   UnsupportedDirectiveWarningParams,
 } from './params';
 import { type SubgraphName } from '../../types/types';
@@ -305,6 +307,42 @@ export function overrideDirectiveLabelArgumentWarning({
       ` https://wundergraph.com/learn/feature-flags-foundations`,
     subgraph: {
       name: subgraphName,
+    },
+  });
+}
+
+export function unsupportedCacheTagLocationWarning({
+  coords,
+  subgraphName,
+}: UnsupportedCacheTagLocationWarningParams): Warning {
+  return new Warning({
+    message:
+      `The "@cacheTag" directive defined on coordinates "${coords}" will be ignored.` +
+      ` "@cacheTag" is currently supported only upon a Query root field.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function inconsistentCacheTagFormatsWarning({
+  coords,
+  formatsBySubgraphName,
+}: InconsistentCacheTagFormatsWarningParams): Warning {
+  let message =
+    `The Query root field "${coords}" is resolved by multiple subgraphs` +
+    ` that define different "@cacheTag" formats upon it:`;
+  for (const [subgraphName, formats] of formatsBySubgraphName) {
+    message +=
+      `\n Subgraph "${subgraphName}": ` + (formats.size > 0 ? `"${[...formats].join(QUOTATION_JOIN)}"` : `no formats`);
+  }
+  return new Warning({
+    message:
+      message +
+      `\nA response carries only the tags of the subgraph that resolves the field,` +
+      ` so the tags depend on the query plan.`,
+    subgraph: {
+      name: '',
     },
   });
 }

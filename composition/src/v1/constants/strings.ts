@@ -3,7 +3,6 @@ import {
   ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
-  CACHE_TAG,
   CONNECT_FIELD_RESOLVER,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
@@ -177,7 +176,6 @@ export const CLIENT_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new 
 export const IMPORT_VERSION_REGEX = /^v\d+\.\d+$/;
 
 export const UNSUPPORTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
-  CACHE_TAG,
   CONTEXT,
   FROM_CONTEXT,
   POLICY,
