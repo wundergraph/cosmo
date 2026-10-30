@@ -939,6 +939,33 @@ func (p *reuseTrackingProvider) Shutdown(context.Context) error {
 }
 
 func TestGraphServerShutdown(t *testing.T) {
+	t.Run("releases replaced muxes while their builder remains reachable", func(t *testing.T) {
+		build := func() (*graphServer, weak.Pointer[graphMux]) {
+			mux := &graphMux{mux: chi.NewMux(), cancel: func() {}}
+			// As in buildGraphMux, the routing handlers retain their owning mux.
+			mux.mux.Get("/", func(http.ResponseWriter, *http.Request) {
+				runtime.KeepAlive(mux)
+			})
+			srv := &graphServer{
+				Config:            &Config{logger: zap.NewNop()},
+				graphServerCancel: func() {},
+				baseTransport:     &http.Transport{},
+				graphMuxList:      map[string]*graphMux{"flag": mux},
+				mux:               chi.NewMux(),
+			}
+			srv.mux.Mount("/flag", mux.mux)
+			require.NoError(t, srv.Shutdown(t.Context()))
+			return srv, weak.Make(mux)
+		}
+
+		srv, replaced := build()
+		runtime.GC()
+		runtime.GC()
+		require.Nil(t, replaced.Value(), "the old server still retains a replaced mux")
+		// Reused mux closures keep their builder server alive after shutdown.
+		runtime.KeepAlive(srv)
+	})
+
 	// When the base graph is unchanged, a hot reload reuses the previous server's
 	// base mux, and that mux keeps serving on the new server. Its pubsub providers
 	// are owned by the mux, so shutting down the previous server must leave a
