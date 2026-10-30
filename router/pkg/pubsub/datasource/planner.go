@@ -110,6 +110,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		return plan.SubscriptionConfiguration{}
 	}
 	dataSource.SetHooks(p.config.Hooks)
+	dataSource.SetCursors(p.config.Cursors)
 
 	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
