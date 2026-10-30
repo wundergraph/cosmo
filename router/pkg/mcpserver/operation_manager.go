@@ -41,10 +41,19 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
-	// Build schemas for operations
+	return om.setOperations(operations)
+}
+
+// LoadOperationsFromManifest loads operations from a manifest. The key of each operation is its name.
+func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) error {
+	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
+	return om.setOperations(loader.LoadOperationsFromManifest(manifestOperations))
+}
+
+// setOperations builds the schemas for operations and stores them
+func (om *OperationsManager) setOperations(operations []schemaloader.Operation) error {
 	builder := schemaloader.NewSchemaBuilder(om.schemaDoc)
-	err = builder.BuildSchemasForOperations(operations)
-	if err != nil {
+	if err := builder.BuildSchemasForOperations(operations); err != nil {
 		return fmt.Errorf("failed to build schemas: %w", err)
 	}
 
