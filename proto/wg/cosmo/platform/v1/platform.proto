@@ -2383,6 +2383,31 @@ message GetFieldUsageResponse {
   FieldUsageMeta meta = 4;
 }
 
+message GetGraphFieldUsageRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional int32 range = 3; // range in hours, must be positive, 24 when neither range nor dateRange is set
+  optional DateRange dateRange = 4; // takes precedence over range, an invalid dateRange is an error and never falls back to range
+}
+
+message GetGraphFieldUsageResponse {
+  message Subgraph {
+    string subgraphId = 1;
+    string subgraphName = 2;
+    int64 requestCount = 3; // requests this subgraph resolved the field in
+  }
+  message Field {
+    string typeName = 1;
+    string fieldName = 2;
+    int64 requestCount = 3;
+    repeated Subgraph subgraphs = 4; // a request resolved by several subgraphs counts for each of them, deleted or unresolvable subgraphs are left out but stay in requestCount
+  }
+  Response response = 1;
+  repeated Field fields = 2; // only fields that were used in the window, in no defined order
+  optional DateRange dateRange = 3; // the window that was queried, after the analytics retention limit
+  optional int32 analyticsRetentionInDays = 4; // the longest window the organization's plan allows
+}
+
 message CreateNamespaceRequest {
   string name = 1;
 }
@@ -4066,6 +4091,10 @@ service PlatformService {
   }
 
   rpc GetFieldUsage(GetFieldUsageRequest) returns (GetFieldUsageResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetGraphFieldUsage(GetGraphFieldUsageRequest) returns (GetGraphFieldUsageResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
