@@ -10,6 +10,9 @@ import {
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   CONTEXT_FIELD_VALUE,
+  CURSOR_UPPER,
+  EDFS_DELIVERY_GUARANTEE_MODE,
+  EDFS_DELIVERY_GUARANTEES,
   EDFS_NATS_STREAM_CONFIGURATION,
   EXECUTION,
   FEDERATION_POLICY,
@@ -19,7 +22,9 @@ import {
   INT_SCALAR,
   LINK_IMPORT,
   LINK_PURPOSE,
+  MODE,
   NOT_UPPER,
+  OFF_UPPER,
   OR_UPPER,
   SCOPE_SCALAR,
   SECURITY,
@@ -36,6 +41,53 @@ import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integers';
 export const CONTEXT_FIELD_VALUE_DEFINITION: ScalarTypeDefinitionNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION,
   name: stringToNameNode(CONTEXT_FIELD_VALUE),
+};
+
+/*
+ * enum edfs__DeliveryGuaranteeMode {
+ *   OFF
+ *   CURSOR
+ * }
+ */
+export const EDFS_DELIVERY_GUARANTEE_MODE_DEFINITION: EnumTypeDefinitionNode = {
+  kind: Kind.ENUM_TYPE_DEFINITION,
+  name: stringToNameNode(EDFS_DELIVERY_GUARANTEE_MODE),
+  values: [
+    {
+      directives: [],
+      kind: Kind.ENUM_VALUE_DEFINITION,
+      name: stringToNameNode(OFF_UPPER),
+    },
+    {
+      directives: [],
+      kind: Kind.ENUM_VALUE_DEFINITION,
+      name: stringToNameNode(CURSOR_UPPER),
+    },
+  ],
+};
+
+/*
+ * input edfs__DeliveryGuarantees {
+ *   mode: edfs__DeliveryGuaranteeMode! = OFF
+ * }
+ * */
+export const EDFS_DELIVERY_GUARANTEES_DEFINITION: InputObjectTypeDefinitionNode = {
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(EDFS_DELIVERY_GUARANTEES),
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MODE),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEE_MODE),
+      },
+      defaultValue: {
+        kind: Kind.ENUM,
+        value: OFF_UPPER,
+      },
+    },
+  ],
 };
 
 /*

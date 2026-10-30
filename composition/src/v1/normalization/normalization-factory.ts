@@ -1,5 +1,6 @@
 import {
   BREAK,
+  type ConstArgumentNode,
   type ConstDirectiveNode,
   type ConstValueNode,
   type DefinitionNode,
@@ -113,6 +114,9 @@ import {
   invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
+  invalidDeliveryGuaranteeModeDefinitionErrorMessage,
+  invalidDeliveryGuaranteesDefinitionErrorMessage,
+  invalidDeliveryGuaranteesInputFieldsErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
   invalidProvidesOrRequiresDirectivesError,
@@ -178,6 +182,7 @@ import {
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
 import {
+  DELIVERY_GUARANTEES_FIELD_NAMES,
   DEPENDENCIES_BY_DIRECTIVE_NAME,
   EVENT_DIRECTIVE_NAMES,
   STREAM_CONFIGURATION_FIELD_NAMES,
@@ -188,6 +193,8 @@ import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
   type ConfigurationData,
+  type DeliveryGuaranteeMode,
+  type DeliveryGuarantees,
   type Costs,
   type EntityCacheConfiguration,
   type EventConfiguration,
@@ -287,8 +294,12 @@ import {
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   COST,
+  CURSOR_UPPER,
   DEFAULT_EDFS_PROVIDER_ID,
+  DELIVERY_GUARANTEES,
   DESCRIPTION_OVERRIDE,
+  EDFS_DELIVERY_GUARANTEE_MODE,
+  EDFS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -318,6 +329,7 @@ import {
   LITERAL_AT,
   LITERAL_PERIOD,
   MAX_AGE,
+  MODE,
   MUTATION,
   NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
@@ -325,6 +337,7 @@ import {
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
+  OFF_UPPER,
   ONE_OF,
   OPENFED_CACHE_INVALIDATE,
   OPENFED_CACHE_POPULATE,
@@ -521,6 +534,7 @@ export class NormalizationFactory {
   subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
   usesEdfsNatsStreamConfiguration: boolean = false;
+  usesEdfsDeliveryGuarantees: boolean = false;
   warnings: Array<Warning> = [];
 
   constructor({ internalGraph, options, subgraphName }: NormalizationFactoryParams) {
@@ -3101,6 +3115,57 @@ export class NormalizationFactory {
     return { fieldName, providerId, providerType: PROVIDER_TYPE_KAFKA, topics, type: PUBLISH };
   }
 
+  /* Parses the optional "deliveryGuarantees" argument of the @edfs__kafkaSubscribe directive.
+   * Returns the delivery guarantees to spread into the configuration. The object is empty unless the mode is CURSOR
+   * (or if the argument value is invalid, in which case an error message is appended).
+   */
+  getDeliveryGuaranteeMode(argumentNode: ConstArgumentNode, errorMessages: Array<string>): DeliveryGuarantees {
+    this.usesEdfsDeliveryGuarantees = true;
+    /* The argument is nullable, so an explicit null is equivalent to omitting the argument. */
+    if (argumentNode.value.kind !== Kind.OBJECT) {
+      return {};
+    }
+    let mode: DeliveryGuaranteeMode = OFF_UPPER;
+    let invalidModeValue: string | undefined;
+    const duplicateFieldNames = new Set<FieldName>();
+    const invalidFieldNames = new Set<FieldName>();
+    const definedFieldNames = new Set<FieldName>();
+    for (const field of argumentNode.value.fields) {
+      const fieldName = field.name.value;
+      if (!DELIVERY_GUARANTEES_FIELD_NAMES.has(fieldName)) {
+        invalidFieldNames.add(fieldName);
+        continue;
+      }
+      if (definedFieldNames.has(fieldName)) {
+        duplicateFieldNames.add(fieldName);
+        continue;
+      }
+      definedFieldNames.add(fieldName);
+      // MODE is currently the only valid field
+      if (field.value.kind !== Kind.ENUM || (field.value.value !== OFF_UPPER && field.value.value !== CURSOR_UPPER)) {
+        invalidModeValue = print(field.value);
+        continue;
+      }
+      mode = field.value.value as DeliveryGuaranteeMode;
+    }
+    if (duplicateFieldNames.size > 0 || invalidFieldNames.size > 0 || invalidModeValue !== undefined) {
+      errorMessages.push(
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({
+          duplicateFieldNames: [...duplicateFieldNames],
+          invalidFieldNames: [...invalidFieldNames],
+          invalidModeValue,
+        }),
+      );
+      return {};
+    }
+
+    if (mode === CURSOR_UPPER) {
+      return { deliveryGuarantees: { mode } };
+    }
+
+    return {};
+  }
+
   getKafkaSubscribeConfiguration(
     directive: ConstDirectiveNode,
     argumentDataByArgumentName: Map<string, InputValueData>,
@@ -3109,6 +3174,7 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const topics: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    let deliveryGuarantees: DeliveryGuarantees = {};
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPICS: {
@@ -3135,6 +3201,10 @@ export class NormalizationFactory {
           providerId = argumentNode.value.value;
           break;
         }
+        case DELIVERY_GUARANTEES: {
+          deliveryGuarantees = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
+          break;
+        }
       }
     }
     if (errorMessages.length > 0) {
@@ -3146,6 +3216,7 @@ export class NormalizationFactory {
       providerType: PROVIDER_TYPE_KAFKA,
       topics: topics,
       type: SUBSCRIBE,
+      ...deliveryGuarantees,
     };
   }
 
@@ -3309,6 +3380,7 @@ export class NormalizationFactory {
               ),
             );
           }
+          break;
         }
       }
     }
@@ -3730,6 +3802,28 @@ export class NormalizationFactory {
     return true;
   }
 
+  isDeliveryGuaranteesInputObjectValid(deliveryGuaranteesInputData: ParentDefinitionData): boolean {
+    if (!isInputObjectDefinitionData(deliveryGuaranteesInputData)) {
+      return false;
+    }
+    if (deliveryGuaranteesInputData.inputValueDataByName.size !== 1) {
+      return false;
+    }
+    const modeData = deliveryGuaranteesInputData.inputValueDataByName.get(MODE);
+    if (!modeData || printTypeNode(modeData.type) !== `${EDFS_DELIVERY_GUARANTEE_MODE}!`) {
+      return false;
+    }
+    return modeData.defaultValue?.kind === Kind.ENUM && modeData.defaultValue.value === OFF_UPPER;
+  }
+
+  isDeliveryGuaranteeModeEnumValid(deliveryGuaranteeModeData: ParentDefinitionData): boolean {
+    if (deliveryGuaranteeModeData.kind !== Kind.ENUM_TYPE_DEFINITION) {
+      return false;
+    }
+    const valueNames = deliveryGuaranteeModeData.enumValueDataByName;
+    return valueNames.size === 2 && valueNames.has(OFF_UPPER) && valueNames.has(CURSOR_UPPER);
+  }
+
   validateEventDrivenSubgraph() {
     const errorMessages: Array<string> = [];
     const invalidEventsDirectiveDataByRootFieldPath = new Map<string, InvalidRootTypeFieldEventsDirectiveData>();
@@ -3782,26 +3876,30 @@ export class NormalizationFactory {
       ) {
         errorMessages.push(invalidNatsStreamConfigurationDefinitionErrorMessage);
       }
-      // Inject the correct dependency
       this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
-      const result = this.upsertInputObjectByNode(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
-      // The result cannot actually be unsuccessful
-      if (result.success) {
-        for (const fieldNode of EDFS_NATS_STREAM_CONFIGURATION_DEFINITION.fields!) {
-          this.addInputValueDataByNode({
-            fieldName: fieldNode.name.value,
-            isArgument: false,
-            inputValueDataByName: result.data.inputValueDataByName,
-            node: fieldNode,
-            originalParentTypeName: EDFS_NATS_STREAM_CONFIGURATION,
-          });
-        }
-      } else {
-        /* Should never happen, but if somehow it did, an error has already been appended from the
-         * `upsertInputObjectByNode` method.
-         */
-        return;
+    }
+    if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
+      const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEES);
+      if (
+        deliveryGuaranteesInputData &&
+        this.usesEdfsDeliveryGuarantees &&
+        !this.isDeliveryGuaranteesInputObjectValid(deliveryGuaranteesInputData)
+      ) {
+        errorMessages.push(invalidDeliveryGuaranteesDefinitionErrorMessage);
       }
+      const deliveryGuaranteeModeData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEE_MODE);
+      if (
+        deliveryGuaranteeModeData &&
+        this.usesEdfsDeliveryGuarantees &&
+        !this.isDeliveryGuaranteeModeEnumValid(deliveryGuaranteeModeData)
+      ) {
+        errorMessages.push(invalidDeliveryGuaranteeModeDefinitionErrorMessage);
+      }
+      /* The canonical definitions are injected into the document as dependencies of @edfs__kafkaSubscribe,
+       * and both type names are ignored by federation, so any user-declared definitions are simply dropped.
+       */
+      this.parentDefinitionDataByTypeName.delete(EDFS_DELIVERY_GUARANTEES);
+      this.parentDefinitionDataByTypeName.delete(EDFS_DELIVERY_GUARANTEE_MODE);
     }
 
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
@@ -4622,7 +4720,10 @@ export class NormalizationFactory {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }
-          definitions.push(this.getEnumNodeByData(parentData));
+          // The definition is conditionally pushed elsewhere.
+          if (parentTypeName !== EDFS_DELIVERY_GUARANTEE_MODE) {
+            definitions.push(this.getEnumNodeByData(parentData));
+          }
           break;
         }
         case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
@@ -4661,7 +4762,7 @@ export class NormalizationFactory {
             break;
           }
           // The definition is conditionally pushed elsewhere.
-          if (parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION) {
+          if (parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION && parentTypeName !== EDFS_DELIVERY_GUARANTEES) {
             definitions.push(this.getInputObjectNodeByData(parentData));
           }
           break;
