@@ -1,9 +1,11 @@
+import type { EditorContextType } from '@graphiql/react';
 import { computeFieldPills } from './defer-pills';
 import { QueryEditor, renderPills } from './defer-pills-render';
 import { measuredInputs } from './probe';
 import { getOperation, parseQuery } from './operation';
 
 const DEFER_ORIGIN = 'defer-advisor';
+const SET_VALUE_ORIGIN = 'setValue';
 
 type AnalysisState = {
   latencies: Record<string, number> | null;
@@ -14,42 +16,77 @@ type AnalysisState = {
 
 const initialAnalysis: AnalysisState = { latencies: null, probeFailures: {}, error: null, running: false };
 
-// Lives outside React so the editor's change listener and the pill markers can reach it directly.
-// The editor only exists while GraphiQL is mounted, so the pills component binds it in an effect.
+type TabAnalysis = {
+  state: AnalysisState;
+  url: string | undefined;
+  inputs: string | undefined;
+};
+
+type TextEditor = NonNullable<EditorContextType['variableEditor']>;
+type Editors = { query: QueryEditor; variables?: TextEditor | null; headers?: TextEditor | null };
+
 type EditEffect = 'rebaseline' | 'keep' | 'clear' | 'none';
 
+// Lives outside React so the editor's change listener and the pill markers can reach it directly.
+// The editor only exists while GraphiQL is mounted, so the pills component binds it in an effect.
 export class DeferStore {
-  private state: AnalysisState = initialAnalysis;
+  private readonly tabs = new Map<string, TabAnalysis>();
+  private activeTab = '';
 
-  private editor: QueryEditor | undefined;
+  private editors: Editors | undefined;
   private clearPills: (() => void) | undefined;
   private frame: number | undefined;
-  private analysedUrl: string | undefined;
-  private analysedInputs: string | undefined;
   private readonly listeners = new Set<() => void>();
 
   private readonly onChange = (_editor: unknown, change?: { origin?: string }) => this.onEditorChange(change?.origin);
 
   // Returns the function that detaches the store from the editor.
-  bind(editor: QueryEditor): () => void {
-    this.editor = editor;
-    editor.on('change', this.onChange);
+  bind(editors: Editors): () => void {
+    this.editors = editors;
+    const bound = [editors.query, editors.variables, editors.headers].filter((editor) => editor != null);
+    bound.forEach((editor) => editor.on('change', this.onChange));
     this.render();
     return () => {
-      editor.off('change', this.onChange);
+      bound.forEach((editor) => editor.off('change', this.onChange));
       if (this.frame !== undefined) {
         cancelAnimationFrame(this.frame);
         this.frame = undefined;
       }
       this.clearPills?.();
       this.clearPills = undefined;
-      this.editor = undefined;
+      this.editors = undefined;
     };
   }
 
   // Replaced on every change, so useSyncExternalStore sees a new reference exactly when something moved.
   get snapshot(): AnalysisState {
-    return this.state;
+    return this.current.state;
+  }
+
+  setTabs(activeTab: string, openTabs: readonly string[]) {
+    if (activeTab !== this.activeTab) {
+      if (this.current.state.running) {
+        this.current.state = { ...this.current.state, running: false };
+      }
+      this.activeTab = activeTab;
+      this.revalidate();
+      this.listeners.forEach((listener) => listener());
+    }
+    const open = new Set(openTabs);
+    for (const tab of this.tabs.keys()) {
+      if (!open.has(tab)) {
+        this.tabs.delete(tab);
+      }
+    }
+  }
+
+  private get current(): TabAnalysis {
+    let tab = this.tabs.get(this.activeTab);
+    if (!tab) {
+      tab = { state: initialAnalysis, url: undefined, inputs: undefined };
+      this.tabs.set(this.activeTab, tab);
+    }
+    return tab;
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -60,37 +97,39 @@ export class DeferStore {
   };
 
   writeQuery(text: string) {
-    if (!this.editor) {
+    if (!this.editors) {
       return;
     }
-    this.editor.getDoc().replaceRange(text, { line: 0, ch: 0 }, { line: Infinity, ch: Infinity }, DEFER_ORIGIN);
+    this.editors.query.getDoc().replaceRange(text, { line: 0, ch: 0 }, { line: Infinity, ch: Infinity }, DEFER_ORIGIN);
   }
 
-  startAnalysis(routingUrl: string, variablesError: string | null, query: string) {
-    this.analysedUrl = routingUrl;
-    this.analysedInputs = measuredInputs(query);
+  startAnalysis(routingUrl: string, variablesError: string | null, query: string): string {
+    this.current.url = routingUrl;
+    this.current.inputs = this.requestInputs(query);
     this.update({ running: true, error: variablesError });
+    return this.activeTab;
   }
 
   // Numbers measured against another endpoint would recommend the wrong defers, so they go.
   invalidateIfUrlChanged(routingUrl: string) {
-    if (this.analysedUrl === undefined || this.analysedUrl === routingUrl) {
+    const tab = this.current;
+    if (tab.url === undefined || tab.url === routingUrl) {
       return;
     }
-    this.analysedUrl = undefined;
+    tab.url = undefined;
     this.clear();
   }
 
-  finishAnalysis(latencies: Record<string, number>, probeFailures: Record<string, string>) {
-    this.update({ latencies, probeFailures, running: false });
+  finishAnalysis(latencies: Record<string, number>, probeFailures: Record<string, string>, tabId = this.activeTab) {
+    this.update({ latencies, probeFailures, running: false }, tabId);
   }
 
-  failAnalysis(message: string) {
-    this.update({ latencies: null, error: message, running: false });
+  failAnalysis(message: string, tabId = this.activeTab) {
+    this.update({ latencies: null, error: message, running: false }, tabId);
   }
 
   setRunning(running: boolean) {
-    if (this.state.running === running) {
+    if (this.current.state.running === running) {
       return;
     }
     this.update({ running });
@@ -100,8 +139,12 @@ export class DeferStore {
     this.update({ latencies: null, probeFailures: {}, error: null });
   }
 
-  private update(patch: Partial<AnalysisState>) {
-    this.state = { ...this.state, ...patch };
+  private update(patch: Partial<AnalysisState>, tabId = this.activeTab) {
+    const tab = tabId === this.activeTab ? this.current : this.tabs.get(tabId);
+    if (!tab) {
+      return;
+    }
+    tab.state = { ...tab.state, ...patch };
     this.listeners.forEach((listener) => listener());
     if ('latencies' in patch) {
       this.render();
@@ -111,7 +154,7 @@ export class DeferStore {
   private onEditorChange(origin: string | undefined) {
     switch (this.determineEditEffect(origin)) {
       case 'rebaseline':
-        this.analysedInputs = this.currentInputs();
+        this.current.inputs = this.currentInputs();
         this.scheduleRender();
         break;
       case 'keep':
@@ -126,9 +169,13 @@ export class DeferStore {
   }
 
   private determineEditEffect(origin: string | undefined): EditEffect {
+    const { latencies, error } = this.current.state;
+    if (origin === SET_VALUE_ORIGIN) {
+      return latencies === null ? 'none' : 'keep';
+    }
     // With no latencies there is nothing to keep, but a user edit may have fixed whatever caused the error.
-    if (this.state.latencies === null) {
-      return origin !== DEFER_ORIGIN && this.state.error !== null ? 'clear' : 'none';
+    if (latencies === null) {
+      return origin !== DEFER_ORIGIN && error !== null ? 'clear' : 'none';
     }
     // The panel moves @defer inside measured fields, so the baseline has to follow it.
     if (origin === DEFER_ORIGIN) {
@@ -137,13 +184,29 @@ export class DeferStore {
     return this.doesEditInvalidateAnalysis() ? 'clear' : 'keep';
   }
 
+  private requestInputs(query: string) {
+    const measured = measuredInputs(query);
+    if (measured === undefined) {
+      return undefined;
+    }
+    return [measured, this.editors?.variables?.getValue() ?? '', this.editors?.headers?.getValue() ?? ''].join('\n\n');
+  }
+
   private currentInputs() {
-    return measuredInputs(this.editor?.getValue() ?? '');
+    return this.requestInputs(this.editors?.query.getValue() ?? '');
   }
 
   private doesEditInvalidateAnalysis(): boolean {
     const current = this.currentInputs();
-    return current === undefined || current !== this.analysedInputs;
+    return current === undefined || current !== this.current.inputs;
+  }
+
+  private revalidate() {
+    if (this.current.state.latencies !== null && this.doesEditInvalidateAnalysis()) {
+      this.clear();
+      return;
+    }
+    this.render();
   }
 
   private scheduleRender() {
@@ -152,7 +215,7 @@ export class DeferStore {
     }
     this.frame = requestAnimationFrame(() => {
       this.frame = undefined;
-      this.render();
+      this.revalidate();
     });
   }
 
@@ -160,8 +223,8 @@ export class DeferStore {
     this.clearPills?.();
     this.clearPills = undefined;
 
-    const { latencies } = this.state;
-    const editor = this.editor;
+    const { latencies } = this.current.state;
+    const editor = this.editors?.query;
     if (!latencies || !editor) {
       return;
     }

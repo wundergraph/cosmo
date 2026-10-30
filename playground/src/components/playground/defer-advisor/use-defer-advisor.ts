@@ -32,9 +32,10 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
     const id = ++runId.current;
     const abort = new AbortController();
     probeAbort.current = abort;
+    let tabId: string | undefined;
     try {
       const request = getRequest();
-      store.startAnalysis(routingUrl, request.variablesError ?? null, query);
+      tabId = store.startAnalysis(routingUrl, request.variablesError ?? null, query);
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
@@ -48,10 +49,10 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
           failures[name] = result.reason;
         }
       }
-      store.finishAnalysis(measured, failures);
+      store.finishAnalysis(measured, failures, tabId);
     } catch (err) {
       if (id === runId.current) {
-        store.failAnalysis(err instanceof Error ? err.message : 'Analysis failed');
+        store.failAnalysis(err instanceof Error ? err.message : 'Analysis failed', tabId);
       }
     }
   };

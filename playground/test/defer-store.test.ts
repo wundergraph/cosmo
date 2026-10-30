@@ -15,19 +15,29 @@ const fakeEditor = () => {
 };
 
 const bound = () => {
-  const { editor, asQueryEditor } = fakeEditor();
+  const query = fakeEditor();
+  const variables = fakeEditor();
+  const headers = fakeEditor();
   const store = new DeferStore();
-  store.bind(asQueryEditor);
-  const [, listener] = editor.on.mock.calls[0];
-  return { editor, store, listener };
+  store.bind({ query: query.asQueryEditor, variables: variables.asQueryEditor, headers: headers.asQueryEditor });
+  const [, listener] = query.editor.on.mock.calls[0];
+  return { editor: query.editor, variables: variables.editor, headers: headers.editor, store, listener };
+};
+
+let frames: FrameRequestCallback[] = [];
+const flushFrames = () => {
+  const pending = frames;
+  frames = [];
+  pending.forEach((frame) => frame(0));
 };
 
 describe('DeferStore', () => {
   beforeEach(() => {
     // Writes schedule a repaint, which needs a frame callback the Node test environment does not have.
+    frames = [];
     vi.stubGlobal(
       'requestAnimationFrame',
-      vi.fn(() => 1),
+      vi.fn((frame: FrameRequestCallback) => frames.push(frame)),
     );
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
@@ -39,7 +49,7 @@ describe('DeferStore', () => {
   test('unbinding removes the change listener it registered', () => {
     const { editor, asQueryEditor } = fakeEditor();
     const store = new DeferStore();
-    const unbind = store.bind(asQueryEditor);
+    const unbind = store.bind({ query: asQueryEditor });
     unbind();
 
     const [, listener] = editor.on.mock.calls[0];
@@ -144,5 +154,115 @@ describe('DeferStore', () => {
 
     store.invalidateIfUrlChanged('http://b');
     expect(store.snapshot.latencies).toBeNull();
+  });
+
+  test.each(['variables', 'headers'] as const)('a %s edit clears the latencies', (name) => {
+    const editors = bound();
+    editors.store.startAnalysis('http://a', null, '{ a }');
+    editors.store.finishAnalysis({ a: 10 }, {});
+
+    editors[name].getValue.mockReturnValue('{ "changed": true }');
+    const [, listener] = editors[name].on.mock.calls[0];
+    listener(null, { origin: '+input' });
+
+    expect(editors.store.snapshot.latencies).toBeNull();
+  });
+
+  test('each tab keeps its own analysis', () => {
+    const { editor, store, listener } = bound();
+    store.setTabs('one', ['one', 'two']);
+    editor.getValue.mockReturnValue('{ a }');
+    store.startAnalysis('http://a', null, '{ a }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{ b }');
+    listener(null, { origin: 'setValue' });
+    store.setTabs('two', ['one', 'two']);
+    flushFrames();
+    expect(store.snapshot.latencies).toBeNull();
+
+    editor.getValue.mockReturnValue('{ a }');
+    listener(null, { origin: 'setValue' });
+    store.setTabs('one', ['one', 'two']);
+    flushFrames();
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test("switching to a tab with the same query does not show the other tab's latencies", () => {
+    const { editor, store } = bound();
+    editor.getValue.mockReturnValue('{ a }');
+    store.setTabs('one', ['one', 'two']);
+    store.startAnalysis('http://a', null, '{ a }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    store.setTabs('two', ['one', 'two']);
+
+    expect(store.snapshot.latencies).toBeNull();
+  });
+
+  test('a programmatic rewrite of the query on the same tab clears the latencies', () => {
+    const { editor, store, listener } = bound();
+    store.setTabs('one', ['one']);
+    store.startAnalysis('http://a', null, '{ a }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    editor.getValue.mockReturnValue('{ b }');
+    listener(null, { origin: 'setValue' });
+    flushFrames();
+
+    expect(store.snapshot.latencies).toBeNull();
+  });
+
+  test('closing a tab drops its analysis', () => {
+    const { editor, store } = bound();
+    editor.getValue.mockReturnValue('{ a }');
+    store.setTabs('one', ['one', 'two']);
+    store.startAnalysis('http://a', null, '{ a }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    store.setTabs('two', ['two']);
+    store.setTabs('one', ['one', 'two']);
+
+    expect(store.snapshot.latencies).toBeNull();
+  });
+
+  test('a probe that finishes after a tab switch writes to the tab it started on', () => {
+    const { editor, store } = bound();
+    editor.getValue.mockReturnValue('{ a }');
+    store.setTabs('one', ['one', 'two']);
+    const tabId = store.startAnalysis('http://a', null, '{ a }');
+
+    store.setTabs('two', ['one', 'two']);
+    store.finishAnalysis({ a: 10 }, {}, tabId);
+    expect(store.snapshot.latencies).toBeNull();
+
+    store.setTabs('one', ['one', 'two']);
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test('closing the middle of three analysed tabs keeps the other two', () => {
+    const { editor, store, listener } = bound();
+    const analyse = (tab: string, query: string, latency: number) => {
+      editor.getValue.mockReturnValue(query);
+      store.setTabs(tab, ['one', 'two', 'three']);
+      store.startAnalysis('http://a', null, query);
+      store.finishAnalysis({ [query]: latency }, {});
+    };
+    analyse('one', '{ a }', 1);
+    analyse('two', '{ b }', 2);
+    analyse('three', '{ c }', 3);
+
+    store.setTabs('two', ['one', 'two', 'three']);
+    editor.getValue.mockReturnValue('{ a }');
+    listener(null, { origin: 'setValue' });
+    store.setTabs('one', ['one', 'three']);
+    flushFrames();
+    expect(store.snapshot.latencies).toEqual({ '{ a }': 1 });
+
+    editor.getValue.mockReturnValue('{ c }');
+    listener(null, { origin: 'setValue' });
+    store.setTabs('three', ['one', 'three']);
+    flushFrames();
+    expect(store.snapshot.latencies).toEqual({ '{ c }': 3 });
   });
 });
