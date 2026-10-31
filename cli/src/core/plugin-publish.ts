@@ -7,6 +7,7 @@ import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { execa, type ResultPromise } from 'execa';
 import { config, getBaseHeaders } from './config.js';
+import { isUnknownPublishOutcome, unknownPublishOutcomeMessage } from './publish-outcome.js';
 import type { BaseCommandOptions } from './types/types.js';
 
 export interface PluginFiles {
@@ -207,25 +208,33 @@ export async function publishPluginPipeline(params: PluginPublishParams): Promis
   }
 
   // Step 3: Publish schema
-  const resp = await client.platform.publishFederatedSubgraph(
-    {
-      name: pluginName,
-      namespace,
-      schema: files.schema,
-      labels: labels.map((label) => splitLabel(label)),
-      type: SubgraphType.GRPC_PLUGIN,
-      proto: {
-        schema: files.protoSchema,
-        mappings: files.protoMapping,
-        lock: files.protoLock,
-        platforms,
-        version: newVersion,
+  let resp;
+  try {
+    resp = await client.platform.publishFederatedSubgraph(
+      {
+        name: pluginName,
+        namespace,
+        schema: files.schema,
+        labels: labels.map((label) => splitLabel(label)),
+        type: SubgraphType.GRPC_PLUGIN,
+        proto: {
+          schema: files.protoSchema,
+          mappings: files.protoMapping,
+          lock: files.protoLock,
+          platforms,
+          version: newVersion,
+        },
       },
-    },
-    {
-      headers: getBaseHeaders(),
-    },
-  );
+      {
+        headers: getBaseHeaders(),
+      },
+    );
+  } catch (error) {
+    if (!isUnknownPublishOutcome(error)) {
+      throw error;
+    }
+    return { error: new Error(unknownPublishOutcomeMessage(error)) };
+  }
 
   const result: PluginPublishResult = {
     error: null,

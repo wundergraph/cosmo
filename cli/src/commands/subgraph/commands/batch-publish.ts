@@ -7,6 +7,7 @@ import yaml from 'js-yaml';
 import { z } from 'zod';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { publishOrReportUnknownOutcome } from '../../../core/publish-outcome.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
 import { limitMaxValue } from '../../../constants.js';
 import { fileExists } from '../../../utils.js';
@@ -128,18 +129,23 @@ export default (opts: BaseCommandOptions) => {
       spinner.start();
     }
 
-    let resp = await opts.client.platform.publishFederatedSubgraphs(
-      {
-        namespace: options.namespace,
-        subgraphs,
-        disableResolvabilityValidation: options.disableResolvabilityValidation,
-        limit,
-        async: options.async,
-      },
-      {
-        headers: getBaseHeaders(),
-      },
+    let resp = await publishOrReportUnknownOutcome(spinner, 'Failed to publish subgraphs.', () =>
+      opts.client.platform.publishFederatedSubgraphs(
+        {
+          namespace: options.namespace,
+          subgraphs,
+          disableResolvabilityValidation: options.disableResolvabilityValidation,
+          limit,
+          async: options.async,
+        },
+        {
+          headers: getBaseHeaders(),
+        },
+      ),
     );
+    if (!resp) {
+      return;
+    }
 
     if (resp.jobId) {
       const controller = new AbortController();

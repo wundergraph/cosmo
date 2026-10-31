@@ -9,6 +9,7 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
+import { publishOrReportUnknownOutcome } from '../../../core/publish-outcome.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -118,25 +119,30 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('GRPC Subgraph is being published...').start();
 
-    const resp = await opts.client.platform.publishFederatedSubgraph(
-      {
-        name,
-        namespace: options.namespace,
-        schema,
-        // Optional when subgraph does not exist yet
-        routingUrl: options.routingUrl,
-        labels: options.label.map((label: string) => splitLabel(label)),
-        type: SubgraphType.GRPC_SERVICE,
-        proto: {
-          schema: protoSchema,
-          mappings: protoMapping,
-          lock: protoLock,
+    const resp = await publishOrReportUnknownOutcome(spinner, `Failed to publish subgraph "${name}".`, () =>
+      opts.client.platform.publishFederatedSubgraph(
+        {
+          name,
+          namespace: options.namespace,
+          schema,
+          // Optional when subgraph does not exist yet
+          routingUrl: options.routingUrl,
+          labels: options.label.map((label: string) => splitLabel(label)),
+          type: SubgraphType.GRPC_SERVICE,
+          proto: {
+            schema: protoSchema,
+            mappings: protoMapping,
+            lock: protoLock,
+          },
         },
-      },
-      {
-        headers: getBaseHeaders(),
-      },
+        {
+          headers: getBaseHeaders(),
+        },
+      ),
     );
+    if (!resp) {
+      return;
+    }
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {

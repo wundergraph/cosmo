@@ -15,6 +15,7 @@ import {
 import { SubgraphPublishStatsSchema, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { publishOrReportUnknownOutcome } from '../../../core/publish-outcome.js';
 import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
 import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
 
@@ -113,30 +114,35 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('Subgraph is being published...').start();
 
-    const resp = await opts.client.platform.publishFederatedSubgraph(
-      {
-        disableResolvabilityValidation: options.disableResolvabilityValidation,
-        name,
-        namespace: options.namespace,
-        // Publish schema only
-        schema,
-        // Optional when subgraph does not exist yet
-        routingUrl: options.routingUrl,
-        subscriptionUrl: options.subscriptionUrl,
-        subscriptionProtocol: options.subscriptionProtocol
-          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
-          : undefined,
-        websocketSubprotocol: options.websocketSubprotocol
-          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
-          : undefined,
-        labels: options.label.map((label: string) => splitLabel(label)),
-        type: SubgraphType.STANDARD,
-        limit,
-      },
-      {
-        headers: getBaseHeaders(),
-      },
+    const resp = await publishOrReportUnknownOutcome(spinner, `Failed to publish subgraph "${name}".`, () =>
+      opts.client.platform.publishFederatedSubgraph(
+        {
+          disableResolvabilityValidation: options.disableResolvabilityValidation,
+          name,
+          namespace: options.namespace,
+          // Publish schema only
+          schema,
+          // Optional when subgraph does not exist yet
+          routingUrl: options.routingUrl,
+          subscriptionUrl: options.subscriptionUrl,
+          subscriptionProtocol: options.subscriptionProtocol
+            ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+            : undefined,
+          websocketSubprotocol: options.websocketSubprotocol
+            ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+            : undefined,
+          labels: options.label.map((label: string) => splitLabel(label)),
+          type: SubgraphType.STANDARD,
+          limit,
+        },
+        {
+          headers: getBaseHeaders(),
+        },
+      ),
     );
+    if (!resp) {
+      return;
+    }
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {

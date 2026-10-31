@@ -64,50 +64,10 @@ export class GraphCompositionRepository {
 
       const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
 
-      let previousCompositionId: string | undefined;
-      if (isFeatureFlagComposition) {
-        previousCompositionId = (
-          await tx
-            .select({ id: graphCompositions.id })
-            .from(graphCompositions)
-            .innerJoin(
-              schemaVersion,
-              and(
-                eq(schemaVersion.targetId, fedGraphTargetId),
-                eq(schemaVersion.id, graphCompositions.schemaVersionId),
-              ),
-            )
-            .innerJoin(
-              federatedGraphsToFeatureFlagSchemaVersions,
-              and(
-                eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
-                eq(
-                  federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
-                  graphCompositions.schemaVersionId,
-                ),
-              ),
-            )
-            .where(eq(graphCompositions.isFeatureFlagComposition, true))
-            .orderBy(desc(graphCompositions.createdAt))
-            .limit(1)
-            .execute()
-        )[0]?.id;
-      } else {
-        previousCompositionId = (
-          await tx
-            .select({
-              id: graphCompositions.id,
-            })
-            .from(graphCompositions)
-            .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-            .where(
-              and(eq(schemaVersion.targetId, fedGraphTargetId), eq(graphCompositions.isFeatureFlagComposition, false)),
-            )
-            .orderBy(desc(graphCompositions.createdAt))
-            .limit(1)
-            .execute()
-        )[0]?.id;
-      }
+      const previousCompositionId = await new GraphCompositionRepository(this.logger, tx).getLatestCompositionId({
+        fedGraphTargetId,
+        featureFlagId: isFeatureFlagComposition ? featureFlagId : undefined,
+      });
 
       const insertedComposition = await tx
         .insert(graphCompositions)
@@ -206,6 +166,83 @@ export class GraphCompositionRepository {
         await tx.insert(graphCompositionSubgraphs).values(insertValues).execute();
       }
     });
+  }
+
+  /**
+   * The latest composition attempt, valid or not, of the federated graph, or of the feature flag on it when
+   * `featureFlagId` is given.
+   */
+  public async getLatestCompositionId({
+    fedGraphTargetId,
+    featureFlagId,
+  }: {
+    fedGraphTargetId: string;
+    featureFlagId?: string;
+  }): Promise<string | undefined> {
+    if (featureFlagId) {
+      const latest = await this.db
+        .select({ id: graphCompositions.id })
+        .from(graphCompositions)
+        .innerJoin(
+          schemaVersion,
+          and(eq(schemaVersion.targetId, fedGraphTargetId), eq(schemaVersion.id, graphCompositions.schemaVersionId)),
+        )
+        .innerJoin(
+          federatedGraphsToFeatureFlagSchemaVersions,
+          and(
+            eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
+            eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, graphCompositions.schemaVersionId),
+          ),
+        )
+        .where(eq(graphCompositions.isFeatureFlagComposition, true))
+        .orderBy(desc(graphCompositions.createdAt))
+        .limit(1)
+        .execute();
+      return latest[0]?.id;
+    }
+
+    const latest = await this.db
+      .select({ id: graphCompositions.id })
+      .from(graphCompositions)
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(and(eq(schemaVersion.targetId, fedGraphTargetId), eq(graphCompositions.isFeatureFlagComposition, false)))
+      .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+    return latest[0]?.id;
+  }
+
+  /**
+   * Whether the latest composition attempt of the federated graph (or of the feature flag on it) used the given
+   * subgraph schema version.
+   */
+  public async subgraphVersionInLatestComposition({
+    fedGraphTargetId,
+    featureFlagId,
+    subgraphSchemaVersionId,
+  }: {
+    fedGraphTargetId: string;
+    featureFlagId?: string;
+    subgraphSchemaVersionId: string;
+  }): Promise<'included' | 'missing' | 'not-composed'> {
+    const compositionId = await this.getLatestCompositionId({ fedGraphTargetId, featureFlagId });
+    if (!compositionId) {
+      return 'not-composed';
+    }
+
+    const match = await this.db
+      .select({ id: graphCompositionSubgraphs.id })
+      .from(graphCompositionSubgraphs)
+      .where(
+        and(
+          eq(graphCompositionSubgraphs.graphCompositionId, compositionId),
+          eq(graphCompositionSubgraphs.schemaVersionId, subgraphSchemaVersionId),
+          not(eq(graphCompositionSubgraphs.changeType, 'removed')),
+        ),
+      )
+      .limit(1)
+      .execute();
+    return match.length > 0 ? 'included' : 'missing';
   }
 
   public updateComposition({

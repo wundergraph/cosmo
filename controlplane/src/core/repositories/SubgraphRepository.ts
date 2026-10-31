@@ -594,9 +594,23 @@ export class SubgraphRepository {
       }
     }
 
-    // If the labels haven't changed and the subgraph hasn't changed, there should be nothing further to do
+    // Nothing changed, so only the compositions that never picked up the stored schema need composing
     if (!subgraphChanged && !labelChanged) {
-      return { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged };
+      const stale = await this.collectStaleCompositions(
+        tx,
+        subgraph,
+        data.namespaceId,
+        splitConfigFeature,
+        listByFederatedGraphCache,
+        featureFlagCaches,
+      );
+      return {
+        subgraph,
+        affectedFederatedGraphById: stale.federatedGraphById,
+        affectedFeatureFlagIds: stale.featureFlagIds,
+        subgraphChanged: stale.federatedGraphById.size > 0 || stale.featureFlagIds.size > 0,
+        labelChanged,
+      };
     }
 
     if (subgraph.isFeatureSubgraph) {
@@ -706,6 +720,116 @@ export class SubgraphRepository {
     }
 
     return { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged };
+  }
+
+  /**
+   * Collects the federated graphs and feature flags whose latest composition attempt did not use the subgraph's stored
+   * schema version. A publish stores the schema before composing, so a request that dies in between leaves the schema
+   * stored but uncomposed, and republishing the identical schema must still compose it.
+   */
+  private async collectStaleCompositions(
+    tx: PostgresJsDatabase<typeof schema>,
+    subgraph: SubgraphDTO,
+    namespaceId: string,
+    splitConfigFeature: Feature | undefined,
+    listByFederatedGraphCache?: Map<string, Promise<SubgraphDTO[]>>,
+    featureFlagCaches?: FeatureFlagCollectCaches,
+  ): Promise<{ federatedGraphById: Map<string, FederatedGraphDTO>; featureFlagIds: Set<string> }> {
+    const federatedGraphById = new Map<string, FederatedGraphDTO>();
+    const featureFlagIds = new Set<string>();
+    if (!subgraph.schemaVersionId) {
+      return { federatedGraphById, featureFlagIds };
+    }
+
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+    const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+    const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
+    const compositionRepo = new GraphCompositionRepository(this.logger, tx);
+
+    const isStale = async (fedGraphTargetId: string, featureFlagId?: string) => {
+      const state = await compositionRepo.subgraphVersionInLatestComposition({
+        fedGraphTargetId,
+        featureFlagId,
+        subgraphSchemaVersionId: subgraph.schemaVersionId,
+      });
+      // A feature flag that was never composed on the graph does not apply to it
+      return featureFlagId ? state === 'missing' : state !== 'included';
+    };
+
+    if (subgraph.isFeatureSubgraph) {
+      const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
+      if (!baseSubgraph) {
+        return { federatedGraphById, featureFlagIds };
+      }
+
+      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: baseSubgraph.labels,
+        namespaceId,
+        excludeContracts: true,
+      });
+      for (const federatedGraph of federatedGraphs) {
+        let subgraphsPromise = listByFederatedGraphCache?.get(federatedGraph.targetId);
+        if (!subgraphsPromise) {
+          subgraphsPromise = subgraphRepo.listByFederatedGraph({
+            federatedGraphTargetId: federatedGraph.targetId,
+            published: true,
+          });
+          listByFederatedGraphCache?.set(federatedGraph.targetId, subgraphsPromise);
+        }
+        const subgraphs = await subgraphsPromise;
+
+        const featureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
+          baseSubgraphId: baseSubgraph.id,
+          namespaceId,
+          fedGraphLabelMatchers: federatedGraph.labelMatchers || [],
+          baseSubgraphNames: subgraphs.map((s) => s.name),
+          excludeDisabled: true,
+          caches: featureFlagCaches,
+        });
+
+        for (const featureFlag of featureFlags) {
+          if (
+            featureFlag.featureSubgraphs.some((fsg) => fsg.id === subgraph.id) &&
+            (await isStale(federatedGraph.targetId, featureFlag.id))
+          ) {
+            featureFlagIds.add(featureFlag.id);
+            // Without split config, a feature flag is only composed along with its federated graph
+            if (!splitConfigFeature?.enabled) {
+              federatedGraphById.set(federatedGraph.id, federatedGraph);
+            }
+          }
+        }
+      }
+
+      return { federatedGraphById, featureFlagIds };
+    }
+
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+      labels: subgraph.labels,
+      namespaceId,
+      excludeContracts: true,
+    });
+    const featureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphLabels({
+      namespaceId,
+      labels: subgraph.labels,
+      excludeDisabled: true,
+    });
+    for (const federatedGraph of federatedGraphs) {
+      if (await isStale(federatedGraph.targetId)) {
+        federatedGraphById.set(federatedGraph.id, federatedGraph);
+      }
+
+      for (const featureFlag of featureFlags) {
+        if (
+          featureFlag.featureSubgraphs.every((fsg) => fsg.baseSubgraphId !== subgraph.id) &&
+          (await isStale(federatedGraph.targetId, featureFlag.id))
+        ) {
+          featureFlagIds.add(featureFlag.id);
+        }
+      }
+    }
+
+    return { federatedGraphById, featureFlagIds };
   }
 
   /**

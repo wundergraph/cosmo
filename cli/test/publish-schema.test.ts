@@ -2,10 +2,11 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
 import { Command } from 'commander';
-import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { Code, ConnectError, createClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { dirname } from 'pathe';
+import pc from 'picocolors';
 import { Client } from '../src/core/client/client.js';
 import PublishSchema from '../src/commands/subgraph/commands/publish.js';
 
@@ -265,5 +266,65 @@ describe('truncation warning', () => {
       ([arg]) => typeof arg === 'string' && arg.includes('warnings were produced'),
     );
     expect(warningTableCalls).toHaveLength(0);
+  });
+});
+
+function runPublishFailingWith(error: ConnectError) {
+  const client: Client = {
+    platform: createClient(
+      PlatformService,
+      createRouterTransport(({ service }) => {
+        service(PlatformService, {
+          publishFederatedSubgraph: () => {
+            throw error;
+          },
+        });
+      }),
+    ),
+  };
+  const program = new Command();
+  program.addCommand(PublishSchema({ client }));
+  return program.parseAsync(['publish', 'wg.orders', '--schema', schemaPath], { from: 'user' });
+}
+
+describe('publish without a response from the control plane', () => {
+  let errorSpy: MockInstance<typeof console.error>;
+
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    process.exitCode = undefined;
+    vi.restoreAllMocks();
+  });
+
+  test.each([
+    ['HTTP 502', Code.Unavailable],
+    ['socket hang up', Code.Aborted],
+    ['the operation timed out', Code.DeadlineExceeded],
+  ])('explains how to recover when the request fails with "%s"', async (message, code) => {
+    await runPublishFailingWith(new ConnectError(message, code));
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy.mock.calls).toEqual([
+      [
+        pc.yellow(
+          `The publish request failed before the control plane responded (${message}).\n` +
+            'The schema may or may not have been stored and composed.\n' +
+            'Check in Studio whether a new composition was created for the affected federated graphs.\n' +
+            'If it was not, publish again. An identical schema is recomposed when the latest composition does not include it.',
+        ),
+      ],
+    ]);
+  });
+
+  test('rethrows errors that came back from the control plane', async () => {
+    await expect(runPublishFailingWith(new ConnectError('boom', Code.Internal))).rejects.toMatchObject({
+      code: Code.Internal,
+      rawMessage: 'boom',
+    });
+    expect(errorSpy.mock.calls).toEqual([]);
   });
 });
