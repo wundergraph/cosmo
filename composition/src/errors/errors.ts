@@ -2295,12 +2295,12 @@ export function undefinedCacheTagInputFieldErrorMessage({
 
 export function untraversableCacheTagReferenceErrorMessage({
   reference,
-  typeString,
+  typeReference,
   untraversableReference,
 }: UntraversableCacheTagReferenceErrorMessageParams): string {
   return (
     `The "format" argument references "$args.${reference}",` +
-    ` but "$args.${untraversableReference}" is of type "${typeString}".` +
+    ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
     ` A period-delimited path can traverse only an Input Object that is not a list.`
   );
 }

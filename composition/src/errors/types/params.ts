@@ -130,7 +130,7 @@ export type UndefinedCacheTagInputFieldErrorMessageParams = {
 
 export type UntraversableCacheTagReferenceErrorMessageParams = {
   reference: string;
-  typeString: string;
+  typeReference: string;
   untraversableReference: string;
 };
 

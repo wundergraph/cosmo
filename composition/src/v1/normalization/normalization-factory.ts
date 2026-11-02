@@ -4628,7 +4628,7 @@ export class NormalizationFactory {
         errorMessages.push(
           untraversableCacheTagReferenceErrorMessage({
             reference,
-            typeString: printTypeNode(inputValueData.type),
+            typeReference: printTypeNode(inputValueData.type),
             untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
           }),
         );

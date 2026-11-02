@@ -451,7 +451,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           untraversableCacheTagReferenceErrorMessage({
             reference: 'filter.tags.name',
-            typeString: '[Tag!]',
+            typeReference: '[Tag!]',
             untraversableReference: 'filter.tags',
           }),
         ]),
@@ -473,7 +473,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           untraversableCacheTagReferenceErrorMessage({
             reference: 'id.value',
-            typeString: 'ID!',
+            typeReference: 'ID!',
             untraversableReference: 'id',
           }),
         ]),
@@ -495,7 +495,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           untraversableCacheTagReferenceErrorMessage({
             reference: 'region.code',
-            typeString: 'Region',
+            typeReference: 'Region',
             untraversableReference: 'region',
           }),
         ]),
