@@ -318,7 +318,7 @@ export function unsupportedCacheTagLocationWarning({
   return new Warning({
     message:
       `The "@cacheTag" directive defined on coordinates "${coords}" will be ignored.` +
-      ` "@cacheTag" is currently supported only upon a Query root field.`,
+      ` "@cacheTag" is currently supported only upon a Query root field or an entity.`,
     subgraph: {
       name: subgraphName,
     },

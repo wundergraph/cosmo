@@ -16,12 +16,14 @@ import {
   invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
+  KEY,
+  listCacheTagKeyFieldErrorMessage,
   NON_NULLABLE_STRING,
+  nonResolvableEntityCacheTagErrorMessage,
   nonRootFieldCacheTagErrorMessage,
   normalizeSubgraph,
   numberToOrdinal,
   parse,
-  partiallyDefinedCacheTagReferenceErrorMessage,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   type SubgraphName,
@@ -29,8 +31,11 @@ import {
   unavailableCacheTagReferencesError,
   undefinedCacheTagArgumentErrorMessage,
   undefinedCacheTagInputFieldErrorMessage,
+  undefinedCacheTagKeyFieldErrorMessage,
+  undefinedFieldInFieldSetErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
+  unsupportedEntityCacheTagNamespaceErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
   untraversableCacheTagReferenceErrorMessage,
 } from '../../../src';
@@ -47,9 +52,8 @@ import {
 } from '../../utils/utils';
 import { CACHE_TAG_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
-/* directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
- *
- * Only a Query root field is supported.
+/* The following directive is tested here:
+ *     directive @cacheTag(format: String!) repeatable on FIELD_DEFINITION | OBJECT
  */
 describe('@cacheTag tests', () => {
   describe('format validation tests', () => {
@@ -1127,8 +1131,8 @@ describe('@cacheTag tests', () => {
       expect(warnings).toStrictEqual([]);
     });
 
-    test('that a reference to an argument omitted by a subgraph that defines the field is rejected', () => {
-      const { errors } = federateSubgraphsFailure(
+    test('that a reference to an argument omitted by a subgraph that defines the field is valid', () => {
+      const { warnings } = federateSubgraphsSuccess(
         [
           createProductsSubgraph(
             'a',
@@ -1139,20 +1143,19 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors).toStrictEqual([
-        unavailableCacheTagReferencesError('Query.products', [
-          partiallyDefinedCacheTagReferenceErrorMessage({
-            coords: 'Query.products(region: ...)',
-            parentCoords: 'Query.products',
-            reference: 'region',
-            subgraphName: 'a',
-          }),
-        ]),
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products-{$args.region}'])],
+            ['b', new Set(['products-{$args.id}'])],
+          ]),
+        }),
       ]);
     });
 
-    test('that a reference to an Input Object field omitted by a subgraph that defines the Input Object is rejected', () => {
-      const { errors } = federateSubgraphsFailure(
+    test('that a reference to an Input Object field omitted by a subgraph that defines the Input Object is valid', () => {
+      const { warnings } = federateSubgraphsSuccess(
         [
           createProductsSubgraph(
             'a',
@@ -1164,15 +1167,14 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors).toStrictEqual([
-        unavailableCacheTagReferencesError('Query.products', [
-          partiallyDefinedCacheTagReferenceErrorMessage({
-            coords: 'Filter.brand',
-            parentCoords: 'Filter',
-            reference: 'filter.brand',
-            subgraphName: 'a',
-          }),
-        ]),
+      expect(warnings).toStrictEqual([
+        inconsistentCacheTagFormatsWarning({
+          coords: 'Query.products',
+          formatsBySubgraphName: new Map<SubgraphName, Set<string>>([
+            ['a', new Set(['products-{$args.filter.brand}'])],
+            ['b', new Set()],
+          ]),
+        }),
       ]);
     });
 
@@ -1388,6 +1390,273 @@ describe('@cacheTag tests', () => {
     });
   });
 
+  describe('entity tests', () => {
+    test('that a CacheTagConfiguration is produced for each distinct format', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraph(
+            'a',
+            `
+            type Query { product(id: ID!): Product }
+            type Product 
+                @key(fields: "id")
+                @cacheTag(format: "product-{ $key.id }") 
+                @cacheTag(format: "product-{$key.id}") 
+                @cacheTag(format: "products") {
+              id: ID!
+            }
+          `,
+          ),
+          'Product',
+        ),
+      ).toStrictEqual([
+        { format: 'product-{$key.id}', typeName: 'Product' },
+        { format: 'products', typeName: 'Product' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
+    test('that a reference can traverse an Object that the key selects', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraph(
+            'a',
+            `
+            type Query { product: Product }
+            type Organization { id: ID! }
+            type Product 
+                @key(fields: "organization { id } sku") 
+                @cacheTag(format: "{$key.organization.id}-{$key.sku}") {
+              organization: Organization!
+              sku: String!
+            }
+          `,
+          ),
+          'Product',
+        ),
+      ).toStrictEqual([
+        { format: '{$key.organization.id}-{$key.sku}', typeName: 'Product' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+
+    test('that a reference that a key does not select as a leaf field is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product }
+          type Product 
+              @key(fields: "upc")
+              @key(fields: "name")
+              @cacheTag(format: "{$key.name}")
+              @cacheTag(format: "{$key.price}") {
+            upc: ID!
+            name: String!
+            price: Int!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
+          undefinedCacheTagKeyFieldErrorMessage({ fieldSets: ['upc'], reference: 'name' }),
+        ]),
+        invalidDirectiveError(CACHE_TAG, 'Product', '2nd', [
+          undefinedCacheTagKeyFieldErrorMessage({ fieldSets: ['upc', 'name'], reference: 'price' }),
+        ]),
+      ]);
+    });
+
+    /* A subgraph declares an unresolvable key to send the entity to the subgraphs that resolve it by that key.
+     * The router never fetches the entity from this subgraph through that key, so a reference need not be in it.
+     */
+    test('that a reference must be selected only by every resolvable key', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraph(
+            'products',
+            `
+            type Query { product: Product }
+            type Product
+                @key(fields: "id")
+                @key(fields: "sku", resolvable: false)
+                @cacheTag(format: "product-{$key.id}") {
+              id: ID!
+              sku: String!
+            }
+          `,
+          ),
+          'Product',
+        ),
+      ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+    });
+
+    test('that a reference that includes a list is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product }
+          type Item { id: ID! }
+          type Organization { codes: [String!]! }
+          type Product
+              @key(fields: "tags items { id } organization { codes }")
+              @cacheTag(format: "{$key.tags}-{$key.items.id}-{$key.organization.codes}") {
+            tags: [String!]!
+            items: [Item!]!
+            organization: Organization!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
+          listCacheTagKeyFieldErrorMessage({ listReference: 'tags', reference: 'tags', typeString: '[String!]!' }),
+          listCacheTagKeyFieldErrorMessage({ listReference: 'items', reference: 'items.id', typeString: '[Item!]!' }),
+          listCacheTagKeyFieldErrorMessage({
+            listReference: 'organization.codes',
+            reference: 'organization.codes',
+            typeString: '[String!]!',
+          }),
+        ]),
+      ]);
+    });
+
+    test('that only the "$key" namespace is supported upon an entity', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product }
+          type Product
+              @key(fields: "id")
+              @cacheTag(format: "{$args.id}") {
+            id: ID!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
+          unsupportedEntityCacheTagNamespaceErrorMessage('args'),
+        ]),
+      ]);
+    });
+
+    test('that the directive upon an Object without a resolvable key is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product review: Review }
+          type Product @cacheTag(format: "products") { id: ID! }
+          type Review
+              @key(fields: "id", resolvable: false)
+              @cacheTag(format: "reviews") {
+            id: ID!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [nonResolvableEntityCacheTagErrorMessage()]),
+        invalidDirectiveError(CACHE_TAG, 'Review', FIRST_ORDINAL, [nonResolvableEntityCacheTagErrorMessage()]),
+      ]);
+    });
+
+    test('that an invalid key is reported without an error for the directive', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product }
+          type Product
+              @key(fields: "upc")
+              @cacheTag(format: "{$key.upc}") {
+            id: ID!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(KEY, 'Product', FIRST_ORDINAL, [
+          undefinedFieldInFieldSetErrorMessage('upc', 'Product', 'upc'),
+        ]),
+      ]);
+    });
+
+    // Each subgraph caches its own part of an entity, so its formats apply only to that part.
+    test('that each subgraph retains its own CacheTagConfigurations without a warning', () => {
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query { product(id: ID!): Product }
+            type Product
+                @key(fields: "id")
+                @cacheTag(format: "product-{$key.id}") {
+              id: ID!
+              name: String!
+            }
+          `,
+          ),
+          createSubgraph(
+            'b',
+            `
+            type Product
+                @key(fields: "id")
+                @cacheTag(format: "reviews-{$key.id}") {
+              id: ID!
+              reviews: [String!]!
+            }
+          `,
+          ),
+          createSubgraph(
+            'c',
+            `
+            type Product @key(fields: "id") { id: ID! price: Int! }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(warnings).toStrictEqual([]);
+      expect(
+        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+      expect(
+        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product')?.entityCaching
+          ?.cacheTagConfigurations,
+      ).toStrictEqual([{ format: 'reviews-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+      expect(
+        subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product')?.entityCaching,
+      ).toBeUndefined();
+    });
+
+    test('that an overridden entity field leaves the CacheTagConfiguration of the entity intact', () => {
+      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query { product(id: ID!): Product }
+            type Product
+                @key(fields: "id")
+                @cacheTag(format: "product-{$key.id}") {
+              id: ID!
+              name: String!
+              price: Int!
+            }
+          `,
+          ),
+          createSubgraph(
+            'b',
+            `
+            type Product @key(fields: "id") { id: ID! name: String! @override(from: "a") }
+          `,
+          ),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
+      expect(configurationData?.fieldNames).toStrictEqual(new Set(['id', 'price']));
+      expect(configurationData?.entityCaching?.cacheTagConfigurations).toStrictEqual([
+        { format: 'product-{$key.id}', typeName: 'Product' },
+      ] satisfies Array<CacheTagConfiguration>);
+    });
+  });
+
   describe('location tests', () => {
     test('that the directive is rejected on an Interface', () => {
       const { errors } = normalizeSubgraphFailure(
@@ -1403,24 +1672,6 @@ describe('@cacheTag tests', () => {
           invalidDirectiveLocationErrorMessage(CACHE_TAG, 'INTERFACE'),
         ]),
       );
-    });
-
-    test('that the directive upon an Object is ignored with a warning', () => {
-      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
-        createSubgraph(
-          'a',
-          `
-          type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @cacheTag(format: "product-{$key.id}") @cacheTag(format: "product") {
-            id: ID!
-          }
-        `,
-        ),
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      // A repeated directive upon the same Object is reported once.
-      expect(warnings).toStrictEqual([unsupportedCacheTagLocationWarning({ coords: 'Product', subgraphName: 'a' })]);
-      expect(configurationDataByTypeName.get('Product')!.entityCaching).toBeUndefined();
     });
   });
 });
