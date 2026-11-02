@@ -2934,7 +2934,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
+							UseGraphQLValidationFailedStatus: config.EnableFlag{
 								Enabled: true,
 							},
 						}),
@@ -2981,7 +2981,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+							ReplaceInvalidVarErrors: config.EnableFlag{
 								Enabled: true,
 							},
 						}),
@@ -3030,7 +3030,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
+							ReplaceInvalidVarErrors: config.EnableFlag{
 								Enabled: true,
 							},
 						}),

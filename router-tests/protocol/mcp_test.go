@@ -527,7 +527,7 @@ Important Notes:
 	t.Run("Structured Tool Output", func(t *testing.T) {
 		outputSchemaEnabled := config.MCPConfiguration{
 			Enabled:      true,
-			OutputSchema: config.MCPOutputSchemaConfiguration{Enabled: true},
+			OutputSchema: config.EnableFlag{Enabled: true},
 		}
 
 		t.Run("Tools declare an output schema when enabled", func(t *testing.T) {
@@ -656,7 +656,7 @@ Important Notes:
 				MCP: config.MCPConfiguration{
 					Enabled:                   true,
 					EnableArbitraryOperations: true,
-					OutputSchema:              config.MCPOutputSchemaConfiguration{Enabled: true},
+					OutputSchema:              config.EnableFlag{Enabled: true},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 

@@ -26,7 +26,7 @@ func TestSafelist(t *testing.T) {
 			ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, err error) {
@@ -38,7 +38,7 @@ func TestSafelist(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -58,7 +58,7 @@ func TestSafelist(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -78,7 +78,7 @@ func TestSafelist(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -101,7 +101,7 @@ func TestSafelist(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -129,7 +129,7 @@ func TestSafelist(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -157,7 +157,7 @@ func TestSafelist(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -185,7 +185,7 @@ func TestSafelist(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{Enabled: true},
+					Safelist: config.EnableFlag{Enabled: true},
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -209,7 +209,7 @@ func TestSafelist(t *testing.T) {
 				},
 				RouterOptions: []core.Option{
 					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-						Safelist:   config.SafelistConfiguration{Enabled: false},
+						Safelist:   config.EnableFlag{Enabled: false},
 						LogUnknown: true,
 					}),
 				},
@@ -243,7 +243,7 @@ func TestSafelist(t *testing.T) {
 				},
 				RouterOptions: []core.Option{
 					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-						Safelist:   config.SafelistConfiguration{Enabled: true},
+						Safelist:   config.EnableFlag{Enabled: true},
 						LogUnknown: true,
 					}),
 				},
@@ -277,7 +277,7 @@ func TestSafelist(t *testing.T) {
 				},
 				RouterOptions: []core.Option{
 					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-						Safelist:   config.SafelistConfiguration{Enabled: true},
+						Safelist:   config.EnableFlag{Enabled: true},
 						LogUnknown: true,
 					}),
 				},

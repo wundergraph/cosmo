@@ -556,7 +556,7 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-						Safelist: config.SafelistConfiguration{Enabled: true},
+						Safelist: config.EnableFlag{Enabled: true},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{

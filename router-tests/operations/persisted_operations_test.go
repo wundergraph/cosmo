@@ -327,7 +327,7 @@ func TestPersistedOperationsCacheMixedCallsWithSafeList(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{
+					Safelist: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
@@ -355,7 +355,7 @@ func TestPersistedOperationsCacheMixedCallsWithSafeList(t *testing.T) {
 					},
 				}),
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
-					Safelist: config.SafelistConfiguration{
+					Safelist: config.EnableFlag{
 						Enabled: true,
 					},
 					Storage: config.PersistedOperationsStorageConfig{

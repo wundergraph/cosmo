@@ -1691,8 +1691,8 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					ResponseCache:   testConfig.MetricOptions.EnableOTLPResponseCacheMetrics,
 					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
-					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
-					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
+					Network:         config.EnableFlag{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.EnableFlag{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -1731,7 +1731,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 				Enabled:     true,
 				HandlerPath: "/absinthe/socket",
 			},
-			ForwardUpgradeHeaders: config.ForwardUpgradeHeadersConfiguration{
+			ForwardUpgradeHeaders: config.ForwardUpgradeAllowList{
 				Enabled: true,
 				AllowList: []string{
 					"Authorization",
@@ -1740,7 +1740,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 					"reverse-canonical-header-name",
 				},
 			},
-			ForwardUpgradeQueryParams: config.ForwardUpgradeQueryParamsConfiguration{
+			ForwardUpgradeQueryParams: config.ForwardUpgradeAllowList{
 				Enabled: true,
 				AllowList: []string{
 					"token",

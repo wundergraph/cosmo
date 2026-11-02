@@ -97,7 +97,7 @@ func TestFallbackErrors(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					SuppressFetchErrors: config.ApolloCompatibilityFlag{
+					SuppressFetchErrors: config.EnableFlag{
 						Enabled: true,
 					},
 				}),
