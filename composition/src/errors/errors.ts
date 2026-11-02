@@ -2301,7 +2301,7 @@ export function invalidCacheTagReferenceErrorMessage({
   return (
     `The "format" argument references "$args.${reference}",` +
     ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
-    ` The period-delimited path must reference only non-list-wrapped Input Objects types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
+    ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
   );
 }
 
