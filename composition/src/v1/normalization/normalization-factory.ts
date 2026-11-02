@@ -92,6 +92,7 @@ import {
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidCacheTagArgumentTypeErrorMessage,
+  invalidCacheTagReferenceErrorMessage,
   invalidComposeDirectiveNameError,
   invalidDirectiveDefinitionError,
   invalidDirectiveError,
@@ -183,7 +184,6 @@ import {
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
   unsupportedFieldCacheTagNamespaceErrorMessage,
-  untraversableCacheTagReferenceErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -4626,7 +4626,7 @@ export class NormalizationFactory {
       // A list yields no single value, and a leaf has no fields.
       if (isTypeNodeListType(inputValueData.type) || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
         errorMessages.push(
-          untraversableCacheTagReferenceErrorMessage({
+          invalidCacheTagReferenceErrorMessage({
             reference,
             typeReference: printTypeNode(inputValueData.type),
             untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),

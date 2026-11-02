@@ -14,6 +14,7 @@ import {
   invalidCacheTagArgumentTypeErrorMessage,
   invalidCacheTagBraceErrorMessage,
   invalidCacheTagPlaceholderErrorMessage,
+  invalidCacheTagReferenceErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   NON_NULLABLE_STRING,
@@ -32,7 +33,6 @@ import {
   undefinedRequiredArgumentsErrorMessage,
   unsupportedCacheTagLocationWarning,
   unsupportedFieldCacheTagNamespaceErrorMessage,
-  untraversableCacheTagReferenceErrorMessage,
 } from '../../../src';
 import {
   createSubgraph,
@@ -449,7 +449,7 @@ describe('@cacheTag tests', () => {
       );
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          untraversableCacheTagReferenceErrorMessage({
+          invalidCacheTagReferenceErrorMessage({
             reference: 'filter.tags.name',
             typeReference: '[Tag!]',
             untraversableReference: 'filter.tags',
@@ -471,7 +471,7 @@ describe('@cacheTag tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          untraversableCacheTagReferenceErrorMessage({
+          invalidCacheTagReferenceErrorMessage({
             reference: 'id.value',
             typeReference: 'ID!',
             untraversableReference: 'id',
@@ -493,7 +493,7 @@ describe('@cacheTag tests', () => {
       );
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
-          untraversableCacheTagReferenceErrorMessage({
+          invalidCacheTagReferenceErrorMessage({
             reference: 'region.code',
             typeReference: 'Region',
             untraversableReference: 'region',

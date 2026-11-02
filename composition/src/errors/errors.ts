@@ -12,6 +12,7 @@ import {
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
   type InvalidCacheTagArgumentTypeErrorParams,
+  type InvalidCacheTagReferenceErrorMessageParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
   type InvalidEntityReturnTypeErrorParams,
@@ -27,7 +28,6 @@ import {
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
   type UndefinedCacheTagInputFieldErrorMessageParams,
-  type UntraversableCacheTagReferenceErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -2293,11 +2293,11 @@ export function undefinedCacheTagInputFieldErrorMessage({
   );
 }
 
-export function untraversableCacheTagReferenceErrorMessage({
+export function invalidCacheTagReferenceErrorMessage({
   reference,
   typeReference,
   untraversableReference,
-}: UntraversableCacheTagReferenceErrorMessageParams): string {
+}: InvalidCacheTagReferenceErrorMessageParams): string {
   return (
     `The "format" argument references "$args.${reference}",` +
     ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
