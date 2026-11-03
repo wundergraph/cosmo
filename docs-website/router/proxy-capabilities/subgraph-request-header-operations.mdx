@@ -108,9 +108,9 @@ Currently, we support the following header rules:
 
 * **remove** - Removes headers from the request forwarded to the subgraph. It only removes headers added by the rules before it. Place it after the rules it should affect. You can choose between one of the following matchers:
 
-  * `named` - It exactly matches on the header name.
+  * `named` - It exactly matches on the header name. Can't be used with `matching`.
 
-  * `matching` - Regex matches on the header name.
+  * `matching` - Regex matches on the header name. Can't be used with `named`.
 
   * `negate_match` - If set to true, the result of the `matching` regex will be inverted, so all headers except the matching ones are removed.
 

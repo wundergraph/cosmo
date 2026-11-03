@@ -602,6 +602,14 @@ func TestPropagatedHeaders(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("remove with both name and match errors", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{
+			{Operation: config.HeaderRuleOperationRemove, Named: "X-A", Matching: "^X-.*"},
+		})
+		require.Error(t, err)
+	})
+
 	t.Run("invalid operation errors", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{

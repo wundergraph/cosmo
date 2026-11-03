@@ -1290,6 +1290,9 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 			if rule.Matching == "" && rule.Named == "" {
 				return nil, nil, fmt.Errorf("invalid header remove rule %+v, no header name nor regular expression", rule)
 			}
+			if rule.Matching != "" && rule.Named != "" {
+				return nil, nil, fmt.Errorf("invalid header remove rule %+v, header name and regular expression can't be used together", rule)
+			}
 		default:
 			return nil, nil, fmt.Errorf("invalid header rule operation %q in rule %+v", rule.Operation, rule)
 		}

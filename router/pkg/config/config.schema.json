@@ -5277,6 +5277,9 @@
       "dependentRequired": {
         "negate_match": ["matching"]
       },
+      "not": {
+        "required": ["named", "matching"]
+      },
       "required": ["op"]
     },
     "set_header_rule": {
