@@ -13,11 +13,36 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 )
 
-// A WebSocket message that is still being handled when a hot reload shuts the
-// graph mux down writes to the mux caches. Shutdown must wait for it before it
-// closes them, or ristretto panics with "send on closed channel".
-func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
-	t.Parallel()
+// heldPingProto is a wsproto.Proto whose Pong blocks until released, which
+// holds a ping inside WebsocketHandler.HandleMessage. Only Pong is implemented.
+type heldPingProto struct {
+	wsproto.Proto
+	started chan struct{}
+	release chan struct{}
+	// onRelease runs after release, while the message is still being handled.
+	onRelease func()
+}
+
+func (p *heldPingProto) Pong(*wsproto.Message) error {
+	close(p.started)
+	<-p.release
+	p.onRelease()
+	return nil
+}
+
+type drainTestMux struct {
+	gm        *graphMux
+	wsHandler *WebsocketHandler
+	// cacheOpen reports whether the normalization cache is still open. Close
+	// clears the store first, so a sentinel entry disappearing means the cache
+	// is closing. GetTTL only reads the store: unlike Set or Get it sends on no
+	// channel, so it cannot race the close or panic if a regression closes the
+	// cache early.
+	cacheOpen func() bool
+}
+
+func newDrainTestMux(t *testing.T) drainTestMux {
+	t.Helper()
 
 	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
 		MaxCost:            1024,
@@ -27,55 +52,7 @@ func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	muxCtx, cancel := context.WithCancel(context.Background())
-	wsHandler := &WebsocketHandler{ctx: muxCtx}
-	gm := &graphMux{
-		ctx:                muxCtx,
-		cancel:             cancel,
-		normalizationCache: cache,
-		websocketHandler:   wsHandler,
-	}
-
-	// Stand in for HandleMessage: cancellation ends the read loop, but the
-	// message already being handled keeps writing to the cache.
-	require.True(t, wsHandler.inFlightMessages.track())
-	var finished atomic.Bool
-	handlerStarted := make(chan struct{})
-	go func() {
-		defer wsHandler.inFlightMessages.done()
-		close(handlerStarted)
-		<-muxCtx.Done()
-		deadline := time.Now().Add(50 * time.Millisecond)
-		for i := uint64(0); time.Now().Before(deadline); i++ {
-			cache.Set(i, NormalizationCacheEntry{}, 1)
-			_, _ = cache.Get(i)
-		}
-		finished.Store(true)
-	}()
-	<-handlerStarted
-
-	require.NoError(t, gm.Shutdown(context.Background()))
-	require.True(t, finished.Load(), "caches closed before the message handler finished")
-}
-
-// When the shutdown deadline passes before the remaining messages finish,
-// Shutdown returns, but the caches stay open until those messages are done.
-func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
-	t.Parallel()
-
-	// Room for every entry, so the sentinel below is never evicted.
-	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
-		MaxCost:            1 << 20,
-		NumCounters:        1 << 21,
-		IgnoreInternalCost: true,
-		BufferItems:        64,
-	})
-	require.NoError(t, err)
-
-	// Close clears the store first, so the sentinel disappearing means the
-	// cache is closing. GetTTL only reads the store: unlike Set or Get, it
-	// sends on no channel and so cannot race the close itself.
-	const sentinel = uint64(1) << 32
+	const sentinel = uint64(1)
 	require.True(t, cache.Set(sentinel, NormalizationCacheEntry{}, 1))
 	cache.Wait()
 	cacheOpen := func() bool {
@@ -85,36 +62,90 @@ func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
 	require.True(t, cacheOpen())
 
 	muxCtx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	wsHandler := &WebsocketHandler{ctx: muxCtx}
-	gm := &graphMux{
-		ctx:                muxCtx,
-		cancel:             cancel,
-		normalizationCache: cache,
-		websocketHandler:   wsHandler,
+	return drainTestMux{
+		gm: &graphMux{
+			ctx:                muxCtx,
+			cancel:             cancel,
+			normalizationCache: cache,
+			websocketHandler:   wsHandler,
+		},
+		wsHandler: wsHandler,
+		cacheOpen: cacheOpen,
 	}
+}
 
-	require.True(t, wsHandler.inFlightMessages.track())
-	release := make(chan struct{})
-	handlerDone := make(chan struct{})
+// holdPing starts a ping through HandleMessage and returns once the message is
+// held. The returned proto releases it; done is closed when HandleMessage returns.
+func (m drainTestMux) holdPing(t *testing.T, openWhileHandled *atomic.Bool) (proto *heldPingProto, done chan struct{}) {
+	t.Helper()
+
+	proto = &heldPingProto{
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+		onRelease: func() {
+			openWhileHandled.Store(m.cacheOpen())
+		},
+	}
+	done = make(chan struct{})
 	go func() {
-		defer close(handlerDone)
-		defer wsHandler.inFlightMessages.done()
-		<-release
-		for i := range uint64(1000) {
-			cache.Set(i, NormalizationCacheEntry{}, 1)
-		}
+		defer close(done)
+		_ = m.wsHandler.HandleMessage(
+			&WebSocketConnectionHandler{protocol: proto},
+			&wsproto.Message{Type: wsproto.MessageTypePing},
+		)
 	}()
+	<-proto.started
+	return proto, done
+}
+
+// A WebSocket message that is still being handled when a hot reload shuts the
+// graph mux down uses the mux caches. Shutdown must wait for it before it
+// closes them, or ristretto panics with "send on closed channel".
+func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
+	t.Parallel()
+
+	m := newDrainTestMux(t)
+	var openWhileHandled atomic.Bool
+	proto, handled := m.holdPing(t, &openWhileHandled)
+
+	shutdownErr := make(chan error, 1)
+	go func() {
+		shutdownErr <- m.gm.Shutdown(context.Background())
+	}()
+
+	require.Never(t, func() bool {
+		return len(shutdownErr) > 0
+	}, 50*time.Millisecond, time.Millisecond, "shutdown returned while a message was still being handled")
+	require.True(t, m.cacheOpen(), "cache closed while a message was still being handled")
+
+	close(proto.release)
+	<-handled
+	require.NoError(t, <-shutdownErr)
+	require.True(t, openWhileHandled.Load(), "cache closed before the message finished")
+	require.False(t, m.cacheOpen(), "cache not closed by shutdown")
+}
+
+// When the shutdown deadline passes before the remaining messages finish,
+// Shutdown returns, but the caches stay open until those messages are done.
+func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
+	t.Parallel()
+
+	m := newDrainTestMux(t)
+	var openWhileHandled atomic.Bool
+	proto, handled := m.holdPing(t, &openWhileHandled)
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer shutdownCancel()
-	require.ErrorIs(t, gm.Shutdown(shutdownCtx), context.DeadlineExceeded)
+	require.ErrorIs(t, m.gm.Shutdown(shutdownCtx), context.DeadlineExceeded)
+	require.True(t, m.cacheOpen(), "cache closed while a message was still being handled")
 
-	require.True(t, cacheOpen(), "cache closed while a message was still being handled")
-
-	close(release)
-	<-handlerDone
+	close(proto.release)
+	<-handled
+	require.True(t, openWhileHandled.Load(), "cache closed before the message finished")
 	require.Eventually(t, func() bool {
-		return !cacheOpen()
+		return !m.cacheOpen()
 	}, time.Second, time.Millisecond, "cache not closed after the last message finished")
 }
 
