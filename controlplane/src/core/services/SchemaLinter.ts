@@ -301,7 +301,7 @@ export default class SchemaLinter {
   static reservedEdfsTypeDefinitions = new Set(['edfs__PublishResult']);
   /** Reserved names for inputs to support EDFS router feature */
   static reservedEdfsInputDefinitions = new Set([
-    'edfs__DeliveryGuarantees',
+    'cosmoStreams__DeliveryGuarantees',
     'edfs__NatsStreamConfiguration',
     'openfed__SubscriptionFieldCondition',
     'openfed__SubscriptionFilterCondition',

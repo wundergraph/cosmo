@@ -486,7 +486,7 @@ interface A{
           InputObjectTypeDefinition: {
             requiredSuffixes: ['Input'],
             ignorePattern:
-              '^(edfs__DeliveryGuarantees|edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
+              '^(cosmoStreams__DeliveryGuarantees|edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
           },
           allowLeadingUnderscore: true,
         },
@@ -529,16 +529,16 @@ streamConfiguration: edfs__NatsStreamConfiguration
 directive @edfs__kafkaSubscribe(
 topics: [String!]!,
 providerId: String! = "default",
-deliveryGuarantees: edfs__DeliveryGuarantees
+deliveryGuarantees: cosmoStreams__DeliveryGuarantees
 ) on FIELD_DEFINITION
 
-enum edfs__DeliveryGuaranteeMode {
+enum cosmoStreams__DeliveryGuaranteeMode {
     OFF
     CURSOR
 }
 
-input edfs__DeliveryGuarantees {
-    mode: edfs__DeliveryGuaranteeMode! = OFF
+input cosmoStreams__DeliveryGuarantees {
+    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
 }
 
 input edfs__NatsStreamConfiguration {
