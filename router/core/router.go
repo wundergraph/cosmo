@@ -1524,7 +1524,7 @@ func (r *Router) buildMCPManifestStore(ctx context.Context) error {
 		return fmt.Errorf("failed to create mcp manifest loader: %w", err)
 	}
 
-	store := operationmanifest.NewStore(r.logger)
+	store := operationmanifest.NewStore(ctx, r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
 		store,
@@ -1743,7 +1743,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		return nil, fmt.Errorf("failed to create PQL manifest loader: %w", err)
 	}
 
-	pqlStore := operationmanifest.NewStore(r.logger)
+	pqlStore := operationmanifest.NewStore(ctx, r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
 		pqlStore,
@@ -2259,14 +2259,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		if closeErr := r.persistedOperationClient.Close(); closeErr != nil {
 			err.Append(fmt.Errorf("failed to close persisted operation client: %w", closeErr))
 		}
-	}
-
-	if r.pqlStore != nil {
-		r.pqlStore.Close()
-	}
-
-	if r.mcpManifestStore != nil {
-		r.mcpManifestStore.Close()
 	}
 
 	r.usage.Close()

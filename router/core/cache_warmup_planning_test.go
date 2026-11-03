@@ -25,8 +25,7 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	const query = `query GetHello { hello }`
 	hash := sha256.Sum256([]byte(query))
 	id := hex.EncodeToString(hash[:])
-	store := operationmanifest.NewStore(zap.NewNop())
-	t.Cleanup(store.Close)
+	store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 	store.Load(&operationmanifest.Manifest{
 		Version:    1,
 		Revision:   "one",

@@ -16,8 +16,7 @@ import (
 func TestManifestSnapshotOverridesStorageCache(t *testing.T) {
 	t.Parallel()
 
-	store := operationmanifest.NewStore(zap.NewNop())
-	t.Cleanup(store.Close)
+	store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 	client, err := NewClient(&Options{PQLStore: store, CacheSize: 1024 * 1024})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
@@ -116,8 +115,7 @@ func TestManifestOperationsWithMismatchedSHA256IDs(t *testing.T) {
 	hashID := hex.EncodeToString(sum[:])
 	mismatchedID := strings.Repeat("a", 64)
 
-	store := operationmanifest.NewStore(zap.NewNop())
-	t.Cleanup(store.Close)
+	store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 	client, err := NewClient(&Options{PQLStore: store})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })

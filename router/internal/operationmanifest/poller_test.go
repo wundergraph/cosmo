@@ -2,188 +2,149 @@ package operationmanifest
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"sync/atomic"
+	"errors"
+	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestPoller_FetchInitial(t *testing.T) {
-	t.Parallel()
-	m := &Manifest{
-		Version:     1,
-		Revision:    "rev-1",
-		GeneratedAt: "2025-01-01T00:00:00Z",
-		Operations:  map[string]string{"h1": "query { a }"},
-	}
-
-	server := httptest.NewServer(newETagCDNHandler(m))
-	defer server.Close()
-
-	f := newTestFetcher(server.URL)
-	l := zap.NewNop()
-	s := NewStore(l)
-	poller := NewPoller(f, s, 10*time.Second, zap.NewNop())
-
-	err := poller.FetchInitial(context.Background())
-	require.NoError(t, err)
-
-	require.True(t, s.IsLoaded())
-	require.Equal(t, m.Revision, s.Revision())
-	require.Equal(t, len(m.Operations), s.OperationCount())
+// fakeLoader serves a manifest from memory and counts fetches. It compares
+// revisions like the real loaders do.
+type fakeLoader struct {
+	mu       sync.Mutex
+	manifest *Manifest
+	err      error
+	fetches  int
 }
 
-func TestPoller_FetchInitialError(t *testing.T) {
-	t.Parallel()
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	f := newTestFetcher(server.URL)
-	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 10*time.Second, zap.NewNop())
-
-	err := poller.FetchInitial(context.Background())
-	require.Error(t, err)
-	require.False(t, s.IsLoaded())
+func (l *fakeLoader) Fetch(_ context.Context, currentRevision string) (*Manifest, bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.fetches++
+	if l.err != nil {
+		return nil, false, l.err
+	}
+	if l.manifest.Revision == currentRevision {
+		return nil, false, nil
+	}
+	return l.manifest, true, nil
 }
 
-func TestPoller_PollUpdatesManifest(t *testing.T) {
-	t.Parallel()
-	manifestV1 := &Manifest{
-		Version:     1,
-		Revision:    "rev-1",
-		GeneratedAt: "2025-01-01T00:00:00Z",
-		Operations:  map[string]string{"h1": "query { a }"},
-	}
-	manifestV2 := &Manifest{
-		Version:     1,
-		Revision:    "rev-2",
-		GeneratedAt: "2025-01-02T00:00:00Z",
-		Operations:  map[string]string{"h1": "query { a }", "h2": "query { b }"},
-	}
-
-	var currentManifest atomic.Value
-	currentManifest.Store(manifestV1)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		m := currentManifest.Load().(*Manifest)
-		etag := `"` + m.Revision + `"`
-		if r.Header.Get("If-None-Match") == etag {
-			w.Header().Set("ETag", etag)
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("ETag", etag)
-		data, _ := json.Marshal(m)
-		_, _ = w.Write(data)
-	}))
-	defer server.Close()
-
-	f := newTestFetcher(server.URL)
-	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
-
-	// Initial fetch
-	err := poller.FetchInitial(context.Background())
-	require.NoError(t, err)
-
-	require.Equal(t, manifestV1.Revision, s.Revision())
-	require.Equal(t, len(manifestV1.Operations), s.OperationCount())
-
-	// Start polling
-	ctx := t.Context()
-	go poller.Poll(ctx)
-
-	// Wait a few poll cycles — manifest should stay at rev-1 (304s)
-	time.Sleep(150 * time.Millisecond)
-	require.Equal(t, manifestV1.Revision, s.Revision())
-
-	// Update server to serve rev-2
-	currentManifest.Store(manifestV2)
-
-	// Wait for poller to pick up the change
-	require.Eventually(t, func() bool {
-		return s.Revision() == manifestV2.Revision
-	}, 2*time.Second, 10*time.Millisecond)
-
-	require.Equal(t, len(manifestV2.Operations), s.OperationCount())
+func (l *fakeLoader) set(manifest *Manifest, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.manifest, l.err = manifest, err
 }
 
-func TestPoller_PollStopsOnContextCancel(t *testing.T) {
-	t.Parallel()
-	var fetchCount atomic.Int32
-
-	m := &Manifest{
-		Version:     1,
-		Revision:    "rev-1",
-		GeneratedAt: "2025-01-01T00:00:00Z",
-		Operations:  map[string]string{},
-	}
-	data := mustMarshalManifest(m)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fetchCount.Add(1)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(data)
-	}))
-	defer server.Close()
-
-	f := newTestFetcher(server.URL)
-	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go poller.Poll(ctx)
-
-	// Let it poll a few times
-	time.Sleep(200 * time.Millisecond)
-	cancel()
-
-	countAtCancel := fetchCount.Load()
-	// Wait and verify no more fetches happen
-	time.Sleep(200 * time.Millisecond)
-	require.Equal(t, countAtCancel, fetchCount.Load(), "poller should stop fetching after context cancel")
+func (l *fakeLoader) fetchCount() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.fetches
 }
 
-func TestPoller_PollContinuesOnFetchError(t *testing.T) {
+func TestPoller(t *testing.T) {
 	t.Parallel()
-	var requestCount atomic.Int32
 
-	m := &Manifest{
-		Version:     1,
-		Revision:    "rev-1",
-		GeneratedAt: "2025-01-01T00:00:00Z",
-		Operations:  map[string]string{"h1": "query { a }"},
-	}
-	data := mustMarshalManifest(m)
+	rev1 := &Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"h1": "query { a }"}}
+	rev2 := &Manifest{Version: 1, Revision: "rev-2", Operations: map[string]string{"h1": "query { a }", "h2": "query { b }"}}
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count := requestCount.Add(1)
-		if count <= 2 {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(data)
-	}))
-	defer server.Close()
+	t.Run("FetchInitial loads the manifest into the store", func(t *testing.T) {
+		t.Parallel()
 
-	f := newTestFetcher(server.URL)
-	s := NewStore(zap.NewNop())
-	poller := NewPoller(f, s, 50*time.Millisecond, zap.NewNop())
+		loader := &fakeLoader{manifest: rev1}
+		store := NewStore(t.Context(), zap.NewNop())
+		poller := NewPoller(loader, store, 10*time.Second, zap.NewNop())
 
-	ctx := t.Context()
-	go poller.Poll(ctx)
+		require.NoError(t, poller.FetchInitial(t.Context()))
+		require.Equal(t, rev1, store.Snapshot())
+		require.Equal(t, 1, loader.fetchCount())
+	})
 
-	require.Eventually(t, func() bool {
-		return s.IsLoaded() && s.Revision() == m.Revision
-	}, 5*time.Second, 10*time.Millisecond)
+	t.Run("FetchInitial returns the loader error and leaves the store empty", func(t *testing.T) {
+		t.Parallel()
+
+		loader := &fakeLoader{err: errors.New("boom")}
+		store := NewStore(t.Context(), zap.NewNop())
+		poller := NewPoller(loader, store, 10*time.Second, zap.NewNop())
+
+		require.ErrorContains(t, poller.FetchInitial(t.Context()), "boom")
+		require.False(t, store.IsLoaded())
+	})
+
+	t.Run("Poll fetches once per interval and loads a changed manifest", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			loader := &fakeLoader{manifest: rev1}
+			store := NewStore(t.Context(), zap.NewNop())
+			poller := NewPoller(loader, store, time.Second, zap.NewNop())
+			require.NoError(t, poller.FetchInitial(t.Context()))
+
+			go poller.Poll(t.Context())
+
+			// Three unchanged polls after the initial fetch.
+			time.Sleep(3 * time.Second)
+			synctest.Wait()
+			require.Equal(t, 4, loader.fetchCount())
+			require.Equal(t, rev1, store.Snapshot())
+
+			loader.set(rev2, nil)
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.Equal(t, 5, loader.fetchCount())
+			require.Equal(t, rev2, store.Snapshot())
+		})
+	})
+
+	t.Run("Poll stops fetching after the context is canceled", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			loader := &fakeLoader{manifest: rev1}
+			store := NewStore(t.Context(), zap.NewNop())
+			poller := NewPoller(loader, store, time.Second, zap.NewNop())
+
+			ctx, cancel := context.WithCancel(t.Context())
+			go poller.Poll(ctx)
+
+			time.Sleep(2 * time.Second)
+			synctest.Wait()
+			require.Equal(t, 2, loader.fetchCount())
+
+			cancel()
+			time.Sleep(10 * time.Second)
+			synctest.Wait()
+			require.Equal(t, 2, loader.fetchCount())
+		})
+	})
+
+	t.Run("Poll logs a fetch error and keeps polling", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			core, logs := observer.New(zap.WarnLevel)
+			loader := &fakeLoader{err: errors.New("boom")}
+			store := NewStore(t.Context(), zap.NewNop())
+			poller := NewPoller(loader, store, time.Second, zap.New(core))
+
+			go poller.Poll(t.Context())
+
+			time.Sleep(2 * time.Second)
+			synctest.Wait()
+			require.Equal(t, 2, loader.fetchCount())
+			require.Equal(t, 2, logs.FilterMessage("Failed to fetch manifest").Len())
+			require.False(t, store.IsLoaded())
+
+			loader.set(rev1, nil)
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.Equal(t, 3, loader.fetchCount())
+			require.Equal(t, rev1, store.Snapshot())
+		})
+	})
 }

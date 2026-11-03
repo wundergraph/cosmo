@@ -16,7 +16,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns nil when store has no manifest", func(t *testing.T) {
 		t.Parallel()
-		store := operationmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 		source := NewManifestWarmupSource(store)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
@@ -26,7 +26,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns nil when manifest has no operations", func(t *testing.T) {
 		t.Parallel()
-		store := operationmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 		store.Load(&operationmanifest.Manifest{
 			Version:    1,
 			Revision:   "rev-1",
@@ -41,7 +41,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("returns all operations with persisted query extensions", func(t *testing.T) {
 		t.Parallel()
-		store := operationmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 		store.Load(&operationmanifest.Manifest{
 			Version:  1,
 			Revision: "rev-1",
@@ -72,7 +72,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("does not include client info", func(t *testing.T) {
 		t.Parallel()
-		store := operationmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 		store.Load(&operationmanifest.Manifest{
 			Version:    1,
 			Revision:   "rev-1",
@@ -88,7 +88,7 @@ func TestManifestWarmupSource(t *testing.T) {
 
 	t.Run("skips operations whose SHA256 ID does not match their body", func(t *testing.T) {
 		t.Parallel()
-		store := operationmanifest.NewStore(zap.NewNop())
+		store := operationmanifest.NewStore(t.Context(), zap.NewNop())
 		store.Load(&operationmanifest.Manifest{
 			Version:  1,
 			Revision: "rev-1",

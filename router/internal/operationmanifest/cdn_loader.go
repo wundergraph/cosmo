@@ -3,7 +3,6 @@ package operationmanifest
 import (
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -124,18 +123,10 @@ func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) (*Manifes
 		return nil, false, fmt.Errorf("could not read response body: %w", err)
 	}
 
-	if len(body) == 0 {
-		return nil, false, errors.New("empty response body")
+	manifest, err := ParseManifest(body)
+	if err != nil {
+		return nil, false, err
 	}
 
-	var manifest Manifest
-	if err := json.Unmarshal(body, &manifest); err != nil {
-		return nil, false, fmt.Errorf("could not unmarshal manifest: %w", err)
-	}
-
-	if err := validateManifest(&manifest); err != nil {
-		return nil, false, fmt.Errorf("invalid manifest: %w", err)
-	}
-
-	return &manifest, true, nil
+	return manifest, true, nil
 }

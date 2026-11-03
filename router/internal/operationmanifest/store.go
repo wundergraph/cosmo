@@ -1,35 +1,29 @@
 package operationmanifest
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"sync"
 	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
-type Manifest struct {
-	Version     int               `json:"version"`
-	Revision    string            `json:"revision"`
-	GeneratedAt string            `json:"generatedAt"`
-	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
-}
-
 type Store struct {
 	manifest  atomic.Pointer[Manifest]
 	updateCh  chan struct{}
-	done      chan struct{}
+	ctx       context.Context
 	onUpdate  atomic.Value // stores func()
 	startOnce sync.Once
 	logger    *zap.Logger
 }
 
-func NewStore(logger *zap.Logger) *Store {
+// NewStore returns a store whose update worker stops when ctx is canceled.
+// Load still swaps the manifest after that but does not signal the worker.
+func NewStore(ctx context.Context, logger *zap.Logger) *Store {
 	return &Store{
+		ctx:      ctx,
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
-		done:     make(chan struct{}),
 	}
 }
 
@@ -44,7 +38,7 @@ func (s *Store) SetOnUpdate(fn func()) {
 		go func() {
 			for {
 				select {
-				case <-s.done:
+				case <-s.ctx.Done():
 					return
 				case <-s.updateCh:
 					if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
@@ -62,14 +56,8 @@ func (s *Store) SetOnUpdate(fn func()) {
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
 
-	if s.onUpdate.Load() == nil {
+	if s.onUpdate.Load() == nil || s.ctx.Err() != nil {
 		return
-	}
-
-	select {
-	case <-s.done:
-		return
-	default:
 	}
 
 	select {
@@ -77,11 +65,6 @@ func (s *Store) Load(manifest *Manifest) {
 	default:
 		s.logger.Debug("Skipping manifest update signal, worker is busy")
 	}
-}
-
-// Close stops the update worker. Load still swaps the manifest after Close but does not signal the worker.
-func (s *Store) Close() {
-	close(s.done)
 }
 
 // Snapshot returns the current manifest. Published manifests must not be modified.
@@ -102,31 +85,6 @@ func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	}
 
 	return []byte(op), true
-}
-
-// ParseManifest parses and validates manifest JSON data.
-func ParseManifest(data []byte) (*Manifest, error) {
-	var manifest Manifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("failed to parse manifest: %w", err)
-	}
-	if err := validateManifest(&manifest); err != nil {
-		return nil, fmt.Errorf("invalid manifest: %w", err)
-	}
-	return &manifest, nil
-}
-
-func validateManifest(m *Manifest) error {
-	if m.Version != 1 {
-		return fmt.Errorf("unsupported manifest version %d, expected 1", m.Version)
-	}
-	if m.Revision == "" {
-		return fmt.Errorf("manifest revision is required")
-	}
-	if m.Operations == nil {
-		return fmt.Errorf("manifest operations field is required")
-	}
-	return nil
 }
 
 // IsLoaded returns whether a manifest has been loaded.
