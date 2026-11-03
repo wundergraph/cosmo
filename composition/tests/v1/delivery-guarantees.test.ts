@@ -17,8 +17,8 @@ import {
   unexpectedDirectiveArgumentErrorMessage,
 } from '../../src';
 import {
-  EDFS_DELIVERY_GUARANTEE_MODE_ENUM,
-  EDFS_DELIVERY_GUARANTEES_INPUT,
+  COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM,
+  COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT,
   EDFS_KAFKA_SUBSCRIBE_DIRECTIVE,
   EXTERNAL_DIRECTIVE,
   KEY_DIRECTIVE,
@@ -182,8 +182,8 @@ describe('deliveryGuarantees tests', () => {
       entitySubscription: Entity! @edfs__kafkaSubscribe(topics: ["entities"], deliveryGuarantees: {mode: CURSOR})
     }
       ` +
-          EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-          EDFS_DELIVERY_GUARANTEES_INPUT +
+          COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM +
+          COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT +
           OPENFED_FIELD_SET,
       ),
     );
@@ -267,7 +267,7 @@ describe('deliveryGuarantees tests', () => {
           'CURSOR',
           `@${EDFS_KAFKA_SUBSCRIBE}`,
           'deliveryGuarantees',
-          'edfs__DeliveryGuarantees',
+          'cosmoStreams__DeliveryGuarantees',
         ),
       ]),
     );
@@ -362,13 +362,13 @@ describe('deliveryGuarantees tests', () => {
           entitySubscription: Entity! @edfs__kafkaSubscribe(topics: ["entities"], deliveryGuarantees: { mode: CURSOR })
         }
 
-        enum edfs__DeliveryGuaranteeMode {
+        enum cosmoStreams__DeliveryGuaranteeMode {
           OFF
           CURSOR
         }
 
-        input edfs__DeliveryGuarantees {
-          mode: edfs__DeliveryGuaranteeMode! = OFF
+        input cosmoStreams__DeliveryGuarantees {
+          mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
         }
       `,
     );
@@ -395,14 +395,14 @@ describe('deliveryGuarantees tests', () => {
       entitySubscription: Entity! @edfs__kafkaSubscribe(topics: ["entities"], deliveryGuarantees: {mode: CURSOR})
     }
       ` +
-          EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-          EDFS_DELIVERY_GUARANTEES_INPUT +
+          COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM +
+          COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT +
           OPENFED_FIELD_SET,
       ),
     );
   });
 
-  test('that an error is returned if edfs__DeliveryGuarantees is improperly defined', () => {
+  test('that an error is returned if cosmoStreams__DeliveryGuarantees is improperly defined', () => {
     const dgKafkaInvalidInputDefinition = createSubgraph(
       'dg-kafka-invalid-input-definition',
       `
@@ -414,13 +414,13 @@ describe('deliveryGuarantees tests', () => {
           entitySubscription: Entity! @edfs__kafkaSubscribe(topics: ["entities"], deliveryGuarantees: { mode: CURSOR })
         }
 
-        enum edfs__DeliveryGuaranteeMode {
+        enum cosmoStreams__DeliveryGuaranteeMode {
           OFF
           CURSOR
         }
 
-        input edfs__DeliveryGuarantees {
-          mode: edfs__DeliveryGuaranteeMode
+        input cosmoStreams__DeliveryGuarantees {
+          mode: cosmoStreams__DeliveryGuaranteeMode
         }
       `,
     );
@@ -430,7 +430,7 @@ describe('deliveryGuarantees tests', () => {
     expect(errors[0]).toStrictEqual(invalidEventDrivenGraphError([invalidDeliveryGuaranteesDefinitionErrorMessage]));
   });
 
-  test('that an error is returned if edfs__DeliveryGuaranteeMode is improperly defined', () => {
+  test('that an error is returned if cosmoStreams__DeliveryGuaranteeMode is improperly defined', () => {
     const dgKafkaInvalidEnumDefinition = createSubgraph(
       'dg-kafka-invalid-enum-definition',
       `
@@ -442,7 +442,7 @@ describe('deliveryGuarantees tests', () => {
           entitySubscription: Entity! @edfs__kafkaSubscribe(topics: ["entities"], deliveryGuarantees: { mode: CURSOR })
         }
 
-        enum edfs__DeliveryGuaranteeMode {
+        enum cosmoStreams__DeliveryGuaranteeMode {
           OFF
           CURSOR
           ALWAYS
@@ -486,7 +486,7 @@ describe('deliveryGuarantees tests', () => {
       [dgKafkaCursor, dgEntitySubgraph],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    expect(federatedGraphSchema.getType('edfs__DeliveryGuarantees')).toBeUndefined();
-    expect(federatedGraphSchema.getType('edfs__DeliveryGuaranteeMode')).toBeUndefined();
+    expect(federatedGraphSchema.getType('cosmoStreams__DeliveryGuarantees')).toBeUndefined();
+    expect(federatedGraphSchema.getType('cosmoStreams__DeliveryGuaranteeMode')).toBeUndefined();
   });
 });

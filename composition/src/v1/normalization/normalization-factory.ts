@@ -314,8 +314,8 @@ import {
   DEFER,
   DELIVERY_GUARANTEES,
   DESCRIPTION_OVERRIDE,
-  EDFS_DELIVERY_GUARANTEE_MODE,
-  EDFS_DELIVERY_GUARANTEES,
+  COSMO_STREAMS_DELIVERY_GUARANTEE_MODE,
+  COSMO_STREAMS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -3853,7 +3853,7 @@ export class NormalizationFactory {
       return false;
     }
     const modeData = deliveryGuaranteesInputData.inputValueDataByName.get(MODE);
-    if (!modeData || printTypeNode(modeData.type) !== `${EDFS_DELIVERY_GUARANTEE_MODE}!`) {
+    if (!modeData || printTypeNode(modeData.type) !== `${COSMO_STREAMS_DELIVERY_GUARANTEE_MODE}!`) {
       return false;
     }
     return modeData.defaultValue?.kind === Kind.ENUM && modeData.defaultValue.value === OFF_UPPER;
@@ -3922,7 +3922,7 @@ export class NormalizationFactory {
       this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
     }
     if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
-      const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEES);
+      const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(COSMO_STREAMS_DELIVERY_GUARANTEES);
       if (
         deliveryGuaranteesInputData &&
         this.usesEdfsDeliveryGuarantees &&
@@ -3930,7 +3930,7 @@ export class NormalizationFactory {
       ) {
         errorMessages.push(invalidDeliveryGuaranteesDefinitionErrorMessage);
       }
-      const deliveryGuaranteeModeData = this.parentDefinitionDataByTypeName.get(EDFS_DELIVERY_GUARANTEE_MODE);
+      const deliveryGuaranteeModeData = this.parentDefinitionDataByTypeName.get(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE);
       if (
         deliveryGuaranteeModeData &&
         this.usesEdfsDeliveryGuarantees &&
@@ -3941,8 +3941,8 @@ export class NormalizationFactory {
       /* The canonical definitions are injected into the document as dependencies of @edfs__kafkaSubscribe,
        * and both type names are ignored by federation, so any user-declared definitions are simply dropped.
        */
-      this.parentDefinitionDataByTypeName.delete(EDFS_DELIVERY_GUARANTEES);
-      this.parentDefinitionDataByTypeName.delete(EDFS_DELIVERY_GUARANTEE_MODE);
+      this.parentDefinitionDataByTypeName.delete(COSMO_STREAMS_DELIVERY_GUARANTEES);
+      this.parentDefinitionDataByTypeName.delete(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE);
     }
 
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
@@ -4919,7 +4919,7 @@ export class NormalizationFactory {
             break;
           }
           // The definition is conditionally pushed elsewhere.
-          if (parentTypeName !== EDFS_DELIVERY_GUARANTEE_MODE) {
+          if (parentTypeName !== COSMO_STREAMS_DELIVERY_GUARANTEE_MODE) {
             definitions.push(this.getEnumNodeByData(parentData));
           }
           break;
@@ -4960,7 +4960,10 @@ export class NormalizationFactory {
             break;
           }
           // The definition is conditionally pushed elsewhere.
-          if (parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION && parentTypeName !== EDFS_DELIVERY_GUARANTEES) {
+          if (
+            parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION &&
+            parentTypeName !== COSMO_STREAMS_DELIVERY_GUARANTEES
+          ) {
             definitions.push(this.getInputObjectNodeByData(parentData));
           }
           break;

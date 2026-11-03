@@ -11,8 +11,8 @@ import {
   CONSUMER_NAME,
   CONTEXT_FIELD_VALUE,
   CURSOR_UPPER,
-  EDFS_DELIVERY_GUARANTEE_MODE,
-  EDFS_DELIVERY_GUARANTEES,
+  COSMO_STREAMS_DELIVERY_GUARANTEE_MODE,
+  COSMO_STREAMS_DELIVERY_GUARANTEES,
   EDFS_NATS_STREAM_CONFIGURATION,
   EXECUTION,
   FEDERATION_POLICY,
@@ -44,14 +44,14 @@ export const CONTEXT_FIELD_VALUE_DEFINITION: ScalarTypeDefinitionNode = {
 };
 
 /*
- * enum edfs__DeliveryGuaranteeMode {
+ * enum cosmoStreams__DeliveryGuaranteeMode {
  *   OFF
  *   CURSOR
  * }
  */
-export const EDFS_DELIVERY_GUARANTEE_MODE_DEFINITION: EnumTypeDefinitionNode = {
+export const COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_DEFINITION: EnumTypeDefinitionNode = {
   kind: Kind.ENUM_TYPE_DEFINITION,
-  name: stringToNameNode(EDFS_DELIVERY_GUARANTEE_MODE),
+  name: stringToNameNode(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE),
   values: [
     {
       directives: [],
@@ -67,20 +67,20 @@ export const EDFS_DELIVERY_GUARANTEE_MODE_DEFINITION: EnumTypeDefinitionNode = {
 };
 
 /*
- * input edfs__DeliveryGuarantees {
- *   mode: edfs__DeliveryGuaranteeMode! = OFF
+ * input cosmoStreams__DeliveryGuarantees {
+ *   mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
  * }
  * */
-export const EDFS_DELIVERY_GUARANTEES_DEFINITION: InputObjectTypeDefinitionNode = {
+export const COSMO_STREAMS_DELIVERY_GUARANTEES_DEFINITION: InputObjectTypeDefinitionNode = {
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-  name: stringToNameNode(EDFS_DELIVERY_GUARANTEES),
+  name: stringToNameNode(COSMO_STREAMS_DELIVERY_GUARANTEES),
   fields: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(MODE),
       type: {
         kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEE_MODE),
+        type: stringToNamedTypeNode(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE),
       },
       defaultValue: {
         kind: Kind.ENUM,
