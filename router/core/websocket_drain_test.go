@@ -30,6 +30,12 @@ func (p *heldPingProto) Pong(*wsproto.Message) error {
 	return nil
 }
 
+func (t *inFlightTracker) isDraining() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.draining
+}
+
 type drainTestMux struct {
 	gm        *graphMux
 	wsHandler *WebsocketHandler
@@ -115,6 +121,10 @@ func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
 		shutdownErr <- m.gm.Shutdown(context.Background())
 	}()
 
+	// Release the ping only once Shutdown has reached the drain, so the test
+	// cannot pass by running Shutdown after the message is done.
+	require.Eventually(t, m.wsHandler.inFlightMessages.isDraining,
+		time.Second, time.Millisecond, "shutdown never started draining websocket messages")
 	require.Never(t, func() bool {
 		return len(shutdownErr) > 0
 	}, 50*time.Millisecond, time.Millisecond, "shutdown returned while a message was still being handled")
