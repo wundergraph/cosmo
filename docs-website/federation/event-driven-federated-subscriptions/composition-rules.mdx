@@ -98,11 +98,11 @@ type Subscription {
 The argument uses the following definitions. Composition provides them, so you don't need to declare them in the EDG. A subgraph that omits them, or that uses the older `@edfs__kafkaSubscribe` signature, still composes.
 
 ```graphql
-input edfs__DeliveryGuarantees {
-    mode: edfs__DeliveryGuaranteeMode! = OFF
+input cosmoStreams__DeliveryGuarantees {
+    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
 }
 
-enum edfs__DeliveryGuaranteeMode {
+enum cosmoStreams__DeliveryGuaranteeMode {
     OFF
     CURSOR
 }
@@ -113,7 +113,7 @@ The following rules apply:
 1. The argument is only valid on `@edfs__kafkaSubscribe`. Defining it on `@edfs__natsSubscribe` or `@edfs__redisSubscribe` results in a compositional error.
 2. The argument must be an input object. Its only field is `mode`, which must be the enum value `OFF` or `CURSOR`. Unknown fields, duplicate fields and any other value result in a compositional error.
 3. `null`, `{}` and `mode: OFF` are equivalent to omitting the argument. Only `mode: CURSOR` is passed on to the router configuration.
-4. If you declare `edfs__DeliveryGuarantees` or `edfs__DeliveryGuaranteeMode` yourself, the definitions must match the ones above exactly, otherwise composition fails. This is only checked when `deliveryGuarantees` is used.
+4. If you declare `cosmoStreams__DeliveryGuarantees` or `cosmoStreams__DeliveryGuaranteeMode` yourself, the definitions must match the ones above exactly, otherwise composition fails. This is only checked when `deliveryGuarantees` is used.
 
 The router also needs `events.delivery_guarantees.cursor_resume` configured to serve cursors, see [Cursors](/router/cosmo-streams/cursors#2-router-configuration).
 

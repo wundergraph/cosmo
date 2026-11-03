@@ -75,22 +75,22 @@ Enabling cursors takes two steps: declare the supported Cosmo Streams subscripti
 
 ### 1. Schema
 
-Add the optional `deliveryGuarantees` argument to the `@edfs__kafkaSubscribe` directive, together with the `edfs__DeliveryGuarantees` input and the `edfs__DeliveryGuaranteeMode` enum. Setting `mode: CURSOR` makes the field offer cursors to clients that ask for them.
+Add the optional `deliveryGuarantees` argument to the `@edfs__kafkaSubscribe` directive, together with the `cosmoStreams__DeliveryGuarantees` input and the `cosmoStreams__DeliveryGuaranteeMode` enum. Setting `mode: CURSOR` makes the field offer cursors to clients that ask for them.
 
 ```graphql
 directive @edfs__kafkaSubscribe(
   topics: [String!]!
   providerId: String! = "default"
-  deliveryGuarantees: edfs__DeliveryGuarantees
+  deliveryGuarantees: cosmoStreams__DeliveryGuarantees
 ) on FIELD_DEFINITION
 
-enum edfs__DeliveryGuaranteeMode {
+enum cosmoStreams__DeliveryGuaranteeMode {
   OFF
   CURSOR
 }
 
-input edfs__DeliveryGuarantees {
-  mode: edfs__DeliveryGuaranteeMode! = OFF
+input cosmoStreams__DeliveryGuarantees {
+  mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
 }
 
 type Subscription {
