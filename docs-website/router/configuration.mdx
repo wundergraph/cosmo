@@ -1164,8 +1164,9 @@ Apply to requests to specific Subgraphs.
 
 | Environment Variable | YAML                       | Required                                      | Description                                                                                                                                                                       | Default Value |
 | -------------------- | -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                                              |               |
+|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set, remove                                                                                                                                                      |               |
 |                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                                            |               |
+|                      | negate_match               | <Icon icon="square" />                        | If set to true, the result of the `matching` regex will be inverted                                                                                                               |               |
 |                      | named                      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                                           |               |
 |                      | rename                     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                                                    |               |
 |                      | default                    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                                                  |               |
@@ -1204,6 +1205,10 @@ headers:
 
 <Note>
   `from_file` is request-only. It cannot be used in response header rules.
+</Note>
+
+<Note>
+  `remove` is request-only. It cannot be used in response header rules.
 </Note>
 
 ### Response Header Rule

@@ -2210,6 +2210,9 @@
                   },
                   {
                     "$ref": "#/$defs/set_header_rule"
+                  },
+                  {
+                    "$ref": "#/$defs/remove_header_rule"
                   }
                 ]
               }
@@ -2244,6 +2247,9 @@
                     },
                     {
                       "$ref": "#/$defs/set_header_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/remove_header_rule"
                     }
                   ]
                 }
@@ -5241,6 +5247,37 @@
         }
       },
       "required": ["name", "expression"]
+    },
+    "remove_header_rule": {
+      "type": "object",
+      "description": "The configuration for removing headers. This is used to remove headers from the requests forwarded to the subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "remove",
+          "description": "The 'remove' operation is used to remove the named or matching headers that previous rules added to the subgraph request."
+        },
+        "matching": {
+          "type": "string",
+          "examples": ["(?i)^X-Internal-.*"],
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
+        },
+        "named": {
+          "type": "string",
+          "examples": ["X-Test-Header"],
+          "description": "The name of the header to remove. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
+      },
+      "required": ["op"]
     },
     "set_header_rule": {
       "type": "object",

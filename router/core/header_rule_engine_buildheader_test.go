@@ -93,6 +93,78 @@ func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
 	assert.Equal(t, "ok", hdr.Get("X-From-Rule"))
 }
 
+func TestBuildRequestHeaderForSubgraph_RemoveRules(t *testing.T) {
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{Operation: "propagate", Matching: ".*"},
+				{Operation: "remove", Named: "X-Global-Remove"},
+			},
+		},
+		Subgraphs: map[string]*config.GlobalHeaderRule{
+			"sg-1": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "remove", Matching: "^x-internal-.*"},
+				},
+			},
+			"sg-2": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "remove", Matching: "^X-Keep$", NegateMatch: true},
+				},
+			},
+			"sg-3": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "remove", Named: "X-Other"},
+					{Operation: "set", Name: "X-Other", Value: "re-added"},
+				},
+			},
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
+	clientReq.Header.Set("X-Global-Remove", "g")
+	clientReq.Header.Set("X-Internal-Secret", "s")
+	clientReq.Header.Set("X-Keep", "k")
+	clientReq.Header.Set("X-Other", "o")
+
+	ctx := &requestContext{
+		logger:           zap.NewNop(),
+		responseWriter:   rr,
+		request:          clientReq,
+		operation:        &operationContext{},
+		subgraphResolver: NewSubgraphResolver(nil),
+	}
+
+	t.Run("global named remove applies to all subgraphs", func(t *testing.T) {
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("sg-without-rules", ctx)
+		assert.Empty(t, hdr.Values("X-Global-Remove"))
+		assert.Equal(t, "s", hdr.Get("X-Internal-Secret"))
+		assert.Equal(t, "k", hdr.Get("X-Keep"))
+		assert.Equal(t, "o", hdr.Get("X-Other"))
+	})
+
+	t.Run("subgraph matching remove is case insensitive", func(t *testing.T) {
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("sg-1", ctx)
+		assert.Empty(t, hdr.Values("X-Global-Remove"))
+		assert.Empty(t, hdr.Values("X-Internal-Secret"))
+		assert.Equal(t, "k", hdr.Get("X-Keep"))
+		assert.Equal(t, "o", hdr.Get("X-Other"))
+	})
+
+	t.Run("negate match removes non matching headers", func(t *testing.T) {
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("sg-2", ctx)
+		assert.Equal(t, http.Header{"X-Keep": []string{"k"}}, hdr)
+	})
+
+	t.Run("later rules can add a removed header back", func(t *testing.T) {
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("sg-3", ctx)
+		assert.Equal(t, "re-added", hdr.Get("X-Other"))
+	})
+}
+
 func BenchmarkHashHeaderStable(b *testing.B) {
 	// Prepare a representative header set with multiple keys and values
 	hdr := make(http.Header)

@@ -583,6 +583,25 @@ func TestPropagatedHeaders(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("remove rule returns no headers", func(t *testing.T) {
+		t.Parallel()
+		names, regexps, err := PropagatedHeaders([]*config.RequestHeaderRule{
+			{Operation: config.HeaderRuleOperationRemove, Named: "X-A"},
+			{Operation: config.HeaderRuleOperationRemove, Matching: "^X-.*"},
+		})
+		require.NoError(t, err)
+		assert.Nil(t, names)
+		assert.Nil(t, regexps)
+	})
+
+	t.Run("remove with no name or match errors", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{
+			{Operation: config.HeaderRuleOperationRemove},
+		})
+		require.Error(t, err)
+	})
+
 	t.Run("invalid operation errors", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := PropagatedHeaders([]*config.RequestHeaderRule{
@@ -635,6 +654,30 @@ func TestNewHeaderPropagation(t *testing.T) {
 			All: &config.GlobalHeaderRule{
 				Response: []*config.ResponseHeaderRule{
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
+				},
+			},
+		}, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("invalid regex in remove request rule returns error", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: config.HeaderRuleOperationRemove, Matching: "[invalid"},
+				},
+			},
+		}, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("remove in response rule returns error", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Response: []*config.ResponseHeaderRule{
+					{Operation: config.HeaderRuleOperationRemove, Named: "X-A"},
 				},
 			},
 		}, nil)
