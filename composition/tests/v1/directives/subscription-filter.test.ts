@@ -43,8 +43,8 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
-  EDFS_DELIVERY_GUARANTEE_MODE_ENUM,
-  EDFS_DELIVERY_GUARANTEES_INPUT,
+  COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM,
+  COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT,
   OPENFED_FIELD_SET,
   OPENFED_SUBSCRIPTION_FIELD_CONDITION,
   OPENFED_SUBSCRIPTION_FILTER_CONDITION,
@@ -71,7 +71,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscription: Subscription
         }
 
-        directive @edfs__kafkaSubscribe(deliveryGuarantees: edfs__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+        directive @edfs__kafkaSubscribe(deliveryGuarantees: cosmoStreams__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
         directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
@@ -84,8 +84,8 @@ describe('@openfed__subscriptionFilter tests', () => {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: ["1"]}})
         }
       ` +
-            EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-            EDFS_DELIVERY_GUARANTEES_INPUT +
+            COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM +
+            COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT +
             OPENFED_FIELD_SET +
             OPENFED_SUBSCRIPTION_FIELD_CONDITION +
             OPENFED_SUBSCRIPTION_FILTER_CONDITION +
@@ -103,7 +103,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscription: Subscription
         }
 
-        directive @edfs__kafkaSubscribe(deliveryGuarantees: edfs__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+        directive @edfs__kafkaSubscribe(deliveryGuarantees: cosmoStreams__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
         directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
@@ -116,8 +116,8 @@ describe('@openfed__subscriptionFilter tests', () => {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: [1]}})
         }
       ` +
-            EDFS_DELIVERY_GUARANTEE_MODE_ENUM +
-            EDFS_DELIVERY_GUARANTEES_INPUT +
+            COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM +
+            COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT +
             OPENFED_FIELD_SET +
             OPENFED_SUBSCRIPTION_FIELD_CONDITION +
             OPENFED_SUBSCRIPTION_FILTER_CONDITION +

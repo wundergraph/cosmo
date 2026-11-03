@@ -27,21 +27,21 @@ export const COST_DIRECTIVE = `
   directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
 `;
 
-export const EDFS_DELIVERY_GUARANTEE_MODE_ENUM = `
-  enum edfs__DeliveryGuaranteeMode {
+export const COSMO_STREAMS_DELIVERY_GUARANTEE_MODE_ENUM = `
+  enum cosmoStreams__DeliveryGuaranteeMode {
     CURSOR
     OFF
   }
 `;
 
-export const EDFS_DELIVERY_GUARANTEES_INPUT = `
-  input edfs__DeliveryGuarantees {
-    mode: edfs__DeliveryGuaranteeMode! = OFF
+export const COSMO_STREAMS_DELIVERY_GUARANTEES_INPUT = `
+  input cosmoStreams__DeliveryGuarantees {
+    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
   }
 `;
 
 export const EDFS_KAFKA_SUBSCRIBE_DIRECTIVE = `
-  directive @edfs__kafkaSubscribe(deliveryGuarantees: edfs__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+  directive @edfs__kafkaSubscribe(deliveryGuarantees: cosmoStreams__DeliveryGuarantees, providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
 `;
 
 export const EDFS_NATS_PUBLISH_DIRECTIVE = `

@@ -19,7 +19,7 @@ import {
   DELIVERY_GUARANTEES,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
-  EDFS_DELIVERY_GUARANTEES,
+  COSMO_STREAMS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -345,7 +345,7 @@ export const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
 
 /* directive @edfs__kafkaSubscribe(
  *   topics: [String!]!, providerId: String! = "default",
- *   deliveryGuarantees: edfs__DeliveryGuarantees
+ *   deliveryGuarantees: cosmoStreams__DeliveryGuarantees
  * ) on FIELD_DEFINITION
  */
 export const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
@@ -373,7 +373,7 @@ export const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(DELIVERY_GUARANTEES),
-      type: stringToNamedTypeNode(EDFS_DELIVERY_GUARANTEES),
+      type: stringToNamedTypeNode(COSMO_STREAMS_DELIVERY_GUARANTEES),
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

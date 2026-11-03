@@ -20,7 +20,7 @@ import {
   BOOLEAN_SCALAR,
   CONTEXT_FIELD_VALUE,
   EDFS_NATS_STREAM_CONFIGURATION,
-  EDFS_DELIVERY_GUARANTEES,
+  COSMO_STREAMS_DELIVERY_GUARANTEES,
   EXECUTION,
   FEDERATION_POLICY,
   FIELD_SET_SCALAR,
@@ -100,8 +100,8 @@ export function isArgumentValueValid({
           }
           return argumentValue.value === SECURITY || argumentValue.value === EXECUTION;
         }
-        // The fields of edfs__DeliveryGuarantees are validated when the event configuration is extracted.
-        case EDFS_DELIVERY_GUARANTEES:
+        // The fields of cosmoStreams__DeliveryGuarantees are validated when the event configuration is extracted.
+        case COSMO_STREAMS_DELIVERY_GUARANTEES:
         // intentional fallthrough
         case EDFS_NATS_STREAM_CONFIGURATION:
         // intentional fallthrough
