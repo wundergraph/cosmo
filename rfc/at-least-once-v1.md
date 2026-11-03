@@ -816,7 +816,6 @@ after a hook call. The cursor is meant to be immutable on `StreamBeforeEventsDis
 - A partition the cursor never saw resumes at the cursor's `IssuedAt` timestamp. That is a time
   approximation of where a fresh subscribe would have started, not an exact position.
 - Cursor resume is implemented for Kafka only.
-- There are no automated tests for resume yet.
 - Partitions without delivered records are missing from cursors, so resume needs a fallback for
   them.
 - Messages can arrive out of order when an `OnReceiveEvents` handler times out, which breaks the
