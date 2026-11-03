@@ -47,6 +47,7 @@ var (
 	CloseKindNormal             = CloseKind{Code: ws.StatusNormalClosure, Reason: "Normal closure"}
 	CloseKindGoingAway          = CloseKind{Code: ws.StatusGoingAway, Reason: "Going away"}
 	CloseKindUnauthorized       = CloseKind{Code: 4401, Reason: "Unauthorized"}
+	CloseKindForbidden          = CloseKind{Code: 4403, Reason: "Forbidden"}
 	CloseKindTooManyInits       = CloseKind{Code: 4429, Reason: "Too many initialisation requests"}
 	CloseKindInvalidMessageType = CloseKind{Code: 4400, Reason: "Invalid message type"}
 )
