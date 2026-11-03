@@ -57,7 +57,7 @@ func TestPoller(t *testing.T) {
 		t.Parallel()
 
 		loader := &fakeLoader{manifest: rev1}
-		store := NewStore(t.Context(), zap.NewNop())
+		store := NewStore(zap.NewNop())
 		poller := NewPoller(loader, store, 10*time.Second, zap.NewNop())
 
 		require.NoError(t, poller.FetchInitial(t.Context()))
@@ -69,7 +69,7 @@ func TestPoller(t *testing.T) {
 		t.Parallel()
 
 		loader := &fakeLoader{err: errors.New("boom")}
-		store := NewStore(t.Context(), zap.NewNop())
+		store := NewStore(zap.NewNop())
 		poller := NewPoller(loader, store, 10*time.Second, zap.NewNop())
 
 		require.ErrorContains(t, poller.FetchInitial(t.Context()), "boom")
@@ -81,7 +81,7 @@ func TestPoller(t *testing.T) {
 
 		synctest.Test(t, func(t *testing.T) {
 			loader := &fakeLoader{manifest: rev1}
-			store := NewStore(t.Context(), zap.NewNop())
+			store := NewStore(zap.NewNop())
 			poller := NewPoller(loader, store, time.Second, zap.NewNop())
 			require.NoError(t, poller.FetchInitial(t.Context()))
 
@@ -106,7 +106,7 @@ func TestPoller(t *testing.T) {
 
 		synctest.Test(t, func(t *testing.T) {
 			loader := &fakeLoader{manifest: rev1}
-			store := NewStore(t.Context(), zap.NewNop())
+			store := NewStore(zap.NewNop())
 			poller := NewPoller(loader, store, time.Second, zap.NewNop())
 
 			ctx, cancel := context.WithCancel(t.Context())
@@ -129,7 +129,7 @@ func TestPoller(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			core, logs := observer.New(zap.WarnLevel)
 			loader := &fakeLoader{err: errors.New("boom")}
-			store := NewStore(t.Context(), zap.NewNop())
+			store := NewStore(zap.NewNop())
 			poller := NewPoller(loader, store, time.Second, zap.New(core))
 
 			go poller.Poll(t.Context())

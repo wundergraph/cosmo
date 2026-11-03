@@ -667,8 +667,7 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 }
 
 // startManifestPollers starts the PQL and MCP manifest pollers in background goroutines
-// if configured. Must be called after newServer so that SetOnUpdate has been registered
-// on the PQL store.
+// if configured.
 func (r *Router) startManifestPollers(ctx context.Context) {
 	if r.pqlPoller != nil {
 		go r.pqlPoller.Poll(ctx)
@@ -1499,7 +1498,19 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 	}
 
 	if r.mcpManifestStore != nil {
-		r.mcpManifestStore.SetOnUpdate(mcpss.ManifestUpdated)
+		// Rebuild the tools when the poller loads a new manifest. The MCP server
+		// lives as long as the router, so the bootstrap context bounds the loop.
+		manifestUpdates := r.mcpManifestStore.Subscribe()
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-manifestUpdates:
+					mcpss.ManifestUpdated()
+				}
+			}
+		}()
 	}
 
 	r.mcpServer = mcpss
@@ -1524,7 +1535,7 @@ func (r *Router) buildMCPManifestStore(ctx context.Context) error {
 		return fmt.Errorf("failed to create mcp manifest loader: %w", err)
 	}
 
-	store := operationmanifest.NewStore(ctx, r.logger)
+	store := operationmanifest.NewStore(r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
 		store,
@@ -1743,7 +1754,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		return nil, fmt.Errorf("failed to create PQL manifest loader: %w", err)
 	}
 
-	pqlStore := operationmanifest.NewStore(ctx, r.logger)
+	pqlStore := operationmanifest.NewStore(r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
 		pqlStore,

@@ -23,7 +23,7 @@ func newManifestProcessor(t *testing.T, opts persistedoperation.Options) (*Opera
 	schema, report := astparser.ParseGraphqlDocumentString(`type Query { old: String new: String }`)
 	require.False(t, report.HasErrors())
 	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schema))
-	store := operationmanifest.NewStore(t.Context(), zap.NewNop())
+	store := operationmanifest.NewStore(zap.NewNop())
 	opts.PQLStore = store
 	client, err := persistedoperation.NewClient(&opts)
 	require.NoError(t, err)

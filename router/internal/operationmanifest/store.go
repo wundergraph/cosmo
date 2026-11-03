@@ -1,69 +1,44 @@
 package operationmanifest
 
 import (
-	"context"
-	"sync"
 	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
 type Store struct {
-	manifest  atomic.Pointer[Manifest]
-	updateCh  chan struct{}
-	ctx       context.Context
-	onUpdate  atomic.Value // stores func()
-	startOnce sync.Once
-	logger    *zap.Logger
+	manifest   atomic.Pointer[Manifest]
+	subscriber atomic.Pointer[chan struct{}]
+	logger     *zap.Logger
 }
 
-// NewStore returns a store whose update worker stops when ctx is canceled.
-// Load still swaps the manifest after that but does not signal the worker.
-func NewStore(ctx context.Context, logger *zap.Logger) *Store {
-	return &Store{
-		ctx:      ctx,
-		logger:   logger,
-		updateCh: make(chan struct{}, 1),
-	}
+func NewStore(logger *zap.Logger) *Store {
+	return &Store{logger: logger}
 }
 
-// SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
-// The callback runs on a dedicated worker goroutine that processes signals sequentially.
-// If an update arrives while the callback is still running, it is coalesced into a single
-// pending signal — at most one signal is buffered, so rapid updates don't queue up.
-// Safe to call multiple times (e.g. on config reload): the callback is swapped atomically.
-func (s *Store) SetOnUpdate(fn func()) {
-	s.onUpdate.Store(fn)
-	s.startOnce.Do(func() {
-		go func() {
-			for {
-				select {
-				case <-s.ctx.Done():
-					return
-				case <-s.updateCh:
-					if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
-						f()
-					}
-				}
-			}
-		}()
-	})
+// Subscribe returns a channel that signals after each later Load. The channel
+// holds one signal, so loads that arrive while a signal is pending coalesce into
+// it and the receiver always sees the latest manifest. A new call replaces the
+// previous subscriber, which receives no further signals.
+func (s *Store) Subscribe() <-chan struct{} {
+	ch := make(chan struct{}, 1)
+	s.subscriber.Store(&ch)
+	return ch
 }
 
-// Load swaps the manifest atomically and signals the update worker if a callback is registered.
-// If the worker is busy processing a previous update, the signal is dropped (coalesced)
-// so back-to-back manifest updates don't queue unbounded work.
+// Load swaps the manifest atomically and signals the subscriber, if any.
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
 
-	if s.onUpdate.Load() == nil || s.ctx.Err() != nil {
+	ch := s.subscriber.Load()
+	if ch == nil {
 		return
 	}
 
 	select {
-	case s.updateCh <- struct{}{}:
+	case *ch <- struct{}{}:
 	default:
-		s.logger.Debug("Skipping manifest update signal, worker is busy")
+		s.logger.Debug("Skipping manifest update signal, previous signal still pending")
 	}
 }
 
