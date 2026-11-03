@@ -33,6 +33,15 @@ jobs:
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: router/go.sum
+      # The release action runs in a container, so cache its module directory
+      # separately from the host Go setup above. Module source is target-independent.
+      - name: Cache release Go modules
+        uses: actions/cache@v4
+        with:
+          path: .gomodcache
+          key: go-mod-${{ hashFiles('router/go.sum') }}
+          restore-keys: |
+            go-mod-
 
       - uses: winterjung/split@v2
         id: split
@@ -52,7 +61,19 @@ jobs:
           # Where to run `go build .`
           project_path: "router/cmd/router"
           binary_name: "router"
-          pre_command: export CGO_ENABLED=0
+          pre_command: |
+            export CGO_ENABLED=0
+            export GOMODCACHE="${GITHUB_WORKSPACE}/.gomodcache"
+            cd "${GITHUB_WORKSPACE}/router"
+            for attempt in 1 2 3; do
+              if timeout --signal=TERM --kill-after=5s 60s go mod download; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                exit 1
+              fi
+              sleep $((attempt * 5))
+            done
           build_flags: -trimpath
           ldflags: -extldflags -static -X "github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/router/core.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/router/core.Commit=${{ github.sha }}"
           overwrite: true
