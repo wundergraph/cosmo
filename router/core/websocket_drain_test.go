@@ -63,13 +63,26 @@ func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
 func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
 	t.Parallel()
 
+	// Room for every entry, so the sentinel below is never evicted.
 	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
-		MaxCost:            1024,
-		NumCounters:        10240,
+		MaxCost:            1 << 20,
+		NumCounters:        1 << 21,
 		IgnoreInternalCost: true,
 		BufferItems:        64,
 	})
 	require.NoError(t, err)
+
+	// Close clears the store first, so the sentinel disappearing means the
+	// cache is closing. GetTTL only reads the store: unlike Set or Get, it
+	// sends on no channel and so cannot race the close itself.
+	const sentinel = uint64(1) << 32
+	require.True(t, cache.Set(sentinel, NormalizationCacheEntry{}, 1))
+	cache.Wait()
+	cacheOpen := func() bool {
+		_, ok := cache.GetTTL(sentinel)
+		return ok
+	}
+	require.True(t, cacheOpen())
 
 	muxCtx, cancel := context.WithCancel(context.Background())
 	wsHandler := &WebsocketHandler{ctx: muxCtx}
@@ -96,13 +109,12 @@ func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
 	defer shutdownCancel()
 	require.ErrorIs(t, gm.Shutdown(shutdownCtx), context.DeadlineExceeded)
 
-	// A closed ristretto cache rejects every Set.
-	require.True(t, cache.Set(1, NormalizationCacheEntry{}, 1), "cache closed while a message was still being handled")
+	require.True(t, cacheOpen(), "cache closed while a message was still being handled")
 
 	close(release)
 	<-handlerDone
 	require.Eventually(t, func() bool {
-		return !cache.Set(2, NormalizationCacheEntry{}, 1)
+		return !cacheOpen()
 	}, time.Second, time.Millisecond, "cache not closed after the last message finished")
 }
 
