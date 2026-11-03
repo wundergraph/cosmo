@@ -168,12 +168,34 @@ func (h *WebsocketHandler) Middleware(next http.Handler) http.Handler {
 // is called, a connection that delivers another message is closed instead.
 //
 // Message handling normalizes, validates and plans operations through the graph
-// mux caches, so the mux must drain before it closes those caches.
+// mux caches, so the mux must drain before it closes those caches. When Drain
+// returns an error, messages are still being handled; wait on Drained before
+// closing anything they use.
 func (h *WebsocketHandler) Drain(ctx context.Context) error {
-	if h == nil {
+	idle := h.Drained()
+	// Prefer the idle signal, so an expired ctx doesn't fail an idle handler.
+	select {
+	case <-idle:
 		return nil
+	default:
 	}
-	return h.inFlightMessages.drain(ctx)
+	select {
+	case <-idle:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("waiting for websocket message handlers: %w", ctx.Err())
+	}
+}
+
+// Drained starts draining, like Drain, and returns a channel that is closed
+// once no WebSocket message is being handled.
+func (h *WebsocketHandler) Drained() <-chan struct{} {
+	if h == nil {
+		idle := make(chan struct{})
+		close(idle)
+		return idle
+	}
+	return h.inFlightMessages.drain()
 }
 
 var errWebsocketHandlerDraining = errors.New("websocket handler is draining")
@@ -184,7 +206,9 @@ type inFlightTracker struct {
 	mu       sync.Mutex
 	draining bool
 	count    int
-	idle     chan struct{}
+	// idle is created when draining starts and closed once count reaches zero.
+	// No work is added while draining, so it is closed at most once.
+	idle chan struct{}
 }
 
 func (t *inFlightTracker) track() bool {
@@ -203,29 +227,20 @@ func (t *inFlightTracker) done() {
 	t.count--
 	if t.count == 0 && t.idle != nil {
 		close(t.idle)
-		t.idle = nil
 	}
 }
 
-func (t *inFlightTracker) drain(ctx context.Context) error {
+func (t *inFlightTracker) drain() <-chan struct{} {
 	t.mu.Lock()
-	t.draining = true
-	if t.count == 0 {
-		t.mu.Unlock()
-		return nil
-	}
-	if t.idle == nil {
+	defer t.mu.Unlock()
+	if !t.draining {
+		t.draining = true
 		t.idle = make(chan struct{})
+		if t.count == 0 {
+			close(t.idle)
+		}
 	}
-	idle := t.idle
-	t.mu.Unlock()
-
-	select {
-	case <-idle:
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("waiting for websocket message handlers: %w", ctx.Err())
-	}
+	return t.idle
 }
 
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows

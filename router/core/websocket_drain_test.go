@@ -58,6 +58,54 @@ func TestGraphMuxShutdownWaitsForWebsocketMessageHandlers(t *testing.T) {
 	require.True(t, finished.Load(), "caches closed before the message handler finished")
 }
 
+// When the shutdown deadline passes before the remaining messages finish,
+// Shutdown returns, but the caches stay open until those messages are done.
+func TestGraphMuxShutdownDefersCacheCloseWhenDrainTimesOut(t *testing.T) {
+	t.Parallel()
+
+	cache, err := ristretto.NewCache(&ristretto.Config[uint64, NormalizationCacheEntry]{
+		MaxCost:            1024,
+		NumCounters:        10240,
+		IgnoreInternalCost: true,
+		BufferItems:        64,
+	})
+	require.NoError(t, err)
+
+	muxCtx, cancel := context.WithCancel(context.Background())
+	wsHandler := &WebsocketHandler{ctx: muxCtx}
+	gm := &graphMux{
+		ctx:                muxCtx,
+		cancel:             cancel,
+		normalizationCache: cache,
+		websocketHandler:   wsHandler,
+	}
+
+	require.True(t, wsHandler.inFlightMessages.track())
+	release := make(chan struct{})
+	handlerDone := make(chan struct{})
+	go func() {
+		defer close(handlerDone)
+		defer wsHandler.inFlightMessages.done()
+		<-release
+		for i := range uint64(1000) {
+			cache.Set(i, NormalizationCacheEntry{}, 1)
+		}
+	}()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer shutdownCancel()
+	require.ErrorIs(t, gm.Shutdown(shutdownCtx), context.DeadlineExceeded)
+
+	// A closed ristretto cache rejects every Set.
+	require.True(t, cache.Set(1, NormalizationCacheEntry{}, 1), "cache closed while a message was still being handled")
+
+	close(release)
+	<-handlerDone
+	require.Eventually(t, func() bool {
+		return !cache.Set(2, NormalizationCacheEntry{}, 1)
+	}, time.Second, time.Millisecond, "cache not closed after the last message finished")
+}
+
 func TestWebsocketHandlerDrain(t *testing.T) {
 	t.Parallel()
 

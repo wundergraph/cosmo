@@ -1007,20 +1007,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	// WebSocket connections are hijacked, so the graph server's in-flight wait
 	// does not cover them. A message still being handled normalizes and plans
-	// through the caches below; closing them under it panics in ristretto.
+	// through the caches; closing them under it panics in ristretto.
 	if dErr := s.websocketHandler.Drain(ctx); dErr != nil {
 		err = errors.Join(err, dErr)
+		// Don't block shutdown past its deadline, but keep the caches open
+		// until the remaining messages are done with them.
+		go func() {
+			<-s.websocketHandler.Drained()
+			s.closeCaches()
+		}()
+	} else {
+		s.closeCaches()
 	}
-
-	s.planCache.Close()
-	s.planFallbackCache.Close()
-	s.persistedOperationCache.Close()
-	s.normalizationCache.Close()
-	s.variablesNormalizationCache.Close()
-	s.remapVariablesCache.Close()
-	s.complexityCalculationCache.Close()
-	s.validationCache.Close()
-	s.operationHashCache.Close()
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
@@ -1062,6 +1060,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *graphMux) closeCaches() {
+	s.planCache.Close()
+	s.planFallbackCache.Close()
+	s.persistedOperationCache.Close()
+	s.normalizationCache.Close()
+	s.variablesNormalizationCache.Close()
+	s.remapVariablesCache.Close()
+	s.complexityCalculationCache.Close()
+	s.validationCache.Close()
+	s.operationHashCache.Close()
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
