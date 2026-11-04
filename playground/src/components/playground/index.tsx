@@ -1,5 +1,6 @@
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
+import { useEditorContext } from '@graphiql/react';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
 import {
@@ -12,11 +13,11 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
-import { TbDevicesCheck } from 'react-icons/tb';
+import { TbBookmarks, TbDevicesCheck } from 'react-icons/tb';
 import { cn, usesDirective } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,6 +41,8 @@ import {
 } from '@/components/playground/custom-scripts';
 import { Badge } from '@/components/ui/badge';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { CursorsPanel } from '@/components/playground/cursors-panel';
+import { cursorKey, getCursor, setCursor, subscriptionRootFieldName } from '@/lib/cursor-storage';
 import 'graphiql/graphiql.css';
 import '@graphiql/plugin-explorer/dist/style.css';
 import '@/theme.css';
@@ -384,13 +387,57 @@ const ToggleClientValidation = () => {
   );
 };
 
+const ToggleCursors = () => {
+  const { cursorsEnabled, setCursorsEnabled } = useContext(TraceContext);
+  const {
+    tabsState: { activeTabIndex, tabs },
+  } = useContext(PlaygroundContext);
+
+  const activeTab = tabs[activeTabIndex];
+  const hasSubscription = subscriptionRootFieldName(activeTab?.query, activeTab?.operationName) !== null;
+
+  let tooltip = cursorsEnabled ? 'Subscription cursors enabled' : 'Subscription cursors disabled';
+  if (!hasSubscription) {
+    tooltip = 'Subscription cursors only apply to Cosmo Streams subscriptions which have enabled it';
+  }
+
+  return (
+    <Tooltip delayDuration={100}>
+      {/* A disabled button swallows pointer events, so the tooltip hangs off a wrapper. */}
+      <TooltipTrigger asChild>
+        <span>
+          <Button
+            onClick={() => setCursorsEnabled(!cursorsEnabled)}
+            disabled={!hasSubscription}
+            variant="ghost"
+            size="icon"
+            className="graphiql-toolbar-button"
+          >
+            <TbBookmarks
+              className={cn('graphiql-toolbar-icon', {
+                'text-success': cursorsEnabled && hasSubscription,
+                'opacity-40': !hasSubscription,
+              })}
+            />
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const PlaygroundPortal = () => {
   const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
+  const toggleCursors = document.getElementById('toggle-cursors');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
+  const cursorsSection = document.getElementById('cursors-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
 
   if (
@@ -398,8 +445,10 @@ const PlaygroundPortal = () => {
     !artDiv ||
     !plannerDiv ||
     !toggleClientValidation ||
+    !toggleCursors ||
     !logo ||
     !scriptsSection ||
+    !cursorsSection ||
     !preFlightScriptSection
   ) {
     return null;
@@ -411,7 +460,9 @@ const PlaygroundPortal = () => {
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {createPortal(<ToggleCursors />, toggleCursors)}
       {createPortal(<CustomScripts />, scriptsSection)}
+      {createPortal(<CursorsPanel />, cursorsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
       {createPortal(
         <a href="https://wundergraph.com">
@@ -507,6 +558,8 @@ export const Playground = (input: {
 
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
+  const [cursorsEnabled, setCursorsEnabled] = useLocalStorage('playground:cursors:enabled', false);
+
   useEffect(() => {
     const responseToolbar = document.getElementById('response-toolbar');
     if (responseToolbar && isMounted) {
@@ -538,44 +591,61 @@ export const Playground = (input: {
     const editorToolsSection = document.getElementsByClassName('graphiql-editor-tool')[0] as any as HTMLDivElement;
 
     if (editorToolsTabBar && editorToolsSection && !document.getElementById('scripts-tab')) {
-      const tabs = [editorToolsTabBar.childNodes[0], editorToolsTabBar.childNodes[1]];
-      const sections = Array.from(editorToolsSection.childNodes);
+      // GraphiQL renders the variables and headers tabs itself; everything we add has to keep
+      // their activation in sync, so all tabs are handled through one list of pairs.
+      const createTab = (id: string, label: string, sectionId: string) => {
+        const button = document.createElement('button');
+        button.id = id;
+        button.className = 'graphiql-un-styled';
+        button.textContent = label;
 
-      const scriptsButton = document.createElement('button');
-      scriptsButton.id = 'scripts-tab';
-      scriptsButton.className = 'graphiql-un-styled';
-      scriptsButton.textContent = 'Operation Scripts';
+        const section = document.createElement('div');
+        section.id = sectionId;
+        section.className = 'graphiql-editor hidden';
 
-      const scriptsSection = document.createElement('div');
-      scriptsSection.id = 'scripts-section';
-      scriptsSection.className = 'graphiql-editor hidden';
-
-      tabs.forEach((e, index) =>
-        e.addEventListener('click', () => {
-          (e as HTMLButtonElement).className = 'graphiql-un-styled active';
-          (sections[index] as HTMLDivElement).className = 'graphiql-editor';
-          scriptsSection.className = 'graphiql-editor hidden';
-        }),
-      );
-
-      scriptsButton.onclick = (e) => {
-        (tabs[0] as HTMLButtonElement).className = 'graphiql-un-styled';
-        (tabs[1] as HTMLButtonElement).className = 'graphiql-un-styled';
-        (sections[0] as HTMLDivElement).className = 'graphiql-editor hidden';
-        (sections[1] as HTMLDivElement).className = 'graphiql-editor hidden';
-        scriptsSection.className = 'graphiql-editor';
-
-        scriptsButton.className = 'graphiql-un-styled active';
+        return { button, section };
       };
 
+      const customTabs = [
+        createTab('scripts-tab', 'Operation Scripts', 'scripts-section'),
+        createTab('cursors-tab', 'Cursors', 'cursors-section'),
+      ];
+
+      const nativeSections = Array.from(editorToolsSection.childNodes) as HTMLDivElement[];
+      const nativeTabs = [editorToolsTabBar.childNodes[0], editorToolsTabBar.childNodes[1]].map((button, index) => ({
+        button: button as HTMLButtonElement,
+        section: nativeSections[index],
+      }));
+
+      const allTabs = [...nativeTabs, ...customTabs];
+
+      const activate = (active: (typeof allTabs)[number]) => {
+        allTabs.forEach(({ button, section }) => {
+          const isActive = button === active.button;
+          button.className = isActive ? 'graphiql-un-styled active' : 'graphiql-un-styled';
+          section.className = isActive ? 'graphiql-editor' : 'graphiql-editor hidden';
+        });
+      };
+
+      allTabs.forEach((tab) => tab.button.addEventListener('click', () => activate(tab)));
+
+      // Clicks on anything else in the tab bar, e.g. the collapse toggle, must not leave one of
+      // our tabs looking active.
       editorToolsTabBar.addEventListener('click', (e) => {
-        if (!(e.target as HTMLElement)?.closest(`#${scriptsButton.id}`)) {
-          scriptsButton.className = 'graphiql-un-styled';
+        const target = e.target as HTMLElement | null;
+        if (customTabs.some(({ button }) => target?.closest(`#${button.id}`))) {
+          return;
         }
+
+        customTabs.forEach(({ button }) => {
+          button.className = 'graphiql-un-styled';
+        });
       });
 
-      editorToolsTabBar.insertBefore(scriptsButton, editorToolsTabBar.childNodes[2]);
-      editorToolsSection.appendChild(scriptsSection);
+      customTabs.forEach(({ button, section }, index) => {
+        editorToolsTabBar.insertBefore(button, editorToolsTabBar.childNodes[2 + index]);
+        editorToolsSection.appendChild(section);
+      });
     }
 
     const editors = document.getElementsByClassName('graphiql-editors')[0] as any as HTMLDivElement;
@@ -612,6 +682,10 @@ export const Playground = (input: {
       const toggleClientValidation = document.createElement('div');
       toggleClientValidation.id = 'toggle-client-validation';
       toolbar.append(toggleClientValidation);
+
+      const toggleCursors = document.createElement('div');
+      toggleCursors.id = 'toggle-cursors';
+      toolbar.append(toggleCursors);
     }
 
     setIsMounted(true);
@@ -654,6 +728,35 @@ export const Playground = (input: {
     [url, input.scripts],
   );
 
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
+
+  // The fetcher is memoised and must not be recreated on every tab switch or edit, so the active
+  // tab ID it needs for cursor tracking is read from a ref instead of the tabsState dependency.
+  const tabsStateRef = useRef(tabsState);
+  useEffect(() => {
+    tabsStateRef.current = tabsState;
+  }, [tabsState]);
+
+  // onTabChange does not fire for the tabs GraphiQL restores on mount, so a subscription started
+  // before any tab interaction would find no active tab. This renders inside GraphiQL's provider
+  // and reports the restored state once. GraphiQL takes a single additionalComponent, so it also
+  // renders the defer pills sync.
+  const toolbar = useMemo(
+    () => ({
+      additionalComponent: function ToolbarSync() {
+        const { tabs, activeTabIndex } = useEditorContext({ nonNull: true });
+        useEffect(() => {
+          setTabsState({ tabs, activeTabIndex });
+        }, []);
+        return <DeferPillsSync />;
+      },
+    }),
+    [],
+  );
+
   const fetcher = useMemo(() => {
     // The first-part callback from readDeferStream calls this without a defer, so keep the one already set.
     const onFetch: OnFetch = (response, status, statusText, defer) => {
@@ -675,11 +778,64 @@ export const Playground = (input: {
     return (params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) => {
       if (isSubscription(params, opts) || params.operationName === 'IntrospectionQuery') {
         setResult((prev) => ({ ...prev, defer: undefined }));
-        return toolkitFetcher(params, opts);
+        return subscribe(params, opts);
       }
 
       return runOperation(params, opts?.headers);
     };
+
+    function subscribe(params: { query: string; operationName?: string | null; variables?: unknown }, opts?: any) {
+      // Cursors are only meaningful for subscriptions, so introspection and anything we cannot
+      // resolve a subscription root field for goes out untouched.
+      const fieldName = cursorsEnabled ? subscriptionRootFieldName(params.query, params.operationName) : null;
+      if (!fieldName) {
+        return toolkitFetcher(params, opts);
+      }
+
+      // Cursors are tracked per tab, so two tabs subscribing to the same field never share one.
+      const activeTabsState = tabsStateRef.current;
+      const tabId = activeTabsState.tabs[activeTabsState.activeTabIndex]?.id;
+      if (!tabId) {
+        return toolkitFetcher(params, opts);
+      }
+
+      const key = cursorKey(tabId, url, fieldName);
+      const storedCursor = getCursor(key);
+
+      const result = toolkitFetcher(
+        {
+          ...params,
+          extensions: {
+            // The router picks the best guarantee it can serve and never errors on this, so no
+            // capability detection is needed.
+            cosmoDeliveryGuarantee: 'cursor,at-most-once',
+            ...(storedCursor ? { streamsCursor: storedCursor } : {}),
+          },
+        } as any,
+        opts,
+      );
+
+      return trackCursors(result, key);
+    }
+
+    // Subscriptions come back as an async iterable. Pass every payload through untouched and
+    // remember the cursor the router stamped onto it, so the next start can resume from there.
+    function trackCursors(result: any, key: string) {
+      if (!result || typeof result[Symbol.asyncIterator] !== 'function') {
+        return result;
+      }
+
+      return (async function* () {
+        for await (const payload of result as AsyncIterable<any>) {
+          const cursor = payload?.extensions?.streamsCursor;
+          if (typeof cursor === 'string' && cursor) {
+            setCursor(key, cursor);
+          }
+
+          yield payload;
+        }
+      })();
+    }
 
     async function runOperation(params: object, extraHeaders?: Record<string, string>) {
       clearResponse();
@@ -698,7 +854,7 @@ export const Playground = (input: {
       }
       return response.json();
     }
-  }, [schema, clientValidationEnabled]);
+  }, [schema, clientValidationEnabled, cursorsEnabled, url]);
 
   const [debouncedQuery] = useDebounce(query, 300);
   const [debouncedHeaders] = useDebounce(headers, 300);
@@ -755,11 +911,6 @@ export const Playground = (input: {
     getPlan();
   }, [debouncedQuery, debouncedHeaders, url, schema, view]);
 
-  const [tabsState, setTabsState] = useState<TabsState>({
-    activeTabIndex: 0,
-    tabs: [],
-  });
-
   return (
     <TooltipProvider>
       <PlaygroundContext.Provider
@@ -783,6 +934,9 @@ export const Playground = (input: {
             planError,
             clientValidationEnabled,
             setClientValidationEnabled,
+            cursorsEnabled,
+            setCursorsEnabled,
+            endpointUrl: url,
             forcedTheme: input.theme,
           }}
         >
@@ -800,7 +954,7 @@ export const Playground = (input: {
               onTabChange={setTabsState}
               plugins={plugins}
               forcedTheme={input.theme}
-              toolbar={{ additionalComponent: DeferPillsSync }}
+              toolbar={toolbar}
             />
           </DeferProvider>
           {isMounted && <PlaygroundPortal />}
