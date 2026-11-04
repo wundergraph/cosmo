@@ -10,6 +10,7 @@ const getConfig = () => {
     apiUrl: process.env.KC_API_URL || 'http://localhost:8080',
 
     apiKey: process.env.API_KEY || ApiKeyGenerator.generate(),
+    apiKeyWasGenerated: !process.env.API_KEY,
 
     userEmail: process.env.USER_EMAIL || 'foo@wundergraph.com',
     userPassword: process.env.USER_PASSWORD || 'wunder@123',
