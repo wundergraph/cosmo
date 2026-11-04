@@ -93,7 +93,6 @@ overrides:
   sharp: 0.35.5
   eslint-plugin-import: 2.27.5
   eslint-module-utils: 2.8.0
-  msw: 2.4.9
 
 patchedDependencies:
   graphql@16.9.0: patches/graphql@16.9.0.patch

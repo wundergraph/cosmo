@@ -164,7 +164,6 @@ overrides:
   sharp: 0.35.5
   eslint-plugin-import: 2.27.5
   eslint-module-utils: 2.8.0
-  msw: 2.4.9
 
 patchedDependencies:
   graphql@16.9.0: 5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f
@@ -7848,7 +7847,7 @@ packages:
   '@vitest/mocker@5.0.5':
     resolution: {integrity: sha512-xLL3lkDegJZw+MGoGaCCsFayDZthGgpAtr3Vziyfc4p7xH89K7KRPcRBBh/kEYm0Aqkt5DtTmkYpBtRV/FrHZg==}
     peerDependencies:
-      msw: 2.4.9
+      msw: ^2.4.9 || ^3.0.0
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
     peerDependenciesMeta:
       msw:
