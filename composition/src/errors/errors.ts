@@ -11,6 +11,8 @@ import {
   type IncompatibleSharedEnumErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
+  type InvalidCacheTagArgumentTypeErrorParams,
+  type InvalidCacheTagReferenceErrorMessageParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
   type InvalidEntityReturnTypeErrorParams,
@@ -21,8 +23,11 @@ import {
   type invalidVersionLinkDirectiveUrlErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
+  type PartiallyDefinedCacheTagReferenceErrorMessageParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  type UnavailableCacheTagReferenceErrorMessageParams,
+  type UndefinedCacheTagInputFieldErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -2242,5 +2247,106 @@ export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<s
       ` provided to both the include and exclude tag sets (which must be mutually exclusive): "` +
       tagNames.join(QUOTATION_JOIN) +
       `".`,
+  );
+}
+
+export function blankCacheTagFormatErrorMessage(): string {
+  return `The argument "format" must be provided a string that is neither empty nor only whitespace.`;
+}
+
+export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
+  return (
+    `The "format" argument defines invalid placeholder "{${placeholder}}":` +
+    ` placeholders must be of the form "{$args.<argumentName>}", where a field of an Input Object argument` +
+    ` is referenced by a period-delimited path, e.g. "{$args.filter.category}".`
+  );
+}
+
+export function invalidCacheTagBraceErrorMessage(format: string): string {
+  return (
+    `The "format" argument defines a curly brace outside of a placeholder;` +
+    ` a curly brace is valid only as the delimiter of a placeholder, e.g. "{$args.id}".` +
+    ` Received "${format}".`
+  );
+}
+
+export function nonRootFieldCacheTagErrorMessage(): string {
+  return `The directive is valid only upon a Query root field or an Object.`;
+}
+
+export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string): string {
+  return `The "format" argument defines placeholder namespace "$${namespace}", but only "$args" is supported.`;
+}
+
+export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
+  return `The "format" argument references "$args.${reference}", which is not an argument of the field.`;
+}
+
+export function undefinedCacheTagInputFieldErrorMessage({
+  fieldName,
+  inputObjectName,
+  reference,
+}: UndefinedCacheTagInputFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but Input Object "${inputObjectName}" does not define the field "${fieldName}".`
+  );
+}
+
+export function invalidCacheTagReferenceErrorMessage({
+  reference,
+  typeReference,
+  untraversableReference,
+}: InvalidCacheTagReferenceErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
+    ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
+  );
+}
+
+export function invalidCacheTagArgumentTypeErrorMessage({
+  reference,
+  typeString,
+}: InvalidCacheTagArgumentTypeErrorParams): string {
+  return (
+    `The "format" argument references "$args.${reference}", which is of type "${typeString}".` +
+    ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable Scalar or Enum.`
+  );
+}
+
+export function unavailableCacheTagReferencesError(fieldCoords: string, errorMessages: Array<string>): Error {
+  return new Error(
+    `The "@cacheTag" formats defined on the root field "${fieldCoords}"` +
+      ` reference values that never reach the subgraph:\n` +
+      errorMessages.join('\n'),
+  );
+}
+
+export function inaccessibleCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" is inaccessible.`;
+}
+
+export function fromContextCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@fromContext".`;
+}
+
+export function partiallyDefinedCacheTagReferenceErrorMessage({
+  coords,
+  parentCoords,
+  reference,
+  subgraphName,
+}: PartiallyDefinedCacheTagReferenceErrorMessageParams): string {
+  return (
+    ` Subgraph "${subgraphName}" references "$args.${reference}",` +
+    ` but "${coords}" is not defined in every subgraph that defines "${parentCoords}".`
   );
 }
