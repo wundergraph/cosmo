@@ -239,6 +239,24 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
     });
 
+    test('Should publish persisted operations that use @defer', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('hello'), contents: `query { ... @defer { hello } }` }],
+      });
+
+      expect(publishOperationsResp.response?.details).toBeUndefined();
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
     test('Should reject persisted operations when payload is too large', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
