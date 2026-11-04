@@ -93,6 +93,7 @@ overrides:
   sharp: 0.35.5
   eslint-plugin-import: 2.27.5
   eslint-module-utils: 2.8.0
+  msw: 2.4.9
 
 patchedDependencies:
   graphql@16.9.0: patches/graphql@16.9.0.patch
@@ -100,8 +101,8 @@ patchedDependencies:
 catalog:
   # Build/test tooling
   typescript: 6.0.3
-  vitest: 4.1.11
-  '@vitest/coverage-v8': 4.1.11
+  vitest: 5.0.5
+  '@vitest/coverage-v8': 5.0.5
   tsx: ^4.16.0
   prettier: ^3.6.2
   postcss: 8.5.26
