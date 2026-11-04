@@ -277,6 +277,7 @@
                   },
                   "router/cosmo-streams/kafka",
                   "router/cosmo-streams/redis",
+                  "router/cosmo-streams/cursors",
                   {
                     "group": "Custom Modules",
                     "icon": "cubes",
