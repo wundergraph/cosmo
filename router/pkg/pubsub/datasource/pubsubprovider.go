@@ -79,8 +79,8 @@ func (p *PubSubProvider) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (p *PubSubProvider) Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error {
-	return p.Adapter.Subscribe(ctx, cfg, updater)
+func (p *PubSubProvider) Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, guarantee DeliveryGuarantee, updater SubscriptionEventUpdater) error {
+	return p.Adapter.Subscribe(ctx, cfg, guarantee, updater)
 }
 
 func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {

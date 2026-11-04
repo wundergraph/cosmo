@@ -14,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -321,9 +322,18 @@ func LogLevelHandler(r *http.Request) zapcore.Level {
 		return zapcore.InfoLevel
 	}
 
-	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) {
+	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) && !isDeliveryGuaranteeRejection(reqContext.error) {
 		return zapcore.ErrorLevel
 	}
 
 	return zapcore.InfoLevel
+}
+
+// isDeliveryGuaranteeRejection reports whether err is the router turning down a client's delivery
+// guarantee request, e.g. cursors asked for on a subscription that has none, or a malformed,
+// expired or foreign cursor. That is the client's mistake, not a server failure, so it must not
+// surface as an error log. It is still tracked as a request error in metrics.
+func isDeliveryGuaranteeRejection(err error) bool {
+	_, ok := errors.AsType[*datasource.DeliveryGuaranteeError](err)
+	return ok
 }
