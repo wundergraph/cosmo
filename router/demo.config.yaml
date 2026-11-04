@@ -20,3 +20,15 @@ events:
       - id: my-redis
         urls:
           - "redis://localhost:6379/2"
+  delivery_guarantees:
+    cursor_resume:
+      identity_claim: sub
+      # Demo-only secrets. Use secrets of at least 32 bytes from your secret store in production,
+      # e.g. secret: "${COSMO_CURSOR_KEY_1}".
+      keys:
+        - id: 1
+          secret: "demo-cursor-signing-key-1-0123456789"
+          # Stops signing new cursors after this point, but keeps verifying them.
+          expires_at: 2027-01-01T00:00:00Z
+        - id: 2
+          secret: "demo-cursor-signing-key-2-0123456789"

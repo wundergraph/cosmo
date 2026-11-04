@@ -62,6 +62,7 @@ func BuildProvidersAndDataSources(
 	hostName string,
 	routerListenAddr string,
 	hooks pubsub_datasource.Hooks,
+	cursors pubsub_datasource.Cursors,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	if store == nil {
 		store = metric.NewNoopStreamMetricStore()
@@ -82,7 +83,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store, hooks, logger, config.SkipUnavailableProviders)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store, hooks, cursors, logger, config.SkipUnavailableProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -100,7 +101,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store, hooks, logger, config.SkipUnavailableProviders)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store, hooks, cursors, logger, config.SkipUnavailableProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,7 +119,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
 		})
 	}
-	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store, hooks, logger, config.SkipUnavailableProviders)
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store, hooks, cursors, logger, config.SkipUnavailableProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,6 +137,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 	providersData []P, dsConfs []dsConfAndEvents[E],
 	store metric.StreamMetricStore,
 	hooks pubsub_datasource.Hooks,
+	cursors pubsub_datasource.Cursors,
 	logger *zap.Logger,
 	skipUnavailableProviders bool,
 ) (map[string]pubsub_datasource.Provider, []plan.DataSource, error) {
@@ -148,6 +150,18 @@ func build[P GetID, E GetEngineEventConfiguration](
 		for _, event := range dsConf.events {
 			if !slices.Contains(usedProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
 				usedProviderIds = append(usedProviderIds, event.GetEngineEventConfiguration().GetProviderId())
+			}
+		}
+	}
+
+	// fields in cursor mode can't serve cursors without a keyring, so they must not be silently downgraded
+	if !cursors.Enabled() {
+		for _, dsConf := range dsConfs {
+			for _, event := range dsConf.events {
+				engineEvent := event.GetEngineEventConfiguration()
+				if pubsub_datasource.NewDeliveryGuaranteeMode(engineEvent) == pubsub_datasource.DeliveryGuaranteeModeCursor {
+					return nil, nil, fmt.Errorf("field %s.%s declares the cursor delivery guarantee, but no cursor keys are configured in events.delivery_guarantees.cursor_resume.keys", engineEvent.GetTypeName(), engineEvent.GetFieldName())
+				}
 			}
 		}
 	}
@@ -202,6 +216,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 				event,
 				pubSubProviders,
 				hooks,
+				cursors,
 			)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
