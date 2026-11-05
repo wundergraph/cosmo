@@ -344,7 +344,7 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
+	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy, r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled)
 	var err error
 	r.headerPropagation, err = NewHeaderPropagation(ctx, r.logger, r.headerRules, postRules)
 	if err != nil {
