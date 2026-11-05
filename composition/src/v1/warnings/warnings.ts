@@ -308,3 +308,16 @@ export function overrideDirectiveLabelArgumentWarning({
     },
   });
 }
+
+export function userDefinedDeferWarning(subgraphName: SubgraphName): Warning {
+  return new Warning({
+    message:
+      `The "@defer" directive is defined or referenced within the schema.` +
+      ` However, the "@defer" directive is intended to be a GraphQL spec-defined executable directive.` +
+      ` Consequently, all non-execution definitions or references will be ignored.` +
+      ` If the intention is to use "@defer" as an executable directive, the definition need not be defined in the schema.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}

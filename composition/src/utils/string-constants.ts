@@ -30,6 +30,7 @@ export const DEFAULT_EDFS_PROVIDER_ID = 'default';
 export const DEFAULT_MUTATION = 'Mutation';
 export const DEFAULT_QUERY = 'Query';
 export const DEFAULT_SUBSCRIPTION = 'Subscription';
+export const DEFER = 'defer';
 export const DEPRECATED = 'deprecated';
 export const DEPRECATED_DEFAULT_ARGUMENT_VALUE = 'No longer supported';
 export const DESCRIPTION_OVERRIDE = 'descriptionOverride';
