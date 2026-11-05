@@ -61,6 +61,8 @@ export const EXTERNAL_DIRECTIVE = `
   directive @external on FIELD_DEFINITION | OBJECT
 `;
 
+export const FEDERATION_POLICY_SCALAR = `  scalar federation__Policy`;
+
 export const FROM_CONTEXT_DIRECTIVE = `
   directive @fromContext(field: ContextFieldValue) on ARGUMENT_DEFINITION
 `;

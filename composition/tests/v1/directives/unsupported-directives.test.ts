@@ -10,7 +10,6 @@ import {
   CONTEXT,
   FROM_CONTEXT,
   overrideDirectiveLabelArgumentWarning,
-  POLICY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   unsupportedDirectiveWarning,
 } from '../../../src';
@@ -20,7 +19,6 @@ import {
   CONTEXT_FIELD_VALUE_SCALAR,
   FROM_CONTEXT_DIRECTIVE,
   OVERRIDE_DIRECTIVE,
-  POLICY_DIRECTIVE,
   SCHEMA_QUERY_DEFINITION,
 } from '../utils/utils';
 
@@ -146,72 +144,6 @@ describe('Unsupported directives test', () => {
     expect(warnings).toStrictEqual([
       unsupportedDirectiveWarning({
         directiveName: FROM_CONTEXT,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
-  test('that defining @policy produces a warning', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      type Query {
-        a: ID @policy(policies: [["test:test"]])
-      }
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${POLICY_DIRECTIVE}
-      
-      type Query {
-        a: ID @policy(policies: [["test:test"]])
-      }
-      
-      scalar federation__Policy
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: POLICY,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
-  test('that manually defining federation__Policy definition does not duplicate the definition', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      type Query {
-        a: ID @policy(policies: [["test:test"]])
-      }
-      
-      scalar federation__Policy
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${POLICY_DIRECTIVE}
-      
-      type Query {
-        a: ID @policy(policies: [["test:test"]])
-      }
-      
-      scalar federation__Policy
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: POLICY,
         subgraphName: 'a',
       }),
     ]);
