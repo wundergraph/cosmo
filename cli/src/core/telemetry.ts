@@ -4,7 +4,7 @@ import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { isAuthenticated } from '../commands/auth/utils.js';
 import { config, getBaseHeaders } from './config.js';
-import { CreateClient } from './client/client.js';
+import { CreateClient, loadTlsClientOptions } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
 // Support for COSMO_TELEMETRY_DISABLED and Console Do Not Track standard
@@ -105,10 +105,12 @@ export const initTelemetry = () => {
   });
 
   const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+  const tlsResult = loadTlsClientOptions(config.tlsClientCert, config.tlsClientKey);
   apiClient = CreateClient({
     baseUrl: config.baseURL,
     apiKey: config.apiKey,
     proxyUrl,
+    tls: tlsResult.success ? tlsResult.data : undefined,
   });
 
   // Handle errors silently to not interrupt CLI operations
