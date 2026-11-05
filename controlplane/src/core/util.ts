@@ -540,6 +540,11 @@ export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions)
     region,
     endpoint,
     forcePathStyle,
+    requestHandler: {
+      connectionTimeout: 5000,
+      requestTimeout: 30_000,
+      throwOnRequestTimeout: true,
+    },
   };
 
   if (accessKeyId && secretAccessKey) {
