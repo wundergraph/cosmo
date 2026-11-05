@@ -19,10 +19,12 @@ import (
 )
 
 type AcquiredConnection struct {
-	Time     time.Time
-	IdleTime time.Duration
-	Reused   bool
-	WasIdle  bool
+	Time       time.Time
+	IdleTime   time.Duration
+	Reused     bool
+	WasIdle    bool
+	LocalAddr  string
+	RemoteAddr string
 }
 
 type GetConnection struct {
@@ -76,14 +78,23 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 			c.durations.TimeToLastRequestByte = 0
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			c.ConnectionAcquired = &AcquiredConnection{
+			acquired := &AcquiredConnection{
 				Time:     time.Now(),
 				Reused:   info.Reused,
 				WasIdle:  info.WasIdle,
 				IdleTime: info.IdleTime,
 			}
+			if info.Conn != nil {
+				if addr := info.Conn.LocalAddr(); addr != nil {
+					acquired.LocalAddr = addr.String()
+				}
+				if addr := info.Conn.RemoteAddr(); addr != nil {
+					acquired.RemoteAddr = addr.String()
+				}
+			}
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			c.ConnectionAcquired = acquired
 		},
 		DNSStart: func(_ httptrace.DNSStartInfo) {
 			c.mu.Lock()
@@ -492,6 +503,13 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	)
 
 	if connectionAcquired != nil {
+		results.Connection = expr.Connection{
+			LocalAddr:  connectionAcquired.LocalAddr,
+			RemoteAddr: connectionAcquired.RemoteAddr,
+			Reused:     connectionAcquired.Reused,
+			WasIdle:    connectionAcquired.WasIdle,
+			IdleTime:   connectionAcquired.IdleTime,
+		}
 		if duration := connectionAcquired.Time.Sub(connectionGet.Time); duration >= 0 {
 			results.ConnectionAcquireDuration = duration
 			t.connectionMetricStore.MeasureConnectionAcquireDuration(
