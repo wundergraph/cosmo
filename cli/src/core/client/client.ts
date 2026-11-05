@@ -8,6 +8,7 @@ export interface ClientOptions {
   baseUrl: string;
   apiKey?: string;
   proxyUrl?: string;
+  timeoutMs?: number;
 }
 
 export interface Client {
@@ -37,7 +38,7 @@ export const CreateClient = (opts: ClientOptions): Client => {
 
     // Interceptors apply to all calls running through this transport.
     interceptors: [],
-    defaultTimeoutMs: 120_000,
+    defaultTimeoutMs: opts.timeoutMs ?? 120_000,
   });
 
   return {
