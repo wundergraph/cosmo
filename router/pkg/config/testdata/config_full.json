@@ -429,6 +429,19 @@
             "Path": "/etc/secrets/api-key",
             "RefreshInterval": 60000000000
           }
+        },
+        {
+          "Operation": "remove",
+          "Matching": "(?i)^X-Custom-Internal-.*",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": null
         }
       ],
       "Response": [
@@ -455,6 +468,19 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null,
+            "FromFile": null
+          },
+          {
+            "Operation": "remove",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-API-Key",
+            "Rename": "",
+            "Default": "",
             "Name": "",
             "Value": "",
             "Expression": "",
