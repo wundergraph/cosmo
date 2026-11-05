@@ -87,7 +87,7 @@
     },
     "scale@1": {
       "name": "Scale",
-      "price": 3499,
+      "price": -1,
       "active": true,
       "stripePriceId": "price_1P3MCcKHknvMloVzs1ehNEUr",
       "weight": 2,

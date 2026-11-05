@@ -85,7 +85,7 @@ export class BillingService {
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
     const plan = await this.billingRepository.getPlanById(params.plan);
 
-    if (!plan?.stripePriceId) {
+    if (!plan?.stripePriceId || plan.price === -1) {
       throw new Error('Invalid billing plan');
     }
 
@@ -211,7 +211,7 @@ export class BillingService {
 
     const plan = await this.billingRepository.getPlanById(params.planId);
 
-    if (!plan?.stripePriceId) {
+    if (!plan?.stripePriceId || plan.price === -1) {
       throw new Error('Invalid billing plan');
     }
 
