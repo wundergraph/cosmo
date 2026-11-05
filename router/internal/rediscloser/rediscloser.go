@@ -26,6 +26,9 @@ type RedisCloserOptions struct {
 	// bounded provider startup) should pass a context with a timeout so a black-holed broker
 	// cannot block the ping for the full go-redis dial timeout.
 	Context context.Context
+	// ContextTimeoutEnabled makes command deadlines cut blocked socket reads;
+	// otherwise only the client's read timeout does.
+	ContextTimeoutEnabled bool
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
@@ -60,6 +63,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			clusterOps.Password = opts.Password
 		}
 
+		clusterOps.ContextTimeoutEnabled = opts.ContextTimeoutEnabled
 		rdb = redis.NewClusterClient(clusterOps)
 	} else {
 		urlEncodedOpts, err := redis.ParseURL(opts.URLs[0])
@@ -71,6 +75,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			// provided in the URL
 			urlEncodedOpts.Password = opts.Password
 		}
+		urlEncodedOpts.ContextTimeoutEnabled = opts.ContextTimeoutEnabled
 		rdb = redis.NewClient(urlEncodedOpts)
 
 		if isClusterClient(rdb) {
