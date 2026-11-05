@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { byApiKey } from '../repositories/ApiKeyRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { traced } from '../tracing.js';
 import type { LoginMethod } from '../../types/index.js';
@@ -35,7 +36,7 @@ export default class ApiKeyAuthenticator {
    */
   public async authenticate(apiKey: string): Promise<ApiKeyAuthContext> {
     const apiKeyModel = await this.db.query.apiKeys.findFirst({
-      where: eq(schema.apiKeys.key, apiKey),
+      where: byApiKey(apiKey),
       with: {
         user: true,
       },
