@@ -5,6 +5,16 @@
   "main": "./dist/index.js",
   "type": "module",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./defer-advisor": {
+      "types": "./dist/defer-advisor/index.d.ts",
+      "default": "./dist/defer-advisor/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -39,7 +49,8 @@
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "graphql": "catalog:",
-    "pino": "catalog:"
+    "pino": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

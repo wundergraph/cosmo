@@ -21,5 +21,23 @@
     "@typescript-eslint/no-non-null-assertion": 0,
     "unicorn/expiring-todo-comments": 0,
     "no-useless-constructor": 0
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/defer-advisor/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "node:*", "@wundergraph/*", "@graphql-tools/*", "@bufbuild/*", "pino"],
+                "message": "Browsers bundle defer-advisor, so it must not reach the rest of shared, its dependencies or node builtins."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

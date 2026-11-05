@@ -1,5 +1,10 @@
-import { slowFieldNames } from './analysis';
-import { collectRootFields, getFragments, getOperation, parseQuery } from './operation';
+import {
+  collectRootFields,
+  getFragments,
+  getOperation,
+  parseQuery,
+  slowFieldNames,
+} from '@wundergraph/cosmo-shared/defer-advisor';
 
 export type FieldPill = {
   fieldName: string;

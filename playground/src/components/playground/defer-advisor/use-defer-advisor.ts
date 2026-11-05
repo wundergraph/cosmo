@@ -1,5 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { ProbeRequest, probeRootFields } from './probe';
+import { ProbeRequest, probeRootFields } from '@wundergraph/cosmo-shared/defer-advisor';
 import { useDefer } from './defer-context';
 
 type Options = {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { parseVariables, probeRootFields, PROBE_RUNS } from '../src/components/playground/defer-advisor/probe';
+import { parseVariables, probeRootFields, PROBE_RUNS } from '../../src/defer-advisor/probe.js';
 
 // graphql's printer breaks selections across lines; compare the shape, not the layout.
 const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
@@ -7,7 +7,7 @@ const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
 type SentRequest = { query: string; variables: Record<string, unknown>; headers: Record<string, string> };
 
 const captureRequests = async (run: () => Promise<unknown>): Promise<SentRequest[]> => {
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ data: {} }) }));
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ data: {} }) }));
   vi.stubGlobal('fetch', fetchMock);
   await run();
   return fetchMock.mock.calls.map(([, init]) => {
@@ -179,7 +179,14 @@ describe('probe HTTP status', () => {
   test('a non-2xx response fails the field even when its body has no errors', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({ ok: false, status: 401, statusText: 'Unauthorized', json: async () => ({ data: {} }) })),
+      vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: () => Promise.resolve({ data: {} }),
+        }),
+      ),
     );
     const results = await probeRootFields('http://router', 'query { a }');
     expect(results.a).toEqual({ ok: false, reason: 'HTTP 401 Unauthorized' });
@@ -188,7 +195,9 @@ describe('probe HTTP status', () => {
   test('a 2xx body that is not a GraphQL response fails the field', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: async () => 'not graphql' })),
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: () => Promise.resolve('not graphql') }),
+      ),
     );
     const results = await probeRootFields('http://router', 'query { a }');
     expect(results.a.ok).toBe(false);

@@ -1,7 +1,7 @@
 import { useEditorContext } from '@graphiql/react';
 import { useEffect, useState } from 'react';
 import { DeferAdvisorPanel } from './defer-advisor-panel';
-import { parseVariables } from './probe';
+import { parseVariables } from '@wundergraph/cosmo-shared/defer-advisor';
 import { useDefer } from './defer-context';
 
 export const DeferAdvisorPluginContent = ({
