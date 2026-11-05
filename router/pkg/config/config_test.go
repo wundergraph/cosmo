@@ -126,6 +126,84 @@ router_config_path: "config.json"
 	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
 }
 
+func TestRouterTrafficTimeouts(t *testing.T) {
+	t.Run("defaults keep the 60s read timeout", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 60*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.IdleTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.WriteTimeout)
+	})
+
+	t.Run("from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+
+traffic_shaping:
+  router:
+    read_timeout: 30s
+    read_header_timeout: 5s
+    idle_timeout: 2m
+    write_timeout: 3m
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 30*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
+		require.Equal(t, 5*time.Second, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+		require.Equal(t, 2*time.Minute, cfg.Config.TrafficShaping.Router.IdleTimeout)
+		require.Equal(t, 3*time.Minute, cfg.Config.TrafficShaping.Router.WriteTimeout)
+	})
+
+	t.Run("read timeout below minimum is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+
+traffic_shaping:
+  router:
+    read_timeout: 0s
+`)
+		_, err := LoadConfig([]string{f})
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/traffic_shaping/router/read_timeout': duration must be greater or equal than 1s", js.Causes[0].Error())
+	})
+}
+
+func TestRouterTrafficTimeoutsFromEnv(t *testing.T) {
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_READ_TIMEOUT", "20s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_READ_HEADER_TIMEOUT", "3s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "45s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "50s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, 20*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
+	require.Equal(t, 3*time.Second, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+	require.Equal(t, 45*time.Second, cfg.Config.TrafficShaping.Router.IdleTimeout)
+	require.Equal(t, 50*time.Second, cfg.Config.TrafficShaping.Router.WriteTimeout)
+}
+
 func TestCustomBytesExtension(t *testing.T) {
 	t.Parallel()
 
