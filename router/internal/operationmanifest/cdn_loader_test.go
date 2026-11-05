@@ -1,4 +1,4 @@
-package pqlmanifest
+package operationmanifest
 
 import (
 	"context"
@@ -13,11 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func newTestFetcher(serverURL string) *Fetcher {
+func newTestFetcher(serverURL string) *CDNLoader {
 	u, _ := url.Parse(serverURL)
-	return &Fetcher{
+	return &CDNLoader{
 		cdnURL:              u,
 		authenticationToken: "test-token",
+		objectPath:          "operations/manifest.json",
 		federatedGraphID:    "graph-id",
 		organizationID:      "org-id",
 		httpClient:          &http.Client{},
@@ -47,7 +48,7 @@ func newETagCDNHandler(m *Manifest) http.Handler {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", etag)
-		w.Write(data)
+		_, _ = w.Write(data)
 	})
 }
 
@@ -71,7 +72,7 @@ func TestFetch_SendsIfNoneMatchHeader(t *testing.T) {
 		receivedBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", `"rev-123"`)
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -197,7 +198,7 @@ func TestFetch_UsesGETMethod(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
