@@ -2848,6 +2848,12 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
+func WithCompatibilityFlags(cfg config.CompatibilityFlags) Option {
+	return func(r *Router) {
+		r.compatibilityFlags = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
