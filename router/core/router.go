@@ -2848,6 +2848,12 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
+func WithGraphQLOverHTTP(cfg config.GraphQLOverHTTPConfiguration) Option {
+	return func(r *Router) {
+		r.graphqlOverHTTP = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg

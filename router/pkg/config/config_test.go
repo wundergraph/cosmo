@@ -1549,6 +1549,9 @@ func TestConfigMerging(t *testing.T) {
 			SubgraphErrorPropagation: SubgraphErrorPropagationConfiguration{
 				Mode: "wrapped",
 			},
+			GraphQLOverHTTP: GraphQLOverHTTPConfiguration{
+				StatusCodes: GraphQLOverHTTPStatusCodesLegacy,
+			},
 			ExecutionConfig: ExecutionConfig{
 				File: ExecutionConfigFile{
 					Path: "ee",

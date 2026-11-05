@@ -1,5 +1,7 @@
 package core
 
+import "net/http"
+
 type HttpError interface {
 	error
 	// ExtensionCode is the code that should be included in the error extensions
@@ -17,6 +19,9 @@ type httpGraphqlError struct {
 	extensionCode string
 	message       string
 	statusCode    int
+	// kind classifies the error, so that the status code of the GraphQL over HTTP spec
+	// can be used instead of statusCode when the response is written
+	kind errorKind
 }
 
 func NewHttpGraphqlError(message, extensionCode string, statusCode int) HttpError {
@@ -41,4 +46,33 @@ func (e *httpGraphqlError) Message() string {
 
 func (e *httpGraphqlError) StatusCode() int {
 	return e.statusCode
+}
+
+type errorKind uint8
+
+const (
+	errorKindUnknown errorKind = iota
+	errorKindBlocked
+	errorKindNotOnSafelist
+	errorKindNoIntrospection
+	errorKindInvalidOperationName
+	errorKindInvalidVariables
+	errorKindPersistedQueryNotConfigured
+	errorKindInvalidDefer
+	errorKindFileUploadDisabled
+	errorKindMutationOverGET
+)
+
+// specStatusCodes are the status codes of the GraphQL over HTTP spec for each kind of error.
+// They are only used when graphql_over_http.status_codes is set to spec.
+var specStatusCodes = map[errorKind]int{
+	errorKindBlocked:                     http.StatusForbidden,
+	errorKindNotOnSafelist:               http.StatusForbidden,
+	errorKindNoIntrospection:             http.StatusForbidden,
+	errorKindInvalidOperationName:        http.StatusUnprocessableEntity,
+	errorKindInvalidVariables:            http.StatusUnprocessableEntity,
+	errorKindPersistedQueryNotConfigured: http.StatusUnprocessableEntity,
+	errorKindInvalidDefer:                http.StatusNotAcceptable,
+	errorKindFileUploadDisabled:          http.StatusUnsupportedMediaType,
+	errorKindMutationOverGET:             http.StatusMethodNotAllowed,
 }
