@@ -69,7 +69,22 @@ func TestDeferAcceptHeader(t *testing.T) {
 				assert.Equal(t, http.StatusOK, res.StatusCode)
 				assert.Equal(t, `multipart/mixed; boundary="graphql"; incrementalSpec=v0.2`, res.Header.Get("Content-Type"))
 				assert.True(t, strings.HasPrefix(body, "--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":"), body)
-				assert.True(t, strings.HasSuffix(body, "\"hasNext\":false}\r\n--graphql\r\n\r\n--graphql--"), body)
+				assert.True(t, strings.HasSuffix(body, "\"hasNext\":false}\r\n--graphql--"), body)
+
+				parts, err := parseMultipartParts([]byte(body), "graphql")
+				require.NoError(t, err)
+				require.GreaterOrEqual(t, len(parts), 2)
+				var initial struct {
+					Data struct {
+						Employees []map[string]any
+					}
+				}
+				require.NoError(t, json.Unmarshal(parts[0], &initial))
+				require.NotEmpty(t, initial.Data.Employees)
+				for _, employee := range initial.Data.Employees {
+					assert.Contains(t, employee, "id")
+					assert.NotContains(t, employee, "isAvailable", "deferred fields must not appear in the initial result")
+				}
 			})
 		})
 	}

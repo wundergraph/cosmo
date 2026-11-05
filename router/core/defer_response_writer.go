@@ -8,15 +8,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tidwall/gjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type HttpDeferWriter struct {
-	ctx     context.Context
-	writer  io.Writer
-	flusher http.Flusher
-	buf     *bytes.Buffer
-	started bool
+	ctx       context.Context
+	writer    io.Writer
+	flusher   http.Flusher
+	buf       *bytes.Buffer
+	started   bool
+	completed bool
 }
 
 var _ resolve.DeferResponseWriter = (*HttpDeferWriter)(nil)
@@ -30,15 +32,17 @@ const (
 )
 
 func (f *HttpDeferWriter) Complete() {
-	if f.ctx.Err() != nil {
+	if f.ctx.Err() != nil || f.completed {
 		return
 	}
 
-	// The close follows the last boundary, which leaves an empty part at the end.
+	// A final payload closes the stream in Flush. This is the fallback for
+	// execution that stops before producing a final payload.
 	if f.started {
 		_, _ = io.WriteString(f.writer, "\r\n")
 	}
 	_, _ = io.WriteString(f.writer, deferCloseLine)
+	f.completed = true
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
@@ -63,6 +67,16 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	resp := bytes.TrimRight(f.buf.Bytes(), "\n")
 	f.buf.Reset()
 
+	// A non-final payload must include the next boundary so clients can read it
+	// immediately. The final payload needs the closing boundary instead: opening
+	// another part here would leave an empty part for clients to parse as JSON.
+	// If no deferred anchor survives, the engine omits hasNext entirely.
+	final := !gjson.GetBytes(resp, "hasNext").Bool()
+	boundary := deferPartBoundary
+	if final {
+		boundary = "\r\n" + deferCloseLine
+	}
+
 	header := deferNextPartHeader
 	if !f.started {
 		header = deferFirstPartHeader
@@ -74,9 +88,10 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, deferPartBoundary); err != nil {
+	if _, err = io.WriteString(f.writer, boundary); err != nil {
 		return err
 	}
+	f.completed = final
 
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
