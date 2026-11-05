@@ -58,3 +58,5 @@ export const organizationSchema = z.object({
 export const defaultRetentionLimitInDays = 7;
 
 export const graphTokenFeatures: FeatureIds[] = ['split-config-loading', 'prompt-to-query'];
+
+export const schemaCheckConcurrency = 5;
