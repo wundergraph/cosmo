@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/pkg/errors"
@@ -173,6 +174,11 @@ type ModuleContext struct {
 	stdContext.Context
 	Module Module
 	Logger *zap.Logger
+	// MeterProviders are the router's own meter providers: the one behind its Prometheus endpoint when that is
+	// enabled, and the one behind its OpenTelemetry exporters when OpenTelemetry metrics are enabled. A module that
+	// creates each of its instruments once on every provider, and records on all of them, exports its metrics wherever
+	// the router exports its own. The list is empty when the router's metrics are disabled.
+	MeterProviders []metric.MeterProvider
 }
 
 // WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter

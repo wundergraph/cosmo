@@ -1962,6 +1962,7 @@ func (s *graphServer) buildGraphMux(
 			ClientHeader:              s.clientHeader,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
+			ConnectionInitHandlers:    s.webSocketConnectionInitHandlers,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
