@@ -681,6 +681,9 @@ type graphMux struct {
 	reused    atomic.Bool
 	finalized atomic.Bool
 
+	// websocketHandler is nil when WebSockets are disabled.
+	websocketHandler *WebsocketHandler
+
 	// inFlightRequests tracks the number of requests currently being processed
 	// by this mux. Does not include subscriptions or websocket (hijacked)
 	// connections. A reused mux keeps serving under the next graph server, so
@@ -1000,17 +1003,22 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
-	s.planCache.Close()
-	s.planFallbackCache.Close()
-	s.persistedOperationCache.Close()
-	s.normalizationCache.Close()
-	s.variablesNormalizationCache.Close()
-	s.remapVariablesCache.Close()
-	s.complexityCalculationCache.Close()
-	s.validationCache.Close()
-	s.operationHashCache.Close()
-
 	var err error
+
+	// WebSocket connections are hijacked, so the graph server's in-flight wait
+	// does not cover them. A message still being handled normalizes and plans
+	// through the caches; closing them under it panics in ristretto.
+	if dErr := s.websocketHandler.Drain(ctx); dErr != nil {
+		err = errors.Join(err, dErr)
+		// Don't block shutdown past its deadline, but keep the caches open
+		// until the remaining messages are done with them.
+		go func() {
+			<-s.websocketHandler.Drained()
+			s.closeCaches()
+		}()
+	} else {
+		s.closeCaches()
+	}
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
@@ -1052,6 +1060,18 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *graphMux) closeCaches() {
+	s.planCache.Close()
+	s.planFallbackCache.Close()
+	s.persistedOperationCache.Close()
+	s.normalizationCache.Close()
+	s.variablesNormalizationCache.Close()
+	s.remapVariablesCache.Close()
+	s.complexityCalculationCache.Close()
+	s.validationCache.Close()
+	s.operationHashCache.Close()
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -1943,7 +1963,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
+		gm.websocketHandler = newWebsocketHandler(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,
@@ -1963,6 +1983,7 @@ func (s *graphServer) buildGraphMux(
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
+		wsMiddleware := gm.websocketHandler.Middleware
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.

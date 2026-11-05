@@ -75,6 +75,10 @@ type WebsocketMiddlewareOptions struct {
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
+	return newWebsocketHandler(ctx, opts).Middleware
+}
+
+func newWebsocketHandler(ctx context.Context, opts WebsocketMiddlewareOptions) *WebsocketHandler {
 	handler := &WebsocketHandler{
 		ctx:                       ctx,
 		operationProcessor:        opts.OperationProcessor,
@@ -144,15 +148,99 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 
 	}
 
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !websocket.IsWebSocketUpgrade(r) {
-				next.ServeHTTP(w, r)
-				return
-			}
-			handler.handleUpgradeRequest(w, r)
-		})
+	return handler
+}
+
+// Middleware upgrades WebSocket requests and passes every other request to next.
+func (h *WebsocketHandler) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !websocket.IsWebSocketUpgrade(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		h.handleUpgradeRequest(w, r)
+	})
+}
+
+// Drain waits until no WebSocket message is being handled, or until ctx is
+// done. Call it after the handler's context is canceled: cancellation ends the
+// reads, and Drain waits for messages that are still being handled. Once Drain
+// is called, a connection that delivers another message is closed instead.
+//
+// Message handling normalizes, validates and plans operations through the graph
+// mux caches, so the mux must drain before it closes those caches. When Drain
+// returns an error, messages are still being handled; wait on Drained before
+// closing anything they use.
+func (h *WebsocketHandler) Drain(ctx context.Context) error {
+	idle := h.Drained()
+	// Prefer the idle signal, so an expired ctx doesn't fail an idle handler.
+	select {
+	case <-idle:
+		return nil
+	default:
 	}
+	select {
+	case <-idle:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("waiting for websocket message handlers: %w", ctx.Err())
+	}
+}
+
+// Drained starts draining, like Drain, and returns a channel that is closed
+// once no WebSocket message is being handled.
+func (h *WebsocketHandler) Drained() <-chan struct{} {
+	if h == nil {
+		idle := make(chan struct{})
+		close(idle)
+		return idle
+	}
+	return h.inFlightMessages.drain()
+}
+
+var errWebsocketHandlerDraining = errors.New("websocket handler is draining")
+
+// inFlightTracker counts work in progress and refuses new work once draining
+// starts, so nothing is added after the drain has begun waiting.
+type inFlightTracker struct {
+	mu       sync.Mutex
+	draining bool
+	count    int
+	// idle is created when draining starts and closed once count reaches zero.
+	// No work is added while draining, so it is closed at most once.
+	idle chan struct{}
+}
+
+func (t *inFlightTracker) track() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.draining {
+		return false
+	}
+	t.count++
+	return true
+}
+
+func (t *inFlightTracker) done() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.count--
+	if t.count == 0 && t.idle != nil {
+		close(t.idle)
+	}
+}
+
+func (t *inFlightTracker) drain() <-chan struct{} {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.draining {
+		t.draining = true
+		t.idle = make(chan struct{})
+		if t.count == 0 {
+			close(t.idle)
+		}
+	}
+	return t.idle
 }
 
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows
@@ -399,6 +487,9 @@ type WebsocketHandler struct {
 	netPoll       netpoll.Poller
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
+
+	// inFlightMessages counts the messages being handled, with or without netpoll.
+	inFlightMessages inFlightTracker
 
 	stats statistics.EngineStatistics
 
@@ -1405,6 +1496,12 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
+	if !h.inFlightMessages.track() {
+		// The graph mux is shutting down and may already be closing its caches.
+		return &wsproto.CloseError{Err: errWebsocketHandlerDraining, Kind: wsproto.CloseKindGoingAway}
+	}
+	defer h.inFlightMessages.done()
+
 	switch msg.Type {
 	case wsproto.MessageTypeTerminate:
 		return errClientTerminatedConnection
