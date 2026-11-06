@@ -65,7 +65,7 @@ export async function getDiffBetweenGraphs(
       oldSchema = oldSchemaSDL;
     }
 
-    if (typeof newSchemaSDL === 'string') {
+    if (typeof newSchemaSDL === 'string' && newSchemaSDL.length > 0) {
       const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
