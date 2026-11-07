@@ -130,7 +130,7 @@ overrides:
   tmp: 0.2.7
   fast-xml-parser: 5.8.0
   '@aws-sdk/client-sesv2': ^3.996.0
-  handlebars: 4.7.9
+  handlebars: 4.7.10
   socket.io-parser: 4.2.7
   minimatch@3.x: 3.1.4
   minimatch@4.x: 4.2.5
@@ -143,7 +143,7 @@ overrides:
   markdown-it: 14.3.0
   rollup@3.29.5: 3.30.0
   '@rollup/pluginutils@5.3.0>rollup': 4.59.0
-  shell-quote: 1.10.0
+  shell-quote: 1.11.0
   picomatch@2.x: 2.3.2
   picomatch@4.x: 4.0.4
   brace-expansion@1.x: 1.1.18
@@ -156,7 +156,7 @@ overrides:
   ws@8.x: 8.21.0
   ajv@6.x: 6.14.0
   hono@4.x: 4.12.25
-  dompurify: 3.4.12
+  dompurify: 3.4.17
   postcss: 8.5.26
   sigstore: 4.1.1
   engine.io: 6.6.9
@@ -1307,8 +1307,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       dompurify:
-        specifier: 3.4.12
-        version: 3.4.12
+        specifier: 3.4.17
+        version: 3.4.17
       framer-motion:
         specifier: ^11.0.3
         version: 11.0.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -7036,6 +7036,7 @@ packages:
   '@smithy/smithy-client@4.11.7':
     resolution: {integrity: sha512-gQP2J3qB/Wmc26gdmB8gA6zq2o2spG5sEU3o7TaTATBJEk29sYGWdEFoGEy91BczSpifTo0DQhVYjZXBEVcrpA==}
     engines: {node: '>=18.0.0'}
+    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/types@4.12.1':
     resolution: {integrity: sha512-ow30Ze/DD02KH2p0eMyIF2+qJzGyNb0kFrnTRtPpuOkQ4hrgvLdaU4YC6r/K8aOrCML4FH0Cmm0aI4503L1Hwg==}
@@ -9240,8 +9241,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.12:
-    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
+  dompurify@3.4.17:
+    resolution: {integrity: sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==}
 
   domutils@2.8.0:
     resolution: {integrity: sha512-w96Cjofp72M5IIhpjgobBimYEfoPjx1Vx0BSX9P30WBdZW2WIKU0T1Bd0kz2eNZ9ikjKgHbEyKx8BB6H1L3h3A==}
@@ -10338,8 +10339,8 @@ packages:
     resolution: {integrity: sha512-GGTKBX4SD7Wdb8mqeDLni2oaRGYQWjWHGKPQ24ZMnUtKfcsVoiv4uX8+LJr1K6U5VW2Lu1BwJnj7uiori0YtRw==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
-  handlebars@4.7.9:
-    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
+  handlebars@4.7.10:
+    resolution: {integrity: sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -13363,8 +13364,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.10.0:
-    resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
+  shell-quote@1.11.0:
+    resolution: {integrity: sha512-JdxDPD0DBTyu08pq0kPC0xSNet/qsU07qT6IsX1AS8oO2ICNRY4ldNa8OAI6PuwAH8tG3lxEhbqmyp4Dw4036g==}
     engines: {node: '>= 0.4'}
 
   shimmer@1.2.1:
@@ -23503,7 +23504,7 @@ snapshots:
     dependencies:
       '@simple-libs/stream-utils': 1.2.0
       conventional-commits-filter: 5.0.0
-      handlebars: 4.7.9
+      handlebars: 4.7.10
       meow: 13.2.0
       semver: 7.7.1
 
@@ -23960,7 +23961,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.12:
+  dompurify@3.4.17:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -25401,7 +25402,7 @@ snapshots:
 
   graphql@16.9.0(patch_hash=5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f): {}
 
-  handlebars@4.7.9:
+  handlebars@4.7.10:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2
@@ -26019,7 +26020,7 @@ snapshots:
 
   isomorphic-dompurify@2.33.0(supports-color@10.2.0):
     dependencies:
-      dompurify: 3.4.12
+      dompurify: 3.4.17
       jsdom: 27.2.0(supports-color@10.2.0)
     transitivePeerDependencies:
       - bufferutil
@@ -26208,7 +26209,7 @@ snapshots:
   launch-editor@2.13.2:
     dependencies:
       picocolors: 1.1.1
-      shell-quote: 1.10.0
+      shell-quote: 1.11.0
 
   leac@0.6.0: {}
 
@@ -27762,7 +27763,7 @@ snapshots:
       '@posthog/core': 1.38.0
       '@posthog/types': 1.391.1
       core-js: 3.41.0
-      dompurify: 3.4.12
+      dompurify: 3.4.17
       fflate: 0.4.8
       preact: 10.29.3
       query-selector-shadow-dom: 1.0.1
@@ -28819,7 +28820,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.10.0: {}
+  shell-quote@1.11.0: {}
 
   shimmer@1.2.1: {}
 
