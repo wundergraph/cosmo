@@ -2,6 +2,7 @@ package retrytransport
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -1148,4 +1149,174 @@ func TestShouldUseRetryAfter(t *testing.T) {
 			assert.Equal(t, tt.expectedUse, use)
 		})
 	}
+}
+
+func TestNoRetryOnContextDeadlineExceeded(t *testing.T) {
+	retries := 0
+	attemptCount := 0
+	maxRetries := 3
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Second))
+	defer cancel()
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				return nil, context.DeadlineExceeded
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      10 * time.Millisecond,
+			MaxDuration:   100 * time.Millisecond,
+			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+				return true
+			},
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+				retries++
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil).WithContext(ctx)
+
+	resp, err := tr.RoundTrip(req)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, resp)
+	assert.Equal(t, 0, retries, "expired context must not perform retries")
+	assert.Equal(t, 1, attemptCount, "only the initial attempt should be executed")
+}
+
+func TestNoRetryOnContextCanceled(t *testing.T) {
+	retries := 0
+	attemptCount := 0
+	maxRetries := 3
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				return nil, context.Canceled
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      10 * time.Millisecond,
+			MaxDuration:   100 * time.Millisecond,
+			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+				return true
+			},
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+				retries++
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil).WithContext(ctx)
+
+	resp, err := tr.RoundTrip(req)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, resp)
+	assert.Equal(t, 0, retries, "canceled context must not perform retries")
+	assert.Equal(t, 1, attemptCount, "only the initial attempt should be executed")
+}
+
+func TestRetryAbortsWhenContextCanceledDuringBackoff(t *testing.T) {
+	retries := 0
+	attemptCount := 0
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, nil
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: 3,
+			Interval:      10 * time.Second,
+			MaxDuration:   10 * time.Second,
+			ShouldRetry:   simpleShouldRetry,
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+				retries++
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					cancel()
+				}()
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil).WithContext(ctx)
+
+	start := time.Now()
+	_, err := tr.RoundTrip(req)
+	duration := time.Since(start)
+
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 1, attemptCount, "subsequent attempts must not run after context cancellation")
+	assert.Less(t, duration, 2*time.Second, "retry wait must abort immediately when context is canceled")
+}
+
+func TestRetryAllowedWhenContextNotExpired(t *testing.T) {
+	retries := 0
+	attemptCount := 0
+	maxRetries := 3
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				if attemptCount == 1 {
+					return nil, errors.New("timeout awaiting response headers")
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+				return err != nil
+			},
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+				retries++
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil).WithContext(ctx)
+
+	resp, err := tr.RoundTrip(req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 1, retries)
+	assert.Equal(t, 2, attemptCount)
 }
