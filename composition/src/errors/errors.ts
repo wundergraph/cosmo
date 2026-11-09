@@ -2327,7 +2327,7 @@ export function inaccessibleCacheTagReferenceErrorMessage({
   reference,
   subgraphName,
 }: UnavailableCacheTagReferenceErrorMessageParams): string {
-  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" is inaccessible.`;
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@inaccessible".`;
 }
 
 export function fromContextCacheTagReferenceErrorMessage({
