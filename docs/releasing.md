@@ -9,11 +9,15 @@ Release the full monorepo with all packages and services can be done by triggeri
    - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
    - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
    - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
-   On every push to `main`, the same workflow also builds the router image (and its `nonroot` variant) and tags it with:
-   - `main`: Always points to the latest commit on `main`.
-   - `main-<short-sha>`: The short SHA of the pushed commit, e.g. `main-d7f7524`.
 
-   Pushes to `main` never move the `latest` tag. Only releases do.
+   For every service except the router, the release also tags the image `main`.
+
+   The router image (and its `nonroot` variant) gets its `main` tags from pushes instead. On every push to `main`, the same workflow builds the router image and tags it with:
+   - `main-<short-sha>`: The short SHA of the pushed commit, e.g. `main-d7f7524`. Every push gets one.
+   - `main`: The newest commit on `main` whose router images are built. A later job moves this tag, and it never moves it to an older commit.
+
+   Router releases do not change the router's `main` tag. The `chore(release): Publish [skip ci]` commits do not start a push build, so `main` and `main-<short-sha>` never point to them. Pushes to `main` never move the `latest` tag. Only releases do.
+
 2. After the release, you can validate the release by:
    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
    2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)

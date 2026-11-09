@@ -35,12 +35,6 @@ on:
         type: string
         default: .
 
-# Serialize main pushes so an older commit can never overwrite a newer `main` tag.
-# Release dispatches keep running independently.
-concurrency:
-  group: ${{ github.event_name == 'push' && format('{0}-main', github.workflow) || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -82,8 +76,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}
           flavor: |
             suffix=${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }},onlatest=true
+          # The router's `main` tag is moved only by the promote-main job below, never by a
+          # release, so a release of an older commit cannot roll it back. Other services
+          # have no push build and keep getting `main` from their releases.
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ env.SERVICE_NAME != 'router' }}
             type=sha,enable=${{ env.IS_RELEASE }}
             # set latest tag for default branch, only on releases
             type=raw,value=latest,enable=${{ env.IS_RELEASE == 'true' && github.ref_name == github.event.repository.default_branch }}
@@ -133,3 +130,104 @@ jobs:
             VERSION=${{ inputs.tag || format('main-{0}', github.sha) }}
             DATE=${{ env.BUILD_TIME }}
             COMMIT=${{ github.sha }}
+
+  # Moves the router's `main` tag after a push to main. The build job above has no
+  # concurrency group, so every push publishes its own `main-<shortsha>`. This job is
+  # serialized per service and never cancelled, but GitHub may replace a pending run
+  # with a newer one. To stay correct when that happens, each run promotes the newest
+  # commit on main whose images are all published, and only if it is newer than the
+  # commit `main` already points to. So `main` never moves to an older commit.
+  promote-main:
+    if: github.event_name == 'push'
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-promote-main-router
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Github Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote newest built commit to main
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}
+          OWN_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          suffixes=("" "-nonroot")
+
+          # Commit that `main` points to now, from the OCI revision label.
+          current=""
+          if docker buildx imagetools inspect "$IMAGE:main" > /dev/null 2>&1; then
+            current=$(docker buildx imagetools inspect "$IMAGE:main" --format '{{json .Image}}' \
+              | jq -r 'if has("config") then .config.Labels else (to_entries[0].value.config.Labels) end
+                       | .["org.opencontainers.image.revision"] // ""')
+          fi
+          echo "main currently points to: ${current:-<none>}"
+
+          # Walk main from its head back to this run's commit, newest first.
+          found=false
+          for commit in $(git rev-list --first-parent --max-count=200 HEAD); do
+            if [ "$commit" = "$current" ]; then
+              echo "main already points to the newest built commit"
+              exit 0
+            fi
+            short="${commit:0:7}"
+            complete=true
+            for suffix in "${suffixes[@]}"; do
+              if ! docker buildx imagetools inspect "$IMAGE:main-$short$suffix" > /dev/null 2>&1; then
+                complete=false
+                break
+              fi
+            done
+            if [ "$complete" = true ]; then
+              found=true
+              break
+            fi
+            if [ "$commit" = "$OWN_SHA" ]; then
+              break
+            fi
+          done
+
+          if [ "$found" != true ]; then
+            echo "::warning::No complete main-<shortsha> image found between main and $OWN_SHA"
+            exit 0
+          fi
+
+          if [ -n "$current" ]; then
+            if ! git cat-file -e "$current^{commit}" 2> /dev/null; then
+              echo "::warning::main points to unknown commit $current, replacing it"
+            elif ! git merge-base --is-ancestor "$current" "$commit"; then
+              echo "main points to $current, which is not older than $commit; leaving it"
+              exit 0
+            fi
+          fi
+
+          echo "Promoting main-$short to main"
+          for suffix in "${suffixes[@]}"; do
+            docker buildx imagetools create \
+              --annotation "index:org.opencontainers.image.description=$SERVICE_NAME" \
+              --annotation "index:org.opencontainers.image.source=https://github.com/wundergraph/cosmo" \
+              --annotation "index:org.opencontainers.image.licenses=Apache-2.0" \
+              --tag "$IMAGE:main$suffix" "$IMAGE:main-$short$suffix"
+          done
+          echo -e "# router\nmain -> main-$short ($commit)" >> "$GITHUB_STEP_SUMMARY"
