@@ -618,6 +618,19 @@
       "additionalProperties": false,
       "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router.",
       "properties": {
+        "watch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reload certificate, key and CA files from disk when they change. New connections use the new files. Open connections are not affected. A file that fails to load is reported and the previous one stays in use. The default value is false."
+        },
+        "watch_interval": {
+          "type": "string",
+          "description": "The interval at which the certificate files are checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s",
+          "duration": {
+            "minimum": "100ms"
+          }
+        },
         "server": {
           "type": "object",
           "description": "The configuration for the server TLS. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",

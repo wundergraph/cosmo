@@ -1,9 +1,12 @@
 package core
 
 import (
+	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -282,4 +285,196 @@ func generateTestCert(t *testing.T, prefix string) (certPath, keyPath string) {
 	require.NoError(t, keyFile.Close())
 
 	return certPath, keyPath
+}
+
+func TestCertReloader(t *testing.T) {
+	t.Parallel()
+
+	t.Run("serves the new certificate after reload", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+		oldCertPath, oldKeyPath := generateTestCert(t, "old")
+		newCertPath, newKeyPath := generateTestCert(t, "new")
+		copyFile(t, oldCertPath, certPath)
+		copyFile(t, oldKeyPath, keyPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, "")
+		require.NoError(t, err)
+
+		served, err := reloader.getCertificate(nil)
+		require.NoError(t, err)
+		require.Equal(t, mustReadFile(t, oldCertPath), pemOf(served))
+
+		copyFile(t, newCertPath, certPath)
+		copyFile(t, newKeyPath, keyPath)
+		require.NoError(t, reloader.reload())
+
+		served, err = reloader.getClientCertificate(nil)
+		require.NoError(t, err)
+		require.Equal(t, mustReadFile(t, newCertPath), pemOf(served))
+	})
+
+	t.Run("keeps the previous certificate when reload fails", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+		oldCertPath, oldKeyPath := generateTestCert(t, "old")
+		copyFile(t, oldCertPath, certPath)
+		copyFile(t, oldKeyPath, keyPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, "")
+		require.NoError(t, err)
+
+		require.NoError(t, os.WriteFile(certPath, []byte("not a certificate"), 0o600))
+		require.ErrorContains(t, reloader.reload(), "failed to load tls cert and key")
+
+		served, err := reloader.getCertificate(nil)
+		require.NoError(t, err)
+		require.Equal(t, mustReadFile(t, oldCertPath), pemOf(served))
+	})
+
+	t.Run("reloads the CA pool", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		caPath := filepath.Join(dir, "ca.crt")
+		oldCAPath, _ := generateTestCert(t, "old-ca")
+		newCAPath, _ := generateTestCert(t, "new-ca")
+		copyFile(t, oldCAPath, caPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add("", "", caPath)
+		require.NoError(t, err)
+		require.Nil(t, reloader.cert.Load())
+		before := reloader.ca.Load()
+		require.NotNil(t, before)
+
+		copyFile(t, newCAPath, caPath)
+		require.NoError(t, reloader.reload())
+		require.False(t, before.Equal(reloader.ca.Load()))
+	})
+
+	t.Run("keeps the previous CA pool when the new certificate loads but the CA does not", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath, caPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), filepath.Join(dir, "ca.crt")
+		oldCertPath, oldKeyPath := generateTestCert(t, "old")
+		newCertPath, newKeyPath := generateTestCert(t, "new")
+		copyFile(t, oldCertPath, certPath)
+		copyFile(t, oldKeyPath, keyPath)
+		copyFile(t, oldCertPath, caPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, caPath)
+		require.NoError(t, err)
+		oldPool := reloader.ca.Load()
+
+		copyFile(t, newCertPath, certPath)
+		copyFile(t, newKeyPath, keyPath)
+		require.NoError(t, os.WriteFile(caPath, []byte("not a certificate"), 0o600))
+		require.ErrorContains(t, reloader.reload(), "failed to append CA cert to pool")
+
+		// Neither half of the rotation is applied until both halves load.
+		served, err := reloader.getCertificate(nil)
+		require.NoError(t, err)
+		require.Equal(t, mustReadFile(t, oldCertPath), pemOf(served))
+		require.True(t, oldPool.Equal(reloader.ca.Load()))
+	})
+
+	t.Run("watch picks up a rotation that happened before it started", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+		oldCertPath, oldKeyPath := generateTestCert(t, "old")
+		newCertPath, newKeyPath := generateTestCert(t, "new")
+		copyFile(t, oldCertPath, certPath)
+		copyFile(t, oldKeyPath, keyPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, "")
+		require.NoError(t, err)
+
+		copyFile(t, newCertPath, certPath)
+		copyFile(t, newKeyPath, keyPath)
+
+		require.NoError(t, reloaders.watch(t.Context(), zap.NewNop(), time.Hour))
+
+		require.Eventually(t, func() bool {
+			served, _ := reloader.getCertificate(nil)
+			return bytes.Equal(mustReadFile(t, newCertPath), pemOf(served))
+		}, 5*time.Second, 20*time.Millisecond)
+	})
+
+	t.Run("fails to add when files are missing", func(t *testing.T) {
+		t.Parallel()
+
+		var reloaders certReloaders
+		_, err := reloaders.add("/nonexistent/tls.crt", "/nonexistent/tls.key", "")
+		require.ErrorContains(t, err, "failed to load tls cert and key")
+		require.Empty(t, reloaders.list)
+	})
+
+	t.Run("watch reloads every registered certificate when a file changes", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+		oldCertPath, oldKeyPath := generateTestCert(t, "old")
+		newCertPath, newKeyPath := generateTestCert(t, "new")
+		copyFile(t, oldCertPath, certPath)
+		copyFile(t, oldKeyPath, keyPath)
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, "")
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		require.NoError(t, reloaders.watch(ctx, zap.NewNop(), 50*time.Millisecond))
+
+		// The watcher captures the mod time on its first tick. Give it one before rotating.
+		time.Sleep(100 * time.Millisecond)
+		copyFile(t, newCertPath, certPath)
+		copyFile(t, newKeyPath, keyPath)
+
+		require.Eventually(t, func() bool {
+			served, _ := reloader.getCertificate(nil)
+			return bytes.Equal(mustReadFile(t, newCertPath), pemOf(served))
+		}, 5*time.Second, 20*time.Millisecond)
+	})
+
+	t.Run("watch is a no-op without registered files", func(t *testing.T) {
+		t.Parallel()
+
+		var reloaders certReloaders
+		require.NoError(t, reloaders.watch(t.Context(), zap.NewNop(), time.Second))
+	})
+}
+
+func copyFile(t *testing.T, src, dst string) {
+	t.Helper()
+	data, err := os.ReadFile(src)
+	require.NoError(t, err)
+	// mtime resolution on some file systems is coarse. Bump it explicitly so a watcher sees the change.
+	require.NoError(t, os.WriteFile(dst, data, 0o600))
+	now := time.Now().Add(time.Second)
+	require.NoError(t, os.Chtimes(dst, now, now))
+}
+
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return data
+}
+
+func pemOf(cert *tls.Certificate) []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Certificate[0]})
 }

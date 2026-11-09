@@ -869,6 +869,102 @@ func TestWatch(t *testing.T) {
 	})
 }
 
+func TestCallbackOnStart(t *testing.T) {
+	t.Parallel()
+
+	t.Run("runs the callback once after the baseline and not again without changes", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			timeSyncFS := newTimeSyncFS()
+
+			dir := t.TempDir()
+			tempFile := filepath.Join(dir, "config.json")
+			require.NoError(t, timeSyncFS.WriteFile(tempFile, []byte("a"), 0o600))
+
+			spy := test.NewCallSpy()
+			tickerChan := make(chan time.Time)
+			watchFunc, err := watcher.New(watcher.Options{
+				Interval:        watchInterval,
+				Logger:          zap.NewNop(),
+				Paths:           []string{tempFile},
+				Callback:        spy.Call,
+				CallbackOnStart: true,
+				TickSource:      tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return timeSyncFS.GetFileInfo(path)
+				},
+			})
+			require.NoError(t, err)
+
+			go func() {
+				_ = watchFunc(ctx)
+			}()
+			synctest.Wait()
+
+			spy.AssertCalled(t, 1)
+
+			sendSyncTick(tickerChan)
+			sendSyncTick(tickerChan)
+
+			spy.AssertCalled(t, 1)
+		})
+	})
+}
+
+func TestModTimeComparison(t *testing.T) {
+	t.Parallel()
+
+	t.Run("detects a file replaced with an older modification time", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			timeSyncFS := newTimeSyncFS()
+
+			dir := t.TempDir()
+			tempFile := filepath.Join(dir, "tls.crt")
+			require.NoError(t, timeSyncFS.WriteFile(tempFile, []byte("a"), 0o600))
+
+			spy := test.NewCallSpy()
+			tickerChan := make(chan time.Time)
+			watchFunc, err := watcher.New(watcher.Options{
+				Interval:   watchInterval,
+				Logger:     zap.NewNop(),
+				Paths:      []string{tempFile},
+				Callback:   spy.Call,
+				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return timeSyncFS.GetFileInfo(path)
+				},
+			})
+			require.NoError(t, err)
+
+			go func() {
+				_ = watchFunc(ctx)
+			}()
+
+			sendSyncTick(tickerChan)
+			sendSyncTick(tickerChan)
+
+			// A symlink swap to a pre-generated file can hand the watcher an older timestamp.
+			fi, err := timeSyncFS.GetFileInfo(tempFile)
+			require.NoError(t, err)
+			fi.modTime = fi.modTime.Add(-time.Hour)
+
+			sendSyncTick(tickerChan)
+			sendSyncTick(tickerChan)
+
+			spy.AssertCalled(t, 1)
+		})
+	})
+}
+
 func TestCancel(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -927,7 +1023,7 @@ func newTimeSyncFileInfo() *timeSyncFileInfo {
 // They might only do seconds or milliseconds. So if you write/rename files quickly in succession,
 // they can end up with identical timestamps from the filesystem's perspective.
 //
-// The watcher detects changes by calling os.Stat() and checking if stat.ModTime().After(prevModTime).
+// The watcher detects changes by calling os.Stat() and comparing stat.ModTime() with prevModTime.
 // If timestamps don't advance (filesystem resolution issue) or don't match the test's time control
 // (synctest mismatch), this comparison breaks and the watcher won't detect changes properly.
 //

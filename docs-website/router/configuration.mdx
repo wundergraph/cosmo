@@ -381,6 +381,11 @@ For more details on how to use the MCP server, see the [MCP Integration document
 
 The Router supports TLS and mTLS for secure communication with your clients and infrastructure components like load balancer.
 
+| Environment Variable | YAML           | Required               | Description                                                                                                                                 | Default Value |
+| -------------------- | -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_WATCH            | watch          | <Icon icon="square" /> | Reloads certificate, key and CA files from disk when they change. New connections use the new files. Open connections are not affected. | false         |
+| TLS_WATCH_INTERVAL   | watch_interval | <Icon icon="square" /> | The interval at which the certificate files are checked for changes.                                                                        | 1s            |
+
 ### Server TLS
 
 | Environment Variable | YAML      | Required               | Description                              | Default Value |

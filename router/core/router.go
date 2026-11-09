@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"maps"
@@ -163,6 +162,9 @@ type (
 		// It's used for the routers http server.
 		// It's created once during bootstrap and reused during server swap.
 		compiledServerConfig *tls.Config
+
+		// certs holds every certificate loaded from the settings so they can be reloaded from disk.
+		certs certReloaders
 	}
 
 	RouterConfigPollerConfig struct {
@@ -597,6 +599,8 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 // It's meant to be used as the routers http server tls configuration.
 // If TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
+// The certificate and the client CA are served through callbacks so that
+// a reload swaps them for new connections without restarting the listener.
 func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	serverTLS := r.tls.settings.Server
 
@@ -612,42 +616,43 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		return nil, errors.New("tls key file not provided")
 	}
 
-	var caCertPool *x509.CertPool
-	clientAuthMode := tls.NoClientCert
+	certs, err := r.tls.certs.add(serverTLS.CertFile, serverTLS.KeyFile, serverTLS.ClientAuth.CertFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &tls.Config{
+		GetCertificate: certs.getCertificate,
+	}
 
 	if serverTLS.ClientAuth.CertFile != "" {
-		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read cert file: %w", err)
-		}
-
-		// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
-		caPool := x509.NewCertPool()
-		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-			return nil, errors.New("failed to append cert to pool")
-		}
-		caCertPool = caPool
-
 		if serverTLS.ClientAuth.Required {
-			clientAuthMode = tls.RequireAndVerifyClientCert
+			cfg.ClientAuth = tls.RequireAndVerifyClientCert
 		} else {
-			clientAuthMode = tls.VerifyClientCertIfGiven
+			cfg.ClientAuth = tls.VerifyClientCertIfGiven
 		}
 
-		r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
+		// ClientCAs has no callback of its own. Hand Go a per-handshake copy of
+		// this config that carries the current pool. The copy inherits whatever
+		// net/http set on cfg at startup, such as the ALPN protocols.
+		cfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+			c := cfg.Clone()
+			c.ClientCAs = certs.ca.Load()
+			return c, nil
+		}
+
+		r.logger.Debug("Client auth enabled", zap.String("mode", cfg.ClientAuth.String()))
 	}
 
-	// Load the server cert and private key
-	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
-	}
+	return cfg, nil
+}
 
-	return &tls.Config{
-		ClientCAs:    caCertPool,
-		Certificates: []tls.Certificate{cer},
-		ClientAuth:   clientAuthMode,
-	}, nil
+// watchTLSCertificates reloads certificates from disk when tls.watch is enabled.
+func (r *Router) watchTLSCertificates(ctx context.Context) error {
+	if !r.tls.settings.Watch {
+		return nil
+	}
+	return r.tls.certs.watch(ctx, r.logger, r.tls.settings.WatchInterval)
 }
 
 // newGraphServer creates a new server.
@@ -852,6 +857,10 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return nil, err
 	}
 
 	r.configureUsageTracking(ctx)
@@ -1779,6 +1788,10 @@ func (r *Router) Start(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return err
 	}
 
 	if r.reloadPersistentState == nil {

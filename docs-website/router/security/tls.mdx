@@ -117,6 +117,34 @@ _, err = client.Do(req)
 
 That's it! The router should now be able to receive TLS connections **only** from clients who authenticate themselves using a certificate issued by your trusted CA.
 
+## Certificate Reloading
+
+The router can reload certificate files from disk without a restart. Set `tls.watch` to `true`. The router then checks the files at `tls.watch_interval` and loads them again when they change.
+
+```yaml config.yaml
+tls:
+  watch: true
+  watch_interval: 1s
+  server:
+    enabled: true
+    key_file: ../your/key.pem
+    cert_file: ../your/cert.pem
+    client_auth:
+      required: true
+      cert_file: ../your/ca.pem
+```
+
+A reload applies to new connections. Open connections keep the certificate they were established with. The listener stays up during a reload, so requests are not interrupted.
+
+The following files are reloaded:
+
+* `tls.server.cert_file` and `tls.server.key_file`
+* `tls.server.client_auth.cert_file`
+
+When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.
+
+Files replaced through a symlink swap, as Kubernetes does for mounted Secrets, are detected because the router compares the modification time of the resolved file.
+
 ## TLS with Subgraphs
 
 For subgraph connections, encryption and authentication are automatically enabled when the subgraph URL uses the `https://` protocol.

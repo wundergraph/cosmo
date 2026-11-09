@@ -1,16 +1,158 @@
 package core
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
+	"sync/atomic"
+	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 )
+
+// certReloader holds the parsed contents of a cert/key pair and an optional CA
+// bundle. reload re-reads the files and swaps the parsed values atomically, so
+// the tls callbacks that read them use the new material on the next handshake.
+// Open connections keep what they were established with.
+type certReloader struct {
+	certFile, keyFile, caFile string
+
+	cert atomic.Pointer[tls.Certificate]
+	ca   atomic.Pointer[x509.CertPool]
+}
+
+// reload parses the files from disk. Every file is parsed before anything is
+// swapped in, so on error the previous values all stay in place.
+func (c *certReloader) reload() error {
+	var (
+		cert *tls.Certificate
+		pool *x509.CertPool
+	)
+
+	if c.certFile != "" {
+		pair, err := tls.LoadX509KeyPair(c.certFile, c.keyFile)
+		if err != nil {
+			return fmt.Errorf("failed to load tls cert and key: %w", err)
+		}
+		cert = &pair
+	}
+	if c.caFile != "" {
+		var err error
+		if pool, err = loadCertPool(c.caFile); err != nil {
+			return err
+		}
+	}
+
+	if cert != nil {
+		c.cert.Store(cert)
+	}
+	if pool != nil {
+		c.ca.Store(pool)
+	}
+	return nil
+}
+
+func (c *certReloader) paths() []string {
+	var paths []string
+	for _, p := range []string{c.certFile, c.keyFile, c.caFile} {
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
+}
+
+// getCertificate is a tls.Config.GetCertificate callback that serves the current cert.
+func (c *certReloader) getCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+	return c.cert.Load(), nil
+}
+
+// getClientCertificate is a tls.Config.GetClientCertificate callback that presents the current cert.
+func (c *certReloader) getClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	return c.cert.Load(), nil
+}
+
+// certReloaders collects every certReloader the router created so a single
+// watcher can reload all of them.
+type certReloaders struct {
+	list []*certReloader
+}
+
+// add loads the files once and registers them for reloading.
+func (s *certReloaders) add(certFile, keyFile, caFile string) (*certReloader, error) {
+	c := &certReloader{certFile: certFile, keyFile: keyFile, caFile: caFile}
+	if err := c.reload(); err != nil {
+		return nil, err
+	}
+	s.list = append(s.list, c)
+	return c, nil
+}
+
+// watch polls the registered files and reloads every certReloader when one of
+// them changes. It returns without starting anything when nothing is registered.
+func (s *certReloaders) watch(ctx context.Context, logger *zap.Logger, interval time.Duration) error {
+	var paths []string
+	for _, c := range s.list {
+		paths = append(paths, c.paths()...)
+	}
+	if len(paths) == 0 {
+		return nil
+	}
+
+	ll := logger.With(zap.String("watcher_label", "tls"))
+
+	reloadAll := func() {
+		for _, c := range s.list {
+			if err := c.reload(); err != nil {
+				ll.Error("Failed to reload TLS certificate. Keeping the previous one", zap.Strings("paths", c.paths()), zap.Error(err))
+				continue
+			}
+			ll.Info("Reloaded TLS certificate", zap.Strings("paths", c.paths()))
+		}
+	}
+
+	// The files were loaded when the router was built. CallbackOnStart loads
+	// them again right after the watcher records its baseline, so a rotation in
+	// between is not missed.
+	w, err := watcher.New(watcher.Options{
+		Interval:        interval,
+		Logger:          ll,
+		Paths:           paths,
+		Callback:        reloadAll,
+		CallbackOnStart: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create tls watcher: %w", err)
+	}
+
+	go func() {
+		if err := w(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			ll.Error("Error watching TLS certificate files", zap.Error(err))
+		}
+	}()
+
+	ll.Info("Watching TLS certificate files for changes. New connections will use updated certificates", zap.Strings("paths", paths))
+
+	return nil
+}
+
+func loadCertPool(caFile string) (*x509.CertPool, error) {
+	caCert, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA file: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if ok := pool.AppendCertsFromPEM(caCert); !ok {
+		return nil, errors.New("failed to append CA cert to pool")
+	}
+	return pool, nil
+}
 
 // buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.
 func buildTLSClientConfig(clientCfg config.TLSClientCertConfiguration) (*tls.Config, error) {
