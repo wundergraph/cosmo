@@ -56,6 +56,7 @@ const (
 	WgResponseCacheResult              = attribute.Key("wg.response_cache.result")
 	WgResponseCacheStoreDecision       = attribute.Key("wg.response_cache.store_decision")
 	WgResponseCacheTagHeaderOverflow   = attribute.Key("wg.response_cache.tag_header_overflow")
+	WgResponseCacheCommitOutcome       = attribute.Key("wg.response_cache.commit_outcome")
 	WgResponseCacheLookupDurationMs    = attribute.Key("wg.response_cache.lookup_duration_ms")
 	WgEntityType                       = attribute.Key("wg.entity.type")
 	WgIsBatchingOperation              = attribute.Key("wg.operation.batching.is_batched")

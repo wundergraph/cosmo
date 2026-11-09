@@ -14,6 +14,7 @@ const (
 	responseCacheWriteTTL          = "router.response_cache.write.ttl_seconds"
 	responseCacheFetches           = "router.response_cache.fetches"
 	responseCacheTagHeaderOverflow = "router.response_cache.cache_tag_header.overflows"
+	responseCacheCommits           = "router.response_cache.commits"
 
 	// Not milliseconds, which the meter views force onto buckets starting at 10 ms.
 	unitSeconds = "s"
@@ -47,6 +48,10 @@ var (
 	responseCacheTagHeaderOverflowOptions = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription("Responses whose cache tags did not fit cache_tag_header.max_bytes"),
 	}
+
+	responseCacheCommitsOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Collected response cache entries by what happened to them once the response resolved"),
+	}
 )
 
 type responseCacheInstruments struct {
@@ -56,6 +61,7 @@ type responseCacheInstruments struct {
 	writeTTL          otelmetric.Float64Histogram
 	fetches           otelmetric.Int64Counter
 	tagHeaderOverflow otelmetric.Int64Counter
+	commits           otelmetric.Int64Counter
 }
 
 func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstruments, error) {
@@ -82,6 +88,9 @@ func newResponseCacheInstruments(meter otelmetric.Meter) (*responseCacheInstrume
 	}
 	if instruments.tagHeaderOverflow, err = meter.Int64Counter(responseCacheTagHeaderOverflow, responseCacheTagHeaderOverflowOptions...); err != nil {
 		return nil, fmt.Errorf("failed to create response cache tag header overflow counter: %w", err)
+	}
+	if instruments.commits, err = meter.Int64Counter(responseCacheCommits, responseCacheCommitsOptions...); err != nil {
+		return nil, fmt.Errorf("failed to create response cache commits counter: %w", err)
 	}
 
 	return &instruments, nil

@@ -164,6 +164,29 @@ func TestResponseCacheMetricStore(t *testing.T) {
 		}
 	})
 
+	t.Run("commits are counted in entries by subgraph and outcome", func(t *testing.T) {
+		t.Parallel()
+
+		store, reader := newOtlpResponseCacheStore(t)
+
+		store.MeasureCommit(ctx, "mood", "written", 3)
+		store.MeasureCommit(ctx, "mood", "written", 2)
+		store.MeasureCommit(ctx, "mood", "dropped_invalid", 1)
+		store.MeasureCommit(ctx, "mood", "dropped_expired", 0)
+
+		commits, ok := responseCacheMetric(t, responseCacheScope(t, reader), "router.response_cache.commits").Data.(metricdata.Sum[int64])
+		require.True(t, ok)
+
+		counts := map[string]int64{}
+		for _, dp := range commits.DataPoints {
+			subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
+			require.Equal(t, "mood", subgraph.AsString())
+			outcome, _ := dp.Attributes.Value(otel.WgResponseCacheCommitOutcome)
+			counts[outcome.AsString()] = dp.Value
+		}
+		require.Equal(t, map[string]int64{"written": 5, "dropped_invalid": 1}, counts)
+	})
+
 	t.Run("nothing is recorded while both exporters are off", func(t *testing.T) {
 		t.Parallel()
 

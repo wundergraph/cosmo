@@ -64,6 +64,8 @@ type ResponseCacheMetricStore interface {
 	MeasureWriteTTL(ctx context.Context, ttl time.Duration)
 	// MeasureTagHeaderOverflow counts a response whose tags did not fit, by what on_overflow did.
 	MeasureTagHeaderOverflow(ctx context.Context, action string)
+	// MeasureCommit counts a held write's entries by outcome: written, dropped_* or failed.
+	MeasureCommit(ctx context.Context, subgraph, outcome string, entries int64)
 }
 
 // ResponseCacheMetrics is the store for the health metrics of the response cache.
@@ -185,5 +187,16 @@ func (s *ResponseCacheMetrics) MeasureTagHeaderOverflow(ctx context.Context, act
 
 	for _, provider := range s.providers {
 		provider.tagHeaderOverflow.Add(ctx, 1, opt)
+	}
+}
+
+func (s *ResponseCacheMetrics) MeasureCommit(ctx context.Context, subgraph, outcome string, entries int64) {
+	if entries <= 0 {
+		return
+	}
+	opt := s.withAttrs(otel.WgSubgraphName.String(subgraph), otel.WgResponseCacheCommitOutcome.String(outcome))
+
+	for _, provider := range s.providers {
+		provider.commits.Add(ctx, entries, opt)
 	}
 }

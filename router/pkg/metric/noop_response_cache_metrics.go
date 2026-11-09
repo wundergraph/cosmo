@@ -19,3 +19,5 @@ func (n *NoopResponseCacheMetricStore) MeasureKeys(ctx context.Context, operatio
 }
 func (n *NoopResponseCacheMetricStore) MeasureWriteTTL(ctx context.Context, ttl time.Duration)      {}
 func (n *NoopResponseCacheMetricStore) MeasureTagHeaderOverflow(ctx context.Context, action string) {}
+func (n *NoopResponseCacheMetricStore) MeasureCommit(ctx context.Context, subgraph, outcome string, entries int64) {
+}

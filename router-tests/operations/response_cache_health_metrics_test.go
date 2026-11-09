@@ -2,7 +2,9 @@ package integration
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -80,7 +82,8 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			ttl, ok := testutils.GetMetricByName(scope, "router.response_cache.write.ttl_seconds").Data.(metricdata.Histogram[float64])
 			require.True(t, ok)
 			require.Len(t, ttl.DataPoints, 1)
-			require.InDelta(t, 60, ttl.DataPoints[0].Sum/float64(ttl.DataPoints[0].Count), 1e-9, "the max-age mood answered with")
+			// Less the time the write was held.
+			require.InDelta(t, 60, ttl.DataPoints[0].Sum/float64(ttl.DataPoints[0].Count), 1, "the max-age mood answered with")
 
 			for _, m := range scope.Metrics {
 				require.NotContains(t, m.Name, "memory", "nothing is reported about a provider that is for tests only")
@@ -171,6 +174,40 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("commits are counted by subgraph and outcome", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+				// A number for an enum: only mood's writes are dropped.
+				Mood: testenv.SubgraphConfig{Middleware: wrongTypeMoodMiddleware},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: moodQuery})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, "cannot represent value")
+
+			commits, ok := testutils.GetMetricByName(responseCacheScope(t, metricReader), "router.response_cache.commits").Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			counts := map[string]int64{}
+			for _, dp := range commits.DataPoints {
+				subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
+				outcome, _ := dp.Attributes.Value(otel.WgResponseCacheCommitOutcome)
+				counts[subgraph.AsString()+"/"+outcome.AsString()] += dp.Value
+			}
+			require.Len(t, counts, 2, "%v", counts)
+			require.EqualValues(t, 1, counts["employees/written"])
+			require.Positive(t, counts["mood/dropped_invalid"])
+		})
+	})
+
 	t.Run("prometheus exposes the metrics", func(t *testing.T) {
 		t.Parallel()
 
@@ -254,4 +291,17 @@ func responseCacheKeysByResult(t *testing.T, reader *metric.ManualReader) map[st
 		counts[operation.AsString()+"/"+result.AsString()] += dp.Value
 	}
 	return counts
+}
+
+// wrongTypeMoodMiddleware answers every mood with a number, cacheable for a minute.
+func wrongTypeMoodMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := httptest.NewRecorder()
+		next.ServeHTTP(rec, r)
+		maps.Copy(w.Header(), rec.Header())
+		w.Header().Del("Content-Length")
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		w.WriteHeader(rec.Code)
+		_, _ = w.Write(moodValue.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":5`)))
+	})
 }

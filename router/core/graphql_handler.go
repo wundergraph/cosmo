@@ -127,6 +127,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		responseCacheTagHeader:                   newCacheTagHeader(opts.ResponseCacheTagHeader, opts.ResponseCacheMetrics),
 		responseCacheSettings:                    opts.ResponseCacheSettings,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
+		responseCacheCommitHandler:               newResponseCacheCommitHandler(opts.ResponseCacheMetrics),
 	}
 	return graphQLHandler
 }
@@ -176,6 +177,16 @@ func measureResponseCacheEngineError(metrics rmetric.ResponseCacheMetricStore, e
 	}
 }
 
+// newResponseCacheCommitHandler counts what became of each held write.
+func newResponseCacheCommitHandler(metrics rmetric.ResponseCacheMetricStore) func(resolve.ResponseCacheCommit) {
+	if metrics == nil {
+		return nil
+	}
+	return func(c resolve.ResponseCacheCommit) {
+		metrics.MeasureCommit(context.Background(), c.Subgraph, string(c.Outcome), int64(c.Entries))
+	}
+}
+
 // Error and Status Code handling
 //
 // When a server receives a well-formed GraphQL-over-HTTP request, it must return a
@@ -201,9 +212,11 @@ type GraphQLHandler struct {
 	headerPropagation         *HeaderPropagation
 	responseCacheStore        caching.Cache
 	responseCacheErrorHandler func(error)
-	responseCacheInvalidation config.ResponseCacheInvalidationConfig
-	responseCacheTagHeader    cacheTagHeader
-	responseCacheSettings     *ResponseCacheSettings
+	// responseCacheCommitHandler gets each held write's outcome.
+	responseCacheCommitHandler func(resolve.ResponseCacheCommit)
+	responseCacheInvalidation  config.ResponseCacheInvalidationConfig
+	responseCacheTagHeader     cacheTagHeader
+	responseCacheSettings      *ResponseCacheSettings
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
@@ -761,6 +774,7 @@ func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, req
 		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
 		cacheOpts.Store = store
 		cacheOpts.OnError = h.responseCacheErrorHandler
+		cacheOpts.OnCommit = h.responseCacheCommitHandler
 		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
 			CacheTag: h.responseCacheInvalidation.CacheTag,
 			Subgraph: h.responseCacheInvalidation.Subgraph,
