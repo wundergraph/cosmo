@@ -664,6 +664,28 @@ func TestHeaderSetFromFile(t *testing.T) {
 			assert.Equal(t, `{"data":{"headerValue":"Bearer file-value"}}`, res.Body)
 		})
 	})
+
+	t.Run("global request rule with whitespace-only prefix sends only file contents", func(t *testing.T) {
+		t.Parallel()
+		path := writeHeaderFile(t, "file-value")
+		rule := getRule(customHeader, path)
+		rule.FromFile.Prefix = "    "
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{rule},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{},
+				Query:  fmt.Sprintf(`query { headerValue(name:"%s") }`, customHeader),
+			})
+			assert.Equal(t, `{"data":{"headerValue":"file-value"}}`, res.Body)
+		})
+	})
 }
 
 func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
