@@ -265,6 +265,73 @@ func TestTLSCertificateReload(t *testing.T) {
 		})
 	})
 
+	t.Run("presents a rotated client certificate to a gRPC subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath := filepath.Join(dir, "client.crt")
+		keyPath := filepath.Join(dir, "client.key")
+
+		oldCA, oldCAKey := issueTestCert(t, nil, nil)
+		newCA, newCAKey := issueTestCert(t, nil, nil)
+		oldClient, _ := issueTestCert(t, oldCA, oldCAKey)
+		newClient, _ := issueTestCert(t, newCA, newCAKey)
+		serverCert, _ := issueTestCert(t, nil, nil)
+		replaceFile(t, certPath, oldClient.certPEM)
+		replaceFile(t, keyPath, oldClient.keyPEM)
+
+		// The subgraph only trusts clients signed by the new CA.
+		subgraphPool := x509.NewCertPool()
+		subgraphPool.AddCert(newCA.cert)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{
+					GRPCTLSConfig: &tls.Config{
+						Certificates: []tls.Certificate{serverCert.tlsCertificate(t)},
+						ClientAuth:   tls.RequireAndVerifyClientCert,
+						ClientCAs:    subgraphPool,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithTLSConfig(config.TLSConfiguration{
+					ClientGRPC: config.GRPCClientTLSConfiguration{
+						All: config.GRPCTLSClientCertConfiguration{
+							Enabled: true,
+							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   certPath,
+								KeyFile:                    keyPath,
+							},
+						},
+					},
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { projects { id name } }`,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, "Failed to fetch from Subgraph")
+
+			replaceFile(t, certPath, newClient.certPEM)
+			replaceFile(t, keyPath, newClient.keyPEM)
+
+			// gRPC redials with backoff after a failed handshake, so give it a few attempts.
+			require.Eventually(t, func() bool {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+				return err == nil && res.Body == projectsExpectedData
+			}, 30*time.Second, 200*time.Millisecond, "router did not present the new client certificate to the gRPC subgraph")
+		})
+	})
+
 	t.Run("verifies client certificates against a rotated client CA", func(t *testing.T) {
 		t.Parallel()
 
