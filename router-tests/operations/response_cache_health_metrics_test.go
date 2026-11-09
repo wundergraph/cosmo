@@ -257,7 +257,7 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 		})
 	})
 
-	t.Run("an entry whose lifetime ran out while held is counted as dropped_expired", func(t *testing.T) {
+	t.Run("a checked entry is written without waiting for a slower fetch", func(t *testing.T) {
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
@@ -280,8 +280,8 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 
 			counts := responseCacheCommitsByOutcome(t, metricReader)
-			require.EqualValues(t, 1, counts["employees/dropped_expired"], "%v", counts)
-			require.Zero(t, counts["employees/written"], "%v", counts)
+			require.EqualValues(t, 1, counts["employees/written"], "%v", counts)
+			require.Zero(t, counts["employees/dropped_expired"], "%v", counts)
 			require.Positive(t, counts["mood/written"], "%v", counts)
 		})
 	})
