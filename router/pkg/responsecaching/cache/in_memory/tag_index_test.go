@@ -189,3 +189,20 @@ func TestTagIndexAddUnlessInvalidated(t *testing.T) {
 		"read after it")
 	require.True(t, index.addUnlessInvalidated("v1:c", []string{"declared:users"}, expires, time.Time{}), "unknown fetch time")
 }
+
+// An older invalidation arriving late must not move the time back, or a
+// fetch read between the two would store.
+func TestTagIndexInvalidatedStaysMonotonic(t *testing.T) {
+	t.Parallel()
+
+	index := newTagIndex()
+	expires := time.Now().Add(time.Minute)
+	older := time.Now()
+	newer := older.Add(time.Second)
+	fetched := older.Add(time.Millisecond)
+
+	index.take("declared:users", newer)
+	index.take("declared:users", older)
+	require.False(t, index.addUnlessInvalidated("v1:a", []string{"declared:users"}, expires, fetched),
+		"read before the newer invalidation")
+}

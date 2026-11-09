@@ -63,7 +63,10 @@ func (t *tagIndex) take(tag string, now time.Time) []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.invalidated[tag] = now
+	// The later time wins: concurrent invalidations may arrive out of order.
+	if at, ok := t.invalidated[tag]; !ok || now.After(at) {
+		t.invalidated[tag] = now
+	}
 
 	keys, ok := t.tags[tag]
 	if !ok {
