@@ -18,7 +18,7 @@ Release the full monorepo with all packages and services can be done by triggeri
 
    Push builds run one at a time, in push order, and a build never cancels another one. GitHub keeps only one waiting run, so if three or more commits land while a build runs, the commits in between get no image. The `chore(release): Publish [skip ci]` commits do not start a push build. Pushes never set `latest` or a version tag. Only releases do.
 
-   A release runs on the commit that was the head of `main` when the release started. A push usually built that commit already, so the release overwrites its `sha-<short-sha>` tag with the release image. If the push build is still running, the build that finishes last wins. The two images have the same code but a different version string in the binary.
+   A release runs on the commit that was the head of `main` when the release started. A push usually built that commit already, so the release replaces its `sha-<short-sha>` image with the release image. The two images have the same code but a different version string and build date. If the push build is still running, the build that finishes last owns the tag.
 
 2. After the release, you can validate the release by:
    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
