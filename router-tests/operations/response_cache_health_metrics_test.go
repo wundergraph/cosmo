@@ -193,18 +193,35 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 			require.NoError(t, err)
 			require.Contains(t, res.Body, "cannot represent value")
 
-			commits, ok := testutils.GetMetricByName(responseCacheScope(t, metricReader), "router.response_cache.commits").Data.(metricdata.Sum[int64])
-			require.True(t, ok)
-
-			counts := map[string]int64{}
-			for _, dp := range commits.DataPoints {
-				subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
-				outcome, _ := dp.Attributes.Value(otel.WgResponseCacheCommitOutcome)
-				counts[subgraph.AsString()+"/"+outcome.AsString()] += dp.Value
-			}
+			counts := responseCacheCommitsByOutcome(t, metricReader)
 			require.Len(t, counts, 2, "%v", counts)
 			require.EqualValues(t, 1, counts["employees/written"])
 			require.Positive(t, counts["mood/dropped_invalid"])
+		})
+	})
+
+	t.Run("a no-store request's writes are counted as dropped_no_store", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery, Header: http.Header{"Cache-Control": []string{"no-store"}}})
+
+			commits := responseCacheCommitsByOutcome(t, metricReader)
+			require.Positive(t, commits["mood/dropped_no_store"])
+			require.Zero(t, commits["mood/written"])
+			require.Zero(t, responseCacheKeysByResult(t, metricReader)["write/stored"], "nothing reached the store")
+
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+			require.Positive(t, responseCacheCommitsByOutcome(t, metricReader)["mood/written"])
 		})
 	})
 
@@ -304,4 +321,20 @@ func wrongTypeMoodMiddleware(next http.Handler) http.Handler {
 		w.WriteHeader(rec.Code)
 		_, _ = w.Write(moodValue.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":5`)))
 	})
+}
+
+// responseCacheCommitsByOutcome sums router.response_cache.commits, keyed by subgraph/outcome.
+func responseCacheCommitsByOutcome(t *testing.T, reader *metric.ManualReader) map[string]int64 {
+	t.Helper()
+
+	commits, ok := testutils.GetMetricByName(responseCacheScope(t, reader), "router.response_cache.commits").Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+
+	counts := map[string]int64{}
+	for _, dp := range commits.DataPoints {
+		subgraph, _ := dp.Attributes.Value(otel.WgSubgraphName)
+		outcome, _ := dp.Attributes.Value(otel.WgResponseCacheCommitOutcome)
+		counts[subgraph.AsString()+"/"+outcome.AsString()] += dp.Value
+	}
+	return counts
 }

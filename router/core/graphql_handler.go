@@ -775,6 +775,9 @@ func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, req
 		cacheOpts.Store = store
 		cacheOpts.OnError = h.responseCacheErrorHandler
 		cacheOpts.OnCommit = h.responseCacheCommitHandler
+		if _, noStore := store.(notStored); noStore && cacheOpts.OnCommit != nil {
+			cacheOpts.OnCommit = noStoreCommits(cacheOpts.OnCommit)
+		}
 		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
 			CacheTag: h.responseCacheInvalidation.CacheTag,
 			Subgraph: h.responseCacheInvalidation.Subgraph,

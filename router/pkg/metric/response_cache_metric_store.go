@@ -64,7 +64,8 @@ type ResponseCacheMetricStore interface {
 	MeasureWriteTTL(ctx context.Context, ttl time.Duration)
 	// MeasureTagHeaderOverflow counts a response whose tags did not fit, by what on_overflow did.
 	MeasureTagHeaderOverflow(ctx context.Context, action string)
-	// MeasureCommit counts a held write's entries by outcome: written, dropped_* or failed.
+	// MeasureCommit counts a held write's entries by outcome: written, dropped_* (dropped_no_store
+	// for a no-store request) or failed.
 	MeasureCommit(ctx context.Context, subgraph, outcome string, entries int64)
 }
 

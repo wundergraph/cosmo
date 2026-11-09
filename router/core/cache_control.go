@@ -9,6 +9,7 @@ import (
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // parseRequestCacheControl reads the Cache-Control the client sent.
@@ -97,3 +98,16 @@ var (
 	_ caching.Cache = notCached{}
 	_ caching.Cache = notStored{}
 )
+
+// responseCacheCommitDroppedNoStore: the request's no-store kept the write from the store.
+const responseCacheCommitDroppedNoStore resolve.ResponseCacheCommitOutcome = "dropped_no_store"
+
+// noStoreCommits reports writes notStored discarded as dropped_no_store, not written.
+func noStoreCommits(next func(resolve.ResponseCacheCommit)) func(resolve.ResponseCacheCommit) {
+	return func(c resolve.ResponseCacheCommit) {
+		if c.Outcome == resolve.ResponseCacheCommitWritten {
+			c.Outcome = responseCacheCommitDroppedNoStore
+		}
+		next(c)
+	}
+}
