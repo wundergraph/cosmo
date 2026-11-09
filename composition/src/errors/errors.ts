@@ -2317,7 +2317,7 @@ export function invalidCacheTagArgumentTypeErrorMessage({
 export function unavailableCacheTagReferencesError(fieldCoords: string, errorMessages: Array<string>): Error {
   return new Error(
     `The "@cacheTag" formats defined on the root field "${fieldCoords}"` +
-      ` reference values that never reach the subgraph:\n` +
+      ` reference at least one inaccessible value:\n` +
       errorMessages.join('\n'),
   );
 }
