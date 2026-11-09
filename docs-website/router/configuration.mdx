@@ -1164,9 +1164,10 @@ Apply to requests to specific Subgraphs.
 
 | Environment Variable | YAML                       | Required                                      | Description                                                                                                                                                                       | Default Value |
 | -------------------- | -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                                              |               |
-|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                                            |               |
-|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                                           |               |
+|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set, remove                                                                                                                                                      |               |
+|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against. If `op` is `remove`, set exactly one of `matching` or `named`                                                             |               |
+|                      | negate_match               | <Icon icon="square" />                        | If set to true, the result of the `matching` regex will be inverted. Requires `matching`                                                                                          |               |
+|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match. If `op` is `remove`, set exactly one of `named` or `matching`                                                                            |               |
 |                      | rename                     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                                                    |               |
 |                      | default                    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                                                  |               |
 |                      | name                       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                                                 |               |
@@ -1175,6 +1176,7 @@ Apply to requests to specific Subgraphs.
 |                      | from_file                  | <Icon icon="square" />                        | If `op` is `set`, sources the header value from a file's contents. The file is loaded into memory and refreshed on a polling interval, so request-time reads do not touch disk. Request rules only. |               |
 |                      | from_file.path             | <Icon icon="square-check" iconType="solid" /> | Absolute path to the file whose contents become the header value.                                                                                                                 |               |
 |                      | from_file.refresh_interval | <Icon icon="square-check" iconType="solid" /> | Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`.                                                                       | `1m`          |
+|                      | from_file.prefix           | <Icon icon="square" />                        | A static value prepended to the file's contents, e.g. `"Bearer "` when the file holds a raw token. Include any separator, such as a trailing space, in the prefix.                |               |
 
 ### Example YAML config:
 
@@ -1204,6 +1206,10 @@ headers:
 
 <Note>
   `from_file` is request-only. It cannot be used in response header rules.
+</Note>
+
+<Note>
+  `remove` is request-only. It cannot be used in response header rules.
 </Note>
 
 ### Response Header Rule

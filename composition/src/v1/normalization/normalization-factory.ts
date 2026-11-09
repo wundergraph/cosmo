@@ -221,6 +221,7 @@ import {
   unimplementedInterfaceOutputTypeWarning,
   unsupportedCacheTagLocationWarning,
   unsupportedDirectiveWarning,
+  userDefinedDeferWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
@@ -302,6 +303,7 @@ import {
   CONSUMER_NAME,
   COST,
   DEFAULT_EDFS_PROVIDER_ID,
+  DEFER,
   DESCRIPTION_OVERRIDE,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -631,19 +633,30 @@ export class NormalizationFactory {
     const isObjectKind = isObjectNodeKind(node.kind);
     for (const directiveNode of node.directives) {
       const directiveName = directiveNode.name.value;
-      if (directiveName === SHAREABLE) {
-        // @shareable need only be propagated once
-        getValueOrDefault(directivesByName, directiveName, () => [directiveNode]);
-      } else {
-        getValueOrDefault(directivesByName, directiveName, () => []).push(directiveNode);
+      switch (directiveName) {
+        case SHAREABLE: {
+          // @shareable need only be propagated once
+          getValueOrDefault(directivesByName, directiveName, () => [directiveNode]);
+          break;
+        }
+        case DEFER: {
+          // `@defer` is intended to be an built-in directive; ignore any user-defined instances
+          break;
+        }
+        default: {
+          getValueOrDefault(directivesByName, directiveName, () => []).push(directiveNode);
+          break;
+        }
       }
       if (!isCompositeKind) {
         continue;
       }
+
       this.doesParentRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       if (!isObjectKind) {
         continue;
       }
+
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
       this.isParentObjectShareable ||= directiveName === SHAREABLE;
     }
@@ -858,9 +871,15 @@ export class NormalizationFactory {
 
   handleExecutableDirectives() {
     for (const [directiveName, definitionData] of this.directiveDefinitionDataByName) {
+      if (directiveName === DEFER) {
+        // `@defer` is intended to be an built-in directive; ignore any user-defined instances
+        continue;
+      }
+
       if (definitionData.isComposed || definitionData.executableLocations.size < 1) {
         continue;
       }
+
       this.federatedDirectiveDataByName.set(directiveName, definitionData);
     }
   }
@@ -1264,7 +1283,13 @@ export class NormalizationFactory {
       this.errors.push(duplicateDirectiveDefinitionError(name));
       return false;
     }
+
     this.definedDirectiveNames.add(name);
+    if (name === DEFER) {
+      // `@defer` is intended to be an in-built directive; ignore any user-defined instances.
+      return false;
+    }
+
     this.extractDirectiveArgumentCosts(node);
     // Normalize federation directives by replacing them with predefined definitions
     const definition = V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.get(name);
@@ -1275,10 +1300,12 @@ export class NormalizationFactory {
       this.isSubgraphVersionTwo = true;
       return false;
     }
+
     // Other known directives will only be added if they are used.
     if (DIRECTIVE_DEFINITION_BY_NAME.has(name)) {
       return false;
     }
+
     this.directiveDefinitionByName.set(name, node);
     // @TODO
     const errorMessages: Array<string> = [];
@@ -4685,6 +4712,10 @@ export class NormalizationFactory {
   #addDirectiveDefinitionsToDocument(definitions: Array<DefinitionNode>): void {
     const dependencies = new Set<DefinitionNode>();
     for (const directiveName of this.referencedDirectiveNames) {
+      if (directiveName === DEFER) {
+        continue;
+      }
+
       const definition = DIRECTIVE_DEFINITION_BY_NAME.get(directiveName);
       if (!definition) {
         continue;
@@ -4725,6 +4756,12 @@ export class NormalizationFactory {
     }
   }
 
+  handleDeferDirective() {
+    if (this.definedDirectiveNames.has(DEFER) || this.referencedDirectiveNames.has(DEFER)) {
+      this.warnings.push(userDefinedDeferWarning(this.subgraphName));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -4732,6 +4769,7 @@ export class NormalizationFactory {
     const definitions: Array<DefinitionNode> = [];
     this.#addDirectiveDefinitionsToDocument(definitions);
     this.validateDirectives(this.schemaData, SCHEMA);
+    this.handleDeferDirective();
     const schemaNodeResult = this.schemaNodeFromData(this.schemaData);
     if (!schemaNodeResult.success) {
       this.errors.push(...schemaNodeResult.errors);

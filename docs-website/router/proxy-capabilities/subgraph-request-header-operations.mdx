@@ -54,17 +54,31 @@ headers:
           path: "/etc/secrets/service-token"
           refresh_interval: "1m"
 
+      # Prepend a static prefix to the file's contents, e.g. "Bearer <token>"
+      - op: "set"
+        name: "Authorization"
+        from_file:
+          path: "/etc/secrets/raw-token"
+          refresh_interval: "1m"
+          prefix: "Bearer "
+
+      # Remove headers added by previous rules
+      - op: "remove"
+        matching: (?i)^X-Internal-.*
+
   subgraphs:
     products: # Will only affect the Subgraph named "products"
       request:
         - op: "propagate"
           named: "Subgraph-Secret"
           default: "some-secret"
+        - op: "remove"
+          named: "X-Custom-Header"
 ```
 
 ### What does the snippet do?
 
-With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
+With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs. The operation `remove` removes headers that previous rules added to the subgraph request.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
 
@@ -98,7 +112,17 @@ Currently, we support the following header rules:
 
     * `refresh_interval` - Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`. Defaults to `1m`.
 
+    * `prefix` - A static value prepended to the file's contents. Use it when the file holds a raw token but the header needs a scheme, e.g. `prefix: "Bearer "`. Include any separator, such as a trailing space, in the prefix.
+
     Use this for mounted secrets that rotate on disk (Kubernetes Secrets, Vault Agent sidecars, externally rotated API keys) without restarting the router.
+
+* **remove** - Removes headers from the request forwarded to the subgraph. It only removes headers added by the rules before it. Place it after the rules it should affect. Set exactly one of the following matchers:
+
+  * `named` - It exactly matches on the header name.
+
+  * `matching` - Regex matches on the header name.
+
+  `negate_match` modifies `matching` and requires it. If set to true, the result of the `matching` regex is inverted, so all headers except the matching ones are removed.
 
 <Note>
   Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.
@@ -124,8 +148,22 @@ Metadata keys match header names but in lowercase. To access `X-User-Id` you nee
 
 ### Rule ordering
 
-All rules are evaluated in the order they are defined.
+All rules are evaluated in the order they are defined. Rules under `all` are applied before the rules of a specific subgraph. A `remove` rule in `subgraphs` removes headers propagated or set by the `all` rules. A later rule can add a removed header again.
+
+```yaml
+headers:
+  all:
+    request:
+      - op: "propagate"
+        matching: (?i)^X-.*
+  subgraphs:
+    products:
+      request:
+        # Don't forward X-Internal-Token to the "products" subgraph
+        - op: "remove"
+          named: "X-Internal-Token"
+```
 
 <Info>
-  Please inform us if you have more advanced use cases that cannot be accommodated with the current feature set. You can still use [Custom Modules](/router/custom-modules) to implement any logic yourself. You can aggregate, remove, or add headers as you like.
+  Please inform us if you have more advanced use cases that cannot be accommodated with the current feature set. You can still use [Custom Modules](/router/custom-modules) to implement any logic yourself. You can aggregate or add headers as you like.
 </Info>

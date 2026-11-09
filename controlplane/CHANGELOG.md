@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.261.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.261.2...controlplane@0.261.3) (2026-11-09)
+
+### Bug Fixes
+
+* **controlplane:** allow [@defer](https://github.com/defer) in persisted operations ([#3472](https://github.com/wundergraph/cosmo/issues/3472)) ([b90094a](https://github.com/wundergraph/cosmo/commit/b90094a7f6c5f82d3275e24428ca4368969da226)) (@Noroth)
+
+## [0.261.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.261.1...controlplane@0.261.2) (2026-11-05)
+
+**Note:** Version bump only for package controlplane
+
+## [0.261.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.261.0...controlplane@0.261.1) (2026-11-04)
+
+### Bug Fixes
+
+* **controlplane:** add hashed API key column ([#3452](https://github.com/wundergraph/cosmo/issues/3452)) ([9f06b87](https://github.com/wundergraph/cosmo/commit/9f06b87ad4b199dd08ca7b9a78a22ec9e926bc16)) (@gausie)
+
 ## [0.261.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.260.0...controlplane@0.261.0) (2026-10-29)
 
 ### Features

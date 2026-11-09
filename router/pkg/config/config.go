@@ -319,12 +319,19 @@ type CacheControlPolicy struct {
 	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
 }
 
+// HeaderRules configures header propagation between the client, the router and
+// the subgraphs (the top-level `headers` key).
 type HeaderRules struct {
-	// All is a set of rules that apply to all requests
-	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
-	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
-	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+	// All is a set of rules that apply to all subgraph requests and responses.
+	All *GlobalHeaderRule `yaml:"all,omitempty"`
+	// Subgraphs maps a subgraph name to rules that apply only to that subgraph.
+	// They are applied after the rules in All.
+	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	// CookieWhitelist lists the cookie keys forwarded to subgraphs. If empty, all
+	// cookies are forwarded. It has no effect unless the Cookie header is propagated.
+	CookieWhitelist []string `yaml:"cookie_whitelist,omitempty"`
+	// Router is a set of rules that apply to the router's response to the client.
+	Router RouterHeaderRules `yaml:"router,omitempty"`
 }
 
 type RouterHeaderRules struct {
@@ -341,8 +348,15 @@ type GlobalHeaderRule struct {
 type HeaderRuleOperation string
 
 const (
+	// HeaderRuleOperationPropagate forwards the named or matching headers as they
+	// are, optionally renamed or with a default value when they are missing.
 	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
-	HeaderRuleOperationSet       HeaderRuleOperation = "set"
+	// HeaderRuleOperationSet sets a header to a static value, an expression result
+	// or the contents of a file.
+	HeaderRuleOperationSet HeaderRuleOperation = "set"
+	// HeaderRuleOperationRemove removes the named or matching headers from the
+	// request forwarded to the subgraph.
+	HeaderRuleOperationRemove HeaderRuleOperation = "remove"
 )
 
 type HeaderRule interface {
@@ -382,6 +396,7 @@ type RequestHeaderRule struct {
 type FileHeaderSource struct {
 	Path            string        `yaml:"path"`
 	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty"`
+	Prefix          string        `yaml:"prefix,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
