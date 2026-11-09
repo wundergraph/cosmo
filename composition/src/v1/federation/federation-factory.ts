@@ -2027,24 +2027,35 @@ export class FederationFactory {
     this.errors.push(configureDescriptionPropagationError(getDefinitionDataCoords(data, true), subgraphNames));
   }
 
+  // Returns true if the argument defines `fromContext` and false otherwise.
+  handleArgumentFromContext(data: InputValueData): boolean {
+    if (!doesArgumentDefineFromContext(data)) {
+      return false;
+    }
+
+    if (data.requiredSubgraphNames.size > 0) {
+      this.errors.push(
+        requiredContextArgumentError(
+          data.federatedCoords,
+          [...data.fromContextSubgraphNames],
+          [...data.requiredSubgraphNames],
+        ),
+      );
+    }
+
+    return true;
+  }
+
   getValidFieldArgumentNodes(fieldData: FieldData): MutableInputValueNode[] {
     const argumentNodes: Array<MutableInputValueNode> = [];
     const argumentNames: Array<string> = [];
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldCoords = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
-      if (doesArgumentDefineFromContext(inputValueData)) {
-        if (inputValueData.requiredSubgraphNames.size > 0) {
-          this.errors.push(
-            requiredContextArgumentError(
-              inputValueData.federatedCoords,
-              [...inputValueData.fromContextSubgraphNames],
-              [...inputValueData.requiredSubgraphNames],
-            ),
-          );
-        }
+      if (this.handleArgumentFromContext(inputValueData)) {
         continue;
       }
+
       if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
         argumentNames.push(argumentName);
         const argumentNodeResult = routerSchemaInputValueNodeFromData({
@@ -2067,6 +2078,7 @@ export class FederationFactory {
         });
       }
     }
+
     if (invalidRequiredArguments.length > 0) {
       this.errors.push(invalidRequiredInputValueError(FIELD, fieldCoords, invalidRequiredArguments));
     } else if (argumentNames.length > 0) {
