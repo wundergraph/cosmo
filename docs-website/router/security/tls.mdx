@@ -143,6 +143,8 @@ The following files are reloaded:
 * `tls.client.all.cert_file` and `tls.client.all.key_file`, and the same fields under `tls.client.subgraphs`
 * `tls.client_grpc.all.cert_file` and `tls.client_grpc.all.key_file`, and the same fields under `tls.client_grpc.subgraphs`
 
+NATS event providers read `ca_file`, `cert_file` and `key_file` under `events.providers.nats[].tls` again on every connection to the server. A rotated file is used the next time the router reconnects. This does not depend on `tls.watch`.
+
 `ca_file` under `tls.client` and `tls.client_grpc` is read once at startup. Go has no hook to replace the trusted roots of a client connection, so a new CA needs a router restart or a config reload.
 
 When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.

@@ -3,10 +3,8 @@ package nats
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -118,38 +116,37 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger, sk
 	}
 
 	if eventSource.TLS != nil {
-		tlsCfg := &tls.Config{
-			InsecureSkipVerify: eventSource.TLS.InsecureSkipCaVerification,
-		}
-
 		if eventSource.TLS.InsecureSkipCaVerification {
 			logger.Warn("TLS InsecureSkipCaVerification is enabled for NATS provider. This is not recommended for production environments.", zap.String("provider_id", eventSource.ID))
 		}
 
+		// nats.RootCAs and nats.ClientCert read their files on every connect, so a
+		// rotated certificate is used as soon as the client reconnects.
+		tlsOpts := []nats.Option{nats.Secure(&tls.Config{
+			InsecureSkipVerify: eventSource.TLS.InsecureSkipCaVerification,
+		})}
+
 		if eventSource.TLS.CaFile != "" {
-			caPEM, err := os.ReadFile(eventSource.TLS.CaFile)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read CA file %q: %w", eventSource.TLS.CaFile, err)
-			}
-			pool := x509.NewCertPool()
-			if !pool.AppendCertsFromPEM(caPEM) {
-				return nil, fmt.Errorf("failed to parse CA certificate from %q", eventSource.TLS.CaFile)
-			}
-			tlsCfg.RootCAs = pool
+			tlsOpts = append(tlsOpts, nats.RootCAs(eventSource.TLS.CaFile))
 		}
 
 		if eventSource.TLS.CertFile != "" || eventSource.TLS.KeyFile != "" {
 			if eventSource.TLS.CertFile == "" || eventSource.TLS.KeyFile == "" {
 				return nil, fmt.Errorf("both cert_file and key_file must be provided for mTLS on NATS provider %q", eventSource.ID)
 			}
-			cert, err := tls.LoadX509KeyPair(eventSource.TLS.CertFile, eventSource.TLS.KeyFile)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load mTLS certificate/key for NATS provider %q: %w", eventSource.ID, err)
-			}
-			tlsCfg.Certificates = []tls.Certificate{cert}
+			tlsOpts = append(tlsOpts, nats.ClientCert(eventSource.TLS.CertFile, eventSource.TLS.KeyFile))
 		}
 
-		opts = append(opts, nats.Secure(tlsCfg))
+		// The options read their files when applied. Apply them once here so a bad
+		// path fails at startup instead of leaving a provider that never connects.
+		scratch := nats.GetDefaultOptions()
+		for _, opt := range tlsOpts {
+			if err := opt(&scratch); err != nil {
+				return nil, fmt.Errorf("invalid TLS configuration for NATS provider %q: %w", eventSource.ID, err)
+			}
+		}
+
+		opts = append(opts, tlsOpts...)
 	}
 
 	if skipUnavailable {
