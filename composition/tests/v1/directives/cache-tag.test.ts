@@ -454,6 +454,8 @@ describe('@cacheTag tests', () => {
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
+            isList: true,
+            namedTypeKind: 'Input Object',
             reference: 'filter.tags.name',
             typeReference: '[Tag!]',
             untraversableReference: 'filter.tags',
@@ -476,6 +478,8 @@ describe('@cacheTag tests', () => {
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
+            isList: false,
+            namedTypeKind: 'Scalar',
             reference: 'id.value',
             typeReference: 'ID!',
             untraversableReference: 'id',
@@ -498,6 +502,8 @@ describe('@cacheTag tests', () => {
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
+            isList: false,
+            namedTypeKind: 'Enum',
             reference: 'region.code',
             typeReference: 'Region',
             untraversableReference: 'region',
@@ -1506,12 +1512,20 @@ describe('@cacheTag tests', () => {
       );
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
-          listCacheTagKeyFieldErrorMessage({ listReference: 'tags', reference: 'tags', typeString: '[String!]!' }),
-          listCacheTagKeyFieldErrorMessage({ listReference: 'items', reference: 'items.id', typeString: '[Item!]!' }),
+          listCacheTagKeyFieldErrorMessage({
+            listReference: 'tags',
+            reference: 'tags',
+            typeReference: '[String!]!',
+          }),
+          listCacheTagKeyFieldErrorMessage({
+            listReference: 'items',
+            reference: 'items.id',
+            typeReference: '[Item!]!',
+          }),
           listCacheTagKeyFieldErrorMessage({
             listReference: 'organization.codes',
             reference: 'organization.codes',
-            typeString: '[String!]!',
+            typeReference: '[String!]!',
           }),
         ]),
       ]);

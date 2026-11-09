@@ -4696,7 +4696,7 @@ export class NormalizationFactory {
           listCacheTagKeyFieldErrorMessage({
             listReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
             reference,
-            typeString: printTypeNode(fieldData.type),
+            typeReference: printTypeNode(fieldData.type),
           }),
         );
         return;
@@ -4761,9 +4761,13 @@ export class NormalizationFactory {
         return;
       }
       // A list yields no single value, and a leaf has no fields.
-      if (isTypeNodeListType(inputValueData.type) || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+      const isList = isTypeNodeListType(inputValueData.type);
+      if (isList || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
         errorMessages.push(
           invalidCacheTagReferenceErrorMessage({
+            isList,
+            // The named type kind of an input value is not yet set, and a missing type is a base scalar.
+            namedTypeKind: kindToNodeType(namedTypeData?.kind ?? Kind.SCALAR_TYPE_DEFINITION),
             reference,
             typeReference: printTypeNode(inputValueData.type),
             untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),

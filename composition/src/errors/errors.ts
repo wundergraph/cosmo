@@ -2303,11 +2303,11 @@ export function undefinedCacheTagKeyFieldErrorMessage({
 export function listCacheTagKeyFieldErrorMessage({
   listReference,
   reference,
-  typeString,
+  typeReference,
 }: ListCacheTagKeyFieldErrorMessageParams): string {
   return (
-    `The "format" argument references "$key.${reference}", but "$key.${listReference}" is of type "${typeString}".` +
-    ` A "$key" reference cannot include a list.`
+    `The "format" argument references "$key.${reference}",` +
+    ` but "$key.${listReference}" is of type "${typeReference}", which is a list.`
   );
 }
 
@@ -2327,13 +2327,18 @@ export function undefinedCacheTagInputFieldErrorMessage({
 }
 
 export function invalidCacheTagReferenceErrorMessage({
+  isList,
+  namedTypeKind,
   reference,
   typeReference,
   untraversableReference,
 }: InvalidCacheTagReferenceErrorMessageParams): string {
+  // "an Enum", but "a Scalar" and "a Union".
+  const article = /^[AEIO]/.test(namedTypeKind) ? 'an' : 'a';
   return (
     `The "format" argument references "$args.${reference}",` +
-    ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
+    ` but "$args.${untraversableReference}" is of type "${typeReference}",` +
+    ` which is ${isList ? 'a list' : `${article} ${namedTypeKind}`}.` +
     ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
   );
 }
