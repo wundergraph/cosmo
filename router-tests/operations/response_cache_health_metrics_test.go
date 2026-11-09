@@ -2,11 +2,14 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -251,6 +254,65 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.Positive(t, responseCacheCommitsByOutcome(t, metricReader)["mood/written"])
+		})
+	})
+
+	t.Run("an entry whose lifetime ran out while held is counted as dropped_expired", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=1")},
+				// Outlasts the employees entry's max-age.
+				Mood: testenv.SubgraphConfig{Middleware: func(next http.Handler) http.Handler {
+					return cacheControlMiddleware("max-age=60")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						time.Sleep(1100 * time.Millisecond)
+						next.ServeHTTP(w, r)
+					}))
+				}},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+
+			counts := responseCacheCommitsByOutcome(t, metricReader)
+			require.EqualValues(t, 1, counts["employees/dropped_expired"], "%v", counts)
+			require.Zero(t, counts["employees/written"], "%v", counts)
+			require.Positive(t, counts["mood/written"], "%v", counts)
+		})
+	})
+
+	t.Run("deferred parts' writes are counted", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+				Mood:      testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			payload, err := json.Marshal(map[string]any{"query": `query { employees { id ... @defer { currentMood } } }`})
+			require.NoError(t, err)
+			res, err := xEnv.RouterClient.Do(xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload)))
+			require.NoError(t, err)
+			// To EOF: the handler, commits included, has returned.
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.NoError(t, res.Body.Close())
+			require.Contains(t, string(body), `"currentMood"`)
+
+			counts := responseCacheCommitsByOutcome(t, metricReader)
+			require.EqualValues(t, 1, counts["employees/written"], "%v", counts)
+			require.Positive(t, counts["mood/written"], "%v", counts)
 		})
 	})
 
