@@ -13,14 +13,7 @@ import {
   type PublishedOperation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-import {
-  DocumentNode,
-  GraphQLDirective,
-  GraphQLSchema,
-  parse,
-  validate,
-  buildSchema,
-} from 'graphql';
+import { DocumentNode, GraphQLDirective, GraphQLSchema, parse, validate, buildSchema } from 'graphql';
 import { GraphQLDeferDirective } from '@graphql-tools/utils';
 import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
