@@ -1,9 +1,13 @@
 package authentication
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestScopes(t *testing.T) {
@@ -83,4 +87,43 @@ func TestScopes(t *testing.T) {
 			require.Equal(t, tt.want, a.Scopes())
 		})
 	}
+}
+
+func TestJwksTokenDecoder_SymmetricAlgorithmEnforcement(t *testing.T) {
+	ctx := context.Background()
+	secret := "disposable-test-secret-at-least-32-bytes-long"
+
+	decoder, err := NewJwksTokenDecoder(ctx, zap.NewNop(), []JWKSConfig{
+		{
+			Secret:    secret,
+			Algorithm: "HS512",
+			KeyId:     "test-key",
+		},
+	})
+	require.NoError(t, err)
+
+	claims := jwt.MapClaims{
+		"sub": "user123",
+		"exp": time.Now().Add(time.Hour).Unix(),
+	}
+
+	// 1. Sign token with configured HS512: should succeed
+	token512 := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	token512.Header["kid"] = "test-key"
+	signed512, err := token512.SignedString([]byte(secret))
+	require.NoError(t, err)
+
+	decodedClaims, err := decoder.Decode(signed512)
+	require.NoError(t, err)
+	require.Equal(t, "user123", decodedClaims["sub"])
+
+	// 2. Sign token with HS256 using the SAME secret: must be rejected
+	token256 := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token256.Header["kid"] = "test-key"
+	signed256, err := token256.SignedString([]byte(secret))
+	require.NoError(t, err)
+
+	_, err = decoder.Decode(signed256)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "could not find alg HS256 in allow list")
 }

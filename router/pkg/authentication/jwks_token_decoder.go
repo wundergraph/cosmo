@@ -133,10 +133,14 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
+			allowedAlgorithms := c.AllowedAlgorithms
+			if len(allowedAlgorithms) == 0 && c.Algorithm != "" {
+				allowedAlgorithms = []string{c.Algorithm}
+			}
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
-				allowedAlgorithms: c.AllowedAlgorithms,
+				allowedAlgorithms: allowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
 
@@ -193,10 +197,14 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
+			allowedAlgorithms := c.AllowedAlgorithms
+			if len(allowedAlgorithms) == 0 && c.Algorithm != "" {
+				allowedAlgorithms = []string{c.Algorithm}
+			}
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
-				allowedAlgorithms: c.AllowedAlgorithms,
+				allowedAlgorithms: allowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
 		}
