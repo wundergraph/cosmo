@@ -509,6 +509,66 @@ export class ProposalRepository {
     return createHash('sha256').update(sdl).digest('hex');
   }
 
+  private static async compareProposedSchema({
+    proposalSubgraph: { proposalId, id: proposalSubgraphId, proposedSchemaSDL, isDeleted: proposalSubgraphIsDeleted },
+    schemaSDL,
+    baseSchema,
+    isDeleted,
+    routerCompatibilityVersion,
+    cachedSchemas,
+  }: {
+    proposalSubgraph: {
+      id: string;
+      proposalId: string;
+      proposedSchemaSDL: string | null;
+      isDeleted: boolean;
+      isNew: boolean;
+    };
+    baseSchema: GraphQLSchema;
+    schemaSDL: string;
+    routerCompatibilityVersion: string;
+    isDeleted: boolean;
+    cachedSchemas: Map<string, GraphQLSchema>;
+  }): Promise<{ proposalId: string; proposalSubgraphId: string; isMatch: boolean } | null> {
+    const base = { proposalId, proposalSubgraphId };
+    if (proposalSubgraphIsDeleted && isDeleted) {
+      return { ...base, isMatch: true };
+    }
+
+    if (!proposedSchemaSDL) {
+      return null;
+    }
+
+    if (proposedSchemaSDL === schemaSDL) {
+      return { ...base, isMatch: true };
+    }
+
+    // Build the proposed schema only once by caching the result, if `buildSchema` fails we skip this proposal
+    // completely to match the `diff.kind === 'failure'` behavior
+    const cacheKey = ProposalRepository.getSchemaCacheKey(proposedSchemaSDL);
+    let proposedSchema = cachedSchemas.get(cacheKey);
+    if (!proposedSchema) {
+      proposedSchema = new GraphQLSchema({});
+      if (proposedSchemaSDL.length > 0) {
+        try {
+          const built = buildSchema(proposedSchemaSDL, true, routerCompatibilityVersion);
+          if (!built.success) {
+            return null;
+          }
+
+          proposedSchema = built.schema;
+        } catch {
+          return null;
+        }
+      }
+
+      cachedSchemas.set(cacheKey, proposedSchema);
+    }
+
+    const diff = await getDiffBetweenGraphs(baseSchema, proposedSchema, routerCompatibilityVersion);
+    return diff.kind === 'failure' ? null : { ...base, isMatch: diff.changes.length === 0 };
+  }
+
   public async matchSchemaWithProposals({
     subgraphName,
     namespaceId,
@@ -533,65 +593,39 @@ export class ProposalRepository {
 
     // Normalize the incoming schema once instead of once per proposal. Mirrors getDiffBetweenGraphs:
     // an empty or invalid old schema is diffed as an empty schema.
-    let baseSchema: GraphQLSchema = new GraphQLSchema({});
-    if (schemaSDL) {
+    let baseSchema: GraphQLSchema | undefined;
+    if (schemaSDL && schemaSDL.length > 0) {
       try {
         const built = buildSchema(schemaSDL, true, routerCompatibilityVersion);
-        if (built.success) {
-          baseSchema = built.schema;
-        }
+        baseSchema = built.success ? built.schema : new GraphQLSchema({});
       } catch {
-        // ignore
+        // If we are unable to parse the base schema, bail. We do this because we don't want to compare the old
+        // schemas with an invalid one
+        return [];
       }
     }
 
     const cachedSchemas = new Map<string, GraphQLSchema>();
-    if (schemaSDL) {
+    if (baseSchema) {
       cachedSchemas.set(ProposalRepository.getSchemaCacheKey(schemaSDL), baseSchema);
+    } else {
+      // The new schema is empty, we'll initialize an empty object so old schemas can be compared to it
+      baseSchema = new GraphQLSchema({});
     }
 
     const limit = pLimit(proposalComparisonConcurrency);
     const results = await Promise.all(
       proposalSubgraphs.map((ps) =>
-        limit(async () => {
-          const base = { proposalId: ps.proposalId, proposalSubgraphId: ps.id };
-          if (ps.isDeleted && isDeleted) {
-            return { ...base, isMatch: true };
-          }
-
-          if (!ps.proposedSchemaSDL) {
-            return null;
-          }
-
-          if (ps.proposedSchemaSDL === schemaSDL) {
-            return { ...base, isMatch: true };
-          }
-
-          // Build the proposed schema only once by caching the result, if `buildSchema` fails we skip this proposal
-          // completely to match the `diff.kind === 'failure'` behavior
-          const cacheKey = ProposalRepository.getSchemaCacheKey(ps.proposedSchemaSDL);
-          let proposedSchema = cachedSchemas.get(cacheKey);
-          if (!proposedSchema) {
-            proposedSchema = new GraphQLSchema({});
-            if (ps.proposedSchemaSDL.length > 0) {
-              try {
-                const built = buildSchema(ps.proposedSchemaSDL, true, routerCompatibilityVersion);
-                if (!built.success) {
-                  return null;
-                }
-
-                proposedSchema = built.schema;
-              } catch {
-                return null;
-              }
-            }
-
-            cachedSchemas.set(cacheKey, proposedSchema);
-          }
-
-          const diff = await getDiffBetweenGraphs(baseSchema, proposedSchema, routerCompatibilityVersion);
-          return diff.kind === 'failure' ? null : { ...base, isMatch: diff.changes.length === 0 };
-        }),
+        limit(() =>
+          ProposalRepository.compareProposedSchema({
+            proposalSubgraph: ps,
+            baseSchema,
+            schemaSDL,
+            routerCompatibilityVersion,
+            isDeleted,
+            cachedSchemas,
+          }),
+        ),
       ),
     );
 
