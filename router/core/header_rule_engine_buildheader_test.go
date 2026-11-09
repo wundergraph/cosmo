@@ -701,6 +701,34 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		require.NotZero(t, hash)
 	})
 
+	t.Run("global rule prepends prefix to file contents", func(t *testing.T) {
+		t.Parallel()
+
+		path := writeHeaderSourceFile(t, "secret-token")
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "Authorization", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second, Prefix: "Bearer "}},
+				},
+			},
+		}, nil)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		h, _ := ht.BuildRequestHeaderForSubgraph("", ctx)
+		assert.Equal(t, "Bearer secret-token", h.Get("Authorization"))
+	})
+
 	t.Run("two rules with different files set their respective headers", func(t *testing.T) {
 		t.Parallel()
 

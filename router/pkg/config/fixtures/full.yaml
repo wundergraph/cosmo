@@ -353,6 +353,7 @@ headers:
         from_file:
           path: '/etc/secrets/api-key'
           refresh_interval: 1m
+          prefix: 'Bearer '
       - op: 'remove' # Remove headers added by previous rules
         matching: (?i)^X-Custom-Internal-.*
     response:
