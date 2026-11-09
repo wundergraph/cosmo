@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"maps"
 	"net/http"
@@ -200,6 +201,32 @@ func TestResponseCacheHealthMetrics(t *testing.T) {
 		})
 	})
 
+	t.Run("a subgraph's unrequested bad field drops its own writes, not the owner's", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:  metricReader,
+			MetricOptions: testenv.MetricOptions{EnableOTLPResponseCacheMetrics: true},
+			RouterOptions: memoryCacheOptions(t, nil),
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
+				// Mood also sends employees' role, with a __typename RoleType doesn't have.
+				Mood: testenv.SubgraphConfig{Middleware: extraRoleMoodMiddleware},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: `query { employees { id role { title } currentMood } }`})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, "invalid value 'Bogus'")
+
+			counts := responseCacheCommitsByOutcome(t, metricReader)
+			require.EqualValues(t, 1, counts["employees/written"], "%v", counts)
+			require.Positive(t, counts["mood/dropped_invalid"], "%v", counts)
+			require.Zero(t, counts["mood/written"], "%v", counts)
+		})
+	})
+
 	t.Run("a no-store request's writes are counted as dropped_no_store", func(t *testing.T) {
 		t.Parallel()
 
@@ -320,6 +347,19 @@ func wrongTypeMoodMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=60")
 		w.WriteHeader(rec.Code)
 		_, _ = w.Write(moodValue.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":5`)))
+	})
+}
+
+// extraRoleMoodMiddleware adds a role the mood subgraph was never asked for.
+func extraRoleMoodMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := httptest.NewRecorder()
+		next.ServeHTTP(rec, r)
+		maps.Copy(w.Header(), rec.Header())
+		w.Header().Del("Content-Length")
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		w.WriteHeader(rec.Code)
+		_, _ = w.Write(bytes.ReplaceAll(rec.Body.Bytes(), []byte(`"currentMood":`), []byte(`"role":{"__typename":"Bogus"},"currentMood":`)))
 	})
 }
 
