@@ -28,6 +28,7 @@ import {
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
   type UndefinedCacheTagInputFieldErrorMessageParams,
+  type UndefinedCacheTagKeyFieldErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
