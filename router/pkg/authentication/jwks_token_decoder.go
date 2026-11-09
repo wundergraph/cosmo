@@ -72,11 +72,7 @@ type configKey struct {
 type audienceSet map[string]struct{}
 
 type keyFuncEntry struct {
-	// cached resolves keys from the entry's current key set and never fetches.
-	cached keyfunc.Keyfunc
-	// refreshing may fetch the key set again for an unknown kid. It is nil when
-	// refresh_unknown_kid is disabled, because it would behave like cached.
-	refreshing        keyfunc.Keyfunc
+	jwks              keyfunc.Keyfunc
 	aud               audienceSet
 	issuers           []string
 	allowedAlgorithms []string
@@ -163,38 +159,30 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 
 			audiencesMap[key] = getAudienceSet(c.Audiences)
 
+			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
+				HTTPURLs: map[string]jwkset.Storage{
+					c.URL: store,
+				},
+				PrioritizeHTTP: true,
+			}
+
+			// Configure the rate limiter for refreshing unknown KIDs
+			if c.RefreshUnknownKID.Enabled {
+				jwksetHTTPClientOptions.RefreshUnknownKID = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
+				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
+			}
+
 			useWhitelist, err := toJwksetUseType(c.AllowedUse)
 			if err != nil {
 				return nil, fmt.Errorf("invalid allowedUse for JWK URL %s: %w", c.URL, err)
 			}
 
-			// Both keyfuncs read the same store, so they share one cache and one
-			// background refresh. Each gets its own map because jwkset writes into it.
-			cached, err := createKeyFunc(ctx, jwkset.HTTPClientOptions{
-				HTTPURLs:       map[string]jwkset.Storage{c.URL: store},
-				PrioritizeHTTP: true,
-			}, useWhitelist)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, useWhitelist)
 			if err != nil {
 				return nil, err
 			}
-
-			// Configure the rate limiter for refreshing unknown KIDs
-			var refreshing keyfunc.Keyfunc
-			if c.RefreshUnknownKID.Enabled {
-				refreshing, err = createKeyFunc(ctx, jwkset.HTTPClientOptions{
-					HTTPURLs:          map[string]jwkset.Storage{c.URL: store},
-					PrioritizeHTTP:    true,
-					RefreshUnknownKID: rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst),
-					RateLimitWaitMax:  c.RefreshUnknownKID.MaxWait,
-				}, useWhitelist)
-				if err != nil {
-					return nil, err
-				}
-			}
-
 			entries = append(entries, keyFuncEntry{
-				cached:            cached,
-				refreshing:        refreshing,
+				jwks:              jwks,
 				aud:               audiencesMap[key],
 				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
@@ -255,7 +243,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				return nil, err
 			}
 			entries = append(entries, keyFuncEntry{
-				cached:            jwks,
+				jwks:              jwks,
 				aud:               audiencesMap[key],
 				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
@@ -279,9 +267,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			errJoin = errors.Join(errJoin, errUnacceptableIss)
 		}
 
-		// First pass: keys already cached by any candidate. A provider that owns the
-		// kid answers without waiting on another provider's unknown-kid refresh.
-		var refreshable []*keyFuncEntry
 		for _, entry := range candidates {
 			if len(entry.aud) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
@@ -317,24 +302,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				}
 			}
 
-			pub, err := entry.cached.Keyfunc(token)
-			if err == nil {
-				return pub, nil
-			}
-			if entry.refreshing == nil {
+			pub, err := entry.jwks.Keyfunc(token)
+			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
 			}
-			refreshable = append(refreshable, entry)
-		}
-
-		// Second pass: no candidate had the key cached, so allow unknown-kid refreshes.
-		for _, entry := range refreshable {
-			pub, err := entry.refreshing.Keyfunc(token)
-			if err == nil {
-				return pub, nil
-			}
-			errJoin = errors.Join(errJoin, err)
+			return pub, nil
 		}
 
 		return nil, fmt.Errorf("no key found for token: %w", errors.Join(errJoin, jwt.ErrTokenUnverifiable))

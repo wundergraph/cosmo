@@ -3905,7 +3905,7 @@ func countingProxy(t *testing.T, target string) (string, *atomic.Int64) {
 	return srv.URL, hits
 }
 
-func TestUnknownKIDRefreshDoesNotBlockOtherProviders(t *testing.T) {
+func TestIssuerRoutingSkipsOtherProviders(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -3913,64 +3913,50 @@ func TestUnknownKIDRefreshDoesNotBlockOtherProviders(t *testing.T) {
 		internalIssuer = "https://internal.example.com/"
 	)
 
-	run := func(t *testing.T, withIssuers bool) {
-		publicServer, err := jwks.NewServer(t)
-		require.NoError(t, err)
-		t.Cleanup(publicServer.Close)
+	publicServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(publicServer.Close)
 
-		internalServer, err := jwks.NewServer(t)
-		require.NoError(t, err)
-		t.Cleanup(internalServer.Close)
+	internalServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(internalServer.Close)
 
-		publicURL, publicHits := countingProxy(t, publicServer.JWKSURL())
+	publicURL, publicHits := countingProxy(t, publicServer.JWKSURL())
 
-		refresh := authentication.RefreshUnknownKIDConfig{
-			Enabled:  true,
-			Interval: time.Hour,
-			Burst:    5,
-			MaxWait:  2 * time.Minute,
-		}
-		cfg := []authentication.JWKSConfig{
-			{URL: publicURL, RefreshInterval: time.Hour, RefreshUnknownKID: refresh},
-			{URL: internalServer.JWKSURL(), RefreshInterval: time.Hour, RefreshUnknownKID: refresh},
-		}
-		if withIssuers {
-			cfg[0].Issuers = []string{publicIssuer}
-			cfg[1].Issuers = []string{internalIssuer}
-		}
-
-		token, err := internalServer.Token(map[string]any{"iss": internalIssuer})
-		require.NoError(t, err)
-
-		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:         testutils.ConfigureAuthWithJwksConfig(t, cfg),
-			AuthenticationRequired: true,
-		})
-		require.NoError(t, err)
-
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{core.WithAccessController(accessController)},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			baseline := publicHits.Load()
-			header := http.Header{"Authorization": []string{"Bearer " + token}}
-			for range 3 {
-				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
-				require.NoError(t, err)
-				require.NoError(t, res.Body.Close())
-				require.Equal(t, http.StatusOK, res.StatusCode)
-			}
-			require.Equal(t, baseline, publicHits.Load(), "the public provider fetched its JWKS again for a token it does not own")
-		})
+	refresh := authentication.RefreshUnknownKIDConfig{
+		Enabled:  true,
+		Interval: time.Hour,
+		Burst:    5,
+		MaxWait:  2 * time.Minute,
+	}
+	// The public provider comes first and would refresh for the unknown kid
+	// if the token's issuer did not route it straight to the internal one.
+	cfg := []authentication.JWKSConfig{
+		{URL: publicURL, RefreshInterval: time.Hour, RefreshUnknownKID: refresh, Issuers: []string{publicIssuer}},
+		{URL: internalServer.JWKSURL(), RefreshInterval: time.Hour, RefreshUnknownKID: refresh, Issuers: []string{internalIssuer}},
 	}
 
-	t.Run("with issuers configured", func(t *testing.T) {
-		t.Parallel()
-		run(t, true)
-	})
+	token, err := internalServer.Token(map[string]any{"iss": internalIssuer})
+	require.NoError(t, err)
 
-	t.Run("without issuers configured", func(t *testing.T) {
-		t.Parallel()
-		run(t, false)
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:         testutils.ConfigureAuthWithJwksConfig(t, cfg),
+		AuthenticationRequired: true,
+	})
+	require.NoError(t, err)
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithAccessController(accessController)},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		baseline := publicHits.Load()
+		header := http.Header{"Authorization": []string{"Bearer " + token}}
+		for range 3 {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			require.NoError(t, res.Body.Close())
+			require.Equal(t, http.StatusOK, res.StatusCode)
+		}
+		require.Equal(t, baseline, publicHits.Load(), "the public provider fetched its JWKS again for a token it does not own")
 	})
 }
 
