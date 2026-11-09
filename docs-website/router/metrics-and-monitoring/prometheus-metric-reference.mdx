@@ -224,7 +224,7 @@ telemetry:
 `router_response_cache_commits_total` carries its own:
 
 * `wg_subgraph_name`: The name of the subgraph.
-* `wg_response_cache_commit_outcome`: What became of a stored response's entries once the client's response resolved. `written`; `dropped_invalid` when the subgraph sent a value of the wrong type; `dropped_expired` when the lifetime ran out before the write; `dropped_unfinished` when the response did not resolve; `dropped_no_store` for a `no-store` request; `failed` when the store write failed.
+* `wg_response_cache_commit_outcome`: What became of a stored response's entries once the client's response resolved. `written`; `dropped_invalid` when the subgraph sent a value of the wrong type, or when the response has one that no stored subgraph's data explains, which drops every write; `dropped_expired` when the lifetime ran out before the write; `dropped_unfinished` when the response did not resolve; `dropped_no_store` for a `no-store` request; `failed` when the store write failed.
 
 #### Examples
 
