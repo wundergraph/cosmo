@@ -2369,6 +2369,7 @@
                   },
                   "issuers": {
                     "type": "array",
+                    "uniqueItems": true,
                     "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
                     "items": {
                       "type": "string",
@@ -2967,6 +2968,7 @@
                   },
                   "issuers": {
                     "type": "array",
+                    "uniqueItems": true,
                     "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
                     "items": {
                       "type": "string",

@@ -72,11 +72,61 @@ type configKey struct {
 type audienceSet map[string]struct{}
 
 type keyFuncEntry struct {
-	jwks              keyfunc.Keyfunc
+	// cached resolves keys from the entry's current key set and never fetches.
+	cached keyfunc.Keyfunc
+	// refreshing may fetch the key set again for an unknown kid. It is nil when
+	// refresh_unknown_kid is disabled, because it would behave like cached.
+	refreshing        keyfunc.Keyfunc
 	aud               audienceSet
 	issuers           []string
 	allowedAlgorithms []string
 	allowedUse        []string
+}
+
+// issuerRoutes holds, for each configured issuer, the entries allowed to
+// validate its tokens in config order, plus entries that accept any issuer.
+type issuerRoutes struct {
+	byIssuer     map[string][]*keyFuncEntry
+	unrestricted []*keyFuncEntry
+}
+
+// newIssuerRoutes builds the combined issuer and unrestricted entries
+// from the existing configuration entries. Entries are kept in config order.
+func newIssuerRoutes(entries []keyFuncEntry) issuerRoutes {
+	r := issuerRoutes{byIssuer: make(map[string][]*keyFuncEntry)}
+	for i := range entries {
+		e := &entries[i]
+		if len(e.issuers) == 0 {
+			r.unrestricted = append(r.unrestricted, e)
+			for iss := range r.byIssuer {
+				r.byIssuer[iss] = append(r.byIssuer[iss], e)
+			}
+			continue
+		}
+		for _, iss := range e.issuers {
+			c, ok := r.byIssuer[iss]
+			if !ok {
+				c = slices.Clone(r.unrestricted)
+			}
+			// Skip an issuer listed twice in the same entry.
+			if len(c) > 0 && c[len(c)-1] == e {
+				continue
+			}
+			r.byIssuer[iss] = append(c, e)
+		}
+	}
+	return r
+}
+
+// candidates returns the entries allowed to validate a token from iss. A missing,
+// empty or unknown issuer only reaches entries that accept any issuer.
+func (r issuerRoutes) candidates(iss string) []*keyFuncEntry {
+	if iss != "" {
+		if c, ok := r.byIssuer[iss]; ok {
+			return c
+		}
+	}
+	return r.unrestricted
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
@@ -113,30 +163,38 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 
 			audiencesMap[key] = getAudienceSet(c.Audiences)
 
-			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
-				HTTPURLs: map[string]jwkset.Storage{
-					c.URL: store,
-				},
-				PrioritizeHTTP: true,
-			}
-
-			// Configure the rate limiter for refreshing unknown KIDs
-			if c.RefreshUnknownKID.Enabled {
-				jwksetHTTPClientOptions.RefreshUnknownKID = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
-				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
-			}
-
 			useWhitelist, err := toJwksetUseType(c.AllowedUse)
 			if err != nil {
 				return nil, fmt.Errorf("invalid allowedUse for JWK URL %s: %w", c.URL, err)
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, useWhitelist)
+			// Both keyfuncs read the same store, so they share one cache and one
+			// background refresh. Each gets its own map because jwkset writes into it.
+			cached, err := createKeyFunc(ctx, jwkset.HTTPClientOptions{
+				HTTPURLs:       map[string]jwkset.Storage{c.URL: store},
+				PrioritizeHTTP: true,
+			}, useWhitelist)
 			if err != nil {
 				return nil, err
 			}
+
+			// Configure the rate limiter for refreshing unknown KIDs
+			var refreshing keyfunc.Keyfunc
+			if c.RefreshUnknownKID.Enabled {
+				refreshing, err = createKeyFunc(ctx, jwkset.HTTPClientOptions{
+					HTTPURLs:          map[string]jwkset.Storage{c.URL: store},
+					PrioritizeHTTP:    true,
+					RefreshUnknownKID: rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst),
+					RateLimitWaitMax:  c.RefreshUnknownKID.MaxWait,
+				}, useWhitelist)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			entries = append(entries, keyFuncEntry{
-				jwks:              jwks,
+				cached:            cached,
+				refreshing:        refreshing,
 				aud:               audiencesMap[key],
 				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
@@ -197,7 +255,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				return nil, err
 			}
 			entries = append(entries, keyFuncEntry{
-				jwks:              jwks,
+				cached:            jwks,
 				aud:               audiencesMap[key],
 				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
@@ -206,22 +264,25 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 		}
 	}
 
+	routes := newIssuerRoutes(entries)
+
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for _, entry := range entries {
-			if len(entry.issuers) > 0 {
-				tokenIssuer, err := token.Claims.GetIssuer()
-				if err != nil {
-					errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
-					continue
-				}
-				// GetIssuer returns "" when iss is absent, so an empty issuer must never match.
-				if tokenIssuer == "" || !slices.Contains(entry.issuers, tokenIssuer) {
-					errJoin = errors.Join(errJoin, errUnacceptableIss)
-					continue
-				}
-			}
 
+		// A non-string iss returns an error and "", which routes like a missing iss.
+		tokenIssuer, err := token.Claims.GetIssuer()
+		if err != nil {
+			errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
+		}
+		candidates := routes.candidates(tokenIssuer)
+		if len(candidates) == 0 {
+			errJoin = errors.Join(errJoin, errUnacceptableIss)
+		}
+
+		// First pass: keys already cached by any candidate. A provider that owns the
+		// kid answers without waiting on another provider's unknown-kid refresh.
+		var refreshable []*keyFuncEntry
+		for _, entry := range candidates {
 			if len(entry.aud) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
@@ -256,12 +317,24 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				}
 			}
 
-			pub, err := entry.jwks.Keyfunc(token)
-			if err != nil {
+			pub, err := entry.cached.Keyfunc(token)
+			if err == nil {
+				return pub, nil
+			}
+			if entry.refreshing == nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
 			}
-			return pub, nil
+			refreshable = append(refreshable, entry)
+		}
+
+		// Second pass: no candidate had the key cached, so allow unknown-kid refreshes.
+		for _, entry := range refreshable {
+			pub, err := entry.refreshing.Keyfunc(token)
+			if err == nil {
+				return pub, nil
+			}
+			errJoin = errors.Join(errJoin, err)
 		}
 
 		return nil, fmt.Errorf("no key found for token: %w", errors.Join(errJoin, jwt.ErrTokenUnverifiable))

@@ -1920,6 +1920,8 @@ Both JWKS configuration flavours accept a list of audiences and a list of issuer
 | audiences                                                                   | <Icon icon="square" />                         | The allowed list of audiences, of which at least one audience is required in the token                             | []               |
 | issuers                                                                     | <Icon icon="square" />                         | The allowed list of issuers. The token's `iss` claim must exactly match one of them. Tokens without `iss` are rejected. | []               |
 
+When several JWKS entries are configured, the router first checks the keys already cached by each entry. A `refresh_unknown_kid` refresh only runs when no entry has the token's `kid`. Setting `issuers` on each entry also limits a token to the entries that list its issuer.
+
 
 ### JWT
 
