@@ -572,7 +572,7 @@ The store decision tells why a type is never answered from the cache:
 | `invalid_response` | not the shape that was asked for. |
 | `no_entity` | without anything in it to store, as for an entity that does not exist. |
 
-The decision is left out for a fetch nothing was decided for: one answered from the cache, or one that is not cacheable. The `subgraph.response.cache.storeDecision` expression reads `empty` for such a fetch. It is taken before the write, which can still fail.
+The decision is left out for a fetch nothing was decided for: one answered from the cache, or one that is not cacheable. The `subgraph.response.cache.storeDecision` expression reads `empty` for such a fetch. It is taken before the write. Writes are held until the client's response resolves, and are dropped if it does not resolve or carries a value of the wrong type from that subgraph; `router.response_cache.commits` counts what became of them.
 
 #### Per response
 

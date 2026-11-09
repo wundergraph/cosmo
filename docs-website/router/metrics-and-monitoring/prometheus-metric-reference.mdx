@@ -205,6 +205,7 @@ telemetry:
 * `router_response_cache_keys_total`: Counter of the entries the store was asked for, found, stored or removed.
 * `router_response_cache_write_ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
 * `router_response_cache_fetches_total`: Counter of subgraph fetches, by what the cache did for them.
+* `router_response_cache_commits_total`: Counter of the entries of stored responses, by what became of them once the client's response resolved.
 
 #### Attributes
 
@@ -219,6 +220,11 @@ telemetry:
 * `wg_entity_type`: The type the fetch resolves fields of.
 * `wg_response_cache_status`: `hit`, `partial_hit`, `miss` or `not_cacheable`.
 * `wg_response_cache_store_decision`: `stored`, or the [reason](/router/response-cache#store-decision) the response was not stored.
+
+`router_response_cache_commits_total` carries its own:
+
+* `wg_subgraph_name`: The name of the subgraph.
+* `wg_response_cache_commit_outcome`: What became of a stored response's entries once the client's response resolved. `written`; `dropped_invalid` when the subgraph sent a value of the wrong type; `dropped_expired` when the lifetime ran out before the write; `dropped_unfinished` when the response did not resolve; `dropped_no_store` for a `no-store` request; `failed` when the store write failed.
 
 #### Examples
 

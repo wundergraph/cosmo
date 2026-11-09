@@ -50,7 +50,7 @@ var (
 	}
 
 	responseCacheCommitsOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Collected response cache entries (vary records left out) by what happened to them once the response resolved; the hold includes the client write"),
+		otelmetric.WithDescription("Collected response cache entries (vary records left out) by what happened to them once the response resolved"),
 	}
 )
 
