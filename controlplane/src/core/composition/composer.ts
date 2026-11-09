@@ -528,8 +528,8 @@ export class Composer {
       );
     }
 
-    if (promptToQueryService) {
-      await promptToQueryService.indexSchema(composedGraph.composedSchema);
+    if (promptToQueryService && composedGraph.federatedClientSchema) {
+      await promptToQueryService.indexSchema(composedGraph.federatedClientSchema);
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
