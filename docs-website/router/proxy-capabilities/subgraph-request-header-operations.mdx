@@ -54,6 +54,14 @@ headers:
           path: "/etc/secrets/service-token"
           refresh_interval: "1m"
 
+      # Prepend a static prefix to the file's contents, e.g. "Bearer <token>"
+      - op: "set"
+        name: "Authorization"
+        from_file:
+          path: "/etc/secrets/raw-token"
+          refresh_interval: "1m"
+          prefix: "Bearer "
+
       # Remove headers added by previous rules
       - op: "remove"
         matching: (?i)^X-Internal-.*
@@ -103,6 +111,8 @@ Currently, we support the following header rules:
     * `path` - Absolute path to the file whose contents become the header value.
 
     * `refresh_interval` - Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`. Defaults to `1m`.
+
+    * `prefix` - A static value prepended to the file's contents. Use it when the file holds a raw token but the header needs a scheme, e.g. `prefix: "Bearer "`. Include any separator, such as a trailing space, in the prefix.
 
     Use this for mounted secrets that rotate on disk (Kubernetes Secrets, Vault Agent sidecars, externally rotated API keys) without restarting the router.
 

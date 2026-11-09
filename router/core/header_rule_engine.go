@@ -770,7 +770,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				return
 			}
 
-			header.Set(rule.Name, content.getBufferString())
+			header.Set(rule.Name, rule.FromFile.Prefix+content.getBufferString())
 			return
 		}
 
