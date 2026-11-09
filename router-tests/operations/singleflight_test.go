@@ -262,6 +262,81 @@ func TestSingleFlight(t *testing.T) {
 			require.Less(t, xEnv.SubgraphRequestCount.Global.Load(), numOfOperations)
 		})
 	})
+	t.Run("headers excluded from the deduplication key should be deduplicated", func(t *testing.T) {
+		t.Parallel()
+		var (
+			receivedRequestIDs   = make(map[string]struct{})
+			receivedRequestIDsMu sync.Mutex
+		)
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						receivedRequestIDsMu.Lock()
+						receivedRequestIDs[r.Header.Get("X-Request-Id")] = struct{}{}
+						receivedRequestIDsMu.Unlock()
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:      true,
+					ForceEnableSingleFlight: false,
+					MaxConcurrentResolvers:  0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Named:     "Authorization",
+								Operation: config.HeaderRuleOperationPropagate,
+							},
+							{
+								Named:                       "X-Request-Id",
+								Operation:                   config.HeaderRuleOperationPropagate,
+								ExcludeFromDeduplicationKey: true,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := range numOfOperations {
+				go func(i int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employees { id } }`,
+						Header: http.Header{
+							"Authorization": []string{"Bearer test"},
+							"X-Request-Id":  []string{fmt.Sprintf("request-%d", i)},
+						},
+					})
+					require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+			// We expect request de-duplication because the only differing header is excluded from the key
+			require.Less(t, xEnv.SubgraphRequestCount.Global.Load(), numOfOperations)
+			// The excluded header is still forwarded to the subgraph
+			receivedRequestIDsMu.Lock()
+			defer receivedRequestIDsMu.Unlock()
+			require.NotContains(t, receivedRequestIDs, "")
+			require.NotEmpty(t, receivedRequestIDs)
+		})
+	})
 	t.Run("subscription deduplication with multiple subgraphs", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{

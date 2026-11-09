@@ -165,6 +165,116 @@ func TestBuildRequestHeaderForSubgraph_RemoveRules(t *testing.T) {
 	})
 }
 
+func TestBuildRequestHeaderForSubgraph_ExcludeFromDeduplicationKey(t *testing.T) {
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{Operation: "propagate", Named: "Authorization"},
+				{Operation: "propagate", Named: "x-request-id", ExcludeFromDeduplicationKey: true},
+				{Operation: "propagate", Named: "X-Client-Trace", Rename: "X-Trace", ExcludeFromDeduplicationKey: true},
+				{Operation: "propagate", Matching: "(?i)^X-Correlation-.*", ExcludeFromDeduplicationKey: true},
+				{Operation: "set", Name: "X-Static", Value: "static", ExcludeFromDeduplicationKey: true},
+			},
+		},
+		Subgraphs: map[string]*config.GlobalHeaderRule{
+			"sg-1": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "propagate", Named: "X-Device-Id", ExcludeFromDeduplicationKey: true},
+				},
+			},
+			"sg-2": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "propagate", Named: "X-Device-Id"},
+				},
+			},
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	build := func(t *testing.T, subgraphName string, header http.Header) (http.Header, uint64) {
+		t.Helper()
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		clientReq.Header = header
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+		return ht.BuildRequestHeaderForSubgraph(subgraphName, ctx)
+	}
+
+	t.Run("excluded headers are forwarded but do not change the hash", func(t *testing.T) {
+		h1, hash1 := build(t, "", http.Header{
+			"Authorization":      []string{"Bearer a"},
+			"X-Request-Id":       []string{"1"},
+			"X-Client-Trace":     []string{"trace-1"},
+			"X-Correlation-Id":   []string{"c-1"},
+			"X-Correlation-Span": []string{"s-1"},
+		})
+		h2, hash2 := build(t, "", http.Header{
+			"Authorization":      []string{"Bearer a"},
+			"X-Request-Id":       []string{"2"},
+			"X-Client-Trace":     []string{"trace-2"},
+			"X-Correlation-Id":   []string{"c-2"},
+			"X-Correlation-Span": []string{"s-2"},
+		})
+
+		assert.Equal(t, hash1, hash2)
+		assert.Equal(t, "1", h1.Get("X-Request-Id"))
+		assert.Equal(t, "2", h2.Get("X-Request-Id"))
+		assert.Equal(t, "trace-1", h1.Get("X-Trace"))
+		assert.Equal(t, "c-1", h1.Get("X-Correlation-Id"))
+		assert.Equal(t, "static", h1.Get("X-Static"))
+	})
+
+	t.Run("headers not marked still change the hash", func(t *testing.T) {
+		_, hash1 := build(t, "", http.Header{"Authorization": []string{"Bearer a"}, "X-Request-Id": []string{"1"}})
+		_, hash2 := build(t, "", http.Header{"Authorization": []string{"Bearer b"}, "X-Request-Id": []string{"1"}})
+		assert.NotEqual(t, hash1, hash2)
+	})
+
+	t.Run("hash is zero when every header is excluded", func(t *testing.T) {
+		h, hash := build(t, "", http.Header{"X-Request-Id": []string{"1"}})
+		assert.Equal(t, "1", h.Get("X-Request-Id"))
+		assert.Equal(t, uint64(0), hash)
+	})
+
+	t.Run("subgraph rules exclude headers only for that subgraph", func(t *testing.T) {
+		_, sg1Hash1 := build(t, "sg-1", http.Header{"Authorization": []string{"Bearer a"}, "X-Device-Id": []string{"d-1"}})
+		_, sg1Hash2 := build(t, "sg-1", http.Header{"Authorization": []string{"Bearer a"}, "X-Device-Id": []string{"d-2"}})
+		assert.Equal(t, sg1Hash1, sg1Hash2)
+
+		_, sg2Hash1 := build(t, "sg-2", http.Header{"Authorization": []string{"Bearer a"}, "X-Device-Id": []string{"d-1"}})
+		_, sg2Hash2 := build(t, "sg-2", http.Header{"Authorization": []string{"Bearer a"}, "X-Device-Id": []string{"d-2"}})
+		assert.NotEqual(t, sg2Hash1, sg2Hash2)
+	})
+
+	t.Run("subgraph rules keep the global exclusions", func(t *testing.T) {
+		_, hash1 := build(t, "sg-1", http.Header{"Authorization": []string{"Bearer a"}, "X-Request-Id": []string{"1"}})
+		_, hash2 := build(t, "sg-1", http.Header{"Authorization": []string{"Bearer a"}, "X-Request-Id": []string{"2"}})
+		assert.Equal(t, hash1, hash2)
+	})
+}
+
+func TestBuildRequestHeaderForSubgraph_NoExcludedHeadersKeepsHash(t *testing.T) {
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{Operation: "propagate", Named: "X-A"},
+			},
+		},
+	}, nil)
+	require.NoError(t, err)
+	assert.Nil(t, ht.allDeduplicationKeyExclusion)
+	assert.Nil(t, ht.subgraphDeduplicationKeyExclusions)
+
+	hdr := http.Header{"X-A": []string{"va"}}
+	assert.Equal(t, hashHeaderStable(hdr, nil), hashHeaderStable(hdr, &deduplicationKeyExclusion{}))
+}
+
 func BenchmarkHashHeaderStable(b *testing.B) {
 	// Prepare a representative header set with multiple keys and values
 	hdr := make(http.Header)
@@ -180,7 +290,7 @@ func BenchmarkHashHeaderStable(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = hashHeaderStable(hdr)
+		_ = hashHeaderStable(hdr, nil)
 	}
 }
 
