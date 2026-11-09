@@ -74,8 +74,14 @@ func (c *certReloader) getCertificate(*tls.ClientHelloInfo) (*tls.Certificate, e
 }
 
 // getClientCertificate is a tls.Config.GetClientCertificate callback that presents the current cert.
-func (c *certReloader) getClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-	return c.cert.Load(), nil
+// Like crypto/tls does for a static Certificates list, it sends no certificate when the server
+// would not accept this one, so optional client auth against another CA still succeeds.
+func (c *certReloader) getClientCertificate(cri *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	cert := c.cert.Load()
+	if err := cri.SupportsCertificate(cert); err != nil {
+		return &tls.Certificate{}, nil
+	}
+	return cert, nil
 }
 
 // certReloaders collects every certReloader the router created so a single
@@ -155,29 +161,27 @@ func loadCertPool(caFile string) (*x509.CertPool, error) {
 }
 
 // buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.
-func buildTLSClientConfig(clientCfg config.TLSClientCertConfiguration) (*tls.Config, error) {
+// The client certificate is presented through a callback registered with
+// reloaders, so a reload applies to new connections. RootCAs has no such
+// callback in crypto/tls and is loaded once.
+func buildTLSClientConfig(reloaders *certReloaders, clientCfg config.TLSClientCertConfiguration) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: clientCfg.InsecureSkipCaVerification,
 	}
 
-	// Load client certificate and key if provided
 	if clientCfg.CertFile != "" && clientCfg.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(clientCfg.CertFile, clientCfg.KeyFile)
+		cert, err := reloaders.add(clientCfg.CertFile, clientCfg.KeyFile, "")
 		if err != nil {
-			return nil, fmt.Errorf("failed to load client TLS cert and key: %w", err)
+			return nil, err
 		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.GetClientCertificate = cert.getClientCertificate
 	}
 
 	// Load custom CA for verifying subgraph server certificates
 	if clientCfg.CaFile != "" {
-		caCert, err := os.ReadFile(clientCfg.CaFile)
+		caPool, err := loadCertPool(clientCfg.CaFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read client TLS CA file: %w", err)
-		}
-		caPool := x509.NewCertPool()
-		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-			return nil, errors.New("failed to append client TLS CA cert to pool")
+			return nil, err
 		}
 		tlsConfig.RootCAs = caPool
 	}
@@ -187,7 +191,7 @@ func buildTLSClientConfig(clientCfg config.TLSClientCertConfiguration) (*tls.Con
 
 // buildSubgraphHTTPTLSConfigs builds the default and per-subgraph TLS configs for HTTP subgraphs
 // from raw configuration.
-func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSConfiguration) (
+func buildSubgraphHTTPTLSConfigs(reloaders *certReloaders, logger *zap.Logger, cfg *config.HTTPClientTLSConfiguration) (
 	*tls.Config, map[string]*tls.Config, error) {
 	hasAll := (cfg.GetAll().CertFile != "" && cfg.GetAll().KeyFile != "") ||
 		cfg.GetAll().CaFile != "" || cfg.GetAll().InsecureSkipCaVerification
@@ -206,7 +210,7 @@ func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSCo
 				"This is not recommended for production environments.")
 		}
 
-		defaultTLS, err := buildTLSClientConfig(cfg.GetAll().TLSClientCertConfiguration)
+		defaultTLS, err := buildTLSClientConfig(reloaders, cfg.GetAll().TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
 		}
@@ -220,7 +224,7 @@ func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSCo
 				zap.String("subgraph", name))
 		}
 
-		subgraphTLS, err := buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
+		subgraphTLS, err := buildTLSClientConfig(reloaders, sgCfg.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
 		}
@@ -232,7 +236,7 @@ func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSCo
 
 // buildSubgraphGRPCTLSConfigs builds the default and per-subgraph TLS configs for gRPC subgraphs
 // from raw configuration.
-func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSConfiguration) (
+func buildSubgraphGRPCTLSConfigs(reloaders *certReloaders, logger *zap.Logger, cfg *config.GRPCClientTLSConfiguration) (
 	*tls.Config, map[string]*tls.Config, error) {
 
 	var (
@@ -249,7 +253,7 @@ func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSCo
 				"This is not recommended for production environments.")
 		}
 
-		globalCfg, err = buildTLSClientConfig(cfg.All.TLSClientCertConfiguration)
+		globalCfg, err = buildTLSClientConfig(reloaders, cfg.All.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
 		}
@@ -269,7 +273,7 @@ func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSCo
 
 		}
 
-		perSubgraphCfgs[sgName], err = buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
+		perSubgraphCfgs[sgName], err = buildTLSClientConfig(reloaders, sgCfg.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil,
 				fmt.Errorf("failed to build TLS config for subgraph %q: %w", sgName, err)

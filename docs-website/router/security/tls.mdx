@@ -140,6 +140,9 @@ The following files are reloaded:
 
 * `tls.server.cert_file` and `tls.server.key_file`
 * `tls.server.client_auth.cert_file`
+* `tls.client.all.cert_file` and `tls.client.all.key_file`, and the same fields under `tls.client.subgraphs`
+
+`ca_file` under `tls.client` is read once at startup. Go has no hook to replace the trusted roots of a client connection, so a new CA needs a router restart or a config reload.
 
 When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.
 

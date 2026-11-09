@@ -30,14 +30,14 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("returns config with insecure_skip_ca_verification only", func(t *testing.T) {
 		t.Parallel()
 
-		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(new(certReloaders), config.TLSClientCertConfiguration{
 			InsecureSkipCaVerification: true,
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
 		require.True(t, tlsCfg.InsecureSkipVerify)
-		require.Empty(t, tlsCfg.Certificates)
+		require.Nil(t, tlsCfg.GetClientCertificate)
 		require.Nil(t, tlsCfg.RootCAs)
 	})
 
@@ -46,14 +46,14 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		certPath, keyPath := generateTestCert(t, "client")
 
-		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(new(certReloaders), config.TLSClientCertConfiguration{
 			CertFile: certPath,
 			KeyFile:  keyPath,
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
-		require.Len(t, tlsCfg.Certificates, 1)
+		require.NotNil(t, tlsCfg.GetClientCertificate)
 	})
 
 	t.Run("loads CA file", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		certPath, _ := generateTestCert(t, "ca")
 
-		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(new(certReloaders), config.TLSClientCertConfiguration{
 			CaFile: certPath,
 		})
 		require.NoError(t, err)
@@ -72,28 +72,28 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid cert path", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
+		_, err := buildTLSClientConfig(new(certReloaders), config.TLSClientCertConfiguration{
 			CertFile: "/nonexistent/cert.pem",
 			KeyFile:  "/nonexistent/key.pem",
 		})
 		require.Error(t, err)
-		require.EqualError(t, err, "failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory")
+		require.EqualError(t, err, "failed to load tls cert and key: open /nonexistent/cert.pem: no such file or directory")
 	})
 
 	t.Run("errors on invalid CA path", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
+		_, err := buildTLSClientConfig(new(certReloaders), config.TLSClientCertConfiguration{
 			CaFile: "/nonexistent/ca.pem",
 		})
 		require.Error(t, err)
-		require.EqualError(t, err, "failed to read client TLS CA file: open /nonexistent/ca.pem: no such file or directory")
+		require.EqualError(t, err, "failed to read CA file: open /nonexistent/ca.pem: no such file or directory")
 	})
 
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
 		t.Parallel()
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{})
+		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{})
 		require.NoError(t, err)
 		require.Nil(t, defaultTLS)
 		require.Nil(t, perSubgraphTLS)
@@ -113,10 +113,10 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
+		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
-		require.Len(t, defaultTLS.Certificates, 1)
+		require.NotNil(t, defaultTLS.GetClientCertificate)
 		require.NotNil(t, defaultTLS.RootCAs)
 		require.Empty(t, perSubgraphTLS)
 	})
@@ -135,11 +135,11 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
+		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.Nil(t, defaultTLS)
 		require.Contains(t, perSubgraphTLS, "products")
-		require.Len(t, perSubgraphTLS["products"].Certificates, 1)
+		require.NotNil(t, perSubgraphTLS["products"].GetClientCertificate)
 	})
 
 	t.Run("builds both global and per-subgraph TLS config", func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all, Subgraphs: subgraphs})
+		defaultTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all, Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
 		require.Contains(t, perSubgraphTLS, "products")
@@ -179,9 +179,9 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		_, _, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
+		_, _, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
 		require.Error(t, err)
-		require.EqualError(t, err, "failed to build global subgraph TLS config: failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory")
+		require.EqualError(t, err, "failed to build global subgraph TLS config: failed to load tls cert and key: open /nonexistent/cert.pem: no such file or directory")
 	})
 
 	t.Run("errors on invalid per-subgraph cert", func(t *testing.T) {
@@ -196,9 +196,9 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		_, _, err := buildSubgraphHTTPTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
+		_, _, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.Error(t, err)
-		require.EqualError(t, err, `failed to build TLS config for subgraph "products": failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory`)
+		require.EqualError(t, err, `failed to build TLS config for subgraph "products": failed to load tls cert and key: open /nonexistent/cert.pem: no such file or directory`)
 	})
 
 	t.Run("logs warning when global InsecureSkipCaVerification is enabled", func(t *testing.T) {
@@ -213,7 +213,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, _, err := buildSubgraphHTTPTLSConfigs(logger, &config.HTTPClientTLSConfiguration{All: all})
+		defaultTLS, _, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), logger, &config.HTTPClientTLSConfiguration{All: all})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
 		require.True(t, defaultTLS.InsecureSkipVerify)
@@ -236,7 +236,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		_, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(logger, &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
+		_, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(new(certReloaders), logger, &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.Contains(t, perSubgraphTLS, "products")
 		require.True(t, perSubgraphTLS["products"].InsecureSkipVerify)
@@ -312,7 +312,10 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, newKeyPath, keyPath)
 		require.NoError(t, reloader.reload())
 
-		served, err = reloader.getClientCertificate(nil)
+		served, err = reloader.getClientCertificate(&tls.CertificateRequestInfo{
+			Version:          tls.VersionTLS13,
+			SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256},
+		})
 		require.NoError(t, err)
 		require.Equal(t, mustReadFile(t, newCertPath), pemOf(served))
 	})
@@ -412,6 +415,36 @@ func TestCertReloader(t *testing.T) {
 		}, 5*time.Second, 20*time.Millisecond)
 	})
 
+	t.Run("sends no client certificate when the server does not accept its issuer", func(t *testing.T) {
+		t.Parallel()
+
+		certPath, keyPath := generateTestCert(t, "client")
+		otherCAPath, _ := generateTestCert(t, "other-ca")
+
+		var reloaders certReloaders
+		reloader, err := reloaders.add(certPath, keyPath, "")
+		require.NoError(t, err)
+
+		leaf := parsePEMCert(t, mustReadFile(t, certPath))
+		otherCA := parsePEMCert(t, mustReadFile(t, otherCAPath))
+
+		accepted, err := reloader.getClientCertificate(&tls.CertificateRequestInfo{
+			Version:          tls.VersionTLS13,
+			SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256},
+			AcceptableCAs:    [][]byte{leaf.RawIssuer},
+		})
+		require.NoError(t, err)
+		require.Len(t, accepted.Certificate, 1)
+
+		rejected, err := reloader.getClientCertificate(&tls.CertificateRequestInfo{
+			Version:          tls.VersionTLS13,
+			SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256},
+			AcceptableCAs:    [][]byte{otherCA.RawSubject},
+		})
+		require.NoError(t, err)
+		require.Empty(t, rejected.Certificate)
+	})
+
 	t.Run("fails to add when files are missing", func(t *testing.T) {
 		t.Parallel()
 
@@ -473,6 +506,15 @@ func mustReadFile(t *testing.T, path string) []byte {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	return data
+}
+
+func parsePEMCert(t *testing.T, data []byte) *x509.Certificate {
+	t.Helper()
+	block, _ := pem.Decode(data)
+	require.NotNil(t, block)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	return cert
 }
 
 func pemOf(cert *tls.Certificate) []byte {

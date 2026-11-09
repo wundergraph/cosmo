@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router-tests/testutils"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -200,6 +201,67 @@ func TestTLSCertificateReload(t *testing.T) {
 
 			// The listener was never restarted, so the router still answers on the same address.
 			require.Contains(t, xEnv.RouterURL, "https://")
+		})
+	})
+
+	t.Run("presents a rotated client certificate to an HTTP subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath := filepath.Join(dir, "client.crt")
+		keyPath := filepath.Join(dir, "client.key")
+
+		oldCA, oldCAKey := issueTestCert(t, nil, nil)
+		newCA, newCAKey := issueTestCert(t, nil, nil)
+		oldClient, _ := issueTestCert(t, oldCA, oldCAKey)
+		newClient, _ := issueTestCert(t, newCA, newCAKey)
+		replaceFile(t, certPath, oldClient.certPEM)
+		replaceFile(t, keyPath, oldClient.keyPEM)
+
+		// The subgraph only trusts clients signed by the new CA.
+		subgraphPool := x509.NewCertPool()
+		subgraphPool.AddCert(newCA.cert)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					TLSConfig: &tls.Config{
+						ClientAuth: tls.RequireAndVerifyClientCert,
+						ClientCAs:  subgraphPool,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithTLSConfig(config.TLSConfiguration{
+					Client: config.HTTPClientTLSConfiguration{
+						All: config.HTTPTLSClientCertConfiguration{
+							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   certPath,
+								KeyFile:                    keyPath,
+							},
+						},
+					},
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `Failed to fetch from Subgraph 'employees'`)
+
+			replaceFile(t, certPath, newClient.certPEM)
+			replaceFile(t, keyPath, newClient.keyPEM)
+
+			require.Eventually(t, func() bool {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				return err == nil && res.Body == testutils.EmployeesIDData
+			}, 10*time.Second, 50*time.Millisecond, "router did not present the new client certificate")
 		})
 	})
 

@@ -165,6 +165,13 @@ type (
 
 		// certs holds every certificate loaded from the settings so they can be reloaded from disk.
 		certs certReloaders
+
+		// Client TLS configs for subgraph connections, built once alongside the server config.
+		// Graph servers created on a config reload share them.
+		defaultClientTLS     *tls.Config
+		perSubgraphTLS       map[string]*tls.Config
+		defaultGRPCClientTLS *tls.Config
+		perSubgraphGRPCTLS   map[string]*tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -400,6 +407,16 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
+	}
+
+	r.tls.defaultClientTLS, r.tls.perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.Client)
+	if err != nil {
+		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+
+	r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.ClientGRPC)
+	if err != nil {
+		return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
 	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
