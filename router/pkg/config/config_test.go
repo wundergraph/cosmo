@@ -501,6 +501,61 @@ telemetry:
 	})
 }
 
+func TestRemoveHeaderRuleNamedMatchingMutuallyExclusive(t *testing.T) {
+	t.Parallel()
+
+	t.Run("only named is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+headers:
+  all:
+    request:
+      - op: 'remove'
+        named: 'X-Internal-Token'
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("only matching is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+headers:
+  subgraphs:
+    products:
+      request:
+        - op: 'remove'
+          matching: '(?i)^X-Internal-.*'
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("both named and matching is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+headers:
+  all:
+    request:
+      - op: 'remove'
+        named: 'X-Internal-Token'
+        matching: '(?i)^X-Internal-.*'
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "headers")
+	})
+}
+
 func TestLogLevels(t *testing.T) {
 	t.Parallel()
 

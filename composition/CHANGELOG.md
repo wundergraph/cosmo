@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.66.2...@wundergraph/composition@0.66.3) (2026-11-09)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.66.1...@wundergraph/composition@0.66.2) (2026-11-05)
+
+### Bug Fixes
+
+* remove [@defer](https://github.com/defer) defs/refs from schemas ([#3473](https://github.com/wundergraph/cosmo/issues/3473)) ([d1139d3](https://github.com/wundergraph/cosmo/commit/d1139d3b2417f8cf7b433ba2857fc8cd0d4a0057)) (@Aenimus)
+
 ## [0.66.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.66.0...@wundergraph/composition@0.66.1) (2026-10-21)
 
 ### Bug Fixes

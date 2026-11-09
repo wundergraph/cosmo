@@ -1,6 +1,9 @@
-import { and, count, desc, eq, gt, inArray, lt, SQL } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
+import { and, count, desc, eq, gt, inArray, lt, sql, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import pLimit from 'p-limit';
+import { GraphQLSchema } from 'graphql';
 import { ProposalState, ProposalOrigin } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -14,7 +17,10 @@ import {
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { isCheckSuccessful, normalizeLabels } from '../util.js';
 import { traced } from '../tracing.js';
+import { buildSchema } from '../composition/composition.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
+
+const proposalComparisonConcurrency = 5;
 
 /**
  * Repository for organization related operations.
@@ -499,6 +505,70 @@ export class ProposalRepository {
     return proposalSubgraphs;
   }
 
+  private static getSchemaCacheKey(sdl: string): string {
+    return createHash('sha256').update(sdl).digest('hex');
+  }
+
+  private static async compareProposedSchema({
+    proposalSubgraph: { proposalId, id: proposalSubgraphId, proposedSchemaSDL, isDeleted: proposalSubgraphIsDeleted },
+    schemaSDL,
+    baseSchema,
+    isDeleted,
+    routerCompatibilityVersion,
+    cachedSchemas,
+  }: {
+    proposalSubgraph: {
+      id: string;
+      proposalId: string;
+      proposedSchemaSDL: string | null;
+      isDeleted: boolean;
+      isNew: boolean;
+    };
+    baseSchema: GraphQLSchema;
+    schemaSDL: string;
+    routerCompatibilityVersion: string;
+    isDeleted: boolean;
+    cachedSchemas: Map<string, GraphQLSchema>;
+  }): Promise<{ proposalId: string; proposalSubgraphId: string; isMatch: boolean } | null> {
+    const base = { proposalId, proposalSubgraphId };
+    if (proposalSubgraphIsDeleted && isDeleted) {
+      return { ...base, isMatch: true };
+    }
+
+    if (!proposedSchemaSDL) {
+      return null;
+    }
+
+    if (proposedSchemaSDL === schemaSDL) {
+      return { ...base, isMatch: true };
+    }
+
+    // Build the proposed schema only once by caching the result, if `buildSchema` fails we skip this proposal
+    // completely to match the `diff.kind === 'failure'` behavior
+    const cacheKey = ProposalRepository.getSchemaCacheKey(proposedSchemaSDL);
+    let proposedSchema = cachedSchemas.get(cacheKey);
+    if (!proposedSchema) {
+      proposedSchema = new GraphQLSchema({});
+      if (proposedSchemaSDL.length > 0) {
+        try {
+          const built = buildSchema(proposedSchemaSDL, true, routerCompatibilityVersion);
+          if (!built.success) {
+            return null;
+          }
+
+          proposedSchema = built.schema;
+        } catch {
+          return null;
+        }
+      }
+
+      cachedSchemas.set(cacheKey, proposedSchema);
+    }
+
+    const diff = await getDiffBetweenGraphs(baseSchema, proposedSchema, routerCompatibilityVersion);
+    return diff.kind === 'failure' ? null : { ...base, isMatch: diff.changes.length === 0 };
+  }
+
   public async matchSchemaWithProposals({
     subgraphName,
     namespaceId,
@@ -517,66 +587,68 @@ export class ProposalRepository {
     approvedOnly?: boolean;
   }): Promise<{ proposalId: string; proposalSubgraphId: string }[]> {
     const proposalSubgraphs = await this.getProposalSubgraphsBySubgraph({ subgraphName, namespaceId, approvedOnly });
+    if (proposalSubgraphs.length === 0) {
+      return [];
+    }
 
-    const matches: { proposalId: string; proposalSubgraphId: string }[] = [];
-
-    for (const proposalSubgraph of proposalSubgraphs) {
-      if (proposalSubgraph.isDeleted && isDeleted) {
-        if (schemaCheckId) {
-          await this.db
-            .insert(schema.schemaCheckProposalMatch)
-            .values({
-              proposalId: proposalSubgraph.proposalId,
-              proposalMatch: true,
-              schemaCheckId,
-            })
-            .onConflictDoUpdate({
-              target: [schema.schemaCheckProposalMatch.schemaCheckId, schema.schemaCheckProposalMatch.proposalId],
-              set: {
-                proposalMatch: true,
-              },
-            });
-        }
-        matches.push({
-          proposalId: proposalSubgraph.proposalId,
-          proposalSubgraphId: proposalSubgraph.id,
-        });
-        continue;
-      }
-
-      if (!proposalSubgraph.proposedSchemaSDL) {
-        continue;
-      }
-      const proposedSchema = proposalSubgraph.proposedSchemaSDL;
-      const schemaChanges = await getDiffBetweenGraphs(schemaSDL, proposedSchema, routerCompatibilityVersion);
-      if (schemaChanges.kind === 'failure') {
-        continue;
-      }
-
-      if (schemaCheckId) {
-        await this.db
-          .insert(schema.schemaCheckProposalMatch)
-          .values({
-            proposalId: proposalSubgraph.proposalId,
-            proposalMatch: schemaChanges.changes.length === 0,
-            schemaCheckId,
-          })
-          .onConflictDoUpdate({
-            target: [schema.schemaCheckProposalMatch.schemaCheckId, schema.schemaCheckProposalMatch.proposalId],
-            set: {
-              proposalMatch: schemaChanges.changes.length === 0,
-            },
-          });
-      }
-
-      if (schemaChanges.changes.length === 0) {
-        matches.push({
-          proposalId: proposalSubgraph.proposalId,
-          proposalSubgraphId: proposalSubgraph.id,
-        });
+    // Normalize the incoming schema once instead of once per proposal. Mirrors getDiffBetweenGraphs:
+    // an empty or invalid old schema is diffed as an empty schema.
+    let baseSchema: GraphQLSchema | undefined;
+    if (schemaSDL && schemaSDL.length > 0) {
+      try {
+        const built = buildSchema(schemaSDL, true, routerCompatibilityVersion);
+        baseSchema = built.success ? built.schema : new GraphQLSchema({});
+      } catch {
+        // If we are unable to parse the base schema, bail. We do this because we don't want to compare the old
+        // schemas with an invalid one
+        return [];
       }
     }
-    return matches;
+
+    const cachedSchemas = new Map<string, GraphQLSchema>();
+    if (baseSchema) {
+      cachedSchemas.set(ProposalRepository.getSchemaCacheKey(schemaSDL), baseSchema);
+    } else {
+      // The new schema is empty, we'll initialize an empty object so old schemas can be compared to it
+      baseSchema = new GraphQLSchema({});
+    }
+
+    const limit = pLimit(proposalComparisonConcurrency);
+    const results = await Promise.all(
+      proposalSubgraphs.map((ps) =>
+        limit(() =>
+          ProposalRepository.compareProposedSchema({
+            proposalSubgraph: ps,
+            baseSchema,
+            schemaSDL,
+            routerCompatibilityVersion,
+            isDeleted,
+            cachedSchemas,
+          }),
+        ),
+      ),
+    );
+
+    const evaluated = results.filter((r) => r !== null);
+    if (schemaCheckId && evaluated.length > 0) {
+      await this.db
+        .insert(schema.schemaCheckProposalMatch)
+        .values(
+          evaluated.map(({ proposalId, isMatch }) => ({
+            proposalId,
+            proposalMatch: isMatch,
+            schemaCheckId,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [schema.schemaCheckProposalMatch.schemaCheckId, schema.schemaCheckProposalMatch.proposalId],
+          set: { proposalMatch: sql`excluded.proposal_match` },
+        });
+    }
+
+    return evaluated
+      .filter((r) => r.isMatch)
+      .map(({ proposalId, proposalSubgraphId }) => ({ proposalId, proposalSubgraphId }));
   }
 
   public async getLatestCheckForProposal(

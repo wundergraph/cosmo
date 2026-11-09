@@ -131,7 +131,7 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []*
 		return body, p.files, err
 	}
 
-	var uploadsList []string
+	var uploadsList map[string]string
 	rawUploadsMap, ok := p.form.Value["map"]
 	if ok {
 		uploadsList, err = p.parseUploadMap(rawUploadsMap[0])
@@ -147,20 +147,25 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []*
 		}
 	}
 
-	fileIndex := 0
-	for _, filePart := range p.form.File {
-		uploadPath := uploadsList[fileIndex]
+	for fileIndex, filePart := range p.form.File {
+		uploadPath, exists := uploadsList[fileIndex]
+		if !exists {
+			return body, p.files, &httpGraphqlError{
+				message:    fmt.Sprintf("file %q has no entry in the upload map", fileIndex),
+				statusCode: http.StatusOK,
+			}
+		}
+
 		err = p.processFilePart(filePart, uploadPath)
 		if err != nil {
 			return body, p.files, err
 		}
-		fileIndex++
 	}
 
 	return body, p.files, err
 }
 
-func (p *MultipartParser) parseUploadMap(rawUploadsMap string) ([]string, error) {
+func (p *MultipartParser) parseUploadMap(rawUploadsMap string) (map[string]string, error) {
 	var uploadsMap map[string][]string
 	if err := json.Unmarshal([]byte(rawUploadsMap), &uploadsMap); err != nil {
 		return nil, &httpGraphqlError{
@@ -169,7 +174,7 @@ func (p *MultipartParser) parseUploadMap(rawUploadsMap string) ([]string, error)
 		}
 	}
 
-	result := make([]string, 0, len(uploadsMap))
+	result := make(map[string]string, len(uploadsMap))
 	for fileIndex, variableName := range uploadsMap {
 		if len(variableName) == 0 {
 			return nil, &httpGraphqlError{
@@ -185,7 +190,14 @@ func (p *MultipartParser) parseUploadMap(rawUploadsMap string) ([]string, error)
 			}
 		}
 
-		result = append(result, variableName[0])
+		if variableName[0] == "" {
+			return nil, &httpGraphqlError{
+				message:    fmt.Sprintf("empty variable name for upload index %s", fileIndex),
+				statusCode: http.StatusOK,
+			}
+		}
+
+		result[fileIndex] = variableName[0]
 	}
 
 	return result, nil

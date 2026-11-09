@@ -356,6 +356,16 @@ func TestRouterPluginRequests(t *testing.T) {
 			expected: `{"data":{"project":{"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"},{"name":"Network Setup","status":"IN_PROGRESS"}]}}}`,
 		},
 		{
+			name:     "query project with field resolver filtering by nullable enum argument",
+			query:    `query { project(id:1) { filteredTasks(status: COMPLETED) { name status }}}`,
+			expected: `{"data":{"project":{"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"}]}}}`,
+		},
+		{
+			name:     "query project with field resolver passing null to nullable enum argument",
+			query:    `query { project(id:1) { filteredTasks(status: null, limit: 3) { name status }}}`,
+			expected: `{"data":{"project":{"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"},{"name":"Network Setup","status":"IN_PROGRESS"}]}}}`,
+		},
+		{
 			name:     "query projects with multiple field resolvers",
 			query:    `query { projects { name status completionRate(includeSubtasks: true) filteredTasks(limit: 3) { name status } } }`,
 			expected: `{"data":{"projects":[{"name":"Cloud Migration Overhaul","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"},{"name":"Network Setup","status":"IN_PROGRESS"}]},{"name":"Microservices Revolution","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Domain Model Analysis","status":"COMPLETED"},{"name":"API Gateway Configuration","status":"IN_PROGRESS"}]},{"name":"AI-Powered Analytics","status":"ACTIVE","completionRate":0,"filteredTasks":[{"name":"Machine Learning Model Research","status":"IN_PROGRESS"},{"name":"Data Pipeline Design","status":"TODO"}]},{"name":"DevOps Transformation","status":"PLANNING","completionRate":0,"filteredTasks":[{"name":"CI/CD Pipeline Setup","status":"TODO"}]},{"name":"Security Overhaul","status":"ON_HOLD","completionRate":0,"filteredTasks":[{"name":"Security Assessment","status":"BLOCKED"}]},{"name":"Mobile App Development","status":"ACTIVE","completionRate":100,"filteredTasks":[{"name":"User Experience Testing","status":"COMPLETED"},{"name":"Flutter App Development","status":"COMPLETED"}]},{"name":"Data Lake Implementation","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Data Schema Design","status":"COMPLETED"},{"name":"Apache Spark Integration","status":"IN_PROGRESS"}]}]}}`,

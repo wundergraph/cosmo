@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { eq } from 'drizzle-orm';
 import { uid } from 'uid';
 import {
   afterAllSetup,
@@ -10,6 +12,7 @@ import {
   TestUser,
 } from '../src/core/test-util.js';
 import { OrganizationRole } from '../src/db/models.js';
+import * as schema from '../src/db/schema.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -157,6 +160,26 @@ describe('API Keys', (ctx) => {
       expect(apiKey).toBeUndefined();
     },
   );
+
+  test('that a hash of the API key is stored', async (testContext) => {
+    const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const name = uid(8);
+    const response = await client.createAPIKey({
+      name,
+      expires: ExpiresAt.NEVER,
+      userID: users.adminAliceCompanyA.userId,
+      groupId: adminGroup.groupId,
+    });
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
+    expect(stored?.keyHash).toBe(createHash('sha256').update(response.apiKey).digest('hex'));
+  });
 
   test('that an "organization-apikey-manager" cannot create API keys with admin role', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
