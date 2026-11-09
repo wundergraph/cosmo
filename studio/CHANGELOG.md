@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.186.4](https://github.com/wundergraph/cosmo/compare/studio@0.186.3...studio@0.186.4) (2026-11-09)
+
+**Note:** Version bump only for package studio
+
+## [0.186.3](https://github.com/wundergraph/cosmo/compare/studio@0.186.2...studio@0.186.3) (2026-11-09)
+
+**Note:** Version bump only for package studio
+
+## [0.186.2](https://github.com/wundergraph/cosmo/compare/studio@0.186.1...studio@0.186.2) (2026-11-05)
+
+### Bug Fixes
+
+* **deps:** upgrade handlebars, shell-quote and dompurify for critical advisories ([#3475](https://github.com/wundergraph/cosmo/issues/3475)) ([2f4f116](https://github.com/wundergraph/cosmo/commit/2f4f11615ed2533cdcf613120dd3d5176aef2cbc)) (@pepol)
+
 ## [0.186.1](https://github.com/wundergraph/cosmo/compare/studio@0.186.0...studio@0.186.1) (2026-10-29)
 
 **Note:** Version bump only for package studio

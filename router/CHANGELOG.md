@@ -4,6 +4,38 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.368.0](https://github.com/wundergraph/cosmo/compare/router@0.367.0...router@0.368.0) (2026-11-09)
+
+### Features
+
+* **router:** support per-exporter trace sampling ([#3433](https://github.com/wundergraph/cosmo/issues/3433)) ([6cdee5c](https://github.com/wundergraph/cosmo/commit/6cdee5cb0d410babd90b382bfa5ad62156d7b271)) (@fiam)
+
+## [0.367.0](https://github.com/wundergraph/cosmo/compare/router@0.366.2...router@0.367.0) (2026-11-09)
+
+### Features
+
+* **router:** add prefix option for from_file header values ([#3486](https://github.com/wundergraph/cosmo/issues/3486)) ([3e62cde](https://github.com/wundergraph/cosmo/commit/3e62cded6c6e1491bb96df932d797f0ea7166a4f)) (@Noroth)
+
+## [0.366.2](https://github.com/wundergraph/cosmo/compare/router@0.366.1...router@0.366.2) (2026-11-09)
+
+**Note:** Version bump only for package router
+
+## [0.366.1](https://github.com/wundergraph/cosmo/compare/router@0.366.0...router@0.366.1) (2026-11-05)
+
+### Bug Fixes
+
+* enable planning when a key jump moves a field to another DS ([#3476](https://github.com/wundergraph/cosmo/issues/3476)) ([c747a11](https://github.com/wundergraph/cosmo/commit/c747a117dfe970548f11558120ffca17a87229e2)) (@ysmolski)
+
+## [0.366.0](https://github.com/wundergraph/cosmo/compare/router@0.365.2...router@0.366.0) (2026-11-04)
+
+### Features
+
+* **router:** add remove operation for subgraph request headers ([#3467](https://github.com/wundergraph/cosmo/issues/3467)) ([d2b16ce](https://github.com/wundergraph/cosmo/commit/d2b16ce3f36b68b59f7aa47ad5839e7b9680edea)) (@vdatcu)
+
+### Bug Fixes
+
+* **router:** send uploaded files under the correct variable path ([#3446](https://github.com/wundergraph/cosmo/issues/3446)) ([4e78c40](https://github.com/wundergraph/cosmo/commit/4e78c4091ced62b861551097d8ddfd04892a3302)) (@Noroth)
+
 ## [0.365.2](https://github.com/wundergraph/cosmo/compare/router@0.365.1...router@0.365.2) (2026-10-29)
 
 ### Bug Fixes

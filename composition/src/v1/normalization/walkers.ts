@@ -51,6 +51,7 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           nf.edfsDirectiveReferences.add(name);
           return false;
         }
+
         if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           nf.isSubgraphVersionTwo = true;
         }
