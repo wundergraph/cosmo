@@ -1912,12 +1912,13 @@ This is useful when you have a symmetric key that you cannot expose through a JW
 | symmetric_algorithm                                                         |  <Icon icon="square-check" iconType="solid" /> | Specify which symmetric algorithm is used for signing, supported algorithms are "HS256", "HS384", "HS512"                                    |                     |
 
 
-#### Audience Validation
-In addition to the above JWKS configuration flavours, you can define a list of audiences of which one is required (if specified) with either options.
+#### Audience and Issuer Validation
+Both JWKS configuration flavours accept a list of audiences and a list of issuers. Each check runs only when its list is set.
 
 | YAML                                                                        | Required                                       | Description                                                                                                        | Default Value    |
 | --------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------|
 | audiences                                                                   | <Icon icon="square" />                         | The allowed list of audiences, of which at least one audience is required in the token                             | []               |
+| issuers                                                                     | <Icon icon="square" />                         | The allowed list of issuers. The token's `iss` claim must exactly match one of them. Tokens without `iss` are rejected. | []               |
 
 
 ### JWT

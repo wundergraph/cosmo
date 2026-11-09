@@ -2367,6 +2367,14 @@
                       "type": "string"
                     }
                   },
+                  "issuers": {
+                    "type": "array",
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
                   "secret": {
                     "type": "string",
                     "description": "The secret of the JWKs"
@@ -2955,6 +2963,14 @@
                     "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "issuers": {
+                    "type": "array",
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "secret": {

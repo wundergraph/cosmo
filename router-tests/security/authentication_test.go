@@ -3774,6 +3774,101 @@ func TestAudienceValidation(t *testing.T) {
 	})
 }
 
+func TestIssuerValidation(t *testing.T) {
+	t.Parallel()
+
+	const (
+		issuerA = "https://issuer-a.example.com"
+		issuerB = "https://issuer-b.example.com"
+	)
+
+	statusFor := func(t *testing.T, cfg []authentication.JWKSConfig, token string) int {
+		t.Helper()
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         testutils.ConfigureAuthWithJwksConfig(t, cfg),
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		var status int
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithAccessController(accessController)},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			status = res.StatusCode
+		})
+		return status
+	}
+
+	httpCases := []struct {
+		name    string
+		issuers []string
+		claims  map[string]any
+		want    int
+	}{
+		{"accepts a configured issuer", []string{issuerA}, map[string]any{"iss": issuerA}, http.StatusOK},
+		{"accepts any of several configured issuers", []string{issuerA, issuerB}, map[string]any{"iss": issuerB}, http.StatusOK},
+		{"rejects an issuer sharing the same JWKS", []string{issuerA}, map[string]any{"iss": issuerB}, http.StatusUnauthorized},
+		{"rejects a token without iss", []string{issuerA}, map[string]any{}, http.StatusUnauthorized},
+		{"rejects a non-string iss", []string{issuerA}, map[string]any{"iss": 123}, http.StatusUnauthorized},
+		{"accepts any issuer when none configured", nil, map[string]any{"iss": issuerB}, http.StatusOK},
+	}
+
+	for _, tc := range httpCases {
+		t.Run("with http based configuration: "+tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			authServer, err := jwks.NewServer(t)
+			require.NoError(t, err)
+			t.Cleanup(authServer.Close)
+
+			token, err := authServer.Token(tc.claims)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.want, statusFor(t, []authentication.JWKSConfig{{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 5 * time.Second,
+				Issuers:         tc.issuers,
+			}}, token))
+		})
+	}
+
+	t.Run("with secret based configuration: rejects a mismatched issuer", func(t *testing.T) {
+		t.Parallel()
+
+		secret, kid := "example secret that is long enough", "givenKID"
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{"iss": issuerB})
+
+		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
+			Secret:    secret,
+			Algorithm: string(jwkset.AlgHS256),
+			KeyId:     kid,
+			Issuers:   []string{issuerA},
+		}}, token))
+	})
+
+	t.Run("an issuer mismatch does not fall through to another entry", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		token, err := authServer.Token(map[string]any{"iss": issuerB})
+		require.NoError(t, err)
+
+		// Entry 1 holds the signing key but trusts only issuer A. Entry 2 trusts
+		// issuer B but has no matching key, so the token must be rejected.
+		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{
+			{URL: authServer.JWKSURL(), RefreshInterval: 5 * time.Second, Issuers: []string{issuerA}},
+			{Secret: "another secret that is long enough", Algorithm: string(jwkset.AlgHS256), KeyId: "other", Issuers: []string{issuerB}},
+		}, token))
+	})
+}
+
 func TestIntrospectionAuthentication(t *testing.T) {
 	t.Run("unauthenticated introspection query fails on full auth", func(t *testing.T) {
 		t.Parallel()

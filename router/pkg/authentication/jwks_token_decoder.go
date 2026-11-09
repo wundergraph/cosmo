@@ -52,6 +52,7 @@ type JWKSConfig struct {
 	KeyId     string
 
 	Audiences []string
+	Issuers   []string
 
 	RefreshUnknownKID RefreshUnknownKIDConfig
 }
@@ -73,6 +74,7 @@ type audienceSet map[string]struct{}
 type keyFuncEntry struct {
 	jwks              keyfunc.Keyfunc
 	aud               audienceSet
+	issuers           []string
 	allowedAlgorithms []string
 	allowedUse        []string
 }
@@ -136,6 +138,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
+				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
@@ -196,6 +199,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
+				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
@@ -205,6 +209,18 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
 		for _, entry := range entries {
+			if len(entry.issuers) > 0 {
+				tokenIssuer, err := token.Claims.GetIssuer()
+				if err != nil {
+					errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
+					continue
+				}
+				if !slices.Contains(entry.issuers, tokenIssuer) {
+					errJoin = errors.Join(errJoin, errUnacceptableIss)
+					continue
+				}
+			}
+
 			if len(entry.aud) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
