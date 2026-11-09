@@ -26,7 +26,7 @@ import {
   normalizeSubgraphFailure,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { Kind } from 'graphql';
+import { Kind, printType, validate } from 'graphql';
 
 describe('Argument federation tests', () => {
   const prefix = 'argument "input"';
@@ -199,6 +199,43 @@ describe('Argument federation tests', () => {
       }
     `,
       ),
+    );
+  });
+
+  test('that client and router schemas expose the same arguments for an external field used by @requires', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [productsWithTraitArguments, seoWithoutTraitArguments],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+
+    expect(printType(federatedGraphSchema.getType('Product')!)).toBe(
+      printType(federatedGraphClientSchema.getType('Product')!),
+    );
+  });
+
+  test('that client and router schemas agree when validating operations with external field arguments', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [productsWithTraitArguments, seoWithoutTraitArguments],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const operation = parse(`
+      query ProductTraits {
+        product(id: "product-id") {
+          productTraits: traits(filterTypes: [RELEASE_DATE, RETAIL_PRICE]) {
+            name
+            value
+          }
+          namedTraits: traits(filters: ["Release Date"]) {
+            name
+            value
+          }
+        }
+      }
+    `);
+
+    // Persisted operations are validated against the router schema, whereas codegen uses the client schema.
+    expect(validate(federatedGraphSchema, operation).map((error) => error.message)).toStrictEqual(
+      validate(federatedGraphClientSchema, operation).map((error) => error.message),
     );
   });
 
@@ -397,6 +434,53 @@ const subgraphWithArgumentAndDefaultValue = (name: string, typeName: string, def
     }
   `),
 });
+
+const productsWithTraitArguments: Subgraph = {
+  name: 'products',
+  url: '',
+  definitions: parse(`
+    extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
+
+    type Query {
+      product(id: String!): Product
+    }
+
+    type Product @key(fields: "id") {
+      id: String!
+      traits(filterTypes: [TraitType!], filters: [String!]): [Traits!]!
+    }
+
+    enum TraitType {
+      RELEASE_DATE
+      RETAIL_PRICE
+    }
+
+    type Traits {
+      name: String!
+      value: String
+    }
+  `),
+};
+
+const seoWithoutTraitArguments: Subgraph = {
+  name: 'seo',
+  url: '',
+  definitions: parse(`
+    extend schema
+      @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@external", "@requires"])
+
+    type Product @key(fields: "id") {
+      id: String!
+      traits: [Traits!]! @external
+      seo: String @requires(fields: "traits { name value }")
+    }
+
+    type Traits {
+      name: String! @external
+      value: String @external
+    }
+  `),
+};
 
 const subgraphA = {
   name: 'subgraph-a',
