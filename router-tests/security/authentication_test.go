@@ -20,6 +20,7 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -3829,7 +3830,7 @@ func TestIssuerValidation(t *testing.T) {
 			token, err := authServer.Token(tc.claims)
 			require.NoError(t, err)
 
-			require.Equal(t, tc.want, statusFor(t, []authentication.JWKSConfig{{
+			assert.Equal(t, tc.want, statusFor(t, []authentication.JWKSConfig{{
 				URL:             authServer.JWKSURL(),
 				RefreshInterval: 5 * time.Second,
 				Issuers:         tc.issuers,
@@ -3843,26 +3844,11 @@ func TestIssuerValidation(t *testing.T) {
 		secret, kid := "example secret that is long enough", "givenKID"
 		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{"iss": issuerB})
 
-		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
+		assert.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
 			Secret:    secret,
 			Algorithm: string(jwkset.AlgHS256),
 			KeyId:     kid,
 			Issuers:   []string{issuerA},
-		}}, token))
-	})
-
-	t.Run("with secret based configuration: an empty configured issuer does not accept a token without iss", func(t *testing.T) {
-		t.Parallel()
-
-		// The YAML schema forbids empty issuers, but direct Go callers bypass it.
-		secret, kid := "example secret that is long enough", "givenKID"
-		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{})
-
-		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
-			Secret:    secret,
-			Algorithm: string(jwkset.AlgHS256),
-			KeyId:     kid,
-			Issuers:   []string{""},
 		}}, token))
 	})
 
@@ -3878,7 +3864,7 @@ func TestIssuerValidation(t *testing.T) {
 
 		// Entry 1 holds the signing key but trusts only issuer A. Entry 2 trusts
 		// issuer B but has no matching key, so the token must be rejected.
-		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{
+		assert.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{
 			{URL: authServer.JWKSURL(), RefreshInterval: 5 * time.Second, Issuers: []string{issuerA}},
 			{Secret: "another secret that is long enough", Algorithm: string(jwkset.AlgHS256), KeyId: "other", Issuers: []string{issuerB}},
 		}, token))
@@ -3954,9 +3940,9 @@ func TestIssuerRoutingSkipsOtherProviders(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			require.NoError(t, res.Body.Close())
-			require.Equal(t, http.StatusOK, res.StatusCode)
+			assert.Equal(t, http.StatusOK, res.StatusCode)
 		}
-		require.Equal(t, baseline, publicHits.Load(), "the public provider fetched its JWKS again for a token it does not own")
+		assert.Equal(t, baseline, publicHits.Load(), "the public provider fetched its JWKS again for a token it does not own")
 	})
 }
 

@@ -3,7 +3,8 @@ package authentication
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestIssuerRoutes(t *testing.T) {
@@ -30,8 +31,20 @@ func TestIssuerRoutes(t *testing.T) {
 		return out
 	}
 
-	require.Equal(t, []int{0, 1, 2}, indexes(routes.candidates("a")))
-	require.Equal(t, []int{1, 2}, indexes(routes.candidates("b")))
-	require.Equal(t, []int{1}, indexes(routes.candidates("unknown")))
-	require.Equal(t, []int{1}, indexes(routes.candidates("")))
+	assert.Equal(t, []int{0, 1, 2}, indexes(routes["a"]))
+	assert.Equal(t, []int{1, 2}, indexes(routes["b"]))
+	assert.Equal(t, []int{1}, indexes(routes[""]))
+	assert.Len(t, routes, 3, "only configured issuers and \"\" get a key")
+}
+
+func TestNewJwksTokenDecoderRejectsEmptyIssuer(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewJwksTokenDecoder(t.Context(), zap.NewNop(), []JWKSConfig{{
+		Secret:    "example secret that is long enough",
+		Algorithm: "HS256",
+		KeyId:     "givenKID",
+		Issuers:   []string{"https://issuer.example.com", ""},
+	}})
+	assert.ErrorContains(t, err, "must not contain an empty issuer")
 }

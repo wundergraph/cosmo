@@ -79,50 +79,35 @@ type keyFuncEntry struct {
 	allowedUse        []string
 }
 
-// issuerRoutes holds, for each configured issuer, the entries allowed to
-// validate its tokens in config order, plus entries that accept any issuer.
-type issuerRoutes struct {
-	byIssuer     map[string][]*keyFuncEntry
-	unrestricted []*keyFuncEntry
-}
+// newIssuerRoutes maps each configured issuer to the entries allowed to validate
+// its tokens, in config order. The "" key holds the entries without issuers,
+// which accept tokens with any issuer, including an unknown or missing one.
+// Configured issuers are never empty, so they cannot collide with "".
+func newIssuerRoutes(entries []keyFuncEntry) map[string][]*keyFuncEntry {
+	// acceptedBy returns the entries that accept iss, in config order.
+	// An entry without issuers accepts any issuer.
+	acceptedBy := func(iss string) []*keyFuncEntry {
+		var accepted []*keyFuncEntry
+		for i := range entries {
+			if len(entries[i].issuers) == 0 || slices.Contains(entries[i].issuers, iss) {
+				accepted = append(accepted, &entries[i])
+			}
+		}
+		return accepted
+	}
 
-// newIssuerRoutes builds the combined issuer and unrestricted entries
-// from the existing configuration entries. Entries are kept in config order.
-func newIssuerRoutes(entries []keyFuncEntry) issuerRoutes {
-	r := issuerRoutes{byIssuer: make(map[string][]*keyFuncEntry)}
+	routes := make(map[string][]*keyFuncEntry)
 	for i := range entries {
 		e := &entries[i]
 		if len(e.issuers) == 0 {
-			r.unrestricted = append(r.unrestricted, e)
-			for iss := range r.byIssuer {
-				r.byIssuer[iss] = append(r.byIssuer[iss], e)
-			}
+			routes[""] = append(routes[""], e)
 			continue
 		}
 		for _, iss := range e.issuers {
-			c, ok := r.byIssuer[iss]
-			if !ok {
-				c = slices.Clone(r.unrestricted)
-			}
-			// Skip an issuer listed twice in the same entry.
-			if len(c) > 0 && c[len(c)-1] == e {
-				continue
-			}
-			r.byIssuer[iss] = append(c, e)
+			routes[iss] = acceptedBy(iss)
 		}
 	}
-	return r
-}
-
-// candidates returns the entries allowed to validate a token from iss. A missing,
-// empty or unknown issuer only reaches entries that accept any issuer.
-func (r issuerRoutes) candidates(iss string) []*keyFuncEntry {
-	if iss != "" {
-		if c, ok := r.byIssuer[iss]; ok {
-			return c
-		}
-	}
-	return r.unrestricted
+	return routes
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
@@ -131,6 +116,10 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	entries := make([]keyFuncEntry, 0, len(configs))
 
 	for _, c := range configs {
+		if slices.Contains(c.Issuers, "") {
+			return nil, errors.New("JWKS issuers must not contain an empty issuer")
+		}
+
 		if c.URL != "" {
 			key := configKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
@@ -262,7 +251,11 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 		if err != nil {
 			errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
 		}
-		candidates := routes.candidates(tokenIssuer)
+		// An unknown or missing issuer falls back to the entries that accept any issuer.
+		candidates, ok := routes[tokenIssuer]
+		if !ok {
+			candidates = routes[""]
+		}
 		if len(candidates) == 0 {
 			errJoin = errors.Join(errJoin, errUnacceptableIss)
 		}
