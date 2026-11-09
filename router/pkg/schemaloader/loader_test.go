@@ -178,7 +178,7 @@ type Employee { id: ID! name: String! }
 	ops := []Operation{{Name: "FindEmployee", Document: opDoc}}
 
 	builder := NewSchemaBuilder(&schemaDoc)
-	require.NoError(t, builder.BuildSchemasForOperations(ops))
+	require.NoError(t, builder.BuildSchemaForOperation(&ops[0]))
 
 	var inputSchema struct {
 		Properties map[string]struct {
@@ -241,7 +241,7 @@ query GetCountry(
 
 	// ...and still reaches the JSON schema built from the loaded Document.
 	builder := NewSchemaBuilder(&schemaDoc)
-	require.NoError(t, builder.BuildSchemasForOperations(operations))
+	require.NoError(t, builder.BuildSchemaForOperation(&operations[0]))
 	require.Contains(t, string(operations[0].JSONSchema), "The ISO 3166-1 alpha-2 code",
 		"variable description must still reach the MCP tool input schema")
 }

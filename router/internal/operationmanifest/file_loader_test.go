@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,6 +62,51 @@ func TestFileLoader(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, changed)
 		require.Nil(t, manifest)
+	})
+
+	t.Run("does not parse a file whose bytes did not change", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte(manifestJSON), 0o644))
+		loader := NewFileLoader(dir, "manifest.json")
+
+		first, changed, err := loader.Fetch(t.Context(), "")
+		require.NoError(t, err)
+		require.True(t, changed)
+		require.Equal(t, "rev-1", first.Revision)
+
+		// Parsing again would return a new manifest. The cached one is returned
+		// for a caller that does not hold its revision yet.
+		second, changed, err := loader.Fetch(t.Context(), "")
+		require.NoError(t, err)
+		require.True(t, changed)
+		require.Same(t, first, second)
+
+		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
+		require.NoError(t, err)
+		require.False(t, changed)
+		require.Nil(t, manifest)
+	})
+
+	t.Run("parses the file again when its bytes change", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		path := filepath.Join(dir, "manifest.json")
+		require.NoError(t, os.WriteFile(path, []byte(manifestJSON), 0o644))
+		loader := NewFileLoader(dir, "manifest.json")
+
+		_, changed, err := loader.Fetch(t.Context(), "")
+		require.NoError(t, err)
+		require.True(t, changed)
+
+		require.NoError(t, os.WriteFile(path, []byte(strings.Replace(manifestJSON, "rev-1", "rev-2", 1)), 0o644))
+
+		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
+		require.NoError(t, err)
+		require.True(t, changed)
+		require.Equal(t, "rev-2", manifest.Revision)
 	})
 
 	t.Run("returns an error when the manifest file is missing", func(t *testing.T) {

@@ -1,44 +1,58 @@
 package operationmanifest
 
 import (
+	"context"
+	"sync"
 	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
 type Store struct {
-	manifest   atomic.Pointer[Manifest]
-	subscriber atomic.Pointer[chan struct{}]
-	logger     *zap.Logger
+	manifest atomic.Pointer[Manifest]
+	logger   *zap.Logger
+
+	mu          sync.Mutex
+	subscribers map[chan struct{}]struct{}
 }
 
 func NewStore(logger *zap.Logger) *Store {
-	return &Store{logger: logger}
+	return &Store{logger: logger, subscribers: make(map[chan struct{}]struct{})}
 }
 
-// Subscribe returns a channel that signals after each later Load. The channel
-// holds one signal, so loads that arrive while a signal is pending coalesce into
-// it and the receiver always sees the latest manifest. A new call replaces the
-// previous subscriber, which receives no further signals.
-func (s *Store) Subscribe() <-chan struct{} {
+// Subscribe returns a channel that signals after each later Load until ctx ends.
+// The channel holds one signal, so loads that arrive while a signal is pending
+// coalesce into it and the receiver always sees the latest manifest. Every
+// subscriber receives its own signal.
+func (s *Store) Subscribe(ctx context.Context) <-chan struct{} {
 	ch := make(chan struct{}, 1)
-	s.subscriber.Store(&ch)
+
+	s.mu.Lock()
+	s.subscribers[ch] = struct{}{}
+	s.mu.Unlock()
+
+	context.AfterFunc(ctx, func() {
+		s.mu.Lock()
+		delete(s.subscribers, ch)
+		s.mu.Unlock()
+	})
+
 	return ch
 }
 
-// Load swaps the manifest atomically and signals the subscriber, if any.
+// Load swaps the manifest atomically and signals every subscriber.
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
 
-	ch := s.subscriber.Load()
-	if ch == nil {
-		return
-	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	select {
-	case *ch <- struct{}{}:
-	default:
-		s.logger.Debug("Skipping manifest update signal, previous signal still pending")
+	for ch := range s.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+			s.logger.Debug("Skipping manifest update signal, previous signal still pending")
+		}
 	}
 }
 

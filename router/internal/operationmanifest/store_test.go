@@ -1,7 +1,9 @@
 package operationmanifest
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -103,7 +105,7 @@ func TestStore(t *testing.T) {
 
 	t.Run("Subscribe signals after a later Load", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
-		updates := store.Subscribe()
+		updates := store.Subscribe(t.Context())
 
 		select {
 		case <-updates:
@@ -125,7 +127,7 @@ func TestStore(t *testing.T) {
 		store := NewStore(zap.New(core))
 
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
-		updates := store.Subscribe()
+		updates := store.Subscribe(t.Context())
 
 		select {
 		case <-updates:
@@ -138,7 +140,7 @@ func TestStore(t *testing.T) {
 	t.Run("Subscribe coalesces loads while a signal is pending", func(t *testing.T) {
 		core, logs := observer.New(zap.DebugLevel)
 		store := NewStore(zap.New(core))
-		updates := store.Subscribe()
+		updates := store.Subscribe(t.Context())
 
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
 		store.Load(&Manifest{Version: 1, Revision: "rev-2", Operations: map[string]string{"b": "q"}})
@@ -162,22 +164,46 @@ func TestStore(t *testing.T) {
 		}
 	})
 
-	t.Run("Subscribe replaces the previous subscriber", func(t *testing.T) {
+	t.Run("Subscribe signals every subscriber", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
-		first := store.Subscribe()
-		second := store.Subscribe()
+		first := store.Subscribe(t.Context())
+		second := store.Subscribe(t.Context())
+
+		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
+
+		for name, updates := range map[string]<-chan struct{}{"first": first, "second": second} {
+			select {
+			case <-updates:
+			default:
+				t.Fatalf("expected a signal on the %s subscriber", name)
+			}
+		}
+	})
+
+	t.Run("Subscribe stops signaling when the context ends", func(t *testing.T) {
+		store := NewStore(zap.NewNop())
+		ctx, cancel := context.WithCancel(t.Context())
+		ended := store.Subscribe(ctx)
+		live := store.Subscribe(t.Context())
+
+		cancel()
+		require.Eventually(t, func() bool {
+			store.mu.Lock()
+			defer store.mu.Unlock()
+			return len(store.subscribers) == 1
+		}, time.Second, time.Millisecond)
 
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
 
 		select {
-		case <-first:
-			t.Fatal("replaced subscriber must not receive signals")
+		case <-ended:
+			t.Fatal("subscriber with an ended context must not receive signals")
 		default:
 		}
 		select {
-		case <-second:
+		case <-live:
 		default:
-			t.Fatal("expected a signal on the current subscriber")
+			t.Fatal("expected a signal on the live subscriber")
 		}
 	})
 }

@@ -733,9 +733,7 @@ func (s *GraphQLSchemaServer) rebuild() error {
 	operationsManager := NewOperationsManager(s.schema, s.logger, s.excludeMutations)
 
 	if s.manifestOperations != nil {
-		if err := operationsManager.LoadOperationsFromManifest(s.manifestOperations()); err != nil {
-			return fmt.Errorf("failed to load operations: %w", err)
-		}
+		operationsManager.LoadOperationsFromManifest(s.manifestOperations())
 	} else if s.operationsDir != "" {
 		if err := operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
 			return fmt.Errorf("failed to load operations: %w", err)
@@ -747,9 +745,7 @@ func (s *GraphQLSchemaServer) rebuild() error {
 	// auth middleware, which is only constructed alongside oauthConfig.
 	if s.oauthConfig != nil && len(s.fieldConfigs) > 0 {
 		maxScopeCombinations := s.oauthConfig.MaxScopeCombinations
-		if err := operationsManager.ComputeToolScopes(s.fieldConfigs, maxScopeCombinations); err != nil {
-			return fmt.Errorf("failed to compute tool scopes: %w", err)
-		}
+		operationsManager.ComputeToolScopes(s.fieldConfigs, maxScopeCombinations)
 		s.authMiddleware.SetScopeExtractor(NewScopeExtractor(s.fieldConfigs, s.schema, maxScopeCombinations))
 	}
 

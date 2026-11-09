@@ -1500,7 +1500,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 	if r.mcpManifestStore != nil {
 		// Rebuild the tools when the poller loads a new manifest. The MCP server
 		// lives as long as the router, so the bootstrap context bounds the loop.
-		manifestUpdates := r.mcpManifestStore.Subscribe()
+		manifestUpdates := r.mcpManifestStore.Subscribe(ctx)
 		go func() {
 			for {
 				select {

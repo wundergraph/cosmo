@@ -1771,8 +1771,9 @@ func (s *graphServer) buildGraphMux(
 			}
 
 			// Subscribe before the warmup so a manifest the poller loads during it
-			// is re-warmed, and a load from before this graph server is not.
-			manifestUpdates := pqlStore.Subscribe()
+			// is re-warmed, and a load from before this graph mux is not. Every mux
+			// subscribes, and the subscription ends with the mux.
+			manifestUpdates := pqlStore.Subscribe(graphMuxCtx)
 
 			err = WarmupCaches(graphMuxCtx, manifestWarmupConfig)
 			if err != nil {

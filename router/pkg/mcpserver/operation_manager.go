@@ -41,25 +41,37 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
-	return om.setOperations(operations)
+	om.setOperations(operations)
+	return nil
 }
 
 // LoadOperationsFromManifest loads operations from a manifest. The key of each operation is its name.
-func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) error {
+func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) {
 	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
-	return om.setOperations(loader.LoadOperationsFromManifest(manifestOperations))
+	om.setOperations(loader.LoadOperationsFromManifest(manifestOperations))
 }
 
-// setOperations builds the schemas for operations and stores them
-func (om *OperationsManager) setOperations(operations []schemaloader.Operation) error {
+// setOperations builds the schemas for operations and stores them. An operation
+// whose schema cannot be built is logged and skipped, so one bad operation does
+// not take the others down with it.
+func (om *OperationsManager) setOperations(operations []schemaloader.Operation) {
 	builder := schemaloader.NewSchemaBuilder(om.schemaDoc)
-	if err := builder.BuildSchemasForOperations(operations); err != nil {
-		return fmt.Errorf("failed to build schemas: %w", err)
+	om.operations = om.keep(operations, "Skipping MCP operation because its input schema cannot be built", builder.BuildSchemaForOperation)
+}
+
+// keep runs fn on every operation in place and returns the ones fn accepted.
+// The rejected ones are logged with msg and dropped.
+func (om *OperationsManager) keep(operations []schemaloader.Operation, msg string, fn func(*schemaloader.Operation) error) []schemaloader.Operation {
+	kept := operations[:0]
+	for i := range operations {
+		if err := fn(&operations[i]); err != nil {
+			om.logger.Error(msg, zap.String("operation", operations[i].Name), zap.Error(err))
+			continue
+		}
+		kept = append(kept, operations[i])
 	}
-
-	om.operations = operations
-
-	return nil
+	clear(operations[len(kept):])
+	return kept
 }
 
 // GetOperations returns all loaded operations
@@ -97,22 +109,19 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 
 // ComputeToolScopes runs the scope extractor against all loaded operations,
 // populating each operation's RequiredScopes from @requiresScopes directives.
-// Returns an error if any operation exceeds the scope combination limit, which
-// indicates a pathological @requiresScopes configuration that should be simplified.
-func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) error {
+// An operation that exceeds the scope combination limit has a pathological
+// @requiresScopes configuration. It is logged and dropped, so it never
+// registers as a tool and does not block the other operations.
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) {
 	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc, maxScopeCombinations)
-	for i := range om.operations {
-		fieldReqs, err := extractor.ExtractScopesForOperation(&om.operations[i].Document)
+	om.operations = om.keep(om.operations, "Skipping MCP operation because its scopes cannot be computed", func(op *schemaloader.Operation) error {
+		fieldReqs, err := extractor.ExtractScopesForOperation(&op.Document)
 		if err != nil {
-			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
+			return err
 		}
-		combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)
-		if err != nil {
-			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
-		}
-		om.operations[i].RequiredScopes = combinedScopes
-	}
-	return nil
+		op.RequiredScopes, err = extractor.ComputeCombinedScopes(fieldReqs)
+		return err
+	})
 }
 
 // GetSchema returns the schema document used by the operations manager
