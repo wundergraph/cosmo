@@ -5338,6 +5338,11 @@
               },
               "default": "1m",
               "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            },
+            "prefix": {
+              "type": "string",
+              "examples": ["Bearer "],
+              "description": "A static value prepended to the file's contents, e.g. 'Bearer ' when the file holds a raw token. Include any separator, such as a trailing space, in the prefix."
             }
           }
         }
