@@ -13,10 +13,10 @@ Release the full monorepo with all packages and services can be done by triggeri
    Releases never set the `main` tag, for any image.
 
    On every push to `main`, the same workflow builds the router image (and its `nonroot` variant) and tags it with:
-   - `main`: The most recent push to `main`. Only the router gets this tag. Other images no longer get a `main` tag.
+   - `main`: The most recent push to `main`. Only the router gets this tag. Releases no longer update the `main` tag of other images. Their old `main` tags stay in the registry, frozen at each image's last release, and are stale.
    - `short-sha`: The short SHA of the pushed commit, e.g. `sha-d7f7524`. Use it to pull the image for a specific commit.
 
-   Push builds run one at a time, in push order, and a build never cancels another one. GitHub keeps only one waiting run, so if three or more commits land while a build runs, the commits in between get no image. The `chore(release): Publish [skip ci]` commits do not start a push build. Pushes never set `latest` or a version tag. Only releases do.
+   Push builds run one at a time and a build never cancels another one. They normally run in push order, but GitHub does not guarantee the order of waiting runs, so in rare cases `main` can be one commit behind until the next push. GitHub keeps only one waiting run, so if three or more commits land while a build runs, the commits in between get no image. The `chore(release): Publish [skip ci]` commits do not start a push build. Pushes never set `latest` or a version tag. Only releases do.
 
    A release runs on the commit that was the head of `main` when the release started. A push usually built that commit already, so the release replaces its `sha-<short-sha>` image with the release image. The two images have the same code but a different version string and build date. If the push build is still running, the build that finishes last owns the tag.
 

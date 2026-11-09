@@ -36,7 +36,9 @@ on:
         type: string
         default: .
 
-# Push builds share one group and wait for each other, so `main` moves in push order.
+# Push builds share one group and wait for each other, so `main` normally moves in push
+# order. GitHub does not guarantee the order of queued runs, so in rare cases `main` can
+# be one commit behind until the next push.
 # GitHub keeps only one waiting run per group: if 3+ commits land during one build,
 # the runs in between are replaced and those commits get no `sha-<shortsha>` image.
 # Release dispatches each get their own group, so pushes never replace or delay them.
