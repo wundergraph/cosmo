@@ -87,7 +87,7 @@ require (
 	github.com/wundergraph/go-arena v1.3.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.15.0
 )
