@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.368.0](https://github.com/wundergraph/cosmo/compare/router@0.367.0...router@0.368.0) (2026-11-09)
+
+### Features
+
+* **router:** support per-exporter trace sampling ([#3433](https://github.com/wundergraph/cosmo/issues/3433)) ([6cdee5c](https://github.com/wundergraph/cosmo/commit/6cdee5cb0d410babd90b382bfa5ad62156d7b271)) (@fiam)
+
 ## [0.367.0](https://github.com/wundergraph/cosmo/compare/router@0.366.2...router@0.367.0) (2026-11-09)
 
 ### Features
