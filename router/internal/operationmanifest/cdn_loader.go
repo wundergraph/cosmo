@@ -17,8 +17,6 @@ import (
 type CDNLoader struct {
 	cdnURL              *url.URL
 	authenticationToken string
-	// objectPath is the manifest path below /{organizationID}/{federatedGraphID}/
-	objectPath string
 	// federatedGraphID is the ID of the federated graph that was obtained
 	// from the token, already url-escaped
 	federatedGraphID string
@@ -31,7 +29,7 @@ type CDNLoader struct {
 
 // NewCDNLoader creates a new manifest loader for the Cosmo CDN. It reuses JWT extraction
 // and HTTP client setup patterns from the CDN persisted operations client.
-func NewCDNLoader(endpoint, token, objectPath string, logger *zap.Logger) (*CDNLoader, error) {
+func NewCDNLoader(endpoint, token string, logger *zap.Logger) (*CDNLoader, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -54,7 +52,6 @@ func NewCDNLoader(endpoint, token, objectPath string, logger *zap.Logger) (*CDNL
 	return &CDNLoader{
 		cdnURL:              u,
 		authenticationToken: token,
-		objectPath:          objectPath,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
@@ -62,11 +59,11 @@ func NewCDNLoader(endpoint, token, objectPath string, logger *zap.Logger) (*CDNL
 	}, nil
 }
 
-// Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/{objectPath}
+// Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/operations/manifest.json
 // with Bearer auth, using If-None-Match for conditional requests. The CDN returns 304 Not Modified
 // when the ETag matches, avoiding a full download. Returns (manifest, changed, err).
 func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
-	manifestPath := fmt.Sprintf("/%s/%s/%s", f.organizationID, f.federatedGraphID, f.objectPath)
+	manifestPath := fmt.Sprintf("/%s/%s/operations/manifest.json", f.organizationID, f.federatedGraphID)
 	manifestURL := f.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
 	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)

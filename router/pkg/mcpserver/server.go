@@ -10,7 +10,6 @@ import (
 	"io"
 	"maps"
 	"net/http"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -35,9 +34,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
-
-// toolNamePattern is the tool name grammar of the MCP SDK. The SDK only logs invalid names.
-var toolNamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
 
 // reservedToolNames contains tool names that are internally registered by the MCP server
 // and must not be used by operations when omitToolNamePrefix is enabled.
@@ -966,13 +962,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
 				zap.String("conflicting_tool", operationToolName),
-			)
-			continue
-		}
-		if !toolNamePattern.MatchString(toolName) {
-			s.logger.Error("Skipping operation because its tool name is not a valid MCP tool name",
-				zap.String("operation", op.Name),
-				zap.String("tool", toolName),
 			)
 			continue
 		}

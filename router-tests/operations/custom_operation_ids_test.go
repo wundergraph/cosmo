@@ -200,6 +200,7 @@ func TestCustomOperationIDManifestReload(t *testing.T) {
 				Manifest: config.PQLManifestConfig{
 					Enabled:      true,
 					PollInterval: 100 * time.Millisecond,
+					PollJitter:   5 * time.Millisecond,
 				},
 			}),
 		},

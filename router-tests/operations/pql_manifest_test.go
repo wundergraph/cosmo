@@ -51,6 +51,7 @@ func TestPQLManifest(t *testing.T) {
 		Manifest: config.PQLManifestConfig{
 			Enabled:      true,
 			PollInterval: 10 * time.Second,
+			PollJitter:   5 * time.Second,
 		},
 	}
 
@@ -58,6 +59,7 @@ func TestPQLManifest(t *testing.T) {
 		Manifest: config.PQLManifestConfig{
 			Enabled:      true,
 			PollInterval: 10 * time.Second,
+			PollJitter:   5 * time.Second,
 			Warmup: config.PQLManifestWarmupConfig{
 				Enabled: true,
 				Workers: 4,
@@ -174,6 +176,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 					Safelist: config.SafelistConfiguration{Enabled: true},
 				}),
@@ -199,6 +202,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 					Safelist: config.SafelistConfiguration{Enabled: true},
 				}),
@@ -224,6 +228,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 				}),
@@ -259,6 +264,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 				}),
@@ -404,6 +410,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 					LogUnknown: true,
 					Safelist:   config.SafelistConfiguration{Enabled: true},
@@ -496,6 +503,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 100 * time.Millisecond,
+						PollJitter:   5 * time.Millisecond,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled: true,
 							Workers: 4,
@@ -629,6 +637,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 				}),
 			},
@@ -676,6 +685,7 @@ func TestPQLManifest(t *testing.T) {
 						Enabled:      true,
 						FileName:     "manifest.json",
 						PollInterval: 100 * time.Millisecond,
+						PollJitter:   5 * time.Millisecond,
 					},
 					Storage: config.PersistedOperationsStorageConfig{
 						ProviderID:   "local",
@@ -729,6 +739,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled: false,
 						},
@@ -772,6 +783,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled:        true,
 							Workers:        2,
@@ -827,6 +839,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
 							Enabled:        true,
 							Workers:        2,
@@ -997,6 +1010,7 @@ func TestPQLManifest(t *testing.T) {
 					Manifest: config.PQLManifestConfig{
 						Enabled:      true,
 						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
 					},
 				}),
 			},

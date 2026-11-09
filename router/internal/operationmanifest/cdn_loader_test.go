@@ -18,7 +18,6 @@ func newTestFetcher(serverURL string) *CDNLoader {
 	return &CDNLoader{
 		cdnURL:              u,
 		authenticationToken: "test-token",
-		objectPath:          "operations/manifest.json",
 		federatedGraphID:    "graph-id",
 		organizationID:      "org-id",
 		httpClient:          &http.Client{},

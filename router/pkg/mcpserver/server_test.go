@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 
@@ -282,32 +281,6 @@ func TestManifestOperations(t *testing.T) {
 		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 
 		require.Equal(t, []string{"get_schema", "FindEmployee", "list-employees_v2", "get_operation_info"}, srv.registeredTools)
-	})
-
-	t.Run("skips tools whose name is not a valid MCP tool name", func(t *testing.T) {
-		t.Parallel()
-
-		// "execute_operation_" is 18 characters, so these keys make tool names of 128 and 129 characters.
-		longestKey := strings.Repeat("a", 110)
-		tooLongKey := strings.Repeat("b", 111)
-
-		srv, err := NewGraphQLSchemaServer(
-			t.Context(),
-			"http://localhost:4000/graphql",
-			WithManifestOperations(func() map[string]string {
-				return map[string]string{
-					longestKey:        listEmployeesOp,
-					tooLongKey:        listEmployeesOp,
-					"with space":      listEmployeesOp,
-					"with/slash":      listEmployeesOp,
-					"with\u00fcmlaut": listEmployeesOp,
-				}
-			}),
-		)
-		require.NoError(t, err)
-		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
-
-		require.Equal(t, []string{"get_schema", "execute_operation_" + longestKey, "get_operation_info"}, srv.registeredTools)
 	})
 }
 

@@ -1540,6 +1540,7 @@ func (r *Router) buildMCPManifestStore(ctx context.Context) error {
 		loader,
 		store,
 		cfg.PollInterval,
+		cfg.PollInterval/2,
 		r.logger,
 	)
 
@@ -1740,9 +1741,9 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		if r.graphApiToken == "" {
 			return nil, errors.New("graph token is required for PQL manifest")
 		}
-		loader, err = operationmanifest.NewCDNLoader(r.cdnConfig.URL, r.graphApiToken, "operations/manifest.json", r.logger)
+		loader, err = operationmanifest.NewCDNLoader(r.cdnConfig.URL, r.graphApiToken, r.logger)
 	} else if provider, ok := registry.CDN(storageProviderID); ok {
-		loader, err = operationmanifest.NewCDNLoader(provider.URL, r.graphApiToken, "operations/manifest.json", r.logger)
+		loader, err = operationmanifest.NewCDNLoader(provider.URL, r.graphApiToken, r.logger)
 	} else if provider, ok := registry.S3(storageProviderID); ok {
 		loader, err = operationmanifest.NewS3Loader(provider, objectPath)
 	} else if provider, ok := registry.FileSystem(storageProviderID); ok {
@@ -1759,6 +1760,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		loader,
 		pqlStore,
 		r.persistedOperationsConfig.Manifest.PollInterval,
+		r.persistedOperationsConfig.Manifest.PollJitter,
 		r.logger,
 	)
 

@@ -221,10 +221,11 @@
             "poll_jitter": {
               "type": "string",
               "format": "go-duration",
-              "description": "Deprecated. The router no longer adds jitter to the poll interval. The value is accepted and ignored.",
+              "description": "The maximum random jitter added to each poll interval. The period is specified as a string with a number and a unit, e.g. 1s, 5s, 10s. Minimum is 1s.",
               "default": "5s",
-              "deprecated": true,
-              "deprecationMessage": "poll_jitter is deprecated and ignored. The router polls the manifest at poll_interval without jitter."
+              "duration": {
+                "minimum": "1s"
+              }
             },
             "warmup": {
               "type": "object",
