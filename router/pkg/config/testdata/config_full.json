@@ -342,7 +342,8 @@
           "Value": "",
           "Expression": "",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "propagate",
@@ -355,7 +356,8 @@
           "Value": "",
           "Expression": "",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "propagate",
@@ -368,7 +370,22 @@
           "Value": "",
           "Expression": "",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
+        },
+        {
+          "Operation": "propagate",
+          "Matching": "",
+          "NegateMatch": false,
+          "Named": "X-Request-Id",
+          "Rename": "",
+          "Default": "",
+          "Name": "",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": true
         },
         {
           "Operation": "set",
@@ -381,7 +398,8 @@
           "Value": "some-secret",
           "Expression": "",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "set",
@@ -399,7 +417,8 @@
             "ResponseHeader": "",
             "Expression": ""
           },
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "set",
@@ -412,7 +431,8 @@
           "Value": "",
           "Expression": "request.header.Get('X-Operation-Name')",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "set",
@@ -428,7 +448,8 @@
           "FromFile": {
             "Path": "/etc/secrets/api-key",
             "RefreshInterval": 60000000000
-          }
+          },
+          "ExcludeFromDeduplicationKey": false
         },
         {
           "Operation": "remove",
@@ -441,7 +462,8 @@
           "Value": "",
           "Expression": "",
           "ValueFrom": null,
-          "FromFile": null
+          "FromFile": null,
+          "ExcludeFromDeduplicationKey": false
         }
       ],
       "Response": [
@@ -472,7 +494,8 @@
             "Value": "",
             "Expression": "",
             "ValueFrom": null,
-            "FromFile": null
+            "FromFile": null,
+            "ExcludeFromDeduplicationKey": false
           },
           {
             "Operation": "remove",
@@ -485,7 +508,8 @@
             "Value": "",
             "Expression": "",
             "ValueFrom": null,
-            "FromFile": null
+            "FromFile": null,
+            "ExcludeFromDeduplicationKey": false
           }
         ],
         "Response": [

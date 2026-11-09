@@ -335,6 +335,9 @@ headers:
       - op: 'propagate'
         named: 'X-User-Id'
         default: '123' # Set the value when the header was not set
+      - op: 'propagate'
+        named: 'X-Request-Id'
+        exclude_from_deduplication_key: true # Forward it, but don't let it prevent request deduplication
       - op: 'set'
         name: 'X-API-Key'
         value: 'some-secret'

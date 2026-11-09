@@ -90,6 +90,8 @@ Currently, we support the following header rules:
 
   * `default`: Fallback to this value when the `named`, `matching` or `rename` header could not be found.
 
+  * `exclude_from_deduplication_key`: Forward the header but leave it out of the request deduplication key. See [Request deduplication](#request-deduplication).
+
 * **set** - Sets a header on the request forward to the subgraph. You must set one of the following:
 
   * `name` - The name of the header to set
@@ -105,6 +107,8 @@ Currently, we support the following header rules:
     * `refresh_interval` - Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`. Defaults to `1m`.
 
     Use this for mounted secrets that rotate on disk (Kubernetes Secrets, Vault Agent sidecars, externally rotated API keys) without restarting the router.
+
+  * `exclude_from_deduplication_key` - Send the header but leave it out of the request deduplication key. See [Request deduplication](#request-deduplication).
 
 * **remove** - Removes headers from the request forwarded to the subgraph. It only removes headers added by the rules before it. Place it after the rules it should affect. Set exactly one of the following matchers:
 
@@ -130,6 +134,31 @@ headers:
         named: "X-User-Id"
         default: "123"
 ```
+
+### Request deduplication
+
+The router deduplicates identical in-flight requests to a subgraph ([single flight](/router/configuration#router-engine-configuration)), and identical client requests with inbound request deduplication. Every header a request rule forwards is part of the deduplication key, because two requests with different headers can get different responses. A header that is unique per request, such as a request ID set by your ingress, therefore makes every request unique, and nothing is deduplicated.
+
+Set `exclude_from_deduplication_key` on the rule to keep forwarding such a header while leaving it out of the key:
+
+```yaml
+headers:
+  all:
+    request:
+      - op: "propagate"
+        named: "Authorization"
+      - op: "propagate"
+        named: "X-Request-Id"
+        # Forwarded to the subgraphs, but requests that differ only
+        # in X-Request-Id share one subgraph call
+        exclude_from_deduplication_key: true
+```
+
+Requests that differ only in excluded headers share one subgraph call, and the subgraph receives the header values of the first of them. Subscriptions that differ only in excluded headers share one subgraph subscription in the same way. A rule with a `matching` regex excludes every header it matches, and a `rename` rule excludes the renamed header.
+
+<Warning>
+  Only exclude headers that never change the subgraph response, such as request, correlation or trace IDs. Excluding a header the subgraph uses to build the response, such as `Authorization`, a tenant or a locale, lets one client receive another client's response.
+</Warning>
 
 ### gRPC services
 

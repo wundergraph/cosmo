@@ -391,6 +391,10 @@ type RequestHeaderRule struct {
 	// loaded into memory and refreshed at RefreshInterval, so reads on the
 	// request hot path do not touch disk.
 	FromFile *FileHeaderSource `yaml:"from_file,omitempty"`
+	// ExcludeFromDeduplicationKey forwards the header to the subgraph but leaves it
+	// out of the hash used to deduplicate requests. Only for headers that never
+	// change the subgraph response, such as request or correlation IDs.
+	ExcludeFromDeduplicationKey bool `yaml:"exclude_from_deduplication_key,omitempty"`
 }
 
 type FileHeaderSource struct {

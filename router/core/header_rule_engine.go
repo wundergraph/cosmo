@@ -182,6 +182,79 @@ type HeaderPropagation struct {
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
 	postResponseRules       *PostResponseRules
+	// Headers left out of the deduplication hash. nil when no rule sets
+	// exclude_from_deduplication_key. A subgraph entry includes the global rules.
+	allDeduplicationKeyExclusion       *deduplicationKeyExclusion
+	subgraphDeduplicationKeyExclusions map[string]*deduplicationKeyExclusion
+}
+
+// deduplicationKeyExclusion matches the outbound headers that request rules marked
+// with exclude_from_deduplication_key leave out of the deduplication hash.
+type deduplicationKeyExclusion struct {
+	names   map[string]struct{}
+	matches []deduplicationKeyExclusionMatch
+}
+
+type deduplicationKeyExclusionMatch struct {
+	regex  *regexp.Regexp
+	negate bool
+}
+
+// add registers the header names a marked rule writes: the set or renamed name,
+// the propagated name, or every header its regex matches.
+func (e *deduplicationKeyExclusion) add(rule *config.RequestHeaderRule, regex map[string]*regexp.Regexp) {
+	if !rule.ExcludeFromDeduplicationKey {
+		return
+	}
+	switch rule.Operation {
+	case config.HeaderRuleOperationSet:
+		e.addName(rule.Name)
+	case config.HeaderRuleOperationPropagate:
+		switch {
+		case rule.Rename != "":
+			e.addName(rule.Rename)
+		case rule.Named != "":
+			e.addName(rule.Named)
+		default:
+			if re, ok := regex[rule.Matching]; ok {
+				e.matches = append(e.matches, deduplicationKeyExclusionMatch{regex: re, negate: rule.NegateMatch})
+			}
+		}
+	}
+}
+
+func (e *deduplicationKeyExclusion) addName(name string) {
+	if name == "" {
+		return
+	}
+	if e.names == nil {
+		e.names = make(map[string]struct{})
+	}
+	e.names[http.CanonicalHeaderKey(name)] = struct{}{}
+}
+
+func (e *deduplicationKeyExclusion) isEmpty() bool {
+	return len(e.names) == 0 && len(e.matches) == 0
+}
+
+func (e *deduplicationKeyExclusion) clone() *deduplicationKeyExclusion {
+	return &deduplicationKeyExclusion{names: maps.Clone(e.names), matches: slices.Clone(e.matches)}
+}
+
+// excludes reports whether the canonical header name stays out of the hash.
+func (e *deduplicationKeyExclusion) excludes(name string) bool {
+	if e == nil {
+		return false
+	}
+	if _, ok := e.names[name]; ok {
+		return true
+	}
+	for _, m := range e.matches {
+		if m.regex.MatchString(name) != m.negate {
+			return true
+		}
+	}
+	return false
 }
 
 // FileSourceContent is a wrapper around a bytes.Buffer that is used to store the content of a file source.
@@ -283,6 +356,9 @@ func NewHeaderPropagation(ctx context.Context, logger *zap.Logger, rules *config
 	if err := hf.collectRuleMatchers(rhrs, rhrrs); err != nil {
 		return nil, err
 	}
+
+	// Needs the regexes compiled by collectRuleMatchers
+	hf.collectDeduplicationKeyExclusions()
 
 	if err := hf.compileExpressionRules(rhrs, rrs); err != nil {
 		return nil, err
@@ -510,7 +586,8 @@ func (h *HeaderPropagation) HasResponseRules() bool {
 // BuildRequestHeaderForSubgraph builds headers for an outbound subgraph request
 // as if the propagation rules were applied during transport. It returns the
 // resulting headers and a stable hash over all header names and values that is
-// independent of map iteration order.
+// independent of map iteration order. Headers marked with
+// exclude_from_deduplication_key are returned but left out of the hash.
 func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, ctx *requestContext) (http.Header, uint64) {
 	if h == nil || h.rules == nil || ctx == nil || ctx.Request() == nil {
 		return http.Header{}, 0
@@ -538,8 +615,46 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 		}
 	}
 
-	headerHash := hashHeaderStable(outHeader)
+	headerHash := hashHeaderStable(outHeader, h.deduplicationKeyExclusionFor(subgraphName))
 	return outHeader, headerHash
+}
+
+// collectDeduplicationKeyExclusions precomputes, globally and per subgraph, the
+// headers that rules marked with exclude_from_deduplication_key leave out of the
+// deduplication hash. Nothing is allocated when no rule is marked.
+func (h *HeaderPropagation) collectDeduplicationKeyExclusions() {
+	all := &deduplicationKeyExclusion{}
+	for _, rule := range h.rules.All.Request {
+		all.add(rule, h.regex)
+	}
+	if !all.isEmpty() {
+		h.allDeduplicationKeyExclusion = all
+	}
+
+	for name, sg := range h.rules.Subgraphs {
+		if sg == nil || !slices.ContainsFunc(sg.Request, func(rule *config.RequestHeaderRule) bool {
+			return rule.ExcludeFromDeduplicationKey
+		}) {
+			continue
+		}
+		exclusion := all.clone()
+		for _, rule := range sg.Request {
+			exclusion.add(rule, h.regex)
+		}
+		if h.subgraphDeduplicationKeyExclusions == nil {
+			h.subgraphDeduplicationKeyExclusions = make(map[string]*deduplicationKeyExclusion)
+		}
+		h.subgraphDeduplicationKeyExclusions[name] = exclusion
+	}
+}
+
+// deduplicationKeyExclusionFor returns the headers left out of the deduplication
+// hash for a subgraph, or nil when every header counts.
+func (h *HeaderPropagation) deduplicationKeyExclusionFor(subgraphName string) *deduplicationKeyExclusion {
+	if exclusion, ok := h.subgraphDeduplicationKeyExclusions[subgraphName]; ok {
+		return exclusion
+	}
+	return h.allDeduplicationKeyExclusion
 }
 
 // hasRequestRulesForSubgraph returns true if there are request header rules
@@ -559,18 +674,23 @@ func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool
 	return h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName]
 }
 
-// hashHeaderStable computes a deterministic 64-bit hash over the provided header map.
-// It is independent of map iteration order and minimizes allocations.
-func hashHeaderStable(hdr http.Header) uint64 {
+// hashHeaderStable computes a deterministic 64-bit hash over the provided header map,
+// skipping the headers in exclude (nil hashes them all). It is independent of map
+// iteration order and minimizes allocations.
+func hashHeaderStable(hdr http.Header, exclude *deduplicationKeyExclusion) uint64 {
 	if len(hdr) == 0 {
 		return 0
 	}
 
-	keys := make([]string, len(hdr))
-	i := 0
+	keys := make([]string, 0, len(hdr))
 	for k := range hdr {
-		keys[i] = k
-		i++
+		if exclude.excludes(k) {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	if len(keys) == 0 {
+		return 0
 	}
 	sort.Strings(keys)
 

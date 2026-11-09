@@ -5172,6 +5172,11 @@
           "examples": ["X-Rename-Test-Header"],
           "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
+        "exclude_from_deduplication_key": {
+          "type": "boolean",
+          "default": false,
+          "description": "If set to true, the header is still sent to the subgraph but left out of the key used to deduplicate requests (single flight, inbound request deduplication and subscription triggers). Use it only for headers that never change the subgraph response, such as request or correlation IDs: requests that differ only in these headers share one subgraph call."
+        },
         "default": {
           "type": "string",
           "examples": ["default-value"],
@@ -5318,6 +5323,11 @@
               "enum": ["operation_name"]
             }
           }
+        },
+        "exclude_from_deduplication_key": {
+          "type": "boolean",
+          "default": false,
+          "description": "If set to true, the header is still sent to the subgraph but left out of the key used to deduplicate requests (single flight, inbound request deduplication and subscription triggers). Use it only for headers that never change the subgraph response, such as request or correlation IDs: requests that differ only in these headers share one subgraph call."
         },
         "from_file": {
           "type": "object",

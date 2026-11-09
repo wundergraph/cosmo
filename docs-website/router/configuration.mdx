@@ -1176,6 +1176,7 @@ Apply to requests to specific Subgraphs.
 |                      | from_file                  | <Icon icon="square" />                        | If `op` is `set`, sources the header value from a file's contents. The file is loaded into memory and refreshed on a polling interval, so request-time reads do not touch disk. Request rules only. |               |
 |                      | from_file.path             | <Icon icon="square-check" iconType="solid" /> | Absolute path to the file whose contents become the header value.                                                                                                                 |               |
 |                      | from_file.refresh_interval | <Icon icon="square-check" iconType="solid" /> | Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`.                                                                       | `1m`          |
+|                      | exclude_from_deduplication_key | <Icon icon="square" />                    | If `op` is `propagate` or `set`, the header is still sent to the subgraph but left out of the request deduplication key. Only for headers that never change the response, such as request or correlation IDs. See [Request deduplication](/router/proxy-capabilities/subgraph-request-header-operations#request-deduplication). | `false`       |
 
 ### Example YAML config:
 
