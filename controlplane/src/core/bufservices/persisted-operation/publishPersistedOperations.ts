@@ -14,12 +14,12 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import {
-  buildASTSchema as graphQLBuildASTSchema,
   DocumentNode,
   GraphQLDirective,
   GraphQLSchema,
   parse,
   validate,
+  buildSchema,
 } from 'graphql';
 import { GraphQLDeferDirective } from '@graphql-tools/utils';
 import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
@@ -165,9 +165,8 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
-    const graphAST = parse(schema.schema);
     // We support @defer, but it is not part of the schema AST for now, so we add it here
-    const graphSchema = withDirectives(graphQLBuildASTSchema(graphAST), [GraphQLDeferDirective]);
+    const graphSchema = withDirectives(buildSchema(schema.clientSchema ?? schema.schema), [GraphQLDeferDirective]);
     for (const operation of req.operations) {
       const contents = operation.contents;
       let opAST: DocumentNode;

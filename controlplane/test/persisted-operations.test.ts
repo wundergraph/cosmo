@@ -39,7 +39,11 @@ vi.mock('../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
+const setupFederatedGraph = async (
+  fedGraphName: string,
+  client: Client,
+  subgraphSchema = 'type Query { hello: String! }',
+) => {
   const subgraph1Name = genID('subgraph1');
   const label = genUniqueLabel();
 
@@ -57,7 +61,7 @@ const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
     namespace: 'default',
     labels: [label],
     routingUrl: 'http://localhost:8081',
-    schema: 'type Query { hello: String! }',
+    schema: subgraphSchema,
   });
 
   expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -263,6 +267,15 @@ describe('Persisted operations', (ctx) => {
 
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client, 'type Query { hello: String! secret: String! @inaccessible }');
+
+      const accessibleResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      expect(accessibleResp.response?.code).toBe(EnumStatusCode.OK);
 
       const inaccessibleResp = await client.publishPersistedOperations({
         fedGraphName,
