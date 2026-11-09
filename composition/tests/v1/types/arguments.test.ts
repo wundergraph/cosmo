@@ -202,38 +202,30 @@ describe('Argument federation tests', () => {
     );
   });
 
-  test('that client and router schemas expose the same arguments for an external field used by @requires', () => {
+  test('that arguments are consistent in client and federated schemas when omitted from an @external field', () => {
     const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-      [productsWithTraitArguments, seoWithoutTraitArguments],
+      [subgraphI, subgraphJ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
 
-    expect(printType(federatedGraphSchema.getType('Product')!)).toBe(
-      printType(federatedGraphClientSchema.getType('Product')!),
+    expect(printType(federatedGraphSchema.getType('Entity')!)).toBe(
+      printType(federatedGraphClientSchema.getType('Entity')!),
     );
   });
 
-  test('that client and router schemas agree when validating operations with external field arguments', () => {
+  test('that client and federated schemas return the same validation errors for an @external field argument', () => {
     const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-      [productsWithTraitArguments, seoWithoutTraitArguments],
+      [subgraphI, subgraphJ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
     const operation = parse(`
-      query ProductTraits {
-        product(id: "product-id") {
-          productTraits: traits(filterTypes: [RELEASE_DATE, RETAIL_PRICE]) {
-            name
-            value
-          }
-          namedTraits: traits(filters: ["Release Date"]) {
-            name
-            value
-          }
+      query {
+        entity {
+          field(input: "value")
         }
       }
     `);
 
-    // Persisted operations are validated against the router schema, whereas codegen uses the client schema.
     expect(validate(federatedGraphSchema, operation).map((error) => error.message)).toStrictEqual(
       validate(federatedGraphClientSchema, operation).map((error) => error.message),
     );
@@ -435,53 +427,6 @@ const subgraphWithArgumentAndDefaultValue = (name: string, typeName: string, def
   `),
 });
 
-const productsWithTraitArguments: Subgraph = {
-  name: 'products',
-  url: '',
-  definitions: parse(`
-    extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
-
-    type Query {
-      product(id: String!): Product
-    }
-
-    type Product @key(fields: "id") {
-      id: String!
-      traits(filterTypes: [TraitType!], filters: [String!]): [Traits!]!
-    }
-
-    enum TraitType {
-      RELEASE_DATE
-      RETAIL_PRICE
-    }
-
-    type Traits {
-      name: String!
-      value: String
-    }
-  `),
-};
-
-const seoWithoutTraitArguments: Subgraph = {
-  name: 'seo',
-  url: '',
-  definitions: parse(`
-    extend schema
-      @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@external", "@requires"])
-
-    type Product @key(fields: "id") {
-      id: String!
-      traits: [Traits!]! @external
-      seo: String @requires(fields: "traits { name value }")
-    }
-
-    type Traits {
-      name: String! @external
-      value: String @external
-    }
-  `),
-};
-
 const subgraphA = {
   name: 'subgraph-a',
   url: '',
@@ -599,6 +544,38 @@ const subgraphH: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: Int!
       test: Float!
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
+
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      field(input: String): String
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    extend schema
+      @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@external", "@requires"])
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String @external
+      fieldTwo: String @requires(fields: "field")
     }
   `),
 };
