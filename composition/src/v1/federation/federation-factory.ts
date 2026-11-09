@@ -2080,7 +2080,8 @@ export class FederationFactory {
     return argumentNodes;
   }
 
-  /* Each "$args" reference of a @cacheTag format must be a value that a client request passes to the subgraph.
+  /* An "$args" reference of a @cacheTag format must not reach an @inaccessible or @fromContext input value.
+   * A reference to an input value that only some subgraphs define is accepted.
    * A response carries only the formats of the subgraph that resolves the Query root field,
    * so formats that differ between the subgraphs resolving that field produce tags that depend on the query plan.
    */
@@ -2118,7 +2119,7 @@ export class FederationFactory {
     );
   }
 
-  // Returns an error message if the value of an "$args" reference is absent from the client or router schema.
+  // Returns an error message if an input value on the path of an "$args" reference is @inaccessible or @fromContext.
   validateCacheTagReference(fieldData: FieldData, subgraphName: SubgraphName, reference: string): string | undefined {
     /* The first segment is an argument of the field; each following segment is a field of an Input Object.
      * NormalizationFactory.getCacheTagArgumentData has already rejected a path that does not resolve,
