@@ -243,7 +243,7 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
     });
 
-    test('Should publish persisted operations that use @defer', async (testContext) => {
+    test('that a valid persisted operation with @defer is published successfully', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
@@ -261,7 +261,7 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should reject persisted operations that are invalid against the client schema', async (testContext) => {
+    test('that a persisted operation invalid against the client schema is rejected', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 

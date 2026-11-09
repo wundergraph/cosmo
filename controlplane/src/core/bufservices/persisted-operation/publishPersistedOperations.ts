@@ -158,7 +158,11 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
-    // We support @defer, but it is not part of the schema AST for now, so we add it here
+    /*
+     * `@defer` is intended to be a native GraphQL directive, but it is not yet in the spec.
+     * It is already part of the router prelude.
+     * Add the `@defer` definition here so that `@defer` is validated correctly until it is part of the spec.
+     */
     const graphSchema = withDirectives(buildSchema(schema.clientSchema ?? schema.schema), [GraphQLDeferDirective]);
     for (const operation of req.operations) {
       const contents = operation.contents;
