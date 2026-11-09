@@ -1,11 +1,11 @@
 package core
 
 import (
-	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -94,7 +94,7 @@ func TestHitDirectives(t *testing.T) {
 	t.Parallel()
 
 	hit := func(client, shared time.Duration, private, public, sharedOnly bool) string {
-		_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: hitDirectives(client, shared, private, public, sharedOnly)}})
+		_, header := createMostRestrictivePolicy([]*cacheobject.Object{{RespDirectives: hitDirectives(client, shared, private, public, sharedOnly)}})
 		return header
 	}
 	require.Equal(t, "max-age=30, public", hit(30*time.Second, 30*time.Second, false, true, false))
