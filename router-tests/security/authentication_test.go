@@ -3850,6 +3850,21 @@ func TestIssuerValidation(t *testing.T) {
 		}}, token))
 	})
 
+	t.Run("with secret based configuration: an empty configured issuer does not accept a token without iss", func(t *testing.T) {
+		t.Parallel()
+
+		// The YAML schema forbids empty issuers, but direct Go callers bypass it.
+		secret, kid := "example secret that is long enough", "givenKID"
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{})
+
+		require.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
+			Secret:    secret,
+			Algorithm: string(jwkset.AlgHS256),
+			KeyId:     kid,
+			Issuers:   []string{""},
+		}}, token))
+	})
+
 	t.Run("an issuer mismatch does not fall through to another entry", func(t *testing.T) {
 		t.Parallel()
 

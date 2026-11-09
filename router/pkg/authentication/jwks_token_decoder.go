@@ -215,7 +215,8 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
 					continue
 				}
-				if !slices.Contains(entry.issuers, tokenIssuer) {
+				// GetIssuer returns "" when iss is absent, so an empty issuer must never match.
+				if tokenIssuer == "" || !slices.Contains(entry.issuers, tokenIssuer) {
 					errJoin = errors.Join(errJoin, errUnacceptableIss)
 					continue
 				}
