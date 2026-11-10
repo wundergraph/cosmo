@@ -201,12 +201,11 @@ describe('API Keys', (ctx) => {
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
-    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
-
     const authenticator = new ApiKeyAuthenticator(server.db, new OrganizationRepository(pino(), server.db, ''));
     const authContext = await authenticator.authenticate(response.apiKey);
     expect(authContext.apiKeyName).toBe(name);
-    await expect(authenticator.authenticate(stored!.keyHash)).rejects.toThrow('Invalid api key');
+    const keyHash = createHash('sha256').update(response.apiKey).digest('hex');
+    await expect(authenticator.authenticate(keyHash)).rejects.toThrow('Invalid api key');
   });
 
   test('that an "organization-apikey-manager" cannot create API keys with admin role', async (testContext) => {
