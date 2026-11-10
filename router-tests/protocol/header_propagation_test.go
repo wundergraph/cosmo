@@ -969,6 +969,29 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		}
 
+		t.Run("cache_control_any_public: applies to a headers rule", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: cacheOptions("public, max-age=300", "max-age=60"),
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{{
+								Operation: config.HeaderRuleOperationPropagate,
+								Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+							}},
+						},
+					}),
+					core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+						CacheControlAnyPublic: config.ApolloCompatibilityFlag{Enabled: true},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+				require.Equal(t, "max-age=60, public", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		// With or without a Cache-Control of its own, a failed fetch is not cacheable.
 		for _, cacheControl := range []string{"max-age=60, public", ""} {
 			t.Run("a failed subgraph response is no-store: "+cacheControl, func(t *testing.T) {

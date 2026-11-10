@@ -182,6 +182,8 @@ type HeaderPropagation struct {
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
 	postResponseRules       *PostResponseRules
+	// anyPublic merges public when any fetch grants it, not every fetch.
+	anyPublic bool
 }
 
 // FileSourceContent is a wrapper around a bytes.Buffer that is used to store the content of a file source.
@@ -227,8 +229,6 @@ func (f *FileSourceContent) getBufferString() string {
 type PostResponseRules struct {
 	All       []*config.ResponseHeaderRule
 	Subgraphs map[string][]*config.ResponseHeaderRule
-	// AnyPublic merges public when any fetch grants it, not every fetch.
-	AnyPublic bool
 }
 
 func (p *PostResponseRules) hasRules() bool {
@@ -299,7 +299,7 @@ func NewHeaderPropagation(ctx context.Context, logger *zap.Logger, rules *config
 
 // CreateCacheControlPolicyHeaderRules builds cache control rules that run after
 // all user-defined response rules.
-func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy, anyPublic bool) *PostResponseRules {
+func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy) *PostResponseRules {
 	var rules PostResponseRules
 
 	if cacheControl.Enabled {
@@ -324,7 +324,6 @@ func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy,
 	if !rules.hasRules() {
 		return nil
 	}
-	rules.AnyPublic = anyPublic
 	return &rules
 }
 
@@ -964,8 +963,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	anyPublic := h.postResponseRules != nil && h.postResponseRules.AnyPublic
-	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, anyPublic)
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.anyPublic)
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)

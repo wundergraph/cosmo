@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -341,6 +340,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			name           string
 			policies       []*cachedirective.Object
 			expectedHeader string
+			wantPublic     bool
 		}{
 			{
 				name: "one public policy is enough",
@@ -349,6 +349,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60}},
 				},
 				expectedHeader: "max-age=60, public",
+				wantPublic:     true,
 			},
 			{
 				name: "private wins over public",
@@ -380,7 +381,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				t.Parallel()
 				result, header := createMostRestrictivePolicy(tt.policies, true)
 				assert.Equal(t, tt.expectedHeader, header)
-				assert.Equal(t, strings.HasSuffix(tt.expectedHeader, "public"), result.RespDirectives.Public)
+				assert.Equal(t, tt.wantPublic, result.RespDirectives.Public)
 			})
 		}
 
@@ -395,6 +396,18 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			}, true)
 			assert.Equal(t, "max-age=60, public", header)
 		})
+
+		t.Run("an earlier private blocks a later public", func(t *testing.T) {
+			t.Parallel()
+			previous, _ := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, PrivatePresent: true}},
+			}, true)
+			_, header := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+				previous,
+			}, true)
+			assert.Equal(t, "max-age=60, private", header)
+		})
 	})
 }
 
@@ -405,7 +418,7 @@ func TestCreateCacheControlPolicyHeaderRules(t *testing.T) {
 		t.Parallel()
 		result := CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{
 			Enabled: false,
-		}, true)
+		})
 		assert.Nil(t, result)
 	})
 
@@ -414,10 +427,9 @@ func TestCreateCacheControlPolicyHeaderRules(t *testing.T) {
 		result := CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{
 			Enabled: true,
 			Value:   "max-age=300",
-		}, false)
+		})
 		require.NotNil(t, result)
 		require.Len(t, result.All, 1)
-		assert.False(t, result.AnyPublic)
 		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.All[0].Algorithm)
 		assert.Equal(t, "max-age=300", result.All[0].Default)
 		assert.Nil(t, result.Subgraphs)
@@ -429,7 +441,7 @@ func TestCreateCacheControlPolicyHeaderRules(t *testing.T) {
 			Subgraphs: []config.SubgraphCacheControlRule{
 				{Name: "sg1", Value: "max-age=60"},
 			},
-		}, false)
+		})
 		require.NotNil(t, result)
 		assert.Nil(t, result.All)
 		require.Contains(t, result.Subgraphs, "sg1")
@@ -445,9 +457,8 @@ func TestCreateCacheControlPolicyHeaderRules(t *testing.T) {
 			Subgraphs: []config.SubgraphCacheControlRule{
 				{Name: "sg1", Value: "max-age=60"},
 			},
-		}, true)
+		})
 		require.NotNil(t, result)
-		assert.True(t, result.AnyPublic)
 		require.Len(t, result.All, 1)
 		assert.Equal(t, "max-age=300", result.All[0].Default)
 		require.Contains(t, result.Subgraphs, "sg1")

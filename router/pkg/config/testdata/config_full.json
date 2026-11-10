@@ -1280,7 +1280,7 @@
       "Enabled": false
     },
     "CacheControlAnyPublic": {
-      "Enabled": false
+      "Enabled": true
     }
   },
   "ClientHeader": {

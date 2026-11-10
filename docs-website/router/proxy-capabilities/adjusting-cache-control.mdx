@@ -50,6 +50,8 @@ The algorithm evaluates the following in order:
 
 3. `Expires` header: The earliest expiration date will be used if `Expires` headers are provided.
 
+4. `public`: The response is `public` only when every subgraph that sets `Cache-Control` sends `public`. `private` always wins. To send `public` when any subgraph does, enable the [`cache_control_any_public`](/router/configuration#apollo-router-compatibility-cache-control-any-public) compatibility flag.
+
 <Info>
   **`no-cache`/`no-store` always wins**
 

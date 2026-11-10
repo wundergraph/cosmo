@@ -344,11 +344,15 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy, r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled)
+	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
 	r.headerPropagation, err = NewHeaderPropagation(ctx, r.logger, r.headerRules, postRules)
 	if err != nil {
 		return nil, err
+	}
+	// Covers headers and cache_control_policy rules alike.
+	if r.headerPropagation != nil {
+		r.headerPropagation.anyPublic = r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
 	}
 
 	defaultCorsHeaders := []string{
