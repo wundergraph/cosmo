@@ -1804,6 +1804,16 @@ func (s *graphServer) buildGraphMux(
 	if s.authorization != nil {
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 		authorizerOptions.EnablePreFetchFieldAuthorization = s.authorization.EnablePreFetchFieldAuthorization
+		authorizerOptions.PolicyDecider, err = newPolicyDecider(s.authorization.Policies, s.policyDecisionHandler)
+		if err != nil {
+			return nil, fmt.Errorf("configure policy decider: %w", err)
+		}
+	}
+	if authorizerOptions.PolicyDecider == nil {
+		if field := firstPolicyField(opts.EngineConfig.FieldConfigurations); field != nil {
+			s.logger.Warn("Schema contains policy fields without a policy decider; all policies are denied",
+				zap.String("field", field.GetTypeName()+"."+field.GetFieldName()))
+		}
 	}
 
 	loaderHooks := NewEngineRequestHooks(

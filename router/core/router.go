@@ -729,6 +729,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			}
 		}
 
+		if fn, ok := moduleInstance.(PolicyDecisionHandler); ok {
+			if r.policyDecisionHandler != nil {
+				return fmt.Errorf("only one policy decision module can be registered")
+			}
+			r.policyDecisionHandler = fn
+		}
+
 		if fn, ok := moduleInstance.(RouterMiddlewareHandler); ok {
 			r.routerMiddlewares = append(r.routerMiddlewares, func(handler http.Handler) http.Handler {
 				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {

@@ -9,6 +9,7 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -22,6 +23,7 @@ type CosmoAuthorizerOptions struct {
 	// EnablePreFetchFieldAuthorization authorizes protected fields in a single batch before any
 	// subgraph fetch runs, instead of filtering them out of the response afterwards.
 	EnablePreFetchFieldAuthorization bool
+	PolicyDecider                    PolicyDecider
 }
 
 func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
@@ -29,16 +31,16 @@ func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 		fieldConfigurations:              opts.FieldConfigurations,
 		rejectUnauthorized:               opts.RejectOperationIfUnauthorized,
 		enablePreFetchFieldAuthorization: opts.EnablePreFetchFieldAuthorization,
+		policyDecider:                    opts.PolicyDecider,
 	}
 }
 
-// CosmoAuthorizer enforces field-level authorization (@authenticated and @requiresScopes) against
-// the scopes of the authenticated request. It implements resolve.Authorizer and, when pre-fetch
-// field authorization is enabled, resolve.BatchAuthorizer.
+// CosmoAuthorizer enforces authentication, scopes, and policies for protected fields.
 type CosmoAuthorizer struct {
 	fieldConfigurations              []*nodev1.FieldConfiguration
 	rejectUnauthorized               bool
 	enablePreFetchFieldAuthorization bool
+	policyDecider                    PolicyDecider
 }
 
 // IsPreFetchFieldAuthorizationEnabled reports whether the engine should authorize protected fields
@@ -51,7 +53,7 @@ func (a *CosmoAuthorizer) IsPreFetchFieldAuthorizationEnabled() bool {
 // should be rendered into the response extensions.
 func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {
 	extension := a.getAuthorizationExtension(ctx)
-	return extension != nil && len(extension.MissingScopes) > 0
+	return extension != nil && (len(extension.MissingScopes) > 0 || len(extension.MissingPolicies) > 0)
 }
 
 // RenderResponseExtension writes the collected authorization extension (missing and actual scopes)
@@ -97,7 +99,7 @@ func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.Authorization
 func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID string, input json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
+	return a.handleRejectUnauthorized(a.validateAuthorization(ctx, coordinate, required, isAuthenticated, actual))
 }
 
 // AuthorizeObjectField authorizes a field against the already-fetched response object. A deny filters
@@ -105,7 +107,7 @@ func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID s
 func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceID string, object json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
+	return a.handleRejectUnauthorized(a.validateAuthorization(ctx, coordinate, required, isAuthenticated, actual))
 }
 
 // AuthorizeFields authorizes every protected field coordinate of an operation in one call, before any
@@ -117,7 +119,7 @@ func (a *CosmoAuthorizer) AuthorizeFields(ctx *resolve.Context, coordinates []re
 
 	for i, coordinate := range coordinates {
 		required := a.requiredScopesForField(coordinate)
-		deny, err := a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
+		deny, err := a.handleRejectUnauthorized(a.validateAuthorization(ctx, coordinate, required, isAuthenticated, actual))
 		if err != nil {
 			return nil, err
 		}
@@ -138,11 +140,23 @@ func (a *CosmoAuthorizer) AuthorizeFields(ctx *resolve.Context, coordinates []re
 	return decisions, nil
 }
 
-// validateScopes checks the actual scopes against a field's required scopes. requiredOrScopes is a
-// disjunction: the field is authorized if all scopes of any one entry are present (OR of ANDs). An
-// unauthenticated request is always denied; a field with no required scopes is allowed. Denials are
-// recorded via addMissingScopes.
-func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
+// Policy grants do not imply authentication, so policy-only fields bypass the authentication check.
+func (a *CosmoAuthorizer) validateAuthorization(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
+	policies := a.requiredPoliciesForField(coordinate)
+	if len(policies) > 0 {
+		granted, _ := ctx.Context().Value(grantedPoliciesKey{}).([]string)
+		required := make([][]string, 0, len(policies))
+		for _, group := range policies {
+			required = append(required, group.GetRequiredAndPolicies())
+		}
+		if !satisfiesAuthorization(required, granted) {
+			a.addMissingPolicies(ctx, coordinate, required, granted, actual)
+			return &resolve.AuthorizationDeny{Reason: "missing policies"}
+		}
+		if len(requiredOrScopes) == 0 && !a.authorizationForField(coordinate).GetRequiresAuthentication() {
+			return nil
+		}
+	}
 	if !isAuthenticated {
 		return &resolve.AuthorizationDeny{
 			Reason: "not authenticated",
@@ -151,13 +165,7 @@ func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolv
 	if len(requiredOrScopes) == 0 {
 		return nil
 	}
-WithNext:
-	for _, requiredOrScope := range requiredOrScopes {
-		for i := range requiredOrScope.RequiredAndScopes {
-			if !slices.Contains(actual, requiredOrScope.RequiredAndScopes[i]) {
-				continue WithNext
-			}
-		}
+	if satisfiesAuthorization(a.requiredAndScopes(requiredOrScopes), actual) {
 		return nil
 	}
 	a.addMissingScopes(ctx, coordinate, requiredOrScopes, actual)
@@ -192,6 +200,39 @@ func (a *CosmoAuthorizer) addMissingScopes(ctx *resolve.Context, coordinate reso
 	extension.mux.Unlock()
 }
 
+// addMissingPolicies records a field denied by its policies, the policies the request was granted and
+// the request's actual scopes, in the same shape as addMissingScopes. It is a no-op when no extension
+// context is attached.
+func (a *CosmoAuthorizer) addMissingPolicies(ctx *resolve.Context, coordinate resolve.GraphCoordinate, required [][]string, granted, actual []string) {
+	extensionCtx := ctx.Context().Value(authorizationExtensionKey{})
+	if extensionCtx == nil {
+		return
+	}
+	extension := extensionCtx.(*authorizationExtensionCtx)
+	extension.mux.Lock()
+	defer extension.mux.Unlock()
+	if extension.extension.ActualScopes == nil {
+		extension.extension.ActualScopes = actual
+		if len(actual) == 0 {
+			extension.extension.ActualScopes = []string{}
+		}
+	}
+	if extension.extension.GrantedPolicies == nil {
+		extension.extension.GrantedPolicies = slices.Clone(granted)
+	}
+	// The loader and the resolvable report the same field with different HasAuthorizationRule flags,
+	// so the comparison takes the type and the field only.
+	if slices.ContainsFunc(extension.extension.MissingPolicies, func(existing MissingPoliciesError) bool {
+		return existing.Coordinate.TypeName == coordinate.TypeName && existing.Coordinate.FieldName == coordinate.FieldName
+	}) {
+		return
+	}
+	extension.extension.MissingPolicies = append(extension.extension.MissingPolicies, MissingPoliciesError{
+		Coordinate:         coordinate,
+		RequiredOrPolicies: required,
+	})
+}
+
 // getAuthorizationExtension returns the authorization extension accumulated on the context, or nil if
 // none was attached via WithAuthorizationExtension.
 func (a *CosmoAuthorizer) getAuthorizationExtension(ctx *resolve.Context) *AuthorizationExtension {
@@ -223,6 +264,16 @@ func WithAuthorizationExtension(ctx *resolve.Context) *resolve.Context {
 type AuthorizationExtension struct {
 	MissingScopes []MissingScopesError `json:"missingScopes,omitempty"`
 	ActualScopes  []string             `json:"actualScopes"`
+	// MissingPolicies and GrantedPolicies are the policy counterparts of the two fields above.
+	// GrantedPolicies is omitted when the request was granted no policy at all.
+	MissingPolicies []MissingPoliciesError `json:"missingPolicies,omitempty"`
+	GrantedPolicies []string               `json:"grantedPolicies,omitempty"`
+}
+
+// MissingPoliciesError reports a field that was denied and the policies it required (an OR of ANDs).
+type MissingPoliciesError struct {
+	Coordinate         resolve.GraphCoordinate `json:"coordinate"`
+	RequiredOrPolicies [][]string              `json:"required"`
 }
 
 // MissingScopesError reports a field that was denied and the scopes it required (an OR of ANDs).
@@ -255,10 +306,79 @@ func (a *CosmoAuthorizer) requiredAndScopes(requiredOrScopes []*nodev1.Scopes) [
 // requiredScopesForField returns the required-or-scopes configured for a field coordinate, or nil when
 // the field has no authorization configuration.
 func (a *CosmoAuthorizer) requiredScopesForField(coordinate resolve.GraphCoordinate) []*nodev1.Scopes {
+	return a.authorizationForField(coordinate).GetRequiredOrScopes()
+}
+
+func (a *CosmoAuthorizer) requiredPoliciesForField(coordinate resolve.GraphCoordinate) []*nodev1.Policies {
+	return a.authorizationForField(coordinate).GetRequiredOrPolicies()
+}
+
+func (a *CosmoAuthorizer) authorizationForField(coordinate resolve.GraphCoordinate) *nodev1.AuthorizationConfiguration {
 	for i := range a.fieldConfigurations {
 		if a.fieldConfigurations[i].TypeName == coordinate.TypeName && a.fieldConfigurations[i].FieldName == coordinate.FieldName {
-			return a.fieldConfigurations[i].AuthorizationConfiguration.RequiredOrScopes
+			return a.fieldConfigurations[i].AuthorizationConfiguration
 		}
 	}
 	return nil
+}
+
+func satisfiesAuthorization(required [][]string, actual []string) bool {
+	if len(required) == 0 {
+		return true
+	}
+next:
+	for _, group := range required {
+		for _, value := range group {
+			if !slices.Contains(actual, value) {
+				continue next
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// firstPolicyField returns the first field configuration that carries a policy, or nil.
+func firstPolicyField(fields []*nodev1.FieldConfiguration) *nodev1.FieldConfiguration {
+	for _, field := range fields {
+		if len(field.GetAuthorizationConfiguration().GetRequiredOrPolicies()) > 0 {
+			return field
+		}
+	}
+	return nil
+}
+
+type grantedPoliciesKey struct{}
+
+// decidePolicies asks the policy decider once for all policies of the operation and stores the
+// granted policies on the returned context, where the per-field checks read them.
+func (a *CosmoAuthorizer) decidePolicies(ctx context.Context, prepared plan.Plan) (context.Context, error) {
+	var info *resolve.GraphQLResponseInfo
+	switch p := prepared.(type) {
+	case *plan.SynchronousResponsePlan:
+		info = p.Response.Info
+	case *plan.SubscriptionResponsePlan:
+		info = p.Response.Response.Info
+	case *plan.DeferResponsePlan:
+		info = p.Response.Response.Info
+	}
+	var required []string
+	if info != nil {
+		for _, coordinate := range info.AuthorizationCoordinates {
+			for _, group := range a.requiredPoliciesForField(coordinate.Coordinate) {
+				required = append(required, group.GetRequiredAndPolicies()...)
+			}
+		}
+	}
+	slices.Sort(required)
+	required = slices.Compact(required)
+	var granted []string
+	if len(required) > 0 && a.policyDecider != nil {
+		var err error
+		granted, err = a.policyDecider.Decide(ctx, required)
+		if err != nil {
+			return ctx, err
+		}
+	}
+	return context.WithValue(ctx, grantedPoliciesKey{}, slices.Clone(granted)), nil
 }

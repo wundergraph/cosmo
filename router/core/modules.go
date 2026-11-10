@@ -104,6 +104,13 @@ type RouterMiddlewareHandler interface {
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
+// PolicyDecisionHandler decides the @policy policies of an operation when authorization.policies.source is module.
+// The router calls it once per operation with the sorted policy names that the operation requires.
+// It returns the granted policies, and an error rejects the operation as unauthorized.
+type PolicyDecisionHandler interface {
+	DecidePolicies(ctx RequestContext, required []string) ([]string, error)
+}
+
 // RouterOnRequestHandler allows you to add middleware that runs before most internal router logic.
 // This runs after the creation of the request context and the creation of the recovery handler.
 // This hook is useful if you want to do some custom logic before tracing or authentication, for example,

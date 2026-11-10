@@ -1305,6 +1305,15 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	if h.graphqlHandler.authorizer != nil {
+		policyCtx, policyErr := h.graphqlHandler.authorizer.decidePolicies(resolveCtx.Context(), operationCtx.preparedPlan.preparedPlan)
+		if policyErr != nil {
+			h.logger.Warn("Policy decision failed", zap.Error(policyErr))
+			if writeErr := h.writeErrorMessage(registration.msg.ID, ErrUnauthorized); writeErr != nil {
+				h.logger.Warn("Write policy error", zap.Error(writeErr))
+			}
+			return
+		}
+		resolveCtx = resolveCtx.WithContext(policyCtx)
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
 		if h.graphqlHandler.authorizer.IsPreFetchFieldAuthorizationEnabled() {
