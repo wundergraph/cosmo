@@ -176,6 +176,11 @@ message AuthorizationConfiguration {
   bool requires_authentication = 1;
   repeated Scopes required_or_scopes = 2;
   repeated Scopes required_or_scopes_by_or = 3;
+  repeated Policies required_or_policies = 4;
+}
+
+message Policies {
+  repeated string required_and_policies = 1;
 }
 
 message FieldConfiguration {
