@@ -37,7 +37,7 @@ overrides:
   graphql: 16.9.0
   cross-spawn: 7.0.6
   next: 15.5.28
-  zod: ^3.25.0
+  zod@3: ^3.25.0
   debug: <4.4.2
   supports-color: <10.2.1
   wrap-ansi: <9.0.1
@@ -147,3 +147,8 @@ catalog:
 
   # GraphQL tooling
   '@graphql-tools/utils': ^11.0.0
+
+catalogs:
+  # CLI-specific versions that diverge from the default catalog
+  cli:
+    zod: ^4.1.0
