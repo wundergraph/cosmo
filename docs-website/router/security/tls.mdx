@@ -153,13 +153,16 @@ Replace the client certificate and matching private key at these paths when they
 
 The `ca_file` verifies the subgraph's server certificate. It is not watched; changing this CA bundle requires a router restart or a configuration reload.
 
-The following files are reloaded:
+Reload support varies by TLS configuration:
 
-* `tls.server.cert_file` and `tls.server.key_file`
-* `tls.client.all.cert_file` and `tls.client.all.key_file`, and the same fields under `tls.client.subgraphs`
-* `tls.client_grpc.all.cert_file` and `tls.client_grpc.all.key_file`, and the same fields under `tls.client_grpc.subgraphs`
+| TLS configuration | Certificate/key reload | CA-bundle reload |
+| --- | --- | --- |
+| Router server (`tls.server`) | Yes | No (includes `client_auth.cert_file`) |
+| HTTP subgraphs (`tls.client`) | Yes (global and per-subgraph) | No |
+| gRPC subgraphs (`tls.client_grpc`) | Yes (global and per-subgraph) | No |
+| NATS providers (`events.providers.nats[].tls`) | No | No |
 
-CA bundles (`tls.server.client_auth.cert_file` and `ca_file` under `tls.client` and `tls.client_grpc`) are read once at startup and are not watched. Changing a CA bundle requires a router restart or a configuration reload. NATS TLS files are also loaded once during provider construction and are not watched by `tls.watch`.
+Reloading requires `tls.watch: true`. Updated certificates apply to new TLS handshakes; existing connections remain open. CA bundles are loaded at startup, and NATS TLS files are loaded during provider construction. Neither is watched.
 
 When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.
 
