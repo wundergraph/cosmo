@@ -709,11 +709,11 @@ type graphMux struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mux       *chi.Mux
-	reused    atomic.Bool
+	mux    *chi.Mux
+	reused atomic.Bool
 	// responseCacheBases is the base mapping this mux's cache settings use.
 	responseCacheBases map[string]string
-	finalized atomic.Bool
+	finalized          atomic.Bool
 
 	// inFlightRequests tracks the number of requests currently being processed
 	// by this mux. Does not include subscriptions or websocket (hijacked)
