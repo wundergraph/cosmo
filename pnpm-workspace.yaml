@@ -37,7 +37,7 @@ overrides:
   graphql: 16.9.0
   cross-spawn: 7.0.6
   next: 15.5.28
-  zod@3: ^3.25.0
+  'zod@<3.25.0': ^3.25.0
   debug: <4.4.2
   supports-color: <10.2.1
   wrap-ansi: <9.0.1
@@ -96,6 +96,14 @@ overrides:
 
 patchedDependencies:
   graphql@16.9.0: patches/graphql@16.9.0.patch
+
+packageExtensions:
+  # @hookform/resolvers imports `zod` in its types without declaring it, so it
+  # would resolve whichever zod pnpm hoists. Declare it as a peer so it uses the
+  # consumer's zod (studio: v3), not the CLI's v4.
+  '@hookform/resolvers@4':
+    peerDependencies:
+      zod: '*'
 
 catalog:
   # Build/test tooling
