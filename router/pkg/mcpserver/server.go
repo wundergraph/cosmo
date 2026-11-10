@@ -365,6 +365,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 				Algorithm:         jwks.Algorithm,
 				KeyId:             jwks.KeyId,
 				Audiences:         jwks.Audiences,
+				Issuers:           jwks.Issuers,
 				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
 					Enabled:  jwks.RefreshUnknownKID.Enabled,
 					MaxWait:  jwks.RefreshUnknownKID.MaxWait,

@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.369.0](https://github.com/wundergraph/cosmo/compare/router@0.368.0...router@0.369.0) (2026-11-10)
+
+### Features
+
+* **router:** validate the JWT iss claim against configured issuers ([#3481](https://github.com/wundergraph/cosmo/issues/3481)) ([fb6203d](https://github.com/wundergraph/cosmo/commit/fb6203da593e69cd638ed7971c4750dabd26b920)) (@vdatcu)
+
+## [0.368.0](https://github.com/wundergraph/cosmo/compare/router@0.367.0...router@0.368.0) (2026-11-09)
+
+### Features
+
+* **router:** support per-exporter trace sampling ([#3433](https://github.com/wundergraph/cosmo/issues/3433)) ([6cdee5c](https://github.com/wundergraph/cosmo/commit/6cdee5cb0d410babd90b382bfa5ad62156d7b271)) (@fiam)
+
+## [0.367.0](https://github.com/wundergraph/cosmo/compare/router@0.366.2...router@0.367.0) (2026-11-09)
+
+### Features
+
+* **router:** add prefix option for from_file header values ([#3486](https://github.com/wundergraph/cosmo/issues/3486)) ([3e62cde](https://github.com/wundergraph/cosmo/commit/3e62cded6c6e1491bb96df932d797f0ea7166a4f)) (@Noroth)
+
+## [0.366.2](https://github.com/wundergraph/cosmo/compare/router@0.366.1...router@0.366.2) (2026-11-09)
+
+**Note:** Version bump only for package router
+
 ## [0.366.1](https://github.com/wundergraph/cosmo/compare/router@0.366.0...router@0.366.1) (2026-11-05)
 
 ### Bug Fixes

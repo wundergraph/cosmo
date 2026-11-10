@@ -20,6 +20,7 @@
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
           "Headers": {},
+          "SamplingRate": 0.5,
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -429,7 +430,8 @@
           "ValueFrom": null,
           "FromFile": {
             "Path": "/etc/secrets/api-key",
-            "RefreshInterval": 60000000000
+            "RefreshInterval": 60000000000,
+            "Prefix": "Bearer "
           }
         },
         {
@@ -718,7 +720,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -737,7 +740,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -753,7 +757,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         }
       ],
       "ScopeClaim": "customscp",
