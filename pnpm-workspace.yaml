@@ -159,4 +159,4 @@ catalog:
 catalogs:
   # CLI-specific versions that diverge from the default catalog
   cli:
-    zod: ^4.1.0
+    zod: ^4.6.6
