@@ -83,7 +83,13 @@ import {
 } from '../utils/utils';
 import { type InputNodeKind, type InvalidRequiredInputValueData, type OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
-import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
+import {
+  type ArgumentName,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
 import {
   type CompareAndValidateInputDefaultValuesParams,
   type DirectiveDefinitionNodeFromDataParams,
@@ -555,15 +561,75 @@ export function getClientFederatedDirectiveNodes<T extends NodeData>(nodeData: T
   return persistedDirectiveNodes;
 }
 
-export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
+// An argument must be defined in every subgraph that contributes its field; otherwise a client (or the router
+// schema, see isArgumentKeptByImplementedInterface) could send the argument to a subgraph that does not support it.
+export function isArgumentDefinedInAllFieldSubgraphs(fieldData: FieldData, inputValueData: InputValueData): boolean {
+  return fieldData.subgraphNames.size === inputValueData.subgraphNames.size;
+}
+
+/* An argument that is not defined in every subgraph that contributes a field would normally be dropped from the
+ * client schema. However, if an Interface implemented by the field's parent defines the same argument for the same
+ * field, and that argument is itself included in the Interface's own client schema, the argument must still be
+ * included here too; otherwise, the implementing type's client schema field would no longer satisfy the
+ * Interface's client schema field. Only the "defined in every subgraph" condition is relaxed by this override:
+ * an argument that is inaccessible or defines @fromContext on the implementation is never included, regardless of
+ * the Interface. */
+function isArgumentKeptByImplementedInterfaceInClientSchema(
+  argumentName: ArgumentName,
+  interfaceFieldDatas: ReadonlyArray<FieldData>,
+): boolean {
+  for (const interfaceFieldData of interfaceFieldDatas) {
+    const interfaceArgumentData = interfaceFieldData.argumentDataByName.get(argumentName);
+    if (interfaceArgumentData && isArgumentIncludedInClientSchema(interfaceFieldData, interfaceArgumentData, [])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isArgumentIncludedInClientSchema(
+  fieldData: FieldData,
+  inputValueData: InputValueData,
+  interfaceFieldDatas: ReadonlyArray<FieldData>,
+): boolean {
+  if (isNodeDataInaccessible(inputValueData) || doesArgumentDefineFromContext(inputValueData)) {
+    return false;
+  }
+  return (
+    isArgumentDefinedInAllFieldSubgraphs(fieldData, inputValueData) ||
+    isArgumentKeptByImplementedInterfaceInClientSchema(inputValueData.name, interfaceFieldDatas)
+  );
+}
+
+/* The router-schema equivalent of isArgumentKeptByImplementedInterfaceInClientSchema: an optional argument that is
+ * missing from some of a field's subgraphs is still kept on the implementation's router schema field if an
+ * Interface implemented by the field's parent requires the same argument, i.e., defines it in every subgraph that
+ * contributes the Interface's field. @inaccessible is not considered, since it does not affect the router schema. */
+export function isArgumentKeptByImplementedInterface(
+  argumentName: ArgumentName,
+  interfaceFieldDatas: ReadonlyArray<FieldData>,
+): boolean {
+  for (const interfaceFieldData of interfaceFieldDatas) {
+    const interfaceArgumentData = interfaceFieldData.argumentDataByName.get(argumentName);
+    if (
+      interfaceArgumentData &&
+      !doesArgumentDefineFromContext(interfaceArgumentData) &&
+      isArgumentDefinedInAllFieldSubgraphs(interfaceFieldData, interfaceArgumentData)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function getClientSchemaFieldNodeByFieldData(
+  fieldData: FieldData,
+  interfaceFieldDatas: ReadonlyArray<FieldData>,
+): MutableFieldNode {
   const directives = getClientFederatedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
   for (const inputValueData of fieldData.argumentDataByName.values()) {
-    if (
-      isNodeDataInaccessible(inputValueData) ||
-      doesArgumentDefineFromContext(inputValueData) ||
-      inputValueData.subgraphNames.size !== fieldData.subgraphNames.size
-    ) {
+    if (!isArgumentIncludedInClientSchema(fieldData, inputValueData, interfaceFieldDatas)) {
       continue;
     }
 

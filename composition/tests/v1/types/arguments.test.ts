@@ -252,6 +252,142 @@ describe('Argument tests', () => {
     expect(warnings).toHaveLength(0);
   });
 
+  test('that an argument is not dropped from an Interface implementation in the client schema if it is not dropped from the Interface', () => {
+    const a = createSubgraph(
+      'reviews-a',
+      `
+        type Query {
+          dummy: String! @shareable
+        }
+
+        interface Product {
+          id: ID!
+        }
+
+        type Book implements Product @shareable {
+          id: ID!
+          reviews: [String]
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'reviews-b',
+      `
+        interface Product {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+
+        type Book implements Product @shareable {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'reviews-c',
+      `
+        interface Product {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+
+        type Book implements Product @shareable {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expectedSchema = normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      type Book implements Product {
+        id: ID!
+        reviews(verifiedOnly: Boolean): [String]
+      }
+
+      interface Product {
+        id: ID!
+        reviews(verifiedOnly: Boolean): [String]
+      }
+
+      type Query {
+        dummy: String!
+      }
+    `);
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an @inaccessible argument is not re-added to an Interface implementation that would otherwise drop it', () => {
+    const a = createSubgraph(
+      'reviews-inaccessible-a',
+      `
+        type Query {
+          dummy: String! @shareable
+        }
+
+        interface Product {
+          id: ID!
+        }
+
+        type Book implements Product @shareable {
+          id: ID!
+          reviews: [String]
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'reviews-inaccessible-b',
+      `
+        interface Product {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+
+        type Book implements Product @shareable {
+          reviews(verifiedOnly: Boolean @inaccessible): [String]
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'reviews-inaccessible-c',
+      `
+        interface Product {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+
+        type Book implements Product @shareable {
+          reviews(verifiedOnly: Boolean): [String]
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Book implements Product {
+          id: ID!
+          reviews: [String]
+        }
+
+        interface Product {
+          id: ID!
+          reviews(verifiedOnly: Boolean): [String]
+        }
+
+        type Query {
+          dummy: String!
+        }
+      `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that an @inaccessible optional argument is not included in the client schema #1', () => {
     const a = createSubgraph(
       'a',

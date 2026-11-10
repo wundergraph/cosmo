@@ -150,6 +150,8 @@ import {
   getInitialFederatedDescription,
   getSubscriptionFilterValue,
   doesArgumentDefineFromContext,
+  isArgumentDefinedInAllFieldSubgraphs,
+  isArgumentKeptByImplementedInterface,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -2052,7 +2054,10 @@ export class FederationFactory {
     return true;
   }
 
-  getValidFieldArgumentNodes(fieldData: FieldData): MutableInputValueNode[] {
+  getValidFieldArgumentNodes(
+    fieldData: FieldData,
+    interfaceFieldDatas: ReadonlyArray<FieldData>,
+  ): MutableInputValueNode[] {
     const argumentNodes: Array<MutableInputValueNode> = [];
     const argumentNames: Array<string> = [];
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
@@ -2062,26 +2067,32 @@ export class FederationFactory {
         continue;
       }
 
-      if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
-        argumentNames.push(argumentName);
-        const argumentNodeResult = routerSchemaInputValueNodeFromData({
-          data: inputValueData,
-          description: this.getFederatedGraphNodeDescription(inputValueData),
-          federatedDirectiveDataByName: this.federatedDirectiveDataByName,
-          parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
-        });
-        if (argumentNodeResult.success) {
-          argumentNodes.push(argumentNodeResult.node);
-          this.warnings.push(...argumentNodeResult.warnings);
-        } else {
-          this.errors.push(...argumentNodeResult.errors);
+      if (!isArgumentDefinedInAllFieldSubgraphs(fieldData, inputValueData)) {
+        if (isTypeRequired(inputValueData.type)) {
+          invalidRequiredArguments.push({
+            inputValueName: argumentName,
+            missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
+            requiredSubgraphs: [...inputValueData.requiredSubgraphNames],
+          });
+          continue;
         }
-      } else if (isTypeRequired(inputValueData.type)) {
-        invalidRequiredArguments.push({
-          inputValueName: argumentName,
-          missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
-          requiredSubgraphs: [...inputValueData.requiredSubgraphNames],
-        });
+        // An Interface implemented by this field's parent may still require this optional argument.
+        if (!isArgumentKeptByImplementedInterface(argumentName, interfaceFieldDatas)) {
+          continue;
+        }
+      }
+      argumentNames.push(argumentName);
+      const argumentNodeResult = routerSchemaInputValueNodeFromData({
+        data: inputValueData,
+        description: this.getFederatedGraphNodeDescription(inputValueData),
+        federatedDirectiveDataByName: this.federatedDirectiveDataByName,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      });
+      if (argumentNodeResult.success) {
+        argumentNodes.push(argumentNodeResult.node);
+        this.warnings.push(...argumentNodeResult.warnings);
+      } else {
+        this.errors.push(...argumentNodeResult.errors);
       }
     }
 
@@ -2096,6 +2107,22 @@ export class FederationFactory {
       })).argumentNames = argumentNames;
     }
     return argumentNodes;
+  }
+
+  // The FieldData of the same-named field on each Interface that the given parent type implements, if any.
+  getImplementedInterfaceFieldDatas(data: CompositeOutputData, fieldName: FieldName): FieldData[] {
+    const interfaceFieldDatas: FieldData[] = [];
+    for (const interfaceTypeName of data.implementedInterfaceTypeNames) {
+      const interfaceData = this.parentDefinitionDataByTypeName.get(interfaceTypeName);
+      if (interfaceData?.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        continue;
+      }
+      const interfaceFieldData = interfaceData.fieldDataByName.get(fieldName);
+      if (interfaceFieldData) {
+        interfaceFieldDatas.push(interfaceFieldData);
+      }
+    }
+    return interfaceFieldDatas;
   }
 
   /* An "$args" reference of a @cacheTag format must not reach an @inaccessible or @fromContext input value.
@@ -2424,7 +2451,8 @@ export class FederationFactory {
           propagateAuthDirectives(parentDefinitionData, authData);
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
             propagateFieldAuthDirectives(fieldData, authData);
-            const argumentNodes = this.getValidFieldArgumentNodes(fieldData);
+            const interfaceFieldDatas = this.getImplementedInterfaceFieldDatas(parentDefinitionData, fieldName);
+            const argumentNodes = this.getValidFieldArgumentNodes(fieldData, interfaceFieldDatas);
             if (isObject) {
               validateExternalAndShareable(fieldData, invalidFieldNames);
             }
@@ -2450,7 +2478,7 @@ export class FederationFactory {
             if (isQuery) {
               this.validateCacheTagFormats(fieldData);
             }
-            clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
+            clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData, interfaceFieldDatas));
             graphFieldDataByFieldName.set(fieldName, this.fieldDataToGraphFieldData(fieldData));
           }
           if (isObject) {
