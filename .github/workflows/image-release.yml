@@ -53,7 +53,8 @@ env:
   # Pushes to main only build the router; dispatches use the given inputs.
   SERVICE_NAME: ${{ inputs.name || 'router' }}
   WORKING_DIRECTORY: ${{ inputs.workingDirectory || 'router' }}
-  DOCKER_CONTEXT: ${{ inputs.dockerContext || 'router' }}
+  # Not DOCKER_CONTEXT: the Docker CLI reads that variable as the name of a CLI context.
+  BUILD_CONTEXT: ${{ inputs.dockerContext || 'router' }}
   IS_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
 
 jobs:
@@ -123,7 +124,7 @@ jobs:
         with:
           push: true
           file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
-          context: ${{ env.DOCKER_CONTEXT }}
+          context: ${{ env.BUILD_CONTEXT }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}:buildcache
