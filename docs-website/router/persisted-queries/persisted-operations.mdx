@@ -135,7 +135,7 @@ Both `persisted_operation_sha256` and `operation_sha256` record the ID from the 
 
 #### Operations published before this rule
 
-Routers before `0.355.0` didn't check SHA256 IDs against their bodies. If you published operations whose ID is the SHA256 hash of a different text than the body, those operations stop working when you upgrade. This happens, for example, when a client computes the ID from its own printed form of the query, and a tool that generates the manifest reorders the fragments before publishing the body.
+Routers before `0.355.0` didn't check SHA256 IDs against their bodies. If you published operations whose ID is the SHA256 hash of a different text than the body, those operations stop working when you upgrade.
 
 Requests for such an operation fail with status `500` and `internal server error`. The request's trace records the error `persisted operation '<id>' is invalid: an ID that looks like a SHA256 hash must be the SHA256 of its body`. With the [PQL manifest](#pql-manifest) and [cache warmup](#cache-warmup) enabled, each warmup, at startup and after every manifest update, also logs `Skipping PQL manifest operation whose SHA256 ID doesn't match its body` with the ID of each affected operation.
 
