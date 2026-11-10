@@ -5,6 +5,7 @@ import {
   type CacheTagConfiguration,
   type ContractTagOptions,
   type EntityCacheConfiguration,
+  type FederationFailure,
   FIRST_ORDINAL,
   FORMAT,
   fromContextCacheTagReferenceErrorMessage,
@@ -1224,7 +1225,7 @@ describe('@cacheTag tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
-      expect(federationResultByContractName.get('excludesRegion')?.errors).toStrictEqual([
+      expect((federationResultByContractName.get('excludesRegion') as FederationFailure).errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Query.products(region: ...)',
@@ -1254,7 +1255,7 @@ describe('@cacheTag tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
-      expect(federationResultByContractName.get('excludesRegion')?.errors).toStrictEqual([
+      expect((federationResultByContractName.get('excludesRegion') as FederationFailure).errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Query.products(region: ...)',
@@ -1285,7 +1286,7 @@ describe('@cacheTag tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(federationResultByContractName.get('retainsCategory')?.success).toBe(true);
-      expect(federationResultByContractName.get('excludesCategory')?.errors).toStrictEqual([
+      expect((federationResultByContractName.get('excludesCategory') as FederationFailure).errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Filter.category',
