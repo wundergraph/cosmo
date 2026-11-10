@@ -1717,6 +1717,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 
 func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
 	opts := []astnormalization.Option{
+		astnormalization.WithLimits(astnormalization.Limits{MaxSelections: 10_000}),
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveFragmentDefinitions(),
