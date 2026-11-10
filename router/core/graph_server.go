@@ -580,8 +580,8 @@ func getRoutingUrlGroupingForCircuitBreakers(
 	return routingUrlGroupings, nil
 }
 
-// responseCacheBasesFor is the base mapping restricted to the given subgraphs.
-func (s *graphServer) responseCacheBasesFor(subgraphs []*nodev1.Subgraph) map[string]string {
+// responseCacheBases is the base mapping restricted to the given subgraphs.
+func (s *graphServer) responseCacheBases(subgraphs []*nodev1.Subgraph) map[string]string {
 	out := make(map[string]string)
 	for _, sg := range subgraphs {
 		if base, ok := s.responseCacheSubgraphBases[sg.GetName()]; ok {
@@ -615,7 +615,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			if !hasChanged && !wasAdded {
 				oldGraphMux, exists := opts.currentGraphMuxes[featureFlagName]
 				// A base change can remap this flag's subgraphs.
-				if exists && maps.Equal(oldGraphMux.responseCacheBases, s.responseCacheBasesFor(executionConfig.Subgraphs)) {
+				if exists && maps.Equal(oldGraphMux.responseCacheBases, s.responseCacheBases(executionConfig.Subgraphs)) {
 					s.logger.Debug("Will reuse feature flag mux for new graph server",
 						zap.String("flag", featureFlagName),
 						zap.String("execution_config_hash", opts.hashes[featureFlagName].NewHash),
@@ -1875,7 +1875,7 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 
-		gm.responseCacheBases = s.responseCacheBasesFor(opts.ConfigSubgraphs)
+		gm.responseCacheBases = s.responseCacheBases(opts.ConfigSubgraphs)
 		// Compiled with this mux's manager so what the expressions use is recorded.
 		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, gm.responseCacheBases, s.logger)
 		if err != nil {
