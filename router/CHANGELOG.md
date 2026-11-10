@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.369.0](https://github.com/wundergraph/cosmo/compare/router@0.368.0...router@0.369.0) (2026-11-10)
+
+### Features
+
+* **router:** validate the JWT iss claim against configured issuers ([#3481](https://github.com/wundergraph/cosmo/issues/3481)) ([fb6203d](https://github.com/wundergraph/cosmo/commit/fb6203da593e69cd638ed7971c4750dabd26b920)) (@vdatcu)
+
 ## [0.368.0](https://github.com/wundergraph/cosmo/compare/router@0.367.0...router@0.368.0) (2026-11-09)
 
 ### Features
