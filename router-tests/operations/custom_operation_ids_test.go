@@ -240,9 +240,39 @@ func TestMismatchedSHA256OperationIDs(t *testing.T) {
 	t.Parallel()
 
 	// The client hashes the query with its fragments in spread order...
-	const hashedQuery = `query Employees { employees { ...ID ...Details } } fragment ID on Employee { id } fragment Details on Employee { details { forename } }`
+	const hashedQuery = `query Employees {
+  employees {
+    ...ID
+    ...Details
+  }
+}
+
+fragment ID on Employee {
+  id
+}
+
+fragment Details on Employee {
+  details {
+    forename
+  }
+}`
 	// ...but the published body has them sorted by name.
-	const publishedBody = `query Employees { employees { ...ID ...Details } } fragment Details on Employee { details { forename } } fragment ID on Employee { id }`
+	const publishedBody = `query Employees {
+  employees {
+    ...ID
+    ...Details
+  }
+}
+
+fragment Details on Employee {
+  details {
+    forename
+  }
+}
+
+fragment ID on Employee {
+  id
+}`
 	const employees = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}]}}`
 	const employeeIDs = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 	sum := sha256.Sum256([]byte(hashedQuery))
@@ -312,7 +342,11 @@ func TestMismatchedSHA256OperationIDs(t *testing.T) {
 	// query that hashes to it, and which one runs depends on what the router has cached.
 	t.Run("the published body or the query that hashes to the ID may run", func(t *testing.T) {
 		t.Parallel()
-		const otherBody = `query { employees { id } }`
+		const otherBody = `query {
+  employees {
+    id
+  }
+}`
 		run(t, options{allowMismatched: true, warmup: true, body: otherBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
 			// Warmup cached the published body, so it runs instead of the query sent.
 			assert.Equal(t, employeeIDs, request(hashedQuery).Body)
