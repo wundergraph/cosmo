@@ -183,6 +183,25 @@ describe('API Keys', (ctx) => {
     const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
     expect(stored?.keyHash).toBe(createHash('sha256').update(response.apiKey).digest('hex'));
     expect(stored?.key).toBeNull();
+  });
+
+  test('that an API key authenticates but its stored hash does not', async (testContext) => {
+    const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const name = uid(8);
+    const response = await client.createAPIKey({
+      name,
+      expires: ExpiresAt.NEVER,
+      userID: users.adminAliceCompanyA.userId,
+      groupId: adminGroup.groupId,
+    });
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
 
     const authenticator = new ApiKeyAuthenticator(server.db, new OrganizationRepository(pino(), server.db, ''));
     const authContext = await authenticator.authenticate(response.apiKey);
