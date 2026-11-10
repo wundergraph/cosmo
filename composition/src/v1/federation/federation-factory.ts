@@ -2123,11 +2123,12 @@ export class FederationFactory {
       this.errors.push(unavailableCacheTagReferencesError(fieldData.federatedCoords, [...errorMessages]));
     }
     const [formats, ...otherFormats] = formatsBySubgraphName.values();
-    if (otherFormats.some((other) => other.size !== formats.size || !other.isSubsetOf(formats))) {
-      this.warnings.push(
-        inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
-      );
+    if (otherFormats.every((other) => other.size === formats.size && other.isSubsetOf(formats))) {
+      return;
     }
+    this.warnings.push(
+      inconsistentCacheTagFormatsWarning({ coords: fieldData.federatedCoords, formatsBySubgraphName }),
+    );
   }
 
   // Returns an error message if an input value on the path of an "$args" reference is @inaccessible or @fromContext.
