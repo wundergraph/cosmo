@@ -3,15 +3,20 @@ package integration
 import (
 	"github.com/wundergraph/cosmo/router-tests/testutils"
 
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -30,8 +35,131 @@ func newTestdataCertsServerTLSConfig() config.TLSConfiguration {
 	}
 }
 
+// replaceTLSFiles copies a fixture pair to stable paths, renaming each file separately.
+func replaceTLSFiles(t *testing.T, dir, certFile, keyFile string) (string, string) {
+	t.Helper()
+
+	certPath, keyPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key")
+	for src, dst := range map[string]string{certFile: certPath, keyFile: keyPath} {
+		data, err := os.ReadFile(src)
+		require.NoError(t, err)
+
+		tmp := dst + ".tmp"
+		require.NoError(t, os.WriteFile(tmp, data, 0o600))
+		require.NoError(t, os.Rename(tmp, dst))
+	}
+
+	return certPath, keyPath
+}
+
 func TestTLS(t *testing.T) {
 	t.Parallel()
+
+	t.Run("serves the replacement server certificate without interrupting traffic when its files change", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := replaceTLSFiles(t, dir, "../testdata/tls/cert-2.pem", "../testdata/tls/key-2.pem")
+		oldCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		require.NoError(t, err)
+		newCert, err := tls.LoadX509KeyPair("../testdata/tls/cert.pem", "../testdata/tls/key.pem")
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: config.TLSConfiguration{
+				Server: config.TLSServerConfiguration{
+					Enabled:  true,
+					CertFile: certPath,
+					KeyFile:  keyPath,
+				},
+				Watch:         true,
+				WatchInterval: 100 * time.Millisecond,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			pool := loadSubgraphMTLSCACertPool(t, "../testdata/tls/cert-2.pem", "../testdata/tls/cert.pem")
+			keepAlive := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}
+			fresh := &http.Client{
+				Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}, DisableKeepAlives: true},
+				Timeout:   5 * time.Second,
+			}
+
+			t.Cleanup(keepAlive.CloseIdleConnections)
+
+			// Use explicit clients without retries so a failed request remains visible.
+			probe := func(client *http.Client) (*x509.Certificate, error) {
+				req, err := http.NewRequestWithContext(
+					xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(),
+					strings.NewReader(`{"query":"query { employees { id } }"}`),
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				req.Header.Set("Content-Type", "application/json")
+
+				res, err := testenv.MakeGraphQLRequestRawFromClient(req, client)
+				if err != nil {
+					return nil, err
+				}
+
+				if res.Response.StatusCode != http.StatusOK || res.Body != testutils.EmployeesIDData {
+					return nil, fmt.Errorf("unexpected response %s: %s", res.Response.Status, res.Body)
+				}
+
+				return res.Response.TLS.PeerCertificates[0], nil
+			}
+			served, err := probe(keepAlive)
+			require.NoError(t, err)
+			require.Equal(t, oldCert.Certificate[0], served.Raw)
+
+			// Keep dialing new connections through the rotation. Any failed request is downtime.
+			stop := make(chan struct{})
+
+			var (
+				requests, failures int
+				wg                 sync.WaitGroup
+			)
+
+			stopLoad := sync.OnceFunc(func() {
+				close(stop)
+				wg.Wait()
+			})
+			t.Cleanup(stopLoad)
+			wg.Go(func() {
+				for {
+					select {
+					case <-stop:
+						return
+					default:
+					}
+
+					requests++
+
+					if _, err := probe(fresh); err != nil {
+						failures++
+					}
+				}
+			})
+
+			replaceTLSFiles(t, dir, "../testdata/tls/cert.pem", "../testdata/tls/key.pem")
+
+			require.Eventually(t, func() bool {
+				served, err := probe(fresh)
+
+				return err == nil && bytes.Equal(served.Raw, newCert.Certificate[0])
+			}, 10*time.Second, 50*time.Millisecond, "router did not pick up the new certificate")
+
+			stopLoad()
+			require.Positive(t, requests)
+			require.Zero(t, failures, "requests failed during certificate rotation")
+
+			// The pre-rotation connection must still use the original certificate.
+			served, err = probe(keepAlive)
+			require.NoError(t, err)
+			require.Equal(t, oldCert.Certificate[0], served.Raw)
+			require.Contains(t, xEnv.RouterURL, "https://")
+		})
+	})
 
 	t.Run("Ensure router URL is https when passing TLSConfig", func(t *testing.T) {
 		t.Parallel()
@@ -180,6 +308,32 @@ func TestTLS(t *testing.T) {
 
 func TestMTLS(t *testing.T) {
 	t.Parallel()
+
+	t.Run("preserves HTTP2 negotiation when client authentication and watching are enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: config.TLSConfiguration{
+				Server: config.TLSServerConfiguration{
+					Enabled:  true,
+					CertFile: "../testdata/tls/cert.pem",
+					KeyFile:  "../testdata/tls/key.pem",
+					ClientAuth: config.TLSClientAuthConfiguration{
+						Required: true,
+						CertFile: "../testdata/tls/cert.pem",
+					},
+				},
+				Watch:         true,
+				WatchInterval: 100 * time.Millisecond,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, "HTTP/2.0", res.Proto)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
+		})
+	})
 
 	t.Run("TestPlayground", func(t *testing.T) {
 		t.Parallel()
