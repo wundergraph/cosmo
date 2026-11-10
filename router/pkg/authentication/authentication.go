@@ -115,6 +115,7 @@ func ScopesFromClaims(claims Claims, scopeClaim string) ([]string, error) {
 }
 
 var errUnacceptableAud = errors.New("audience match not found")
+var errUnacceptableIss = errors.New("issuer match not found")
 
 // Authenticate tries to authenticate the given Provider using the given authenticators. If any of
 // the authenticators succeeds, the Authentication result is returned with no error. If the Provider

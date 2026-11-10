@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.22.1...helm-cosmo@0.22.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **helm:** fix typo in controlplane split config loading template name ([#3500](https://github.com/wundergraph/cosmo/issues/3500)) ([a56a419](https://github.com/wundergraph/cosmo/commit/a56a4191de6f9372c6d905e870be008030e731e7))
+
 ## [0.22.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.22.0...helm-cosmo@0.22.1) (2026-10-13)
 
 
