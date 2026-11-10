@@ -580,6 +580,17 @@ func getRoutingUrlGroupingForCircuitBreakers(
 	return routingUrlGroupings, nil
 }
 
+// responseCacheBasesFor is the base mapping restricted to the given subgraphs.
+func (s *graphServer) responseCacheBasesFor(subgraphs []*nodev1.Subgraph) map[string]string {
+	out := make(map[string]string)
+	for _, sg := range subgraphs {
+		if base, ok := s.responseCacheSubgraphBases[sg.GetName()]; ok {
+			out[sg.GetName()] = base
+		}
+	}
+	return out
+}
+
 // buildMultiGraphHandler assembles the feature-flag routing handler. The returned
 // reusedGraphMux slice lists muxes inherited from the previous server; the caller
 // is responsible for committing the reuse bookkeeping once construction has fully
@@ -603,7 +614,8 @@ func (s *graphServer) buildMultiGraphHandler(
 
 			if !hasChanged && !wasAdded {
 				oldGraphMux, exists := opts.currentGraphMuxes[featureFlagName]
-				if exists {
+				// A base change can remap this flag's subgraphs.
+				if exists && maps.Equal(oldGraphMux.responseCacheBases, s.responseCacheBasesFor(executionConfig.Subgraphs)) {
 					s.logger.Debug("Will reuse feature flag mux for new graph server",
 						zap.String("flag", featureFlagName),
 						zap.String("execution_config_hash", opts.hashes[featureFlagName].NewHash),
@@ -699,6 +711,8 @@ type graphMux struct {
 
 	mux       *chi.Mux
 	reused    atomic.Bool
+	// responseCacheBases is the base mapping this mux's cache settings use.
+	responseCacheBases map[string]string
 	finalized atomic.Bool
 
 	// inFlightRequests tracks the number of requests currently being processed
@@ -1861,8 +1875,9 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ResponseCacheInvalidation = s.responseCacheConfig.Invalidation
 		handlerOpts.ResponseCacheTagHeader = s.responseCacheConfig.TagHeader
 
+		gm.responseCacheBases = s.responseCacheBasesFor(opts.ConfigSubgraphs)
 		// Compiled with this mux's manager so what the expressions use is recorded.
-		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, s.responseCacheSubgraphBases, s.logger)
+		handlerOpts.ResponseCacheSettings, err = NewResponseCacheSettings(s.responseCacheConfig, exprManager, opts.ConfigSubgraphs, gm.responseCacheBases, s.logger)
 		if err != nil {
 			return nil, err
 		}
