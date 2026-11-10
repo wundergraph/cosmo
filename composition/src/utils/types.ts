@@ -19,7 +19,7 @@ export type InvalidFieldImplementation = {
   // Argument names that are not defined at all
   unimplementedArguments: Set<ArgumentName>;
   implementedResponseType?: string;
-  // Argument names that are not defined in al subgraphs and are removed
+  // Argument names that are not defined in all subgraphs and are removed from the federated field definition
   unfederatedArguments?: Set<ArgumentName>;
 };
 
