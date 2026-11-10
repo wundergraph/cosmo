@@ -18,6 +18,7 @@ import {
   RedisEventConfigurationSchema,
   RequiredFieldSchema,
   ScopesSchema,
+  PoliciesSchema,
   SubscriptionFieldConditionSchema,
   SubscriptionFilterConditionSchema,
   TypeFieldSchema,
@@ -267,11 +268,17 @@ export function generateFieldConfigurations(
         create(ScopesSchema, { requiredAndScopes: andScopes }),
       ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
-    if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
+    const requiredOrPolicies =
+      compositionFieldConfiguration.requiredPolicies?.map((andPolicies: string[]) =>
+        create(PoliciesSchema, { requiredAndPolicies: andPolicies }),
+      ) || [];
+    const hasRequiredOrPolicies = requiredOrPolicies.length > 0;
+    if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes || hasRequiredOrPolicies) {
       fieldConfiguration.authorizationConfiguration = create(AuthorizationConfigurationSchema, {
         requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
         requiredOrScopesByOr,
+        requiredOrPolicies,
       });
     }
     if (compositionFieldConfiguration.subscriptionFilterCondition) {
