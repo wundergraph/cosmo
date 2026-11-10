@@ -3,7 +3,7 @@ import {
   duplicateArgumentsError,
   FIELD,
   FLOAT_SCALAR,
-  INACCESSIBLE_DEFINITION,
+  inaccessibleRequiredInputValueError,
   incompatibleInputValueDefaultValuesError,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleMergedTypesError,
@@ -30,7 +30,7 @@ import {
 } from '../../utils/utils';
 import { Kind } from 'graphql';
 
-describe('Argument federation tests', () => {
+describe('Argument tests', () => {
   const prefix = 'argument "input"';
   const argumentCoords = 'Object.field(input: ...)';
 
@@ -505,6 +505,101 @@ describe('Argument federation tests', () => {
     `,
       ),
     );
+  });
+
+  test('that an error is returned if a required argument is declared @inaccessible #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID! @inaccessible): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if a required argument is declared @inaccessible #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that only a single error is returned if a required argument is declared @inaccessible', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
   });
 });
 

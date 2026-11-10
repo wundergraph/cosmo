@@ -884,6 +884,10 @@ export class FederationFactory {
     }
   }
 
+  /* Note that this cannot be done at normalization time because the argument's field or parent type could be
+   * declared @inaccessible in another subgraph.
+   * This means validity can only be assessed post-federation.
+   */
   handleInputValueInaccessibility(isParentInaccessible: boolean, inputValueData: InputValueData, parentCoords: string) {
     /* If an ancestor (Input Object for field; Composite type or field for argument) of the input value is
      * @inaccessible, nullability is not considered.
@@ -897,6 +901,7 @@ export class FederationFactory {
     if (!isNodeDataInaccessible(inputValueData)) {
       return;
     }
+
     if (isTypeRequired(inputValueData.type)) {
       this.inaccessibleRequiredInputValueErrorByCoords.set(
         inputValueData.federatedCoords,
@@ -904,6 +909,7 @@ export class FederationFactory {
       );
       return;
     }
+
     this.inaccessibleCoords.add(inputValueData.federatedCoords);
   }
 
@@ -2290,6 +2296,7 @@ export class FederationFactory {
             this.internalGraph.setNodeInaccessible(parentDefinitionData.name);
             break;
           }
+
           if (clientEnumValueNodes.length < 1) {
             this.errors.push(
               allChildDefinitionsAreInaccessibleError(
@@ -2312,6 +2319,7 @@ export class FederationFactory {
           if (IGNORED_FEDERATED_TYPE_NAMES.has(parentTypeName)) {
             break;
           }
+
           const invalidRequiredInputs = new Array<InvalidRequiredInputValueData>();
           const inputValueNodes = new Array<MutableInputValueNode>();
           const clientInputValueNodes = new Array<MutableInputValueNode>();
@@ -2357,6 +2365,7 @@ export class FederationFactory {
             );
             break;
           }
+
           if (
             !this.validateOneOfDirective({
               data: parentDefinitionData,
@@ -2366,6 +2375,7 @@ export class FederationFactory {
           ) {
             break;
           }
+
           parentDefinitionData.node.fields = inputValueNodes;
           const inputObjectNodeResult = routerSchemaNodeFromData<InputObjectDefinitionData>({
             data: parentDefinitionData,
@@ -2382,6 +2392,7 @@ export class FederationFactory {
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             break;
           }
+
           if (clientInputValueNodes.length < 1) {
             this.errors.push(
               allChildDefinitionsAreInaccessibleError(
@@ -2392,6 +2403,7 @@ export class FederationFactory {
             );
             break;
           }
+
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
             directives: getClientFederatedDirectiveNodes(parentDefinitionData),
@@ -2433,6 +2445,7 @@ export class FederationFactory {
             if (isNodeDataInaccessible(fieldData)) {
               continue;
             }
+
             // An inaccessible field, e.g., one excluded from a contract, cannot be queried, so it produces no tags.
             if (isQuery) {
               this.validateCacheTagFormats(fieldData);
@@ -2457,6 +2470,7 @@ export class FederationFactory {
             interfaceImplementations.push({ data: parentDefinitionData, clientSchemaFieldNodes });
             break;
           }
+
           const nodeResult = routerSchemaNodeFromData<ObjectDefinitionData>({
             data: parentDefinitionData,
             description: this.getFederatedGraphNodeDescription(parentDefinitionData),
@@ -2473,10 +2487,12 @@ export class FederationFactory {
               this.errors.push(inaccessibleQueryRootTypeError);
               break;
             }
+
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             this.internalGraph.setNodeInaccessible(parentDefinitionData.name);
             break;
           }
+
           if (clientSchemaFieldNodes.length < 1) {
             const error = isQuery
               ? noQueryRootTypeError(false)
@@ -2488,6 +2504,7 @@ export class FederationFactory {
             this.errors.push(error);
             break;
           }
+
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
             directives: getClientFederatedDirectiveNodes(parentDefinitionData),
