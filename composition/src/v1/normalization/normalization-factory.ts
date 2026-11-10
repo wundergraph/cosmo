@@ -4902,6 +4902,7 @@ export class NormalizationFactory {
             if (fieldData.namedTypeKind !== Kind.NULL) {
               continue;
             }
+
             const namedTypeData = this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName);
             if (!namedTypeData) {
               // undefined types are handled elsewhere
@@ -4917,6 +4918,7 @@ export class NormalizationFactory {
               );
               continue;
             }
+
             fieldData.namedTypeKind = this.entityInterfaceDataByTypeName.get(namedTypeData.name)
               ? Kind.INTERFACE_TYPE_DEFINITION
               : namedTypeData.kind;
