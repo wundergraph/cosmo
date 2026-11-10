@@ -301,6 +301,7 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldKeyPath, keyPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, "")
 		require.NoError(t, err)
 
@@ -330,6 +331,7 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldKeyPath, keyPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, "")
 		require.NoError(t, err)
 
@@ -351,6 +353,7 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldCAPath, caPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add("", "", caPath)
 		require.NoError(t, err)
 		require.Nil(t, reloader.cert.Load())
@@ -374,8 +377,10 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldCertPath, caPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, caPath)
 		require.NoError(t, err)
+
 		oldPool := reloader.ca.Load()
 
 		copyFile(t, newCertPath, certPath)
@@ -401,6 +406,7 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldKeyPath, keyPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, "")
 		require.NoError(t, err)
 
@@ -422,6 +428,7 @@ func TestCertReloader(t *testing.T) {
 		otherCAPath, _ := generateTestCert(t, "other-ca")
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, "")
 		require.NoError(t, err)
 
@@ -449,6 +456,7 @@ func TestCertReloader(t *testing.T) {
 		t.Parallel()
 
 		var reloaders certReloaders
+
 		_, err := reloaders.add("/nonexistent/tls.crt", "/nonexistent/tls.key", "")
 		require.ErrorContains(t, err, "failed to load tls cert and key")
 		require.Empty(t, reloaders.list)
@@ -465,11 +473,13 @@ func TestCertReloader(t *testing.T) {
 		copyFile(t, oldKeyPath, keyPath)
 
 		var reloaders certReloaders
+
 		reloader, err := reloaders.add(certPath, keyPath, "")
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
+
 		require.NoError(t, reloaders.watch(ctx, zap.NewNop(), 50*time.Millisecond))
 
 		// The watcher captures the mod time on its first tick. Give it one before rotating.
@@ -493,27 +503,33 @@ func TestCertReloader(t *testing.T) {
 
 func copyFile(t *testing.T, src, dst string) {
 	t.Helper()
+
 	data, err := os.ReadFile(src)
 	require.NoError(t, err)
 	// mtime resolution on some file systems is coarse. Bump it explicitly so a watcher sees the change.
 	require.NoError(t, os.WriteFile(dst, data, 0o600))
+
 	now := time.Now().Add(time.Second)
 	require.NoError(t, os.Chtimes(dst, now, now))
 }
 
 func mustReadFile(t *testing.T, path string) []byte {
 	t.Helper()
+
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
+
 	return data
 }
 
 func parsePEMCert(t *testing.T, data []byte) *x509.Certificate {
 	t.Helper()
+
 	block, _ := pem.Decode(data)
 	require.NotNil(t, block)
 	cert, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
+
 	return cert
 }
 

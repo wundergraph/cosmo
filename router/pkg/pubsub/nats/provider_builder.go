@@ -134,6 +134,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger, sk
 			if eventSource.TLS.CertFile == "" || eventSource.TLS.KeyFile == "" {
 				return nil, fmt.Errorf("both cert_file and key_file must be provided for mTLS on NATS provider %q", eventSource.ID)
 			}
+
 			tlsOpts = append(tlsOpts, nats.ClientCert(eventSource.TLS.CertFile, eventSource.TLS.KeyFile))
 		}
 

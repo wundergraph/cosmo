@@ -332,6 +332,7 @@ func subscribeEmployeeUpdated(t *testing.T, xEnv *testenv.Environment) <-chan na
 
 	clientErrCh := make(chan error, 1)
 	go func() { clientErrCh <- client.Run() }()
+
 	t.Cleanup(func() {
 		require.NoError(t, client.Close())
 		testenv.AwaitChannelWithT(t, EventWaitTimeout, clientErrCh, func(t *testing.T, err error) {
@@ -398,6 +399,7 @@ func TestRouterReconnectsToNATSWithRotatedCertificates(t *testing.T) {
 	helperConn := func(serverURL string, certs *tlsCerts) *nats.Conn {
 		clientCert, err := tls.LoadX509KeyPair(certs.ClientCertFile, certs.ClientKeyFile)
 		require.NoError(t, err)
+
 		return connectToNATS(t, serverURL, nats.Secure(&tls.Config{
 			InsecureSkipVerify: true, //nolint:gosec // test helper only
 			Certificates:       []tls.Certificate{clientCert},
@@ -431,6 +433,7 @@ func TestRouterReconnectsToNATSWithRotatedCertificates(t *testing.T) {
 		installCerts(newCerts)
 		oldServer.Shutdown()
 		oldServer.WaitForShutdown()
+
 		newServer := startMTLSServer(newCerts, port)
 
 		newConn := helperConn(natsPlainURL(newServer), newCerts)

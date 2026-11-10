@@ -40,8 +40,10 @@ func (c *certReloader) reload() error {
 		if err != nil {
 			return fmt.Errorf("failed to load tls cert and key: %w", err)
 		}
+
 		cert = &pair
 	}
+
 	if c.caFile != "" {
 		var err error
 		if pool, err = loadCertPool(c.caFile); err != nil {
@@ -52,19 +54,23 @@ func (c *certReloader) reload() error {
 	if cert != nil {
 		c.cert.Store(cert)
 	}
+
 	if pool != nil {
 		c.ca.Store(pool)
 	}
+
 	return nil
 }
 
 func (c *certReloader) paths() []string {
 	var paths []string
+
 	for _, p := range []string{c.certFile, c.keyFile, c.caFile} {
 		if p != "" {
 			paths = append(paths, p)
 		}
 	}
+
 	return paths
 }
 
@@ -81,6 +87,7 @@ func (c *certReloader) getClientCertificate(cri *tls.CertificateRequestInfo) (*t
 	if err := cri.SupportsCertificate(cert); err != nil {
 		return &tls.Certificate{}, nil
 	}
+
 	return cert, nil
 }
 
@@ -96,7 +103,9 @@ func (s *certReloaders) add(certFile, keyFile, caFile string) (*certReloader, er
 	if err := c.reload(); err != nil {
 		return nil, err
 	}
+
 	s.list = append(s.list, c)
+
 	return c, nil
 }
 
@@ -107,6 +116,7 @@ func (s *certReloaders) watch(ctx context.Context, logger *zap.Logger, interval 
 	for _, c := range s.list {
 		paths = append(paths, c.paths()...)
 	}
+
 	if len(paths) == 0 {
 		return nil
 	}
@@ -119,6 +129,7 @@ func (s *certReloaders) watch(ctx context.Context, logger *zap.Logger, interval 
 				ll.Error("Failed to reload TLS certificate. Keeping the previous one", zap.Strings("paths", c.paths()), zap.Error(err))
 				continue
 			}
+
 			ll.Info("Reloaded TLS certificate", zap.Strings("paths", c.paths()))
 		}
 	}
@@ -153,10 +164,12 @@ func loadCertPool(caFile string) (*x509.CertPool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA file: %w", err)
 	}
+
 	pool := x509.NewCertPool()
 	if ok := pool.AppendCertsFromPEM(caCert); !ok {
 		return nil, errors.New("failed to append CA cert to pool")
 	}
+
 	return pool, nil
 }
 
@@ -174,6 +187,7 @@ func buildTLSClientConfig(reloaders *certReloaders, clientCfg config.TLSClientCe
 		if err != nil {
 			return nil, err
 		}
+
 		tlsConfig.GetClientCertificate = cert.getClientCertificate
 	}
 

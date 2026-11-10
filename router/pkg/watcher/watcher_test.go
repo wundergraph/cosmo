@@ -903,6 +903,7 @@ func TestCallbackOnStart(t *testing.T) {
 			go func() {
 				_ = watchFunc(ctx)
 			}()
+
 			synctest.Wait()
 
 			spy.AssertCalled(t, 1)
@@ -955,6 +956,7 @@ func TestModTimeComparison(t *testing.T) {
 			// A symlink swap to a pre-generated file can hand the watcher an older timestamp.
 			fi, err := timeSyncFS.GetFileInfo(tempFile)
 			require.NoError(t, err)
+
 			fi.modTime = fi.modTime.Add(-time.Hour)
 
 			sendSyncTick(tickerChan)

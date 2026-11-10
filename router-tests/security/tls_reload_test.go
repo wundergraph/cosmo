@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"net/http"
@@ -80,6 +81,7 @@ func issueTestCert(t *testing.T, ca *testCert, caKey *ecdsa.PrivateKey) (*testCe
 // replaceFile writes data next to path and renames it into place, the way secret mounts rotate files.
 func replaceFile(t *testing.T, path string, data []byte) {
 	t.Helper()
+
 	tmp := path + ".tmp"
 	require.NoError(t, os.WriteFile(tmp, data, 0o600))
 	require.NoError(t, os.Rename(tmp, path))
@@ -87,8 +89,10 @@ func replaceFile(t *testing.T, path string, data []byte) {
 
 func (c *testCert) tlsCertificate(t *testing.T) tls.Certificate {
 	t.Helper()
+
 	cert, err := tls.X509KeyPair(c.certPEM, c.keyPEM)
 	require.NoError(t, err)
+
 	return cert
 }
 
@@ -98,6 +102,7 @@ func graphqlPeerCert(ctx testenv.Environment, client *http.Client) (*x509.Certif
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := client.Do(req)
@@ -110,19 +115,12 @@ func graphqlPeerCert(ctx testenv.Environment, client *http.Client) (*x509.Certif
 	if _, err := body.ReadFrom(res.Body); err != nil {
 		return nil, err
 	}
+
 	if res.StatusCode != http.StatusOK || body.String() != testutils.EmployeesIDData {
-		return nil, &unexpectedResponseError{status: res.StatusCode, body: body.String()}
+		return nil, fmt.Errorf("unexpected response %s: %s", http.StatusText(res.StatusCode), body.String())
 	}
+
 	return res.TLS.PeerCertificates[0], nil
-}
-
-type unexpectedResponseError struct {
-	status int
-	body   string
-}
-
-func (e *unexpectedResponseError) Error() string {
-	return "unexpected response " + http.StatusText(e.status) + ": " + e.body
 }
 
 func TestTLSCertificateReload(t *testing.T) {
@@ -165,8 +163,11 @@ func TestTLSCertificateReload(t *testing.T) {
 
 			// Keep dialing new connections through the rotation. Any failed request is downtime.
 			stop := make(chan struct{})
-			var requests, failures atomic.Int32
-			var wg sync.WaitGroup
+
+			var (
+				requests, failures atomic.Int32
+				wg                 sync.WaitGroup
+			)
 			wg.Go(func() {
 				for {
 					select {
@@ -174,7 +175,9 @@ func TestTLSCertificateReload(t *testing.T) {
 						return
 					default:
 					}
+
 					requests.Add(1)
+
 					if _, err := graphqlPeerCert(*xEnv, fresh); err != nil {
 						failures.Add(1)
 					}
@@ -260,6 +263,7 @@ func TestTLSCertificateReload(t *testing.T) {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
+
 				return err == nil && res.Body == testutils.EmployeesIDData
 			}, 10*time.Second, 50*time.Millisecond, "router did not present the new client certificate")
 		})
@@ -327,6 +331,7 @@ func TestTLSCertificateReload(t *testing.T) {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: `query { projects { id name } }`,
 				})
+
 				return err == nil && res.Body == projectsExpectedData
 			}, 30*time.Second, 200*time.Millisecond, "router did not present the new client certificate to the gRPC subgraph")
 		})

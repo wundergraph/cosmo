@@ -655,6 +655,7 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		cfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
 			c := cfg.Clone()
 			c.ClientCAs = certs.ca.Load()
+
 			return c, nil
 		}
 
@@ -669,6 +670,7 @@ func (r *Router) watchTLSCertificates(ctx context.Context) error {
 	if !r.tls.settings.Watch {
 		return nil
 	}
+
 	return r.tls.certs.watch(ctx, r.logger, r.tls.settings.WatchInterval)
 }
 
