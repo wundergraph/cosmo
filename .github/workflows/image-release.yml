@@ -1,6 +1,12 @@
 name: Build and Release Image
-run-name: Build and Release ${{ inputs.name }} Image v${{ inputs.tag }}
+run-name: ${{ github.event_name == 'push' && format('Build router main image {0}', github.sha) || format('Build and Release {0} Image v{1}', inputs.name, inputs.tag) }}
 on:
+  # Every push to main publishes the router image as `main` and `sha-<shortsha>`.
+  # Only pushes set `main`, and only for the router. Pushes never set `latest` or a
+  # version tag; only release dispatches do.
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       name:
@@ -30,10 +36,25 @@ on:
         type: string
         default: .
 
+# Push builds share one group and wait for each other, so `main` normally moves in push
+# order. GitHub does not guarantee the order of queued runs, so in rare cases `main` can
+# be one commit behind until the next push.
+# GitHub keeps only one waiting run per group: if 3+ commits land during one build,
+# the runs in between are replaced and those commits get no `sha-<shortsha>` image.
+# Release dispatches each get their own group, so pushes never replace or delay them.
+concurrency:
+  group: ${{ github.event_name == 'push' && format('{0}-push-main', github.workflow) || format('{0}-release-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   DO_NOT_TRACK: '1'
+  # Pushes to main only build the router; dispatches use the given inputs.
+  SERVICE_NAME: ${{ inputs.name || 'router' }}
+  WORKING_DIRECTORY: ${{ inputs.workingDirectory || 'router' }}
+  DOCKER_CONTEXT: ${{ inputs.dockerContext || 'router' }}
+  IS_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
 
 jobs:
   build-and-push-image:
@@ -42,7 +63,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        docker_build_target: ${{ inputs.name == 'router' && fromJson('["", "nonroot"]') || fromJson('[""]') }}
+        docker_build_target: ${{ (github.event_name == 'push' || inputs.name == 'router') && fromJson('["", "nonroot"]') || fromJson('[""]') }}
     permissions:
       contents: read
       packages: write
@@ -63,16 +84,18 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}
           flavor: |
             suffix=${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }},onlatest=true
+          # `main` is set only by pushes to main, never by a release, so a release of an
+          # older commit cannot roll it back. `sha-<shortsha>` is set by both.
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,enable=${{ env.IS_RELEASE != 'true' }}
             type=sha
-            # set latest tag for default branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            # set latest tag for default branch, only on releases
+            type=raw,value=latest,enable=${{ env.IS_RELEASE == 'true' && github.ref_name == github.event.repository.default_branch }}
             # use custom value instead of git tag
-            type=raw,value=${{ inputs.tag }}
+            type=raw,value=${{ inputs.tag }},enable=${{ env.IS_RELEASE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -90,7 +113,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate Summary
-        run: echo -e "# ${{ inputs.name }}\n## Tags\n\`\`\`${{ steps.meta.outputs.tags }}\n\`\`\`\n## Labels\n\`\`\`${{ steps.meta.outputs.labels }}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+        run: echo -e "# ${{ env.SERVICE_NAME }}\n## Tags\n\`\`\`${{ steps.meta.outputs.tags }}\n\`\`\`\n## Labels\n\`\`\`${{ steps.meta.outputs.labels }}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Set BUILD_TIME env
         run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
@@ -99,19 +122,19 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          file: ${{ inputs.workingDirectory }}/Dockerfile
-          context: ${{ inputs.dockerContext }}
+          file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
+          context: ${{ env.DOCKER_CONTEXT }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVICE_NAME }}:buildcache,mode=max
           platforms: linux/amd64,linux/arm64
           target: ${{ matrix.docker_build_target }}
           outputs:
-            type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.name }}
+            type=image,name=target,annotation-index.org.opencontainers.image.description=${{ env.SERVICE_NAME }}
             type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
             type=image,name=target,annotation-index.org.opencontainers.image.licenses=Apache-2.0
           build-args: |
-            VERSION=${{ inputs.tag }}
+            VERSION=${{ inputs.tag || format('main-{0}', github.sha) }}
             DATE=${{ env.BUILD_TIME }}
             COMMIT=${{ github.sha }}
