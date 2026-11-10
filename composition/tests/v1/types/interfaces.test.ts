@@ -1,5 +1,6 @@
 import {
   duplicateFieldDefinitionError,
+  ID_SCALAR,
   type ImplementationErrors,
   incompatibleFederatedFieldNamedTypeError,
   INTERFACE,
@@ -1225,6 +1226,272 @@ describe('Interface tests', () => {
           }
         `,
         ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if an implemented optional argument is not defined in one applicable subgraph', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a(arg: ID): ID
+          }
+          
+          type Entity implements Interface @key(fields: "id") {
+            a(arg: ID): ID
+            id: ID!
+          }
+          
+          type Query {
+            entities: [Entity!]
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Entity @key(fields: "id") {
+            a: ID
+            id: ID!
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedArguments: new Set(['arg']),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if an implemented optional argument is not defined in multiple applicable subgraphs', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a(arg: ID): ID
+          }
+          
+          type Entity implements Interface @key(fields: "id") @shareable {
+            a(arg: ID): ID
+            id: ID!
+          }
+          
+          type Query {
+            entities: [Entity!]
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Entity @key(fields: "id") @shareable {
+            a: ID
+            id: ID!
+          }
+        `,
+      );
+      const c = createSubgraph(
+        'c',
+        `
+          type Entity @key(fields: "id") @shareable {
+            a: ID
+            id: ID!
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedArguments: new Set(['arg']),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if multiple implemented optional arguments are not defined in one applicable subgraph', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a(one: ID, two: Boolean): ID
+          }
+          
+          type Entity implements Interface @key(fields: "id") {
+            a(one: ID, two: Boolean): ID
+            id: ID!
+          }
+          
+          type Query {
+            entities: [Entity!]
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Entity @key(fields: "id") {
+            a: ID
+            id: ID!
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedArguments: new Set(['one', 'two']),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that unfederated interface arguments do not require federated implementations', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a(one: ID): ID
+          }
+          
+          type Entity implements Interface @key(fields: "id") {
+            a(one: ID): ID
+            id: ID!
+          }
+          
+          type Query {
+            entities: [Entity!]!
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          interface Interface {
+            a(two: Boolean): ID
+          }
+          
+          type Entity implements Interface @key(fields: "id") {
+            a(two: Boolean): ID
+            id: ID!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [a, b],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        type Entity implements Interface {
+          a: ID
+          id: ID!
+        }
+        
+        interface Interface {
+          a: ID
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+      `),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        type Entity implements Interface {
+          a: ID
+          id: ID!
+        }
+        
+        interface Interface {
+          a: ID
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+      `),
       );
       expect(warnings).toHaveLength(0);
     });

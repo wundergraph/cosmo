@@ -376,52 +376,51 @@ export class FederationFactory {
     return data;
   }
 
-  getValidImplementedInterfaces(data: CompositeOutputData): NamedTypeNode[] {
+  getValidImplementedInterfaces(implData: CompositeOutputData): NamedTypeNode[] {
     const interfaces: NamedTypeNode[] = [];
-    if (data.implementedInterfaceTypeNames.size < 1) {
+    if (implData.implementedInterfaceTypeNames.size < 1) {
       return interfaces;
     }
-    const isParentInaccessible = isNodeDataInaccessible(data);
+
+    const isParentInaccessible = isNodeDataInaccessible(implData);
     const implementationErrorsByInterfaceName = new Map<string, ImplementationErrors>();
     const invalidImplementationTypeStringByTypeName = new Map<string, string>();
-    for (const interfaceName of data.implementedInterfaceTypeNames) {
+    for (const interfaceName of implData.implementedInterfaceTypeNames) {
       interfaces.push(stringToNamedTypeNode(interfaceName));
-      const implementationData = getOrThrowError(
-        this.parentDefinitionDataByTypeName,
-        interfaceName,
-        PARENT_DEFINITION_DATA,
-      );
-      if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        invalidImplementationTypeStringByTypeName.set(implementationData.name, kindToNodeType(implementationData.kind));
+      const interfaceData = getOrThrowError(this.parentDefinitionDataByTypeName, interfaceName, PARENT_DEFINITION_DATA);
+      if (interfaceData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        invalidImplementationTypeStringByTypeName.set(interfaceData.name, kindToNodeType(interfaceData.kind));
         continue;
       }
+
       const implementationErrors: ImplementationErrors = {
         invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of implementationData.fieldDataByName) {
+      for (const [fieldName, interfaceField] of interfaceData.fieldDataByName) {
         let hasNestedErrors = false;
-        const fieldData = data.fieldDataByName.get(fieldName);
-        if (!fieldData) {
+        const implField = implData.fieldDataByName.get(fieldName);
+        if (!implField) {
           hasErrors = true;
           implementationErrors.unimplementedFields.push(fieldName);
           continue;
         }
+
         const invalidFieldImplementation: InvalidFieldImplementation = {
-          implementationContextCoords: new Set<string>(),
-          interfaceContextCoords: new Set<string>(),
-          invalidAdditionalArguments: new Set<string>(),
+          implementationContextCoords: new Set(),
+          interfaceContextCoords: new Set(),
+          invalidAdditionalArguments: new Set(),
           invalidImplementedArguments: [],
           isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),
-          unimplementedArguments: new Set<ArgumentName>(),
+          unimplementedArguments: new Set(),
         };
         // The implemented field type must be equally or more restrictive than the original interface field type
         if (
           !isTypeValidImplementation({
             concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
-            implementationType: fieldData.node.type,
+            implementationType: implField.node.type,
             interfaceImplementationTypeNamesByInterfaceTypeName:
               this.interfaceImplementationTypeNamesByInterfaceTypeName,
             originalType: interfaceField.node.type,
@@ -429,13 +428,14 @@ export class FederationFactory {
         ) {
           hasErrors = true;
           hasNestedErrors = true;
-          invalidFieldImplementation.implementedResponseType = printTypeNode(fieldData.node.type);
+          invalidFieldImplementation.implementedResponseType = printTypeNode(implField.node.type);
         }
-        const handledArguments = new Set<string>();
-        for (const [argumentName, inputValueData] of interfaceField.argumentDataByName) {
-          const interfaceArgument = inputValueData.node;
+
+        const handledArguments = new Set<ArgumentName>();
+        const unsatisfiedArguments = new Set<ArgumentName>();
+        for (const [argumentName, interfaceArg] of interfaceField.argumentDataByName) {
           handledArguments.add(argumentName);
-          const implementationArgumentData = fieldData.argumentDataByName.get(argumentName);
+          const implementationArgumentData = implField.argumentDataByName.get(argumentName);
           // The type implementing the interface must include all arguments with no variation for that argument
           if (!implementationArgumentData) {
             hasErrors = true;
@@ -443,12 +443,18 @@ export class FederationFactory {
             invalidFieldImplementation.unimplementedArguments.add(argumentName);
             continue;
           }
-          // @fromContext cannot be defined on an interface field
-          if (doesArgumentDefineFromContext(inputValueData)) {
+
+          if (interfaceField.subgraphNames.size === interfaceArg.subgraphNames.size) {
+            unsatisfiedArguments.add(argumentName);
+          }
+
+          if (doesArgumentDefineFromContext(interfaceArg)) {
+            // @fromContext cannot be defined on an interface field
             hasErrors = true;
             hasNestedErrors = true;
-            invalidFieldImplementation.interfaceContextCoords.add(inputValueData.federatedCoords);
+            invalidFieldImplementation.interfaceContextCoords.add(interfaceArg.federatedCoords);
           }
+
           // @fromContext cannot be defined on the implementation of an interface field
           if (doesArgumentDefineFromContext(implementationArgumentData)) {
             hasErrors = true;
@@ -457,7 +463,7 @@ export class FederationFactory {
           }
           // Implemented arguments should be the exact same type
           const actualType = printTypeNode(implementationArgumentData.node.type);
-          const expectedType = printTypeNode(interfaceArgument.type);
+          const expectedType = printTypeNode(interfaceArg.node.type);
           if (expectedType !== actualType) {
             hasErrors = true;
             hasNestedErrors = true;
@@ -465,23 +471,36 @@ export class FederationFactory {
           }
         }
         // Additional arguments must be optional (nullable)
-        for (const [argumentName, inputValueContainer] of fieldData.argumentDataByName) {
-          const argumentNode = inputValueContainer.node;
+        for (const [argumentName, implArg] of implField.argumentDataByName) {
+          if (implField.subgraphNames.size === implArg.subgraphNames.size) {
+            unsatisfiedArguments.delete(argumentName);
+          }
           if (handledArguments.has(argumentName)) {
             continue;
           }
-          if (argumentNode.type.kind !== Kind.NON_NULL_TYPE) {
+
+          if (implArg.node.type.kind !== Kind.NON_NULL_TYPE) {
             continue;
           }
+
           hasErrors = true;
           hasNestedErrors = true;
           invalidFieldImplementation.invalidAdditionalArguments.add(argumentName);
         }
-        if (!isParentInaccessible && fieldData.isInaccessible && !interfaceField.isInaccessible) {
+
+        if (!isParentInaccessible && implField.isInaccessible && !interfaceField.isInaccessible) {
           hasErrors = true;
           hasNestedErrors = true;
           invalidFieldImplementation.isInaccessible = true;
         }
+
+        // Remaining entries in this set are optional arguments the Interface needs that implementation does not satisfy
+        if (unsatisfiedArguments.size > 0) {
+          hasErrors = true;
+          hasNestedErrors = true;
+          invalidFieldImplementation.unfederatedArguments = unsatisfiedArguments;
+        }
+
         if (hasNestedErrors) {
           implementationErrors.invalidFieldImplementations.set(fieldName, invalidFieldImplementation);
         }
@@ -490,18 +509,21 @@ export class FederationFactory {
         implementationErrorsByInterfaceName.set(interfaceName, implementationErrors);
       }
     }
+
     if (invalidImplementationTypeStringByTypeName.size > 0) {
-      this.errors.push(invalidImplementedTypeError(data.name, invalidImplementationTypeStringByTypeName));
+      this.errors.push(invalidImplementedTypeError(implData.name, invalidImplementationTypeStringByTypeName));
     }
+
     if (implementationErrorsByInterfaceName.size > 0) {
       this.errors.push(
         invalidInterfaceImplementationError(
-          data.node.name.value,
-          kindToNodeType(data.kind),
+          implData.node.name.value,
+          kindToNodeType(implData.kind),
           implementationErrorsByInterfaceName,
         ),
       );
     }
+
     return interfaces;
   }
 
@@ -898,6 +920,7 @@ export class FederationFactory {
       this.inaccessibleCoords.add(inputValueData.federatedCoords);
       return;
     }
+
     if (!isNodeDataInaccessible(inputValueData)) {
       return;
     }
@@ -2076,7 +2099,10 @@ export class FederationFactory {
         } else {
           this.errors.push(...argumentNodeResult.errors);
         }
-      } else if (isTypeRequired(inputValueData.type)) {
+        continue;
+      }
+
+      if (isTypeRequired(inputValueData.type)) {
         invalidRequiredArguments.push({
           inputValueName: argumentName,
           missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
@@ -2650,6 +2676,7 @@ export class FederationFactory {
         this.internalGraph.setNodeInaccessible(data.name);
         continue;
       }
+
       const clientInterfaces: NamedTypeNode[] = [];
       for (const interfaceTypeName of data.implementedInterfaceTypeNames) {
         if (!this.inaccessibleCoords.has(interfaceTypeName)) {
@@ -2659,7 +2686,7 @@ export class FederationFactory {
 
       /* It is not possible for clientSchemaFieldNodes to be empty.
        * If all interface fields were declared @inaccessible, the error would be caught above.
-       * */
+       */
       this.clientDefinitions.push({
         ...data.node,
         directives: getClientFederatedDirectiveNodes(data),
