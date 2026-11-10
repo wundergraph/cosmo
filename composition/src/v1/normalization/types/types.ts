@@ -80,10 +80,11 @@ export type HandleOverrideDirectiveParams = {
   targetSubgraphName: SubgraphName;
 };
 
-export type HandleRequiresScopesDirectiveParams = {
+export type ExtractAuthorizationRequirementsParams = {
   directiveCoords: string;
-  orScopes: ReadonlyArray<ValueNode>;
-  requiredScopes: Array<Set<string>>;
+  isPolicy: boolean;
+  requirementNodes: ReadonlyArray<ValueNode>;
+  requirements: Array<Set<string>>;
 };
 
 export type HandleSemanticNonNullDirectiveParams = {

@@ -94,6 +94,8 @@ export const OPENFED_FIELD_SET = `  scalar openfed__FieldSet`;
 
 export const OPENFED_SCOPE = `  scalar openfed__Scope`;
 
+export const FEDERATION_POLICY = `  scalar federation__Policy`;
+
 export const OPENFED_SUBSCRIPTION_FIELD_CONDITION = `
   input openfed__SubscriptionFieldCondition {
     fieldPath: String!

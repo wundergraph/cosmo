@@ -21,6 +21,7 @@ import {
   nonEqualCoreFeatureComposeDirectiveError,
   noSubgraphNameError,
   orScopesLimitError,
+  orPoliciesLimitError,
   subgraphValidationError,
   unknownSubgraphNameError,
 } from '../../../errors/errors';
@@ -28,7 +29,7 @@ import { subtractSet, upsertAuthorizationData, upsertEntityData } from '../../ut
 import { addIterableToSet, getOrThrowError, getValueOrDefault, mergeSetValueMap } from '../../../utils/utils';
 import { upsertFederatedDirectiveData } from '../utils';
 import { invalidOverrideTargetSubgraphNameWarning } from '../../warnings/warnings';
-import { MAX_OR_SCOPES } from '../../constants/constants';
+import { MAX_OR_SCOPES, MAX_OR_POLICIES } from '../../constants/constants';
 import { normalizeSubgraph } from '../normalization-factory';
 import { type LinkImportData } from '../types/types';
 import { type HandleOverridesParams } from './types/params';
@@ -49,6 +50,7 @@ export class BatchNormalizer {
   overrideSourceSubgraphNamesByFieldCoords = new Map<string, Array<SubgraphName>>();
   duplicateOverriddenFieldCoords = new Set<string>();
   subgraphNames = new Set<SubgraphName>();
+  invalidORPoliciesCoords = new Set<string>();
   invalidORScopesCoords = new Set<string>();
   fieldCoordsByNamedTypeName = new Map<TypeName, Set<string>>();
   subgraphs: Array<Subgraph>;
@@ -234,7 +236,12 @@ export class BatchNormalizer {
       this.handleLinkImports(normalizationResult.importDataByDirectiveName);
 
       for (const authorizationData of normalizationResult.authorizationDataByParentTypeName.values()) {
-        upsertAuthorizationData(this.authorizationDataByParentTypeName, authorizationData, this.invalidORScopesCoords);
+        upsertAuthorizationData(
+          this.authorizationDataByParentTypeName,
+          authorizationData,
+          this.invalidORScopesCoords,
+          this.invalidORPoliciesCoords,
+        );
       }
       for (const [namedTypeName, fieldCoords] of normalizationResult.fieldCoordsByNamedTypeName) {
         addIterableToSet({
@@ -269,6 +276,9 @@ export class BatchNormalizer {
     }
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
+    }
+    if (this.invalidORPoliciesCoords.size > 0) {
+      this.errors.push(orPoliciesLimitError(MAX_OR_POLICIES, [...this.invalidORPoliciesCoords]));
     }
     if (this.duplicateOverriddenFieldCoords.size > 0) {
       const duplicateOverriddenFieldErrorMessages: string[] = [];

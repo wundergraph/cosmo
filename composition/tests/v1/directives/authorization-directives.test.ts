@@ -4,8 +4,10 @@ import {
   type FieldAuthorizationData,
   INTERFACE,
   MAX_OR_SCOPES,
+  MAX_OR_POLICIES,
   OBJECT,
   orScopesLimitError,
+  orPoliciesLimitError,
   parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -13,7 +15,9 @@ import {
 } from '../../../src';
 import {
   AUTHENTICATED_DIRECTIVE,
+  FEDERATION_POLICY,
   OPENFED_SCOPE,
+  POLICY_DIRECTIVE,
   REQUIRES_SCOPES_DIRECTIVE,
   SCHEMA_QUERY_DEFINITION,
 } from '../utils/utils';
@@ -41,17 +45,20 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'object',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [],
                       requiredScopesByOR: [],
                       requiresAuthentication: true,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [],
                       requiresAuthentication: true,
                     },
                   },
                 ],
               ]),
+              requiredPolicies: [],
               requiredScopes: [],
               requiredScopesByOR: [],
               requiresAuthentication: false,
@@ -87,6 +94,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: true,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Object',
             },
@@ -123,11 +131,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'object',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: false,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b'])],
                       requiresAuthentication: false,
                     },
@@ -136,6 +146,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -146,6 +157,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['a', 'b']), new Set<string>(['c'])],
               typeName: 'Object',
             },
@@ -183,11 +195,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'object',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a', 'b'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: false,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a', 'b'])],
                       requiresAuthentication: false,
                     },
@@ -196,6 +210,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -206,6 +221,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
               typeName: 'Object',
             },
@@ -243,11 +259,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'b',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['f']), new Set<string>(['c'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: true,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['f']), new Set<string>(['c'])],
                       requiresAuthentication: true,
                     },
@@ -256,6 +274,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: true,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['b', 'c']), new Set<string>(['d'])],
               typeName: 'Object',
             },
@@ -269,11 +288,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'object',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: true,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b'])],
                       requiresAuthentication: true,
                     },
@@ -282,6 +303,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -292,6 +314,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: true,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['c', 'e']), new Set<string>(['d'])],
               typeName: 'Scalar',
             },
@@ -328,6 +351,112 @@ describe('Authorization directives tests', () => {
       );
     });
 
+    test('that required policies are merged correctly', () => {
+      const result = normalizeSubgraphSuccess(nk, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.authorizationDataByParentTypeName).toStrictEqual(
+        new Map<string, AuthorizationData>([
+          [
+            'Query',
+            {
+              fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>([
+                [
+                  'object',
+                  {
+                    fieldName: 'object',
+                    inheritedData: {
+                      requiredPolicies: [new Set<string>(['a']), new Set<string>(['b'])],
+                      requiredScopes: [],
+                      requiredScopesByOR: [],
+                      requiresAuthentication: false,
+                    },
+                    originalData: {
+                      requiredPolicies: [new Set<string>(['a']), new Set<string>(['b'])],
+                      requiredScopes: [],
+                      requiresAuthentication: false,
+                    },
+                  },
+                ],
+              ]),
+              requiredPolicies: [],
+              requiredScopes: [],
+              requiredScopesByOR: [],
+              requiresAuthentication: false,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
+              requiredPolicies: [new Set<string>(['a', 'b']), new Set<string>(['c'])],
+              requiredScopes: [],
+              requiredScopesByOR: [],
+              requiresAuthentication: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            POLICY_DIRECTIVE +
+            `
+          type Object @policy(policies: [["a", "b"], ["c"]]) {
+            b: Boolean!
+          }
+
+          type Query {
+            object: Object @policy(policies: [["a"], ["b"]])
+          }
+        ` +
+            FEDERATION_POLICY,
+        ),
+      );
+    });
+
+    test('that an error is returned if the limit of @policy policies is exceeded #1', () => {
+      const result = normalizeSubgraphFailure(nl, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toStrictEqual(
+        orPoliciesLimitError(MAX_OR_POLICIES, ['Query', 'Interface', 'Enum', 'Scalar']),
+      );
+    });
+
+    test('that @policy is normalized without a warning', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(nm, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            POLICY_DIRECTIVE +
+            `
+          type Query {
+            a: ID @policy(policies: [["test:test"]])
+          }
+        ` +
+            FEDERATION_POLICY,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that manually defining the federation__Policy scalar does not duplicate the definition', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(nn, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            POLICY_DIRECTIVE +
+            `
+          type Query {
+            a: ID @policy(policies: [["test:test"]])
+          }
+        ` +
+            FEDERATION_POLICY,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
     test('that merged scopes remove any superfluous scopes #1', () => {
       const result = normalizeSubgraphSuccess(nh, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.authorizationDataByParentTypeName).toStrictEqual(
@@ -341,11 +470,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'scalar',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: false,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
                       requiresAuthentication: false,
                     },
@@ -354,6 +485,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -364,6 +496,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
               typeName: 'Scalar',
             },
@@ -399,11 +532,13 @@ describe('Authorization directives tests', () => {
                   {
                     fieldName: 'scalar',
                     inheritedData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
                       requiredScopesByOR: [],
                       requiresAuthentication: false,
                     },
                     originalData: {
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a']), new Set<string>(['b']), new Set<string>(['c'])],
                       requiresAuthentication: false,
                     },
@@ -412,6 +547,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -420,6 +556,7 @@ describe('Authorization directives tests', () => {
             'Scalar',
             {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
+              requiredPolicies: [],
               requiredScopes: [
                 new Set<string>(['a']),
                 new Set<string>(['b']),
@@ -463,11 +600,13 @@ describe('Authorization directives tests', () => {
                     fieldName: 'scalar',
                     inheritedData: {
                       requiresAuthentication: false,
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a', 'b', 'c'])],
                       requiredScopesByOR: [],
                     },
                     originalData: {
                       requiresAuthentication: false,
+                      requiredPolicies: [],
                       requiredScopes: [new Set<string>(['a', 'b', 'c'])],
                     },
                   },
@@ -475,6 +614,7 @@ describe('Authorization directives tests', () => {
               ]),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [],
               typeName: 'Query',
             },
@@ -485,6 +625,7 @@ describe('Authorization directives tests', () => {
               fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
               requiredScopesByOR: [],
               requiresAuthentication: false,
+              requiredPolicies: [],
               requiredScopes: [new Set<string>(['a'])],
               typeName: 'Scalar',
             },
@@ -1014,6 +1155,143 @@ describe('Authorization directives tests', () => {
               OPENFED_SCOPE,
           ),
         );
+      });
+    });
+
+    describe('@policy tests', () => {
+      test('that @policy is persisted in the federated schema and merged by AND across subgraphs', () => {
+        const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fraa, frab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'item',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredPolicies: [
+              ['object:read', 'c', 'a'],
+              ['object:read', 'c', 'b'],
+            ],
+            requiredScopes: [],
+            requiredScopesByOR: [],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              POLICY_DIRECTIVE +
+              `
+          type Item @policy(policies: [["object:read"]]) {
+            value: String
+          }
+
+          type Query {
+            item: Item @policy(policies: [["c", "a"], ["c", "b"]])
+          }
+        ` +
+              FEDERATION_POLICY,
+          ),
+        );
+        expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              `
+          type Item {
+            value: String
+          }
+
+          type Query {
+            item: Item
+          }
+        `,
+          ),
+        );
+      });
+
+      test('that @policy defined on an Interface field does not affect its implementations', () => {
+        const { fieldConfigurations } = federateSubgraphsSuccess([fsaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'id',
+            typeName: INTERFACE,
+            requiresAuthentication: false,
+            requiredPolicies: [['read:id']],
+            requiredScopes: [],
+            requiredScopesByOR: [],
+          },
+        ]);
+      });
+
+      test('that @policy defined on an Interface is applied to the fields that return it', () => {
+        const { fieldConfigurations } = federateSubgraphsSuccess([ftaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'interface',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredPolicies: [['read:interface']],
+            requiredScopes: [],
+            requiredScopesByOR: [],
+          },
+        ]);
+      });
+
+      test('that @policy and @requiresScopes are kept independently on the same field', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fuaa],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'secret',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredPolicies: [['p']],
+            requiredScopes: [['s']],
+            requiredScopesByOR: [['s']],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              POLICY_DIRECTIVE +
+              REQUIRES_SCOPES_DIRECTIVE +
+              `
+          type Query {
+            secret: String @requiresScopes(scopes: [["s"]]) @policy(policies: [["p"]])
+          }
+        ` +
+              FEDERATION_POLICY +
+              OPENFED_SCOPE,
+          ),
+        );
+      });
+
+      test('that an error is returned if the limit of @policy policies is exceeded after federation #1.1', () => {
+        const result = federateSubgraphsFailure([fvaa, fvab], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(
+          orPoliciesLimitError(MAX_OR_POLICIES, ['Query.entity', 'Interface.enum']),
+        );
+      });
+
+      test('that an error is returned if the limit of @policy policies is exceeded after federation #1.2', () => {
+        const result = federateSubgraphsFailure([fvab, fvaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(
+          orPoliciesLimitError(MAX_OR_POLICIES, ['Query.entity', 'Interface.enum']),
+        );
+      });
+
+      test('that an error is returned if the limit of @policy policies is exceeded by named type auth data', () => {
+        const result = federateSubgraphsFailure([fwaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(orPoliciesLimitError(MAX_OR_POLICIES, ['Query.enum', 'Query.scalar']));
       });
     });
 
@@ -2553,5 +2831,215 @@ const fqac: Subgraph = {
     type Query @shareable {
       ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"], ["c"]])
     }
+  `),
+};
+
+const nk: Subgraph = {
+  name: 'nk',
+  url: '',
+  definitions: parse(`
+    type Object @policy(policies: [["a", "b"], ["c"]]) {
+      b: Boolean!
+    }
+    
+    type Query {
+      object: Object @policy(policies: [["a"], ["b"]])
+    }
+  `),
+};
+
+const nl: Subgraph = {
+  name: 'nl',
+  url: '',
+  definitions: parse(`
+    type Query @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"], ["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]]) {
+      enum: Enum!
+      scalar: Scalar!
+    }
+    
+    interface Interface @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"], ["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]]) {
+      name: String!
+    }
+    
+    type Object implements Interface {
+      name: String!
+    }
+    
+    enum Enum @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"], ["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]]) {
+      VALUE
+    }
+    
+    scalar Scalar @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"], ["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]])
+  `),
+};
+
+const nm: Subgraph = {
+  name: 'nm',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @policy(policies: [["test:test"]])
+    }
+  `),
+};
+
+const nn: Subgraph = {
+  name: 'nn',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @policy(policies: [["test:test"]])
+    }
+
+    scalar federation__Policy
+  `),
+};
+
+const fraa: Subgraph = {
+  name: 'fraa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      item: Item @shareable @policy(policies: [["a"], ["b"]])
+    }
+    
+    type Item @shareable @policy(policies: [["object:read"]]) {
+      value: String
+    }
+  `),
+};
+
+const frab: Subgraph = {
+  name: 'frab',
+  url: '',
+  definitions: parse(`
+    type Query {
+      item: Item @shareable @policy(policies: [["c"]])
+    }
+    
+    type Item @shareable {
+      value: String
+    }
+  `),
+};
+
+const fsaa: Subgraph = {
+  name: 'fsaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      interfaces: [Interface!]!
+      objects: [Object!]!
+    }
+    
+    interface Interface {
+      id: ID! @policy(policies: [["read:id"]])
+      name: String!
+    }
+    
+    type Object implements Interface {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const ftaa: Subgraph = {
+  name: 'ftaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      interface: Interface!
+      object: Object!
+    }
+    
+    interface Interface @policy(policies: [["read:interface"]]) {
+      a: ID
+    }
+    
+    type Object implements Interface {
+      a: ID
+    }
+  `),
+};
+
+const fuaa: Subgraph = {
+  name: 'fuaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      secret: String @policy(policies: [["p"]]) @requiresScopes(scopes: [["s"]])
+    }
+  `),
+};
+
+const fvaa: Subgraph = {
+  name: 'fvaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity! @shareable @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"]])
+    }
+    
+    interface Interface @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"]]) {
+      id: ID! 
+    }
+    
+    type Entity implements Interface @key(fields: "id")  {
+      id: ID! @policy(policies: [["a"], ["b"]])
+      enum: Enum! @shareable
+    }
+    
+    enum Enum @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"]]) {
+      VALUE
+    }
+  `),
+};
+
+const fvab: Subgraph = {
+  name: 'fvab',
+  url: '',
+  definitions: parse(`
+    type Query @policy(policies: [["f"], ["g"], ["h"], ["i"], ["j"]]) {
+      entity: Entity! @shareable
+    }
+
+    interface Interface {
+      enum: Enum! @policy(policies: [["f"], ["g"], ["h"], ["i"], ["j"]])
+    }
+    
+    type Entity implements Interface @key(fields: "id")  @policy(policies: [["f"], ["g"], ["h"], ["i"], ["j"]]) {
+      id: ID!
+      enum: Enum! @shareable
+    }
+    
+    enum Enum {
+      VALUE
+    }
+  `),
+};
+
+const fwaa: Subgraph = {
+  name: 'fwaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      enum: Enum! @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"]])
+      scalar: Scalar! @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"]])
+    }
+    
+    interface Interface @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"]]) {
+      name: String!
+    }
+
+    type Object implements Interface @policy(policies: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"]]) {
+      name: String!
+    }
+
+    enum Enum @policy(policies: [["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]]) {
+      VALUE
+    }
+    
+    scalar Scalar @policy(policies: [["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]])
   `),
 };

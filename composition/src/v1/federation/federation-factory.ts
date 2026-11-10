@@ -56,6 +56,7 @@ import {
   noQueryRootTypeError,
   oneOfRequiredFieldsError,
   orScopesLimitError,
+  orPoliciesLimitError,
   semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldError,
@@ -119,7 +120,7 @@ import {
   type SubscriptionFieldCondition,
   type SubscriptionFilterValue,
 } from '../../router-configuration/types';
-import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
+import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES, MAX_OR_POLICIES } from '../constants/constants';
 import { FEDERATED_DIRECTIVE_DATAS, isNodeQuery } from '../normalization/utils';
 import {
   type AuthorizationData,
@@ -292,6 +293,7 @@ export class FederationFactory {
   interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
+  invalidORPoliciesCoords = new Set<string>();
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
@@ -1987,8 +1989,15 @@ export class FederationFactory {
               const concreteAuthData = getValueOrDefault(this.authorizationDataByParentTypeName, concreteTypeName, () =>
                 newAuthorizationData(concreteTypeName),
               );
-              if (!upsertFieldAuthorizationData(concreteAuthData.fieldAuthDataByFieldName, interfaceFieldAuthData)) {
+              const { isOrScopesLimitExceeded, isOrPoliciesLimitExceeded } = upsertFieldAuthorizationData(
+                concreteAuthData.fieldAuthDataByFieldName,
+                interfaceFieldAuthData,
+              );
+              if (isOrScopesLimitExceeded) {
                 this.invalidORScopesCoords.add(fieldCoords);
+              }
+              if (isOrPoliciesLimitExceeded) {
+                this.invalidORPoliciesCoords.add(fieldCoords);
               }
             }
             const existingFieldData = concreteTypeData.fieldDataByName.get(fieldName);
@@ -2601,7 +2610,11 @@ export class FederationFactory {
 
   pushNamedTypeAuthDataToFields() {
     for (const [typeName, namedTypeAuthData] of this.authorizationDataByParentTypeName) {
-      if (!namedTypeAuthData.requiresAuthentication && namedTypeAuthData.requiredScopes.length < 1) {
+      if (
+        !namedTypeAuthData.requiresAuthentication &&
+        namedTypeAuthData.requiredScopes.length < 1 &&
+        namedTypeAuthData.requiredPolicies.length < 1
+      ) {
         continue;
       }
       const fieldCoords = this.fieldCoordsByNamedTypeName.get(typeName);
@@ -2633,6 +2646,17 @@ export class FederationFactory {
               fieldAuthData.inheritedData.requiredScopes = mergeRequiredScopesByAND(
                 fieldAuthData.inheritedData.requiredScopes,
                 namedTypeAuthData.requiredScopes,
+              );
+            }
+            if (
+              fieldAuthData.inheritedData.requiredPolicies.length * namedTypeAuthData.requiredPolicies.length >
+              MAX_OR_POLICIES
+            ) {
+              this.invalidORPoliciesCoords.add(coords);
+            } else {
+              fieldAuthData.inheritedData.requiredPolicies = mergeRequiredScopesByAND(
+                fieldAuthData.inheritedData.requiredPolicies,
+                namedTypeAuthData.requiredPolicies,
               );
             }
             break;
@@ -3310,6 +3334,9 @@ export class FederationFactory {
     }
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
+    }
+    if (this.invalidORPoliciesCoords.size > 0) {
+      this.errors.push(orPoliciesLimitError(MAX_OR_POLICIES, [...this.invalidORPoliciesCoords]));
     }
     this.handleCustomDirectiveDefinitionNodes();
     const definitionsWithInterfaces: Array<InterfaceImplementationData> = [];

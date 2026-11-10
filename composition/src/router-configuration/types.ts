@@ -67,6 +67,7 @@ export type FieldConfiguration = {
   subscriptionFilterCondition?: SubscriptionCondition;
   requiresAuthentication?: boolean;
   requiredScopes?: Array<Array<string>>;
+  requiredPolicies?: Array<Array<string>>;
   requiredScopesByOR?: Array<Array<string>>;
 };
 
