@@ -152,6 +152,38 @@ For a Dynatrace example that exports to Dynatrace and Cosmo Cloud at the same ti
   ```
 </CodeGroup>
 
+### Per-exporter sampling
+
+Each exporter can set its own `sampling_rate` to receive only part of the traces the router records. An exporter without one receives every recorded trace.
+
+The global `telemetry.tracing.sampling_rate` decides which traces the router samples itself. For these traces, an exporter's effective rate is the lower of the global rate and its own `sampling_rate`. For example, the global rate is 0.1. An exporter with a `sampling_rate` of 0.05 receives 5% of the traces. An exporter with a `sampling_rate` of 0.5 receives 10%.
+
+If every exporter has a lower `sampling_rate` than the global rate, the router samples at the highest exporter rate instead. It does not record traces that no exporter receives, or mark them as sampled for subgraphs.
+
+Sampling is based on the trace ID, so every exporter receives complete traces. The traces sent to an exporter with a lower rate are a subset of those sent to an exporter with a higher rate.
+
+With `parent_based_sampler` enabled, the router also records every request whose incoming trace context is marked as sampled. Each exporter receives its `sampling_rate` share of these traces.
+
+Your account's trace sampling limit caps the `sampling_rate` of every Cosmo Cloud exporter, so the traces sampled upstream also stay within it. The limit does not affect other exporters. If it lowers a Cosmo Cloud exporter's effective rate, the router logs a warning.
+
+The following example sends every trace to a self-hosted collector and 1% of them to Cosmo Cloud:
+
+<CodeGroup>
+  ```yaml config.yaml
+  telemetry:
+    tracing:
+      enabled: true
+      sampling_rate: 1
+      exporters:
+        # Self-hosted collector. Receives every recorded trace.
+        - endpoint: https://otel-collector.example.com
+        # Cosmo Cloud
+        - endpoint: https://cosmo-otel.wundergraph.com
+          headers: {Authorization: Bearer ${MY_AUTH_TOKEN}}
+          sampling_rate: 0.01
+  ```
+</CodeGroup>
+
 ### Trace Propagation
 
 Propagation is the mechanism that allows the movement of data between services and processes. As a user of the router, you will interact with them in the form of headers to pass the trace context across service boundaries. By default, we enable the widely-used [Trace-Context](https://www.w3.org/TR/trace-context/) specification. You can disable or enable different specifications according to your needs.

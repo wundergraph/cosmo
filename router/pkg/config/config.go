@@ -61,6 +61,7 @@ type TracingExporter struct {
 	Endpoint              string              `yaml:"endpoint,omitempty"`
 	HTTPPath              string              `yaml:"path,omitempty" envDefault:"/v1/traces"`
 	Headers               map[string]string   `yaml:"headers,omitempty"`
+	SamplingRate          *float64            `yaml:"sampling_rate,omitempty"`
 	TracingExporterConfig `yaml:",inline"`
 }
 
@@ -396,6 +397,7 @@ type RequestHeaderRule struct {
 type FileHeaderSource struct {
 	Path            string        `yaml:"path"`
 	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty"`
+	Prefix          string        `yaml:"prefix,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {

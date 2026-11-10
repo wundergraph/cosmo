@@ -1332,6 +1332,12 @@
                       "type": "string"
                     }
                   },
+                  "sampling_rate": {
+                    "type": "number",
+                    "description": "The share of the recorded traces sent to this exporter. For traces the router samples itself, the effective rate is the lower of this and the global sampling rate. Defaults to 1, which sends every recorded trace.",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
                   "batch_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
@@ -5356,6 +5362,11 @@
               },
               "default": "1m",
               "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            },
+            "prefix": {
+              "type": "string",
+              "examples": ["Bearer "],
+              "description": "A static value prepended to the file's contents, e.g. 'Bearer ' when the file holds a raw token. Include any separator, such as a trailing space, in the prefix."
             }
           }
         }
