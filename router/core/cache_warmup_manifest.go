@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"slices"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -12,12 +13,17 @@ import (
 var _ CacheWarmupSource = (*ManifestWarmupSource)(nil)
 
 type ManifestWarmupSource struct {
-	store *pqlmanifest.Store
+	store                    *pqlmanifest.Store
+	allowMismatchedSHA256IDs bool
 }
 
-func NewManifestWarmupSource(store *pqlmanifest.Store) *ManifestWarmupSource {
+// NewManifestWarmupSource warms the operations in the store's manifest. Unless
+// allowMismatchedSHA256IDs is set, it skips operations whose ID looks like a
+// SHA256 hash but isn't the SHA256 of their body.
+func NewManifestWarmupSource(store *pqlmanifest.Store, allowMismatchedSHA256IDs bool) *ManifestWarmupSource {
 	return &ManifestWarmupSource{
-		store: store,
+		store:                    store,
+		allowMismatchedSHA256IDs: allowMismatchedSHA256IDs,
 	}
 }
 
@@ -29,11 +35,16 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 	}
 
 	items := make([]*nodev1.Operation, 0, len(ops))
+	var mismatchedIDs []string
 	for sha256Hash, body := range ops {
-		// Requests reject these at lookup, so warming them would let cache hits bypass that.
 		if !persistedoperation.OperationIDMatchesBody(sha256Hash, body) {
-			log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
-			continue
+			if s.allowMismatchedSHA256IDs {
+				mismatchedIDs = append(mismatchedIDs, sha256Hash)
+			} else {
+				// Requests reject these at lookup, so warming them would let cache hits bypass that.
+				log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
+				continue
+			}
 		}
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{
@@ -46,6 +57,13 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 				},
 			},
 		})
+	}
+
+	if len(mismatchedIDs) > 0 {
+		// One entry per warmup lists what is left to migrate without flooding the log.
+		slices.Sort(mismatchedIDs)
+		log.Warn("Serving PQL manifest operations whose SHA256 ID doesn't match their body",
+			zap.Int("count", len(mismatchedIDs)), zap.Strings("ids", mismatchedIDs))
 	}
 
 	log.Debug("Loaded PQL manifest operations for warmup", zap.Int("count", len(items)))

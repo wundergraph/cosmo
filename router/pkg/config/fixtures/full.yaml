@@ -683,6 +683,10 @@ client_header:
   name: 'Client-Name'
   version: 'Client_Version'
 
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: true
+
 apollo_compatibility_flags:
   enable_all: false
   replace_undefined_op_field_errors:

@@ -1315,6 +1315,11 @@
     "Name": "Client-Name",
     "Version": "Client_Version"
   },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": true
+    }
+  },
   "Plugins": {
     "Enabled": true,
     "Path": "some/path/to/plugins",

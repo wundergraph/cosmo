@@ -141,3 +141,42 @@ func TestManifestOperationsWithMismatchedSHA256IDs(t *testing.T) {
 	}
 	assert.Nil(t, content)
 }
+
+func TestAllowMismatchedSHA256IDs(t *testing.T) {
+	t.Parallel()
+
+	const body = `query Employees { employees { id } }`
+	mismatchedID := strings.Repeat("a", 64)
+
+	t.Run("serves and caches storage operations", func(t *testing.T) {
+		t.Parallel()
+		provider := &staticStorageClient{body: []byte(body)}
+		client, err := NewClient(&Options{ProviderClient: provider, CacheSize: 1024 * 1024, AllowMismatchedSHA256IDs: true})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, client.Close()) })
+
+		content, _, err := client.PersistedOperation(t.Context(), "web", mismatchedID)
+		assert.NoError(t, err)
+		assert.Equal(t, body, string(content))
+
+		client.cache.Cache.Wait()
+		content, _, err = client.PersistedOperation(t.Context(), "web", mismatchedID)
+		assert.NoError(t, err)
+		assert.Equal(t, body, string(content))
+		assert.Equal(t, 1, provider.calls)
+	})
+
+	t.Run("serves manifest operations", func(t *testing.T) {
+		t.Parallel()
+		store := pqlmanifest.NewStore(zap.NewNop())
+		t.Cleanup(store.Close)
+		client, err := NewClient(&Options{PQLStore: store, AllowMismatchedSHA256IDs: true})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, client.Close()) })
+		store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{mismatchedID: body}})
+
+		content, _, err := client.PersistedOperation(t.Context(), "web", mismatchedID)
+		assert.NoError(t, err)
+		assert.Equal(t, body, string(content))
+	})
+}

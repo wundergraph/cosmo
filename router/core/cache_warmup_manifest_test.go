@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestManifestWarmupSource(t *testing.T) {
@@ -17,7 +18,7 @@ func TestManifestWarmupSource(t *testing.T) {
 	t.Run("returns nil when store has no manifest", func(t *testing.T) {
 		t.Parallel()
 		store := pqlmanifest.NewStore(zap.NewNop())
-		source := NewManifestWarmupSource(store)
+		source := NewManifestWarmupSource(store, false)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -32,7 +33,7 @@ func TestManifestWarmupSource(t *testing.T) {
 			Revision:   "rev-1",
 			Operations: map[string]string{},
 		})
-		source := NewManifestWarmupSource(store)
+		source := NewManifestWarmupSource(store, false)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -50,7 +51,7 @@ func TestManifestWarmupSource(t *testing.T) {
 				"sha256def": "mutation CreateUser { createUser { id } }",
 			},
 		})
-		source := NewManifestWarmupSource(store)
+		source := NewManifestWarmupSource(store, false)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -78,7 +79,7 @@ func TestManifestWarmupSource(t *testing.T) {
 			Revision:   "rev-1",
 			Operations: map[string]string{"hash1": "query { a }"},
 		})
-		source := NewManifestWarmupSource(store)
+		source := NewManifestWarmupSource(store, false)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -97,11 +98,33 @@ func TestManifestWarmupSource(t *testing.T) {
 				strings.Repeat("a", 64): "query Employees { employees { id } }",
 			},
 		})
-		source := NewManifestWarmupSource(store)
+		source := NewManifestWarmupSource(store, false)
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
 		require.Len(t, items, 1)
 		assert.Equal(t, "get_employees", items[0].Request.Extensions.PersistedQuery.Sha256Hash)
+	})
+
+	t.Run("includes mismatched SHA256 IDs when allowed", func(t *testing.T) {
+		t.Parallel()
+		store := pqlmanifest.NewStore(zap.NewNop())
+		store.Load(&pqlmanifest.Manifest{
+			Version:    1,
+			Revision:   "rev-1",
+			Operations: map[string]string{strings.Repeat("a", 64): "query Employees { employees { id } }"},
+		})
+		source := NewManifestWarmupSource(store, true)
+		observed, logs := observer.New(zap.WarnLevel)
+
+		items, err := source.LoadItems(context.Background(), zap.New(observed))
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, strings.Repeat("a", 64), items[0].Request.Extensions.PersistedQuery.Sha256Hash)
+		entries := logs.FilterMessage("Serving PQL manifest operations whose SHA256 ID doesn't match their body").All()
+		if assert.Len(t, entries, 1) {
+			assert.Equal(t, int64(1), entries[0].ContextMap()["count"])
+			assert.Equal(t, []any{strings.Repeat("a", 64)}, entries[0].ContextMap()["ids"])
+		}
 	})
 }
