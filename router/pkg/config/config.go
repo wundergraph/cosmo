@@ -769,7 +769,13 @@ type AuthorizationConfiguration struct {
 	// batch call before any subgraph fetch executes (scope-only, independent of the returned data),
 	// instead of filtering them out of the response after the fetch. This avoids fetching data that the
 	// client is not authorized to see.
-	EnablePreFetchFieldAuthorization bool `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
+	EnablePreFetchFieldAuthorization bool                `yaml:"enable_pre_fetch_field_authorization" envDefault:"false" env:"ENABLE_PRE_FETCH_FIELD_AUTHORIZATION"`
+	Policies                         PolicyConfiguration `yaml:"policies"`
+}
+
+// PolicyConfiguration selects the decision source for fields with @policy.
+type PolicyConfiguration struct {
+	Source string `yaml:"source"`
 }
 
 type RateLimitConfiguration struct {
