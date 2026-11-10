@@ -2258,7 +2258,7 @@ export function blankCacheTagFormatErrorMessage(): string {
 export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
   return (
     `The "format" argument defines invalid placeholder "{${placeholder}}":` +
-    ` placeholders must be of the form "{$args.<path>}" upon a root field or "{$key.<path>}" upon an entity,` +
+    ` placeholders must be of the form "{$args.<path>}" upon a Query root field or "{$key.<path>}" upon an entity,` +
     ` where <path> is period-delimited, e.g. "{$args.filter.category}" or "{$key.id}".`
   );
 }
