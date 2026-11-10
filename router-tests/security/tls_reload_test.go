@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,8 +34,8 @@ type testCert struct {
 	keyPEM  []byte
 }
 
-// issueTestCert creates a certificate signed by ca, or a self-signed CA when ca is nil.
-func issueTestCert(t *testing.T, ca *testCert, caKey *ecdsa.PrivateKey) (*testCert, *ecdsa.PrivateKey) {
+// issueTestCert creates a self-signed certificate with a fresh key.
+func issueTestCert(t *testing.T) *testCert {
 	t.Helper()
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -58,12 +57,7 @@ func issueTestCert(t *testing.T, ca *testCert, caKey *ecdsa.PrivateKey) (*testCe
 		BasicConstraintsValid: true,
 	}
 
-	parent, signer := template, key
-	if ca != nil {
-		parent, signer = ca.cert, caKey
-	}
-
-	der, err := x509.CreateCertificate(rand.Reader, template, parent, &key.PublicKey, signer)
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
 	require.NoError(t, err)
 	cert, err := x509.ParseCertificate(der)
 	require.NoError(t, err)
@@ -75,16 +69,18 @@ func issueTestCert(t *testing.T, ca *testCert, caKey *ecdsa.PrivateKey) (*testCe
 		cert:    cert,
 		certPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
 		keyPEM:  pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}),
-	}, key
+	}
 }
 
-// replaceFile writes data next to path and renames it into place, the way secret mounts rotate files.
-func replaceFile(t *testing.T, path string, data []byte) {
+// writeFiles replaces each PEM file by rename; the pair is not replaced atomically.
+func (c *testCert) writeFiles(t *testing.T, certPath, keyPath string) {
 	t.Helper()
 
-	tmp := path + ".tmp"
-	require.NoError(t, os.WriteFile(tmp, data, 0o600))
-	require.NoError(t, os.Rename(tmp, path))
+	for path, data := range map[string][]byte{certPath: c.certPEM, keyPath: c.keyPEM} {
+		tmp := path + ".tmp"
+		require.NoError(t, os.WriteFile(tmp, data, 0o600))
+		require.NoError(t, os.Rename(tmp, path))
+	}
 }
 
 func (c *testCert) tlsCertificate(t *testing.T) tls.Certificate {
@@ -126,7 +122,7 @@ func graphqlPeerCert(ctx testenv.Environment, client *http.Client) (*x509.Certif
 func TestTLSCertificateReload(t *testing.T) {
 	t.Parallel()
 
-	t.Run("negotiates HTTP2 with client authentication and certificate watching enabled", func(t *testing.T) {
+	t.Run("preserves HTTP2 negotiation when client authentication and watching are enabled", func(t *testing.T) {
 		t.Parallel()
 
 		tlsConfig := newTestdataCertsServerTLSConfig()
@@ -148,17 +144,15 @@ func TestTLSCertificateReload(t *testing.T) {
 		})
 	})
 
-	t.Run("serves a rotated server certificate to new connections while traffic keeps flowing", func(t *testing.T) {
+	t.Run("serves the replacement server certificate without interrupting traffic when its files change", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
 		certPath := filepath.Join(dir, "server.crt")
 		keyPath := filepath.Join(dir, "server.key")
 
-		oldCert, _ := issueTestCert(t, nil, nil)
-		newCert, _ := issueTestCert(t, nil, nil)
-		replaceFile(t, certPath, oldCert.certPEM)
-		replaceFile(t, keyPath, oldCert.keyPEM)
+		oldCert, newCert := issueTestCert(t), issueTestCert(t)
+		oldCert.writeFiles(t, certPath, keyPath)
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: config.TLSConfiguration{
@@ -177,7 +171,12 @@ func TestTLSCertificateReload(t *testing.T) {
 
 			// keepAlive reuses one connection for the whole test. fresh dials a new one per request.
 			keepAlive := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}
-			fresh := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}, DisableKeepAlives: true}}
+			fresh := &http.Client{
+				Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}, DisableKeepAlives: true},
+				Timeout:   5 * time.Second,
+			}
+
+			t.Cleanup(keepAlive.CloseIdleConnections)
 
 			served, err := graphqlPeerCert(*xEnv, keepAlive)
 			require.NoError(t, err)
@@ -187,9 +186,15 @@ func TestTLSCertificateReload(t *testing.T) {
 			stop := make(chan struct{})
 
 			var (
-				requests, failures atomic.Int32
+				requests, failures int
 				wg                 sync.WaitGroup
 			)
+
+			stopLoad := sync.OnceFunc(func() {
+				close(stop)
+				wg.Wait()
+			})
+			t.Cleanup(stopLoad)
 			wg.Go(func() {
 				for {
 					select {
@@ -198,26 +203,24 @@ func TestTLSCertificateReload(t *testing.T) {
 					default:
 					}
 
-					requests.Add(1)
+					requests++
 
 					if _, err := graphqlPeerCert(*xEnv, fresh); err != nil {
-						failures.Add(1)
+						failures++
 					}
 				}
 			})
 
-			replaceFile(t, certPath, newCert.certPEM)
-			replaceFile(t, keyPath, newCert.keyPEM)
+			newCert.writeFiles(t, certPath, keyPath)
 
 			require.Eventually(t, func() bool {
 				served, err := graphqlPeerCert(*xEnv, fresh)
 				return err == nil && bytes.Equal(served.Raw, newCert.cert.Raw)
 			}, 10*time.Second, 50*time.Millisecond, "router did not pick up the new certificate")
 
-			close(stop)
-			wg.Wait()
-			require.Positive(t, requests.Load())
-			require.Zero(t, failures.Load(), "requests failed during certificate rotation")
+			stopLoad()
+			require.Positive(t, requests)
+			require.Zero(t, failures, "requests failed during certificate rotation")
 
 			// The connection opened before the rotation is still served with the certificate it was established with.
 			served, err = graphqlPeerCert(*xEnv, keepAlive)
@@ -229,130 +232,109 @@ func TestTLSCertificateReload(t *testing.T) {
 		})
 	})
 
-	t.Run("presents a rotated client certificate to an HTTP subgraph", func(t *testing.T) {
+	t.Run("presents the replacement client certificate to an HTTP subgraph when its files change", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		certPath := filepath.Join(dir, "client.crt")
-		keyPath := filepath.Join(dir, "client.key")
+		certPath, keyPath := filepath.Join(dir, "client.crt"), filepath.Join(dir, "client.key")
+		oldClient, newClient := issueTestCert(t), issueTestCert(t)
+		oldClient.writeFiles(t, certPath, keyPath)
 
-		oldCA, oldCAKey := issueTestCert(t, nil, nil)
-		newCA, newCAKey := issueTestCert(t, nil, nil)
-		oldClient, _ := issueTestCert(t, oldCA, oldCAKey)
-		newClient, _ := issueTestCert(t, newCA, newCAKey)
-		replaceFile(t, certPath, oldClient.certPEM)
-		replaceFile(t, keyPath, oldClient.keyPEM)
+		// Trust only the replacement self-signed client certificate.
+		pool := x509.NewCertPool()
+		pool.AddCert(newClient.cert)
 
-		// The subgraph only trusts clients signed by the new CA.
-		subgraphPool := x509.NewCertPool()
-		subgraphPool.AddCert(newCA.cert)
+		routerTLS := config.TLSConfiguration{
+			Watch:         true,
+			WatchInterval: 100 * time.Millisecond,
+			Client: config.HTTPClientTLSConfiguration{
+				All: config.HTTPTLSClientCertConfiguration{
+					TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+						CertFile:                   certPath,
+						KeyFile:                    keyPath,
+						InsecureSkipCaVerification: true,
+					},
+				},
+			},
+		}
 
 		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithTLSConfig(routerTLS)},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
 					TLSConfig: &tls.Config{
 						ClientAuth: tls.RequireAndVerifyClientCert,
-						ClientCAs:  subgraphPool,
+						ClientCAs:  pool,
 					},
 				},
 			},
-			RouterOptions: []core.Option{
-				core.WithTLSConfig(config.TLSConfiguration{
-					Client: config.HTTPClientTLSConfiguration{
-						All: config.HTTPTLSClientCertConfiguration{
-							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
-								InsecureSkipCaVerification: true,
-								CertFile:                   certPath,
-								KeyFile:                    keyPath,
-							},
-						},
-					},
-					Watch:         true,
-					WatchInterval: 100 * time.Millisecond,
-				}),
-			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
+			request := testenv.GraphQLRequest{Query: `query { employees { id } }`}
+			res, err := xEnv.MakeGraphQLRequest(request)
 			require.NoError(t, err)
 			require.Contains(t, res.Body, `Failed to fetch from Subgraph 'employees'`)
 
-			replaceFile(t, certPath, newClient.certPEM)
-			replaceFile(t, keyPath, newClient.keyPEM)
+			newClient.writeFiles(t, certPath, keyPath)
 
 			require.Eventually(t, func() bool {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `query { employees { id } }`,
-				})
+				res, err := xEnv.MakeGraphQLRequest(request)
 
 				return err == nil && res.Body == testutils.EmployeesIDData
 			}, 10*time.Second, 50*time.Millisecond, "router did not present the new client certificate")
 		})
 	})
 
-	t.Run("presents a rotated client certificate to a gRPC subgraph", func(t *testing.T) {
+	t.Run("presents the replacement client certificate to a gRPC subgraph when its files change", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		certPath := filepath.Join(dir, "client.crt")
-		keyPath := filepath.Join(dir, "client.key")
+		certPath, keyPath := filepath.Join(dir, "client.crt"), filepath.Join(dir, "client.key")
+		oldClient, newClient := issueTestCert(t), issueTestCert(t)
+		oldClient.writeFiles(t, certPath, keyPath)
 
-		oldCA, oldCAKey := issueTestCert(t, nil, nil)
-		newCA, newCAKey := issueTestCert(t, nil, nil)
-		oldClient, _ := issueTestCert(t, oldCA, oldCAKey)
-		newClient, _ := issueTestCert(t, newCA, newCAKey)
-		serverCert, _ := issueTestCert(t, nil, nil)
-		replaceFile(t, certPath, oldClient.certPEM)
-		replaceFile(t, keyPath, oldClient.keyPEM)
+		// Trust only the replacement self-signed client certificate.
+		pool := x509.NewCertPool()
+		pool.AddCert(newClient.cert)
 
-		// The subgraph only trusts clients signed by the new CA.
-		subgraphPool := x509.NewCertPool()
-		subgraphPool.AddCert(newCA.cert)
+		routerTLS := config.TLSConfiguration{
+			Watch:         true,
+			WatchInterval: 100 * time.Millisecond,
+			ClientGRPC: config.GRPCClientTLSConfiguration{
+				All: config.GRPCTLSClientCertConfiguration{
+					Enabled: true,
+					TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+						CertFile:                   certPath,
+						KeyFile:                    keyPath,
+						InsecureSkipCaVerification: true,
+					},
+				},
+			},
+		}
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
 			EnableGRPC:               true,
+			RouterOptions:            []core.Option{core.WithTLSConfig(routerTLS)},
 			Subgraphs: testenv.SubgraphsConfig{
 				Projects: testenv.SubgraphConfig{
 					GRPCTLSConfig: &tls.Config{
-						Certificates: []tls.Certificate{serverCert.tlsCertificate(t)},
+						Certificates: []tls.Certificate{issueTestCert(t).tlsCertificate(t)},
 						ClientAuth:   tls.RequireAndVerifyClientCert,
-						ClientCAs:    subgraphPool,
+						ClientCAs:    pool,
 					},
 				},
 			},
-			RouterOptions: []core.Option{
-				core.WithTLSConfig(config.TLSConfiguration{
-					ClientGRPC: config.GRPCClientTLSConfiguration{
-						All: config.GRPCTLSClientCertConfiguration{
-							Enabled: true,
-							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
-								InsecureSkipCaVerification: true,
-								CertFile:                   certPath,
-								KeyFile:                    keyPath,
-							},
-						},
-					},
-					Watch:         true,
-					WatchInterval: 100 * time.Millisecond,
-				}),
-			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query { projects { id name } }`,
-			})
+			request := testenv.GraphQLRequest{Query: `query { projects { id name } }`}
+			res, err := xEnv.MakeGraphQLRequest(request)
 			require.NoError(t, err)
 			require.Contains(t, res.Body, "Failed to fetch from Subgraph")
 
-			replaceFile(t, certPath, newClient.certPEM)
-			replaceFile(t, keyPath, newClient.keyPEM)
+			newClient.writeFiles(t, certPath, keyPath)
 
-			// gRPC redials with backoff after a failed handshake, so give it a few attempts.
+			// gRPC redials with backoff after a failed handshake.
 			require.Eventually(t, func() bool {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query: `query { projects { id name } }`,
-				})
+				res, err := xEnv.MakeGraphQLRequest(request)
 
 				return err == nil && res.Body == projectsExpectedData
 			}, 30*time.Second, 200*time.Millisecond, "router did not present the new client certificate to the gRPC subgraph")
