@@ -921,24 +921,6 @@ func TestBuildMultiGraphHandler(t *testing.T) {
 		require.Nil(t, weakStale.Value(), "handler retained the previous server's graph muxes")
 		runtime.KeepAlive(handler)
 	})
-
-	t.Run("reuses an unchanged flag mux only while its base mapping holds", func(t *testing.T) {
-		s := &graphServer{Config: &Config{logger: zap.NewNop()}, responseCacheSubgraphBases: map[string]string{"products_fg": "products"}}
-		ff := map[string]*nodev1.FeatureFlagRouterExecutionConfig{"flag": {Subgraphs: []*nodev1.Subgraph{{Name: "products_fg"}}}}
-		build := func(old map[string]string) []reusedGraphMux {
-			defer func() { _ = recover() }() // rebuild path needs a full server
-			_, reused, _ := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
-				baseMux:            chi.NewMux(),
-				featureFlagConfigs: ff,
-				changes:            &routerconfig.Changes{},
-				currentGraphMuxes:  map[string]*graphMux{"flag": {mux: chi.NewMux(), responseCacheBases: old}},
-			})
-			return reused
-		}
-
-		require.Len(t, build(map[string]string{"products_fg": "products"}), 1)
-		require.Empty(t, build(map[string]string{"products_fg": "inventory"}))
-	})
 }
 
 // reuseTrackingProvider is a pubsub provider that only records whether Shutdown

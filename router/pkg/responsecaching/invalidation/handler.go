@@ -24,18 +24,15 @@ type Handler struct {
 	logger      *zap.Logger
 	invalidator responsecaching.Invalidator
 	cfg         config.ResponseCacheInvalidationConfig
-	aliases     *responsecaching.SubgraphAliases
 }
 
 // NewHandler returns a handler removing entries from invalidator, refusing the
-// kinds whose indexes cfg does not maintain. A subgraph named also reaches
-// the feature flag subgraphs aliases holds for it; aliases may be nil.
-func NewHandler(logger *zap.Logger, invalidator responsecaching.Invalidator, cfg config.ResponseCacheInvalidationConfig, aliases *responsecaching.SubgraphAliases) *Handler {
+// kinds whose indexes cfg does not maintain.
+func NewHandler(logger *zap.Logger, invalidator responsecaching.Invalidator, cfg config.ResponseCacheInvalidationConfig) *Handler {
 	return &Handler{
 		logger:      logger.With(zap.String("component", "response_cache_invalidation")),
 		invalidator: invalidator,
 		cfg:         cfg,
-		aliases:     aliases,
 	}
 }
 
@@ -127,7 +124,7 @@ func (h *Handler) plan(requests []Request) ([]string, []Error) {
 	)
 
 	for i, request := range requests {
-		requestTags, err := request.tags(h.cfg, h.aliases.Expand)
+		requestTags, err := request.tags(h.cfg)
 		if err != nil {
 			errs = append(errs, Error{Index: i, Kind: request.Kind, Message: err.Error()})
 			continue

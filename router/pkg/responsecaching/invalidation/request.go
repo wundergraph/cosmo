@@ -27,8 +27,8 @@ type Request struct {
 }
 
 // tags returns the index entries this request names, or why it names none.
-// expand names every subgraph standing in for one, feature flag ones included.
-func (r Request) tags(indexes config.ResponseCacheInvalidationConfig, expand func(string) []string) ([]string, error) {
+
+func (r Request) tags(indexes config.ResponseCacheInvalidationConfig) ([]string, error) {
 	var (
 		subgraphs []string
 		indexed   bool
@@ -76,9 +76,7 @@ func (r Request) tags(indexes config.ResponseCacheInvalidationConfig, expand fun
 
 	tags := make([]string, 0, len(subgraphs))
 	for _, subgraph := range subgraphs {
-		for _, name := range expand(subgraph) {
-			tags = append(tags, tagFor(name))
-		}
+		tags = append(tags, tagFor(subgraph))
 	}
 
 	return tags, nil
