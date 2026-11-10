@@ -616,8 +616,8 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 // It's meant to be used as the routers http server tls configuration.
 // If TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
-// The certificate and the client CA are served through callbacks so that
-// a reload swaps them for new connections without restarting the listener.
+// The certificate is served through a callback so a reload applies to new
+// connections without restarting the listener. The client CA is loaded once.
 func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	serverTLS := r.tls.settings.Server
 
@@ -633,7 +633,7 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		return nil, errors.New("tls key file not provided")
 	}
 
-	certs, err := r.tls.certs.add(serverTLS.CertFile, serverTLS.KeyFile, serverTLS.ClientAuth.CertFile)
+	certs, err := r.tls.certs.add(serverTLS.CertFile, serverTLS.KeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -643,20 +643,15 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	}
 
 	if serverTLS.ClientAuth.CertFile != "" {
+		cfg.ClientCAs, err = loadCertPool(serverTLS.ClientAuth.CertFile)
+		if err != nil {
+			return nil, err
+		}
+
 		if serverTLS.ClientAuth.Required {
 			cfg.ClientAuth = tls.RequireAndVerifyClientCert
 		} else {
 			cfg.ClientAuth = tls.VerifyClientCertIfGiven
-		}
-
-		// ClientCAs has no callback of its own. Hand Go a per-handshake copy of
-		// this config that carries the current pool. The copy inherits whatever
-		// net/http set on cfg at startup, such as the ALPN protocols.
-		cfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
-			c := cfg.Clone()
-			c.ClientCAs = certs.ca.Load()
-
-			return c, nil
 		}
 
 		r.logger.Debug("Client auth enabled", zap.String("mode", cfg.ClientAuth.String()))

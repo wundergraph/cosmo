@@ -124,8 +124,8 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		require.True(t, natsOpts.Secure)
 		require.NotNil(t, natsOpts.TLSConfig)
 		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
-		require.Nil(t, natsOpts.RootCAsCB)
-		require.Nil(t, natsOpts.TLSCertCB)
+		require.Nil(t, natsOpts.TLSConfig.RootCAs)
+		require.Empty(t, natsOpts.TLSConfig.Certificates)
 	})
 
 	t.Run("insecure skip ca verification is allowed", func(t *testing.T) {
@@ -158,22 +158,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		logger := zaptest.NewLogger(t)
 
 		_, err := buildNatsOptions(cfg, logger, false)
-		require.ErrorContains(t, err, "nats: error loading or parsing rootCA file")
-	})
-
-	t.Run("missing client cert file returns error", func(t *testing.T) {
-		cfg := config.NatsEventSource{
-			ID:  "test-nats",
-			URL: "nats://localhost:4222",
-			TLS: &config.NatsTLSConfiguration{
-				CertFile: "/nonexistent/client.crt",
-				KeyFile:  "/nonexistent/client.key",
-			},
-		}
-		logger := zaptest.NewLogger(t)
-
-		_, err := buildNatsOptions(cfg, logger, false)
-		require.ErrorContains(t, err, "nats: error loading client certificate")
+		require.ErrorContains(t, err, "failed to read CA file")
 	})
 
 	t.Run("cert file without key file returns error", func(t *testing.T) {
@@ -222,11 +207,8 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		natsOpts := applyNatsOptions(t, opts)
 		require.True(t, natsOpts.Secure)
 		require.NotNil(t, natsOpts.TLSConfig)
-		require.Nil(t, natsOpts.RootCAsCB)
-		require.NotNil(t, natsOpts.TLSCertCB)
-		cert, err := natsOpts.TLSCertCB()
-		require.NoError(t, err)
-		require.Len(t, cert.Certificate, 1)
+		require.Nil(t, natsOpts.TLSConfig.RootCAs)
+		require.Len(t, natsOpts.TLSConfig.Certificates, 1)
 	})
 
 	t.Run("ca file only succeeds", func(t *testing.T) {
@@ -247,11 +229,8 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		require.True(t, natsOpts.Secure)
 		require.NotNil(t, natsOpts.TLSConfig)
 		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
-		require.NotNil(t, natsOpts.RootCAsCB)
-		require.Nil(t, natsOpts.TLSCertCB)
-		pool, err := natsOpts.RootCAsCB()
-		require.NoError(t, err)
-		require.NotNil(t, pool)
+		require.NotNil(t, natsOpts.TLSConfig.RootCAs)
+		require.Empty(t, natsOpts.TLSConfig.Certificates)
 	})
 
 	t.Run("mtls with ca file succeeds", func(t *testing.T) {
@@ -274,8 +253,8 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		require.True(t, natsOpts.Secure)
 		require.NotNil(t, natsOpts.TLSConfig)
 		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
-		require.NotNil(t, natsOpts.RootCAsCB)
-		require.NotNil(t, natsOpts.TLSCertCB)
+		require.NotNil(t, natsOpts.TLSConfig.RootCAs)
+		require.Len(t, natsOpts.TLSConfig.Certificates, 1)
 	})
 }
 

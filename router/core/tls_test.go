@@ -302,7 +302,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		reloader, err := reloaders.add(certPath, keyPath, "")
+		reloader, err := reloaders.add(certPath, keyPath)
 		require.NoError(t, err)
 
 		served, err := reloader.getCertificate(nil)
@@ -332,7 +332,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		reloader, err := reloaders.add(certPath, keyPath, "")
+		reloader, err := reloaders.add(certPath, keyPath)
 		require.NoError(t, err)
 
 		require.NoError(t, os.WriteFile(certPath, []byte("not a certificate"), 0o600))
@@ -341,58 +341,6 @@ func TestCertReloader(t *testing.T) {
 		served, err := reloader.getCertificate(nil)
 		require.NoError(t, err)
 		require.Equal(t, mustReadFile(t, oldCertPath), pemOf(served))
-	})
-
-	t.Run("reloads the CA pool", func(t *testing.T) {
-		t.Parallel()
-
-		dir := t.TempDir()
-		caPath := filepath.Join(dir, "ca.crt")
-		oldCAPath, _ := generateTestCert(t, "old-ca")
-		newCAPath, _ := generateTestCert(t, "new-ca")
-		copyFile(t, oldCAPath, caPath)
-
-		var reloaders certReloaders
-
-		reloader, err := reloaders.add("", "", caPath)
-		require.NoError(t, err)
-		require.Nil(t, reloader.cert.Load())
-		before := reloader.ca.Load()
-		require.NotNil(t, before)
-
-		copyFile(t, newCAPath, caPath)
-		require.NoError(t, reloader.reload())
-		require.False(t, before.Equal(reloader.ca.Load()))
-	})
-
-	t.Run("keeps the previous CA pool when the new certificate loads but the CA does not", func(t *testing.T) {
-		t.Parallel()
-
-		dir := t.TempDir()
-		certPath, keyPath, caPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), filepath.Join(dir, "ca.crt")
-		oldCertPath, oldKeyPath := generateTestCert(t, "old")
-		newCertPath, newKeyPath := generateTestCert(t, "new")
-		copyFile(t, oldCertPath, certPath)
-		copyFile(t, oldKeyPath, keyPath)
-		copyFile(t, oldCertPath, caPath)
-
-		var reloaders certReloaders
-
-		reloader, err := reloaders.add(certPath, keyPath, caPath)
-		require.NoError(t, err)
-
-		oldPool := reloader.ca.Load()
-
-		copyFile(t, newCertPath, certPath)
-		copyFile(t, newKeyPath, keyPath)
-		require.NoError(t, os.WriteFile(caPath, []byte("not a certificate"), 0o600))
-		require.ErrorContains(t, reloader.reload(), "failed to append CA cert to pool")
-
-		// Neither half of the rotation is applied until both halves load.
-		served, err := reloader.getCertificate(nil)
-		require.NoError(t, err)
-		require.Equal(t, mustReadFile(t, oldCertPath), pemOf(served))
-		require.True(t, oldPool.Equal(reloader.ca.Load()))
 	})
 
 	t.Run("watch picks up a rotation that happened before it started", func(t *testing.T) {
@@ -407,7 +355,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		reloader, err := reloaders.add(certPath, keyPath, "")
+		reloader, err := reloaders.add(certPath, keyPath)
 		require.NoError(t, err)
 
 		copyFile(t, newCertPath, certPath)
@@ -429,7 +377,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		reloader, err := reloaders.add(certPath, keyPath, "")
+		reloader, err := reloaders.add(certPath, keyPath)
 		require.NoError(t, err)
 
 		leaf := parsePEMCert(t, mustReadFile(t, certPath))
@@ -457,7 +405,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		_, err := reloaders.add("/nonexistent/tls.crt", "/nonexistent/tls.key", "")
+		_, err := reloaders.add("/nonexistent/tls.crt", "/nonexistent/tls.key")
 		require.ErrorContains(t, err, "failed to load tls cert and key")
 		require.Empty(t, reloaders.list)
 	})
@@ -474,7 +422,7 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 
-		reloader, err := reloaders.add(certPath, keyPath, "")
+		reloader, err := reloaders.add(certPath, keyPath)
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithCancel(t.Context())

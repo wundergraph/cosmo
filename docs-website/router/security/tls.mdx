@@ -136,16 +136,30 @@ tls:
 
 A reload applies to new connections. Open connections keep the certificate they were established with. The listener stays up during a reload, so requests are not interrupted.
 
+For outbound mTLS connections to HTTPS subgraphs, enable watching alongside the client certificate configuration:
+
+```yaml config.yaml
+tls:
+  watch: true
+  watch_interval: 1s
+  client:
+    all:
+      cert_file: /etc/router/tls/client.crt
+      key_file: /etc/router/tls/client.key
+      ca_file: /etc/router/tls/ca.crt
+```
+
+Replace the client certificate and matching private key at these paths when they rotate. The router picks up the replacements without a restart, and new TLS connections to subgraphs use the updated client certificate. Existing connections remain open.
+
+The `ca_file` verifies the subgraph's server certificate. It is not watched; changing this CA bundle requires a router restart or a configuration reload.
+
 The following files are reloaded:
 
 * `tls.server.cert_file` and `tls.server.key_file`
-* `tls.server.client_auth.cert_file`
 * `tls.client.all.cert_file` and `tls.client.all.key_file`, and the same fields under `tls.client.subgraphs`
 * `tls.client_grpc.all.cert_file` and `tls.client_grpc.all.key_file`, and the same fields under `tls.client_grpc.subgraphs`
 
-NATS event providers read `ca_file`, `cert_file` and `key_file` under `events.providers.nats[].tls` again on every connection to the server. A rotated file is used the next time the router reconnects. This does not depend on `tls.watch`.
-
-`ca_file` under `tls.client` and `tls.client_grpc` is read once at startup. Go has no hook to replace the trusted roots of a client connection, so a new CA needs a router restart or a config reload.
+CA bundles (`tls.server.client_auth.cert_file` and `ca_file` under `tls.client` and `tls.client_grpc`) are read once at startup and are not watched. Changing a CA bundle requires a router restart or a configuration reload. NATS TLS files are also loaded once during provider construction and are not watched by `tls.watch`.
 
 When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.
 

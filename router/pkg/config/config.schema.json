@@ -621,7 +621,7 @@
         "watch": {
           "type": "boolean",
           "default": false,
-          "description": "Reload certificate, key and CA files from disk when they change. New connections use the new files. Open connections are not affected. A file that fails to load is reported and the previous one stays in use. The default value is false."
+          "description": "Reload router server and HTTP/gRPC subgraph client certificate and key files from disk when they change. New connections use the new files. Open connections are not affected. CA bundles and NATS TLS files are not watched. A file that fails to load is reported and the previous one stays in use. The default value is false."
         },
         "watch_interval": {
           "type": "string",

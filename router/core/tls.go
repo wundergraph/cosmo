@@ -16,62 +16,31 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 )
 
-// certReloader holds the parsed contents of a cert/key pair and an optional CA
-// bundle. reload re-reads the files and swaps the parsed values atomically, so
+// certReloader holds the parsed contents of a cert/key pair.
+// reload re-reads the files and swaps the parsed certificate atomically, so
 // the tls callbacks that read them use the new material on the next handshake.
 // Open connections keep what they were established with.
 type certReloader struct {
-	certFile, keyFile, caFile string
+	certFile, keyFile string
 
 	cert atomic.Pointer[tls.Certificate]
-	ca   atomic.Pointer[x509.CertPool]
 }
 
-// reload parses the files from disk. Every file is parsed before anything is
-// swapped in, so on error the previous values all stay in place.
+// reload loads a matching cert/key pair from disk and retains the previous
+// certificate if loading fails.
 func (c *certReloader) reload() error {
-	var (
-		cert *tls.Certificate
-		pool *x509.CertPool
-	)
-
-	if c.certFile != "" {
-		pair, err := tls.LoadX509KeyPair(c.certFile, c.keyFile)
-		if err != nil {
-			return fmt.Errorf("failed to load tls cert and key: %w", err)
-		}
-
-		cert = &pair
+	cert, err := tls.LoadX509KeyPair(c.certFile, c.keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to load tls cert and key: %w", err)
 	}
 
-	if c.caFile != "" {
-		var err error
-		if pool, err = loadCertPool(c.caFile); err != nil {
-			return err
-		}
-	}
-
-	if cert != nil {
-		c.cert.Store(cert)
-	}
-
-	if pool != nil {
-		c.ca.Store(pool)
-	}
+	c.cert.Store(&cert)
 
 	return nil
 }
 
 func (c *certReloader) paths() []string {
-	var paths []string
-
-	for _, p := range []string{c.certFile, c.keyFile, c.caFile} {
-		if p != "" {
-			paths = append(paths, p)
-		}
-	}
-
-	return paths
+	return []string{c.certFile, c.keyFile}
 }
 
 // getCertificate is a tls.Config.GetCertificate callback that serves the current cert.
@@ -98,8 +67,8 @@ type certReloaders struct {
 }
 
 // add loads the files once and registers them for reloading.
-func (s *certReloaders) add(certFile, keyFile, caFile string) (*certReloader, error) {
-	c := &certReloader{certFile: certFile, keyFile: keyFile, caFile: caFile}
+func (s *certReloaders) add(certFile, keyFile string) (*certReloader, error) {
+	c := &certReloader{certFile: certFile, keyFile: keyFile}
 	if err := c.reload(); err != nil {
 		return nil, err
 	}
@@ -183,7 +152,7 @@ func buildTLSClientConfig(reloaders *certReloaders, clientCfg config.TLSClientCe
 	}
 
 	if clientCfg.CertFile != "" && clientCfg.KeyFile != "" {
-		cert, err := reloaders.add(clientCfg.CertFile, clientCfg.KeyFile, "")
+		cert, err := reloaders.add(clientCfg.CertFile, clientCfg.KeyFile)
 		if err != nil {
 			return nil, err
 		}

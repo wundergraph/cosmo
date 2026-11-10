@@ -3,9 +3,7 @@ package events_test
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"net"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -117,8 +115,53 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 	// publishes one event via natsHelperConn, and asserts the subscription response.
 	subscribePublishVerify := func(t *testing.T, xEnv *testenv.Environment, natsHelperConn *nats.Conn) {
 		t.Helper()
-		resultCh := subscribeEmployeeUpdated(t, xEnv)
-		publishEmployeeUpdated(t, xEnv, natsHelperConn, resultCh)
+
+		var subscriptionQuery struct {
+			EmployeeUpdated struct {
+				ID      float64 `graphql:"id"`
+				Details struct {
+					Forename string `graphql:"forename"`
+					Surname  string `graphql:"surname"`
+				} `graphql:"details"`
+			} `graphql:"employeeUpdated(employeeID: 3)"`
+		}
+
+		client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
+
+		resultCh := make(chan natsSubscriptionArgs, 1)
+		subscriptionHandler := func(dataValue []byte, errValue error) error {
+			resultCh <- natsSubscriptionArgs{dataValue: dataValue, errValue: errValue}
+			return nil
+		}
+
+		subscriptionID, err := client.Subscribe(&subscriptionQuery, nil, subscriptionHandler)
+		require.NoError(t, err)
+		require.NotEmpty(t, subscriptionID)
+
+		clientErrCh := make(chan error, 1)
+		go func() { clientErrCh <- client.Run() }()
+		t.Cleanup(func() {
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientErrCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			})
+		})
+
+		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+		xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+		subject := xEnv.GetPubSubName("employeeUpdated.3")
+		payload := []byte(`{"id":3,"__typename":"Employee"}`)
+		xEnv.NATSPublishUntilReceived(natsHelperConn, subject, payload, 1, EventWaitTimeout)
+
+		testenv.AwaitChannelWithT(t, EventWaitTimeout, resultCh, func(t *testing.T, args natsSubscriptionArgs) {
+			require.NoError(t, args.errValue)
+			require.JSONEq(t,
+				`{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`,
+				string(args.dataValue),
+			)
+		})
+
 	}
 
 	t.Run("router connects when server requires TLS", func(t *testing.T) {
@@ -300,143 +343,5 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 			natsHelperConn := connectToNATS(t, natsPlainURL(srv))
 			subscribePublishVerify(t, xEnv, natsHelperConn)
 		})
-	})
-}
-
-// subscribeEmployeeUpdated opens a websocket subscription for employeeUpdated(employeeID: 3)
-// and returns the channel its results arrive on. The subscription is closed when the test ends.
-func subscribeEmployeeUpdated(t *testing.T, xEnv *testenv.Environment) <-chan natsSubscriptionArgs {
-	t.Helper()
-
-	var subscriptionQuery struct {
-		EmployeeUpdated struct {
-			ID      float64 `graphql:"id"`
-			Details struct {
-				Forename string `graphql:"forename"`
-				Surname  string `graphql:"surname"`
-			} `graphql:"details"`
-		} `graphql:"employeeUpdated(employeeID: 3)"`
-	}
-
-	client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
-
-	resultCh := make(chan natsSubscriptionArgs, 16)
-	subscriptionHandler := func(dataValue []byte, errValue error) error {
-		resultCh <- natsSubscriptionArgs{dataValue: dataValue, errValue: errValue}
-		return nil
-	}
-
-	subscriptionID, err := client.Subscribe(&subscriptionQuery, nil, subscriptionHandler)
-	require.NoError(t, err)
-	require.NotEmpty(t, subscriptionID)
-
-	clientErrCh := make(chan error, 1)
-	go func() { clientErrCh <- client.Run() }()
-
-	t.Cleanup(func() {
-		require.NoError(t, client.Close())
-		testenv.AwaitChannelWithT(t, EventWaitTimeout, clientErrCh, func(t *testing.T, err error) {
-			require.NoError(t, err)
-		})
-	})
-
-	xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
-	xEnv.WaitForTriggerCount(1, EventWaitTimeout)
-
-	return resultCh
-}
-
-// publishEmployeeUpdated publishes one employeeUpdated event through conn and asserts that the
-// subscription behind resultCh receives it.
-func publishEmployeeUpdated(t *testing.T, xEnv *testenv.Environment, conn *nats.Conn, resultCh <-chan natsSubscriptionArgs) {
-	t.Helper()
-
-	subject := xEnv.GetPubSubName("employeeUpdated.3")
-	payload := []byte(`{"id":3,"__typename":"Employee"}`)
-	xEnv.NATSPublishUntilReceived(conn, subject, payload, 1, EventWaitTimeout)
-
-	testenv.AwaitChannelWithT(t, EventWaitTimeout, resultCh, func(t *testing.T, args natsSubscriptionArgs) {
-		require.NoError(t, args.errValue)
-		require.JSONEq(t,
-			`{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`,
-			string(args.dataValue),
-		)
-	})
-}
-
-// TestRouterReconnectsToNATSWithRotatedCertificates verifies that the router reads its NATS CA, client
-// certificate and key from disk again when it reconnects, so a certificate rotation on disk
-// takes effect without a restart.
-func TestRouterReconnectsToNATSWithRotatedCertificates(t *testing.T) {
-	t.Parallel()
-
-	oldCerts := generateTLSCerts(t)
-	newCerts := generateTLSCerts(t)
-
-	// The router points at stable paths that the test rotates underneath it.
-	dir := t.TempDir()
-	caPath := filepath.Join(dir, "ca.pem")
-	certPath := filepath.Join(dir, "client.pem")
-	keyPath := filepath.Join(dir, "client-key.pem")
-	installCerts := func(certs *tlsCerts) {
-		for src, dst := range map[string]string{certs.CACertFile: caPath, certs.ClientCertFile: certPath, certs.ClientKeyFile: keyPath} {
-			data, err := os.ReadFile(src)
-			require.NoError(t, err)
-			require.NoError(t, os.WriteFile(dst, data, 0o600))
-		}
-	}
-	installCerts(oldCerts)
-
-	startMTLSServer := func(certs *tlsCerts, port int) *natssrv.Server {
-		return startNATSServer(t, &natssrv.Options{
-			Host:      "127.0.0.1",
-			Port:      port,
-			TLS:       true,
-			TLSVerify: true,
-			TLSConfig: createServerMTLSConfig(t, certs.ServerCertFile, certs.ServerKeyFile, certs.CACertFile),
-		})
-	}
-	helperConn := func(serverURL string, certs *tlsCerts) *nats.Conn {
-		clientCert, err := tls.LoadX509KeyPair(certs.ClientCertFile, certs.ClientKeyFile)
-		require.NoError(t, err)
-
-		return connectToNATS(t, serverURL, nats.Secure(&tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec // test helper only
-			Certificates:       []tls.Certificate{clientCert},
-		}))
-	}
-
-	oldServer := startMTLSServer(oldCerts, -1)
-	port := oldServer.Addr().(*net.TCPAddr).Port
-	serverURL := natsPlainURL(oldServer)
-
-	routerTLS := &config.NatsTLSConfiguration{
-		CaFile:   caPath,
-		CertFile: certPath,
-		KeyFile:  keyPath,
-	}
-
-	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-		ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
-			cfg.Providers.Nats = tlsNATSEventSourceConfig(serverURL, routerTLS)
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		resultCh := subscribeEmployeeUpdated(t, xEnv)
-
-		oldConn := helperConn(serverURL, oldCerts)
-		publishEmployeeUpdated(t, xEnv, oldConn, resultCh)
-		oldConn.Close()
-
-		// Rotate everything to the new CA, then replace the server with one that only trusts
-		// the new CA. The router can only reconnect if it reads the rotated files.
-		installCerts(newCerts)
-		oldServer.Shutdown()
-		oldServer.WaitForShutdown()
-
-		newServer := startMTLSServer(newCerts, port)
-
-		newConn := helperConn(natsPlainURL(newServer), newCerts)
-		publishEmployeeUpdated(t, xEnv, newConn, resultCh)
 	})
 }

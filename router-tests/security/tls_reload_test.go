@@ -126,6 +126,28 @@ func graphqlPeerCert(ctx testenv.Environment, client *http.Client) (*x509.Certif
 func TestTLSCertificateReload(t *testing.T) {
 	t.Parallel()
 
+	t.Run("negotiates HTTP2 with client authentication and certificate watching enabled", func(t *testing.T) {
+		t.Parallel()
+
+		tlsConfig := newTestdataCertsServerTLSConfig()
+		tlsConfig.Server.ClientAuth = config.TLSClientAuthConfiguration{
+			Required: true,
+			CertFile: tlsConfig.Server.CertFile,
+		}
+		tlsConfig.Watch = true
+		tlsConfig.WatchInterval = 100 * time.Millisecond
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: tlsConfig,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, "HTTP/2.0", res.Proto)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
+		})
+	})
+
 	t.Run("serves a rotated server certificate to new connections while traffic keeps flowing", func(t *testing.T) {
 		t.Parallel()
 
@@ -334,75 +356,6 @@ func TestTLSCertificateReload(t *testing.T) {
 
 				return err == nil && res.Body == projectsExpectedData
 			}, 30*time.Second, 200*time.Millisecond, "router did not present the new client certificate to the gRPC subgraph")
-		})
-	})
-
-	t.Run("verifies client certificates against a rotated client CA", func(t *testing.T) {
-		t.Parallel()
-
-		dir := t.TempDir()
-		certPath := filepath.Join(dir, "server.crt")
-		keyPath := filepath.Join(dir, "server.key")
-		caPath := filepath.Join(dir, "client-ca.crt")
-
-		// The server certificate doubles as the initial client CA, which is what the test
-		// environment presents as its own client certificate.
-		serverCert, _ := issueTestCert(t, nil, nil)
-		newCA, newCAKey := issueTestCert(t, nil, nil)
-		newClient, _ := issueTestCert(t, newCA, newCAKey)
-
-		replaceFile(t, certPath, serverCert.certPEM)
-		replaceFile(t, keyPath, serverCert.keyPEM)
-		replaceFile(t, caPath, serverCert.certPEM)
-
-		testenv.Run(t, &testenv.Config{
-			TLSConfig: config.TLSConfiguration{
-				Server: config.TLSServerConfiguration{
-					Enabled:  true,
-					CertFile: certPath,
-					KeyFile:  keyPath,
-					ClientAuth: config.TLSClientAuthConfiguration{
-						Required: true,
-						CertFile: caPath,
-					},
-				},
-				Watch:         true,
-				WatchInterval: 100 * time.Millisecond,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			pool := x509.NewCertPool()
-			pool.AddCert(serverCert.cert)
-
-			newClientHTTP := &http.Client{Transport: &http.Transport{
-				DisableKeepAlives: true,
-				TLSClientConfig: &tls.Config{
-					RootCAs:      pool,
-					Certificates: []tls.Certificate{newClient.tlsCertificate(t)},
-				},
-			}}
-			oldClientHTTP := &http.Client{Transport: &http.Transport{
-				DisableKeepAlives: true,
-				TLSClientConfig: &tls.Config{
-					RootCAs:      pool,
-					Certificates: []tls.Certificate{serverCert.tlsCertificate(t)},
-				},
-			}}
-
-			_, err := graphqlPeerCert(*xEnv, newClientHTTP)
-			require.ErrorContains(t, err, "tls:")
-
-			_, err = graphqlPeerCert(*xEnv, oldClientHTTP)
-			require.NoError(t, err)
-
-			replaceFile(t, caPath, newCA.certPEM)
-
-			require.Eventually(t, func() bool {
-				_, err := graphqlPeerCert(*xEnv, newClientHTTP)
-				return err == nil
-			}, 10*time.Second, 50*time.Millisecond, "router did not pick up the new client CA")
-
-			_, err = graphqlPeerCert(*xEnv, oldClientHTTP)
-			require.ErrorContains(t, err, "tls:")
 		})
 	})
 }
