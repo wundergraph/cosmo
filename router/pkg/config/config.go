@@ -721,6 +721,7 @@ type JWKSConfiguration struct {
 
 	// Common
 	Audiences []string `yaml:"audiences"`
+	Issuers   []string `yaml:"issuers"`
 }
 
 type RefreshUnknownKID struct {

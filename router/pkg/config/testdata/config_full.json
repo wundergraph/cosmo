@@ -718,7 +718,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -737,7 +738,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -753,7 +755,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         }
       ],
       "ScopeClaim": "customscp",

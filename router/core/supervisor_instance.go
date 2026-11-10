@@ -347,6 +347,7 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			KeyId:     jwks.KeyId,
 
 			Audiences: jwks.Audiences,
+			Issuers:   jwks.Issuers,
 			RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
 				Enabled:  jwks.RefreshUnknownKID.Enabled,
 				MaxWait:  jwks.RefreshUnknownKID.MaxWait,
