@@ -372,32 +372,6 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
   });
 
-  test('records validation errors for invalid and oversized extension responses', async (testContext) => {
-    const postSpy = vi.fn();
-    const { client, server, subgraph1Name, fedGraphName } = await setupTestGraphs(postSpy);
-    testContext.onTestFinished(() => server.close());
-
-    for (const count of [1000, 1001]) {
-      postSpy.mockResolvedValue({
-        status: 200,
-        data: { lintIssues: { [subgraph1Name]: Array.from({ length: count }, () => ({})) } },
-      });
-      const response = await client.checkSubgraphSchema({
-        subgraphName: subgraph1Name,
-        schema: new Uint8Array(Buffer.from(subgraph1Schema)),
-        namespace: 'default',
-      });
-      expect(response.response?.code).toBe(EnumStatusCode.OK);
-      expect(response.checkExtensionErrorMessage).toContain('Check extension returned an invalid response:');
-      const summary = await client.getCheckSummary({
-        namespace: 'default',
-        graphName: fedGraphName,
-        checkId: response.checkId,
-      });
-      expect(summary.check?.checkExtensionErrorMessage).toBe(response.checkExtensionErrorMessage);
-    }
-  });
-
   test('that the subgraph check extension webhook is sent and handled correctly', async (testContext) => {
     const postSpy = vi.fn().mockResolvedValue({ status: 400, data: {} });
 

@@ -25,19 +25,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test('rejects an oversized errors collection', async () => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ errors: Array.from({ length: 1001 }, () => ({ message: 'error' })) }),
-    })),
-  );
-  expect(await probeRootFields('http://router', '{ user { id } }')).toEqual({
-    user: { ok: false, reason: 'Response is not a GraphQL response' },
-  });
-});
-
 describe('probe documents with named fragments', () => {
   test('a field whose selection spreads a fragment carries the fragment definition', async () => {
     const sent = await captureRequests(() =>

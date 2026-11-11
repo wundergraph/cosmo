@@ -11,7 +11,8 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { v4 } from 'uuid';
-import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import * as z from 'zod';
+import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
@@ -35,7 +36,28 @@ import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
 import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
-import { subgraphCheckExtensionSchema } from './subgraph-check-extension.js';
+
+const subgraphCheckExtensionSchema = z.object({
+  errors: z.array(z.string()).optional(),
+  lintIssues: z
+    .record(
+      z.string(),
+      z.array(
+        z.object({
+          lintRuleType: z.string().trim(),
+          severity: z.enum(LintSeverity),
+          message: z.string().trim(),
+          issueLocation: z.object({
+            line: z.number().int().positive(),
+            column: z.number().int().positive(),
+            endLine: z.number().int().positive().optional(),
+            endColumn: z.number().int().positive().optional(),
+          }),
+        }),
+      ),
+    )
+    .optional(),
+});
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -95,7 +117,7 @@ export interface ProposalStateUpdated {
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
-export type { SubgraphCheckExtensionResponse } from './subgraph-check-extension.js';
+export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
 
 type Config = {
   url?: string;
@@ -790,7 +812,6 @@ export class OrganizationWebhookService {
         }
       } else {
         overwriteErrorMessage = true;
-        // Minimizing issue count with .slice to prevent resource exhaustion
         deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
       }
     }
