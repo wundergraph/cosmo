@@ -398,7 +398,7 @@ func TestCache_WaitAfterClose(t *testing.T) {
 }
 
 // A Set or Wait that passed the closed check may still send after Close.
-func TestCache_CloseDuringSetAndWait(t *testing.T) {
+func TestCloseDuringSetAndWait(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
