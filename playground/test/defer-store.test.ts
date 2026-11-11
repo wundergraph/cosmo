@@ -75,6 +75,7 @@ describe('DeferStore', () => {
 
   test('a formatting-only edit keeps the latencies', () => {
     const { editor, store, listener } = bound();
+    editor.getValue.mockReturnValue('{ a @defer { b } }');
     store.startAnalysis({ routingUrl: 'http://a', query: '{ a @defer { b } }' });
     store.finishAnalysis({ a: 10 }, {});
 
@@ -86,6 +87,7 @@ describe('DeferStore', () => {
 
   test('an edit outside the measured fields keeps the latencies', () => {
     const { editor, store, listener } = bound();
+    editor.getValue.mockReturnValue('{ a { b } }\n\nfragment Unused on T { x }');
     store.startAnalysis({ routingUrl: 'http://a', query: '{ a { b } }\n\nfragment Unused on T { x }' });
     store.finishAnalysis({ a: 10 }, {});
 
@@ -97,6 +99,7 @@ describe('DeferStore', () => {
 
   test('an unrelated edit after the panel inserts @defer keeps the latencies', () => {
     const { editor, store, listener } = bound();
+    editor.getValue.mockReturnValue('{ a { b } }\n\nfragment Unused on T { x }');
     store.startAnalysis({ routingUrl: 'http://a', query: '{ a { b } }\n\nfragment Unused on T { x }' });
     store.finishAnalysis({ a: 10 }, {});
 
@@ -169,6 +172,37 @@ describe('DeferStore', () => {
     listener(null, { origin: '+input' });
 
     expect(editors.store.snapshot.latencies).toEqual({ a: 10 });
+  });
+
+  test.each(['query', 'variables', 'headers'] as const)(
+    'a %s change during a probe discards its results and stops running',
+    (name) => {
+      const editors = bound();
+      editors.editor.getValue.mockReturnValue('{ a }');
+      editors.store.startAnalysis({ routingUrl: 'http://a', query: '{ a }', variablesError: 'old error' });
+
+      const changed = name === 'query' ? '{ b }' : '{ "changed": true }';
+      (name === 'query' ? editors.editor : editors[name]).getValue.mockReturnValue(changed);
+      editors.store.finishAnalysis({ a: 10 }, { b: 'failed' });
+
+      expect(editors.store.snapshot).toEqual({ latencies: null, probeFailures: {}, error: null, running: false });
+    },
+  );
+
+  test('a formatting-only change during a probe keeps its results', () => {
+    const { editor, variables, headers, store } = bound();
+    editor.getValue.mockReturnValue('{ a }');
+    variables.getValue.mockReturnValue('{"id":1}');
+    headers.getValue.mockReturnValue('{"token":"abc"}');
+    store.startAnalysis({ routingUrl: 'http://a', query: '{ a }' });
+
+    editor.getValue.mockReturnValue('{\n  a\n}');
+    variables.getValue.mockReturnValue('{ "id": 1 }');
+    headers.getValue.mockReturnValue('{ "token": "abc" }');
+    store.finishAnalysis({ a: 10 }, {});
+
+    expect(store.snapshot.latencies).toEqual({ a: 10 });
+    expect(store.snapshot.running).toBe(false);
   });
 
   test('each tab keeps its own analysis', () => {

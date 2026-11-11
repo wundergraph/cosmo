@@ -126,6 +126,17 @@ export class DeferStore {
   }
 
   finishAnalysis(latencies: Record<string, number>, probeFailures: Record<string, string>, tabId = this.activeTab) {
+    if (
+      tabId === this.activeTab &&
+      this.editors &&
+      this.currentTab().inputs !== undefined &&
+      this.doesEditInvalidateAnalysis()
+    ) {
+      const tab = this.currentTab();
+      tab.inputs = undefined;
+      this.update(initialAnalysis);
+      return;
+    }
     this.update({ latencies, probeFailures, running: false }, tabId);
   }
 
