@@ -590,20 +590,44 @@ export function invalidInterfaceImplementationError(
         implementationErrors.unimplementedFields.join('", "') +
         '"\n';
     }
-    for (const [fieldName, invalidFieldImplementation] of implementationErrors.invalidFieldImplementations) {
-      const unimplementedArgumentsSize = invalidFieldImplementation.unimplementedArguments.size;
-      const invalidArgumentsLength = invalidFieldImplementation.invalidImplementedArguments.length;
-      const invalidAdditionalArgumentsSize = invalidFieldImplementation.invalidAdditionalArguments.size;
+    for (const [
+      fieldName,
+      {
+        implementationContextCoords,
+        implementedResponseType,
+        invalidAdditionalArguments,
+        interfaceContextCoords,
+        invalidImplementedArguments,
+        isInaccessible,
+        originalResponseType,
+        unfederatedArguments,
+        unimplementedArguments,
+      },
+    ] of implementationErrors.invalidFieldImplementations) {
+      const unimplementedArgumentsSize = unimplementedArguments.size;
+      const invalidArgumentsLength = invalidImplementedArguments.length;
+      const invalidAdditionalArgumentsSize = invalidAdditionalArguments.size;
+      const unfederatedArgumentsSize = unfederatedArguments?.size;
       message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
           `   The following argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
-          [...invalidFieldImplementation.unimplementedArguments].join('", "') +
+          [...unimplementedArguments].join('", "') +
           '"\n';
       }
+      if (unfederatedArgumentsSize) {
+        message +=
+          `   Optional arguments that are not defined in all subgraphs that define its parent field must be` +
+          ` removed from the federated schema to prevent run-time errors.\n` +
+          `    However, this caused the following argument implementation${unfederatedArgumentsSize > 1 ? 's' : ''}` +
+          ` to be removed and the federated definition of "${interfaceName}.${fieldName}" is no longer satisfied: "` +
+          [...unfederatedArguments].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+
       if (invalidArgumentsLength) {
         message += `   The following implemented argument${invalidArgumentsLength > 1 ? 's are' : ' is'} invalid:\n`;
-        for (const invalidArgument of invalidFieldImplementation.invalidImplementedArguments) {
+        for (const invalidArgument of invalidImplementedArguments) {
           message +=
             `    The argument "${invalidArgument.argumentName}" must define type "` +
             invalidArgument.expectedType +
@@ -616,38 +640,38 @@ export function invalidInterfaceImplementationError(
           ` on the original Interface field must be optional (nullable).\n`;
         message +=
           `    The following additional argument` +
-          (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
+          (invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
           ` not defined as optional: "` +
-          [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) +
+          [...invalidAdditionalArguments].join(`", "`) +
           `"\n`;
       }
-      if (invalidFieldImplementation.implementedResponseType) {
+      if (implementedResponseType) {
         message +=
-          `   The implemented response type "${invalidFieldImplementation.implementedResponseType}" is not` +
+          `   The implemented response type "${implementedResponseType}" is not` +
           ` a valid subtype (equally or more restrictive) of the response type "` +
-          invalidFieldImplementation.originalResponseType +
+          originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
-      if (invalidFieldImplementation.interfaceContextCoords.size > 0) {
+      if (interfaceContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
           `    The following argument` +
-          (invalidFieldImplementation.interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
+          (interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.interfaceContextCoords].join(QUOTATION_JOIN) +
+          [...interfaceContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
-      if (invalidFieldImplementation.implementationContextCoords.size > 0) {
+      if (implementationContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on the implementation of the Interface field` +
           ` "${interfaceName}.${fieldName}".\n` +
           `    The following argument` +
-          (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
+          (implementationContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.implementationContextCoords].join(QUOTATION_JOIN) +
+          [...implementationContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
-      if (invalidFieldImplementation.isInaccessible) {
+      if (isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
           ` on the Interface definition.\n   Consequently, the Interface implementation cannot be satisfied.\n`;
@@ -657,7 +681,7 @@ export function invalidInterfaceImplementationError(
   }
   return new Error(
     `The ${parentNodeType} "${parentTypeName}" has the following Interface implementation errors:\n` +
-      messages.join('\n'),
+      messages.join(LITERAL_NEW_LINE),
   );
 }
 
