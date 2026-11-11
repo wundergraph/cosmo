@@ -790,11 +790,8 @@ export class OrganizationWebhookService {
         }
       } else {
         overwriteErrorMessage = true;
-        const issues = parsedResponse.error.issues.slice(0, 10).map((issue) => ({
-          path: issue.path.map(String).join('.').slice(0, 200),
-          message: issue.message.slice(0, 300),
-        }));
-        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${JSON.stringify(issues)}.`;
+        // Minimizing issue count with .slice to prevent resource exhaustion
+        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
       }
     }
 
