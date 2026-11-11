@@ -1462,10 +1462,11 @@ type ApolloCompatibilityFlags struct {
 }
 
 type ApolloRouterCompatibilityFlags struct {
-	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
-	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
-	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
-	CacheControlAnyPublic   ApolloCompatibilityFlag `yaml:"cache_control_any_public" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_"`
+	ReplaceInvalidVarErrors    ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	SubrequestHTTPError        ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+	SkipNullVariablesError     ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
+	CacheControlAnyPublic      ApolloCompatibilityFlag `yaml:"cache_control_any_public" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_"`
+	CacheControlMissingNoStore ApolloCompatibilityFlag `yaml:"cache_control_missing_no_store" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_MISSING_NO_STORE_"`
 }
 
 type ApolloCompatibilityFlag struct {

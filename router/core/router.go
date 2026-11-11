@@ -353,6 +353,7 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	// Covers headers and cache_control_policy rules alike.
 	if r.headerPropagation != nil {
 		r.headerPropagation.anyPublic = r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
+		r.headerPropagation.missingNoStore = r.apolloRouterCompatibilityFlags.CacheControlMissingNoStore.Enabled
 	}
 
 	defaultCorsHeaders := []string{

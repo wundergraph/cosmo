@@ -686,3 +686,5 @@ apollo_compatibility_flags:
 apollo_router_compatibility_flags:
   cache_control_any_public:
     enabled: true
+  cache_control_missing_no_store:
+    enabled: true

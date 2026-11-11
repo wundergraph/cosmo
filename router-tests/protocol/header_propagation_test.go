@@ -992,6 +992,66 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		missingNoStore := core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+			CacheControlMissingNoStore: config.ApolloCompatibilityFlag{Enabled: true},
+		})
+		for _, tc := range []struct {
+			name, policy, employees, hobbies, want string
+		}{
+			{name: "a subgraph without Cache-Control is no-store", employees: "public, max-age=120", want: "no-store"},
+			{name: "only unknown directives is no-store", employees: "public, max-age=120", hobbies: "foo, bar=1", want: "no-store"},
+			{name: "only no-transform is no-store", employees: "public, max-age=120", hobbies: "no-transform", want: "no-store"},
+			{name: "no-store wins over no-cache", employees: "no-cache", want: "no-store"},
+			{name: "the default stands in for a missing header", policy: "max-age=300", employees: "public, max-age=120", want: "max-age=120"},
+			{name: "the default stands in for unknown directives", policy: "max-age=300", employees: "public, max-age=120", hobbies: "foo", want: "max-age=120"},
+			{name: "a public default stands in for a missing header", policy: "max-age=300, public", employees: "public, max-age=120", want: "max-age=120, public"},
+		} {
+			t.Run("cache_control_missing_no_store: "+tc.name, func(t *testing.T) {
+				t.Parallel()
+				testenv.Run(t, &testenv.Config{
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: tc.policy},
+					Subgraphs:          cacheOptions(tc.employees, tc.hobbies),
+					RouterOptions:      []core.Option{missingNoStore},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+					require.Equal(t, tc.want, res.Response.Header.Get("Cache-Control"))
+				})
+			})
+		}
+
+		t.Run("cache_control_missing_no_store: applies to a headers rule", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: cacheOptions("public, max-age=300", ""),
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{{
+								Operation: config.HeaderRuleOperationPropagate,
+								Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+							}},
+						},
+					}),
+					missingNoStore,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+				require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
+		t.Run("without cache_control_missing_no_store unknown directives are not no-store", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+				Subgraphs:          cacheOptions("public, max-age=120", "foo"),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+				// foo withdraws public: it is not public itself.
+				require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		// With or without a Cache-Control of its own, a failed fetch is not cacheable.
 		for _, cacheControl := range []string{"max-age=60, public", ""} {
 			t.Run("a failed subgraph response is no-store: "+cacheControl, func(t *testing.T) {

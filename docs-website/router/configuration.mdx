@@ -2882,6 +2882,18 @@ For example, subgraph A sends `max-age=300, public` and subgraph B sends `max-ag
 | ------------------------------------------------------------ | ------------------------ | ---------------------- | ---------------------------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_ENABLED | cache_control_any_public | <Icon icon="square" /> | Sends `public` when any subgraph fetch is `public`. | false         |
 
+### Apollo Router Compatibility Cache Control Missing No Store
+
+Changes how the [restrictive cache control policy](/router/proxy-capabilities/adjusting-cache-control) treats a subgraph response without caching information, matching Apollo Router behavior. It applies to both `cache_control_policy` and `most_restrictive_cache_control` header rules. A response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
+
+By default the router ignores such a response. With this flag it counts as `no-store`, so the client receives `Cache-Control: no-store`. A configured default stands in for the response either way.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With this flag it sends `no-store`.
+
+| Environment Variable                                               | YAML                           | Required               | Description                                                           | Default Value |
+| ------------------------------------------------------------------ | ------------------------------ | ---------------------- | --------------------------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_MISSING_NO_STORE_ENABLED | cache_control_missing_no_store | <Icon icon="square" /> | Treats a subgraph response without caching information as `no-store`. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2893,6 +2905,8 @@ apollo_router_compatibility_flags:
   skip_null_variables_error:
     enabled: true
   cache_control_any_public:
+    enabled: true
+  cache_control_missing_no_store:
     enabled: true
 ```
 

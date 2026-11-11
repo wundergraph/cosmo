@@ -219,6 +219,7 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
 	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
 	usage["apollo_router_compatibility_flags_cache_control_any_public_enabled"] = c.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
+	usage["apollo_router_compatibility_flags_cache_control_missing_no_store_enabled"] = c.apolloRouterCompatibilityFlags.CacheControlMissingNoStore.Enabled
 
 	usage["demo_mode"] = c.demoMode
 

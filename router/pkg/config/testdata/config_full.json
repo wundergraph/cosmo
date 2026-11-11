@@ -1281,6 +1281,9 @@
     },
     "CacheControlAnyPublic": {
       "Enabled": true
+    },
+    "CacheControlMissingNoStore": {
+      "Enabled": true
     }
   },
   "ClientHeader": {

@@ -4733,6 +4733,17 @@
               "default": false
             }
           }
+        },
+        "cache_control_missing_no_store": {
+          "type": "object",
+          "description": "Merges a fetch with no caching directives (no Cache-Control or Expires, or only unknown directives) as no-store, unless a default is configured, similar to Apollo Router. By default, such a fetch is ignored.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
