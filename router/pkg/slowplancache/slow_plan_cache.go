@@ -108,7 +108,6 @@ func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
 }
 
 // enqueue sends req to processWrites, or drops it if the buffer is full.
-// Close can run concurrently, after the caller's closed check.
 func (c *Cache[V]) enqueue(req setRequest[V]) {
 	select {
 	case c.writeCh <- req:
@@ -126,8 +125,7 @@ func (c *Cache[V]) Wait() {
 	c.waitForWrites()
 }
 
-// waitForWrites blocks until processWrites has handled the writes buffered so
-// far, or has stopped. Close can run concurrently, after the caller's closed check.
+// waitForWrites blocks until processWrites has handled the buffered writes or stopped.
 func (c *Cache[V]) waitForWrites() {
 	ch := make(chan struct{})
 
@@ -235,9 +233,6 @@ func (c *Cache[V]) Close() {
 		close(c.stop)
 		<-c.done
 
-		// writeCh is deliberately left open: a Set or Wait that checked closed
-		// just before it was stored may still send on it, and sending on a
-		// closed channel panics. Nothing reads it any more, so those writes are
-		// dropped and the channel is garbage collected with the cache.
+		// writeCh stays open: a concurrent Set or Wait may still send on it.
 	})
 }

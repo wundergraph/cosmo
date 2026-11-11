@@ -397,10 +397,8 @@ func TestCache_WaitAfterClose(t *testing.T) {
 	})
 }
 
-// A Set or Wait that passed the closed check just before Close still sends on
-// writeCh. Close must leave it open, or that send panics, and the Wait must not
-// block on a request that processWrites will never handle.
-func TestCache_SendAfterClose(t *testing.T) {
+// A Set or Wait that passed the closed check may still send after Close.
+func TestCache_CloseDuringSetAndWait(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
