@@ -420,10 +420,10 @@ func TestReload_ResourcesDisabledRegistersNothing(t *testing.T) {
 
 	// A disabled server still carries a non-nil, empty scan: handlers that
 	// read s.contextScan must never see a nil map.
-	require.NotNil(t, srv.contextScan)
-	assert.Empty(t, srv.contextScan.skills)
-	assert.Empty(t, srv.contextScan.resources)
-	assert.Empty(t, srv.contextScan.byURI)
+	require.NotNil(t, srv.contextScan.Load())
+	assert.Empty(t, srv.contextScan.Load().skills)
+	assert.Empty(t, srv.contextScan.Load().resources)
+	assert.Empty(t, srv.contextScan.Load().byURI)
 }
 
 // TestReadContextResource_OversizedFileAtReadTimeIsRejected proves both read
@@ -448,7 +448,7 @@ func TestReadContextResource_OversizedFileAtReadTimeIsRejected(t *testing.T) {
 		WithResourcesEnabled(true),
 	)
 	require.NoError(t, err)
-	require.NoError(t, srv.Reload(&schemaDoc, nil))
+	require.NoError(t, srv.Reload(&schemaDoc, nil, ""))
 	require.Contains(t, srv.registeredResources, "context:///notes.md")
 
 	// Grow the file past the limit on disk, after the scan already recorded it.
@@ -852,6 +852,49 @@ func TestGetContextTool(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.IsError)
 	})
+}
+
+func TestGetContextToolConcurrentReload(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"notes.md":             "# Notes body\n",
+	})
+
+	schemaDoc := testSchemaDoc(t)
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil, ""))
+
+	getContext := srv.handleGetContext()
+	readResource := srv.handleReadContextResource()
+
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		for range 20 {
+			assert.NoError(t, srv.Reload(&schemaDoc, nil, ""))
+		}
+	})
+	wg.Go(func() {
+		for range 200 {
+			_, err := getContext(t.Context(), &mcp.CallToolRequest{
+				Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{"uri":"context:///notes.md"}`)},
+			})
+			assert.NoError(t, err)
+			_, err = readResource(t.Context(), &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{URI: "context:///notes.md"},
+			})
+			assert.NoError(t, err)
+		}
+	})
+	wg.Wait()
 }
 
 func TestGetContextToolNotRegisteredWhenDisabled(t *testing.T) {

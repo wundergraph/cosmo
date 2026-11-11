@@ -169,7 +169,7 @@ type GraphQLSchemaServer struct {
 	operationsManager         atomic.Pointer[OperationsManager]
 	schemaCompiler            *SchemaCompiler
 	resourcesEnabled          bool
-	contextScan               *contextScan
+	contextScan               atomic.Pointer[contextScan]
 	registeredResources       []string
 	corsConfig                cors.Config
 	cancel                    context.CancelFunc
@@ -497,7 +497,6 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		omitToolTitlePrefix:       options.OmitToolTitlePrefix,
 		outputSchemaEnabled:       options.OutputSchemaEnabled,
 		resourcesEnabled:          options.ResourcesEnabled,
-		contextScan:               newEmptyContextScan(),
 		stateless:                 options.Stateless,
 		schemaCompiler:            NewSchemaCompiler(options.Logger),
 		corsConfig:                options.CorsConfig,
@@ -508,6 +507,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		authMiddleware:            authMiddleware,
 		promptToQueryClient:       options.PromptToQueryClient,
 	}
+	gs.contextScan.Store(newEmptyContextScan())
 
 	return gs, nil
 }
@@ -872,7 +872,7 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 	if !s.resourcesEnabled || s.operationsDir == "" {
 		s.server.RemoveResources(s.registeredResources...)
 		s.registeredResources = nil
-		s.contextScan = newEmptyContextScan()
+		s.contextScan.Store(newEmptyContextScan())
 		return nil
 	}
 
@@ -883,7 +883,7 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 
 	s.server.RemoveResources(s.registeredResources...)
 	s.registeredResources = nil
-	s.contextScan = scan
+	s.contextScan.Store(scan)
 
 	handler := s.handleReadContextResource()
 	for _, res := range scan.resources {
@@ -927,7 +927,7 @@ func checkServableFile(filePath string) error {
 // reloads are served fresh.
 func (s *GraphQLSchemaServer) handleReadContextResource() mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		res, ok := s.contextScan.byURI[req.Params.URI]
+		res, ok := s.contextScan.Load().byURI[req.Params.URI]
 		if !ok {
 			return nil, fmt.Errorf("unknown resource: %s", req.Params.URI)
 		}
@@ -1647,7 +1647,7 @@ func (s *GraphQLSchemaServer) handleGetContext() func(ctx context.Context, reque
 			}
 		}
 
-		scan := s.contextScan
+		scan := s.contextScan.Load()
 
 		if input.URI == "" {
 			index := ContextIndex{
