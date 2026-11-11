@@ -11,13 +11,16 @@ export type InvalidArgumentImplementation = {
 
 export type InvalidFieldImplementation = {
   implementationContextCoords: Set<string>;
-  implementedResponseType?: string;
   interfaceContextCoords: Set<string>;
-  invalidAdditionalArguments: Set<string>;
+  invalidAdditionalArguments: Set<ArgumentName>;
   invalidImplementedArguments: InvalidArgumentImplementation[];
   isInaccessible: boolean;
   originalResponseType: string;
+  // Argument names that are not defined at all
   unimplementedArguments: Set<ArgumentName>;
+  implementedResponseType?: string;
+  // Argument names that are not defined in all subgraphs and are removed from the federated field definition
+  unfederatedArguments?: Set<ArgumentName>;
 };
 
 export type ImplementationErrors = {
