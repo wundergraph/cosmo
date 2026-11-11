@@ -14,7 +14,7 @@ import (
 // S3Loader loads a manifest from an S3 object. It sends If-None-Match with the
 // ETag of the last response, so an unchanged object costs one 304 response.
 // Stores that ignore If-None-Match return the object every time, and the
-// revision check skips the unchanged manifest.
+// Poller's revision check skips the unchanged manifest.
 type S3Loader struct {
 	client     minio.Core
 	bucket     string
@@ -37,7 +37,7 @@ func NewS3Loader(provider config.S3StorageProvider, objectPath string) (*S3Loade
 
 // Fetch downloads the manifest object. If the object path ends with .gz or .zst,
 // the content is decompressed.
-func (l *S3Loader) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
+func (l *S3Loader) Fetch(ctx context.Context, _ string) ([]byte, bool, error) {
 	opts := minio.GetObjectOptions{}
 	// SetMatchETagExcept rejects an empty ETag.
 	if l.etag != "" {
@@ -65,16 +65,7 @@ func (l *S3Loader) Fetch(ctx context.Context, currentRevision string) (*Manifest
 		return nil, false, fmt.Errorf("failed to read manifest from S3: %w", err)
 	}
 
-	manifest, err := ParseManifest(data)
-	if err != nil {
-		return nil, false, err
-	}
-
 	l.etag = info.ETag
 
-	if manifest.Revision == currentRevision {
-		return nil, false, nil
-	}
-
-	return manifest, true, nil
+	return data, true, nil
 }

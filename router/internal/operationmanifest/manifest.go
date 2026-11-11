@@ -12,6 +12,15 @@ type Manifest struct {
 	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
 }
 
+// Parse parses operation manifest data for a Poller.
+func Parse(data []byte) (*Manifest, string, error) {
+	manifest, err := ParseManifest(data)
+	if err != nil {
+		return nil, "", err
+	}
+	return manifest, manifest.Revision, nil
+}
+
 // ParseManifest parses and validates manifest JSON data.
 func ParseManifest(data []byte) (*Manifest, error) {
 	var manifest Manifest
