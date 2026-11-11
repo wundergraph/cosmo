@@ -897,6 +897,87 @@ func TestGetContextToolConcurrentReload(t *testing.T) {
 	wg.Wait()
 }
 
+func TestReloadKeepsContextResourcesThatStayAvailable(t *testing.T) {
+	tempDir := t.TempDir()
+	writeOperationFiles(t, tempDir, map[string]string{
+		"FindEmployee.graphql": findEmployeeOp,
+		"stable.md":            "# Stable\n",
+		"a.md":                 "# A\n",
+	})
+
+	schemaDoc := testSchemaDoc(t)
+
+	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
+		"http://localhost:4000/graphql",
+		WithLogger(zap.NewNop()),
+		WithOperationsDir(tempDir),
+		WithResourcesEnabled(true),
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.Reload(&schemaDoc, nil, ""))
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err = srv.server.Connect(t.Context(), serverTransport, nil)
+	require.NoError(t, err)
+	session, err := mcp.NewClient(&mcp.Implementation{Name: "test"}, nil).Connect(t.Context(), clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = session.Close() })
+
+	// List and read resources continuously while the document set alternates
+	// between {stable, a} and {stable, b}.
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	var missing []string
+	stop := sync.OnceFunc(func() {
+		close(done)
+		wg.Wait()
+	})
+	t.Cleanup(stop)
+	wg.Go(func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+			}
+			result, err := session.ListResources(t.Context(), &mcp.ListResourcesParams{})
+			if err != nil {
+				missing = append(missing, err.Error())
+				continue
+			}
+			if !slices.ContainsFunc(result.Resources, func(r *mcp.Resource) bool { return r.URI == "context:///stable.md" }) {
+				missing = append(missing, "context:///stable.md missing from list")
+			}
+			if _, err := session.ReadResource(t.Context(), &mcp.ReadResourceParams{URI: "context:///stable.md"}); err != nil {
+				missing = append(missing, err.Error())
+			}
+		}
+	})
+
+	for i := range 20 {
+		if i%2 == 0 {
+			require.NoError(t, os.Remove(filepath.Join(tempDir, "a.md")))
+			writeOperationFiles(t, tempDir, map[string]string{"b.md": "# B\n"})
+		} else {
+			require.NoError(t, os.Remove(filepath.Join(tempDir, "b.md")))
+			writeOperationFiles(t, tempDir, map[string]string{"a.md": "# A\n"})
+		}
+		require.NoError(t, srv.Reload(&schemaDoc, nil, ""))
+	}
+	stop()
+
+	require.Empty(t, missing)
+
+	result, err := session.ListResources(t.Context(), &mcp.ListResourcesParams{})
+	require.NoError(t, err)
+	uris := make([]string, 0, len(result.Resources))
+	for _, r := range result.Resources {
+		uris = append(uris, r.URI)
+	}
+	require.ElementsMatch(t, []string{"context:///stable.md", "context:///a.md"}, uris)
+}
+
 func TestGetContextToolNotRegisteredWhenDisabled(t *testing.T) {
 	tempDir := t.TempDir()
 	writeOperationFiles(t, tempDir, map[string]string{

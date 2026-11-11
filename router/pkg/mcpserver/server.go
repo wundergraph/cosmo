@@ -865,9 +865,8 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 //
 // The directory is scanned before anything is removed: a scan error leaves
 // the previously registered resources live instead of leaving the server
-// resource-less, and there is no window where resources are briefly
-// unregistered while the scan runs. This mirrors how Reload leaves old tools
-// registered when operation loading fails.
+// resource-less. This mirrors how Reload leaves old tools registered when
+// operation loading fails.
 func (s *GraphQLSchemaServer) registerContextResources() error {
 	if !s.resourcesEnabled || s.operationsDir == "" {
 		s.server.RemoveResources(s.registeredResources...)
@@ -881,11 +880,13 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 		return err
 	}
 
-	s.server.RemoveResources(s.registeredResources...)
-	s.registeredResources = nil
 	s.contextScan.Store(scan)
 
+	// Resources that keep their URI are replaced in place and resources that
+	// disappeared are removed afterwards, so clients never see a missing
+	// resource that stays.
 	handler := s.handleReadContextResource()
+	uris := make([]string, 0, len(scan.resources))
 	for _, res := range scan.resources {
 		s.server.AddResource(&mcp.Resource{
 			URI:         res.uri,
@@ -894,8 +895,19 @@ func (s *GraphQLSchemaServer) registerContextResources() error {
 			Description: res.description,
 			MIMEType:    res.mimeType,
 		}, handler)
-		s.registeredResources = append(s.registeredResources, res.uri)
+		uris = append(uris, res.uri)
 	}
+
+	var removed []string
+	for _, uri := range s.registeredResources {
+		if !slices.Contains(uris, uri) {
+			removed = append(removed, uri)
+		}
+	}
+	if len(removed) > 0 {
+		s.server.RemoveResources(removed...)
+	}
+	s.registeredResources = uris
 
 	s.logger.Debug("Registered MCP context resources",
 		zap.Int("resources", len(scan.resources)),
