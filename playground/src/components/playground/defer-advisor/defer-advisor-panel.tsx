@@ -1,13 +1,19 @@
 import { useMemo } from 'react';
 import { Kind } from 'graphql';
 import { Button } from '../../ui/button';
-import { slowFieldNames } from './analysis';
-import { applyDefer, listDeferLabels, makeUniqueLabel, revertDefer } from './defer-transform';
-import { getOperation, parseQuery } from './operation';
+import {
+  applyDefer,
+  getOperation,
+  listDeferLabels,
+  makeUniqueLabel,
+  parseQuery,
+  type ProbeRequest,
+  revertDefer,
+  slowFieldNames,
+  summarizeRootFields,
+} from '@wundergraph/cosmo-shared/defer-advisor';
 import { DeferAdvisorFailures } from './defer-advisor-failures';
 import { DeferAdvisorLatencies } from './defer-advisor-latencies';
-import type { ProbeRequest } from './probe';
-import { summarizeRootFields } from './root-field-summary';
 import { useDeferAdvisor } from './use-defer-advisor';
 
 type Props = {

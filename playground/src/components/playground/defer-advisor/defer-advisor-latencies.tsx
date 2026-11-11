@@ -1,7 +1,7 @@
 import { GiSnail } from 'react-icons/gi';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import type { RootFieldRow } from './root-field-summary';
+import type { RootFieldRow } from '@wundergraph/cosmo-shared/defer-advisor';
 
 type Props = {
   rows: RootFieldRow[];

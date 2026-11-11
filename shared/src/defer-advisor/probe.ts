@@ -1,6 +1,6 @@
 import { ASTNode, FieldNode, FragmentDefinitionNode, OperationDefinitionNode, print, visit } from 'graphql';
 import { z } from 'zod';
-import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation';
+import { collectRootFields, FragmentMap, getFragments, getOperation, parseQuery } from './operation.js';
 
 export const PROBE_RUNS = 3;
 
@@ -16,6 +16,8 @@ export type ProbeRequest = {
   variables: Record<string, unknown>;
   variablesError?: string;
 };
+
+const EMPTY_REQUEST: ProbeRequest = { headers: {}, variables: {} };
 
 const variablesSchema = z.record(z.string(), z.unknown());
 
@@ -86,7 +88,9 @@ const referencedFragments = (nodes: readonly ASTNode[], fragments: FragmentMap):
       },
     });
   };
-  nodes.forEach(collect);
+  for (const node of nodes) {
+    collect(node);
+  }
   return [...found.values()];
 };
 
@@ -134,7 +138,7 @@ const probeField = async (
 export const probeRootFields = async (
   url: string,
   query: string,
-  request: ProbeRequest = { headers: {}, variables: {} },
+  request: ProbeRequest = EMPTY_REQUEST,
   signal: AbortSignal = new AbortController().signal,
 ): Promise<Record<string, ProbeResult>> => {
   const doc = parseQuery(query)?.doc;
