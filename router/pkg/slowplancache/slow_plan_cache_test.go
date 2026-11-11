@@ -397,6 +397,31 @@ func TestCache_WaitAfterClose(t *testing.T) {
 	})
 }
 
+// A Set or Wait that passed the closed check just before Close still sends on
+// writeCh. Close must leave it open, or that send panics, and the Wait must not
+// block on a request that processWrites will never handle.
+func TestCache_SendAfterClose(t *testing.T) {
+	t.Parallel()
+	c, err := New[*testPlan](10, 0)
+	require.NoError(t, err)
+	c.Close()
+
+	require.NotPanics(t, func() {
+		c.enqueue(setRequest[*testPlan]{key: 1, value: &testPlan{content: "q1"}, dur: time.Millisecond})
+	})
+
+	waited := make(chan struct{})
+	go func() {
+		defer close(waited)
+		c.waitForWrites()
+	}()
+	select {
+	case <-waited:
+	case <-time.After(5 * time.Second):
+		t.Fatal("waitForWrites blocked after Close")
+	}
+}
+
 func TestCache_DoubleClose(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
