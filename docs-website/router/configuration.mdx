@@ -2787,7 +2787,7 @@ These options restore behavior of older router versions, so that you can upgrade
 
 | Option | Restores | Migration guide |
 | ------ | -------- | --------------- |
-| `persisted_operations.allow_mismatched_sha256_ids` | Persisted operations whose SHA256-like ID isn't the SHA256 hash of their body, rejected since `0.355.0`. | [Operations published before this rule](/router/persisted-queries/persisted-operations#operations-published-before-this-rule) |
+| `persisted_operations.allow_mismatched_sha256_ids` | Persisted operations whose SHA256-like ID isn't the SHA256 hash of their body, rejected since `0.355.0`. | [Mismatched SHA256 operation IDs](/router/persisted-queries/mismatched-sha256-ids) |
 
 ### Configuration Reference
 
@@ -2795,7 +2795,7 @@ These options restore behavior of older router versions, so that you can upgrade
 | -------------------- | ---- | -------- | ----------- | ------------- |
 | | backwards_compatibility | <Icon icon="square" /> | Options that restore behavior of older router versions. | |
 | | backwards_compatibility.persisted_operations | <Icon icon="square" /> | Options for persisted operations. | |
-| BACKWARDS_COMPATIBILITY_PERSISTED_OPERATIONS_ALLOW_MISMATCHED_SHA256_IDS | backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids | <Icon icon="square" /> | Serve published operations whose ID looks like a SHA256 hash but isn't the SHA256 hash of their body, as routers before `0.355.0` did. Such an ID is ambiguous; see [Operations published before this rule](/router/persisted-queries/persisted-operations#operations-published-before-this-rule) for the tradeoffs. | false |
+| BACKWARDS_COMPATIBILITY_PERSISTED_OPERATIONS_ALLOW_MISMATCHED_SHA256_IDS | backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids | <Icon icon="square" /> | Serve published operations whose ID looks like a SHA256 hash but isn't the SHA256 hash of their body, as routers before `0.355.0` did. Such an ID is ambiguous; see [Mismatched SHA256 operation IDs](/router/persisted-queries/mismatched-sha256-ids) for the tradeoffs. | false |
 
 ### Example YAML Configuration
 

@@ -1,0 +1,37 @@
+---
+title: "Mismatched SHA256 Operation IDs"
+description: "Keep serving persisted operations whose SHA256 ID doesn't match their body while you migrate them"
+noindex: true
+---
+
+Since `0.355.0`, a persisted operation ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. See [Operation IDs](/router/persisted-queries/persisted-operations#operation-ids) for the full rules.
+
+Routers before `0.355.0` didn't check SHA256 IDs against their bodies. If you published operations whose ID is the SHA256 hash of a different text than the body, those operations stop working when you upgrade.
+
+Requests for such an operation fail with status `500` and `internal server error`. The request's trace records the error `persisted operation '<id>' is invalid: an ID that looks like a SHA256 hash must be the SHA256 of its body`. With the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) and [cache warmup](/router/persisted-queries/persisted-operations#cache-warmup) enabled, each warmup, at startup and after every manifest update, also logs `Skipping PQL manifest operation whose SHA256 ID doesn't match its body` with the ID of each affected operation.
+
+To keep serving these operations while you migrate, enable `allow_mismatched_sha256_ids` in the [backwards compatibility](/router/configuration#backwards-compatibility) options:
+
+```yaml config.yaml
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: true
+```
+
+The router then serves the published body for these IDs and includes them in cache warmup. It logs a warning at startup while the option is enabled. With cache warmup enabled, every warmup also logs `Serving PQL manifest operations whose SHA256 ID doesn't match their body`, with the number of affected operations and their IDs, so you can track what is left to migrate.
+
+<Warning>
+With this option, an ID that breaks the rule names two operations: the published body, and the query whose SHA256 hash the ID is. The router can't tell them apart:
+
+- With APQ enabled, a request that sends the ID together with the query that hashes to it executes either that query or the published body, depending on what the router has cached for the ID. The request can also register that query under the ID: always with a Redis APQ store, and with the in-memory APQ store when operations aren't loaded from a manifest. Requests that send only the ID then execute the registered query instead of the published body until the APQ entry expires.
+- Without APQ, a request that sends the ID together with that query executes the published body instead of the query that was sent. So does a request that sends only that query, when safelisting or `log_unknown` looks it up by its SHA256 hash.
+
+This is harmless when both texts are the same operation, such as when only the order of fragments differs. If they could differ in meaning, don't enable the option.
+</Warning>
+
+To migrate away from the option, publish the affected operations again under new IDs, and keep the old ones until no client sends them:
+
+1. Change your tooling so that each operation's ID is the SHA256 hash of the exact body you publish, or an ID that doesn't look like a SHA256 hash. Both the body and the ID of an affected operation usually change as a result.
+2. Push the new operations with `wgc operations push`, and release clients that send the new IDs. Keep the old operations published, so that clients still sending the old IDs keep working. The new operations count toward your persisted operations limit alongside the old ones.
+3. Once clients no longer send the old IDs, [delete the old operations](/router/persisted-queries/persisted-operations#deleting-persisted-operations-in-studio). Studio warns you when an operation still receives traffic.
+4. Disable the option once no affected operations are left. With the PQL manifest, that is when cache warmup no longer logs any. Without it, check that every published ID that looks like a SHA256 hash is the SHA256 hash of its body.
