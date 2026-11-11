@@ -389,7 +389,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
       });
       expect(response.response?.code).toBe(EnumStatusCode.OK);
       expect(response.checkExtensionErrorMessage).toContain('Check extension returned an invalid response:');
-      expect(response.checkExtensionErrorMessage.length).toBeLessThan(6000);
+      expect(response.checkExtensionErrorMessage?.length).toBeLessThan(6000);
       const summary = await client.getCheckSummary({
         namespace: 'default',
         graphName: fedGraphName,
