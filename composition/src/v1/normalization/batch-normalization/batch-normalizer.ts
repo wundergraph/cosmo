@@ -25,7 +25,12 @@ import {
   unknownSubgraphNameError,
 } from '../../../errors/errors';
 import { subtractSet, upsertAuthorizationData, upsertEntityData } from '../../utils/utils';
-import { addIterableToSet, getOrThrowError, getValueOrDefault, mergeSetValueMap } from '../../../utils/utils';
+import {
+  addIterableToSet,
+  getOrThrowError,
+  getValueOrDefault,
+  mergeSetValueMap
+} from '../../../utils/utils';
 import { upsertFederatedDirectiveData } from '../utils';
 import { invalidOverrideTargetSubgraphNameWarning } from '../../warnings/warnings';
 import { MAX_OR_SCOPES } from '../../constants/constants';
@@ -56,11 +61,11 @@ export class BatchNormalizer {
   validationErrors: Array<Error> = [];
   options?: CompositionOptions;
 
-  constructor({ options, subgraphs }: BatchNormalizeParams) {
+  constructor({options, subgraphs}: BatchNormalizeParams) {
     this.options = options;
     this.subgraphs = subgraphs;
     const duplicateSubgraphNames = new Set<SubgraphName>();
-    for (const { name } of subgraphs) {
+    for (const {name} of subgraphs) {
       if (!name) {
         this.errors.push(noSubgraphNameError);
         break;
@@ -119,10 +124,10 @@ export class BatchNormalizer {
   }
 
   handleOverrides({
-    originalTypeNameByRenamedTypeName,
-    overriddenFieldNamesByParentTypeNameByTargetSubgraphName,
-    subgraphName,
-  }: HandleOverridesParams) {
+                    originalTypeNameByRenamedTypeName,
+                    overriddenFieldNamesByParentTypeNameByTargetSubgraphName,
+                    subgraphName,
+                  }: HandleOverridesParams) {
     for (const [
       targetSubgraphName,
       overriddenFieldNamesByTypeName,
@@ -194,11 +199,13 @@ export class BatchNormalizer {
           continue;
         }
 
-        const { entityCaching } = configurationData;
+        const {entityCaching} = configurationData;
         if (entityCaching) {
-          // An entity config has no field name, so it is kept.
+          /* Drop the tags of fields that @override moved to another subgraph.
+           * An entity tag has no field name, so it always stays.
+           */
           entityCaching.cacheTagConfigurations = entityCaching.cacheTagConfigurations.filter(
-            ({ fieldName }) => fieldName === undefined || !fieldNames.has(fieldName),
+            ({fieldName}) => fieldName === undefined || !fieldNames.has(fieldName),
           );
         }
       }
@@ -259,12 +266,12 @@ export class BatchNormalizer {
       });
       this.internalSubgraphBySubgraphName.set(
         subgraphName,
-        internalSubgraphFromNormalization({ normalization: normalizationResult, subgraphName }),
+        internalSubgraphFromNormalization({normalization: normalizationResult, subgraphName}),
       );
       this.handleOverrides({
         originalTypeNameByRenamedTypeName: normalizationResult.originalTypeNameByRenamedTypeName,
         overriddenFieldNamesByParentTypeNameByTargetSubgraphName:
-          normalizationResult.overriddenFieldNamesByParentTypeNameByTargetSubgraphName,
+        normalizationResult.overriddenFieldNamesByParentTypeNameByTargetSubgraphName,
         subgraphName,
       });
     }
