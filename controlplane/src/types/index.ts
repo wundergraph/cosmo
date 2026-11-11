@@ -718,6 +718,13 @@ export interface DateRange<T extends string | number = string> {
   end: T;
 }
 
+export interface GraphFieldUsage {
+  typeName: string;
+  fieldName: string;
+  requestCount: bigint;
+  subgraphs: { subgraphId: string; requestCount: bigint }[];
+}
+
 export type TimeFilters = {
   granule: string;
   dateRange: DateRange<number>;

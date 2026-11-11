@@ -13,7 +13,8 @@ import {
   type PublishedOperation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
+import { DocumentNode, GraphQLDirective, GraphQLSchema, parse, validate, buildSchema } from 'graphql';
+import { GraphQLDeferDirective } from '@graphql-tools/utils';
 import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -28,6 +29,27 @@ const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
 // Fallback used when no `persisted-operations` limit is configured for the organization's plan.
 const DEFAULT_MAX_MANIFEST_OPERATIONS = 3000;
+
+/**
+ * Adds directives to a schema if they are not already present.
+ * @param schema - The schema to add directives to.
+ * @param directives - The directives to add to the schema.
+ * @returns A new schema with the directives added.
+ */
+function withDirectives(schema: GraphQLSchema, directives: ReadonlyArray<GraphQLDirective>): GraphQLSchema {
+  const config = schema.toConfig();
+  const newDirectives = [...config.directives];
+
+  for (const directive of directives) {
+    if (schema.getDirective(directive.name)) {
+      continue;
+    }
+
+    newDirectives.push(directive);
+  }
+
+  return new GraphQLSchema({ ...config, directives: newDirectives });
+}
 
 export function publishPersistedOperations(
   opts: RouterOptions,
@@ -136,8 +158,12 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
-    const graphAST = parse(schema.schema);
-    const graphSchema = graphQLBuildASTSchema(graphAST);
+    /*
+     * `@defer` is intended to be a native GraphQL directive, but it is not yet in the spec.
+     * It is already part of the router prelude.
+     * Add the `@defer` definition here so that `@defer` is validated correctly until it is part of the spec.
+     */
+    const graphSchema = withDirectives(buildSchema(schema.clientSchema ?? schema.schema), [GraphQLDeferDirective]);
     for (const operation of req.operations) {
       const contents = operation.contents;
       let opAST: DocumentNode;

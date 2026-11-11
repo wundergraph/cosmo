@@ -96,7 +96,7 @@ export class PromptToQueryService {
       targetId: federatedGraph.targetId,
       schemaVersionId: parsed.data.version,
     });
-    if (!schemaVersion?.sdl) {
+    if (!schemaVersion?.clientSchema) {
       return create(GenerateQueryResponseSchema, {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
@@ -107,7 +107,7 @@ export class PromptToQueryService {
 
     // Invoke the `prompt to query` service
     try {
-      const schemaId = await this.getSchemaId(schemaVersion.sdl, signal);
+      const schemaId = await this.getSchemaId(schemaVersion.clientSchema, signal);
       if (!schemaId) {
         return create(GenerateQueryResponseSchema, {
           response: {

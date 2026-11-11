@@ -839,11 +839,8 @@ func TestResponseCacheTags(t *testing.T) {
 			require.ElementsMatch(t, entries, tags["declared:employees:homepage"])
 			require.ElementsMatch(t, entries, tags["subgraph:employees"])
 
-			// A root fetch's data object is a selection set rather than an
-			// entity, so there is no one typename to index it under.
-			for tag := range tags {
-				require.NotContains(t, tag, "type:", "a root fetch has no typename of its own")
-			}
+			// Indexed under the root type its fields are on.
+			require.ElementsMatch(t, entries, tags["type:employees:Query"])
 		})
 	})
 

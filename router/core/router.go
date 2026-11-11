@@ -917,14 +917,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
 			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-					r.logger.Warn(
-						"Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
-				}
+				applyCosmoCloudTraceSamplingLimit(r.logger, r.traceConfig, float64(r.registrationInfo.AccountLimits.TraceSamplingRate))
 			}
 		}
 	}
@@ -3035,6 +3028,34 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	return transport
 }
 
+// applyCosmoCloudTraceSamplingLimit lowers the sampling rate of every Cosmo
+// Cloud exporter above the account limit to the limit, so the traces recorded
+// because an upstream service sampled them also stay within it. It only warns
+// when the limit lowers the rate of the traces the router samples itself, which
+// is the lower of the global and the exporter rate. Other exporters keep their
+// rates.
+func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.Config, accountLimit float64) {
+	for _, exporter := range traceConfig.Exporters {
+		if !rtrace.IsDefaultExporter(exporter) {
+			continue
+		}
+		rate := rtrace.ExporterSamplingRate(exporter)
+		if rate <= accountLimit {
+			continue
+		}
+		// The exporter rate is above the limit, so its effective rate only exceeds it when the global rate does.
+		if traceConfig.Sampler > accountLimit {
+			logger.Warn(
+				"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
+				zap.String("endpoint", exporter.Endpoint),
+				zap.Float64("sampling_rate", min(traceConfig.Sampler, rate)),
+				zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
+			)
+		}
+		exporter.SamplingRate = &accountLimit
+	}
+}
+
 func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 	var exporters []*rtrace.ExporterConfig
 	for _, exp := range cfg.Tracing.Exporters {
@@ -3046,6 +3067,7 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 			ExportTimeout: exp.ExportTimeout,
 			Headers:       exp.Headers,
 			HTTPPath:      exp.HTTPPath,
+			SamplingRate:  exp.SamplingRate,
 		})
 	}
 
