@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -940,6 +941,10 @@ func TestRedisEvents(t *testing.T) {
 }
 
 func TestRedisClusterEvents(t *testing.T) {
+	if _, set := os.LookupEnv("SKIP_REDIS_CLUSTER_TESTS"); set {
+		t.Skip("skipping redis cluster tests")
+	}
+
 	t.Parallel()
 
 	if testing.Short() {

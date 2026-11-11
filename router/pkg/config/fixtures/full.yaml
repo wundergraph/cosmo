@@ -209,6 +209,8 @@ telemetry:
         export_timeout: 30s
         path: '/v1/traces'
         headers: {}
+        # Defaults to 1, every recorded trace.
+        sampling_rate: 0.5
     attributes:
       - key: 'wg.tracing.custom.conn.subgraph.hostport'
         value_from:
@@ -350,6 +352,9 @@ headers:
         from_file:
           path: '/etc/secrets/api-key'
           refresh_interval: 1m
+          prefix: 'Bearer '
+      - op: 'remove' # Remove headers added by previous rules
+        matching: (?i)^X-Custom-Internal-.*
     response:
       - op: 'propagate'
         algorithm: 'append'
@@ -360,6 +365,8 @@ headers:
         - op: 'propagate'
           named: Subgraph-Secret
           default: 'some-secret'
+        - op: 'remove'
+          named: 'X-API-Key'
       response:
         - op: 'set'
           name: 'X-Subgraph-Key'

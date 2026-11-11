@@ -2,15 +2,6 @@ FROM --platform=${BUILDPLATFORM} golang:1.26 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG COMMIT
-ARG DATE
-
-ARG VERSION=dev
-ENV VERSION=$VERSION
-
-ENV COMMIT=$COMMIT
-
-ENV DATE=$DATE
 
 WORKDIR /app/
 
@@ -22,6 +13,12 @@ RUN go mod download
 
 # Copy the rest of the files
 COPY . .
+
+# Declare the build info only here. DATE changes on every build, so declaring it
+# earlier would stop the layers above from being cached.
+ARG VERSION=dev
+ARG COMMIT
+ARG DATE
 
 # Build the binary with manual build info injection
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
