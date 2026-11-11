@@ -1531,6 +1531,7 @@ func (r *Router) buildMCPManifestStore(ctx context.Context) error {
 	store := operationmanifest.NewStore(r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
+		operationmanifest.Parse,
 		store,
 		cfg.PollInterval,
 		cfg.PollInterval/2,
@@ -1751,6 +1752,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 	pqlStore := operationmanifest.NewStore(r.logger)
 	poller := operationmanifest.NewPoller(
 		loader,
+		operationmanifest.Parse,
 		pqlStore,
 		r.persistedOperationsConfig.Manifest.PollInterval,
 		r.persistedOperationsConfig.Manifest.PollJitter,

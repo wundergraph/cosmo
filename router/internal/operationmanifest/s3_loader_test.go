@@ -15,12 +15,6 @@ func TestS3Loader(t *testing.T) {
 	t.Parallel()
 
 	manifestJSON := `{"version":1,"revision":"rev-1","generatedAt":"2026-10-01T00:00:00Z","operations":{"get_employees":"query { employees { id } }"}}`
-	expectedManifest := &Manifest{
-		Version:     1,
-		Revision:    "rev-1",
-		GeneratedAt: "2026-10-01T00:00:00Z",
-		Operations:  map[string]string{"get_employees": "query { employees { id } }"},
-	}
 
 	// newServer serves manifestJSON with ETag "etag-1". When honorIfNoneMatch is set,
 	// it answers a matching If-None-Match with 304, like S3. It records the
@@ -65,10 +59,10 @@ func TestS3Loader(t *testing.T) {
 
 		loader, received := newServer(t, true)
 
-		manifest, changed, err := loader.Fetch(t.Context(), "")
+		data, changed, err := loader.Fetch(t.Context(), "")
 		require.NoError(t, err)
 		require.True(t, changed)
-		require.Equal(t, expectedManifest, manifest)
+		require.Equal(t, []byte(manifestJSON), data)
 		require.Equal(t, []string{"GET /bucket/ops/manifest.json "}, received())
 	})
 
@@ -80,17 +74,17 @@ func TestS3Loader(t *testing.T) {
 		_, _, err := loader.Fetch(t.Context(), "")
 		require.NoError(t, err)
 
-		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
+		data, changed, err := loader.Fetch(t.Context(), "")
 		require.NoError(t, err)
 		require.False(t, changed)
-		require.Nil(t, manifest)
+		require.Nil(t, data)
 		require.Equal(t, []string{
 			"GET /bucket/ops/manifest.json ",
 			`GET /bucket/ops/manifest.json "etag-1"`,
 		}, received())
 	})
 
-	t.Run("compares revisions when the store ignores if-none-match", func(t *testing.T) {
+	t.Run("returns the object again when the store ignores if-none-match", func(t *testing.T) {
 		t.Parallel()
 
 		loader, received := newServer(t, false)
@@ -98,19 +92,13 @@ func TestS3Loader(t *testing.T) {
 		_, _, err := loader.Fetch(t.Context(), "")
 		require.NoError(t, err)
 
-		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
-		require.NoError(t, err)
-		require.False(t, changed)
-		require.Nil(t, manifest)
-
-		manifest, changed, err = loader.Fetch(t.Context(), "rev-0")
+		data, changed, err := loader.Fetch(t.Context(), "")
 		require.NoError(t, err)
 		require.True(t, changed)
-		require.Equal(t, expectedManifest, manifest)
+		require.Equal(t, []byte(manifestJSON), data)
 
 		require.Equal(t, []string{
 			"GET /bucket/ops/manifest.json ",
-			`GET /bucket/ops/manifest.json "etag-1"`,
 			`GET /bucket/ops/manifest.json "etag-1"`,
 		}, received())
 	})

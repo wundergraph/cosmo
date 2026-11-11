@@ -81,7 +81,7 @@ func TestFetch_SendsIfNoneMatchHeader(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, changed)
 	require.NotNil(t, result)
-	require.Equal(t, m.Revision, result.Revision)
+	require.Equal(t, mustMarshalManifest(m), result)
 	require.Equal(t, `"rev-123"`, receivedHeaders.Get("If-None-Match"))
 	require.Equal(t, "GET", receivedMethod)
 	require.Empty(t, receivedBody, "GET request should have no body")
@@ -151,8 +151,7 @@ func TestFetch_Handles200WithManifest(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, changed)
 	require.NotNil(t, result)
-	require.Equal(t, m.Revision, result.Revision)
-	require.Equal(t, m.Operations["hash1"], result.Operations["hash1"])
+	require.Equal(t, mustMarshalManifest(m), result)
 }
 
 func TestFetch_ETagRoundTrip(t *testing.T) {
@@ -174,10 +173,10 @@ func TestFetch_ETagRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, changed)
 	require.NotNil(t, result)
-	require.Equal(t, m.Revision, result.Revision)
+	require.Equal(t, mustMarshalManifest(m), result)
 
 	// Second fetch: send revision back, should get 304
-	result2, changed2, err2 := f.Fetch(context.Background(), result.Revision)
+	result2, changed2, err2 := f.Fetch(context.Background(), m.Revision)
 	require.NoError(t, err2)
 	require.False(t, changed2)
 	require.Nil(t, result2)

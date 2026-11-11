@@ -109,9 +109,9 @@ type Config struct {
 	cdnConfig                       config.CDNConfiguration
 	persistedOperationClient        *persistedoperation.Client
 	pqlStore                        *operationmanifest.Store
-	pqlPoller                       *operationmanifest.Poller
+	pqlPoller                       *operationmanifest.Poller[*operationmanifest.Manifest]
 	mcpManifestStore                *operationmanifest.Store
-	mcpManifestPoller               *operationmanifest.Poller
+	mcpManifestPoller               *operationmanifest.Poller[*operationmanifest.Manifest]
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags

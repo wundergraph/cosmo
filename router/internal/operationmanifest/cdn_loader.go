@@ -61,8 +61,8 @@ func NewCDNLoader(endpoint, token string, logger *zap.Logger) (*CDNLoader, error
 
 // Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/operations/manifest.json
 // with Bearer auth, using If-None-Match for conditional requests. The CDN returns 304 Not Modified
-// when the ETag matches, avoiding a full download. Returns (manifest, changed, err).
-func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
+// when the ETag matches, avoiding a full download. Returns (data, changed, err).
+func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) ([]byte, bool, error) {
 	manifestPath := fmt.Sprintf("/%s/%s/operations/manifest.json", f.organizationID, f.federatedGraphID)
 	manifestURL := f.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
@@ -120,10 +120,5 @@ func (f *CDNLoader) Fetch(ctx context.Context, currentRevision string) (*Manifes
 		return nil, false, fmt.Errorf("could not read response body: %w", err)
 	}
 
-	manifest, err := ParseManifest(body)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return manifest, true, nil
+	return body, true, nil
 }
