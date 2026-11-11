@@ -456,7 +456,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
             isList: true,
-            namedTypeKind: 'Input Object',
+            namedTypeNodeType: 'Input Object',
             reference: 'filter.tags.name',
             typeReference: '[Tag!]',
             untraversableReference: 'filter.tags',
@@ -480,7 +480,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
             isList: false,
-            namedTypeKind: 'Scalar',
+            namedTypeNodeType: 'Scalar',
             reference: 'id.value',
             typeReference: 'ID!',
             untraversableReference: 'id',
@@ -504,7 +504,7 @@ describe('@cacheTag tests', () => {
         invalidDirectiveError(CACHE_TAG, 'Query.products', FIRST_ORDINAL, [
           invalidCacheTagReferenceErrorMessage({
             isList: false,
-            namedTypeKind: 'Enum',
+            namedTypeNodeType: 'Enum',
             reference: 'region.code',
             typeReference: 'Region',
             untraversableReference: 'region',

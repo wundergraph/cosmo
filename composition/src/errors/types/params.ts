@@ -141,8 +141,8 @@ export type ListCacheTagKeyFieldErrorMessageParams = {
 
 export type InvalidCacheTagReferenceErrorMessageParams = {
   isList: boolean;
-  // The kind of the named type, e.g., "Enum"; used only if isList is false.
-  namedTypeKind: string;
+  // The node type of the named type, e.g., "Enum"; used only if isList is false.
+  namedTypeNodeType: string;
   reference: string;
   typeReference: string;
   untraversableReference: string;

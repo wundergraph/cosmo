@@ -4767,7 +4767,7 @@ export class NormalizationFactory {
           invalidCacheTagReferenceErrorMessage({
             isList,
             // The named type kind of an input value is not yet set, and a missing type is a base scalar.
-            namedTypeKind: kindToNodeType(namedTypeData?.kind ?? Kind.SCALAR_TYPE_DEFINITION),
+            namedTypeNodeType: kindToNodeType(namedTypeData?.kind ?? Kind.SCALAR_TYPE_DEFINITION),
             reference,
             typeReference: printTypeNode(inputValueData.type),
             untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),

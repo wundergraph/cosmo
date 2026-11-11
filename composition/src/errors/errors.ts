@@ -2328,17 +2328,17 @@ export function undefinedCacheTagInputFieldErrorMessage({
 
 export function invalidCacheTagReferenceErrorMessage({
   isList,
-  namedTypeKind,
+  namedTypeNodeType,
   reference,
   typeReference,
   untraversableReference,
 }: InvalidCacheTagReferenceErrorMessageParams): string {
   // "an Enum", but "a Scalar" and "a Union".
-  const article = /^[AEIO]/.test(namedTypeKind) ? 'an' : 'a';
+  const article = /^[AEIO]/.test(namedTypeNodeType) ? 'an' : 'a';
   return (
     `The "format" argument references "$args.${reference}",` +
     ` but "$args.${untraversableReference}" is of type "${typeReference}",` +
-    ` which is ${isList ? 'a list' : `${article} ${namedTypeKind}`}.` +
+    ` which is ${isList ? 'a list' : `${article} ${namedTypeNodeType}`}.` +
     ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
   );
 }
