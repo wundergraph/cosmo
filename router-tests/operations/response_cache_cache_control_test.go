@@ -138,7 +138,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions:      responseCacheOptions(t, time.Minute),
-			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			CacheControlPolicy: moodCacheControlPolicy,
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{Middleware: headersMiddleware("Cache-Control", "s-maxage=300", "Age", "240")},
 			},
@@ -160,7 +160,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions:      responseCacheOptions(t, 30*time.Second),
-			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			CacheControlPolicy: moodCacheControlPolicy,
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public")},
 			},
@@ -182,7 +182,7 @@ func TestResponseCacheClientCacheControl(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions:      responseCacheOptions(t, time.Minute),
-			CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
+			CacheControlPolicy: moodCacheControlPolicy,
 			Subgraphs: testenv.SubgraphsConfig{
 				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware(`public, max-age=60, no-cache="Set-Cookie"`)},
 			},
@@ -410,6 +410,12 @@ func TestResponseCacheClientCacheControlFromEntries(t *testing.T) {
 
 // headersMiddleware makes a subgraph answer with the given name, value pairs.
 // An empty value sets nothing.
+// moodCacheControlPolicy merges only mood: employees sends no Cache-Control,
+// which would make the response no-store.
+var moodCacheControlPolicy = config.CacheControlPolicy{
+	Subgraphs: []config.SubgraphCacheControlRule{{Name: "mood"}},
+}
+
 func headersMiddleware(pairs ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

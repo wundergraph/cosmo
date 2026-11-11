@@ -57,6 +57,12 @@ The algorithm evaluates the following in order:
 </Info>
 
 <Note>
+  **Subgraphs without caching information are `no-store`**
+
+  A subgraph response counts as `no-store` when it has no `Cache-Control` and no `Expires` header, or when its `Cache-Control` has no directive that affects caching (for example `no-transform` or an unknown extension). The configured default stands in for it when one is set.
+</Note>
+
+<Note>
   **Mutation Requests Automatically Set `no-cache`**
 
   If a global cache control policy is enabled, we will automatically set `Cache-Control: no-cache` to GraphQL mutation request for security reasons, ensuring that mutation results are never cached.
@@ -116,7 +122,7 @@ The algorithm evaluates the following in order:
 
 * Subgraph B: `Cache-Control: max-age=300`
 
-  * Result: Any requests which access `subgraph B` will have `Cache-Control: max-age=300` set, but requests which don't access subgraph B won't have any cache-control set
+  * Result: `Cache-Control: no-store`. Subgraph A sends no caching information and there is no default to stand in for it. A request that only accesses Subgraph B gets `Cache-Control: max-age=300`.
 
 #### Scenario 6: With subgraph error
 
@@ -126,7 +132,7 @@ The algorithm evaluates the following in order:
 
 * Subgraph B: Returns error response
 
-  * Result: Any requests which access `subgraph B` will have an error, and thus `Cache-Control: no-store, no-cache, must-revalidate` set, but requests which don't access subgraph B won't have any cache-control set.
+  * Result: Any requests which access `subgraph B` will have an error, and thus `Cache-Control: no-store, no-cache, must-revalidate` set. Requests which don't access Subgraph B get the result of the other subgraphs.
 
 By combining these mechanisms, the algorithm ensures that data handling adheres to the strictest cache control settings from all subgraph responses, promoting both security and performance integrity. Users can define global defaults to enforce a baseline cache policy, and can rely on `no-cache` or `no-store` directives for security sensitive subgraphs.
 

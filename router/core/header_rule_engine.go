@@ -928,16 +928,9 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 
 	reqCacheHeader := cacheControlValue(res.Request.Header)
-	resCacheHeader := cacheControlValue(res.Header)
 	expiresHeader, _ := http.ParseTime(res.Header.Get(expiresKey))
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
-
-	if resCacheHeader == "" && len(res.Header.Values(expiresKey)) == 0 && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
-		// Nothing from the subgraph and no default to stand in: the fetch
-		// restricts nothing, so it can't withdraw what others granted either.
-		return
-	}
 
 	// The parsers return nil on malformed input.
 	reqDir, err := cachedirective.ParseRequestCacheControl(reqCacheHeader)
@@ -947,6 +940,11 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	resDir, err := parseFreshness(res.Header)
 	if err != nil || res.StatusCode >= http.StatusBadRequest {
 		// Unreadable freshness, or a failed fetch, is not cacheable.
+		resDir = noStoreDirectives()
+	}
+	// No header, or only unknown directives: the subgraph allowed no caching.
+	silent := !hasCachingDirectives(resDir)
+	if silent && rule.Default == "" {
 		resDir = noStoreDirectives()
 	}
 	obj := &cachedirective.Object{
@@ -976,7 +974,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 			markStale(defaultResponseCache)
 			// The default stands in for a missing header. Against a fetch's own
 			// header it only caps the lifetime, so it can't withdraw public.
-			if resCacheHeader != "" {
+			if !silent {
 				defaultResponseCache.Public = resDir.Public
 			} else {
 				// Nothing of its own: the fetch is as public as the default.
@@ -1118,6 +1116,15 @@ func markStale(dir *cachedirective.ResponseCacheDirectives) {
 	if dir.MaxAge == 0 || dir.SMaxAge == 0 {
 		dir.NoCachePresent, dir.NoCache = true, nil
 	}
+}
+
+// hasCachingDirectives reports whether dir says anything about caching.
+func hasCachingDirectives(dir *cachedirective.ResponseCacheDirectives) bool {
+	return dir.MaxAge != -1 || dir.SMaxAge != -1 ||
+		dir.NoCachePresent || dir.NoStore ||
+		dir.Public || dir.PrivatePresent ||
+		dir.MustRevalidate || dir.ProxyRevalidate ||
+		dir.StaleIfError != -1 || dir.StaleWhileRevalidate != -1
 }
 
 func noStoreDirectives() *cachedirective.ResponseCacheDirectives {

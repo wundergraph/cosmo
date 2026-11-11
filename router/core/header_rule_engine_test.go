@@ -952,3 +952,36 @@ func TestMarkStale(t *testing.T) {
 	_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: dir}})
 	require.Equal(t, "no-cache", header, "a stale response is bare no-cache, not field-specific")
 }
+
+func TestHasCachingDirectives(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		header http.Header
+		want   bool
+	}{
+		{name: "no header", header: http.Header{}, want: false},
+		{name: "unknown directives", header: http.Header{"Cache-Control": {"foo, bar=1"}}, want: false},
+		{name: "no-transform only", header: http.Header{"Cache-Control": {"no-transform"}}, want: false},
+		{name: "immutable only", header: http.Header{"Cache-Control": {"immutable"}}, want: false},
+		{name: "expires only", header: http.Header{"Expires": {"Wed, 21 Oct 2026 12:00:00 GMT"}}, want: true},
+		{name: "max-age", header: http.Header{"Cache-Control": {"max-age=60"}}, want: true},
+		{name: "s-maxage", header: http.Header{"Cache-Control": {"s-maxage=60"}}, want: true},
+		{name: "public", header: http.Header{"Cache-Control": {"public"}}, want: true},
+		{name: "private", header: http.Header{"Cache-Control": {"private"}}, want: true},
+		{name: "no-cache", header: http.Header{"Cache-Control": {"no-cache"}}, want: true},
+		{name: "no-store", header: http.Header{"Cache-Control": {"no-store"}}, want: true},
+		{name: "must-revalidate", header: http.Header{"Cache-Control": {"must-revalidate"}}, want: true},
+		{name: "proxy-revalidate", header: http.Header{"Cache-Control": {"proxy-revalidate"}}, want: true},
+		{name: "stale-if-error", header: http.Header{"Cache-Control": {"stale-if-error=60"}}, want: true},
+		{name: "stale-while-revalidate", header: http.Header{"Cache-Control": {"stale-while-revalidate=60"}}, want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir, err := parseFreshness(tc.header)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, hasCachingDirectives(dir))
+		})
+	}
+}

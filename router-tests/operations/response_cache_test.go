@@ -653,8 +653,8 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 		employees.cacheControl.Store("public, max-age=60")
 
 		// Only the merged fetch is cacheable here. The root fetches and the
-		// other subgraphs send no Cache-Control, so nothing else weighs in on
-		// the header the client receives.
+		// other subgraphs send no Cache-Control; the default's longer public
+		// lifetime stands in for them, so only the merged fetch decides.
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				responseCacheStorageProviders(),
@@ -664,6 +664,7 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 						Response: []*config.ResponseHeaderRule{{
 							Operation: config.HeaderRuleOperationPropagate,
 							Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+							Default:   "public, max-age=3600",
 						}},
 					},
 				}),

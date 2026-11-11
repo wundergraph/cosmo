@@ -905,7 +905,7 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("no-cache wins against no value", func(t *testing.T) {
+		t.Run("no value wins against no-cache", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
@@ -915,7 +915,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				cc := res.Response.Header.Get("Cache-Control")
-				require.Equal(t, "no-cache", cc) // no-cache wins over max-age
+				require.Equal(t, "no-store", cc) // no value, no default: no-store
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
@@ -924,7 +924,12 @@ func TestHeaderPropagation(t *testing.T) {
 			name, policy, employees, hobbies, want string
 		}{
 			{name: "public only when every subgraph says it", employees: "public, max-age=120", hobbies: "max-age=60", want: "max-age=60"},
-			{name: "a subgraph without Cache-Control does not withdraw public", employees: "public, max-age=120", want: "max-age=120, public"},
+			{name: "a subgraph without Cache-Control makes the response no-store", employees: "public, max-age=120", want: "no-store"},
+			{name: "a subgraph with only unknown directives makes the response no-store", employees: "public, max-age=120", hobbies: "foo, bar=1", want: "no-store"},
+			{name: "only no-transform is no-store", employees: "public, max-age=120", hobbies: "no-transform", want: "no-store"},
+			{name: "the policy default stands in for a missing header", policy: "max-age=300", employees: "public, max-age=120", want: "max-age=120"},
+			{name: "the policy default stands in for unknown directives", policy: "max-age=300", employees: "public, max-age=120", hobbies: "foo", want: "max-age=120"},
+			{name: "a public policy default stands in for a missing header", policy: "max-age=300, public", employees: "public, max-age=120", want: "max-age=120, public"},
 			{name: "the policy default does not withdraw a subgraph's public", policy: "max-age=300", employees: "public, max-age=120", hobbies: "public, max-age=60", want: "max-age=60, public"},
 			{name: "zero max-age is not raised to the policy default", policy: "max-age=300", employees: "max-age=0, public", hobbies: "max-age=60", want: "no-cache"}, // no public: hobbies lacks it
 			{name: "a zero max-age default caps a subgraph's lifetime", policy: "max-age=0", employees: "max-age=600", hobbies: "max-age=600", want: "no-cache"},
@@ -1213,12 +1218,12 @@ func TestHeaderPropagation(t *testing.T) {
 						Query: queryEmployeeWithHobby,
 					})
 					cc := res.Response.Header.Get("Cache-Control")
-					require.Equal(t, "max-age=300", cc) // Shorter max-age wins
+					require.Equal(t, "no-store", cc) // employees: no header, no default
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
 			})
 
-			t.Run("partial default age doesn't set for unassociated requests", func(t *testing.T) {
+			t.Run("partial default age doesn't apply to unassociated requests", func(t *testing.T) {
 				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					CacheControlPolicy: config.CacheControlPolicy{
@@ -1232,9 +1237,7 @@ func TestHeaderPropagation(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithNoHobby,
 					})
-					val, present := res.Response.Header["Cache-Control"]
-					require.False(t, present)
-					require.Equal(t, []string(nil), val)
+					require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
 					require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 				})
 			})
@@ -1259,7 +1262,7 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("doesn't set cache control on unrelated requests", func(t *testing.T) {
+		t.Run("subgraphs without cache control make the response no-store", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				CacheControlPolicy: config.CacheControlPolicy{
@@ -1273,9 +1276,7 @@ func TestHeaderPropagation(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: queryEmployeeWithHobby,
 				})
-				val, present := res.Response.Header["Cache-Control"]
-				require.False(t, present)
-				require.Equal(t, []string(nil), val)
+				require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
