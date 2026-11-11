@@ -112,7 +112,7 @@ Filesystem storage uses `<id>.json` filenames. The 250-character limit leaves ro
 An ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. For a different ID of that length, use uppercase letters or other characters. A query sent with a SHA256 ID must hash to that ID, as with APQ.
 
 <Warning>
-A request for an operation that breaks this rule fails with an error. The router doesn't cache the operation, and manifest warmup skips it with a warning. If you published such operations for an older router, see [Mismatched SHA256 operation IDs](/router/persisted-queries/mismatched-sha256-ids).
+A request for an operation that breaks this rule fails with an error. The router doesn't cache the operation, and manifest warmup skips it with a warning.
 </Warning>
 
 With APQ enabled, IDs must be SHA256 hashes and must match the query body when both are supplied.

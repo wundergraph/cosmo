@@ -1,8 +1,38 @@
 ---
-title: "Mismatched SHA256 Operation IDs"
-description: "Keep serving persisted operations whose SHA256 ID doesn't match their body while you migrate them"
+title: "Backwards Compatibility"
+description: "Router options that restore behavior of older router versions while you migrate"
 noindex: true
 ---
+
+<Warning>
+Backwards compatibility options are intended only for migrations. They aren't covered by the router's compatibility guarantees, and any of them might be removed in any router release, without a deprecation period. Migrate away from an option as soon as you can.
+</Warning>
+
+These options restore behavior of older router versions, so that you can upgrade the router before you finish migrating away from that behavior. Each option gives up a guarantee of the current behavior. Enable an option only while you migrate, and disable it afterwards. The router logs a warning at startup while an option is enabled.
+
+| Option | Restores | Migration guide |
+| ------ | -------- | --------------- |
+| `persisted_operations.allow_mismatched_sha256_ids` | Persisted operations whose SHA256-like ID isn't the SHA256 hash of their body, rejected since `0.355.0`. | [Mismatched SHA256 operation IDs](#mismatched-sha256-operation-ids) |
+
+## Configuration Reference
+
+| Environment Variable | YAML | Required | Description | Default Value |
+| -------------------- | ---- | -------- | ----------- | ------------- |
+| | backwards_compatibility | <Icon icon="square" /> | Options that restore behavior of older router versions. | |
+| | backwards_compatibility.persisted_operations | <Icon icon="square" /> | Options for persisted operations. | |
+| BACKWARDS_COMPATIBILITY_PERSISTED_OPERATIONS_ALLOW_MISMATCHED_SHA256_IDS | backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids | <Icon icon="square" /> | Serve published operations whose ID looks like a SHA256 hash but isn't the SHA256 hash of their body, as routers before `0.355.0` did. Such an ID is ambiguous; see [Mismatched SHA256 operation IDs](#mismatched-sha256-operation-ids) for the tradeoffs. | false |
+
+## Example YAML Configuration
+
+```yaml
+version: "1"
+
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: false
+```
+
+## Mismatched SHA256 operation IDs
 
 Since `0.355.0`, a persisted operation ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. See [Operation IDs](/router/persisted-queries/persisted-operations#operation-ids) for the full rules.
 
@@ -10,7 +40,7 @@ Routers before `0.355.0` didn't check SHA256 IDs against their bodies. If you pu
 
 Requests for such an operation fail with status `500` and `internal server error`. The request's trace records the error `persisted operation '<id>' is invalid: an ID that looks like a SHA256 hash must be the SHA256 of its body`. With the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) and [cache warmup](/router/persisted-queries/persisted-operations#cache-warmup) enabled, each warmup, at startup and after every manifest update, also logs `Skipping PQL manifest operation whose SHA256 ID doesn't match its body` with the ID of each affected operation.
 
-To keep serving these operations while you migrate, enable `allow_mismatched_sha256_ids` in the [backwards compatibility](/router/configuration#backwards-compatibility) options:
+To keep serving these operations while you migrate, enable `allow_mismatched_sha256_ids`:
 
 ```yaml config.yaml
 backwards_compatibility:

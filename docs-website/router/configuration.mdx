@@ -2781,32 +2781,6 @@ By default, we support `Graphql-Client-Name` , `Graphql-Client-Version`, `Apollo
 
 The custom names are given more precedence.
 
-## Backwards Compatibility
-
-These options restore behavior of older router versions, so that you can upgrade the router before you finish migrating away from that behavior. Each option gives up a guarantee of the current behavior. Enable an option only while you migrate, and disable it afterwards. The router logs a warning at startup while an option is enabled.
-
-| Option | Restores | Migration guide |
-| ------ | -------- | --------------- |
-| `persisted_operations.allow_mismatched_sha256_ids` | Persisted operations whose SHA256-like ID isn't the SHA256 hash of their body, rejected since `0.355.0`. | [Mismatched SHA256 operation IDs](/router/persisted-queries/mismatched-sha256-ids) |
-
-### Configuration Reference
-
-| Environment Variable | YAML | Required | Description | Default Value |
-| -------------------- | ---- | -------- | ----------- | ------------- |
-| | backwards_compatibility | <Icon icon="square" /> | Options that restore behavior of older router versions. | |
-| | backwards_compatibility.persisted_operations | <Icon icon="square" /> | Options for persisted operations. | |
-| BACKWARDS_COMPATIBILITY_PERSISTED_OPERATIONS_ALLOW_MISMATCHED_SHA256_IDS | backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids | <Icon icon="square" /> | Serve published operations whose ID looks like a SHA256 hash but isn't the SHA256 hash of their body, as routers before `0.355.0` did. Such an ID is ambiguous; see [Mismatched SHA256 operation IDs](/router/persisted-queries/mismatched-sha256-ids) for the tradeoffs. | false |
-
-### Example YAML Configuration
-
-```yaml
-version: "1"
-
-backwards_compatibility:
-  persisted_operations:
-    allow_mismatched_sha256_ids: false
-```
-
 ## Apollo Compatibility Flags
 
 This configuration is used to enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.
