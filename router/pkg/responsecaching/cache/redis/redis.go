@@ -32,6 +32,7 @@ type RedisCache struct {
 
 var _ caching.Cache = (*RedisCache)(nil)
 
+// There
 const (
 	entryNamespace = "e:"
 	tagNamespace   = "t:"
