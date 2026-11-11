@@ -3,24 +3,25 @@ import { z } from 'zod';
 
 const pendingEntrySchema = z.object({
   id: z.string(),
-  path: z.array(z.unknown()),
+  path: z.array(z.unknown()).max(1000),
   label: z.string().optional(),
 });
 
 const v02PayloadSchema = z.object({
-  data: z.unknown(),
-  errors: z.unknown(),
-  extensions: z.unknown(),
-  pending: z.array(pendingEntrySchema).optional(),
+  data: z.unknown().optional(),
+  errors: z.unknown().optional(),
+  extensions: z.unknown().optional(),
+  pending: z.array(pendingEntrySchema).max(1000).optional(),
   incremental: z
     .array(
       z.object({
         id: z.string(),
-        data: z.unknown(),
-        errors: z.unknown(),
-        extensions: z.unknown(),
+        data: z.unknown().optional(),
+        errors: z.unknown().optional(),
+        extensions: z.unknown().optional(),
       }),
     )
+    .max(1000)
     .optional(),
   hasNext: z.boolean().optional(),
 });

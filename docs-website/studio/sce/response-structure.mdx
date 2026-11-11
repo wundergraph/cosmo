@@ -13,7 +13,7 @@ and the **LintIssues** as the value.
 
 You can also return a collection of error messages to be displayed in the extension’s UI.
 
-The response payload must be a JSON object no larger than **5 MB**.
+The response payload must be a JSON object no larger than **5 MiB**. It can contain at most **1,000 findings** in total, counting both `errors` and lint issues across all subgraphs. The `lintIssues` map can contain at most **1,000 subgraph names**, including entries with empty arrays. Responses that exceed these limits are rejected as invalid.
 
 ## SubgraphCheckExtensionReply
 | Field        | Type                                                           | Description                                                                                                                                                                                                      |

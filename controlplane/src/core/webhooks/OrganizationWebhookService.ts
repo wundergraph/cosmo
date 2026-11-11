@@ -11,8 +11,7 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { v4 } from 'uuid';
-import * as z from 'zod';
-import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
@@ -36,28 +35,7 @@ import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
 import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
-
-const subgraphCheckExtensionSchema = z.object({
-  errors: z.array(z.string()).optional(),
-  lintIssues: z
-    .record(
-      z.string(),
-      z.array(
-        z.object({
-          lintRuleType: z.string().trim(),
-          severity: z.nativeEnum(LintSeverity),
-          message: z.string().trim(),
-          issueLocation: z.object({
-            line: z.number().int().positive(),
-            column: z.number().int().positive(),
-            endLine: z.number().int().positive().optional(),
-            endColumn: z.number().int().positive().optional(),
-          }),
-        }),
-      ),
-    )
-    .optional(),
-});
+import { subgraphCheckExtensionSchema } from './subgraph-check-extension.js';
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -117,7 +95,7 @@ export interface ProposalStateUpdated {
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
-export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
+export type { SubgraphCheckExtensionResponse } from './subgraph-check-extension.js';
 
 type Config = {
   url?: string;
@@ -772,7 +750,7 @@ export class OrganizationWebhookService {
       requestHeaders: {},
     };
 
-    const response = await this.#sendWebhookRequest<SubgraphCheckExtensionResponse>(
+    const response = await this.#sendWebhookRequest<unknown>(
       sceConfig.endpoint,
       sceConfig.secretKey,
       payload,
@@ -812,7 +790,11 @@ export class OrganizationWebhookService {
         }
       } else {
         overwriteErrorMessage = true;
-        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
+        const issues = parsedResponse.error.issues.slice(0, 10).map((issue) => ({
+          path: issue.path.map(String).join('.').slice(0, 200),
+          message: issue.message.slice(0, 300),
+        }));
+        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${JSON.stringify(issues)}.`;
       }
     }
 

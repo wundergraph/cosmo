@@ -32,6 +32,13 @@ const collect = async (parts: AsyncIterable<unknown[]>) => {
 };
 
 describe('readDeferStream', () => {
+  test.each(['pending', 'incremental'])('rejects oversized %s before validating entries', async (field) => {
+    const payload = { [field]: Array.from({ length: 1001 }, () => ({})) };
+    const body = `--graphql\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(payload)}\r\n--graphql--`;
+    await expect(collect(readDeferStream(responseOf(body, 4096)))).rejects.toMatchObject({
+      issues: [expect.objectContaining({ code: 'too_big', path: [field] })],
+    });
+  });
   for (const size of [1, 7, 4096]) {
     test(`yields path-based parts from the v0.2 body (chunks of ${size} bytes)`, async () => {
       const parts = await collect(readDeferStream(responseOf(ROUTER_V02_BODY, size)));

@@ -19,6 +19,10 @@ The playground is enhanced with visual representations of the query execution pl
 For more information about Advanced Request Tracing (ART) click [here](/router/advanced-request-tracing-art)
 </Info>
 
+## Response validation limits
+
+For incremental responses, each multipart payload can contain at most 1,000 `pending` entries and 1,000 `incremental` entries. Each pending path can contain at most 1,000 segments. Defer Advisor probes reject responses containing more than 1,000 errors. These limits bound validation work on responses from external GraphQL endpoints.
+
 ## Choosing what to query
 
 The dropdown in the playground toolbar selects what the editor validates against and where requests are sent:

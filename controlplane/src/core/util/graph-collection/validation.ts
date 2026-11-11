@@ -75,7 +75,7 @@ const operationVariablesSchema = z
 
 type Validated<T> = { ok: true; value: T } | { ok: false; error: string };
 
-const toResult = <T>(parsed: z.SafeParseReturnType<unknown, T>): Validated<T> =>
+const toResult = <T>(parsed: z.ZodSafeParseResult<T>): Validated<T> =>
   parsed.success ? { ok: true, value: parsed.data } : { ok: false, error: parsed.error.issues[0].message };
 
 /**
