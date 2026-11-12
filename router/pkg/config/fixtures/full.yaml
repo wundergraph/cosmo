@@ -122,6 +122,8 @@ mcp:
     provider_id: mcp
     object_path: mcp/manifest.json
     poll_interval: 30s
+  resources:
+    enabled: true
   output_schema:
     enabled: true
 
