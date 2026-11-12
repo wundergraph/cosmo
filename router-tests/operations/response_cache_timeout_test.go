@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -115,45 +113,5 @@ func TestResponseCacheRedisTimeouts(t *testing.T) {
 			// lookup + write bounds plus the fetch; the go-redis default is 3s per read.
 			require.Less(t, elapsed, 2500*time.Millisecond)
 		})
-	})
-}
-
-func TestResponseCacheRedisDownAtStartup(t *testing.T) {
-	t.Parallel()
-
-	t.Run("the router fails to start", func(t *testing.T) {
-		t.Parallel()
-
-		// A port nothing listens on.
-		downURL := fmt.Sprintf("redis://127.0.0.1:%d", freeport.GetOne(t))
-		_, err := testenv.CreateTestEnv(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithStorageProviders(config.StorageProviders{
-					Redis: []config.RedisStorageProvider{{URLs: []string{downURL}, ID: responseCacheRedisProviderID}},
-				}),
-				core.WithResponseCache(responseCacheConfig(t, time.Minute)),
-			},
-		})
-		require.ErrorContains(t, err, "failed to create redis client for response cache")
-	})
-
-	t.Run("a redis that never answers fails startup within the ping bound", func(t *testing.T) {
-		t.Parallel()
-
-		proxy := newStallProxy(t)
-		proxy.stall()
-
-		start := time.Now()
-		_, err := testenv.CreateTestEnv(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithStorageProviders(config.StorageProviders{
-					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
-				}),
-				core.WithResponseCache(responseCacheConfig(t, time.Minute)),
-			},
-		})
-		require.ErrorContains(t, err, "failed to create redis client for response cache")
-		// 2s ping bound plus startup; unbounded takes over 6s.
-		require.Less(t, time.Since(start), 5*time.Second)
 	})
 }

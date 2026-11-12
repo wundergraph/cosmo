@@ -40,7 +40,8 @@ func TestRedisCacheNoDanglingEntriesStress(t *testing.T) {
 
 	prefix := fmt.Sprintf("stress:%d:", time.Now().UnixNano())
 	newCache := func() *RedisCache {
-		c := NewRedisCache(redis.NewClient(&redis.Options{Addr: addr, PoolSize: 4}), prefix)
+		c, err := NewRedisCache(t.Context(), redis.NewClient(&redis.Options{Addr: addr, PoolSize: 4}), prefix)
+		require.NoError(t, err)
 		t.Cleanup(func() { _ = c.Close() })
 		return c
 	}

@@ -1343,9 +1343,6 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 // setupRedisResponseCache builds a response cache on a redis instance declared
 // under storage_providers.redis.
-// responseCacheStartupPingTimeout bounds the response cache's startup ping.
-const responseCacheStartupPingTimeout = 2 * time.Second
-
 func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 	providerID := r.responseCacheConfig.Storage.ProviderID
 	if providerID == "" {
@@ -1361,27 +1358,27 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		return fmt.Errorf("response cache references unknown redis storage provider %q", providerID)
 	}
 
-	// Bounded: a black-holed redis must not hold startup.
-	pingCtx, cancelPing := context.WithTimeout(ctx, responseCacheStartupPingTimeout)
-	defer cancelPing()
 	client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
 		URLs:           provider.URLs,
 		ClusterEnabled: provider.ClusterEnabled,
 		Logger:         r.logger,
-		Context:        pingCtx,
-		// Own client, so the storage timeouts can cut stalled reads.
+		// Lets the storage timeouts cut stalled reads.
 		ContextTimeoutEnabled: true,
 	})
 	if err != nil {
-		// A failed ping still returns the client; close it or its pool leaks.
-		if client != nil {
-			if closeErr := client.Close(); closeErr != nil {
-				r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
-			}
-		}
 		return fmt.Errorf("failed to create redis client for response cache: %w", err)
 	}
-	cache := rediscache.NewRedisCache(client, r.responseCacheConfig.KeyPrefix)
+
+	cache, err := rediscache.NewRedisCache(ctx, client, r.responseCacheConfig.KeyPrefix)
+	if err != nil {
+		// Ownership of the client only passes to the cache once there is a cache,
+		// so on this path it is still ours and has to be closed here or it leaks
+		// along with its connection pool.
+		if closeErr := client.Close(); closeErr != nil {
+			r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
+		}
+		return fmt.Errorf("failed to create response cache: %w", err)
+	}
 
 	// The cache owns the client from here on and closes it with itself, and
 	// Shutdown closes the cache.

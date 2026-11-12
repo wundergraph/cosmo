@@ -27,10 +27,11 @@ func TestRedisCacheWalkReadsThePrimary(t *testing.T) {
 
 	prefix := fmt.Sprintf("replica:%d:", time.Now().UnixNano())
 	newCache := func(readOnly bool) *RedisCache {
-		c := NewRedisCache(redis.NewClusterClient(&redis.ClusterOptions{
+		c, err := NewRedisCache(t.Context(), redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:    strings.Split(addrs, ","),
 			ReadOnly: readOnly,
 		}), prefix)
+		require.NoError(t, err)
 		t.Cleanup(func() { _ = c.Close() })
 		return c
 	}
