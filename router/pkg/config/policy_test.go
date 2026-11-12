@@ -8,6 +8,8 @@ import (
 )
 
 func TestPolicyConfiguration(t *testing.T) {
+	t.Parallel()
+
 	for _, tt := range []struct {
 		name   string
 		policy string
@@ -28,6 +30,7 @@ func TestPolicyConfiguration(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			path := createTempFileFromFixture(t, fmt.Sprintf(`
 version: "1"
 router_config_path: config.json
