@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.263.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.262.1...controlplane@0.263.0) (2026-11-12)
+
+### Features
+
+* send the client schema instead of the federated schema to the prompt to query service ([#3490](https://github.com/wundergraph/cosmo/issues/3490)) ([6063223](https://github.com/wundergraph/cosmo/commit/6063223d27453c1142419e6e8ac6c573af5bf3a2)) (@wilsonrivera)
+
+### Bug Fixes
+
+* migrate all packages to Zod v4 ([#3511](https://github.com/wundergraph/cosmo/issues/3511)) ([68cc6a9](https://github.com/wundergraph/cosmo/commit/68cc6a9631b45ba4614963299dbc1186c661bdff)) (@comatory)
+* show all permitted federated graphs when rules mix namespaces and graphs ([#3510](https://github.com/wundergraph/cosmo/issues/3510)) ([c3b4d25](https://github.com/wundergraph/cosmo/commit/c3b4d25f90be67f5782939ddc2295579ab030583)) (@JivusAyrus)
+
 ## [0.262.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.262.0...controlplane@0.262.1) (2026-11-10)
 
 **Note:** Version bump only for package controlplane

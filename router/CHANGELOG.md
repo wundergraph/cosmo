@@ -4,6 +4,15 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.369.2](https://github.com/wundergraph/cosmo/compare/router@0.369.1...router@0.369.2) (2026-11-12)
+
+### Bug Fixes
+
+* migrate all packages to Zod v4 ([#3511](https://github.com/wundergraph/cosmo/issues/3511)) ([68cc6a9](https://github.com/wundergraph/cosmo/commit/68cc6a9631b45ba4614963299dbc1186c661bdff)) (@comatory)
+* **router:** accurate client Cache-Control and request directives for response cache ([#3384](https://github.com/wundergraph/cosmo/issues/3384)) ([f36777c](https://github.com/wundergraph/cosmo/commit/f36777c9f3af66d702a6f7bf07ff888507f4d048)) (@SkArchon)
+* **router:** invalidate root entries and in-flight writes ([#3377](https://github.com/wundergraph/cosmo/issues/3377)) ([cfc369d](https://github.com/wundergraph/cosmo/commit/cfc369d000c453959bbb70a211382a937086f19a)) (@SkArchon)
+* **router:** keep slowplancache Close from racing Set and Wait ([#3509](https://github.com/wundergraph/cosmo/issues/3509)) ([bd9e01b](https://github.com/wundergraph/cosmo/commit/bd9e01b8003c13b53d924eaba63bc7c07d30324f)) (@fiam)
+
 ## [0.369.1](https://github.com/wundergraph/cosmo/compare/router@0.369.0...router@0.369.1) (2026-11-10)
 
 **Note:** Version bump only for package router
