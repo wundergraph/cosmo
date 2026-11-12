@@ -412,6 +412,8 @@ authentication:
 
 authorization:
   require_authentication: false # Set to true to disable requests without authentication
+  policies:
+    source: module
 
 cdn:
   url: https://cosmo-cdn.wundergraph.com

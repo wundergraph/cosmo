@@ -251,6 +251,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.authorizer != nil {
+		policyCtx, err := h.authorizer.decidePolicies(resolveCtx.Context(), reqCtx.operation.preparedPlan.preparedPlan)
+		if err != nil {
+			h.log.Warn("Policy decision failed", zap.Error(err))
+			h.WriteError(resolveCtx, ErrUnauthorized, nil, w)
+			return
+		}
+		resolveCtx = resolveCtx.WithContext(policyCtx)
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)
 		if h.authorizer.IsPreFetchFieldAuthorizationEnabled() {

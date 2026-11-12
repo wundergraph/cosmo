@@ -753,7 +753,7 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 	if fieldConfiguration.AuthorizationConfiguration.RequiresAuthentication {
 		return true
 	}
-	if len(fieldConfiguration.AuthorizationConfiguration.RequiredOrScopes) > 0 {
+	if len(fieldConfiguration.AuthorizationConfiguration.RequiredOrScopes) > 0 || len(fieldConfiguration.AuthorizationConfiguration.RequiredOrPolicies) > 0 {
 		return true
 	}
 	return false

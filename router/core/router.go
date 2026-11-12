@@ -690,6 +690,7 @@ func (r *Router) listenAndServe() error {
 
 func (r *Router) initModules(ctx context.Context) error {
 	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
+	var policyDecisionHandler PolicyDecisionHandler
 
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
@@ -727,6 +728,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			if err := fn.Provision(mc); err != nil {
 				return fmt.Errorf("failed to provision module '%s': %w", moduleInfo.ID, err)
 			}
+		}
+
+		if fn, ok := moduleInstance.(PolicyDecisionHandler); ok {
+			if policyDecisionHandler != nil {
+				return fmt.Errorf("only one policy decision module can be registered")
+			}
+			policyDecisionHandler = fn
 		}
 
 		if fn, ok := moduleInstance.(RouterMiddlewareHandler); ok {
@@ -817,6 +825,14 @@ func (r *Router) initModules(ctx context.Context) error {
 		formatter = wrap(formatter)
 	}
 	r.spanNameFormatter = formatter
+
+	if r.authorization != nil {
+		policyDecider, err := newPolicyDecider(r.authorization.Policies, policyDecisionHandler)
+		if err != nil {
+			return fmt.Errorf("failed to configure the policy decider: %w", err)
+		}
+		r.policyDecider = policyDecider
+	}
 
 	return nil
 }

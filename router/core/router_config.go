@@ -166,6 +166,7 @@ type Config struct {
 	// the new overrides config
 	overrides                     config.OverridesConfiguration
 	authorization                 *config.AuthorizationConfiguration
+	policyDecider                 PolicyDecider
 	rateLimit                     *config.RateLimitConfiguration
 	webSocketConfiguration        *config.WebSocketConfiguration
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration

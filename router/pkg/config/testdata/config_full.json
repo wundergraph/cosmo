@@ -784,7 +784,10 @@
   "Authorization": {
     "RequireAuthentication": false,
     "RejectOperationIfUnauthorized": false,
-    "EnablePreFetchFieldAuthorization": false
+    "EnablePreFetchFieldAuthorization": false,
+    "Policies": {
+      "Source": "module"
+    }
   },
   "RateLimit": {
     "Enabled": true,
