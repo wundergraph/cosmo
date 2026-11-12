@@ -21,12 +21,14 @@ import {
   type InvalidRepeatedDirectiveErrorParams,
   type InvalidSubValueFieldLinkDirectiveImportErrorParams,
   type invalidVersionLinkDirectiveUrlErrorParams,
+  type ListCacheTagKeyFieldErrorMessageParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
   type UnavailableCacheTagReferenceErrorMessageParams,
   type UndefinedCacheTagInputFieldErrorMessageParams,
+  type UndefinedCacheTagKeyFieldErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -2346,8 +2348,8 @@ export function blankCacheTagFormatErrorMessage(): string {
 export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
   return (
     `The "format" argument defines invalid placeholder "{${placeholder}}":` +
-    ` placeholders must be of the form "{$args.<argumentName>}", where a field of an Input Object argument` +
-    ` is referenced by a period-delimited path, e.g. "{$args.filter.category}".`
+    ` placeholders must be of the form "{$args.<path>}" upon a Query root field or "{$key.<path>}" upon an entity,` +
+    ` where <path> is period-delimited, e.g. "{$args.filter.category}" or "{$key.id}".`
   );
 }
 
@@ -2367,6 +2369,38 @@ export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string)
   return `The "format" argument defines placeholder namespace "$${namespace}", but only "$args" is supported.`;
 }
 
+export function nonResolvableEntityCacheTagErrorMessage(): string {
+  return `The directive upon an Object is valid only if the Object is an entity that defines a resolvable "@key" directive.`;
+}
+
+export function unsupportedEntityCacheTagNamespaceErrorMessage(namespace: string): string {
+  return `The "format" argument defines placeholder namespace "$${namespace}", but only "$key" is supported upon an entity.`;
+}
+
+export function undefinedCacheTagKeyFieldErrorMessage({
+  fieldSets,
+  reference,
+}: UndefinedCacheTagKeyFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$key.${reference}",` +
+    ` but the following resolvable "@key" field set${fieldSets.length > 1 ? 's do' : ' does'}` +
+    ` not select it as a leaf field: "` +
+    fieldSets.join(QUOTATION_JOIN) +
+    `". A "$key" reference must be a leaf field that every resolvable "@key" field set selects.`
+  );
+}
+
+export function listCacheTagKeyFieldErrorMessage({
+  listReference,
+  reference,
+  typeReference,
+}: ListCacheTagKeyFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$key.${reference}",` +
+    ` but "$key.${listReference}" is of type "${typeReference}", which is a list.`
+  );
+}
+
 export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
   return `The "format" argument references "$args.${reference}", which is not an argument of the field.`;
 }
@@ -2383,13 +2417,18 @@ export function undefinedCacheTagInputFieldErrorMessage({
 }
 
 export function invalidCacheTagReferenceErrorMessage({
+  isList,
+  namedTypeNodeType,
   reference,
   typeReference,
   untraversableReference,
 }: InvalidCacheTagReferenceErrorMessageParams): string {
+  // "an Enum", but "a Scalar" and "a Union".
+  const article = /^[AEIO]/.test(namedTypeNodeType) ? 'an' : 'a';
   return (
     `The "format" argument references "$args.${reference}",` +
-    ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
+    ` but "$args.${untraversableReference}" is of type "${typeReference}",` +
+    ` which is ${isList ? 'a list' : `${article} ${namedTypeNodeType}`}.` +
     ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
   );
 }
