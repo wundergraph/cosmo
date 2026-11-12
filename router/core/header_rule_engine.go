@@ -83,6 +83,8 @@ type responseHeaderPropagation struct {
 type fetchCacheControl struct {
 	policy  *cachedirective.Object
 	expires bool
+	// injected is set when a set rule wrote Cache-Control or Expires.
+	injected bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -750,6 +752,10 @@ func (h *HeaderPropagation) applyResponseHeaderRules(ctx context.Context, header
 		}
 	}
 
+	// A set rule speaks for the subgraph: judge what it wrote.
+	if silent && fetch.injected {
+		silent = silentOrigin(resp.Header, statusCode)
+	}
 	// Per fetch, not per rule: any rule's default may stand in.
 	if silent {
 		h.noStoreSilentFetch(fetch, resp.Request.Context(), subgraphName)
@@ -771,6 +777,9 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 		// came from the subgraph. Downstream rules (propagate, cache control
 		// algorithm, etc.) will process it naturally.
 		res.Header.Set(rule.Name, rule.Value)
+		if propagation.fetch != nil && (strings.EqualFold(rule.Name, cacheControlKey) || strings.EqualFold(rule.Name, expiresKey)) {
+			propagation.fetch.injected = true
+		}
 		return
 	}
 

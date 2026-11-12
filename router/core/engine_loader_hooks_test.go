@@ -1069,6 +1069,44 @@ func TestOnFinished_MissingNoStore(t *testing.T) {
 	})
 }
 
+func TestOnFinished_MissingNoStoreSetRule(t *testing.T) {
+	t.Parallel()
+
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	run := func(t *testing.T, name, value string) string {
+		rules := &config.HeaderRules{Subgraphs: map[string]*config.GlobalHeaderRule{"b": {Response: []*config.ResponseHeaderRule{
+			{Operation: config.HeaderRuleOperationSet, Name: name, Value: value},
+		}}}}
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), rules,
+			CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}))
+		require.NoError(t, err)
+		propagation.missingNoStore = true
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		hooks.OnFinished(ctx, b, okResponse(""))
+		return client.header.Get(cacheControlKey)
+	}
+
+	t.Run("a set Cache-Control speaks for the subgraph", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60, public", run(t, "cache-control", "max-age=60, public"))
+	})
+
+	t.Run("a set with only unknown directives is still silent", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, "Cache-Control", "foo"))
+	})
+
+	t.Run("a set of another header is still silent", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, "X-Other", "1"))
+	})
+}
+
 func TestOnFinished_AnyPublicPerFetch(t *testing.T) {
 	t.Parallel()
 
