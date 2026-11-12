@@ -1317,7 +1317,7 @@
   },
   "BackwardsCompatibility": {
     "PersistedOperations": {
-      "AllowMismatchedSHA256IDs": true
+      "AllowMismatchedSHA256IDs": false
     }
   },
   "Plugins": {
