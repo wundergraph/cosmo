@@ -101,6 +101,23 @@ func TestPoller(t *testing.T) {
 		})
 	})
 
+	t.Run("Poll fetches without jitter when configured with negative jitter", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Test(t, func(t *testing.T) {
+			loader := &fakeLoader{manifest: rev1}
+			store := NewStore(zap.NewNop())
+			poller := NewPoller(loader, store, time.Second, -time.Second, nil)
+
+			go poller.Poll(t.Context())
+
+			time.Sleep(2 * time.Second)
+			synctest.Wait()
+			require.Equal(t, 2, loader.fetchCount())
+			require.Equal(t, rev1, store.Snapshot())
+		})
+	})
+
 	t.Run("Poll stops fetching after the context is canceled", func(t *testing.T) {
 		t.Parallel()
 

@@ -22,7 +22,7 @@ type Poller struct {
 }
 
 // NewPoller creates a poller that fetches every pollInterval plus a random
-// jitter of up to pollJitter. A pollJitter of zero disables the jitter.
+// jitter of up to pollJitter. A non-positive pollJitter disables the jitter.
 func NewPoller(loader Loader, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
 	if pollInterval <= 0 {
 		pollInterval = 10 * time.Second
@@ -34,7 +34,7 @@ func NewPoller(loader Loader, store *Store, pollInterval, pollJitter time.Durati
 		loader:       loader,
 		store:        store,
 		pollInterval: pollInterval,
-		pollJitter:   pollJitter,
+		pollJitter:   max(0, pollJitter),
 		logger:       logger,
 	}
 }
