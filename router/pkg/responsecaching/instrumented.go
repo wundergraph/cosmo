@@ -97,10 +97,11 @@ func errorType(err error) string {
 	switch {
 	case errors.Is(err, context.Canceled):
 		return metric.ResponseCacheErrorCanceled
-	case errors.As(err, &partial):
-		return metric.ResponseCacheErrorPartialWrite
+	// Timeout first: a write cut by write_timeout is usually partial too.
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &netErr) && netErr.Timeout():
 		return metric.ResponseCacheErrorTimeout
+	case errors.As(err, &partial):
+		return metric.ResponseCacheErrorPartialWrite
 	case errors.Is(err, caching.ErrMissingTTL), errors.Is(err, caching.ErrNoKeys), errors.Is(err, caching.ErrNoItems):
 		return metric.ResponseCacheErrorInvalidArgument
 	default:

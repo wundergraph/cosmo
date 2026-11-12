@@ -218,8 +218,18 @@ func TestErrorType(t *testing.T) {
 		{name: "a network timeout", err: fmt.Errorf("get: %w", timeoutError{}), want: metric.ResponseCacheErrorTimeout},
 		{
 			name: "a partial write",
-			err:  &caching.SetManyError{KnownStoredKeys: []string{"a"}, Err: timeoutError{}},
+			err:  &caching.SetManyError{KnownStoredKeys: []string{"a"}, Err: errors.New("connection reset")},
 			want: metric.ResponseCacheErrorPartialWrite,
+		},
+		{
+			name: "a partial write cut by a deadline",
+			err:  &caching.SetManyError{KnownStoredKeys: []string{"a"}, Err: fmt.Errorf("finishing write: %w", context.DeadlineExceeded)},
+			want: metric.ResponseCacheErrorTimeout,
+		},
+		{
+			name: "a partial write cut by a network timeout",
+			err:  &caching.SetManyError{KnownStoredKeys: []string{"a"}, Err: timeoutError{}},
+			want: metric.ResponseCacheErrorTimeout,
 		},
 		{name: "a missing TTL", err: fmt.Errorf("%w: key a", caching.ErrMissingTTL), want: metric.ResponseCacheErrorInvalidArgument},
 		{name: "no keys", err: caching.ErrNoKeys, want: metric.ResponseCacheErrorInvalidArgument},
