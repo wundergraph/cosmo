@@ -73,7 +73,7 @@ const headersSchema = jsonText.pipe(z.record(z.string(), z.unknown())).transform
  * Parses one of the editors, reporting why it was dropped using zod's own issue messages
  * rather than throwing, so a malformed editor never blocks copying the rest of the request.
  */
-const parseEditor = <S extends z.ZodType<unknown, z.ZodTypeDef, string>>(
+const parseEditor = <S extends z.ZodType<unknown, string>>(
   schema: S,
   value: string | null | undefined,
   label: string,
