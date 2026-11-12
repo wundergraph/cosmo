@@ -1804,15 +1804,17 @@ func (s *graphServer) buildGraphMux(
 	if s.authorization != nil {
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 		authorizerOptions.EnablePreFetchFieldAuthorization = s.authorization.EnablePreFetchFieldAuthorization
-		authorizerOptions.PolicyDecider, err = newPolicyDecider(s.authorization.Policies, s.policyDecisionHandler)
-		if err != nil {
-			return nil, fmt.Errorf("configure policy decider: %w", err)
-		}
+		authorizerOptions.PolicyDecider = s.policyDecider
 	}
+	// The schema of each graph mux can add policy fields, so the check runs per mux and not at the router start.
 	if authorizerOptions.PolicyDecider == nil {
-		if field := firstPolicyField(opts.EngineConfig.FieldConfigurations); field != nil {
+		fields := opts.EngineConfig.FieldConfigurations
+		if i := slices.IndexFunc(fields, func(field *nodev1.FieldConfiguration) bool {
+			return len(field.GetAuthorizationConfiguration().GetRequiredOrPolicies()) > 0
+		}); i >= 0 {
 			s.logger.Warn("Schema contains policy fields without a policy decider; all policies are denied",
-				zap.String("field", field.GetTypeName()+"."+field.GetFieldName()))
+				zap.String("field", fields[i].GetTypeName()+"."+fields[i].GetFieldName()),
+				zap.String("feature_flag", opts.FeatureFlagName))
 		}
 	}
 

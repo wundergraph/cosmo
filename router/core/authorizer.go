@@ -361,16 +361,6 @@ next:
 	return false
 }
 
-// firstPolicyField returns the first field configuration that carries a policy, or nil.
-func firstPolicyField(fields []*nodev1.FieldConfiguration) *nodev1.FieldConfiguration {
-	for _, field := range fields {
-		if len(field.GetAuthorizationConfiguration().GetRequiredOrPolicies()) > 0 {
-			return field
-		}
-	}
-	return nil
-}
-
 type grantedPoliciesKey struct{}
 
 // decidePolicies asks the policy decider once for all policies of the operation and stores the

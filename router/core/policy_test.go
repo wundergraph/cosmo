@@ -199,31 +199,3 @@ func TestPolicyWithScopes(t *testing.T) {
 		})
 	}
 }
-
-func TestFirstPolicyField(t *testing.T) {
-	scopes := &nodev1.FieldConfiguration{
-		TypeName:  "Query",
-		FieldName: "scoped",
-		AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
-			RequiredOrScopes: []*nodev1.Scopes{
-				{
-					RequiredAndScopes: []string{"a"},
-				},
-			},
-		},
-	}
-	policy := &nodev1.FieldConfiguration{
-		TypeName:  "Query",
-		FieldName: "secret",
-		AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
-			RequiredOrPolicies: []*nodev1.Policies{
-				{
-					RequiredAndPolicies: []string{"a"},
-				},
-			},
-		},
-	}
-	require.Nil(t, firstPolicyField(nil))
-	require.Nil(t, firstPolicyField([]*nodev1.FieldConfiguration{scopes}))
-	require.Same(t, policy, firstPolicyField([]*nodev1.FieldConfiguration{scopes, policy}))
-}
