@@ -1482,6 +1482,15 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 			Kafka: kafkaEventSources,
 			Redis: redisEventSources,
 		},
+		// The demo schema has fields in cursor mode, which require a keyring.
+		DeliveryGuarantees: config.DeliveryGuaranteesConfiguration{
+			CursorResume: config.CursorResumeConfiguration{
+				IdentityClaim: "sub",
+				Keys: []config.CursorKeyConfiguration{
+					{ID: 1, Secret: "router-tests-cursor-secret-0123456789"},
+				},
+			},
+		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {
 		testConfig.ModifyEventsConfiguration(&eventsConfiguration)

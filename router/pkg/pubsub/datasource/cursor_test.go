@@ -489,6 +489,82 @@ func (c testCursorSubscriptionConfig) DeliveryGuaranteeMode() DeliveryGuaranteeM
 	return ""
 }
 
+func TestCursorRequestData(t *testing.T) {
+	t.Parallel()
+
+	// expected is the specification: uvarint-length-prefixed provider type and provider id,
+	// uvarint topic count, then every topic length-prefixed in sorted order.
+	lp := func(s string) []byte { return append([]byte{byte(len(s))}, s...) }
+	join := func(parts ...[]byte) []byte { return slices.Concat(parts...) }
+
+	t.Run("follows the specification", func(t *testing.T) {
+		t.Parallel()
+		got, err := cursorRequestData(testCursorSubscriptionConfig{
+			providerType: "kafka", providerID: "my-kafka", topics: []string{"b", "a"},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, join(lp("kafka"), lp("my-kafka"), []byte{2}, lp("a"), lp("b")), got)
+	})
+
+	t.Run("topic order does not matter and the config is not modified", func(t *testing.T) {
+		t.Parallel()
+		topics := []string{"b", "a", "c"}
+		a, err := cursorRequestData(testCursorSubscriptionConfig{providerType: "kafka", providerID: "p", topics: topics})
+		require.NoError(t, err)
+		b, err := cursorRequestData(testCursorSubscriptionConfig{providerType: "kafka", providerID: "p", topics: []string{"c", "b", "a"}})
+		require.NoError(t, err)
+		assert.Equal(t, a, b)
+		assert.Equal(t, []string{"b", "a", "c"}, topics)
+	})
+
+	t.Run("differs per subscription", func(t *testing.T) {
+		t.Parallel()
+		base := testCursorSubscriptionConfig{providerType: "kafka", providerID: "p", topics: []string{"a", "b"}}
+		baseData, err := cursorRequestData(base)
+		require.NoError(t, err)
+
+		for name, conf := range map[string]testCursorSubscriptionConfig{
+			"provider type":    {providerType: "nats", providerID: "p", topics: []string{"a", "b"}},
+			"provider id":      {providerType: "kafka", providerID: "q", topics: []string{"a", "b"}},
+			"extra topic":      {providerType: "kafka", providerID: "p", topics: []string{"a", "b", "c"}},
+			"fewer topics":     {providerType: "kafka", providerID: "p", topics: []string{"a"}},
+			"different topic":  {providerType: "kafka", providerID: "p", topics: []string{"a", "c"}},
+			"topics merged":    {providerType: "kafka", providerID: "p", topics: []string{"ab"}},
+			"no topics":        {providerType: "kafka", providerID: "p"},
+			"id moved to type": {providerType: "kafkap", providerID: "", topics: []string{"a", "b"}},
+		} {
+			data, err := cursorRequestData(conf)
+			require.NoError(t, err, name)
+			assert.NotEqual(t, baseData, data, name)
+		}
+	})
+
+	t.Run("topic boundaries are unambiguous", func(t *testing.T) {
+		t.Parallel()
+		a, err := cursorRequestData(testCursorSubscriptionConfig{providerType: "kafka", providerID: "p", topics: []string{"a", "bc"}})
+		require.NoError(t, err)
+		b, err := cursorRequestData(testCursorSubscriptionConfig{providerType: "kafka", providerID: "p", topics: []string{"ab", "c"}})
+		require.NoError(t, err)
+		assert.NotEqual(t, a, b)
+	})
+
+	t.Run("provider without cursor support is rejected", func(t *testing.T) {
+		t.Parallel()
+		_, err := cursorRequestData(subscriptionConfigWithoutCursors{})
+		assert.Error(t, err)
+	})
+}
+
+// subscriptionConfigWithoutCursors implements SubscriptionEventConfiguration only.
+type subscriptionConfigWithoutCursors struct{}
+
+func (subscriptionConfigWithoutCursors) ProviderID() string         { return "p" }
+func (subscriptionConfigWithoutCursors) ProviderType() ProviderType { return "other" }
+func (subscriptionConfigWithoutCursors) RootFieldName() string      { return "field" }
+func (subscriptionConfigWithoutCursors) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
+	return ""
+}
+
 func TestCursorClientBinding(t *testing.T) {
 	t.Parallel()
 
