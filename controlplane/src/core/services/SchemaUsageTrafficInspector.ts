@@ -256,7 +256,7 @@ export class SchemaUsageTrafficInspector {
             GROUP BY OperationHash
             -- Stop on the server once the HTTP client has given up (see the client timeout), instead of
             -- keeping the CPU busy and slowing down the queries that follow.
-            SETTINGS max_execution_time = ${QUERY_MAX_EXECUTION_TIME_SECONDS}
+            SETTINGS max_execution_time = ${QUERY_MAX_EXECUTION_TIME_SECONDS}, timeout_before_checking_execution_speed = 0
           `;
 
           const res: {
