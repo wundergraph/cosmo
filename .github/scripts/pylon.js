@@ -55,7 +55,15 @@ module.exports = async ({ github, context, core }) => {
     core.setFailed(`Pylon returned ${res.status}: ${await res.text()}`);
     return;
   }
-  core.info(`Created Pylon issue for ${item.html_url}`);
+  const { data: ticket } = await res.json();
+  core.info(`Created Pylon #${ticket.number} for ${item.html_url}`);
+
+  // Public comment, so keep the account name out of it.
+  await github.rest.issues.createComment({
+    ...context.repo,
+    issue_number: item.number,
+    body: `Tracked internally as Pylon #${ticket.number}.`,
+  });
 };
 
 function escapeHtml(s) {
