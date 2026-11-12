@@ -991,3 +991,39 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		require.Contains(t, fields, "request_id")
 	})
 }
+
+func TestOnFinished_MissingNoStore(t *testing.T) {
+	t.Parallel()
+
+	run := func(t *testing.T, fetches map[string]*resolve.ResponseInfo, order ...string) string {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{},
+			CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}))
+		require.NoError(t, err)
+		propagation.missingNoStore = true
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		for _, name := range order {
+			hooks.OnFinished(ctx, resolve.DataSourceInfo{ID: name, Name: name}, fetches[name])
+		}
+		return client.header.Get(cacheControlKey)
+	}
+	public := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: http.Header{"Cache-Control": {"max-age=300, public"}}}
+
+	t.Run("a fetch without an HTTP response is skipped", func(t *testing.T) {
+		t.Parallel()
+		// gRPC and plugin fetches: status 0, no headers.
+		got := run(t, map[string]*resolve.ResponseInfo{"http": public, "grpc": {}}, "http", "grpc")
+		require.Equal(t, "max-age=300, public", got)
+	})
+
+	t.Run("an HTTP fetch without headers is no-store", func(t *testing.T) {
+		t.Parallel()
+		silent := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: http.Header{}}
+		got := run(t, map[string]*resolve.ResponseInfo{"http": public, "silent": silent}, "http", "silent")
+		require.Equal(t, "no-store", got)
+	})
+}

@@ -52,7 +52,7 @@ The algorithm evaluates the following in order:
 
 4. `public`: The response is `public` only when every subgraph that sets `Cache-Control` sends `public`. `private` always wins. To send `public` when any subgraph does, enable the [`cache_control_any_public`](/router/configuration#apollo-router-compatibility-cache-control-any-public) compatibility flag.
 
-5. Subgraphs without caching information: A subgraph response with no `Cache-Control` or `Expires` header is ignored. One with only directives that do not affect caching sets no lifetime but withdraws `public`. To treat both as `no-store` instead, set [`missing_no_store: true`](/router/configuration#missing-caching-information). A configured default stands in for such a response either way.
+5. Subgraphs without caching information: A subgraph response with no `Cache-Control` or `Expires` header is ignored. One with only directives that do not affect caching sets no lifetime but withdraws `public`. To treat both as `no-store` instead, set [`missing_no_store: true`](/router/configuration#missing-caching-information). A configured default stands in for such a response either way. gRPC subgraphs and router plugins cannot send `Cache-Control`, so `missing_no_store` skips them. Set a subgraph `value` to restrict them.
 
 <Info>
   **`no-cache`/`no-store` always wins**

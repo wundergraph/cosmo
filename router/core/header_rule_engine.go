@@ -636,8 +636,9 @@ func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string)
 // noStoreSilentFetch merges no-store for a fetch without caching directives,
 // unless no rule covers it or a rule's default stands in for it.
 func (h *HeaderPropagation) noStoreSilentFetch(propagation *responseHeaderPropagation, res *http.Response, subgraphName string) {
-	// Mutations are no-cache, failed fetches no-store already.
-	if res.StatusCode >= http.StatusBadRequest || resolve.GetOperationTypeFromContext(res.Request.Context()) == ast.OperationTypeMutation {
+	// Mutations are no-cache, failed fetches no-store already. Status 0 is no
+	// HTTP response (gRPC, plugins): no headers to judge.
+	if res.StatusCode == 0 || res.StatusCode >= http.StatusBadRequest || resolve.GetOperationTypeFromContext(res.Request.Context()) == ast.OperationTypeMutation {
 		return
 	}
 	if dir, err := parseFreshness(res.Header); err != nil || hasCachingDirectives(dir) {

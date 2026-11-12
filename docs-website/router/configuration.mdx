@@ -1040,6 +1040,10 @@ By default the router ignores a response with neither header. One with only such
 
 For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
 
+<Note>
+  `missing_no_store` does not apply to gRPC subgraphs, including router plugins. The router does not read gRPC response metadata, so it cannot tell whether such a subgraph sent caching information, and their responses are ignored as they are without the setting. To restrict caching for a gRPC subgraph, set a `value` for it under `subgraphs`.
+</Note>
+
 ### Example YAML Config:
 
 ```yaml config.yaml
