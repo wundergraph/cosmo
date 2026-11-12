@@ -119,7 +119,11 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header htt
 		zap.String("field_name", conf.RootFieldName()),
 	)
 
-	eventUpdater := NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
+	eventUpdater := newSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder)
+	if negotiatedGuarantee == DeliveryGuaranteeCursor {
+		eventUpdater.enableCursors(s.cursors)
+	}
+
 	return s.pubSub.Subscribe(ctx.Context(), conf, negotiatedGuarantee, eventUpdater)
 }
 

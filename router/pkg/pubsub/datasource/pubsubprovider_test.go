@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +29,10 @@ func (e mutableTestEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
+func (e mutableTestEvent) Cursor() *streamsv1.Cursor {
+	return nil
+}
+
 type testEvent struct {
 	evt mutableTestEvent
 }
@@ -38,6 +43,10 @@ func (e *testEvent) GetData() []byte {
 
 func (e *testEvent) Clone() MutableStreamEvent {
 	return e.evt.Clone()
+}
+
+func (e *testEvent) Cursor() *streamsv1.Cursor {
+	return nil
 }
 
 type testSubscriptionConfig struct {

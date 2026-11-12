@@ -12,6 +12,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 )
@@ -48,11 +49,17 @@ type ProviderAdapter struct {
 }
 
 type PollerOpts struct {
-	providerId string
+	providerId     string
+	trackPositions bool
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
+	var positions map[string]map[int32]*streamsv1.KafkaPartitionOffset
+	if pollerOpts.trackPositions {
+		positions = make(map[string]map[int32]*streamsv1.KafkaPartitionOffset)
+	}
+
 	for {
 		select {
 		case <-ctx.Done(): // Close the poller if the context was canceled (subscription ended, or router shutdown/hot reload)
@@ -109,44 +116,81 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
-				updater.Update([]datasource.StreamEvent{
-					&Event{
-						evt: &MutableEvent{
-							Data:    r.Value,
-							Headers: headers,
-							Key:     r.Key,
-						},
-					},
-				})
+				evt := &MutableEvent{
+					Data:    r.Value,
+					Headers: headers,
+					Key:     r.Key,
+				}
+
+				if positions != nil {
+					partitions, exists := positions[r.Topic]
+					if !exists {
+						partitions = make(map[int32]*streamsv1.KafkaPartitionOffset)
+						positions[r.Topic] = partitions
+					}
+					partitions[r.Partition] = &streamsv1.KafkaPartitionOffset{Epoch: r.LeaderEpoch, Offset: r.Offset}
+					evt.cursor = snapshotKafkaPosition(pollerOpts.providerId, positions)
+				}
+
+				updater.Update([]datasource.StreamEvent{&Event{evt: evt}})
 			}
 		}
 	}
 }
 
+// snapshotKafkaPosition returns a cursor carrying a deep copy of positions,
+// so it stays unchanged while the poller keeps updating positions.
+func snapshotKafkaPosition(providerID string, positions map[string]map[int32]*streamsv1.KafkaPartitionOffset) *streamsv1.Cursor {
+	topics := make(map[string]*streamsv1.KafkaPartitionPositions, len(positions))
+	for topic, partitions := range positions {
+		snapshot := make(map[int32]*streamsv1.KafkaPartitionOffset, len(partitions))
+		for partition, offset := range partitions {
+			snapshot[partition] = &streamsv1.KafkaPartitionOffset{Epoch: offset.Epoch, Offset: offset.Offset}
+		}
+		topics[topic] = &streamsv1.KafkaPartitionPositions{Partitions: snapshot}
+	}
+	return &streamsv1.Cursor{
+		ProviderId: providerID,
+		Position:   &streamsv1.Cursor_Kafka{Kafka: &streamsv1.KafkaCursorPosition{Topics: topics}},
+	}
+}
+
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, _ datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
 		return datasource.NewError("invalid event type for Kafka adapter", nil)
 	}
 
+	return p.subscribe(ctx, subConf, updater, []kgo.Opt{
+		kgo.ConsumeTopics(subConf.Topics...),
+		// We want to consume the events produced after the first subscription was created
+		// Messages are shared among all subscriptions, therefore old events are not redelivered
+		// This replicates a stateless publish-subscribe model
+		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
+	}, PollerOpts{
+		providerId:     conf.ProviderID(),
+		trackPositions: guarantee == datasource.DeliveryGuaranteeCursor,
+	})
+}
+
+// subscribe creates the consumer client of a single subscription and runs its poller until the
+// subscription, the adapter or the application context ends. consumeOpts says what the client
+// consumes and where it starts.
+func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater, consumeOpts []kgo.Opt, pollerOpts PollerOpts) error {
 	log := p.logger.With(
-		zap.String("provider_id", conf.ProviderID()),
+		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", subConf.Topics),
 	)
 
 	// Create a new client for the topic
 	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
-	opts := make([]kgo.Opt, len(p.opts), len(p.opts)+3)
+	opts := make([]kgo.Opt, len(p.opts), len(p.opts)+len(consumeOpts)+1)
 	copy(opts, p.opts)
+	opts = append(opts, consumeOpts...)
 	client, err := kgo.NewClient(append(opts,
-		kgo.ConsumeTopics(subConf.Topics...),
-		// We want to consume the events produced after the first subscription was created
-		// Messages are shared among all subscriptions, therefore old events are not redelivered
-		// This replicates a stateless publish-subscribe model
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
 		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(subConf.Topics, "-"))),
 		// FIXME: the client id should have some unique identifier, like in nats
@@ -173,7 +217,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		stop := context.AfterFunc(p.ctx, cancel)
 		defer stop()
 
-		err := p.topicPoller(pollerCtx, client, updater, PollerOpts{providerId: conf.ProviderID()})
+		err := p.topicPoller(pollerCtx, client, updater, pollerOpts)
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -181,9 +225,9 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 				log.Error(
 					"poller error",
 					zap.Error(err),
-					zap.String("provider_id", conf.ProviderID()),
-					zap.String("provider_type", string(conf.ProviderType())),
-					zap.String("field_name", conf.RootFieldName()),
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
 				)
 			}
 			return
