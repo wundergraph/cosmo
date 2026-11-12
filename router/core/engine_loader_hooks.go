@@ -225,7 +225,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 		})
 	}
 
-	_, merged := createMostRestrictivePolicy(policies)
+	_, merged := createMostRestrictivePolicy(policies, publicRequiresAll)
 	headers.Set(cacheControlKey, merged)
 	// Lifetimes are net of Age now; the policy must not take it off again.
 	headers.Del("Age")
@@ -257,11 +257,15 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			responseInfo.ResponseHeaders = make(http.Header)
 		}
 		headers := responseInfo.ResponseHeaders
+		// Judged before a hit's lifetime hides it. A full hit has no origin.
+		silent := f.headerPropagation.missingNoStore &&
+			responseInfo.ResponseCache.Status != resolve.ResponseCacheStatusHit &&
+			silentOrigin(headers, responseInfo.StatusCode)
 		// The TTL is only for the most restrictive algorithm.
 		if f.headerPropagation.usesMostRestrictiveCacheControl(ds.Name) {
 			applyResponseCacheLifetime(headers, responseInfo)
 		}
-		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
+		f.headerPropagation.applyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request, silent)
 	}
 
 	if reqContext == nil {
