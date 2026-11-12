@@ -519,7 +519,7 @@ type edfs__PublishResult {
     expect(lintIssues.errors).toHaveLength(0);
   });
 
-  test("Should ignore prefixing of 'edfs__' and 'openfed__' inputs", () => {
+  test("Should ignore prefixing of 'edfs__', 'openfed__' and 'cosmoStreams__' inputs", () => {
     const schema = `directive @edfs__natsSubscribe(
 subjects: [String!]!,
 providerId: String! = "default",
