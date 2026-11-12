@@ -8,13 +8,13 @@ export const sentryEnvVariables = z.object({
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
   SENTRY_DSN: z.string().optional(),
   SENTRY_SEND_DEFAULT_PII: z
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
   SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
   SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
@@ -23,7 +23,7 @@ export const sentryEnvVariables = z.object({
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
 });
 
 export const envVariables = z
@@ -56,7 +56,7 @@ export const envVariables = z
     PROMETHEUS_ENABLED: z
       .string()
       .transform((val) => val === 'true')
-      .default('false'),
+      .default(false),
     PROMETHEUS_HTTP_PATH: z.string().default('/metrics'),
     PROMETHEUS_PORT: z
       .string()
@@ -181,7 +181,7 @@ export const envVariables = z
     S3_FORCE_PATH_STYLE: z
       .string()
       .transform((val) => val === 'true')
-      .default('true'),
+      .default(true),
     /**
      * Whether to use individual deletes for S3 objects instead of bulking them.
      */
@@ -211,7 +211,7 @@ export const envVariables = z
     SMTP_ENABLED: z
       .string()
       .transform((val) => val === 'true')
-      .default('false'),
+      .default(false),
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     SMTP_HOST: z.string().optional(),
