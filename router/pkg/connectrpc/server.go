@@ -163,7 +163,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	// Create protocol transcoder
 	vanguardServices := vanguardService.GetServices()
-	transcoder, err := vanguard.NewTranscoder(vanguardServices)
+	transcoder, err := vanguard.NewTranscoder(vanguardServices, vanguard.WithUnknownHandler(newUnknownRouteHandler(server.logger)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create protocol transcoder: %w", err)
 	}
@@ -298,7 +298,7 @@ func (s *Server) Reload() error {
 	s.vanguardService = vanguardService
 
 	// Recreate protocol transcoder
-	transcoder, err := vanguard.NewTranscoder(vanguardService.GetServices())
+	transcoder, err := vanguard.NewTranscoder(vanguardService.GetServices(), vanguard.WithUnknownHandler(newUnknownRouteHandler(s.logger)))
 	if err != nil {
 		return fmt.Errorf("failed to recreate protocol transcoder: %w", err)
 	}
