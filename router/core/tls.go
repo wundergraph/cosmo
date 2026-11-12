@@ -131,12 +131,12 @@ func (s *certReloaders) watch(ctx context.Context, logger *zap.Logger, interval 
 func loadCertPool(caFile string) (*x509.CertPool, error) {
 	caCert, err := os.ReadFile(caFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA file: %w", err)
+		return nil, fmt.Errorf("failed to read CA file %q: %w", caFile, err)
 	}
 
 	pool := x509.NewCertPool()
 	if ok := pool.AppendCertsFromPEM(caCert); !ok {
-		return nil, errors.New("failed to append CA cert to pool")
+		return nil, fmt.Errorf("failed to append CA cert from %q to pool", caFile)
 	}
 
 	return pool, nil

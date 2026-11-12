@@ -87,7 +87,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			CaFile: "/nonexistent/ca.pem",
 		})
 		require.Error(t, err)
-		require.EqualError(t, err, "failed to read CA file: open /nonexistent/ca.pem: no such file or directory")
+		require.ErrorContains(t, err, `failed to read CA file "/nonexistent/ca.pem"`)
+		require.ErrorIs(t, err, os.ErrNotExist)
 	})
 
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
@@ -446,6 +447,59 @@ func TestCertReloader(t *testing.T) {
 
 		var reloaders certReloaders
 		require.NoError(t, reloaders.watch(t.Context(), zap.NewNop(), time.Second))
+	})
+}
+
+func TestNewHTTPTransport(t *testing.T) {
+	t.Parallel()
+
+	t.Run("isolates protocol settings and preserves reload callbacks when TLS config is shared", func(t *testing.T) {
+		t.Parallel()
+
+		certPath, keyPath := generateTestCert(t, "client")
+
+		var reloaders certReloaders
+
+		cfg, err := buildTLSClientConfig(&reloaders, config.TLSClientCertConfiguration{
+			CertFile: certPath, KeyFile: keyPath,
+		})
+		require.NoError(t, err)
+
+		first := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg)
+		second := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg)
+		require.NotSame(t, cfg, first.TLSClientConfig)
+		require.NotSame(t, first.TLSClientConfig, second.TLSClientConfig)
+		first.TLSClientConfig.NextProtos = []string{"h2"}
+		require.Empty(t, cfg.NextProtos)
+		require.Empty(t, second.TLSClientConfig.NextProtos)
+
+		newCert, newKey := generateTestCert(t, "replacement")
+		copyFile(t, newCert, certPath)
+		copyFile(t, newKey, keyPath)
+		require.NoError(t, reloaders.list[0].reload())
+
+		for _, transport := range []*tls.Config{first.TLSClientConfig, second.TLSClientConfig} {
+			served, err := transport.GetClientCertificate(&tls.CertificateRequestInfo{
+				Version:          tls.VersionTLS13,
+				SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256},
+			})
+			require.NoError(t, err)
+			require.Equal(t, mustReadFile(t, newCert), pemOf(served))
+		}
+	})
+}
+
+func TestLoadCertPool(t *testing.T) {
+	t.Parallel()
+
+	t.Run("names the file when PEM parsing fails", func(t *testing.T) {
+		t.Parallel()
+
+		path := filepath.Join(t.TempDir(), "invalid-ca.pem")
+		require.NoError(t, os.WriteFile(path, []byte("invalid"), 0o600))
+		_, err := loadCertPool(path)
+		require.ErrorContains(t, err, path)
+		require.ErrorContains(t, err, "failed to append CA cert")
 	})
 }
 

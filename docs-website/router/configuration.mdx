@@ -383,8 +383,8 @@ The Router supports TLS and mTLS for secure communication with your clients and 
 
 | Environment Variable | YAML           | Required               | Description                                                                                                                                 | Default Value |
 | -------------------- | -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| TLS_WATCH            | watch          | <Icon icon="square" /> | Reloads router server and HTTP/gRPC subgraph client certificate and key files from disk when they change. New connections use the new files. Open connections are not affected. CA bundles and NATS TLS files are not watched. | false         |
-| TLS_WATCH_INTERVAL   | watch_interval | <Icon icon="square" /> | The interval at which the certificate files are checked for changes.                                                                        | 1s            |
+| TLS_WATCH            | watch          | <Icon icon="square" /> | Enables certificate/key reloading for router server and HTTP/gRPC subgraph TLS. Excludes CA bundles. | false         |
+| TLS_WATCH_INTERVAL   | watch_interval | <Icon icon="square" /> | How often certificate/key files are checked for changes. | 1s            |
 
 ### Server TLS
 

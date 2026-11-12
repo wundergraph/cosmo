@@ -114,6 +114,7 @@ func TestTLS(t *testing.T) {
 
 			// Keep dialing new connections through the rotation. Any failed request is downtime.
 			stop := make(chan struct{})
+			started := make(chan struct{})
 
 			var (
 				requests, failures int
@@ -138,8 +139,18 @@ func TestTLS(t *testing.T) {
 					if _, err := probe(fresh); err != nil {
 						failures++
 					}
+
+					if requests == 1 {
+						close(started)
+					}
 				}
 			})
+
+			select {
+			case <-started:
+			case <-time.After(10 * time.Second):
+				t.Fatal("traffic worker did not complete its first probe")
+			}
 
 			replaceTLSFiles(t, dir, "../testdata/tls/cert.pem", "../testdata/tls/key.pem")
 

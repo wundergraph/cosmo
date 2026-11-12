@@ -163,9 +163,26 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	// muxes reused across a reload keep the transports they were built with.
 	traceDialer := r.connectionTraceDialer()
 
-	// Subgraph client TLS configs (mTLS for outbound subgraph connections) are built once by the router.
+	// Watched TLS configs share reload callbacks. Otherwise, preserve file reloading
+	// on graph rebuilds without accumulating registrations in the router.
 	defaultClientTLS, perSubgraphTLS := r.tls.defaultClientTLS, r.tls.perSubgraphTLS
 	defaultGRPCClientTLS, perSubgraphGRPCTLS := r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS
+	if !r.tls.settings.Watch {
+		var (
+			reloaders certReloaders
+			err       error
+		)
+
+		defaultClientTLS, perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&reloaders, r.logger, &r.tls.settings.Client)
+		if err != nil {
+			return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+		}
+
+		defaultGRPCClientTLS, perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&reloaders, r.logger, &r.tls.settings.ClientGRPC)
+		if err != nil {
+			return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		}
+	}
 
 	// Base transport
 	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS)

@@ -119,24 +119,7 @@ That's it! The router should now be able to receive TLS connections **only** fro
 
 ## Certificate Reloading
 
-The router can reload certificate files from disk without a restart. Set `tls.watch` to `true`. The router then checks the files at `tls.watch_interval` and loads them again when they change.
-
-```yaml config.yaml
-tls:
-  watch: true
-  watch_interval: 1s
-  server:
-    enabled: true
-    key_file: ../your/key.pem
-    cert_file: ../your/cert.pem
-    client_auth:
-      required: true
-      cert_file: ../your/ca.pem
-```
-
-A reload applies to new connections. Open connections keep the certificate they were established with. The listener stays up during a reload, so requests are not interrupted.
-
-For outbound mTLS connections to HTTPS subgraphs, enable watching alongside the client certificate configuration:
+Enable `tls.watch` to reload certificate/key files without restarting. For example, for outbound subgraph mTLS:
 
 ```yaml config.yaml
 tls:
@@ -149,24 +132,13 @@ tls:
       ca_file: /etc/router/tls/ca.crt
 ```
 
-Replace the client certificate and matching private key at these paths when they rotate. The router picks up the replacements without a restart, and new TLS connections to subgraphs use the updated client certificate. Existing connections remain open.
+| TLS configuration | Certificate/key reload |
+| --- | --- |
+| Router server (`tls.server`) | Yes |
+| HTTP subgraphs (`tls.client`) | Yes (global and per-subgraph) |
+| gRPC subgraphs (`tls.client_grpc`) | Yes (global and per-subgraph) |
 
-The `ca_file` verifies the subgraph's server certificate. It is not watched; changing this CA bundle requires a router restart or a configuration reload.
-
-Reload support varies by TLS configuration:
-
-| TLS configuration | Certificate/key reload | CA-bundle reload |
-| --- | --- | --- |
-| Router server (`tls.server`) | Yes | No (includes `client_auth.cert_file`) |
-| HTTP subgraphs (`tls.client`) | Yes (global and per-subgraph) | No |
-| gRPC subgraphs (`tls.client_grpc`) | Yes (global and per-subgraph) | No |
-| NATS providers (`events.providers.nats[].tls`) | No | No |
-
-Reloading requires `tls.watch: true`. Updated certificates apply to new TLS handshakes; existing connections remain open. CA bundles are loaded at startup, and NATS TLS files are loaded during provider construction. Neither is watched.
-
-When a file fails to load, for example because it was written half way, the router logs an error and keeps the previous certificate. The next change to the file triggers another attempt.
-
-Files replaced through a symlink swap, as Kubernetes does for mounted Secrets, are detected because the router compares the modification time of the resolved file.
+CA bundles are not watched. Updated certificates apply to new connections; existing connections stay open. Failed reloads retain the previous certificate.
 
 ## TLS with Subgraphs
 

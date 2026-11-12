@@ -166,8 +166,8 @@ type (
 		// certs holds every certificate loaded from the settings so they can be reloaded from disk.
 		certs certReloaders
 
-		// Client TLS configs for subgraph connections, built once alongside the server config.
-		// Graph servers created on a config reload share them.
+		// Watched client TLS configs are shared across graph servers.
+		// Without watching, each graph server reloads its own TLS files.
 		defaultClientTLS     *tls.Config
 		perSubgraphTLS       map[string]*tls.Config
 		defaultGRPCClientTLS *tls.Config
@@ -409,14 +409,16 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 	}
 
-	r.tls.defaultClientTLS, r.tls.perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.Client)
-	if err != nil {
-		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
-	}
+	if r.tls.settings.Watch {
+		r.tls.defaultClientTLS, r.tls.perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.Client)
+		if err != nil {
+			return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+		}
 
-	r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.ClientGRPC)
-	if err != nil {
-		return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.ClientGRPC)
+		if err != nil {
+			return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		}
 	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
@@ -645,7 +647,7 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	if serverTLS.ClientAuth.CertFile != "" {
 		cfg.ClientCAs, err = loadCertPool(serverTLS.ClientAuth.CertFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load tls.server.client_auth.cert_file: %w", err)
 		}
 
 		if serverTLS.ClientAuth.Required {
@@ -3044,7 +3046,7 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	}
 
 	if clientTLS != nil {
-		transport.TLSClientConfig = clientTLS
+		transport.TLSClientConfig = clientTLS.Clone()
 	}
 
 	if traceDialer != nil {
