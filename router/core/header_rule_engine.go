@@ -73,6 +73,16 @@ type responseHeaderPropagation struct {
 	header               http.Header
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
+	// fetch, when set, collects one fetch's cache control rules before they
+	// join previousCacheControl.
+	fetch *fetchCacheControl
+}
+
+// fetchCacheControl is one fetch's policy across its rules. Rules of one fetch
+// merge strictly; only fetches merge with any public.
+type fetchCacheControl struct {
+	policy  *cachedirective.Object
+	expires bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -633,15 +643,22 @@ func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string)
 	return found
 }
 
-// noStoreSilentFetch merges no-store for a fetch without caching directives,
-// unless no rule covers it or a rule's default stands in for it.
-func (h *HeaderPropagation) noStoreSilentFetch(propagation *responseHeaderPropagation, res *http.Response, subgraphName string) {
-	// Mutations are no-cache, failed fetches no-store already. Status 0 is no
-	// HTTP response (gRPC, plugins): no headers to judge.
-	if res.StatusCode == 0 || res.StatusCode >= http.StatusBadRequest || resolve.GetOperationTypeFromContext(res.Request.Context()) == ast.OperationTypeMutation {
-		return
+// silentOrigin reports whether a subgraph's own response has no caching
+// directives. Status 0 is no HTTP response (gRPC, plugins): no headers to
+// judge. Failed fetches are no-store already.
+func silentOrigin(headers http.Header, statusCode int) bool {
+	if statusCode == 0 || statusCode >= http.StatusBadRequest {
+		return false
 	}
-	if dir, err := parseFreshness(res.Header); err != nil || hasCachingDirectives(dir) {
+	dir, err := parseFreshness(headers)
+	return err == nil && !hasCachingDirectives(dir)
+}
+
+// noStoreSilentFetch merges no-store into a silent fetch's policy, unless no
+// rule covers it or a rule's default stands in for it.
+func (h *HeaderPropagation) noStoreSilentFetch(fetch *fetchCacheControl, ctx context.Context, subgraphName string) {
+	// Mutations are no-cache already.
+	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
 		return
 	}
 	covered, standIn := false, false
@@ -656,25 +673,46 @@ func (h *HeaderPropagation) noStoreSilentFetch(propagation *responseHeaderPropag
 	if !covered || standIn {
 		return
 	}
+	fetch.policy = &cachedirective.Object{RespDirectives: noStoreDirectives()}
+}
 
+// commitFetchCacheControl merges a fetch's policy into the response's.
+func (h *HeaderPropagation) commitFetchCacheControl(propagation *responseHeaderPropagation, fetch *fetchCacheControl) {
+	if fetch.policy == nil {
+		return
+	}
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
-	policies := []*cachedirective.Object{{RespDirectives: noStoreDirectives()}}
+	policies := []*cachedirective.Object{fetch.policy}
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}
 	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.anyPublic)
 	propagation.previousCacheControl = restrictivePolicy
-	propagation.header.Set(cacheControlKey, cacheControlHeader)
+	if cacheControlHeader != "" {
+		propagation.header.Set(cacheControlKey, cacheControlHeader)
+	}
+	if fetch.expires && !restrictivePolicy.RespExpiresHeader.IsZero() {
+		propagation.header.Set(expiresKey, restrictivePolicy.RespExpiresHeader.Format(http.TimeFormat))
+	}
 }
 
 // ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
-// Called from OnFinished for every fetch (both singleflight leaders and followers).
 func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
-	propagation := getResponseHeaderPropagation(ctx)
-	if propagation == nil {
+	h.applyResponseHeaderRules(ctx, headers, subgraphName, statusCode, request, h.missingNoStore && silentOrigin(headers, statusCode))
+}
+
+// applyResponseHeaderRules is called from OnFinished for every fetch (both
+// singleflight leaders and followers). silent is judged on the subgraph's own
+// headers, before a cache hit's lifetime is merged into them.
+func (h *HeaderPropagation) applyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request, silent bool) {
+	shared := getResponseHeaderPropagation(ctx)
+	if shared == nil {
 		return
 	}
+	// Same header and lock, own cache control stage.
+	fetch := &fetchCacheControl{}
+	propagation := &responseHeaderPropagation{header: shared.header, m: shared.m, fetch: fetch}
 
 	resp := &http.Response{
 		StatusCode: statusCode,
@@ -713,9 +751,10 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 	}
 
 	// Per fetch, not per rule: any rule's default may stand in.
-	if h.missingNoStore {
-		h.noStoreSilentFetch(propagation, resp, subgraphName)
+	if silent {
+		h.noStoreSilentFetch(fetch, resp.Request.Context(), subgraphName)
 	}
+	h.commitFetchCacheControl(shared, fetch)
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
@@ -1052,14 +1091,24 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		defaultPolicy = &cachedirective.Object{RespDirectives: defaultDir}
 	}
 
-	propagation.m.Lock()
-	defer propagation.m.Unlock()
-	// Merge with the current shared state under lock to avoid lost updates when
-	// multiple subgraph responses compute policies concurrently.
 	policies := []*cachedirective.Object{obj}
 	if defaultPolicy != nil {
 		policies = append(policies, defaultPolicy)
 	}
+	if fetch := propagation.fetch; fetch != nil {
+		// Rules of one fetch describe the same data: strict merge.
+		if fetch.policy != nil {
+			policies = append(policies, fetch.policy)
+		}
+		fetch.policy, _ = createMostRestrictivePolicy(policies, false)
+		fetch.expires = fetch.expires || !expiresHeader.IsZero()
+		return
+	}
+
+	propagation.m.Lock()
+	defer propagation.m.Unlock()
+	// Merge with the current shared state under lock to avoid lost updates when
+	// multiple subgraph responses compute policies concurrently.
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}

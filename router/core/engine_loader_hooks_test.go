@@ -992,38 +992,108 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 	})
 }
 
-func TestOnFinished_MissingNoStore(t *testing.T) {
-	t.Parallel()
-
-	run := func(t *testing.T, fetches map[string]*resolve.ResponseInfo, order ...string) string {
-		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{},
-			CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}))
+// onFinishedCacheControl runs fetches through OnFinished under a cache
+// control policy and returns the client Cache-Control.
+func onFinishedCacheControl(t *testing.T, policy config.CacheControlPolicy, anyPublic bool, fetches ...resolve.DataSourceInfo) func(...*resolve.ResponseInfo) string {
+	return func(infos ...*resolve.ResponseInfo) string {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{}, CreateCacheControlPolicyHeaderRules(policy))
 		require.NoError(t, err)
-		propagation.missingNoStore = true
+		propagation.missingNoStore = policy.MissingNoStore
+		propagation.anyPublic = anyPublic
 
 		tp := sdktrace.NewTracerProvider()
 		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
 		ctx, _ := setupTestContext(t, tp)
 		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
 		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
-		for _, name := range order {
-			hooks.OnFinished(ctx, resolve.DataSourceInfo{ID: name, Name: name}, fetches[name])
+		for i, info := range infos {
+			hooks.OnFinished(ctx, fetches[i], info)
 		}
 		return client.header.Get(cacheControlKey)
 	}
-	public := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: http.Header{"Cache-Control": {"max-age=300, public"}}}
+}
+
+func okResponse(cacheControl string) *resolve.ResponseInfo {
+	headers := http.Header{}
+	if cacheControl != "" {
+		headers.Set(cacheControlKey, cacheControl)
+	}
+	return &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: headers}
+}
+
+func TestOnFinished_MissingNoStore(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	policy := config.CacheControlPolicy{Enabled: true, MissingNoStore: true}
 
 	t.Run("a fetch without an HTTP response is skipped", func(t *testing.T) {
 		t.Parallel()
 		// gRPC and plugin fetches: status 0, no headers.
-		got := run(t, map[string]*resolve.ResponseInfo{"http": public, "grpc": {}}, "http", "grpc")
+		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), &resolve.ResponseInfo{})
 		require.Equal(t, "max-age=300, public", got)
 	})
 
 	t.Run("an HTTP fetch without headers is no-store", func(t *testing.T) {
 		t.Parallel()
-		silent := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: http.Header{}}
-		got := run(t, map[string]*resolve.ResponseInfo{"http": public, "silent": silent}, "http", "silent")
+		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), okResponse(""))
 		require.Equal(t, "no-store", got)
+	})
+
+	partialHit := func(cacheControl string) *resolve.ResponseInfo {
+		info := okResponse(cacheControl)
+		info.ResponseCacheTTL = 100 * time.Second
+		info.ResponseCache = resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit, ClientTTL: 100 * time.Second, Public: true}
+		return info
+	}
+
+	// The hit's lifetime must not hide that the origin sent nothing.
+	for _, cacheControl := range []string{"", "foo"} {
+		t.Run("a partial hit with a silent origin is no-store: "+cacheControl, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, "no-store", onFinishedCacheControl(t, policy, false, b)(partialHit(cacheControl)))
+		})
+	}
+
+	t.Run("a partial hit with an origin lifetime keeps it", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, false, b)(partialHit("max-age=60")))
+	})
+
+	t.Run("a full hit has no origin to judge", func(t *testing.T) {
+		t.Parallel()
+		hit := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCacheTTL: 100 * time.Second,
+			ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit, ClientTTL: 100 * time.Second, Public: true}}
+		require.Equal(t, "max-age=100, public", onFinishedCacheControl(t, policy, false, b)(hit))
+	})
+}
+
+func TestOnFinished_AnyPublicPerFetch(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	policy := config.CacheControlPolicy{
+		Enabled:   true,
+		Value:     "max-age=600, public",
+		Subgraphs: []config.SubgraphCacheControlRule{{Name: "b", Value: "max-age=60"}},
+	}
+
+	t.Run("a subgraph value without public withholds it from its own fetch", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, true, b)(okResponse("")))
+	})
+
+	t.Run("another public fetch still grants it", func(t *testing.T) {
+		t.Parallel()
+		got := onFinishedCacheControl(t, policy, true, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		require.Equal(t, "max-age=60, public", got)
+	})
+
+	t.Run("without any public every fetch must grant it", func(t *testing.T) {
+		t.Parallel()
+		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		require.Equal(t, "max-age=60", got)
 	})
 }
