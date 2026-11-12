@@ -207,7 +207,9 @@ export class SchemaUsageTrafficInspector {
                 return `'${escaped}'`;
               })
               .join(',');
-            where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
+
+            where.push(`hasAll(Path, [${escapedPath}])`);
+            where.push(`Path = [${escapedPath}]`);
           }
           if (change.namedType) {
             params.namedType = change.namedType;
