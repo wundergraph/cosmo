@@ -1037,6 +1037,43 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("missing_no_store: a subgraph value stands in without a global one", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled:        true,
+					MissingNoStore: true,
+					Subgraphs:      []config.SubgraphCacheControlRule{{Name: "hobbies", Value: "max-age=300"}},
+				},
+				Subgraphs: cacheOptions("public, max-age=120", ""),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+				require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
+		t.Run("missing_no_store: applies to a named headers rule", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{MissingNoStore: true},
+				Subgraphs:          cacheOptions("public, max-age=300", ""),
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cache-Control",
+								Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+							}},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
+				require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"))
+			})
+		})
+
 		t.Run("without missing_no_store unknown directives are not no-store", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

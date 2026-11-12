@@ -602,24 +602,69 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-// usesMostRestrictiveCacheControl reports whether a response rule with the most
-// restrictive cache control algorithm applies to a fetch of subgraphName.
-func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
-	lists := [][]*config.ResponseHeaderRule{h.rules.All.Response}
+// eachMostRestrictiveCacheControlRule calls fn for each response rule with the
+// most restrictive cache control algorithm that applies to a fetch of
+// subgraphName, until fn returns false.
+func (h *HeaderPropagation) eachMostRestrictiveCacheControlRule(subgraphName string, fn func(*config.ResponseHeaderRule) bool) {
+	lists := [4][]*config.ResponseHeaderRule{h.rules.All.Response}
 	if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
-		lists = append(lists, subgraphRules.Response)
+		lists[1] = subgraphRules.Response
 	}
 	if h.postResponseRules != nil {
-		lists = append(lists, h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName])
+		lists[2], lists[3] = h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName]
 	}
 	for _, rules := range lists {
 		for _, rule := range rules {
-			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
-				return true
+			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl && !fn(rule) {
+				return
 			}
 		}
 	}
-	return false
+}
+
+// usesMostRestrictiveCacheControl reports whether a response rule with the most
+// restrictive cache control algorithm applies to a fetch of subgraphName.
+func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
+	found := false
+	h.eachMostRestrictiveCacheControlRule(subgraphName, func(*config.ResponseHeaderRule) bool {
+		found = true
+		return false
+	})
+	return found
+}
+
+// noStoreSilentFetch merges no-store for a fetch without caching directives,
+// unless no rule covers it or a rule's default stands in for it.
+func (h *HeaderPropagation) noStoreSilentFetch(propagation *responseHeaderPropagation, res *http.Response, subgraphName string) {
+	// Mutations are no-cache, failed fetches no-store already.
+	if res.StatusCode >= http.StatusBadRequest || resolve.GetOperationTypeFromContext(res.Request.Context()) == ast.OperationTypeMutation {
+		return
+	}
+	if dir, err := parseFreshness(res.Header); err != nil || hasCachingDirectives(dir) {
+		return
+	}
+	covered, standIn := false, false
+	h.eachMostRestrictiveCacheControlRule(subgraphName, func(rule *config.ResponseHeaderRule) bool {
+		covered = true
+		if rule.Default != "" {
+			_, err := cachedirective.ParseResponseCacheControl(rule.Default)
+			standIn = err == nil
+		}
+		return !standIn
+	})
+	if !covered || standIn {
+		return
+	}
+
+	propagation.m.Lock()
+	defer propagation.m.Unlock()
+	policies := []*cachedirective.Object{{RespDirectives: noStoreDirectives()}}
+	if propagation.previousCacheControl != nil {
+		policies = append(policies, propagation.previousCacheControl)
+	}
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.anyPublic)
+	propagation.previousCacheControl = restrictivePolicy
+	propagation.header.Set(cacheControlKey, cacheControlHeader)
 }
 
 // ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
@@ -664,6 +709,11 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 				h.applyResponseRule(propagation, resp, rule)
 			}
 		}
+	}
+
+	// Per fetch, not per rule: any rule's default may stand in.
+	if h.missingNoStore {
+		h.noStoreSilentFetch(propagation, resp, subgraphName)
 	}
 }
 
@@ -937,7 +987,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if !h.missingNoStore && resCacheHeader == "" && len(res.Header.Values(expiresKey)) == 0 && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
+	if resCacheHeader == "" && len(res.Header.Values(expiresKey)) == 0 && rule.Default == "" && res.StatusCode < http.StatusBadRequest {
 		// Nothing from the subgraph and no default to stand in: the fetch
 		// restricts nothing, so it can't withdraw what others granted either.
 		return
@@ -964,7 +1014,8 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	// No header, or only unknown directives.
 	silent := h.missingNoStore && !hasCachingDirectives(resDir)
 	if silent && defaultDir == nil {
-		resDir = noStoreDirectives()
+		// noStoreSilentFetch decides, once every rule has run.
+		return
 	}
 	obj := &cachedirective.Object{
 		RespDirectives:         resDir,
