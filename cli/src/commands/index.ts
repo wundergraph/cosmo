@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { CreateClient } from '../core/client/client.js';
+import { CreateClient, loadTlsClientOptions } from '../core/client/client.js';
 import { config } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import { capture } from '../core/telemetry.js';
@@ -32,10 +32,17 @@ if (proxyUrl) {
   setGlobalDispatcher(dispatcher);
 }
 
+const tlsResult = loadTlsClientOptions(config.tlsClientCert, config.tlsClientKey);
+if (!tlsResult.success) {
+  console.error(tlsResult.errors.map((e) => e.message).join('\n'));
+  process.exit(1);
+}
+
 const client = CreateClient({
   baseUrl: config.baseURL,
   apiKey: config.apiKey,
   proxyUrl,
+  tls: tlsResult.data,
 });
 
 const program = new Command();
