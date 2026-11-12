@@ -1519,11 +1519,11 @@ export class NormalizationFactory {
   }
 
   addInterfaceObjectFieldsByNode(node: ObjectTypeNode) {
-    const typeName = node.name.value;
-    const entityInterfaceData = this.entityInterfaceDataByTypeName.get(typeName);
+    const entityInterfaceData = this.entityInterfaceDataByTypeName.get(node.name.value);
     if (!entityInterfaceData || !entityInterfaceData.isInterfaceObject || !node.fields) {
       return;
     }
+
     for (const fieldNode of node.fields) {
       entityInterfaceData.interfaceObjectFieldNames.add(fieldNode.name.value);
     }
@@ -5012,6 +5012,7 @@ export class NormalizationFactory {
               // undefined types are handled elsewhere
               continue;
             }
+
             if (!isOutputNodeKind(namedTypeData.kind)) {
               this.errors.push(
                 invalidNamedTypeError({
