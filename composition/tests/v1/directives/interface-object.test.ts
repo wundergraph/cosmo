@@ -898,7 +898,89 @@ describe('@interfaceObject tests', () => {
     );
   });
 
-  test('that field arguments constributed by an @interfaceObject is considered #1', () => {
+  test('that an optional @interfaceObject field argument that is not propagated into the federated schemas can still be propagated in the implementation', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a: ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Entity @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a: ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a: ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an optional @interfaceObject field argument is propagated into the federated schemas', () => {
     const a = createSubgraph(
       'a',
       `
