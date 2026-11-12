@@ -1514,8 +1514,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
-		allowMismatchedSHA256IDs := r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs
-		if allowMismatchedSHA256IDs {
+		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
 			r.logger.Warn("Serving persisted operations whose ID looks like a SHA256 hash but isn't the SHA256 of their body, " +
 				"because backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids is enabled. A request whose query hashes to such an ID " +
 				"can execute or register a different operation than the published one. Republish these operations with matching IDs " +
@@ -1529,7 +1528,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			APQStore:       apqStore,
 			PQLStore:       pqlStore,
 
-			AllowMismatchedSHA256IDs: allowMismatchedSHA256IDs,
+			AllowMismatchedSHA256IDs: r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs,
 		})
 		if err != nil {
 			return err
@@ -2851,7 +2850,6 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
-// WithBackwardsCompatibility restores behavior of older router versions.
 func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
 	return func(r *Router) {
 		r.backwardsCompatibility = cfg

@@ -52,15 +52,16 @@ type Options struct {
 
 	// AllowMismatchedSHA256IDs serves stored operations whose ID looks like a
 	// SHA256 hash but isn't the SHA256 of their body, instead of returning an
-	// OperationIDMismatchError. It exists for backwards compatibility only.
+	// OperationIDMismatchError.
 	AllowMismatchedSHA256IDs bool
 }
 
 type Client struct {
-	cache                    *operationstorage.OperationsCache
-	providerClient           StorageClient
-	apqStore                 apq.Store
-	pqlStore                 *pqlmanifest.Store
+	cache          *operationstorage.OperationsCache
+	providerClient StorageClient
+	apqStore       apq.Store
+	pqlStore       *pqlmanifest.Store
+
 	allowMismatchedSHA256IDs bool
 }
 
@@ -109,7 +110,7 @@ func (c *Client) PersistedOperationWithManifest(
 	// A loaded manifest takes precedence over cached storage-provider responses.
 	if manifest != nil {
 		if body, found := manifest.Operations[sha256Hash]; found {
-			if !c.operationIDMatchesBody(sha256Hash, body) {
+			if !c.allowMismatchedSHA256IDs && !OperationIDMatchesBody(sha256Hash, body) {
 				return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
 			}
 			return []byte(body), false, nil
@@ -136,7 +137,7 @@ func (c *Client) PersistedOperationWithManifest(
 	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if err == nil && !c.operationIDMatchesBody(sha256Hash, string(content)) {
+	if err == nil && !c.allowMismatchedSHA256IDs && !OperationIDMatchesBody(sha256Hash, string(content)) {
 		return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
 	}
 	if errors.As(err, &poNotFound) && c.APQEnabled() {
@@ -150,11 +151,6 @@ func (c *Client) PersistedOperationWithManifest(
 	c.cache.Set(clientName, sha256Hash, content, 0)
 
 	return content, false, nil
-}
-
-// operationIDMatchesBody is OperationIDMatchesBody, unless mismatched SHA256 IDs are allowed.
-func (c *Client) operationIDMatchesBody(id, body string) bool {
-	return c.allowMismatchedSHA256IDs || OperationIDMatchesBody(id, body)
 }
 
 func (c *Client) SaveOperation(ctx context.Context, sha256Hash, operationBody string) error {

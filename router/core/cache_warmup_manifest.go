@@ -17,9 +17,6 @@ type ManifestWarmupSource struct {
 	allowMismatchedSHA256IDs bool
 }
 
-// NewManifestWarmupSource warms the operations in the store's manifest. Unless
-// allowMismatchedSHA256IDs is set, it skips operations whose ID looks like a
-// SHA256 hash but isn't the SHA256 of their body.
 func NewManifestWarmupSource(store *pqlmanifest.Store, allowMismatchedSHA256IDs bool) *ManifestWarmupSource {
 	return &ManifestWarmupSource{
 		store:                    store,
@@ -37,14 +34,14 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 	items := make([]*nodev1.Operation, 0, len(ops))
 	var mismatchedIDs []string
 	for sha256Hash, body := range ops {
-		if !persistedoperation.OperationIDMatchesBody(sha256Hash, body) {
-			if s.allowMismatchedSHA256IDs {
-				mismatchedIDs = append(mismatchedIDs, sha256Hash)
-			} else {
-				// Requests reject these at lookup, so warming them would let cache hits bypass that.
-				log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
-				continue
-			}
+		matches := persistedoperation.OperationIDMatchesBody(sha256Hash, body)
+		// Requests reject these at lookup, so warming them would let cache hits bypass that.
+		if !matches && !s.allowMismatchedSHA256IDs {
+			log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
+			continue
+		}
+		if !matches {
+			mismatchedIDs = append(mismatchedIDs, sha256Hash)
 		}
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{

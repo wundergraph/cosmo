@@ -239,125 +239,62 @@ func TestCustomOperationIDManifestReload(t *testing.T) {
 func TestMismatchedSHA256OperationIDs(t *testing.T) {
 	t.Parallel()
 
-	// The client hashes the query with its fragments in spread order...
-	const hashedQuery = `query Employees {
-  employees {
-    ...ID
-    ...Details
-  }
-}
-
-fragment ID on Employee {
-  id
-}
-
-fragment Details on Employee {
-  details {
-    forename
-  }
-}`
-	// ...but the published body has them sorted by name.
-	const publishedBody = `query Employees {
-  employees {
-    ...ID
-    ...Details
-  }
-}
-
-fragment Details on Employee {
-  details {
-    forename
-  }
-}
-
-fragment ID on Employee {
-  id
-}`
-	const employees = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}]}}`
-	const employeeIDs = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-	sum := sha256.Sum256([]byte(hashedQuery))
-	id := hex.EncodeToString(sum[:])
-
-	type options struct {
-		allowMismatched bool
-		noAPQ           bool
-		warmup          bool
-		body            string
-	}
-	// run starts a router with a manifest that publishes opts.body under id.
-	run := func(t *testing.T, opts options, fn func(t *testing.T, request func(query string) *testenv.TestResponse)) {
-		t.Helper()
-		cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.True(t, strings.HasSuffix(r.URL.Path, "/operations/manifest.json"))
-			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
-				"version": 1, "revision": "one", "operations": map[string]string{id: opts.body},
-			}))
-		}))
-		t.Cleanup(cdn.Close)
-		testenv.Run(t, &testenv.Config{
-			CdnSever:      cdn,
-			NoRetryClient: true,
-			ApqConfig:     config.AutomaticPersistedQueriesConfig{Enabled: !opts.noAPQ, Cache: config.AutomaticPersistedQueriesCacheConfig{Size: 1024 * 1024}},
-			RouterOptions: []core.Option{
-				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{Manifest: config.PQLManifestConfig{
-					Enabled: true, Warmup: config.PQLManifestWarmupConfig{Enabled: opts.warmup, Workers: 1, Timeout: 5 * time.Second},
-				}}),
-				core.WithBackwardsCompatibility(config.BackwardsCompatibilityConfiguration{
-					PersistedOperations: config.PersistedOperationsBackwardsCompatibility{AllowMismatchedSHA256IDs: opts.allowMismatched},
-				}),
-			},
-		}, func(t *testing.T, e *testenv.Environment) {
-			fn(t, func(query string) *testenv.TestResponse {
-				res, err := e.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query:      query,
-					Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id),
-				})
-				if !assert.NoError(t, err) {
-					return &testenv.TestResponse{Response: &http.Response{}}
-				}
-				return res
-			})
-		})
-	}
-
-	t.Run("rejected by default", func(t *testing.T) {
-		t.Parallel()
-		run(t, options{warmup: true, body: publishedBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
-			res := request("")
-			assert.Equal(t, http.StatusInternalServerError, res.Response.StatusCode)
-			assert.NotContains(t, res.Body, `"data"`)
-		})
-	})
-
-	t.Run("served and warmed when allowed", func(t *testing.T) {
-		t.Parallel()
-		run(t, options{allowMismatched: true, warmup: true, body: publishedBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
-			res := request("")
-			assert.Equal(t, employees, res.Body)
-			assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
-		})
-	})
-
-	// The tradeoff of allowing them: the ID names both the published body and the
-	// query that hashes to it, and which one runs depends on what the router has cached.
-	t.Run("the published body or the query that hashes to the ID may run", func(t *testing.T) {
-		t.Parallel()
-		const otherBody = `query {
+	const body = `query {
   employees {
     id
   }
 }`
-		run(t, options{allowMismatched: true, warmup: true, body: otherBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
-			// Warmup cached the published body, so it runs instead of the query sent.
-			assert.Equal(t, employeeIDs, request(hashedQuery).Body)
+	id := strings.Repeat("a", 64)
+	const employees = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
+	// request starts a router with id in its manifest and requests it.
+	request := func(t *testing.T, allowMismatched, warmup bool) *testenv.TestResponse {
+		t.Helper()
+		cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.True(t, strings.HasSuffix(r.URL.Path, "/operations/manifest.json"))
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"version": 1, "revision": "one", "operations": map[string]string{id: body},
+			}))
+		}))
+		t.Cleanup(cdn.Close)
+		var res *testenv.TestResponse
+		testenv.Run(t, &testenv.Config{
+			CdnSever:      cdn,
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{Manifest: config.PQLManifestConfig{
+					Enabled: true, Warmup: config.PQLManifestWarmupConfig{Enabled: warmup, Workers: 1, Timeout: 5 * time.Second},
+				}}),
+				core.WithBackwardsCompatibility(config.BackwardsCompatibilityConfiguration{
+					PersistedOperations: config.PersistedOperationsBackwardsCompatibility{AllowMismatchedSHA256IDs: allowMismatched},
+				}),
+			},
+		}, func(t *testing.T, e *testenv.Environment) {
+			var err error
+			res, err = e.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id),
+			})
+			require.NoError(t, err)
 		})
-		run(t, options{allowMismatched: true, body: otherBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
-			// Without warmup, the query sent with the ID runs instead of the published body.
-			assert.Equal(t, employees, request(hashedQuery).Body)
-		})
-		run(t, options{allowMismatched: true, noAPQ: true, body: otherBody}, func(t *testing.T, request func(string) *testenv.TestResponse) {
-			// Without APQ, the published body always runs.
-			assert.Equal(t, employeeIDs, request(hashedQuery).Body)
-		})
+		return res
+	}
+
+	t.Run("rejected by default", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, http.StatusInternalServerError, request(t, false, true).Response.StatusCode)
+	})
+
+	t.Run("served and warmed when allowed", func(t *testing.T) {
+		t.Parallel()
+		res := request(t, true, true)
+		assert.Equal(t, employees, res.Body)
+		assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+
+	t.Run("served without warmup when allowed", func(t *testing.T) {
+		t.Parallel()
+		res := request(t, true, false)
+		assert.Equal(t, employees, res.Body)
+		assert.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 	})
 }

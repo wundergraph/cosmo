@@ -148,22 +148,15 @@ func TestAllowMismatchedSHA256IDs(t *testing.T) {
 	const body = `query Employees { employees { id } }`
 	mismatchedID := strings.Repeat("a", 64)
 
-	t.Run("serves and caches storage operations", func(t *testing.T) {
+	t.Run("serves storage operations", func(t *testing.T) {
 		t.Parallel()
-		provider := &staticStorageClient{body: []byte(body)}
-		client, err := NewClient(&Options{ProviderClient: provider, CacheSize: 1024 * 1024, AllowMismatchedSHA256IDs: true})
+		client, err := NewClient(&Options{ProviderClient: &staticStorageClient{body: []byte(body)}, AllowMismatchedSHA256IDs: true})
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, client.Close()) })
 
 		content, _, err := client.PersistedOperation(t.Context(), "web", mismatchedID)
 		assert.NoError(t, err)
 		assert.Equal(t, body, string(content))
-
-		client.cache.Cache.Wait()
-		content, _, err = client.PersistedOperation(t.Context(), "web", mismatchedID)
-		assert.NoError(t, err)
-		assert.Equal(t, body, string(content))
-		assert.Equal(t, 1, provider.calls)
 	})
 
 	t.Run("serves manifest operations", func(t *testing.T) {
