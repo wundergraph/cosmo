@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/pkg/errors"
@@ -173,6 +174,16 @@ type ModuleContext struct {
 	stdContext.Context
 	Module Module
 	Logger *zap.Logger
+	// PrometheusMeterProvider creates instruments that are served on the router's
+	// Prometheus endpoint, subject to the telemetry.metrics.prometheus settings
+	// (e.g. exclude_metrics). It is never nil: when Prometheus metrics are disabled,
+	// instruments created from it are not exported.
+	PrometheusMeterProvider metric.MeterProvider
+	// OTLPMeterProvider creates instruments that are exported through the router's
+	// OTLP metric exporters, subject to the telemetry.metrics.otlp settings.
+	// It is never nil: when OTLP metrics are disabled, instruments created from it
+	// are not exported.
+	OTLPMeterProvider metric.MeterProvider
 }
 
 // WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
