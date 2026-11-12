@@ -125,7 +125,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, _ datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
 		return datasource.NewError("invalid event type for Kafka adapter", nil)
