@@ -1002,6 +1002,7 @@ func TestHeaderPropagation(t *testing.T) {
 			{name: "the default stands in for a missing header", policy: "max-age=300", employees: "public, max-age=120", want: "max-age=120"},
 			{name: "the default stands in for unknown directives", policy: "max-age=300", employees: "public, max-age=120", hobbies: "foo", want: "max-age=120"},
 			{name: "a public default stands in for a missing header", policy: "max-age=300, public", employees: "public, max-age=120", want: "max-age=120, public"},
+			{name: "an unparseable default does not stand in", policy: "max-age=abc", employees: "public, max-age=120", want: "no-store"},
 		} {
 			t.Run("missing_no_store: "+tc.name, func(t *testing.T) {
 				t.Parallel()

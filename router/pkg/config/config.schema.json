@@ -2314,7 +2314,7 @@
         "missing_no_store": {
           "type": "boolean",
           "default": false,
-          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, such a response is ignored."
+          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, a response with neither header is ignored, and one with only such directives withdraws public."
         },
         "subgraphs": {
           "type": "array",

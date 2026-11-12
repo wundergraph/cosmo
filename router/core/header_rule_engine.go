@@ -953,9 +953,17 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		// Unreadable freshness, or a failed fetch, is not cacheable.
 		resDir = noStoreDirectives()
 	}
+	// An unparseable default stands in for nothing.
+	var defaultDir *cachedirective.ResponseCacheDirectives
+	if rule.Default != "" {
+		if d, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			markStale(d)
+			defaultDir = d
+		}
+	}
 	// No header, or only unknown directives.
 	silent := h.missingNoStore && !hasCachingDirectives(resDir)
-	if silent && rule.Default == "" {
+	if silent && defaultDir == nil {
 		resDir = noStoreDirectives()
 	}
 	obj := &cachedirective.Object{
@@ -980,19 +988,16 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	)
 
 	var defaultPolicy *cachedirective.Object
-	if rule.Default != "" {
-		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
-			markStale(defaultResponseCache)
-			// The default stands in for a missing header. Against a fetch's own
-			// header it only caps the lifetime, so it can't withdraw public.
-			if resCacheHeader != "" && !silent {
-				defaultResponseCache.Public = resDir.Public
-			} else {
-				// Nothing of its own: the fetch is as public as the default.
-				resDir.Public = defaultResponseCache.Public
-			}
-			defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+	if defaultDir != nil {
+		// The default stands in for a missing header. Against a fetch's own
+		// header it only caps the lifetime, so it can't withdraw public.
+		if resCacheHeader != "" && !silent {
+			defaultDir.Public = resDir.Public
+		} else {
+			// Nothing of its own: the fetch is as public as the default.
+			resDir.Public = defaultDir.Public
 		}
+		defaultPolicy = &cachedirective.Object{RespDirectives: defaultDir}
 	}
 
 	propagation.m.Lock()
