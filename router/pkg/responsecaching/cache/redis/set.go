@@ -98,8 +98,8 @@ return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
 //     earliest expiry its lifts set. One a tag no longer lists is removed.
 //
 // So an extended entry is always listed, and a write racing a walk only costs
-// a miss. A failed confirm, or a writer dying in between, leaves only a
-// lease-long entry (10s). The token keeps each step to this write's own entry,
+// a miss. A failed confirm, a cancelled ctx, or a writer dying in between,
+// leaves only a lease-long entry (10s). The token keeps each step to this write's own entry,
 // never a later one's.
 func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 	if len(items) == 0 {
@@ -183,10 +183,8 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item 
 }
 
 // finishWrites is round trips 2 and 3.
+// Bounded by ctx; cut short, entries keep the lease.
 func (c *RedisCache) finishWrites(ctx context.Context, writes []write) error {
-	// Entries may be written now, so finish even if the caller gives up.
-	ctx = context.WithoutCancel(ctx)
-
 	lifts, err := c.checkListings(ctx, writes)
 	extErr := c.extendConfirmed(ctx, writes, lifts)
 
