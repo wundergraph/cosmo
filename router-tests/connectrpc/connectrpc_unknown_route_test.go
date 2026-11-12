@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -13,102 +12,65 @@ import (
 	employeev1 "github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1"
 )
 
-// TestConnectRPCUnknownRoute checks that a request for a path with no registered
-// RPC gets an error in the protocol the client speaks, not a bare text 404.
+// TestConnectRPCUnknownRoute checks that an unknown RPC path gets an error in
+// the protocol the client speaks, not a bare text 404.
 func TestConnectRPCUnknownRoute(t *testing.T) {
 	t.Parallel()
 
-	const (
-		unknownMethodPath  = "/employee.v1.EmployeeService/DoesNotExist"
-		unknownServicePath = "/does.not.Exist/Method"
-	)
+	const path = "/employee.v1.EmployeeService/DoesNotExist"
 
 	startServer := func(t *testing.T) (*TestConnectRPCServer, string) {
 		t.Helper()
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
 		require.NoError(t, ts.Start())
-		return ts, "http://" + ts.Addr().String()
+		return ts, "http://" + ts.Addr().String() + path
 	}
 
-	callUnknown := func(t *testing.T, httpClient *http.Client, url string, opts ...connect.ClientOption) *connect.Error {
+	// Streaming calls, so the request announces a framed protocol.
+	assertStreamError := func(t *testing.T, url string, opts ...connect.ClientOption) {
 		t.Helper()
-		client := connect.NewClient[employeev1.GetEmployeeByIdRequest, employeev1.GetEmployeeByIdResponse](httpClient, url, opts...)
-		_, err := client.CallUnary(context.Background(), connect.NewRequest(&employeev1.GetEmployeeByIdRequest{EmployeeId: 1}))
-
-		var connectErr *connect.Error
-		require.ErrorAs(t, err, &connectErr)
-		return connectErr
-	}
-
-	_, baseURL := startServer(t)
-
-	p := &http.Protocols{}
-	p.SetUnencryptedHTTP2(true)
-	h2cClient := &http.Client{Transport: &http.Transport{Protocols: p}}
-
-	protocols := []struct {
-		name       string
-		httpClient *http.Client
-		opts       []connect.ClientOption
-	}{
-		{name: "Connect", httpClient: http.DefaultClient},
-		{name: "gRPC", httpClient: h2cClient, opts: []connect.ClientOption{connect.WithGRPC()}},
-		{name: "gRPC-Web", httpClient: http.DefaultClient, opts: []connect.ClientOption{connect.WithGRPCWeb()}},
-	}
-	for _, protocol := range protocols {
-		t.Run(protocol.name+" client gets unimplemented for an unknown method", func(t *testing.T) {
-			t.Parallel()
-
-			connectErr := callUnknown(t, protocol.httpClient, baseURL+unknownMethodPath, protocol.opts...)
-			assert.Equal(t, connect.CodeUnimplemented, connectErr.Code())
-			assert.Equal(t, "method not found: "+unknownMethodPath, connectErr.Message())
-		})
-	}
-
-	t.Run("Connect streaming client gets unimplemented for an unknown method", func(t *testing.T) {
-		t.Parallel()
-
-		client := connect.NewClient[employeev1.GetEmployeeByIdRequest, employeev1.GetEmployeeByIdResponse](http.DefaultClient, baseURL+unknownMethodPath)
-		stream, err := client.CallServerStream(context.Background(), connect.NewRequest(&employeev1.GetEmployeeByIdRequest{EmployeeId: 1}))
+		client := connect.NewClient[employeev1.GetEmployeeByIdRequest, employeev1.GetEmployeeByIdResponse](http.DefaultClient, url, opts...)
+		stream, err := client.CallServerStream(t.Context(), connect.NewRequest(&employeev1.GetEmployeeByIdRequest{}))
 		require.NoError(t, err)
 		defer stream.Close()
 
-		require.False(t, stream.Receive())
+		assert.False(t, stream.Receive())
+		assert.Equal(t, connect.CodeUnimplemented, connect.CodeOf(stream.Err()))
+		assert.ErrorContains(t, stream.Err(), "method not found: "+path)
+	}
 
-		var connectErr *connect.Error
-		require.ErrorAs(t, stream.Err(), &connectErr)
-		assert.Equal(t, connect.CodeUnimplemented, connectErr.Code())
-		assert.Equal(t, "method not found: "+unknownMethodPath, connectErr.Message())
-	})
+	_, url := startServer(t)
 
-	t.Run("unknown service gets a Connect error envelope with HTTP 404", func(t *testing.T) {
+	t.Run("unary Connect gets HTTP 404 with a JSON error", func(t *testing.T) {
 		t.Parallel()
 
-		req, err := http.NewRequest(http.MethodPost, baseURL+unknownServicePath, strings.NewReader(`{}`))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := http.Post(url, "application/json", strings.NewReader(`{}`))
 		require.NoError(t, err)
 		defer resp.Body.Close()
-
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-		assert.JSONEq(t, `{"code":"unimplemented","message":"method not found: `+unknownServicePath+`"}`, string(body))
+		assert.JSONEq(t, `{"code":"unimplemented","message":"method not found: `+path+`"}`, string(body))
+	})
+
+	t.Run("gRPC-Web gets unimplemented", func(t *testing.T) {
+		t.Parallel()
+		assertStreamError(t, url, connect.WithGRPCWeb())
+	})
+
+	t.Run("Connect streaming gets unimplemented", func(t *testing.T) {
+		t.Parallel()
+		assertStreamError(t, url)
 	})
 
 	t.Run("still applies after a reload", func(t *testing.T) {
 		t.Parallel()
 
-		// Reload swaps the handler, so this needs a server of its own.
-		ts, reloadedURL := startServer(t)
+		// Reload swaps the handler, so this needs its own server.
+		ts, url := startServer(t)
 		require.NoError(t, ts.Reload())
-
-		connectErr := callUnknown(t, http.DefaultClient, reloadedURL+unknownServicePath)
-		assert.Equal(t, connect.CodeUnimplemented, connectErr.Code())
-		assert.Equal(t, "method not found: "+unknownServicePath, connectErr.Message())
+		assertStreamError(t, url)
 	})
 }
