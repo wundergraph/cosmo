@@ -1,0 +1,105 @@
+---
+title: "Considerations and Limitations"
+sidebarTitle: "Considerations and limitations"
+description: "What to plan for before relying on the response cache, and what it does not do."
+icon: "triangle-exclamation"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha and should not be used in production environments. The limitations below apply to the current release.
+</Danger>
+
+## Before you deploy
+
+### Redis is in the request path
+
+- **Startup depends on Redis.** The router pings Redis at startup and does not start if it is unreachable.
+- **Writes are synchronous.** A stored fetch waits for its write before the response is sent. An untagged entry costs one round trip. An entry with index tags costs up to three. Measure `router.response_cache.operation.duration_seconds` for `write` and keep Redis close to the router.
+- **There is no cache-specific timeout.** A Redis that accepts connections but stops answering holds every cacheable fetch for the client's read timeout, on the lookup and again on the write, including retries. Set timeouts and `max_retries=-1` on the Redis URL. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
+- **Failures degrade to the subgraph.** A failed lookup is a miss and a failed write drops the entry. The request still succeeds. Your subgraphs must be able to take the full traffic while Redis is down.
+
+### Size Redis for the cache
+
+- Set `maxmemory` and an eviction policy such as `volatile-ttl` or `allkeys-lru`. Every entry has an expiry.
+- Each entity is a separate key. A list of 100 entities is 100 keys, plus the root entry.
+- Every index tag is a sorted set. With all indexes on, an entity entry is listed in at least two sets: its subgraph and its type.
+- Watch evictions. An evicted entry is a miss on the next request. An evicted tag set loses its index, and the entries it listed can no longer be invalidated by that tag until they expire. See [Evictions](/router/response-cache/observability#evictions).
+
+### Key cardinality
+
+A key includes every variable value of the subgraph request. Operations with many distinct variable values, such as search terms or pagination cursors, create entries that are rarely read again. They cost a write on each miss and a lookup on each request.
+
+Use the [store decision](/router/response-cache/observability#store-decision) and the churn query to find such operations. Send `no-store` from the subgraph for responses that are not worth caching.
+
+### Several router replicas
+
+Use Redis. With the memory provider, each replica caches separately, hit rates drop as replicas are added, and an invalidation reaches one replica only.
+
+### Secure the invalidation endpoint
+
+- Bind it to a private interface or put TLS in front of it.
+- Use a random `shared_key` of at least 32 characters and rotate it like any other credential.
+- Anyone with the key can empty the cache and push the full load onto your subgraphs.
+
+## Subgraph responsibilities
+
+The cache trusts what subgraphs say about their responses.
+
+- **Send a caching directive on every cacheable response.** A response with no `Cache-Control` and no `Expires` is not stored, whatever `fallback_ttl` says.
+- **Name request headers in `Vary`.** A propagated header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. Headers are not part of the key on their own.
+- **Mark per-caller data `private`.** Configure a [`private_id`](/router/response-cache/configuration#private-responses) that identifies who may share it. Without one, `private` responses are not cached.
+- **Know the `Authorization` rule.** When `Authorization` is propagated, a response without `public`, `s-maxage` or `must-revalidate` is treated as private.
+- **Report failures as failures.** A status of 400 or higher, or a GraphQL `errors` entry, prevents storing. A `200` with wrong data is stored.
+
+## Limitations
+
+### Batches are all or nothing
+
+An entity batch is served from the cache only when every entity in it is cached. One missing entity sends the whole batch to the subgraph, including the cached ones. After an invalidation of one entity, the next request for any batch containing it refetches the whole batch.
+
+### Entities that do not exist are not cached
+
+An entity the subgraph returns as `null` is not stored. A batch that contains one is never a full hit, so it reaches the subgraph on every request.
+
+### Merged entity fetches
+
+With `engine.enable_multi_fetch`, entity fetches to the same subgraph in the same step are merged into one request with aliased `_entities` fields.
+
+- **Entries are not shared with plain entity fetches.** An entry's key includes the rendered subgraph request. The merged request differs from a plain `_entities` request for the same entity and fields. An entity cached by one is a miss for the other. How fetches are merged depends on the shape of the operation, so two operations that need the same entities can use different entries.
+- **Each alias is all or nothing**, like a batch. Warm aliases are left out of the request.
+- **Declared cache tags are dropped.** Such entries can be invalidated by subgraph or type, but not by cache tag.
+- **One `Vary` covers all aliases.** An alias is stored under the widest set of headers any alias varied on.
+- **Dependent fetches are skipped on failure.** When the request for cold aliases fails, warm aliases keep their data. Fetches that depend on the merged fetch are skipped, including those that need only warm aliases.
+
+### Subgraph data is not validated before storing
+
+Data is stored as the subgraph returned it, before it is checked against the schema. A value of the wrong type, or `null` in a non-null field, is stored. Every hit then returns the same error until the entry expires or is invalidated. This is a known issue.
+
+### No stale serving or revalidation
+
+Entries are served until they expire and never after. `stale-while-revalidate` and `stale-if-error` do not keep entries past their lifetime, and the cache never revalidates with the subgraph. When an entry expires, the next request goes to the subgraph.
+
+### Request directives are limited
+
+Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `no-store`, and require a cached answer with `only-if-cached`. `max-age` greater than zero, `min-fresh` and `max-stale` are ignored. Any client can send these directives, and they cannot be turned off.
+
+### Operations that are never cached
+
+- Mutations and subscriptions, including their entity fetches.
+- Every operation sent over WebSocket, queries included.
+- Requests that upload files.
+- Root fetches to non-GraphQL data sources, such as gRPC subgraphs.
+
+### Cache-Control on the client response
+
+- Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data.
+- Directives other than lifetimes, `public` and `private`, such as `must-revalidate` or `stale-while-revalidate`, are reported on a miss but not on a hit.
+- Responses with subgraph errors receive `no-store, no-cache, must-revalidate`.
+
+### Telemetry on hits
+
+A hit sends no subgraph request, so it has no transport telemetry. Request size, response size, in-flight counts and connection metrics are not recorded. The fetch is still recorded with `wg.response_cache.status="hit"`.
+
+### Tags on Redis can outlive a re-tag
+
+An entry stored again under different tags stays listed under its earlier tags until it expires. Invalidating an earlier tag still removes it.

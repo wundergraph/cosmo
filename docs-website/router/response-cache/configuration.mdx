@@ -1,0 +1,319 @@
+---
+title: "Configure the Response Cache"
+sidebarTitle: "Configuration"
+description: "Storage, per-subgraph settings, private responses, Vary, request directives and the client Cache-Control."
+icon: "sliders"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha. Its configuration can change between releases.
+</Danger>
+
+## Storage
+
+The cache needs a store. `storage` is required when `enabled` is `true`.
+
+### Redis
+
+Every router replica shares one cache, and entries outlive the router process. Declare a [storage provider](/router/storage-providers) and reference it by `provider_id`.
+
+```yaml config.yaml
+storage_providers:
+  redis:
+    - id: 'response_cache'
+      cluster_enabled: false
+      urls:
+        - 'redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&dial_timeout=500ms&pool_timeout=250ms&max_retries=-1'
+
+response_cache:
+  enabled: true
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    provider: 'redis'
+    provider_id: 'response_cache'
+```
+
+- Redis 7.0 or newer is required.
+- Set `cluster_enabled: true` for Redis Cluster. List the nodes in `urls`. The cache works across hash slots.
+- The router connects and pings Redis at startup. **If Redis is unreachable, the router does not start.**
+- An empty or unknown `provider_id` fails startup.
+- `key_prefix` is prepended to every key, so the cache can share a Redis instance with other data.
+
+Give the cache its own storage provider entry. Timeouts and pool settings in the URL then apply to the cache alone, and its keys can be told apart from other router features.
+
+#### Redis timeouts
+
+The response cache has no timeout of its own. Every lookup and write waits as long as the Redis client allows. With the client's defaults, a Redis instance that accepts connections but does not answer holds each request for many seconds: each lookup and each write waits for a read timeout of 3 seconds, and is retried 3 times.
+
+Set the client's limits as query parameters on the Redis URL:
+
+| Parameter | Meaning | Suggested |
+| --- | --- | --- |
+| `read_timeout` | Longest wait for a reply | `250ms` |
+| `write_timeout` | Longest wait to send a command | `250ms` |
+| `dial_timeout` | Longest wait to open a connection | `500ms` |
+| `pool_timeout` | Longest wait for a free connection | `250ms` |
+| `max_retries` | Retries per command. `-1` disables retries. `0` means the default of 3. | `-1` |
+
+The same parameters apply in cluster mode, read from the first URL.
+
+These settings bound the worst case to the timeouts of one lookup and one write per cacheable fetch. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write drops the entry. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
+
+### Memory
+
+Each replica holds its own cache. Nothing survives a restart, and no Redis is needed.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'memory'
+    max_entries: 10000
+```
+
+`provider` defaults to `redis`, so the memory provider must be named. This prevents a missing `provider_id` from turning one shared cache into one cache per replica.
+
+`max_entries` accepts 1 to 100000. Use the memory provider for development or for a single router instance. With several replicas, each has its own entries and an [invalidation](/router/response-cache/invalidation) reaches only the replica it was sent to.
+
+## Configuration reference
+
+```yaml config.yaml
+response_cache:
+  # Turn the response cache on. Default: false.
+  enabled: true
+  # Prepended to every Redis key. Ignored by the memory provider.
+  # Default: cosmo_response_cache:
+  key_prefix: 'cosmo_response_cache:'
+
+  # Settings for every subgraph without an entry under subgraphs.
+  all:
+    # Cache this subgraph. Set to false to cache only the subgraphs
+    # listed under subgraphs. Default: true.
+    enabled: true
+    # Lifetime of a response with a directive that allows a default but
+    # no lifetime of its own. Minimum 1s. Default: 30s.
+    fallback_ttl: 30s
+    # Expression yielding the private context of a request, so private
+    # responses can be cached per context. Default: none.
+    private_id: ''
+
+  # Per-subgraph settings, keyed by subgraph name. An entry replaces all.
+  subgraphs:
+    products:
+      enabled: true
+      fallback_ttl: 5m
+
+  storage:
+    # redis or memory. Default: redis.
+    provider: 'redis'
+    # Id of an entry under storage_providers.redis. Required for redis.
+    provider_id: 'response_cache'
+    # Memory provider only. 1 to 100000. Default: 10000.
+    max_entries: 10000
+
+  invalidation:
+    # Secondary indexes built over entries. Each defaults to true.
+    cache_tag: true
+    subgraph: true
+    type: true
+    endpoint:
+      # Serve the invalidation endpoint. Default: false.
+      enabled: false
+      # Its own listener, not a route on the router's port.
+      # Default: localhost:5027.
+      listen_addr: 'localhost:5027'
+      # Must start with /. Default: /invalidation.
+      path: '/invalidation'
+      # Expected Authorization header value. At least 32 characters.
+      # Required when the endpoint is enabled.
+      shared_key: ''
+
+  cache_tag_header:
+    # Send the tags of a response in a header a CDN can purge by.
+    # Default: false.
+    enabled: false
+    # Default: Cache-Tag.
+    name: 'Cache-Tag'
+    # Separator between tags. Default: ",".
+    delimiter: ','
+    # Which tags to send. Default: [subgraph, type, cache_tag].
+    tiers: ['subgraph', 'type', 'cache_tag']
+    # Largest header value in bytes. Default: 16384.
+    max_bytes: 16384
+    # When the tags do not fit: truncate or private. Default: truncate.
+    on_overflow: 'truncate'
+```
+
+The invalidation and cache tag header settings are described in [Invalidation and CDN purging](/router/response-cache/invalidation).
+
+### Environment variables
+
+| Variable | Key |
+| --- | --- |
+| `RESPONSE_CACHE_ENABLED` | `enabled` |
+| `RESPONSE_CACHE_KEY_PREFIX` | `key_prefix` |
+| `RESPONSE_CACHE_ALL_ENABLED` | `all.enabled` |
+| `RESPONSE_CACHE_ALL_FALLBACK_TTL` | `all.fallback_ttl` |
+| `RESPONSE_CACHE_ALL_PRIVATE_ID` | `all.private_id` |
+| `RESPONSE_CACHE_STORAGE_PROVIDER` | `storage.provider` |
+| `RESPONSE_CACHE_STORAGE_PROVIDER_ID` | `storage.provider_id` |
+| `RESPONSE_CACHE_STORAGE_MAX_ENTRIES` | `storage.max_entries` |
+| `RESPONSE_CACHE_INVALIDATION_CACHE_TAG` | `invalidation.cache_tag` |
+| `RESPONSE_CACHE_INVALIDATION_SUBGRAPH` | `invalidation.subgraph` |
+| `RESPONSE_CACHE_INVALIDATION_TYPE` | `invalidation.type` |
+| `RESPONSE_CACHE_INVALIDATION_ENDPOINT_ENABLED` | `invalidation.endpoint.enabled` |
+| `RESPONSE_CACHE_INVALIDATION_ENDPOINT_LISTEN_ADDR` | `invalidation.endpoint.listen_addr` |
+| `RESPONSE_CACHE_INVALIDATION_ENDPOINT_PATH` | `invalidation.endpoint.path` |
+| `RESPONSE_CACHE_INVALIDATION_ENDPOINT_SHARED_KEY` | `invalidation.endpoint.shared_key` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_ENABLED` | `cache_tag_header.enabled` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_NAME` | `cache_tag_header.name` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_DELIMITER` | `cache_tag_header.delimiter` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_TIERS` | `cache_tag_header.tiers` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_MAX_BYTES` | `cache_tag_header.max_bytes` |
+| `RESPONSE_CACHE_CACHE_TAG_HEADER_ON_OVERFLOW` | `cache_tag_header.on_overflow` |
+
+`subgraphs` can only be set in the config file.
+
+### Startup checks
+
+Environment variables bypass schema validation. The router still checks these at startup and refuses to start if one fails:
+
+- `fallback_ttl` is greater than zero, under `all` when it is enabled and in every enabled entry under `subgraphs`.
+- Every `private_id` compiles.
+- `storage.provider` is `redis` or `memory`, and `provider_id` names a declared Redis provider.
+- `shared_key` has at least 32 characters when the endpoint is enabled.
+- `cache_tag_header.name` is a valid header name and is not `Content-Length`, `Content-Type` or `Transfer-Encoding`.
+- `cache_tag_header.delimiter` is not empty and is valid in a header.
+- `cache_tag_header.max_bytes` is greater than zero, and `tiers` and `on_overflow` hold known values.
+
+## Per-subgraph configuration
+
+`all` applies to every subgraph. An entry under `subgraphs`, keyed by subgraph name, replaces `all` for that subgraph.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'response_cache'
+  all:
+    fallback_ttl: 30s
+    private_id: 'request.auth.claims.sub'
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+```
+
+Here `inventory` is never cached. `products` uses a five-minute default lifetime. Every other subgraph uses thirty seconds.
+
+An entry is a full override. Nothing is inherited from `all` and nothing is defaulted:
+
+- `enabled` must be set. An entry without it does not cache the subgraph.
+- An enabled entry must set `fallback_ttl`. Otherwise startup fails and names the entry.
+- An entry without `private_id` has none. In the example, `products` does not cache `private` responses even though `all` sets an id. Repeat `private_id` in the entry to keep it.
+
+With `all.enabled: false`, only subgraphs whose entry sets `enabled: true` are cached. If no entry does, the router starts, caches nothing, and logs a warning.
+
+The indexes, the invalidation endpoint and the cache tag header apply to all subgraphs.
+
+### Feature flags
+
+A feature flag graph uses the same settings. A feature subgraph is configured, cached and invalidated under its own name, not the name of the subgraph it replaces.
+
+An entry naming a subgraph that a graph does not have is kept, because another graph may have it. The router logs a warning per graph that lacks it.
+
+## Private responses
+
+A subgraph whose answer depends on who is asking marks it `Cache-Control: private`. Such a response must not be served to anyone else. It can still be cached for the context it was produced in.
+
+`private_id` is an [expression](/router/configuration/template-expressions) evaluated once per request. Its value names the context: a user, a tenant or any group of requests that may share a response.
+
+```yaml config.yaml
+response_cache:
+  all:
+    private_id: 'request.auth.claims.sub'
+```
+
+With a `private_id`:
+
+- A `private` response is stored under a key that includes a SHA-256 digest of the id. Each context has its own entry. Raw ids are never written to the store.
+- A request whose expression yields nothing, such as an anonymous request without the claim, does not store or read private entries. The subgraph is asked every time.
+- A value that is not a string is treated as no id and reported in the warning log.
+- `public` responses are unaffected. They are shared by every request.
+- Invalidation by subgraph, type or tag also removes private entries.
+
+Without a `private_id`, `private` responses are not stored.
+
+<Warning>
+  `private_id` decides who shares an entry. Two requests with the same id share it, whatever else differs between them.
+
+  - An id that the client can set itself, such as a plain request header, lets one client read another's entries. Prefer a verified claim.
+  - Propagated headers are not part of the key unless the subgraph names them in `Vary`. A private answer that also depends on such a header must name it in `Vary`, or the expression must include it.
+  - A [`set` response header rule](/router/proxy-capabilities/subgraph-response-header-operations) on `Cache-Control` can replace `private` in what the client receives. It does not change how the entry is stored.
+</Warning>
+
+### Authorization
+
+A subgraph request that carries an `Authorization` header produces a private response unless the response says `public`, `s-maxage` or `must-revalidate`. Without a `private_id`, such a response is not stored.
+
+This applies only when `Authorization` is propagated to the subgraph. A subgraph that serves the same data to every authenticated caller should say `public`.
+
+## Varying responses
+
+A subgraph whose answer depends on a request header, such as `Accept-Language`, names it in a `Vary` response header. The router keeps one entry per combination of values it sent.
+
+- The first response stores the names from `Vary` as a record at the entry's key, and the body under a variant key.
+- A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant. A varying fetch costs two round trips to the store. A fetch without `Vary` costs one.
+- Values are taken from the request as the subgraph receives it, after header propagation. A named header the router does not send counts as empty.
+- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names.
+- A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
+- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. Older variants stay reachable until they expire.
+- With `engine.enable_multi_fetch`, one `Vary` applies to every alias of a merged fetch. Keep the subgraph's `Vary` to the headers each response depends on.
+
+## Request directives
+
+A client can control the cache for its own request with the `Cache-Control` request header.
+
+| Request directive | Effect |
+| --- | --- |
+| `no-cache`, or `max-age=0` | Not answered from the cache. Every fetch goes to its subgraph and the responses are stored, so the entries are refreshed. |
+| `no-store` | Nothing is stored. Existing entries can still answer the request. |
+| `no-cache, no-store` | The cache is neither read nor written. |
+| `only-if-cached` | Every fetch must be answered from the cache. Otherwise the request fails with status `504`. Fetches to subgraphs the cache is off for fail too. Introspection is exempt. |
+
+`max-age` greater than zero, `min-fresh` and `max-stale` are ignored. So is the `Pragma` header. A `Cache-Control` request header that cannot be parsed is ignored.
+
+Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated](/router/request-deduplication) with other requests in flight.
+
+<Warning>
+  Any client can send these directives. They cannot be turned off. A client that sends `no-cache` on every request bypasses the cache, and its subgraphs see all of its traffic.
+</Warning>
+
+## Client Cache-Control
+
+The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses.
+
+```yaml config.yaml
+cache_control_policy:
+  enabled: true
+  # Optional. Stands in for a subgraph that sends no Cache-Control.
+  value: 'max-age=60, public'
+  # Optional. A subgraph without caching directives makes the response no-store.
+  missing_no_store: false
+
+apollo_router_compatibility_flags:
+  cache_control_any_public:
+    # Keep public when any fetch is public and none is private.
+    enabled: false
+```
+
+How each setting interacts with the cache:
+
+- **`value`** is used for fetches whose subgraph sent no caching directives. It caps the lifetime of fetches that sent their own. It does not make a response storable.
+- **`missing_no_store`** makes the response `no-store` when a fetch had no caching directives and no `value` stands in for it. A fetch answered fully from the cache does not count, since no subgraph response was received.
+- **`cache_control_any_public`** changes how `public` is merged. By default, every fetch must be public for the response to be public.
+
+With a policy in place, a cached fetch reports its remaining lifetime. See [Client Cache-Control](/router/response-cache/how-it-works#client-cache-control) for the exact rules.
