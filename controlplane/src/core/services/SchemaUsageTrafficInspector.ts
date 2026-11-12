@@ -12,6 +12,9 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { traced } from '../tracing.js';
 
+// Matches the HTTP timeout of the ClickHouse client (src/core/plugins/clickhouse.ts).
+const INSPECTOR_QUERY_MAX_EXECUTION_TIME_SECONDS = 60;
+
 export enum FieldTypeChangeCategory {
   /**
    * Optional same type -> Required same type
@@ -253,6 +256,9 @@ export class SchemaUsageTrafficInspector {
               OrganizationID = {organizationId:String} AND
               ${where.join(' AND ')}
             GROUP BY OperationHash
+            -- Stop on the server once the HTTP client has given up (see the client timeout), instead of
+            -- keeping the CPU busy and slowing down the queries that follow.
+            SETTINGS max_execution_time = ${INSPECTOR_QUERY_MAX_EXECUTION_TIME_SECONDS}
           `;
 
           const res: {
