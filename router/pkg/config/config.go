@@ -1228,10 +1228,10 @@ type ResponseCacheStorageConfig struct {
 	MaxEntries int64 `yaml:"max_entries,omitempty" envDefault:"10000" env:"MAX_ENTRIES"`
 	// LookupTimeout bounds a storage read on the request path; past it the
 	// lookup is a miss. Zero or less is unbounded.
-	LookupTimeout time.Duration `yaml:"lookup_timeout,omitempty" envDefault:"150ms" env:"LOOKUP_TIMEOUT"`
+	LookupTimeout time.Duration `yaml:"lookup_timeout,omitempty" envDefault:"200ms" env:"LOOKUP_TIMEOUT"`
 	// WriteTimeout bounds a storage write on the request path; past it the
 	// write is dropped. Zero or less is unbounded.
-	WriteTimeout time.Duration `yaml:"write_timeout,omitempty" envDefault:"500ms" env:"WRITE_TIMEOUT"`
+	WriteTimeout time.Duration `yaml:"write_timeout,omitempty" envDefault:"600ms" env:"WRITE_TIMEOUT"`
 }
 
 type StorageProviders struct {
