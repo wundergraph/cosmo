@@ -600,14 +600,16 @@ export function invalidInterfaceImplementationError(
         invalidImplementedArguments,
         isInaccessible,
         originalResponseType,
-        unfederatedArguments,
+        unfederatedOptionalArguments,
+        unfederatedRequiredArguments,
         unimplementedArguments,
       },
     ] of implementationErrors.invalidFieldImplementations) {
       const unimplementedArgumentsSize = unimplementedArguments.size;
       const invalidArgumentsLength = invalidImplementedArguments.length;
       const invalidAdditionalArgumentsSize = invalidAdditionalArguments.size;
-      const unfederatedArgumentsSize = unfederatedArguments?.size;
+      const unfederatedOptionalArgsSize = unfederatedOptionalArguments?.size;
+      const unfederatedRequiredArgsSize = unfederatedRequiredArguments?.size;
       message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
@@ -615,13 +617,22 @@ export function invalidInterfaceImplementationError(
           [...unimplementedArguments].join('", "') +
           '"\n';
       }
-      if (unfederatedArgumentsSize) {
+
+      if (unfederatedOptionalArgsSize) {
         message +=
           `   Optional arguments that are not defined in all subgraphs that define its parent field must be` +
           ` removed from the federated schema to prevent run-time errors.\n` +
-          `    However, this caused the following argument implementation${unfederatedArgumentsSize > 1 ? 's' : ''}` +
+          `    However, this caused the following argument implementation${unfederatedOptionalArgsSize > 1 ? 's' : ''}` +
           ` to be removed and the federated definition of "${interfaceName}.${fieldName}" is no longer satisfied: "` +
-          [...unfederatedArguments].join(QUOTATION_JOIN) +
+          [...unfederatedOptionalArguments].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+
+      if (unfederatedRequiredArgsSize) {
+        message +=
+          `    The following argument implementation${unfederatedRequiredArgsSize > 1 ? 's are' : ' is'}` +
+          ` required and must be defined on all implementations of the field: "` +
+          [...unfederatedRequiredArguments].join(QUOTATION_JOIN) +
           `"\n`;
       }
 

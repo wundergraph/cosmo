@@ -5,6 +5,7 @@ import {
   type EntityInterfaceSubgraphData,
   type FieldData,
   type FieldName,
+  ID_SCALAR,
   type ImplementationErrors,
   INTERFACE,
   type InvalidEntityInterface,
@@ -12,6 +13,8 @@ import {
   invalidFieldShareabilityError,
   invalidInterfaceImplementationError,
   invalidInterfaceObjectImplementationDefinitionsError,
+  invalidRequiredInputValueError,
+  OBJECT,
   type ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -22,6 +25,7 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../../../src';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -892,6 +896,738 @@ describe('@interfaceObject tests', () => {
         ]),
       ),
     );
+  });
+
+  test('that field arguments constributed by an @interfaceObject is considered #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an optional @interfaceObject field argument is propagated into the federated schemas if all other instances of the field define that argument #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Entity @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an optional @interfaceObject field argument is propagated into the federated schemas if all other instances of the field define that argument #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Entity @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const d = createSubgraph(
+      'd',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c, d],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an optional @interfaceObject field argument is propagated into the federated schemas if all other instances of the field define that argument #3', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an optional @interfaceObject field argument is propagated into the federated schemas if all other instances of the field define that argument #4', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID): ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b, c],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+      
+      type Entity implements Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      interface Interface {
+        a(a: ID): ID
+        id: ID!
+      }
+      
+      type Query {
+        interfaces: [Interface!]!
+      }
+    `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if an @interfaceObject defines a required field argument that is not defined by all other instances of the field #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a: ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      invalidRequiredInputValueError(
+        'field',
+        'Entity.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['a'],
+            requiredSubgraphs: ['b'],
+          },
+        ],
+        true,
+      ),
+      invalidInterfaceImplementationError(
+        'Entity',
+        OBJECT,
+        new Map<string, ImplementationErrors>([
+          [
+            INTERFACE,
+            {
+              invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                [
+                  'a',
+                  {
+                    implementationContextCoords: new Set(),
+                    interfaceContextCoords: new Set(),
+                    invalidAdditionalArguments: new Set(),
+                    invalidImplementedArguments: [],
+                    isInaccessible: false,
+                    originalResponseType: ID_SCALAR,
+                    unfederatedRequiredArguments: new Set(['a']),
+                    unimplementedArguments: new Set(),
+                  },
+                ],
+              ]),
+              unimplementedFields: [],
+            },
+          ],
+        ]),
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if an @interfaceObject defines a required field argument that is not defined by all other instances of the field #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a: ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a: ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          id: ID!
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      invalidRequiredInputValueError(
+        'field',
+        'Interface.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['a'],
+            requiredSubgraphs: ['b'],
+          },
+        ],
+        true,
+      ),
+      invalidRequiredInputValueError(
+        'field',
+        'Entity.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['a'],
+            requiredSubgraphs: ['b'],
+          },
+        ],
+        true,
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if an @interfaceObject field does not define a required field argument defined elsewhere #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a(a: ID!): ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID!): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          a: ID
+          id: ID!
+        }
+      `,
+    );
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      invalidRequiredInputValueError(
+        'field',
+        'Interface.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['a'],
+          },
+        ],
+        true,
+      ),
+      invalidRequiredInputValueError(
+        'field',
+        'Entity.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['a'],
+          },
+        ],
+        true,
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if an @interfaceObject field does not define a required field argument defined elsewhere #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          a(a: ID!): ID
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID!): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          a: ID
+          id: ID!
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          a(a: ID): ID
+          id: ID!
+        }
+      `,
+    );
+    const { errors, warnings } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      invalidRequiredInputValueError(
+        'field',
+        'Interface.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['a'],
+          },
+        ],
+        true,
+      ),
+      invalidRequiredInputValueError(
+        'field',
+        'Entity.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['a'],
+          },
+        ],
+        true,
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if an @interfaceObject field does not define a required field argument defined elsewhere #3', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface @key(fields: "id") {
+          id: ID!
+        }
+        
+        type Entity implements Interface @key(fields: "id") @shareable {
+          a(a: ID!): ID
+          id: ID!
+        }
+        
+        type Query {
+          interfaces: [Interface!]!
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          a: ID
+          id: ID!
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Interface @key(fields: "id") @interfaceObject @shareable {
+          a(a: ID!): ID
+          id: ID!
+        }
+      `,
+    );
+    const { errors, warnings } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      invalidRequiredInputValueError(
+        'field',
+        'Interface.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['c'],
+          },
+        ],
+        true,
+      ),
+      invalidRequiredInputValueError(
+        'field',
+        'Entity.a',
+        [
+          {
+            inputValueName: 'a',
+            missingSubgraphs: ['b'],
+            requiredSubgraphs: ['a', 'c'],
+          },
+        ],
+        true,
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
   });
 });
 
