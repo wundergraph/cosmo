@@ -118,6 +118,7 @@ type headerPropagationWriter struct {
 	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
 	responseCacheStatusFor    *requestContext
 	didSetResponseCacheStatus bool
+	didCheckOnlyIfCached      bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -164,6 +165,13 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
 		h.didSetResponseCacheStatus = true
 		setResponseCacheStatusHeader(h.writer.Header(), h.responseCacheStatusFor)
+	}
+	// An only-if-cached request the cache could not answer.
+	if !h.didCheckOnlyIfCached {
+		h.didCheckOnlyIfCached = true
+		if h.resolveCtx.ResponseCacheUnsatisfied() {
+			h.writer.WriteHeader(http.StatusGatewayTimeout)
+		}
 	}
 	return h.writer.Write(p)
 }
@@ -353,7 +361,7 @@ func (h *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*confi
 func (h *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
 	switch rule.GetOperation() {
 	case config.HeaderRuleOperationSet:
-	case config.HeaderRuleOperationPropagate:
+	case config.HeaderRuleOperationPropagate, config.HeaderRuleOperationRemove:
 		if rule.GetMatching() != "" {
 			regex, err := regexp.Compile(caseInsensitiveRegexp + rule.GetMatching())
 			if err != nil {
@@ -375,6 +383,9 @@ func (h *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRule
 	}
 
 	for i, rule := range rhrrs {
+		if rule.Operation == config.HeaderRuleOperationRemove {
+			return fmt.Errorf("operation 'remove' is not supported for response header rule %d", i)
+		}
 		if err := h.processRule(rule, i); err != nil {
 			return err
 		}
@@ -771,11 +782,37 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				return
 			}
 
-			header.Set(rule.Name, content.getBufferString())
+			header.Set(rule.Name, rule.FromFile.Prefix+content.getBufferString())
 			return
 		}
 
 		header.Set(rule.Name, rule.Value)
+		return
+	}
+
+	/**
+	 *	Remove the named or matching headers added by previous rules
+	 */
+
+	if rule.Operation == config.HeaderRuleOperationRemove {
+		if rule.Named != "" {
+			header.Del(rule.Named)
+			return
+		}
+
+		if regex, ok := h.regex[rule.Matching]; ok {
+			for name := range header {
+				result := regex.MatchString(name)
+				if rule.NegateMatch {
+					result = !result
+				}
+
+				if result {
+					header.Del(name)
+				}
+			}
+		}
+
 		return
 	}
 
@@ -1276,6 +1313,14 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 				headerNames = append(headerNames, rule.Named)
 			} else {
 				return nil, nil, fmt.Errorf("invalid header propagation rule %+v, no header name nor regular expression", rule)
+			}
+		case config.HeaderRuleOperationRemove:
+			// Removed headers are never forwarded, so they don't add to the propagated headers.
+			if rule.Matching == "" && rule.Named == "" {
+				return nil, nil, fmt.Errorf("invalid header remove rule %+v, no header name nor regular expression", rule)
+			}
+			if rule.Matching != "" && rule.Named != "" {
+				return nil, nil, fmt.Errorf("invalid header remove rule %+v, header name and regular expression can't be used together", rule)
 			}
 		default:
 			return nil, nil, fmt.Errorf("invalid header rule operation %q in rule %+v", rule.Operation, rule)

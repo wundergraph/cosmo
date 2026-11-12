@@ -1,5 +1,6 @@
 import {
   BREAK,
+  type ConstArgumentNode,
   type ConstDirectiveNode,
   type ConstValueNode,
   type DefinitionNode,
@@ -47,6 +48,7 @@ import {
   getNormalizedFieldSet,
   initializeDirectiveDefinitionDatas,
   isNodeQuery,
+  parseCacheTagFormat,
   validateArgumentTemplateReferences,
   validateKeyFieldSets,
 } from './utils';
@@ -69,6 +71,7 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import {
+  blankCacheTagFormatErrorMessage,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   directlyProvidedInterfaceFieldError,
@@ -89,6 +92,8 @@ import {
   incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
+  invalidCacheTagArgumentTypeErrorMessage,
+  invalidCacheTagReferenceErrorMessage,
   invalidComposeDirectiveNameError,
   invalidDirectiveDefinitionError,
   invalidDirectiveError,
@@ -113,6 +118,9 @@ import {
   invalidMutuallyExclusiveCacheDirectivesError,
   invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
+  invalidDeliveryGuaranteeModeDefinitionErrorMessage,
+  invalidDeliveryGuaranteesDefinitionErrorMessage,
+  invalidDeliveryGuaranteesInputFieldsErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
   invalidProvidesOrRequiresDirectivesError,
@@ -152,6 +160,7 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  nonRootFieldCacheTagErrorMessage,
   oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
@@ -162,6 +171,8 @@ import {
   semanticNonNullLevelsNonNullErrorMessage,
   subgraphInvalidSyntaxError,
   typeNameAlreadyProvidedErrorMessage,
+  undefinedCacheTagArgumentErrorMessage,
+  undefinedCacheTagInputFieldErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -176,8 +187,10 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  unsupportedFieldCacheTagNamespaceErrorMessage,
 } from '../../errors/errors';
 import {
+  DELIVERY_GUARANTEES_FIELD_NAMES,
   DEPENDENCIES_BY_DIRECTIVE_NAME,
   EVENT_DIRECTIVE_NAMES,
   STREAM_CONFIGURATION_FIELD_NAMES,
@@ -187,7 +200,10 @@ import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
   type CacheInvalidateConfiguration,
   type CachePopulateConfiguration,
+  type CacheTagConfiguration,
   type ConfigurationData,
+  type DeliveryGuaranteeMode,
+  type DeliveryGuarantees,
   type Costs,
   type EntityCacheConfiguration,
   type EventConfiguration,
@@ -210,11 +226,14 @@ import {
   providesWithInterfaceFieldSelectionWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
+  unsupportedCacheTagLocationWarning,
   unsupportedDirectiveWarning,
+  userDefinedDeferWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
   type AuthorizationData,
+  type CacheTagData,
   type CompositeOutputData,
   type ConditionalFieldData,
   type ConfigureDescriptionData,
@@ -244,6 +263,7 @@ import {
   isInputObjectDefinitionData,
   isInterfaceDefinitionData,
   isInterfaceNode,
+  isLeafKind,
   isNodeExternalOrShareable,
   isOutputNodeKind,
   isParentDataCompositeOutputType,
@@ -277,9 +297,11 @@ import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
 import { type Warning } from '../../warnings/types';
 import { type NormalizationResult } from '../../normalization/types';
 import {
+  ARGS,
   ARGUMENT,
   ASSUMED_SIZE,
   AUTHENTICATED,
+  CACHE_TAG,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -287,8 +309,13 @@ import {
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   COST,
+  CURSOR_UPPER,
   DEFAULT_EDFS_PROVIDER_ID,
+  DEFER,
+  DELIVERY_GUARANTEES,
   DESCRIPTION_OVERRIDE,
+  COSMO_STREAMS_DELIVERY_GUARANTEE_MODE,
+  COSMO_STREAMS_DELIVERY_GUARANTEES,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -303,6 +330,7 @@ import {
   EXTERNAL,
   FIELDS,
   FIRST_ORDINAL,
+  FORMAT,
   FROM_CONTEXT,
   HYPHEN_JOIN,
   INACCESSIBLE,
@@ -318,6 +346,7 @@ import {
   LITERAL_AT,
   LITERAL_PERIOD,
   MAX_AGE,
+  MODE,
   MUTATION,
   NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
@@ -325,6 +354,7 @@ import {
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
+  OFF_UPPER,
   ONE_OF,
   OPENFED_CACHE_INVALIDATE,
   OPENFED_CACHE_POPULATE,
@@ -521,6 +551,7 @@ export class NormalizationFactory {
   subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
   usesEdfsNatsStreamConfiguration: boolean = false;
+  usesEdfsDeliveryGuarantees: boolean = false;
   warnings: Array<Warning> = [];
 
   constructor({ internalGraph, options, subgraphName }: NormalizationFactoryParams) {
@@ -616,19 +647,30 @@ export class NormalizationFactory {
     const isObjectKind = isObjectNodeKind(node.kind);
     for (const directiveNode of node.directives) {
       const directiveName = directiveNode.name.value;
-      if (directiveName === SHAREABLE) {
-        // @shareable need only be propagated once
-        getValueOrDefault(directivesByName, directiveName, () => [directiveNode]);
-      } else {
-        getValueOrDefault(directivesByName, directiveName, () => []).push(directiveNode);
+      switch (directiveName) {
+        case SHAREABLE: {
+          // @shareable need only be propagated once
+          getValueOrDefault(directivesByName, directiveName, () => [directiveNode]);
+          break;
+        }
+        case DEFER: {
+          // `@defer` is intended to be an built-in directive; ignore any user-defined instances
+          break;
+        }
+        default: {
+          getValueOrDefault(directivesByName, directiveName, () => []).push(directiveNode);
+          break;
+        }
       }
       if (!isCompositeKind) {
         continue;
       }
+
       this.doesParentRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       if (!isObjectKind) {
         continue;
       }
+
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
       this.isParentObjectShareable ||= directiveName === SHAREABLE;
     }
@@ -843,9 +885,15 @@ export class NormalizationFactory {
 
   handleExecutableDirectives() {
     for (const [directiveName, definitionData] of this.directiveDefinitionDataByName) {
+      if (directiveName === DEFER) {
+        // `@defer` is intended to be an built-in directive; ignore any user-defined instances
+        continue;
+      }
+
       if (definitionData.isComposed || definitionData.executableLocations.size < 1) {
         continue;
       }
+
       this.federatedDirectiveDataByName.set(directiveName, definitionData);
     }
   }
@@ -1249,7 +1297,13 @@ export class NormalizationFactory {
       this.errors.push(duplicateDirectiveDefinitionError(name));
       return false;
     }
+
     this.definedDirectiveNames.add(name);
+    if (name === DEFER) {
+      // `@defer` is intended to be an in-built directive; ignore any user-defined instances.
+      return false;
+    }
+
     this.extractDirectiveArgumentCosts(node);
     // Normalize federation directives by replacing them with predefined definitions
     const definition = V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.get(name);
@@ -1260,10 +1314,12 @@ export class NormalizationFactory {
       this.isSubgraphVersionTwo = true;
       return false;
     }
+
     // Other known directives will only be added if they are used.
     if (DIRECTIVE_DEFINITION_BY_NAME.has(name)) {
       return false;
     }
+
     this.directiveDefinitionByName.set(name, node);
     // @TODO
     const errorMessages: Array<string> = [];
@@ -1312,6 +1368,7 @@ export class NormalizationFactory {
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
     const fieldData: FieldData = {
       argumentDataByName: argumentDataByName,
+      cacheTagDataBySubgraphName: new Map<SubgraphName, CacheTagData>(),
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       externalFieldDataBySubgraphName: new Map<SubgraphName, ExternalFieldData>([
         [this.subgraphName, newExternalFieldData(isExternal)],
@@ -3101,6 +3158,57 @@ export class NormalizationFactory {
     return { fieldName, providerId, providerType: PROVIDER_TYPE_KAFKA, topics, type: PUBLISH };
   }
 
+  /* Parses the optional "deliveryGuarantees" argument of the @edfs__kafkaSubscribe directive.
+   * Returns the delivery guarantees to spread into the configuration. The object is empty unless the mode is CURSOR
+   * (or if the argument value is invalid, in which case an error message is appended).
+   */
+  getDeliveryGuaranteeMode(argumentNode: ConstArgumentNode, errorMessages: Array<string>): DeliveryGuarantees {
+    this.usesEdfsDeliveryGuarantees = true;
+    /* The argument is nullable, so an explicit null is equivalent to omitting the argument. */
+    if (argumentNode.value.kind !== Kind.OBJECT) {
+      return {};
+    }
+    let mode: DeliveryGuaranteeMode = OFF_UPPER;
+    let invalidModeValue: string | undefined;
+    const duplicateFieldNames = new Set<FieldName>();
+    const invalidFieldNames = new Set<FieldName>();
+    const definedFieldNames = new Set<FieldName>();
+    for (const field of argumentNode.value.fields) {
+      const fieldName = field.name.value;
+      if (!DELIVERY_GUARANTEES_FIELD_NAMES.has(fieldName)) {
+        invalidFieldNames.add(fieldName);
+        continue;
+      }
+      if (definedFieldNames.has(fieldName)) {
+        duplicateFieldNames.add(fieldName);
+        continue;
+      }
+      definedFieldNames.add(fieldName);
+      // MODE is currently the only valid field
+      if (field.value.kind !== Kind.ENUM || (field.value.value !== OFF_UPPER && field.value.value !== CURSOR_UPPER)) {
+        invalidModeValue = print(field.value);
+        continue;
+      }
+      mode = field.value.value as DeliveryGuaranteeMode;
+    }
+    if (duplicateFieldNames.size > 0 || invalidFieldNames.size > 0 || invalidModeValue !== undefined) {
+      errorMessages.push(
+        invalidDeliveryGuaranteesInputFieldsErrorMessage({
+          duplicateFieldNames: [...duplicateFieldNames],
+          invalidFieldNames: [...invalidFieldNames],
+          invalidModeValue,
+        }),
+      );
+      return {};
+    }
+
+    if (mode === CURSOR_UPPER) {
+      return { deliveryGuarantees: { mode } };
+    }
+
+    return {};
+  }
+
   getKafkaSubscribeConfiguration(
     directive: ConstDirectiveNode,
     argumentDataByArgumentName: Map<string, InputValueData>,
@@ -3109,6 +3217,7 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const topics: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    let deliveryGuarantees: DeliveryGuarantees = {};
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPICS: {
@@ -3135,6 +3244,10 @@ export class NormalizationFactory {
           providerId = argumentNode.value.value;
           break;
         }
+        case DELIVERY_GUARANTEES: {
+          deliveryGuarantees = this.getDeliveryGuaranteeMode(argumentNode, errorMessages);
+          break;
+        }
       }
     }
     if (errorMessages.length > 0) {
@@ -3146,6 +3259,7 @@ export class NormalizationFactory {
       providerType: PROVIDER_TYPE_KAFKA,
       topics: topics,
       type: SUBSCRIBE,
+      ...deliveryGuarantees,
     };
   }
 
@@ -3309,6 +3423,7 @@ export class NormalizationFactory {
               ),
             );
           }
+          break;
         }
       }
     }
@@ -3730,6 +3845,28 @@ export class NormalizationFactory {
     return true;
   }
 
+  isDeliveryGuaranteesInputObjectValid(deliveryGuaranteesInputData: ParentDefinitionData): boolean {
+    if (!isInputObjectDefinitionData(deliveryGuaranteesInputData)) {
+      return false;
+    }
+    if (deliveryGuaranteesInputData.inputValueDataByName.size !== 1) {
+      return false;
+    }
+    const modeData = deliveryGuaranteesInputData.inputValueDataByName.get(MODE);
+    if (!modeData || printTypeNode(modeData.type) !== `${COSMO_STREAMS_DELIVERY_GUARANTEE_MODE}!`) {
+      return false;
+    }
+    return modeData.defaultValue?.kind === Kind.ENUM && modeData.defaultValue.value === OFF_UPPER;
+  }
+
+  isDeliveryGuaranteeModeEnumValid(deliveryGuaranteeModeData: ParentDefinitionData): boolean {
+    if (deliveryGuaranteeModeData.kind !== Kind.ENUM_TYPE_DEFINITION) {
+      return false;
+    }
+    const valueNames = deliveryGuaranteeModeData.enumValueDataByName;
+    return valueNames.size === 2 && valueNames.has(OFF_UPPER) && valueNames.has(CURSOR_UPPER);
+  }
+
   validateEventDrivenSubgraph() {
     const errorMessages: Array<string> = [];
     const invalidEventsDirectiveDataByRootFieldPath = new Map<string, InvalidRootTypeFieldEventsDirectiveData>();
@@ -3782,26 +3919,30 @@ export class NormalizationFactory {
       ) {
         errorMessages.push(invalidNatsStreamConfigurationDefinitionErrorMessage);
       }
-      // Inject the correct dependency
       this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
-      const result = this.upsertInputObjectByNode(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
-      // The result cannot actually be unsuccessful
-      if (result.success) {
-        for (const fieldNode of EDFS_NATS_STREAM_CONFIGURATION_DEFINITION.fields!) {
-          this.addInputValueDataByNode({
-            fieldName: fieldNode.name.value,
-            isArgument: false,
-            inputValueDataByName: result.data.inputValueDataByName,
-            node: fieldNode,
-            originalParentTypeName: EDFS_NATS_STREAM_CONFIGURATION,
-          });
-        }
-      } else {
-        /* Should never happen, but if somehow it did, an error has already been appended from the
-         * `upsertInputObjectByNode` method.
-         */
-        return;
+    }
+    if (this.edfsDirectiveReferences.has(EDFS_KAFKA_SUBSCRIBE)) {
+      const deliveryGuaranteesInputData = this.parentDefinitionDataByTypeName.get(COSMO_STREAMS_DELIVERY_GUARANTEES);
+      if (
+        deliveryGuaranteesInputData &&
+        this.usesEdfsDeliveryGuarantees &&
+        !this.isDeliveryGuaranteesInputObjectValid(deliveryGuaranteesInputData)
+      ) {
+        errorMessages.push(invalidDeliveryGuaranteesDefinitionErrorMessage);
       }
+      const deliveryGuaranteeModeData = this.parentDefinitionDataByTypeName.get(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE);
+      if (
+        deliveryGuaranteeModeData &&
+        this.usesEdfsDeliveryGuarantees &&
+        !this.isDeliveryGuaranteeModeEnumValid(deliveryGuaranteeModeData)
+      ) {
+        errorMessages.push(invalidDeliveryGuaranteeModeDefinitionErrorMessage);
+      }
+      /* The canonical definitions are injected into the document as dependencies of @edfs__kafkaSubscribe,
+       * and both type names are ignored by federation, so any user-declared definitions are simply dropped.
+       */
+      this.parentDefinitionDataByTypeName.delete(COSMO_STREAMS_DELIVERY_GUARANTEES);
+      this.parentDefinitionDataByTypeName.delete(COSMO_STREAMS_DELIVERY_GUARANTEE_MODE);
     }
 
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
@@ -4479,6 +4620,150 @@ export class NormalizationFactory {
     return true;
   }
 
+  extractFieldCacheTagDirectives(fieldData: FieldData) {
+    const directiveNodes = fieldData.directivesByName.get(CACHE_TAG);
+    if (!directiveNodes || directiveNodes.length < 1) {
+      return;
+    }
+    const { name: fieldName, originalParentTypeName, renamedParentTypeName: typeName } = fieldData;
+    const fieldCoords = `${originalParentTypeName}.${fieldName}`;
+    const operationTypeNode = this.getOperationTypeNodeForRootTypeName(originalParentTypeName);
+    if (!operationTypeNode) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_TAG, fieldCoords, FIRST_ORDINAL, [nonRootFieldCacheTagErrorMessage()]),
+      );
+      return;
+    }
+    // The directive upon a Mutation or Subscription root field composes, but it is ignored.
+    if (operationTypeNode !== OperationTypeNode.QUERY) {
+      this.warnings.push(unsupportedCacheTagLocationWarning({ coords: fieldCoords, subgraphName: this.subgraphName }));
+      return;
+    }
+    const formats = new Set<string>();
+    const references = new Set<string>();
+    for (const [index, directiveNode] of directiveNodes.entries()) {
+      const ordinal = numberToOrdinal(index + 1);
+      const format = this.getCacheTagFormat(directiveNode);
+      if (format === undefined) {
+        continue;
+      }
+      if (format.trim() === '') {
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [blankCacheTagFormatErrorMessage()]));
+        continue;
+      }
+      const errorMessages: Array<string> = [];
+      const { normalizedFormat, placeholders } = parseCacheTagFormat(format, errorMessages);
+      for (const { namespace, reference } of placeholders) {
+        // Only the "$args" namespace is supported upon a field.
+        if (namespace !== ARGS) {
+          errorMessages.push(unsupportedFieldCacheTagNamespaceErrorMessage(namespace));
+          continue;
+        }
+        const argumentData = this.getCacheTagArgumentData(fieldData, reference, errorMessages);
+        if (!argumentData) {
+          continue;
+        }
+        if (!this.isValidCacheTagLeaf(argumentData)) {
+          errorMessages.push(
+            invalidCacheTagArgumentTypeErrorMessage({
+              reference: reference,
+              typeString: printTypeNode(argumentData.type),
+            }),
+          );
+        }
+      }
+      if (errorMessages.length > 0) {
+        // A repeated placeholder produces the same message.
+        this.errors.push(invalidDirectiveError(CACHE_TAG, fieldCoords, ordinal, [...new Set(errorMessages)]));
+        continue;
+      }
+      formats.add(normalizedFormat);
+      for (const { reference } of placeholders) {
+        references.add(reference);
+      }
+    }
+    if (formats.size < 1) {
+      return;
+    }
+    fieldData.cacheTagDataBySubgraphName.set(this.subgraphName, { formats, references });
+    const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(false, typeName),
+    );
+    getOrInitializeEntityCaching(configurationData).cacheTagConfigurations.push(
+      ...Array.from(formats, (format): CacheTagConfiguration => ({ fieldName, format, typeName })),
+    );
+  }
+
+  isValidCacheTagLeaf({ namedTypeName, type }: InputValueData): boolean {
+    if (isTypeNodeListType(type)) {
+      return false;
+    }
+    if (BASE_SCALARS.has(namedTypeName)) {
+      return true;
+    }
+    const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
+    if (!namedTypeData) {
+      return true;
+    }
+    return isLeafKind(namedTypeData.kind);
+  }
+
+  // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.
+  getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
+    const formatArgument = directiveNode.arguments?.find((argument) => argument.name.value === FORMAT);
+    if (!formatArgument || formatArgument.value.kind !== Kind.STRING) {
+      return;
+    }
+    return formatArgument.value.value;
+  }
+
+  /* Returns the input value at the end of the path,
+   * or pushes an error message for the segment that does not resolve.
+   */
+  getCacheTagArgumentData(
+    fieldData: FieldData,
+    reference: string,
+    errorMessages: Array<string>,
+  ): InputValueData | undefined {
+    const path = reference.split(LITERAL_PERIOD);
+    // The first segment is an argument of the field; each following segment is a field of an Input Object.
+    let inputObjectName: TypeName | undefined;
+    let inputValueDataByName = fieldData.argumentDataByName;
+    for (const [index, segment] of path.entries()) {
+      const inputValueData = inputValueDataByName.get(segment);
+      if (!inputValueData) {
+        errorMessages.push(
+          inputObjectName
+            ? undefinedCacheTagInputFieldErrorMessage({ fieldName: segment, inputObjectName, reference })
+            : undefinedCacheTagArgumentErrorMessage(reference),
+        );
+        return;
+      }
+      // Whether the final segment is an interpolatable leaf value is assessed by the consumer.
+      if (index === path.length - 1) {
+        return inputValueData;
+      }
+      const namedTypeData = this.parentDefinitionDataByTypeName.get(inputValueData.namedTypeName);
+      // An undefined type fails normalization without the directive too.
+      if (!namedTypeData && !BASE_SCALARS.has(inputValueData.namedTypeName)) {
+        return;
+      }
+      // A list yields no single value, and a leaf has no fields.
+      if (isTypeNodeListType(inputValueData.type) || namedTypeData?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        errorMessages.push(
+          invalidCacheTagReferenceErrorMessage({
+            reference,
+            typeReference: printTypeNode(inputValueData.type),
+            untraversableReference: path.slice(0, index + 1).join(LITERAL_PERIOD),
+          }),
+        );
+        return;
+      }
+      inputObjectName = namedTypeData.name;
+      inputValueDataByName = namedTypeData.inputValueDataByName;
+    }
+  }
+
   addFieldNamesToConfigurationData(fieldDataByFieldName: Map<string, FieldData>, configurationData: ConfigurationData) {
     const externalFieldNames = new Set<string>();
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
@@ -4525,6 +4810,10 @@ export class NormalizationFactory {
   #addDirectiveDefinitionsToDocument(definitions: Array<DefinitionNode>): void {
     const dependencies = new Set<DefinitionNode>();
     for (const directiveName of this.referencedDirectiveNames) {
+      if (directiveName === DEFER) {
+        continue;
+      }
+
       const definition = DIRECTIVE_DEFINITION_BY_NAME.get(directiveName);
       if (!definition) {
         continue;
@@ -4565,6 +4854,12 @@ export class NormalizationFactory {
     }
   }
 
+  handleDeferDirective() {
+    if (this.definedDirectiveNames.has(DEFER) || this.referencedDirectiveNames.has(DEFER)) {
+      this.warnings.push(userDefinedDeferWarning(this.subgraphName));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -4572,6 +4867,7 @@ export class NormalizationFactory {
     const definitions: Array<DefinitionNode> = [];
     this.#addDirectiveDefinitionsToDocument(definitions);
     this.validateDirectives(this.schemaData, SCHEMA);
+    this.handleDeferDirective();
     const schemaNodeResult = this.schemaNodeFromData(this.schemaData);
     if (!schemaNodeResult.success) {
       this.errors.push(...schemaNodeResult.errors);
@@ -4622,7 +4918,10 @@ export class NormalizationFactory {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }
-          definitions.push(this.getEnumNodeByData(parentData));
+          // The definition is conditionally pushed elsewhere.
+          if (parentTypeName !== COSMO_STREAMS_DELIVERY_GUARANTEE_MODE) {
+            definitions.push(this.getEnumNodeByData(parentData));
+          }
           break;
         }
         case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
@@ -4661,7 +4960,10 @@ export class NormalizationFactory {
             break;
           }
           // The definition is conditionally pushed elsewhere.
-          if (parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION) {
+          if (
+            parentTypeName !== EDFS_NATS_STREAM_CONFIGURATION &&
+            parentTypeName !== COSMO_STREAMS_DELIVERY_GUARANTEES
+          ) {
             definitions.push(this.getInputObjectNodeByData(parentData));
           }
           break;
@@ -4681,9 +4983,17 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
+          if (isObject && parentData.directivesByName.has(CACHE_TAG)) {
+            // Not yet supported.
+            this.warnings.push(
+              unsupportedCacheTagLocationWarning({ coords: parentTypeName, subgraphName: this.subgraphName }),
+            );
+          }
 
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+            // Interface fields are passed too, so that @cacheTag upon them is rejected as upon a non-root field.
+            this.extractFieldCacheTagDirectives(fieldData);
             if (isObject) {
               this.handleFieldCacheDirectives(fieldData);
             } else if (fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
@@ -4696,6 +5006,7 @@ export class NormalizationFactory {
             if (fieldData.namedTypeKind !== Kind.NULL) {
               continue;
             }
+
             const namedTypeData = this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName);
             if (!namedTypeData) {
               // undefined types are handled elsewhere
@@ -4711,6 +5022,7 @@ export class NormalizationFactory {
               );
               continue;
             }
+
             fieldData.namedTypeKind = this.entityInterfaceDataByTypeName.get(namedTypeData.name)
               ? Kind.INTERFACE_TYPE_DEFINITION
               : namedTypeData.kind;

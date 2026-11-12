@@ -49,21 +49,23 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
 }
 
 export async function getDiffBetweenGraphs(
-  oldSchemaSDL: string,
-  newSchemaSDL: string,
+  oldSchemaSDL: string | GraphQLSchema,
+  newSchemaSDL: string | GraphQLSchema,
   routerCompatibilityVersion: string,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
     let newSchema: GraphQLSchema = new GraphQLSchema({});
-    if (oldSchemaSDL) {
+    if (typeof oldSchemaSDL === 'string') {
       const result = buildSchema(oldSchemaSDL, true, routerCompatibilityVersion);
       if (result.success) {
         oldSchema = result.schema;
       }
+    } else if (oldSchemaSDL instanceof GraphQLSchema) {
+      oldSchema = oldSchemaSDL;
     }
 
-    if (newSchemaSDL.length > 0) {
+    if (typeof newSchemaSDL === 'string' && newSchemaSDL.length > 0) {
       const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
@@ -73,13 +75,14 @@ export async function getDiffBetweenGraphs(
           errorMessage: result.errors.map((e) => e.toString()).join('\n'),
         };
       }
+
       newSchema = result.schema;
+    } else if (newSchemaSDL instanceof GraphQLSchema) {
+      newSchema = newSchemaSDL;
     }
 
     const schemaChanges = await getSchemaDiff(oldSchema, newSchema);
-
     const breakingChanges = schemaChanges.filter((change) => change.isBreaking);
-
     const breakingSchemaChanges: SchemaDiff[] = breakingChanges.map((breakingChange) => {
       return {
         message: breakingChange.message,

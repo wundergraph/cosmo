@@ -11,6 +11,8 @@ import {
   type IncompatibleSharedEnumErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
   type InvalidArgumentValueErrorParams,
+  type InvalidCacheTagArgumentTypeErrorParams,
+  type InvalidCacheTagReferenceErrorMessageParams,
   type InvalidCustomDirectiveErrorParams,
   type InvalidDirectiveLocationErrorParams,
   type InvalidEntityReturnTypeErrorParams,
@@ -23,6 +25,8 @@ import {
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
+  type UnavailableCacheTagReferenceErrorMessageParams,
+  type UndefinedCacheTagInputFieldErrorMessageParams,
   type DirectlyProvidedInterfaceFieldErrorParams,
 } from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
@@ -586,20 +590,44 @@ export function invalidInterfaceImplementationError(
         implementationErrors.unimplementedFields.join('", "') +
         '"\n';
     }
-    for (const [fieldName, invalidFieldImplementation] of implementationErrors.invalidFieldImplementations) {
-      const unimplementedArgumentsSize = invalidFieldImplementation.unimplementedArguments.size;
-      const invalidArgumentsLength = invalidFieldImplementation.invalidImplementedArguments.length;
-      const invalidAdditionalArgumentsSize = invalidFieldImplementation.invalidAdditionalArguments.size;
+    for (const [
+      fieldName,
+      {
+        implementationContextCoords,
+        implementedResponseType,
+        invalidAdditionalArguments,
+        interfaceContextCoords,
+        invalidImplementedArguments,
+        isInaccessible,
+        originalResponseType,
+        unfederatedArguments,
+        unimplementedArguments,
+      },
+    ] of implementationErrors.invalidFieldImplementations) {
+      const unimplementedArgumentsSize = unimplementedArguments.size;
+      const invalidArgumentsLength = invalidImplementedArguments.length;
+      const invalidAdditionalArgumentsSize = invalidAdditionalArguments.size;
+      const unfederatedArgumentsSize = unfederatedArguments?.size;
       message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
           `   The following argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
-          [...invalidFieldImplementation.unimplementedArguments].join('", "') +
+          [...unimplementedArguments].join('", "') +
           '"\n';
       }
+      if (unfederatedArgumentsSize) {
+        message +=
+          `   Optional arguments that are not defined in all subgraphs that define its parent field must be` +
+          ` removed from the federated schema to prevent run-time errors.\n` +
+          `    However, this caused the following argument implementation${unfederatedArgumentsSize > 1 ? 's' : ''}` +
+          ` to be removed and the federated definition of "${interfaceName}.${fieldName}" is no longer satisfied: "` +
+          [...unfederatedArguments].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+
       if (invalidArgumentsLength) {
         message += `   The following implemented argument${invalidArgumentsLength > 1 ? 's are' : ' is'} invalid:\n`;
-        for (const invalidArgument of invalidFieldImplementation.invalidImplementedArguments) {
+        for (const invalidArgument of invalidImplementedArguments) {
           message +=
             `    The argument "${invalidArgument.argumentName}" must define type "` +
             invalidArgument.expectedType +
@@ -612,38 +640,38 @@ export function invalidInterfaceImplementationError(
           ` on the original Interface field must be optional (nullable).\n`;
         message +=
           `    The following additional argument` +
-          (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
+          (invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
           ` not defined as optional: "` +
-          [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) +
+          [...invalidAdditionalArguments].join(`", "`) +
           `"\n`;
       }
-      if (invalidFieldImplementation.implementedResponseType) {
+      if (implementedResponseType) {
         message +=
-          `   The implemented response type "${invalidFieldImplementation.implementedResponseType}" is not` +
+          `   The implemented response type "${implementedResponseType}" is not` +
           ` a valid subtype (equally or more restrictive) of the response type "` +
-          invalidFieldImplementation.originalResponseType +
+          originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
-      if (invalidFieldImplementation.interfaceContextCoords.size > 0) {
+      if (interfaceContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on an Interface field.\n` +
           `    The following argument` +
-          (invalidFieldImplementation.interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
+          (interfaceContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.interfaceContextCoords].join(QUOTATION_JOIN) +
+          [...interfaceContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
-      if (invalidFieldImplementation.implementationContextCoords.size > 0) {
+      if (implementationContextCoords.size > 0) {
         message +=
           `   "@${FROM_CONTEXT}" cannot be defined on the implementation of the Interface field` +
           ` "${interfaceName}.${fieldName}".\n` +
           `    The following argument` +
-          (invalidFieldImplementation.implementationContextCoords.size > 1 ? `s define` : ` defines`) +
+          (implementationContextCoords.size > 1 ? `s define` : ` defines`) +
           ` "@${FROM_CONTEXT}": "` +
-          [...invalidFieldImplementation.implementationContextCoords].join(QUOTATION_JOIN) +
+          [...implementationContextCoords].join(QUOTATION_JOIN) +
           `"\n`;
       }
-      if (invalidFieldImplementation.isInaccessible) {
+      if (isInaccessible) {
         message +=
           `   The field has been declared "@inaccessible"; however, the same field has not been declared "@inaccessible"` +
           ` on the Interface definition.\n   Consequently, the Interface implementation cannot be satisfied.\n`;
@@ -653,7 +681,7 @@ export function invalidInterfaceImplementationError(
   }
   return new Error(
     `The ${parentNodeType} "${parentTypeName}" has the following Interface implementation errors:\n` +
-      messages.join('\n'),
+      messages.join(LITERAL_NEW_LINE),
   );
 }
 
@@ -1329,6 +1357,61 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
 export const invalidEdfsPublishResultObjectErrorMessage =
   ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
+
+const invalidDeliveryGuaranteesInputErrorMessage =
+  `The "deliveryGuarantees" argument must be a valid input object with the following form:\n` +
+  `  input cosmoStreams__DeliveryGuarantees {\n    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }\n` +
+  `  enum cosmoStreams__DeliveryGuaranteeMode {\n    OFF\n    CURSOR\n  }`;
+
+export function invalidDeliveryGuaranteesInputFieldsErrorMessage({
+  duplicateFieldNames,
+  invalidFieldNames,
+  invalidModeValue,
+}: {
+  duplicateFieldNames: Array<string>;
+  invalidFieldNames: Array<string>;
+  invalidModeValue?: string;
+}): string {
+  let message = invalidDeliveryGuaranteesInputErrorMessage;
+  const errorMessages: Array<string> = [];
+  if (duplicateFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (duplicateFieldNames.length > 1 ? `s were` : ` was`) +
+        ` defined more than once: "` +
+        duplicateFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+        ` not part of a valid "cosmoStreams__DeliveryGuarantees" input definition: "` +
+        invalidFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidModeValue !== undefined) {
+    errorMessages.push(
+      `The value "${invalidModeValue}" provided to field "mode" is not a valid "cosmoStreams__DeliveryGuaranteeMode" enum value.`,
+    );
+  }
+  message +=
+    `\n However, the provided input was invalid for the following reason` +
+    (errorMessages.length > 1 ? `s` : ``) +
+    `:\n  ` +
+    errorMessages.join(`\n  `);
+  return message;
+}
+
+export const invalidDeliveryGuaranteesDefinitionErrorMessage =
+  ` The input object "cosmoStreams__DeliveryGuarantees" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  input cosmoStreams__DeliveryGuarantees {\n   mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }`;
+
+export const invalidDeliveryGuaranteeModeDefinitionErrorMessage =
+  ` The enum "cosmoStreams__DeliveryGuaranteeMode" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  enum cosmoStreams__DeliveryGuaranteeMode {\n   OFF\n   CURSOR\n  }`;
 
 export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
@@ -2243,4 +2326,93 @@ export function intersectingExcludeAndIncludeContractTagsError(tagNames: Array<s
       tagNames.join(QUOTATION_JOIN) +
       `".`,
   );
+}
+
+export function blankCacheTagFormatErrorMessage(): string {
+  return `The argument "format" must be provided a string that is neither empty nor only whitespace.`;
+}
+
+export function invalidCacheTagPlaceholderErrorMessage(placeholder: string): string {
+  return (
+    `The "format" argument defines invalid placeholder "{${placeholder}}":` +
+    ` placeholders must be of the form "{$args.<argumentName>}", where a field of an Input Object argument` +
+    ` is referenced by a period-delimited path, e.g. "{$args.filter.category}".`
+  );
+}
+
+export function invalidCacheTagBraceErrorMessage(format: string): string {
+  return (
+    `The "format" argument defines a curly brace outside of a placeholder;` +
+    ` a curly brace is valid only as the delimiter of a placeholder, e.g. "{$args.id}".` +
+    ` Received "${format}".`
+  );
+}
+
+export function nonRootFieldCacheTagErrorMessage(): string {
+  return `The directive is valid only upon a Query root field or an Object.`;
+}
+
+export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string): string {
+  return `The "format" argument defines placeholder namespace "$${namespace}", but only "$args" is supported.`;
+}
+
+export function undefinedCacheTagArgumentErrorMessage(reference: string): string {
+  return `The "format" argument references "$args.${reference}", which is not an argument of the field.`;
+}
+
+export function undefinedCacheTagInputFieldErrorMessage({
+  fieldName,
+  inputObjectName,
+  reference,
+}: UndefinedCacheTagInputFieldErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but Input Object "${inputObjectName}" does not define the field "${fieldName}".`
+  );
+}
+
+export function invalidCacheTagReferenceErrorMessage({
+  reference,
+  typeReference,
+  untraversableReference,
+}: InvalidCacheTagReferenceErrorMessageParams): string {
+  return (
+    `The "format" argument references "$args.${reference}",` +
+    ` but "$args.${untraversableReference}" is a reference to "${typeReference}".` +
+    ` The period-delimited path must reference only non-list-wrapped Input Object types in the initial and any medial positions, and a leaf type (Enum or Scalar) in the final position.`
+  );
+}
+
+export function invalidCacheTagArgumentTypeErrorMessage({
+  reference,
+  typeString,
+}: InvalidCacheTagArgumentTypeErrorParams): string {
+  return (
+    `The "format" argument references "$args.${reference}", which is of type "${typeString}".` +
+    ` A referenced argument must be a single leaf value, i.e. a nullable or non-nullable Scalar or Enum.`
+  );
+}
+
+export function unavailableCacheTagReferencesError(fieldCoords: string, errorMessages: Array<string>): Error {
+  return new Error(
+    `The "@cacheTag" formats defined on the root field "${fieldCoords}"` +
+      ` reference at least one inaccessible value:\n` +
+      errorMessages.join('\n'),
+  );
+}
+
+export function inaccessibleCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@inaccessible".`;
+}
+
+export function fromContextCacheTagReferenceErrorMessage({
+  coords,
+  reference,
+  subgraphName,
+}: UnavailableCacheTagReferenceErrorMessageParams): string {
+  return ` Subgraph "${subgraphName}" references "$args.${reference}", but "${coords}" defines "@fromContext".`;
 }

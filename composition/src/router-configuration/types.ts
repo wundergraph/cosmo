@@ -6,6 +6,7 @@ import {
   type FieldName,
   type TypeName,
 } from '../types/types';
+import { type CURSOR_UPPER, type OFF_UPPER } from '../utils/string-constants';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
@@ -19,12 +20,23 @@ export type StreamConfiguration = {
   streamName: string;
 };
 
+export type DeliveryGuaranteeMode = typeof OFF_UPPER | typeof CURSOR_UPPER;
+
+export type DeliveryGuaranteesConfiguration = {
+  mode: DeliveryGuaranteeMode;
+};
+
+export type DeliveryGuarantees = {
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
+};
+
 export type KafkaEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'kafka';
   topics: string[];
   type: KafkaEventType;
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
 };
 
 export type NatsEventConfiguration = {
@@ -138,11 +150,20 @@ export type CachePopulateConfiguration = {
   operationType: OperationTypeNode;
 };
 
+export type CacheTagConfiguration = {
+  fieldName: FieldName;
+  // This is the normalized format; a placeholder contains no whitespace, e.g., "products-{$args.filter.category}".
+  format: string;
+  typeName: TypeName;
+};
+
 export type EntityCachingConfiguration = {
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cacheInvalidate.
   cacheInvalidateConfigurations: Array<CacheInvalidateConfiguration>;
   // Attached to the Mutation/Subscription type's ConfigurationData from @openfed__cachePopulate.
   cachePopulateConfigurations: Array<CachePopulateConfiguration>;
+  // Attached to the Query root type's ConfigurationData from @cacheTag.
+  cacheTagConfigurations: Array<CacheTagConfiguration>;
   // Attached to an entity type's ConfigurationData (e.g. "Product") from @openfed__entityCache.
   entityCacheConfigurations: Array<EntityCacheConfiguration>;
 };
