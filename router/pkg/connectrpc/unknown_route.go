@@ -2,9 +2,8 @@ package connectrpc
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -21,8 +20,10 @@ const unknownRouteCode = connect.CodeUnimplemented
 // plain text 404, which clients can't turn into a proper RPC error.
 //
 // The transcoder hasn't picked a protocol at that point, so the handler answers in
-// the protocol the request's Content-Type announces, falling back to Connect.
+// the protocol the request's Content-Type announces, falling back to unary Connect.
 func newUnknownRouteHandler(logger *zap.Logger) http.Handler {
+	errorWriter := connect.NewErrorWriter()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		message := "method not found: " + r.URL.Path
 
@@ -30,18 +31,19 @@ func newUnknownRouteHandler(logger *zap.Logger) http.Handler {
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path))
 
+		// gRPC, gRPC-Web and Connect streaming all report errors with HTTP 200
+		// and a protocol-specific framing, which connect-go writes for us.
 		contentType := r.Header.Get("Content-Type")
-		if strings.HasPrefix(contentType, "application/grpc") {
-			// gRPC and gRPC-Web report errors with HTTP 200 and the status in the
-			// trailers. With no response body, the trailers go in the headers
-			// (a "Trailers-Only" response).
-			w.Header().Set("Content-Type", contentType)
-			w.Header().Set("Grpc-Status", strconv.Itoa(int(unknownRouteCode)))
-			w.Header().Set("Grpc-Message", grpcPercentEncode(message))
-			w.WriteHeader(http.StatusOK)
+		if strings.HasPrefix(contentType, "application/grpc") || strings.HasPrefix(contentType, "application/connect+") {
+			err := errorWriter.Write(w, r, connect.NewError(unknownRouteCode, errors.New(message)))
+			if err != nil {
+				logger.Debug("failed to write unknown route response", zap.Error(err))
+			}
 			return
 		}
 
+		// Unary Connect is written here and not by connect-go, which would send
+		// HTTP 501 for unimplemented. The router has always answered 404.
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(ConnectCodeToHTTPStatus(unknownRouteCode))
 		err := json.NewEncoder(w).Encode(map[string]string{
@@ -52,19 +54,4 @@ func newUnknownRouteHandler(logger *zap.Logger) http.Handler {
 			logger.Debug("failed to write unknown route response", zap.Error(err))
 		}
 	})
-}
-
-// grpcPercentEncode encodes a grpc-message value: every byte outside printable
-// ASCII, and '%' itself, becomes %XX.
-// See https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#responses
-func grpcPercentEncode(msg string) string {
-	var sb strings.Builder
-	for i := 0; i < len(msg); i++ {
-		if c := msg[i]; c >= ' ' && c <= '~' && c != '%' {
-			sb.WriteByte(c)
-		} else {
-			fmt.Fprintf(&sb, "%%%02X", c)
-		}
-	}
-	return sb.String()
 }

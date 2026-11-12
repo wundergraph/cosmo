@@ -65,6 +65,22 @@ func TestConnectRPCUnknownRoute(t *testing.T) {
 		})
 	}
 
+	t.Run("Connect streaming client gets unimplemented for an unknown method", func(t *testing.T) {
+		t.Parallel()
+
+		client := connect.NewClient[employeev1.GetEmployeeByIdRequest, employeev1.GetEmployeeByIdResponse](http.DefaultClient, baseURL+unknownMethodPath)
+		stream, err := client.CallServerStream(context.Background(), connect.NewRequest(&employeev1.GetEmployeeByIdRequest{EmployeeId: 1}))
+		require.NoError(t, err)
+		defer stream.Close()
+
+		require.False(t, stream.Receive())
+
+		var connectErr *connect.Error
+		require.ErrorAs(t, stream.Err(), &connectErr)
+		assert.Equal(t, connect.CodeUnimplemented, connectErr.Code())
+		assert.Equal(t, "method not found: "+unknownMethodPath, connectErr.Message())
+	})
+
 	t.Run("unknown service gets a Connect error envelope with HTTP 404", func(t *testing.T) {
 		t.Parallel()
 
