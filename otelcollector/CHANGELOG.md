@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.21.0...otelcollector@0.21.1) (2026-11-12)
+
+### Bug Fixes
+
+* trigger otelcollector release to mitigate brotli vulnerability ([#3523](https://github.com/wundergraph/cosmo/issues/3523)) ([bdedab2](https://github.com/wundergraph/cosmo/commit/bdedab2955d2778d79082541148fd2137aec1fb2)) (@pepol)
+
 # [0.21.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.20.1...otelcollector@0.21.0) (2026-09-25)
 
 ### Features

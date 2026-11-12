@@ -465,7 +465,6 @@ export class Composer {
     routerExecutionConfig,
     featureFlagId,
     splitConfigEnabled,
-    promptToQueryService,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedById: string;
@@ -528,10 +527,6 @@ export class Composer {
         composedGraph.composedSchema || '',
         updatedFederatedGraph.routerCompatibilityVersion,
       );
-    }
-
-    if (promptToQueryService) {
-      await promptToQueryService.indexSchema(composedGraph.composedSchema);
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {

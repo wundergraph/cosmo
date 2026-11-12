@@ -580,7 +580,7 @@ func TestRedisCache(t *testing.T) {
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
 			require.Equal(t, map[string]enginecache.Item{
-				"a": {Key: "a", Value: []byte("value"), TTL: time.Minute},
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Minute, ClientTTL: time.Minute},
 			}, results)
 		})
 
@@ -980,4 +980,25 @@ func TestRedisCache(t *testing.T) {
 			require.Contains(t, results, "a")
 		})
 	})
+}
+
+func TestRedisCacheKeepsClientDirectives(t *testing.T) {
+	t.Parallel()
+
+	c, mr := newTestRedisCache(t)
+	item := enginecache.Item{Key: "k", Value: []byte(`{}`), TTL: time.Minute, ClientTTL: 50 * time.Second, Public: true}
+	require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+
+	got, err := c.GetMany(t.Context(), []string{"k"})
+	require.NoError(t, err)
+	require.True(t, got["k"].Public)
+	require.Equal(t, time.Minute, got["k"].TTL)
+	require.Equal(t, 50*time.Second, got["k"].ClientTTL)
+
+	// ClientTTL counts down with TTL.
+	mr.FastForward(20 * time.Second)
+	got, err = c.GetMany(t.Context(), []string{"k"})
+	require.NoError(t, err)
+	require.Equal(t, 40*time.Second, got["k"].TTL)
+	require.Equal(t, 30*time.Second, got["k"].ClientTTL)
 }

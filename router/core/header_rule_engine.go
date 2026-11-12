@@ -118,6 +118,7 @@ type headerPropagationWriter struct {
 	// responseCacheStatusFor sets ResponseCacheStatusHeader from this request's fetches.
 	responseCacheStatusFor    *requestContext
 	didSetResponseCacheStatus bool
+	didCheckOnlyIfCached      bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -164,6 +165,13 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.responseCacheStatusFor != nil && !h.didSetResponseCacheStatus {
 		h.didSetResponseCacheStatus = true
 		setResponseCacheStatusHeader(h.writer.Header(), h.responseCacheStatusFor)
+	}
+	// An only-if-cached request the cache could not answer.
+	if !h.didCheckOnlyIfCached {
+		h.didCheckOnlyIfCached = true
+		if h.resolveCtx.ResponseCacheUnsatisfied() {
+			h.writer.WriteHeader(http.StatusGatewayTimeout)
+		}
 	}
 	return h.writer.Write(p)
 }

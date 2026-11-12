@@ -20,6 +20,7 @@
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
           "Headers": {},
+          "SamplingRate": 0.5,
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -717,7 +718,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -736,7 +738,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -752,7 +755,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         }
       ],
       "ScopeClaim": "customscp",

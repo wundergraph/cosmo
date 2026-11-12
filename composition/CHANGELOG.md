@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.67.1...@wundergraph/composition@0.68.0) (2026-11-12)
+
+### Features
+
+* **composition:** add `deliveryGuarantees` field to `[@edfs](https://github.com/edfs)__kafkaSubscribe` ([#3415](https://github.com/wundergraph/cosmo/issues/3415)) ([ab4500b](https://github.com/wundergraph/cosmo/commit/ab4500b0d5dd46d679d9c55882c0669c214d2bef)) (@dkorittki)
+
+### Bug Fixes
+
+* fix validation of [@interface](https://github.com/interface)Object field arguments ([#3522](https://github.com/wundergraph/cosmo/issues/3522)) ([29fb17d](https://github.com/wundergraph/cosmo/commit/29fb17d6222486baf30f8d3aad810cf465d0d08c)) (@Aenimus)
+* return error if implemented arg is not federated ([#3506](https://github.com/wundergraph/cosmo/issues/3506)) ([d2db43f](https://github.com/wundergraph/cosmo/commit/d2db43fec5f04930b4314f32b1e2a8a5de84f24c)) (@Aenimus)
+
+## [0.67.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.67.0...@wundergraph/composition@0.67.1) (2026-11-10)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.67.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.66.3...@wundergraph/composition@0.67.0) (2026-11-09)
+
+### Features
+
+* **composition:** support [@cache](https://github.com/cache)Tag on root fields ([#3131](https://github.com/wundergraph/cosmo/issues/3131)) ([cc790f2](https://github.com/wundergraph/cosmo/commit/cc790f20a8f7c701438038941bdf00543e91c29c)) (@SkArchon)
+
+### Bug Fixes
+
+* client schema should remove invalid field arguments ([#3489](https://github.com/wundergraph/cosmo/issues/3489)) ([d0bdafd](https://github.com/wundergraph/cosmo/commit/d0bdafd4e782ac80e4b56f0147800fef9af42d14)) (@Aenimus)
+
 ## [0.66.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.66.2...@wundergraph/composition@0.66.3) (2026-11-09)
 
 **Note:** Version bump only for package @wundergraph/composition

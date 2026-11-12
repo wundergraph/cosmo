@@ -1332,6 +1332,12 @@
                       "type": "string"
                     }
                   },
+                  "sampling_rate": {
+                    "type": "number",
+                    "description": "The share of the recorded traces sent to this exporter. For traces the router samples itself, the effective rate is the lower of this and the global sampling rate. Defaults to 1, which sends every recorded trace.",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
                   "batch_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
@@ -2367,6 +2373,15 @@
                       "type": "string"
                     }
                   },
+                  "issuers": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
                   "secret": {
                     "type": "string",
                     "description": "The secret of the JWKs"
@@ -2955,6 +2970,15 @@
                     "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "issuers": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "secret": {
