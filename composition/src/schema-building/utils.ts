@@ -68,14 +68,17 @@ import {
   QUERY,
   REASON,
   REQUIRES_SCOPES,
+  POLICY,
+  POLICIES,
   ROOT_TYPE_NAMES,
+  SCOPES,
   SEMANTIC_NON_NULL,
   SHAREABLE,
   STRING_SCALAR,
   SUBSCRIPTION,
 } from '../utils/string-constants';
 import {
-  generateRequiresScopesDirective,
+  generateAuthorizationDirective,
   generateSemanticNonNullDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
@@ -377,7 +380,12 @@ export function propagateAuthDirectives(parentData: ParentDefinitionData, authDa
   }
   if (authData.requiredScopes.length > 0) {
     parentData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
-      generateRequiresScopesDirective(authData.requiredScopes),
+      generateAuthorizationDirective(authData.requiredScopes, REQUIRES_SCOPES, SCOPES),
+    ]);
+  }
+  if (authData.requiredPolicies.length > 0) {
+    parentData.federatedDirectivesData.directivesByName.set(POLICY, [
+      generateAuthorizationDirective(authData.requiredPolicies, POLICY, POLICIES),
     ]);
   }
 }
@@ -395,7 +403,12 @@ export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: Au
   }
   if (fieldAuthData.originalData.requiredScopes.length > 0) {
     fieldData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
-      generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
+      generateAuthorizationDirective(fieldAuthData.originalData.requiredScopes, REQUIRES_SCOPES, SCOPES),
+    ]);
+  }
+  if (fieldAuthData.originalData.requiredPolicies.length > 0) {
+    fieldData.federatedDirectivesData.directivesByName.set(POLICY, [
+      generateAuthorizationDirective(fieldAuthData.originalData.requiredPolicies, POLICY, POLICIES),
     ]);
   }
 }

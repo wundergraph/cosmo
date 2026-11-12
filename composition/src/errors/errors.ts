@@ -1180,6 +1180,15 @@ export function orScopesLimitError(maxOrScopes: number, directiveCoords: string[
   );
 }
 
+export function orPoliciesLimitError(maxOrPolicies: number, directiveCoords: string[]): Error {
+  return new Error(
+    `The maximum number of OR policies that can be defined by @policy on a single field is ${maxOrPolicies}.` +
+      ` However, the following coordinates attempt to define more:\n "` +
+      directiveCoords.join(QUOTATION_JOIN) +
+      `"\nIf you require more, please contact support.`,
+  );
+}
+
 export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
   return new Error(
     `An "Event Driven" graph—a subgraph that defines event driven directives—must not define any resolvers.\n` +

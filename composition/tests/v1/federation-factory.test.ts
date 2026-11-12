@@ -21,9 +21,11 @@ import {
 import { describe, expect, test } from 'vitest';
 import {
   AUTHENTICATED_DIRECTIVE,
+  FEDERATION_POLICY,
   INACCESSIBLE_DIRECTIVE,
   OPENFED_FIELD_SET,
   OPENFED_SCOPE,
+  POLICY_DIRECTIVE,
   REQUIRES_SCOPES_DIRECTIVE,
   SCHEMA_ALL_ROOTS_DEFINITION,
   SCHEMA_QUERY_DEFINITION,
@@ -622,7 +624,7 @@ describe('FederationFactory tests', () => {
     );
   });
 
-  test('that a manually defined federation__Policy scalar is not included in the federated graph', () => {
+  test('that a manually defined federation__Policy scalar is not included in the client schema', () => {
     const a = createSubgraph(
       'a',
       `
@@ -637,15 +639,28 @@ describe('FederationFactory tests', () => {
       [a],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    const expected = normalizeString(`
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      ${POLICY_DIRECTIVE}
+
+      type Query {
+        a: ID @policy(policies: [["read"]])
+      }
+
+      ${FEDERATION_POLICY}
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
       ${SCHEMA_QUERY_DEFINITION}
 
       type Query {
         a: ID
       }
-    `);
-    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expected);
-    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expected);
+    `),
+    );
   });
 
   test('that a manually defined openfed__Scope scalar is not included in the client schema', () => {

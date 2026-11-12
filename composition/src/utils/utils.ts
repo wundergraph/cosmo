@@ -12,9 +12,7 @@ import {
   LEVELS,
   NULL,
   OBJECT,
-  REQUIRES_SCOPES,
   SCALAR,
-  SCOPES,
   SEMANTIC_NON_NULL,
   STRING_SCALAR,
   UNION,
@@ -183,25 +181,29 @@ export function generateSimpleDirective(name: string): ConstDirectiveNode {
   };
 }
 
-export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstDirectiveNode {
+export function generateAuthorizationDirective(
+  requirements: Set<string>[],
+  directiveName: string,
+  argumentName: string,
+): ConstDirectiveNode {
   const values: ConstValueNode[] = [];
-  for (const andScopes of orScopes) {
-    const scopes: StringValueNode[] = [];
-    for (const scope of andScopes) {
-      scopes.push({
+  for (const requirement of requirements) {
+    const items: StringValueNode[] = [];
+    for (const item of requirement) {
+      items.push({
         kind: Kind.STRING,
-        value: scope,
+        value: item,
       });
     }
-    values.push({ kind: Kind.LIST, values: scopes });
+    values.push({ kind: Kind.LIST, values: items });
   }
   return {
     kind: Kind.DIRECTIVE,
-    name: stringToNameNode(REQUIRES_SCOPES),
+    name: stringToNameNode(directiveName),
     arguments: [
       {
         kind: Kind.ARGUMENT,
-        name: stringToNameNode(SCOPES),
+        name: stringToNameNode(argumentName),
         value: {
           kind: Kind.LIST,
           values,

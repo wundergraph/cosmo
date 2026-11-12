@@ -175,6 +175,7 @@ export const ROUTER_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new 
   DEPRECATED,
   INACCESSIBLE,
   ONE_OF,
+  POLICY,
   REQUIRES_SCOPES,
   SEMANTIC_NON_NULL,
   TAG,
@@ -188,8 +189,4 @@ export const CLIENT_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new 
 
 export const IMPORT_VERSION_REGEX = /^v\d+\.\d+$/;
 
-export const UNSUPPORTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
-  CONTEXT,
-  FROM_CONTEXT,
-  POLICY,
-]);
+export const UNSUPPORTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([CONTEXT, FROM_CONTEXT]);

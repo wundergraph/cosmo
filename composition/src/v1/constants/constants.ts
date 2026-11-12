@@ -182,3 +182,4 @@ export const CACHE_TAG_PLACEHOLDER_REGEXP =
 export const CACHE_TAG_BRACE_REGEXP = /[{}]/;
 
 export const MAX_OR_SCOPES = 16;
+export const MAX_OR_POLICIES = 16;

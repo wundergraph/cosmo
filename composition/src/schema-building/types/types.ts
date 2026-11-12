@@ -287,17 +287,20 @@ export type FieldAuthorizationData = {
 };
 
 export type InheritedAuthorizationData = {
+  requiredPolicies: Array<Set<string>>;
   requiredScopes: Array<Set<string>>;
   requiredScopesByOR: Array<Set<string>>;
   requiresAuthentication: boolean;
 };
 
 export type OriginalAuthorizationData = {
+  requiredPolicies: Array<Set<string>>;
   requiredScopes: Array<Set<string>>;
   requiresAuthentication: boolean;
 };
 
 export type AuthorizationData = {
+  requiredPolicies: Array<Set<string>>;
   fieldAuthDataByFieldName: Map<FieldName, FieldAuthorizationData>;
   requiredScopes: Array<Set<string>>;
   requiredScopesByOR: Array<Set<string>>;

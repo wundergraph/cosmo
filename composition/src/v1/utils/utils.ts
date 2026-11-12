@@ -30,7 +30,7 @@ import {
 } from '../../utils/string-constants';
 import { addIterableToSet, addSets } from '../../utils/utils';
 import type { KeyFieldSetData } from '../normalization/types/types';
-import { MAX_OR_SCOPES } from '../constants/constants';
+import { MAX_OR_SCOPES, MAX_OR_POLICIES } from '../constants/constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
 import type { CompositeOutputNodeKind } from '../../ast/utils';
@@ -263,11 +263,13 @@ export function newFieldAuthorizationData(fieldName: string): FieldAuthorization
   return {
     fieldName,
     inheritedData: {
+      requiredPolicies: [],
       requiredScopes: [],
       requiredScopesByOR: [],
       requiresAuthentication: false,
     },
     originalData: {
+      requiredPolicies: [],
       requiredScopes: [],
       requiresAuthentication: false,
     },
@@ -277,6 +279,7 @@ export function newFieldAuthorizationData(fieldName: string): FieldAuthorization
 export function newAuthorizationData(typeName: string): AuthorizationData {
   return {
     fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
+    requiredPolicies: [],
     requiredScopes: [],
     requiredScopesByOR: [],
     requiresAuthentication: false,
@@ -326,35 +329,49 @@ export function mergeRequiredScopesByOR(targetScopes: Array<Set<string>>, source
 export function upsertFieldAuthorizationData(
   fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>,
   incomingData: FieldAuthorizationData,
-): boolean {
+): { isOrScopesLimitExceeded: boolean; isOrPoliciesLimitExceeded: boolean } {
   const fieldName = incomingData.fieldName;
   const existingData = fieldAuthorizationDataByFieldName.get(fieldName);
   if (!existingData) {
     fieldAuthorizationDataByFieldName.set(fieldName, copyFieldAuthorizationData(incomingData));
-    return true;
+    return { isOrScopesLimitExceeded: false, isOrPoliciesLimitExceeded: false };
   }
   existingData.inheritedData.requiresAuthentication ||= incomingData.inheritedData.requiresAuthentication;
   existingData.originalData.requiresAuthentication ||= incomingData.originalData.requiresAuthentication;
-  if (
+  const isOrScopesLimitExceeded =
     !mergeRequiredScopesByOR(
       existingData.inheritedData.requiredScopesByOR,
       incomingData.inheritedData.requiredScopes,
     ) ||
     existingData.inheritedData.requiredScopes.length * incomingData.inheritedData.requiredScopes.length >
       MAX_OR_SCOPES ||
-    existingData.originalData.requiredScopes.length * incomingData.originalData.requiredScopes.length > MAX_OR_SCOPES
-  ) {
-    return false;
+    existingData.originalData.requiredScopes.length * incomingData.originalData.requiredScopes.length > MAX_OR_SCOPES;
+  if (!isOrScopesLimitExceeded) {
+    existingData.inheritedData.requiredScopes = mergeRequiredScopesByAND(
+      existingData.inheritedData.requiredScopes,
+      incomingData.inheritedData.requiredScopes,
+    );
+    existingData.originalData.requiredScopes = mergeRequiredScopesByAND(
+      existingData.originalData.requiredScopes,
+      incomingData.originalData.requiredScopes,
+    );
   }
-  existingData.inheritedData.requiredScopes = mergeRequiredScopesByAND(
-    existingData.inheritedData.requiredScopes,
-    incomingData.inheritedData.requiredScopes,
-  );
-  existingData.originalData.requiredScopes = mergeRequiredScopesByAND(
-    existingData.originalData.requiredScopes,
-    incomingData.originalData.requiredScopes,
-  );
-  return true;
+  const isOrPoliciesLimitExceeded =
+    existingData.inheritedData.requiredPolicies.length * incomingData.inheritedData.requiredPolicies.length >
+      MAX_OR_POLICIES ||
+    existingData.originalData.requiredPolicies.length * incomingData.originalData.requiredPolicies.length >
+      MAX_OR_POLICIES;
+  if (!isOrPoliciesLimitExceeded) {
+    existingData.inheritedData.requiredPolicies = mergeRequiredScopesByAND(
+      existingData.inheritedData.requiredPolicies,
+      incomingData.inheritedData.requiredPolicies,
+    );
+    existingData.originalData.requiredPolicies = mergeRequiredScopesByAND(
+      existingData.originalData.requiredPolicies,
+      incomingData.originalData.requiredPolicies,
+    );
+  }
+  return { isOrScopesLimitExceeded, isOrPoliciesLimitExceeded };
 }
 
 function copyFieldAuthorizationDataByFieldName(
@@ -372,11 +389,13 @@ function copyFieldAuthorizationData(data: FieldAuthorizationData): FieldAuthoriz
     fieldName: data.fieldName,
     inheritedData: {
       requiredScopes: [...data.inheritedData.requiredScopes],
+      requiredPolicies: data.inheritedData.requiredPolicies.map((andPolicies) => new Set(andPolicies)),
       requiredScopesByOR: [...data.inheritedData.requiredScopes],
       requiresAuthentication: data.inheritedData.requiresAuthentication,
     },
     originalData: {
       requiredScopes: [...data.originalData.requiredScopes],
+      requiredPolicies: data.originalData.requiredPolicies.map((andPolicies) => new Set(andPolicies)),
       requiresAuthentication: data.originalData.requiresAuthentication,
     },
   };
@@ -386,6 +405,7 @@ function copyAuthorizationData(data: AuthorizationData): AuthorizationData {
   return {
     fieldAuthDataByFieldName: copyFieldAuthorizationDataByFieldName(data.fieldAuthDataByFieldName),
     requiredScopes: [...data.requiredScopes],
+    requiredPolicies: data.requiredPolicies.map((andPolicies) => new Set(andPolicies)),
     requiredScopesByOR: [...data.requiredScopes],
     requiresAuthentication: data.requiresAuthentication,
     typeName: data.typeName,
@@ -396,6 +416,7 @@ export function upsertAuthorizationData(
   authorizationDataByParentTypeName: Map<string, AuthorizationData>,
   incomingData: AuthorizationData,
   invalidORScopesCoords: Set<string>,
+  invalidORPoliciesCoords: Set<string>,
 ) {
   const existingData = authorizationDataByParentTypeName.get(incomingData.typeName);
   if (!existingData) {
@@ -411,9 +432,24 @@ export function upsertAuthorizationData(
   } else {
     existingData.requiredScopes = mergeRequiredScopesByAND(existingData.requiredScopes, incomingData.requiredScopes);
   }
+  if (existingData.requiredPolicies.length * incomingData.requiredPolicies.length > MAX_OR_POLICIES) {
+    invalidORPoliciesCoords.add(incomingData.typeName);
+  } else {
+    existingData.requiredPolicies = mergeRequiredScopesByAND(
+      existingData.requiredPolicies,
+      incomingData.requiredPolicies,
+    );
+  }
   for (const [fieldName, fieldAuthData] of incomingData.fieldAuthDataByFieldName) {
-    if (!upsertFieldAuthorizationData(existingData.fieldAuthDataByFieldName, fieldAuthData)) {
+    const { isOrScopesLimitExceeded, isOrPoliciesLimitExceeded } = upsertFieldAuthorizationData(
+      existingData.fieldAuthDataByFieldName,
+      fieldAuthData,
+    );
+    if (isOrScopesLimitExceeded) {
       invalidORScopesCoords.add(`${incomingData.typeName}.${fieldName}`);
+    }
+    if (isOrPoliciesLimitExceeded) {
+      invalidORPoliciesCoords.add(`${incomingData.typeName}.${fieldName}`);
     }
   }
 }
@@ -425,6 +461,7 @@ export function upsertAuthorizationConfiguration(
   const typeName = authorizationData.typeName;
   for (const [fieldName, fieldAuthData] of authorizationData.fieldAuthDataByFieldName) {
     const fieldCoords = `${typeName}.${fieldName}`;
+    const requiredPolicies = fieldAuthData.inheritedData.requiredPolicies.map((andPolicies) => [...andPolicies]);
     const existingConfig = fieldConfigurationByFieldCoords.get(fieldCoords);
     if (existingConfig) {
       existingConfig.requiresAuthentication = fieldAuthData.inheritedData.requiresAuthentication;
@@ -432,15 +469,22 @@ export function upsertAuthorizationConfiguration(
       existingConfig.requiredScopesByOR = fieldAuthData.inheritedData.requiredScopesByOR.map((orScopes) => [
         ...orScopes,
       ]);
+      if (requiredPolicies.length > 0) {
+        existingConfig.requiredPolicies = requiredPolicies;
+      }
     } else {
-      fieldConfigurationByFieldCoords.set(fieldCoords, {
+      const fieldConfiguration: FieldConfiguration = {
         argumentNames: [],
         typeName,
         fieldName,
         requiresAuthentication: fieldAuthData.inheritedData.requiresAuthentication,
         requiredScopes: fieldAuthData.inheritedData.requiredScopes.map((orScopes) => [...orScopes]),
         requiredScopesByOR: fieldAuthData.inheritedData.requiredScopesByOR.map((orScopes) => [...orScopes]),
-      });
+      };
+      if (requiredPolicies.length > 0) {
+        fieldConfiguration.requiredPolicies = requiredPolicies;
+      }
+      fieldConfigurationByFieldCoords.set(fieldCoords, fieldConfiguration);
     }
   }
 }

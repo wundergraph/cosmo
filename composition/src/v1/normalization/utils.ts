@@ -564,6 +564,7 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
 }
 
 export const FEDERATED_DIRECTIVE_DATAS: ReadonlyArray<DirectiveDefinitionData> = [
+  POLICY_DEFINITION_DATA,
   AUTHENTICATED_DEFINITION_DATA,
   DEPRECATED_DEFINITION_DATA,
   INACCESSIBLE_DEFINITION_DATA,

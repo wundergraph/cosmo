@@ -56,6 +56,7 @@ import {
   BASE_SCALARS,
   DIRECTIVE_DEFINITION_BY_NAME,
   MAX_OR_SCOPES,
+  MAX_OR_POLICIES,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../constants/constants';
 import {
@@ -164,6 +165,7 @@ import {
   oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
+  orPoliciesLimitError,
   selfImplementationError,
   semanticNonNullArgumentErrorMessage,
   semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
@@ -373,6 +375,8 @@ import {
   REQUIRE_FETCH_REASONS,
   REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES_SCOPES,
+  POLICY,
+  POLICIES,
   RESOLVABLE,
   ROOT_TYPE_NAMES,
   SCHEMA,
@@ -420,7 +424,7 @@ import {
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
   type HandleOverrideDirectiveParams,
-  type HandleRequiresScopesDirectiveParams,
+  type ExtractAuthorizationRequirementsParams,
   type HandleSemanticNonNullDirectiveParams,
   type KeyFieldSetData,
   type LinkImportData,
@@ -525,6 +529,7 @@ export class NormalizationFactory {
   interfaceImplementationTypeNamesByInterfaceTypeName = new Map<InterfaceTypeName, Set<InterfaceTypeName>>();
   internalGraph: Graph;
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
+  invalidORPoliciesCoords = new Set<string>();
   invalidORScopesCoords = new Set<string>();
   invalidRepeatedDirectiveNameByCoords = new Map<string, Set<string>>();
   isParentObjectExternal = false;
@@ -694,6 +699,7 @@ export class NormalizationFactory {
     const isListSize = directiveName === LIST_SIZE;
     const isOverride = directiveName === OVERRIDE;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
+    const isPolicy = directiveName === POLICY;
     const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
     if (!directiveNode.arguments || directiveNode.arguments.length < 1) {
       if (definitionData.requiredArgumentNames.size > 0) {
@@ -731,7 +737,7 @@ export class NormalizationFactory {
     const definedArgumentNames = new Set<ArgumentName>();
     const duplicateArgumentNames = new Set<ArgumentName>();
     const unexpectedArgumentNames = new Set<ArgumentName>();
-    const requiredScopes: Array<Set<string>> = [];
+    const requirements: Array<Set<string>> = [];
     for (const argumentNode of directiveNode.arguments) {
       const argumentName = argumentNode.name.value;
       if (definedArgumentNames.has(argumentName)) {
@@ -792,14 +798,30 @@ export class NormalizationFactory {
         });
         continue;
       }
-      if (!isRequiresScopes || argumentName !== SCOPES) {
+      if (!(isRequiresScopes && argumentName === SCOPES) && !(isPolicy && argumentName === POLICIES)) {
         continue;
       }
-      this.extractRequiredScopes({
+      /* The validator coerces a single value into a list: "a" becomes [["a"]], and ["a", "b"] becomes [["a"], ["b"]].
+       * [["a"], ["b"]] means a OR b, but the author of ["a", "b"] can mean a AND b.
+       * So the requirements must be a list of lists, with no coercion.
+       * */
+      const requirementsNode = argumentNode.value;
+      if (requirementsNode.kind !== Kind.LIST || requirementsNode.values.some((node) => node.kind !== Kind.LIST)) {
+        errorMessages.push(
+          invalidArgumentValueErrorMessage(
+            print(requirementsNode),
+            `@${directiveName}`,
+            argumentName,
+            printTypeNode(argumentData.type),
+          ),
+        );
+        continue;
+      }
+      this.extractAuthorizationRequirements({
         directiveCoords,
-        // Casts are safe because invalid arguments would short circuit
-        orScopes: (argumentNode.value as ListValueNode).values,
-        requiredScopes,
+        isPolicy,
+        requirementNodes: requirementsNode.values,
+        requirements,
       });
     }
     if (isCost) {
@@ -823,7 +845,7 @@ export class NormalizationFactory {
         undefinedRequiredArgumentsErrorMessage(directiveName, requiredArgumentNames, undefinedArgumentNames),
       );
     }
-    if (errorMessages.length > 0 || !isRequiresScopes) {
+    if (errorMessages.length > 0 || (!isRequiresScopes && !isPolicy)) {
       return errorMessages;
     }
     const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
@@ -831,13 +853,22 @@ export class NormalizationFactory {
     );
     if (data.kind !== Kind.FIELD_DEFINITION) {
       this.parentTypeNamesWithAuthDirectives.add(parentTypeName);
-      parentAuthorizationData.requiredScopes.push(...requiredScopes);
+      if (isPolicy) {
+        parentAuthorizationData.requiredPolicies.push(...requirements);
+      } else {
+        parentAuthorizationData.requiredScopes.push(...requirements);
+      }
     } else {
       const fieldAuthData = getValueOrDefault(parentAuthorizationData.fieldAuthDataByFieldName, data.name, () =>
         newFieldAuthorizationData(data.name),
       );
-      fieldAuthData.inheritedData.requiredScopes.push(...requiredScopes);
-      fieldAuthData.originalData.requiredScopes.push(...requiredScopes);
+      if (isPolicy) {
+        fieldAuthData.inheritedData.requiredPolicies.push(...requirements);
+        fieldAuthData.originalData.requiredPolicies.push(...requirements);
+      } else {
+        fieldAuthData.inheritedData.requiredScopes.push(...requirements);
+        fieldAuthData.originalData.requiredScopes.push(...requirements);
+      }
     }
     return errorMessages;
   }
@@ -3106,20 +3137,25 @@ export class NormalizationFactory {
     this.costs.listSizes.set(fieldCoords, listSizeConfig);
   }
 
-  extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
-    if (orScopes.length > MAX_OR_SCOPES) {
-      this.invalidORScopesCoords.add(directiveCoords);
+  extractAuthorizationRequirements({
+    directiveCoords,
+    isPolicy,
+    requirementNodes,
+    requirements,
+  }: ExtractAuthorizationRequirementsParams) {
+    if (requirementNodes.length > (isPolicy ? MAX_OR_POLICIES : MAX_OR_SCOPES)) {
+      (isPolicy ? this.invalidORPoliciesCoords : this.invalidORScopesCoords).add(directiveCoords);
       return;
     }
-    for (const scopes of orScopes) {
-      const newANDScopes = new Set<string>();
-      for (const scope of (scopes as ListValueNode).values) {
-        newANDScopes.add((scope as StringValueNode).value);
+    for (const requirementNode of requirementNodes) {
+      const newANDRequirement = new Set<string>();
+      for (const value of (requirementNode as ListValueNode).values) {
+        newANDRequirement.add((value as StringValueNode).value);
       }
-      if (newANDScopes.size < 1) {
+      if (newANDRequirement.size < 1) {
         continue;
       }
-      addScopes(requiredScopes, newANDScopes);
+      addScopes(requirements, newANDRequirement);
     }
   }
 
@@ -4898,6 +4934,9 @@ export class NormalizationFactory {
     }
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
+    }
+    if (this.invalidORPoliciesCoords.size > 0) {
+      this.errors.push(orPoliciesLimitError(MAX_OR_POLICIES, [...this.invalidORPoliciesCoords]));
     }
     /*
      * Sometimes an @openfed__configureDescription directive is defined before a description is, e.g., on an extension.
