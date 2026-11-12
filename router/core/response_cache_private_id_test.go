@@ -94,7 +94,7 @@ func TestHitDirectives(t *testing.T) {
 	t.Parallel()
 
 	hit := func(client, shared time.Duration, private, public, sharedOnly bool) string {
-		_, header := createMostRestrictivePolicy([]*cacheobject.Object{{RespDirectives: hitDirectives(client, shared, private, public, sharedOnly)}}, false)
+		_, header := createMostRestrictivePolicy([]*cacheobject.Object{{RespDirectives: hitDirectives(client, shared, private, public, sharedOnly)}}, publicRequiresAll)
 		return header
 	}
 	require.Equal(t, "max-age=30, public", hit(30*time.Second, 30*time.Second, false, true, false))

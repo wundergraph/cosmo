@@ -994,12 +994,12 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 
 // onFinishedCacheControl runs fetches through OnFinished under a cache
 // control policy and returns the client Cache-Control.
-func onFinishedCacheControl(t *testing.T, policy config.CacheControlPolicy, anyPublic bool, fetches ...resolve.DataSourceInfo) func(...*resolve.ResponseInfo) string {
+func onFinishedCacheControl(t *testing.T, policy config.CacheControlPolicy, publicMode publicMergeMode, fetches ...resolve.DataSourceInfo) func(...*resolve.ResponseInfo) string {
 	return func(infos ...*resolve.ResponseInfo) string {
 		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{}, CreateCacheControlPolicyHeaderRules(policy))
 		require.NoError(t, err)
 		propagation.missingNoStore = policy.MissingNoStore
-		propagation.anyPublic = anyPublic
+		propagation.publicMode = publicMode
 
 		tp := sdktrace.NewTracerProvider()
 		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
@@ -1031,13 +1031,13 @@ func TestOnFinished_MissingNoStore(t *testing.T) {
 	t.Run("a fetch without an HTTP response is skipped", func(t *testing.T) {
 		t.Parallel()
 		// gRPC and plugin fetches: status 0, no headers.
-		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), &resolve.ResponseInfo{})
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), &resolve.ResponseInfo{})
 		require.Equal(t, "max-age=300, public", got)
 	})
 
 	t.Run("an HTTP fetch without headers is no-store", func(t *testing.T) {
 		t.Parallel()
-		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), okResponse(""))
 		require.Equal(t, "no-store", got)
 	})
 
@@ -1052,20 +1052,20 @@ func TestOnFinished_MissingNoStore(t *testing.T) {
 	for _, cacheControl := range []string{"", "foo"} {
 		t.Run("a partial hit with a silent origin is no-store: "+cacheControl, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, "no-store", onFinishedCacheControl(t, policy, false, b)(partialHit(cacheControl)))
+			require.Equal(t, "no-store", onFinishedCacheControl(t, policy, publicRequiresAll, b)(partialHit(cacheControl)))
 		})
 	}
 
 	t.Run("a partial hit with an origin lifetime keeps it", func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, false, b)(partialHit("max-age=60")))
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, publicRequiresAll, b)(partialHit("max-age=60")))
 	})
 
 	t.Run("a full hit has no origin to judge", func(t *testing.T) {
 		t.Parallel()
 		hit := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCacheTTL: 100 * time.Second,
 			ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit, ClientTTL: 100 * time.Second, Public: true}}
-		require.Equal(t, "max-age=100, public", onFinishedCacheControl(t, policy, false, b)(hit))
+		require.Equal(t, "max-age=100, public", onFinishedCacheControl(t, policy, publicRequiresAll, b)(hit))
 	})
 }
 
@@ -1120,18 +1120,18 @@ func TestOnFinished_AnyPublicPerFetch(t *testing.T) {
 
 	t.Run("a subgraph value without public withholds it from its own fetch", func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, true, b)(okResponse("")))
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, publicRequiresAny, b)(okResponse("")))
 	})
 
 	t.Run("another public fetch still grants it", func(t *testing.T) {
 		t.Parallel()
-		got := onFinishedCacheControl(t, policy, true, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		got := onFinishedCacheControl(t, policy, publicRequiresAny, a, b)(okResponse("max-age=300, public"), okResponse(""))
 		require.Equal(t, "max-age=60, public", got)
 	})
 
 	t.Run("without any public every fetch must grant it", func(t *testing.T) {
 		t.Parallel()
-		got := onFinishedCacheControl(t, policy, false, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), okResponse(""))
 		require.Equal(t, "max-age=60", got)
 	})
 }

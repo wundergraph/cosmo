@@ -202,8 +202,8 @@ type HeaderPropagation struct {
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
 	postResponseRules       *PostResponseRules
-	// anyPublic merges public when any fetch grants it, not every fetch.
-	anyPublic bool
+	// publicMode decides when fetches merge as public.
+	publicMode publicMergeMode
 	// missingNoStore makes a fetch with no caching directives no-store.
 	missingNoStore bool
 }
@@ -689,7 +689,7 @@ func (h *HeaderPropagation) commitFetchCacheControl(propagation *responseHeaderP
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}
-	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.anyPublic)
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.publicMode)
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
@@ -1109,7 +1109,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		if fetch.policy != nil {
 			policies = append(policies, fetch.policy)
 		}
-		fetch.policy, _ = createMostRestrictivePolicy(policies, false)
+		fetch.policy, _ = createMostRestrictivePolicy(policies, publicRequiresAll)
 		fetch.expires = fetch.expires || !expiresHeader.IsZero()
 		return
 	}
@@ -1122,7 +1122,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.anyPublic)
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.publicMode)
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
@@ -1263,8 +1263,18 @@ func noStoreDirectives() *cachedirective.ResponseCacheDirectives {
 	}
 }
 
-// With anyPublic, one public policy is enough; otherwise every policy must be public.
-func createMostRestrictivePolicy(policies []*cachedirective.Object, anyPublic bool) (*cachedirective.Object, string) {
+// publicMergeMode decides when the merged policy is public.
+type publicMergeMode int
+
+const (
+	// publicRequiresAll keeps public only when every policy is public.
+	publicRequiresAll publicMergeMode = iota
+	// publicRequiresAny keeps public when at least one policy is public.
+	publicRequiresAny
+)
+
+func createMostRestrictivePolicy(policies []*cachedirective.Object, publicMode publicMergeMode) (*cachedirective.Object, string) {
+	anyPublic := publicMode == publicRequiresAny
 	result := cachedirective.Object{
 		RespDirectives: &cachedirective.ResponseCacheDirectives{},
 	}

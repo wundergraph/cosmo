@@ -225,7 +225,7 @@ func applyResponseCacheLifetime(headers http.Header, info *resolve.ResponseInfo)
 		})
 	}
 
-	_, merged := createMostRestrictivePolicy(policies, false)
+	_, merged := createMostRestrictivePolicy(policies, publicRequiresAll)
 	headers.Set(cacheControlKey, merged)
 	// Lifetimes are net of Age now; the policy must not take it off again.
 	headers.Del("Age")
