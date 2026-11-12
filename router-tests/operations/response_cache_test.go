@@ -686,7 +686,7 @@ func TestResponseCacheWithMultiFetch(t *testing.T) {
 			require.Equal(t, first.Body, second.Body)
 			require.Len(t, employees.entityRequests(), 2, "the cold alias was fetched")
 
-			maxAge := maxAgeOf(t, second.Response.Header.Get("Cache-Control"))
+			maxAge := maxAgeFrom(t, second.Response.Header.Get("Cache-Control"))
 			require.Greater(t, maxAge, 0)
 			require.LessOrEqual(t, maxAge, 60,
 				"half of the merged fetch expires with the warm alias, so the origin's longer max-age must not reach the client")
@@ -839,11 +839,31 @@ func TestResponseCacheTags(t *testing.T) {
 			require.ElementsMatch(t, entries, tags["declared:employees:homepage"])
 			require.ElementsMatch(t, entries, tags["subgraph:employees"])
 
-			// A root fetch's data object is a selection set rather than an
-			// entity, so there is no one typename to index it under.
-			for tag := range tags {
-				require.NotContains(t, tag, "type:", "a root fetch has no typename of its own")
-			}
+			// Indexed under the root type its fields are on.
+			require.ElementsMatch(t, entries, tags["type:employees:Query"])
+		})
+	})
+
+	t.Run("a type request for Query drops root entries", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := makeCacheAsConfig(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id } }`}
+			xEnv.MakeGraphQLRequestOK(query)
+
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
+				`[{"kind":"type","subgraph":"employees","type":"Query"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Equal(t, 1, count)
+
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load())
 		})
 	})
 
@@ -1222,14 +1242,7 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 // The header is set before the handler runs, because the handler writes the body
 // and a header set after that is a header nobody receives.
 func cacheControlMiddleware(value string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if value != "" {
-				w.Header().Set("Cache-Control", value)
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+	return headersMiddleware("Cache-Control", value)
 }
 
 const responseCacheSharedKey = "a-shared-key-that-is-long-enough-to-pass"
@@ -1300,8 +1313,6 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 const (
 	responseCacheEntryNamespace = "e:"
 	responseCacheTagNamespace   = "t:"
-	// Mirrors the redis adapter's walksMember, the walk count in a tag set.
-	responseCacheWalksMember = "\x00walks"
 )
 
 // responseCacheStored reads back what a test wrote, split into the entries
@@ -1333,7 +1344,8 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
 				members, err := client.ZRange(ctx, key, 0, -1).Result()
 				require.NoError(t, err)
-				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return m == responseCacheWalksMember })
+				// Bookkeeping members start with a NUL byte; no cache key does.
+				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return strings.HasPrefix(m, "\x00") })
 				continue
 			}
 			entries = append(entries, strings.TrimPrefix(name, responseCacheEntryNamespace))

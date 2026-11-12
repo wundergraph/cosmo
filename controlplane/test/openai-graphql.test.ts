@@ -1,7 +1,40 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { OpenAIGraphql } from '../src/core/openai-graphql/index.js';
 
 describe('OpenAI GraphQL', () => {
+  test('publishes the SDL JSON schema through the SDK and parses the function result', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(
+        Response.json({
+          choices: [
+            { message: { function_call: { name: 'store_sdl', arguments: JSON.stringify({ sdl: fixedSubgraphSDL }) } } },
+          ],
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetch);
+    try {
+      const ai = new OpenAIGraphql({ openAiApiKey: 'test-key' });
+      expect(await ai.fixSDL({ sdl: brokenSubgraphSDL, checkResult: brokenSubgraphCheckResult })).toEqual({
+        sdl: fixedSubgraphSDL,
+      });
+      const [, init] = fetch.mock.calls[0];
+      const request = JSON.parse(String(init?.body));
+      expect(request.functions[0]).toMatchObject({
+        name: 'store_sdl',
+        parameters: {
+          $schema: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          properties: { sdl: { type: 'string', description: 'The fixed GraphQL Schema' } },
+          required: ['sdl'],
+          additionalProperties: false,
+        },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('Should properly correct schema', { timeout: 20_000 }, async () => {
     if (!process.env.OPENAI_API_KEY) {
       return;

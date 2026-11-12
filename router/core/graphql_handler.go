@@ -262,32 +262,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 
-	if h.responseCacheStore != nil && h.responseCacheSettings != nil {
-		store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl)
-		if store != nil {
-			cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
-			cacheOpts.Store = store
-			cacheOpts.OnError = h.responseCacheErrorHandler
-			cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
-				CacheTag: h.responseCacheInvalidation.CacheTag,
-				Subgraph: h.responseCacheInvalidation.Subgraph,
-				Type:     h.responseCacheInvalidation.Type,
-			}
-			if resolveCtx.TracingOptions.Enable {
-				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
-				// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
-				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
-					return synchronous && resolveCtx.SubgraphErrors() == nil
-				})
-			}
-			resolveCtx.SetResponseCache(cacheOpts)
-		}
-	}
-	if h.responseCacheStore != nil && reqCtx.cacheControl != nil && reqCtx.cacheControl.NoCache {
-		// The leader of a shared flight may answer from the cache,
-		// so a no-cache request resolves on its own.
-		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
-	}
+	h.configureResponseCache(resolveCtx, reqCtx)
 
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
@@ -771,5 +746,39 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
+	}
+}
+
+// configureResponseCache hands a request's resolve context the response cache,
+// as the request's Cache-Control allows.
+func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, reqCtx *requestContext) {
+	cacheControl := reqCtx.cacheControl
+	// The graph mux sets settings with the store, or fails to build.
+	if h.responseCacheStore == nil {
+		return
+	}
+	if store := selectCacheStore(h.responseCacheStore, cacheControl); store != nil {
+		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
+		cacheOpts.Store = store
+		cacheOpts.OnError = h.responseCacheErrorHandler
+		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
+			CacheTag: h.responseCacheInvalidation.CacheTag,
+			Subgraph: h.responseCacheInvalidation.Subgraph,
+			Type:     h.responseCacheInvalidation.Type,
+		}
+		cacheOpts.OnlyIfCached = requestOnlyIfCached(cacheControl)
+		if resolveCtx.TracingOptions.Enable {
+			_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+			// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+			cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+				return synchronous && resolveCtx.SubgraphErrors() == nil
+			})
+		}
+		resolveCtx.SetResponseCache(cacheOpts)
+	}
+	if requestRevalidates(cacheControl) || requestOnlyIfCached(cacheControl) {
+		// The leader of a shared flight may answer from the cache, or refuse
+		// to fetch, so such a request resolves on its own.
+		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
 	}
 }
