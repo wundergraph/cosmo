@@ -7,7 +7,6 @@ module.exports = async ({ github, context, core }) => {
     'Content-Type': 'application/json',
   };
 
-  // Only public memberships are visible.
   const orgs = (await github.paginate(github.rest.orgs.listForUser, { username: login })).map((o) =>
     o.login.toLowerCase(),
   );
