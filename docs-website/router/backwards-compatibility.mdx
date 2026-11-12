@@ -61,7 +61,7 @@ This is harmless when both texts are the same operation, such as when only the o
 
 To migrate away from the option, publish the affected operations again under new IDs, and keep the old ones until no client sends them:
 
-1. Change your tooling so that each operation's ID is the SHA256 hash of the exact body you publish, or an ID that doesn't look like a SHA256 hash. Both the body and the ID of an affected operation usually change as a result.
+1. Change your tooling so that each operation's ID is the SHA256 hash of the exact body you publish. With APQ disabled, you can use an ID that doesn't look like a SHA256 hash instead. With APQ enabled, IDs must be SHA256 hashes. Both the body and the ID of an affected operation usually change as a result.
 2. Push the new operations with `wgc operations push`, and release clients that send the new IDs. Keep the old operations published, so that clients still sending the old IDs keep working. The new operations count toward your persisted operations limit alongside the old ones.
 3. Once clients no longer send the old IDs, [delete the old operations](/router/persisted-queries/persisted-operations#deleting-persisted-operations-in-studio). Studio warns you when an operation still receives traffic.
 4. Disable the option once no affected operations are left. With the PQL manifest, that is when cache warmup no longer logs any. Without it, check that every published ID that looks like a SHA256 hash is the SHA256 hash of its body.
