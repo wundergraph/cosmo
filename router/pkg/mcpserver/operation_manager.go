@@ -45,7 +45,7 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 	return nil
 }
 
-// LoadOperationsFromManifest loads operations from a manifest. The key of each operation is its name.
+// LoadOperationsFromManifest loads MCP operations using the names in their documents.
 func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) {
 	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
 	om.setOperations(loader.LoadOperationsFromManifest(manifestOperations))

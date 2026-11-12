@@ -28,6 +28,19 @@ func TestParseManifest(t *testing.T) {
 		require.ErrorContains(t, err, "failed to parse manifest")
 	})
 
+	t.Run("preserves opaque keys and bodies without MCP enforcement", func(t *testing.T) {
+		t.Parallel()
+		data := []byte(`{"version":1,"revision":"r","operations":{"custom/id!":"{ a }","one":"query Same { a }","two":"query Same { b }","not graphql":"opaque body"}}`)
+		m, err := ParseManifest(data)
+		require.NoError(t, err)
+		require.Equal(t, map[string]string{
+			"custom/id!":  "{ a }",
+			"one":         "query Same { a }",
+			"two":         "query Same { b }",
+			"not graphql": "opaque body",
+		}, m.Operations)
+	})
+
 	t.Run("returns an error for an unsupported version", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseManifest([]byte(`{"version":2,"revision":"r","operations":{}}`))

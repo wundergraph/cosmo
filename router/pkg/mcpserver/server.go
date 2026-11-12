@@ -941,12 +941,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			compiledSchema: compiledSchema,
 		}
 
-		// In manifest mode the key is the tool name. Otherwise convert the operation name
-		// to snake_case for consistent tool naming.
-		operationToolName := op.Name
-		if s.manifestOperations == nil {
-			operationToolName = strcase.ToSnake(op.Name)
-		}
+		operationToolName := strcase.ToSnake(op.Name)
 
 		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
@@ -959,10 +954,11 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(toolNames, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+		}
+		if slices.Contains(toolNames, toolName) || slices.Contains(reservedToolNames, toolName) {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
-				zap.String("conflicting_tool", operationToolName),
+				zap.String("conflicting_tool", toolName),
 			)
 			continue
 		}

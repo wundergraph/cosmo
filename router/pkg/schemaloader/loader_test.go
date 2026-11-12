@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -341,30 +342,29 @@ type Employee {
 	require.False(t, report.HasErrors())
 	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
 
-	type loadedOperation struct {
-		Name            string
-		OperationType   string
-		OperationString string
-	}
-
-	t.Run("names operations by their key sorted by key", func(t *testing.T) {
+	t.Run("uses document names and skips anonymous and duplicate operations in key order", func(t *testing.T) {
 		const namedOp = `query ListEmployees { employees { id } }`
+		const duplicateOp = `query ListEmployees { employees { id } } # duplicate`
 		const anonymousOp = `{ employees { id } }`
 
-		loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+		core, logs := observer.New(zap.ErrorLevel)
+		loader := NewOperationLoader(zap.New(core), &schemaDoc)
 		operations := loader.LoadOperationsFromManifest(map[string]string{
-			"b-named":     namedOp,
-			"a_anonymous": anonymousOp,
+			"a": namedOp,
+			"b": duplicateOp,
+			"c": anonymousOp,
 		})
 
-		loaded := make([]loadedOperation, 0, len(operations))
-		for _, op := range operations {
-			loaded = append(loaded, loadedOperation{Name: op.Name, OperationType: op.OperationType, OperationString: op.OperationString})
-		}
-		require.Equal(t, []loadedOperation{
-			{Name: "a_anonymous", OperationType: "query", OperationString: anonymousOp},
-			{Name: "b-named", OperationType: "query", OperationString: namedOp},
-		}, loaded)
+		require.Len(t, operations, 1)
+		require.Equal(t, "ListEmployees", operations[0].Name)
+		require.Equal(t, namedOp, operations[0].OperationString)
+		anonymous := logs.FilterMessage("Skipping anonymous MCP operation").All()
+		require.Len(t, anonymous, 1)
+		require.Equal(t, "c", anonymous[0].ContextMap()["manifest_key"])
+		duplicates := logs.FilterMessage("MCP operation already exists").All()
+		require.Len(t, duplicates, 1)
+		require.Equal(t, "b", duplicates[0].ContextMap()["manifest_key"])
+		require.Equal(t, "ListEmployees", duplicates[0].ContextMap()["operation"])
 	})
 
 	t.Run("skips invalid and subscription operations", func(t *testing.T) {

@@ -125,8 +125,8 @@ As an alternative to a directory, you can define all tools in one JSON file. Set
   "revision": "2026-01-15-1",
   "generatedAt": "2026-01-15T10:00:00Z",
   "operations": {
-    "get_users": "query GetUsers { users { id name email } }",
-    "create_user": "mutation CreateUser($name: String!, $email: String!) { createUser(input: { name: $name, email: $email }) { id name email } }"
+    "7693b76d7cc349bc8bb5fc44336997abfe45115131a72b05e7128940ac60927b": "query GetUsers { users { id name email } }",
+    "45f9f313dd581d594a1729ad1cc88d7aacb75bc21604340b4114ea39833fabab": "mutation CreateUser($name: String!, $email: String!) { createUser(input: { name: $name, email: $email }) { id name email } }"
   }
 }
 ```
@@ -134,9 +134,9 @@ As an alternative to a directory, you can define all tools in one JSON file. Set
 - `version` must be `1`.
 - `revision` identifies the content. Change it on every edit, or the router ignores the edit.
 - `generatedAt` is an ISO 8601 timestamp. It is for information only.
-- `operations` maps each key to one operation body. The key is the tool name (see [Tool Naming](#tool-naming)).
+- `operations` maps each operation document's SHA-256 hash to its body, using the same operations-map format as persisted operation manifests. The key does not determine the tool name (see [Tool Naming](#tool-naming)).
 
-Because the key names the operation, operations in a manifest can be anonymous. For how the router polls the manifest, see [Operation Manifest](/router/mcp/configuration#operation-manifest).
+Each MCP manifest document must contain one named operation. Anonymous operations are logged and skipped. Operations are processed in manifest-key order; if multiple documents declare the same operation name, the first valid operation wins and later duplicates are logged and skipped. These MCP restrictions do not apply to persisted operation manifests. For how the router polls the manifest, see [Operation Manifest](/router/mcp/configuration#operation-manifest).
 
 ### Validation
 
@@ -154,7 +154,9 @@ Each tool's name is derived from its operation name:
 
 Operation names are converted to `snake_case` for tool naming consistency.
 
-In an [operation manifest](#operation-manifest), the key is the tool name. The router uses the key as it is and does not change its case. The name in the operation body is not used. The `execute_operation_` prefix still applies (see [Omitting the Tool Name Prefix](#omitting-the-tool-name-prefix)). For example, the key `get_users` becomes `execute_operation_get_users`.
+This naming rule applies to both directories and [operation manifests](#operation-manifest). For example, `query GetUsers { ... }` becomes `execute_operation_get_users` regardless of its manifest hash key. Anonymous operations in directories retain the filename (without its extension) as the fallback operation name.
+
+Distinct operation names that normalize to the same final tool name collide: the first registered tool wins, and later tools are logged and skipped, with or without the prefix.
 
 ### Omitting the Tool Name Prefix
 

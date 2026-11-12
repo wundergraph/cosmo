@@ -243,44 +243,53 @@ func TestManifestOperations(t *testing.T) {
 	schemaDoc := testSchemaDoc(t)
 
 	manifest := map[string]string{
-		"FindEmployee":       findEmployeeOp,
-		"get_operation_info": listEmployeesOp,
-		"list-employees_v2":  listEmployeesOp,
+		"a": findEmployeeOp,
+		"b": getOperationInfoOp,
+		"c": listEmployeesOp,
+		"d": `query find_employee { employees { id } }`,
 	}
 
-	t.Run("registers manifest keys verbatim as tool names with the prefix", func(t *testing.T) {
+	t.Run("uses document names and skips normalized collisions with the prefix", func(t *testing.T) {
 		t.Parallel()
 
+		core, logs := observer.New(zap.ErrorLevel)
 		srv, err := NewGraphQLSchemaServer(
 			t.Context(),
 			"http://localhost:4000/graphql",
 			WithManifestOperations(func() map[string]string { return manifest }),
+			WithLogger(zap.New(core)),
 		)
 		require.NoError(t, err)
 		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 
-		require.Equal(t, []string{
+		require.ElementsMatch(t, []string{
 			"get_schema",
-			"execute_operation_FindEmployee",
+			"execute_operation_find_employee",
 			"execute_operation_get_operation_info",
-			"execute_operation_list-employees_v2",
+			"execute_operation_list_employees",
 			"get_operation_info",
 		}, srv.registeredTools)
+		collisions := logs.FilterMessage("Skipping operation due to tool name collision").All()
+		require.Len(t, collisions, 1)
+		require.Equal(t, "find_employee", collisions[0].ContextMap()["operation"])
 	})
 
-	t.Run("registers manifest keys verbatim as tool names without the prefix and skips reserved names", func(t *testing.T) {
+	t.Run("uses document names and skips normalized and reserved collisions without the prefix", func(t *testing.T) {
 		t.Parallel()
 
+		core, logs := observer.New(zap.ErrorLevel)
 		srv, err := NewGraphQLSchemaServer(
 			t.Context(),
 			"http://localhost:4000/graphql",
 			WithManifestOperations(func() map[string]string { return manifest }),
 			WithOmitToolNamePrefix(true),
+			WithLogger(zap.New(core)),
 		)
 		require.NoError(t, err)
 		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
 
-		require.Equal(t, []string{"get_schema", "FindEmployee", "list-employees_v2", "get_operation_info"}, srv.registeredTools)
+		require.ElementsMatch(t, []string{"get_schema", "find_employee", "list_employees", "get_operation_info"}, srv.registeredTools)
+		require.Equal(t, 2, logs.FilterMessage("Skipping operation due to tool name collision").Len())
 	})
 }
 
@@ -320,12 +329,12 @@ func TestManifestUpdated(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
-		require.Equal(t, []string{"get_schema", "find", "list", "get_operation_info"}, srv.registeredTools)
+		require.ElementsMatch(t, []string{"get_schema", "find_employee", "list_employees", "get_operation_info"}, srv.registeredTools)
 
-		manifest = map[string]string{"list": listEmployeesOp, "list_again": listEmployeesOp}
+		manifest = map[string]string{"list": listEmployeesOp, "again": `query ListAgain { employees { id } }`}
 		srv.ManifestUpdated()
 
-		require.Equal(t, []string{"get_schema", "list", "list_again", "get_operation_info"}, srv.registeredTools)
+		require.Equal(t, []string{"get_schema", "list_again", "list_employees", "get_operation_info"}, srv.registeredTools)
 	})
 
 	t.Run("does nothing before the first reload", func(t *testing.T) {

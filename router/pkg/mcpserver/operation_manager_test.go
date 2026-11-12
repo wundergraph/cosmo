@@ -19,8 +19,8 @@ func TestOperationsManager(t *testing.T) {
 		core, logs := observer.New(zap.ErrorLevel)
 		om := NewOperationsManager(&schemaDoc, zap.New(core), false)
 
-		// "all" sorts first and touches two scoped fields (2 x 2 = 4 groups), which
-		// exceeds a limit of 2. "ids" touches one scoped field (2 groups).
+		// ListEmployees touches two scoped fields (2 x 2 = 4 groups), which
+		// exceeds a limit of 2. Ids touches one scoped field (2 groups).
 		om.LoadOperationsFromManifest(map[string]string{
 			"all": listEmployeesOp,
 			"ids": `query Ids { employees { id } }`,
@@ -40,11 +40,11 @@ func TestOperationsManager(t *testing.T) {
 
 		ops := om.GetOperations()
 		require.Len(t, ops, 1)
-		require.Equal(t, "ids", ops[0].Name)
+		require.Equal(t, "Ids", ops[0].Name)
 		require.Equal(t, [][]string{{"read:a"}, {"read:b"}}, ops[0].RequiredScopes)
 
 		dropped := logs.FilterMessage("Skipping MCP operation because its scopes cannot be computed")
 		require.Equal(t, 1, dropped.Len())
-		require.Equal(t, "all", dropped.All()[0].ContextMap()["operation"])
+		require.Equal(t, "ListEmployees", dropped.All()[0].ContextMap()["operation"])
 	})
 }

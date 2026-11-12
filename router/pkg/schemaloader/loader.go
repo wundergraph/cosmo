@@ -107,18 +107,27 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 	return operations, nil
 }
 
-// LoadOperationsFromManifest loads the operations of a manifest, sorted by key. The key
-// of each operation is its name, regardless of the name in the operation body.
+// LoadOperationsFromManifest loads named MCP operations from a manifest, sorted by key.
+// Names come from the documents; anonymous and duplicate operations are logged and skipped.
 func (l *OperationLoader) LoadOperationsFromManifest(manifestOperations map[string]string) []Operation {
 	validator := astvalidation.DefaultOperationValidator()
 
 	operations := make([]Operation, 0, len(manifestOperations))
+	seen := make(map[string]bool, len(manifestOperations))
 	for _, key := range slices.Sorted(maps.Keys(manifestOperations)) {
 		op, ok := l.loadOperation(validator, manifestOperations[key], zap.String("manifest_key", key))
 		if !ok {
 			continue
 		}
-		op.Name = key
+		if op.Name == "" {
+			l.Logger.Error("Skipping anonymous MCP operation", zap.String("manifest_key", key))
+			continue
+		}
+		if seen[op.Name] {
+			l.Logger.Error("MCP operation already exists", zap.String("operation", op.Name), zap.String("manifest_key", key))
+			continue
+		}
+		seen[op.Name] = true
 		operations = append(operations, op)
 	}
 

@@ -1,7 +1,9 @@
 package integration
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -55,12 +57,19 @@ func TestMCPManifest(t *testing.T) {
 		},
 	}
 
-	initialOperations := map[string]string{
-		"employeeIds":  `query { employees { id } }`,
-		"find-mood_v1": `query MyEmployees { employees { currentMood } }`,
+	hashedOperations := func(bodies ...string) map[string]string {
+		operations := make(map[string]string, len(bodies))
+		for _, body := range bodies {
+			operations[fmt.Sprintf("%x", sha256.Sum256([]byte(body)))] = body
+		}
+		return operations
 	}
+	initialOperations := hashedOperations(
+		`query EmployeeIds { employees { id } }`,
+		`query MyEmployees { employees { currentMood } }`,
+	)
 
-	t.Run("lists the manifest keys as tool names", func(t *testing.T) {
+	t.Run("lists document names in snake case for SHA keyed operations", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
@@ -70,7 +79,7 @@ func TestMCPManifest(t *testing.T) {
 			MCP:               mcpConfig,
 			MCPOperationsPath: dir,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			require.Equal(t, []string{"employeeIds", "find-mood_v1", "get_operation_info"}, listToolNames(t, xEnv))
+			require.Equal(t, []string{"employee_ids", "get_operation_info", "my_employees"}, listToolNames(t, xEnv))
 		})
 	})
 
@@ -84,13 +93,13 @@ func TestMCPManifest(t *testing.T) {
 			MCP:               mcpConfig,
 			MCPOperationsPath: dir,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			writeManifest(t, dir, "2", map[string]string{
-				"employeeIds":   `query { employees { id } }`,
-				"employeeMoods": `query { employees { currentMood } }`,
-			})
+			writeManifest(t, dir, "2", hashedOperations(
+				`query EmployeeIds { employees { id } }`,
+				`query EmployeeMoods { employees { currentMood } }`,
+			))
 
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assert.Equal(c, []string{"employeeIds", "employeeMoods", "get_operation_info"}, listToolNames(c, xEnv))
+				assert.Equal(c, []string{"employee_ids", "employee_moods", "get_operation_info"}, listToolNames(c, xEnv))
 			}, 10*time.Second, 100*time.Millisecond)
 		})
 	})
@@ -115,7 +124,7 @@ func TestMCPManifest(t *testing.T) {
 				return xEnv.Observer().FilterMessage("Failed to fetch manifest").Len() > 0
 			}, 10*time.Second, 100*time.Millisecond)
 
-			require.Equal(t, []string{"employeeIds", "find-mood_v1", "get_operation_info"}, listToolNames(t, xEnv))
+			require.Equal(t, []string{"employee_ids", "get_operation_info", "my_employees"}, listToolNames(t, xEnv))
 		})
 	})
 
@@ -140,18 +149,18 @@ func TestMCPManifest(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// A new revision first, so the reload must use the current manifest and not the initial one.
-			writeManifest(t, dir, "2", map[string]string{
-				"employeeMoods": `query { employees { currentMood } }`,
-			})
+			writeManifest(t, dir, "2", hashedOperations(
+				`query EmployeeMoods { employees { currentMood } }`,
+			))
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assert.Equal(c, []string{"employeeMoods", "get_operation_info"}, listToolNames(c, xEnv))
+				assert.Equal(c, []string{"employee_moods", "get_operation_info"}, listToolNames(c, xEnv))
 			}, 10*time.Second, 100*time.Millisecond)
 
 			<-pm.ready
 			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
-			require.Equal(t, []string{"employeeMoods", "get_operation_info"}, listToolNames(t, xEnv))
+			require.Equal(t, []string{"employee_moods", "get_operation_info"}, listToolNames(t, xEnv))
 		})
 	})
 }
