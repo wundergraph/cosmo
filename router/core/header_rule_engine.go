@@ -85,6 +85,8 @@ type fetchCacheControl struct {
 	expires bool
 	// injected is set when a set rule wrote Cache-Control or Expires.
 	injected bool
+	// defaulted is set when a rule applied a default with caching directives.
+	defaulted bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -656,23 +658,14 @@ func silentOrigin(headers http.Header, statusCode int) bool {
 	return err == nil && !hasCachingDirectives(dir)
 }
 
-// noStoreSilentFetch merges no-store into a silent fetch's policy, unless no
-// rule covers it or a rule's default stands in for it.
+// noStoreSilentFetch makes a silent fetch's policy no-store, unless no rule
+// covers it or a rule applied a default for it.
 func (h *HeaderPropagation) noStoreSilentFetch(fetch *fetchCacheControl, ctx context.Context, subgraphName string) {
 	// Mutations are no-cache already.
 	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
 		return
 	}
-	covered, standIn := false, false
-	h.eachMostRestrictiveCacheControlRule(subgraphName, func(rule *config.ResponseHeaderRule) bool {
-		covered = true
-		if rule.Default != "" {
-			_, err := cachedirective.ParseResponseCacheControl(rule.Default)
-			standIn = err == nil
-		}
-		return !standIn
-	})
-	if !covered || standIn {
+	if fetch.defaulted || !h.usesMostRestrictiveCacheControl(subgraphName) {
 		return
 	}
 	fetch.policy = &cachedirective.Object{RespDirectives: noStoreDirectives()}
@@ -1060,11 +1053,16 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 			defaultDir = d
 		}
 	}
+	// Only a default that says something about caching stands in.
+	standsIn := defaultDir != nil && hasCachingDirectives(defaultDir)
 	// No header, or only unknown directives.
 	silent := h.missingNoStore && !hasCachingDirectives(resDir)
-	if silent && defaultDir == nil {
+	if silent && !standsIn {
 		// noStoreSilentFetch decides, once every rule has run.
 		return
+	}
+	if standsIn && propagation.fetch != nil {
+		propagation.fetch.defaulted = true
 	}
 	obj := &cachedirective.Object{
 		RespDirectives:         resDir,

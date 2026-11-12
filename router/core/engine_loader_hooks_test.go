@@ -1107,6 +1107,48 @@ func TestOnFinished_MissingNoStoreSetRule(t *testing.T) {
 	})
 }
 
+func TestOnFinished_MissingNoStoreDefaults(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	run := func(t *testing.T, rules *config.HeaderRules, policy config.CacheControlPolicy) string {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), rules, CreateCacheControlPolicyHeaderRules(policy))
+		require.NoError(t, err)
+		propagation.missingNoStore = true
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		hooks.OnFinished(ctx, a, okResponse("max-age=300, public"))
+		hooks.OnFinished(ctx, b, okResponse(""))
+		return client.header.Get(cacheControlKey)
+	}
+
+	t.Run("a matching rule's default is never applied", func(t *testing.T) {
+		t.Parallel()
+		rules := &config.HeaderRules{All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{{
+			Operation: config.HeaderRuleOperationPropagate,
+			Matching:  "^Cache-Control$",
+			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+			Default:   "max-age=60",
+		}}}}
+		require.Equal(t, "no-store", run(t, rules, config.CacheControlPolicy{}))
+	})
+
+	t.Run("a default without caching directives does not stand in", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, &config.HeaderRules{}, config.CacheControlPolicy{Enabled: true, Value: "foo"}))
+	})
+
+	t.Run("a default with caching directives stands in", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", run(t, &config.HeaderRules{}, config.CacheControlPolicy{Enabled: true, Value: "max-age=60"}))
+	})
+}
+
 func TestOnFinished_AnyPublicPerFetch(t *testing.T) {
 	t.Parallel()
 

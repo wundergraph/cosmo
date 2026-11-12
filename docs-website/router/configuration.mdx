@@ -1036,7 +1036,7 @@ Configure your cache control policy. More information on this feature can be fou
 
 A subgraph response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
 
-By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way.
+By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way, as long as it parses and has a caching directive.
 
 For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
 
