@@ -189,6 +189,7 @@
   "CacheControl": {
     "Enabled": false,
     "Value": "",
+    "MissingNoStore": false,
     "Subgraphs": null
   },
   "MCP": {
@@ -768,9 +769,6 @@
       "Enabled": false
     },
     "CacheControlAnyPublic": {
-      "Enabled": false
-    },
-    "CacheControlMissingNoStore": {
       "Enabled": false
     }
   },

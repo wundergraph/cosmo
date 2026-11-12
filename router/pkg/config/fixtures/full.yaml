@@ -279,6 +279,7 @@ telemetry:
 cache_control_policy:
   enabled: true
   value: 'max-age=180, public'
+  missing_no_store: true
   subgraphs:
     - name: 'products'
       value: 'max-age=60, public'
@@ -692,6 +693,4 @@ apollo_compatibility_flags:
 
 apollo_router_compatibility_flags:
   cache_control_any_public:
-    enabled: true
-  cache_control_missing_no_store:
     enabled: true

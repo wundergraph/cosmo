@@ -258,6 +258,7 @@
   "CacheControl": {
     "Enabled": true,
     "Value": "max-age=180, public",
+    "MissingNoStore": true,
     "Subgraphs": [
       {
         "Name": "products",
@@ -1311,9 +1312,6 @@
       "Enabled": false
     },
     "CacheControlAnyPublic": {
-      "Enabled": true
-    },
-    "CacheControlMissingNoStore": {
       "Enabled": true
     }
   },

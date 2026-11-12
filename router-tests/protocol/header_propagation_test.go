@@ -992,9 +992,6 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		missingNoStore := core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-			CacheControlMissingNoStore: config.ApolloCompatibilityFlag{Enabled: true},
-		})
 		for _, tc := range []struct {
 			name, policy, employees, hobbies, want string
 		}{
@@ -1006,12 +1003,11 @@ func TestHeaderPropagation(t *testing.T) {
 			{name: "the default stands in for unknown directives", policy: "max-age=300", employees: "public, max-age=120", hobbies: "foo", want: "max-age=120"},
 			{name: "a public default stands in for a missing header", policy: "max-age=300, public", employees: "public, max-age=120", want: "max-age=120, public"},
 		} {
-			t.Run("cache_control_missing_no_store: "+tc.name, func(t *testing.T) {
+			t.Run("missing_no_store: "+tc.name, func(t *testing.T) {
 				t.Parallel()
 				testenv.Run(t, &testenv.Config{
-					CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: tc.policy},
+					CacheControlPolicy: config.CacheControlPolicy{Enabled: true, Value: tc.policy, MissingNoStore: true},
 					Subgraphs:          cacheOptions(tc.employees, tc.hobbies),
-					RouterOptions:      []core.Option{missingNoStore},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
 					require.Equal(t, tc.want, res.Response.Header.Get("Cache-Control"))
@@ -1019,10 +1015,11 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		}
 
-		t.Run("cache_control_missing_no_store: applies to a headers rule", func(t *testing.T) {
+		t.Run("missing_no_store: applies to a headers rule", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
-				Subgraphs: cacheOptions("public, max-age=300", ""),
+				CacheControlPolicy: config.CacheControlPolicy{MissingNoStore: true},
+				Subgraphs:          cacheOptions("public, max-age=300", ""),
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
 						All: &config.GlobalHeaderRule{
@@ -1032,7 +1029,6 @@ func TestHeaderPropagation(t *testing.T) {
 							}},
 						},
 					}),
-					missingNoStore,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: queryEmployeeWithHobby})
@@ -1040,7 +1036,7 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("without cache_control_missing_no_store unknown directives are not no-store", func(t *testing.T) {
+		t.Run("without missing_no_store unknown directives are not no-store", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				CacheControlPolicy: config.CacheControlPolicy{Enabled: true},
