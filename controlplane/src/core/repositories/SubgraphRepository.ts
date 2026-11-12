@@ -2622,13 +2622,7 @@ export class SubgraphRepository {
     // The lookup is identical for every graph, so resolve it once up front.
     let fedGraphIdsMatchingNewSubgraph: Set<string> | undefined;
     if (!isFeatureSubgraphCheck && !subgraph && federatedGraphs.length > 0) {
-      const fedGraphsMatching = await fedGraphRepo.bySubgraphLabels({
-        labels: labels || [],
-        namespaceId: namespace.id,
-        excludeContracts: true,
-      });
-
-      fedGraphIdsMatchingNewSubgraph = new Set(fedGraphsMatching.map((fg) => fg.id));
+      fedGraphIdsMatchingNewSubgraph = new Set(federatedGraphs.filter((fg) => !fg.contract).map((fg) => fg.id));
     }
 
     const buildCompositionPlan = async (graph: FederatedGraphDTO) => {
