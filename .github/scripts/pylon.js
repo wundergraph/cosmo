@@ -23,7 +23,7 @@ module.exports = async ({ github, context, core }) => {
         operator: 'or',
         subfilters: candidates.map((c) => ({ ...c, operator: 'string_contains' })),
       },
-      limit: 10,
+      limit: 100,
     }),
   });
   if (!search.ok) {
@@ -58,11 +58,17 @@ module.exports = async ({ github, context, core }) => {
   core.info(`Created Pylon #${ticket.number} for ${item.html_url}`);
 
   // Public comment, so keep the account name out of it.
-  await github.rest.issues.createComment({
-    ...context.repo,
-    issue_number: item.number,
-    body: `Tracked internally as Pylon #${ticket.number}.`,
-  });
+  // Failing here would invite a re-run, which creates a duplicate ticket.
+  try {
+    await github.rest.issues.createComment({
+      ...context.repo,
+      issue_number: item.number,
+      body: `Tracked internally as Pylon #${ticket.number}.`,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    core.warning(`Created Pylon #${ticket.number} but failed to comment on ${item.html_url}: ${message}`);
+  }
 };
 
 function escapeHtml(s) {

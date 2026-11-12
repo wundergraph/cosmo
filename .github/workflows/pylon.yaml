@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: .github/scripts
       - name: Create Pylon issue for customer authors
         uses: actions/github-script@v7
