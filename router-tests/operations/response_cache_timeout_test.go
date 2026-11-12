@@ -121,51 +121,39 @@ func TestResponseCacheRedisTimeouts(t *testing.T) {
 func TestResponseCacheRedisDownAtStartup(t *testing.T) {
 	t.Parallel()
 
-	// A port nothing listens on.
-	downURL := func(t *testing.T) string {
-		return fmt.Sprintf("redis://127.0.0.1:%d", freeport.GetOne(t))
-	}
-
-	t.Run("the router starts and serves from the subgraphs", func(t *testing.T) {
+	t.Run("the router fails to start", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{
+		// A port nothing listens on.
+		downURL := fmt.Sprintf("redis://127.0.0.1:%d", freeport.GetOne(t))
+		_, err := testenv.CreateTestEnv(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithStorageProviders(config.StorageProviders{
-					Redis: []config.RedisStorageProvider{{URLs: []string{downURL(t)}, ID: responseCacheRedisProviderID}},
+					Redis: []config.RedisStorageProvider{{URLs: []string{downURL}, ID: responseCacheRedisProviderID}},
 				}),
 				core.WithResponseCache(responseCacheConfig(t, time.Minute)),
 			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("max-age=60")},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			query := testenv.GraphQLRequest{Query: `query { employees { id currentMood } }`}
-			first := xEnv.MakeGraphQLRequestOK(query)
-			second := xEnv.MakeGraphQLRequestOK(query)
-			require.Equal(t, first.Body, second.Body)
-			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Mood.Load())
 		})
+		require.ErrorContains(t, err, "failed to create redis client for response cache")
 	})
 
-	t.Run("a redis that never answers does not hold startup", func(t *testing.T) {
+	t.Run("a redis that never answers fails startup within the ping bound", func(t *testing.T) {
 		t.Parallel()
 
 		proxy := newStallProxy(t)
 		proxy.stall()
 
 		start := time.Now()
-		testenv.Run(t, &testenv.Config{
+		_, err := testenv.CreateTestEnv(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithStorageProviders(config.StorageProviders{
 					Redis: []config.RedisStorageProvider{{URLs: []string{proxy.url()}, ID: responseCacheRedisProviderID}},
 				}),
 				core.WithResponseCache(responseCacheConfig(t, time.Minute)),
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// 2s ping bound plus startup; unbounded takes over 6s.
-			require.Less(t, time.Since(start), 5*time.Second)
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employees { id } }`})
 		})
+		require.ErrorContains(t, err, "failed to create redis client for response cache")
+		// 2s ping bound plus startup; unbounded takes over 6s.
+		require.Less(t, time.Since(start), 5*time.Second)
 	})
 }

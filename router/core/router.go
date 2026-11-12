@@ -1373,15 +1373,13 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		ContextTimeoutEnabled: true,
 	})
 	if err != nil {
-		// A failed ping still returns the client; only a bad config returns none.
-		if client == nil {
-			return fmt.Errorf("failed to create redis client for response cache: %w", err)
+		// A failed ping still returns the client; close it or its pool leaks.
+		if client != nil {
+			if closeErr := client.Close(); closeErr != nil {
+				r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
+			}
 		}
-		// go-redis reconnects on its own; until then lookups miss and writes drop.
-		r.logger.Warn("Redis for the response cache is unreachable, starting without it",
-			zap.String("storage_provider_id", providerID),
-			zap.Error(err),
-		)
+		return fmt.Errorf("failed to create redis client for response cache: %w", err)
 	}
 	cache := rediscache.NewRedisCache(client, r.responseCacheConfig.KeyPrefix)
 

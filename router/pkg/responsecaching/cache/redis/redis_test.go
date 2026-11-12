@@ -135,8 +135,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a server it cannot reach fails lookups, not construction", func(t *testing.T) {
 			t.Parallel()
 
-			// Nothing is listening here. The router starts without redis, so the
-			// cache must too, and report the failure on use.
+			// Nothing is listening here; the router pings, not the cache.
 			client := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", DialTimeout: time.Second})
 			c := NewRedisCache(client, testPrefix)
 			t.Cleanup(func() { _ = c.Close() })

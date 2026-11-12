@@ -47,9 +47,8 @@ func (c *RedisCache) entryKey(key string) string { return c.prefix + entryNamesp
 func (c *RedisCache) tagKey(tag string) string { return c.prefix + tagNamespace + tag }
 
 // NewRedisCache returns a cache backed by client, namespacing every key with
-// prefix. It does not reach redis: an unreachable one fails each call until it
-// is back, as go-redis reconnects on its own. The cache takes ownership of
-// client and closes it in Close.
+// prefix. It does not ping; callers check the client first. The cache takes
+// ownership of client and closes it in Close.
 // rediscloser.RDCloser satisfies redis.UniversalClient, so a client built by
 // rediscloser.NewRedisCloser can be passed straight in.
 func NewRedisCache(client redis.UniversalClient, prefix string) *RedisCache {
