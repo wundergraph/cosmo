@@ -1766,7 +1766,7 @@ func (s *graphServer) buildGraphMux(
 				Workers:        manifestWarmup.Workers,
 				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 				Timeout:        manifestWarmup.Timeout,
-				Source:         NewManifestWarmupSource(pqlStore, s.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs),
+				Source:         NewManifestWarmupSource(s.persistedOperationClient),
 				AfterOperation: manifestAfterOperation,
 			}
 
@@ -1785,7 +1785,7 @@ func (s *graphServer) buildGraphMux(
 					Workers:        manifestWarmup.Workers,
 					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 					Timeout:        manifestWarmup.Timeout,
-					Source:         NewManifestWarmupSource(pqlStore, s.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs),
+					Source:         NewManifestWarmupSource(s.persistedOperationClient),
 					AfterOperation: manifestAfterOperation,
 				}
 

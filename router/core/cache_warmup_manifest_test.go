@@ -7,10 +7,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+func newManifestWarmupSource(t *testing.T, opts *persistedoperation.Options) *ManifestWarmupSource {
+	t.Helper()
+	client, err := persistedoperation.NewClient(opts)
+	require.NoError(t, err)
+	return NewManifestWarmupSource(client)
+}
 
 func TestManifestWarmupSource(t *testing.T) {
 	t.Parallel()
@@ -18,7 +26,7 @@ func TestManifestWarmupSource(t *testing.T) {
 	t.Run("returns nil when store has no manifest", func(t *testing.T) {
 		t.Parallel()
 		store := pqlmanifest.NewStore(zap.NewNop())
-		source := NewManifestWarmupSource(store, false)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store})
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -33,7 +41,7 @@ func TestManifestWarmupSource(t *testing.T) {
 			Revision:   "rev-1",
 			Operations: map[string]string{},
 		})
-		source := NewManifestWarmupSource(store, false)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store})
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -51,7 +59,7 @@ func TestManifestWarmupSource(t *testing.T) {
 				"sha256def": "mutation CreateUser { createUser { id } }",
 			},
 		})
-		source := NewManifestWarmupSource(store, false)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store})
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -79,7 +87,7 @@ func TestManifestWarmupSource(t *testing.T) {
 			Revision:   "rev-1",
 			Operations: map[string]string{"hash1": "query { a }"},
 		})
-		source := NewManifestWarmupSource(store, false)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store})
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -98,7 +106,7 @@ func TestManifestWarmupSource(t *testing.T) {
 				strings.Repeat("a", 64): "query Employees { employees { id } }",
 			},
 		})
-		source := NewManifestWarmupSource(store, false)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store})
 
 		items, err := source.LoadItems(context.Background(), zap.NewNop())
 		require.NoError(t, err)
@@ -115,7 +123,7 @@ func TestManifestWarmupSource(t *testing.T) {
 			Revision:   "rev-1",
 			Operations: map[string]string{mismatchedID: "query Employees { employees { id } }"},
 		})
-		source := NewManifestWarmupSource(store, true)
+		source := newManifestWarmupSource(t, &persistedoperation.Options{PQLStore: store, AllowMismatchedSHA256IDs: true})
 		observed, logs := observer.New(zap.WarnLevel)
 
 		items, err := source.LoadItems(context.Background(), zap.New(observed))

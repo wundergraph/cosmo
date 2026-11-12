@@ -6,26 +6,23 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
 var _ CacheWarmupSource = (*ManifestWarmupSource)(nil)
 
 type ManifestWarmupSource struct {
-	store                    *pqlmanifest.Store
-	allowMismatchedSHA256IDs bool
+	client *persistedoperation.Client
 }
 
-func NewManifestWarmupSource(store *pqlmanifest.Store, allowMismatchedSHA256IDs bool) *ManifestWarmupSource {
+func NewManifestWarmupSource(client *persistedoperation.Client) *ManifestWarmupSource {
 	return &ManifestWarmupSource{
-		store:                    store,
-		allowMismatchedSHA256IDs: allowMismatchedSHA256IDs,
+		client: client,
 	}
 }
 
 func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
-	ops := s.store.AllOperations()
+	ops := s.client.PQLStore().AllOperations()
 	if len(ops) == 0 {
 		log.Debug("No operations in PQL manifest for warmup")
 		return nil, nil
@@ -36,7 +33,7 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 	for sha256Hash, body := range ops {
 		matches := persistedoperation.OperationIDMatchesBody(sha256Hash, body)
 		// Requests reject these at lookup, so warming them would let cache hits bypass that.
-		if !matches && !s.allowMismatchedSHA256IDs {
+		if !matches && !s.client.AllowsMismatchedSHA256IDs() {
 			log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
 			continue
 		}

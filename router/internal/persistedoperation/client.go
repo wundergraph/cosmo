@@ -191,6 +191,12 @@ func (c *Client) PQLStore() *pqlmanifest.Store {
 	return c.pqlStore
 }
 
+// AllowsMismatchedSHA256IDs reports whether the client serves operations whose
+// ID looks like a SHA256 hash but isn't the SHA256 of their body.
+func (c *Client) AllowsMismatchedSHA256IDs() bool {
+	return c.allowMismatchedSHA256IDs
+}
+
 func (c *Client) Close() error {
 	if c.providerClient != nil {
 		c.providerClient.Close()

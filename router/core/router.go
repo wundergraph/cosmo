@@ -1515,10 +1515,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		}
 
 		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
-			r.logger.Warn("Serving persisted operations whose ID looks like a SHA256 hash but isn't the SHA256 of their body, " +
-				"because backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids is enabled. A request whose query hashes to such an ID " +
-				"can execute or register a different operation than the published one. Republish these operations with matching IDs " +
-				"and disable the option.")
+			r.logger.Warn("allow_mismatched_sha256_ids is enabled: requests for persisted operations whose SHA256 ID doesn't match their body may run a different operation")
 		}
 
 		c, err := persistedoperation.NewClient(&persistedoperation.Options{
