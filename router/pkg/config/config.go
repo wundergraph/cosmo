@@ -576,12 +576,19 @@ type SecurityConfiguration struct {
 	CostControl                 *CostControl                `yaml:"cost_control" envPrefix:"SECURITY_COST_CONTROL_"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	NormalizationLimits         NormalizationLimits         `yaml:"normalization_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
 }
 
 type ParserLimitsConfiguration struct {
 	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
 	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
+}
+
+type NormalizationLimits struct {
+	// MaxSelections is the maximum number of selections an operation may hold while it is
+	// normalized, counting the ones added by inlining fragment spreads. 0 means disabled.
+	MaxSelections int `yaml:"max_selections,omitempty" envDefault:"10000" env:"SECURITY_NORMALIZATION_LIMITS_MAX_SELECTIONS"`
 }
 
 type QueryDepthConfiguration struct {

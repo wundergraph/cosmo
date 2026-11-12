@@ -4108,6 +4108,19 @@
               "minimum": 0
             }
           }
+        },
+        "normalization_limits": {
+          "type": "object",
+          "description": "The configuration to enforce limits while an operation is normalized. Operations above the limits are rejected before they are validated and planned.",
+          "additionalProperties": false,
+          "properties": {
+            "max_selections": {
+              "type": "integer",
+              "description": "The maximum number of selections an operation may hold while it is normalized, counting the selections added by inlining fragment spreads. Set to 0 to disable.",
+              "default": 10000,
+              "minimum": 0
+            }
+          }
         }
       }
     },

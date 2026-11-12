@@ -195,7 +195,6 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	report := operationreport.Report{}
 
 	normalizer := astnormalization.NewWithOpts(
-		astnormalization.WithLimits(astnormalization.Limits{MaxSelections: 10_000}),
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithRemoveFragmentDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),

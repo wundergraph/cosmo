@@ -618,6 +618,8 @@ security:
     max_estimated_limit: 1000
     estimated_list_size: 10
     expose_headers: false
+  normalization_limits:
+    max_selections: 20000
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:
