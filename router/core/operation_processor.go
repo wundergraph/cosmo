@@ -136,6 +136,8 @@ type OperationProcessorOptions struct {
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
+
+	cacheRefs *cacheRefs
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -153,6 +155,9 @@ type OperationProcessor struct {
 	costControl              *config.CostControl
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
+
+	// cacheRefs must be acquired while an operation is prepared, it keeps the caches above open.
+	cacheRefs *cacheRefs
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -1767,7 +1772,11 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 	if opts.ParseKitPoolSize <= 0 {
 		opts.ParseKitPoolSize = 1
 	}
+	if opts.cacheRefs == nil {
+		opts.cacheRefs = newCacheRefs(func() {})
+	}
 	processor := &OperationProcessor{
+		cacheRefs:                opts.cacheRefs,
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
 		persistedOperationClient: opts.PersistedOperationClient,

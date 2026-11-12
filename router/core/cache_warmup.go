@@ -291,6 +291,7 @@ type CacheWarmupPlanningProcessor struct {
 }
 
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
+	defer c.operationProcessor.cacheRefs.acquire()()
 
 	var (
 		skipParse bool

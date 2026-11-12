@@ -688,6 +688,8 @@ type graphMux struct {
 	// tears the mux down.
 	inFlightRequests atomic.Int64
 
+	cacheRefs *cacheRefs
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -991,15 +993,7 @@ func (s *graphMux) stopPubsubProviders(ctx context.Context) error {
 	}, providerTimeout, "pubsub provider shutdown timed out", s.logger, s.skipUnavailableProviders)
 }
 
-func (s *graphMux) Shutdown(ctx context.Context) error {
-	// Make sure we do not shutdown the mux multiple times
-	if !s.finalized.CompareAndSwap(false, true) {
-		return nil
-	}
-
-	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
-	s.cancel()
-
+func (s *graphMux) closeCaches() {
 	s.planCache.Close()
 	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
@@ -1009,6 +1003,21 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.complexityCalculationCache.Close()
 	s.validationCache.Close()
 	s.operationHashCache.Close()
+}
+
+func (s *graphMux) Shutdown(ctx context.Context) error {
+	// Make sure we do not shutdown the mux multiple times
+	if !s.finalized.CompareAndSwap(false, true) {
+		return nil
+	}
+
+	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
+	s.cancel()
+
+	// Operations still being prepared keep the caches open until they are done.
+	if s.cacheRefs != nil {
+		s.cacheRefs.release()
+	}
 
 	var err error
 
@@ -1070,6 +1079,7 @@ func (s *graphServer) buildGraphMux(
 		skipUnavailableProviders: s.eventsConfig.SkipUnavailableProviders,
 		logger:                   s.logger,
 	}
+	gm.cacheRefs = newCacheRefs(gm.closeCaches)
 
 	// A failed mux isn't in s.graphMuxList yet (added on success below), so the graph
 	// server's Shutdown won't see it. Clean it up here to avoid leaking its callbacks,
@@ -1618,6 +1628,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 		CostControl:                                            s.securityConfiguration.CostControl,
 		ValidateInlineArguments:                                s.engineExecutionConfiguration.ValidateInlineArguments,
+		cacheRefs:                                              gm.cacheRefs,
 	})
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
