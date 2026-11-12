@@ -8,17 +8,17 @@ const pendingEntrySchema = z.object({
 });
 
 const v02PayloadSchema = z.object({
-  data: z.unknown(),
-  errors: z.unknown(),
-  extensions: z.unknown(),
+  data: z.unknown().optional(),
+  errors: z.unknown().optional(),
+  extensions: z.unknown().optional(),
   pending: z.array(pendingEntrySchema).optional(),
   incremental: z
     .array(
       z.object({
         id: z.string(),
-        data: z.unknown(),
-        errors: z.unknown(),
-        extensions: z.unknown(),
+        data: z.unknown().optional(),
+        errors: z.unknown().optional(),
+        extensions: z.unknown().optional(),
       }),
     )
     .optional(),
