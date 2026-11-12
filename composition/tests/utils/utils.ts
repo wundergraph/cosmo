@@ -96,6 +96,22 @@ export function federateSubgraphsSuccess(
   return result as FederationSuccess;
 }
 
+export function federateSubgraphsContractFailure(
+  subgraphs: Array<Subgraph>,
+  contractTagOptions: ContractTagOptions,
+  version: SupportedRouterCompatibilityVersion,
+  options?: CompositionOptions,
+): FederationFailure {
+  const result = federateSubgraphsContract({
+    contractTagOptions,
+    options,
+    subgraphs,
+    version,
+  });
+  expect(result.success, 'federateSubgraphsContract succeeded when expected to fail').toBe(false);
+  return result as FederationFailure;
+}
+
 export function federateSubgraphsContractSuccess(
   subgraphs: Array<Subgraph>,
   contractTagOptions: ContractTagOptions,

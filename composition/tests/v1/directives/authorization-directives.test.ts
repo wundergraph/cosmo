@@ -22,6 +22,7 @@ import {
   SCHEMA_QUERY_DEFINITION,
 } from '../utils/utils';
 import {
+  federateSubgraphsContractFailure,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -1293,6 +1294,16 @@ describe('Authorization directives tests', () => {
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]).toStrictEqual(orPoliciesLimitError(MAX_OR_POLICIES, ['Query.enum', 'Query.scalar']));
       });
+
+      test('that a contract graph returns the OR limit error if a type @policy merges into a field @policy', () => {
+        const result = federateSubgraphsContractFailure(
+          [fwaa],
+          { tagNamesToExclude: new Set<string>(['excluded']), tagNamesToInclude: new Set<string>() },
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(orPoliciesLimitError(MAX_OR_POLICIES, ['Query.enum', 'Query.scalar']));
+      });
     });
 
     test('that authorization directives generate the correct router configuration', () => {
@@ -1400,6 +1411,16 @@ describe('Authorization directives tests', () => {
 
     test('that an error is returned if the limit of @requiresScopes scopes is exceeded by named type auth data', () => {
       const result = federateSubgraphsFailure([fda], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.enum', 'Query.scalar']));
+    });
+
+    test('that a contract graph returns the OR limit error if a type @requiresScopes merges into a field @requiresScopes', () => {
+      const result = federateSubgraphsContractFailure(
+        [fda],
+        { tagNamesToExclude: new Set<string>(['excluded']), tagNamesToInclude: new Set<string>() },
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.enum', 'Query.scalar']));
     });

@@ -3328,16 +3328,20 @@ export class FederationFactory {
     return { condition: firstCondition, success: true };
   }
 
-  buildFederationResult(): FederationResult {
-    if (this.subscriptionFilterDataByFieldPath.size > 0) {
-      this.validateSubscriptionFiltersAndGenerateConfiguration();
-    }
+  pushORLimitErrors() {
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
     }
     if (this.invalidORPoliciesCoords.size > 0) {
       this.errors.push(orPoliciesLimitError(MAX_OR_POLICIES, [...this.invalidORPoliciesCoords]));
     }
+  }
+
+  buildFederationResult(): FederationResult {
+    if (this.subscriptionFilterDataByFieldPath.size > 0) {
+      this.validateSubscriptionFiltersAndGenerateConfiguration();
+    }
+    this.pushORLimitErrors();
     this.handleCustomDirectiveDefinitionNodes();
     const definitionsWithInterfaces: Array<InterfaceImplementationData> = [];
     this.pushParentDefinitionDataToDocumentDefinitions(definitionsWithInterfaces);
@@ -3686,6 +3690,7 @@ export class FederationFactory {
     if (this.subscriptionFilterDataByFieldPath.size > 0) {
       this.validateSubscriptionFiltersAndGenerateConfiguration();
     }
+    this.pushORLimitErrors();
     this.handleCustomDirectiveDefinitionNodes();
     const interfaceImplementations: InterfaceImplementationData[] = [];
     this.pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations);
