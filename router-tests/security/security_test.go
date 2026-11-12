@@ -116,10 +116,10 @@ func TestParserHardLimits(t *testing.T) {
 func TestNormalizationLimits(t *testing.T) {
 	t.Parallel()
 
-	// The document stores 7 selections, and inlining the fragment spreads adds more.
+	// The document holds 7 selections as sent, and more once the fragment spreads are expanded.
 	const query = `{ a: employee(id:1) { ...F } b: employee(id:2) { ...F } } fragment F on Employee { id details { forename } }`
 
-	t.Run("blocks operations that exceed the limit while fragments are inlined", func(t *testing.T) {
+	t.Run("blocks operations over the limit after fragment expansion", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -129,6 +129,21 @@ func TestNormalizationLimits(t *testing.T) {
 			res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			assert.Equal(t, `{"errors":[{"message":"normalization limit \"max_selections\" of 7 exceeded","extensions":{"code":"NORMALIZATION_LIMIT_EXCEEDED"}}]}`, res.Body)
+		})
+	})
+
+	t.Run("blocks operations over the limit without fragments", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.NormalizationLimits.MaxSelections = 4
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`, // has 5 selections
+			})
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"normalization limit \"max_selections\" of 4 exceeded","extensions":{"code":"NORMALIZATION_LIMIT_EXCEEDED"}}]}`, res.Body)
 		})
 	})
 

@@ -586,8 +586,9 @@ type ParserLimitsConfiguration struct {
 }
 
 type NormalizationLimits struct {
-	// MaxSelections is the maximum number of selections an operation may hold while it is
-	// normalized, counting the ones added by inlining fragment spreads. 0 means disabled.
+	// MaxSelections is the maximum total number of selections in a document after fragment
+	// spreads are expanded. It applies whether or not there is anything to expand.
+	// 0 means disabled.
 	MaxSelections int `yaml:"max_selections,omitempty" envDefault:"10000" env:"SECURITY_NORMALIZATION_LIMITS_MAX_SELECTIONS"`
 }
 
