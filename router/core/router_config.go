@@ -108,7 +108,6 @@ type Config struct {
 	routerConfigPollerConfig        *RouterConfigPollerConfig
 	cdnConfig                       config.CDNConfiguration
 	persistedOperationClient        *persistedoperation.Client
-	pqlStore                        *operationmanifest.Store
 	pqlPoller                       *operationmanifest.Poller
 	mcpManifestStore                *operationmanifest.Store
 	mcpManifestPoller               *operationmanifest.Poller

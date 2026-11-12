@@ -1769,7 +1769,6 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 	)
 
 	r.pqlPoller = poller
-	r.pqlStore = pqlStore
 	return pqlStore, nil
 }
 
