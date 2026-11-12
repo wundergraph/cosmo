@@ -1366,6 +1366,12 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 		ContextTimeoutEnabled: true,
 	})
 	if err != nil {
+		// Failed ping still returns a client.
+		if client != nil {
+			if closeErr := client.Close(); closeErr != nil {
+				r.logger.Error("failed to close redis client after response cache setup failed", zap.Error(closeErr))
+			}
+		}
 		return fmt.Errorf("failed to create redis client for response cache: %w", err)
 	}
 
