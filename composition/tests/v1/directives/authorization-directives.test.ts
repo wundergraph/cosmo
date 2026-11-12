@@ -2,15 +2,22 @@ import { describe, expect, test } from 'vitest';
 import {
   type AuthorizationData,
   type FieldAuthorizationData,
+  FIRST_ORDINAL,
   INTERFACE,
+  invalidArgumentValueErrorMessage,
+  invalidDirectiveError,
   MAX_OR_SCOPES,
   MAX_OR_POLICIES,
   OBJECT,
   orScopesLimitError,
   orPoliciesLimitError,
   parse,
+  POLICIES,
+  POLICY,
   QUERY,
+  REQUIRES_SCOPES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  SCOPES,
   type Subgraph,
 } from '../../../src';
 import {
@@ -422,6 +429,36 @@ describe('Authorization directives tests', () => {
       expect(result.errors[0]).toStrictEqual(
         orPoliciesLimitError(MAX_OR_POLICIES, ['Query', 'Interface', 'Enum', 'Scalar']),
       );
+    });
+
+    test('that an error is returned if @requiresScopes scopes are not a list of lists', () => {
+      const { errors } = normalizeSubgraphFailure(no, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(REQUIRES_SCOPES, 'Query.a', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"a"', `@${REQUIRES_SCOPES}`, SCOPES, '[[openfed__Scope!]!]!'),
+        ]),
+        invalidDirectiveError(REQUIRES_SCOPES, 'Query.b', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('["a", "b"]', `@${REQUIRES_SCOPES}`, SCOPES, '[[openfed__Scope!]!]!'),
+        ]),
+        invalidDirectiveError(REQUIRES_SCOPES, 'Query.c', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('[["a"], "b"]', `@${REQUIRES_SCOPES}`, SCOPES, '[[openfed__Scope!]!]!'),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if @policy policies are not a list of lists', () => {
+      const { errors } = normalizeSubgraphFailure(np, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(POLICY, 'Query.a', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"a"', `@${POLICY}`, POLICIES, '[[federation__Policy!]!]!'),
+        ]),
+        invalidDirectiveError(POLICY, 'Query.b', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('["a", "b"]', `@${POLICY}`, POLICIES, '[[federation__Policy!]!]!'),
+        ]),
+        invalidDirectiveError(POLICY, 'Query.c', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('[["a"], "b"]', `@${POLICY}`, POLICIES, '[[federation__Policy!]!]!'),
+        ]),
+      ]);
     });
 
     test('that @policy is normalized without a warning', () => {
@@ -2913,6 +2950,30 @@ const nn: Subgraph = {
     }
 
     scalar federation__Policy
+  `),
+};
+
+const no: Subgraph = {
+  name: 'no',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @requiresScopes(scopes: "a")
+      b: ID @requiresScopes(scopes: ["a", "b"])
+      c: ID @requiresScopes(scopes: [["a"], "b"])
+    }
+  `),
+};
+
+const np: Subgraph = {
+  name: 'np',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @policy(policies: "a")
+      b: ID @policy(policies: ["a", "b"])
+      c: ID @policy(policies: [["a"], "b"])
+    }
   `),
 };
 

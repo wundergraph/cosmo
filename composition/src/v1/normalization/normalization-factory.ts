@@ -787,11 +787,26 @@ export class NormalizationFactory {
       if (!(isRequiresScopes && argumentName === SCOPES) && !(isPolicy && argumentName === POLICIES)) {
         continue;
       }
+      /* The validator coerces a single value into a list: "a" becomes [["a"]], and ["a", "b"] becomes [["a"], ["b"]].
+       * [["a"], ["b"]] means a OR b, but the author of ["a", "b"] can mean a AND b.
+       * So the requirements must be a list of lists, with no coercion.
+       * */
+      const requirementsNode = argumentNode.value;
+      if (requirementsNode.kind !== Kind.LIST || requirementsNode.values.some((node) => node.kind !== Kind.LIST)) {
+        errorMessages.push(
+          invalidArgumentValueErrorMessage(
+            print(requirementsNode),
+            `@${directiveName}`,
+            argumentName,
+            printTypeNode(argumentData.type),
+          ),
+        );
+        continue;
+      }
       this.extractAuthorizationRequirements({
         directiveCoords,
         isPolicy,
-        // Casts are safe because invalid arguments would short circuit
-        requirementNodes: (argumentNode.value as ListValueNode).values,
+        requirementNodes: requirementsNode.values,
         requirements,
       });
     }
