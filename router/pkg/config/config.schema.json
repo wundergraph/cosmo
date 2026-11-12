@@ -3496,7 +3496,7 @@
             "write_timeout": {
               "type": "string",
               "format": "go-duration",
-              "default": "600ms",
+              "default": "900ms",
               "description": "How long storing fetched responses may wait on the storage before the write is abandoned. The response is still served, only not cached. Ignored by the 'memory' provider. The period is specified as a string with a number and a unit, e.g. 500ms, 1s.",
               "duration": {
                 "minimum": "1ms"
