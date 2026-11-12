@@ -94,7 +94,7 @@ export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean
 
   type GraphDetailsInput = z.infer<typeof schema>;
 
-  const form = useZodForm<GraphDetailsInput>({
+  const form = useZodForm({
     schema,
     mode: 'onChange',
   });

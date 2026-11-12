@@ -844,6 +844,29 @@ func TestResponseCacheTags(t *testing.T) {
 		})
 	})
 
+	t.Run("a type request for Query drops root entries", func(t *testing.T) {
+		t.Parallel()
+		cfg, addr := makeCacheAsConfig(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{responseCacheStorageProviders(), core.WithResponseCache(cfg)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{Middleware: cacheControlMiddleware("public, max-age=60")},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := testenv.GraphQLRequest{Query: `query { employees { id } }`}
+			xEnv.MakeGraphQLRequestOK(query)
+
+			status, count := invalidateCacheKey(t, addr, responseCacheSharedKey,
+				`[{"kind":"type","subgraph":"employees","type":"Query"}]`)
+			require.Equal(t, http.StatusAccepted, status)
+			require.Equal(t, 1, count)
+
+			xEnv.MakeGraphQLRequestOK(query)
+			require.EqualValues(t, 2, xEnv.SubgraphRequestCount.Employees.Load())
+		})
+	})
+
 	t.Run("a root fetch sending the entity shaped key is not tagged by it", func(t *testing.T) {
 		t.Parallel()
 
@@ -1290,8 +1313,6 @@ func responseCacheOptions(t *testing.T, ttl time.Duration) []core.Option {
 const (
 	responseCacheEntryNamespace = "e:"
 	responseCacheTagNamespace   = "t:"
-	// Mirrors the redis adapter's walksMember, the walk count in a tag set.
-	responseCacheWalksMember = "\x00walks"
 )
 
 // responseCacheStored reads back what a test wrote, split into the entries
@@ -1323,7 +1344,8 @@ func responseCacheStored(t *testing.T, prefix string) (entries []string, tags ma
 			if tag, isTag := strings.CutPrefix(name, responseCacheTagNamespace); isTag {
 				members, err := client.ZRange(ctx, key, 0, -1).Result()
 				require.NoError(t, err)
-				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return m == responseCacheWalksMember })
+				// Bookkeeping members start with a NUL byte; no cache key does.
+				tags[tag] = slices.DeleteFunc(members, func(m string) bool { return strings.HasPrefix(m, "\x00") })
 				continue
 			}
 			entries = append(entries, strings.TrimPrefix(name, responseCacheEntryNamespace))
