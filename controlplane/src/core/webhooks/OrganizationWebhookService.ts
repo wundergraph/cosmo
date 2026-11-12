@@ -37,27 +37,54 @@ import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspecto
 import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
 
-const subgraphCheckExtensionSchema = z.object({
-  errors: z.array(z.string()).optional(),
-  lintIssues: z
-    .record(
-      z.string(),
-      z.array(
-        z.object({
-          lintRuleType: z.string().trim(),
-          severity: z.enum(LintSeverity),
-          message: z.string().trim(),
-          issueLocation: z.object({
-            line: z.number().int().positive(),
-            column: z.number().int().positive(),
-            endLine: z.number().int().positive().optional(),
-            endColumn: z.number().int().positive().optional(),
-          }),
-        }),
-      ),
-    )
-    .optional(),
-});
+const MAX_CHECK_EXTENSION_FINDINGS = 1000;
+const MAX_CHECK_EXTENSION_SUBGRAPHS = 1000;
+
+// Count findings before parsing entries so nested arrays cannot multiply validation errors.
+const subgraphCheckExtensionSchema = z
+  .object({
+    errors: z.array(z.unknown()).max(MAX_CHECK_EXTENSION_FINDINGS).optional(),
+    lintIssues: z.record(z.string(), z.unknown()).optional(),
+  })
+  .superRefine((response, ctx) => {
+    const subgraphs = Object.values(response.lintIssues ?? {});
+    if (subgraphs.length > MAX_CHECK_EXTENSION_SUBGRAPHS) {
+      ctx.addIssue({ code: 'custom', message: 'Check extension returned more than 1000 subgraphs' });
+      return;
+    }
+
+    let findings = response.errors?.length ?? 0;
+    for (const issues of subgraphs) {
+      findings += Array.isArray(issues) ? issues.length : 1;
+      if (findings > MAX_CHECK_EXTENSION_FINDINGS) {
+        ctx.addIssue({ code: 'custom', message: 'Check extension returned more than 1000 findings' });
+        return;
+      }
+    }
+  })
+  .pipe(
+    z.object({
+      errors: z.array(z.string()).optional(),
+      lintIssues: z
+        .record(
+          z.string(),
+          z.array(
+            z.object({
+              lintRuleType: z.string().trim(),
+              severity: z.enum(LintSeverity),
+              message: z.string().trim(),
+              issueLocation: z.object({
+                line: z.number().int().positive(),
+                column: z.number().int().positive(),
+                endLine: z.number().int().positive().optional(),
+                endColumn: z.number().int().positive().optional(),
+              }),
+            }),
+          ),
+        )
+        .optional(),
+    }),
+  );
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;

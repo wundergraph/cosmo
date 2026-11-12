@@ -25,6 +25,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+test.each([1000, 1001])('bounds GraphQL probe errors (%i entries)', async (count) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            errors: Array.from({ length: count }, () => ({ message: 'GraphQL error' })),
+          }),
+          { headers: { 'content-type': 'application/json' } },
+        ),
+    ),
+  );
+  expect(await probeRootFields('http://router', '{ user { id } }')).toEqual({
+    user: { ok: false, reason: count === 1000 ? 'GraphQL error' : 'Response is not a GraphQL response' },
+  });
+});
+
 describe('probe documents with named fragments', () => {
   test('a field whose selection spreads a fragment carries the fragment definition', async () => {
     const sent = await captureRequests(() =>
