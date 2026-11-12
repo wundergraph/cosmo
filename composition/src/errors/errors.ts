@@ -1358,6 +1358,61 @@ export const invalidEdfsPublishResultObjectErrorMessage =
   ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
 
+const invalidDeliveryGuaranteesInputErrorMessage =
+  `The "deliveryGuarantees" argument must be a valid input object with the following form:\n` +
+  `  input cosmoStreams__DeliveryGuarantees {\n    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }\n` +
+  `  enum cosmoStreams__DeliveryGuaranteeMode {\n    OFF\n    CURSOR\n  }`;
+
+export function invalidDeliveryGuaranteesInputFieldsErrorMessage({
+  duplicateFieldNames,
+  invalidFieldNames,
+  invalidModeValue,
+}: {
+  duplicateFieldNames: Array<string>;
+  invalidFieldNames: Array<string>;
+  invalidModeValue?: string;
+}): string {
+  let message = invalidDeliveryGuaranteesInputErrorMessage;
+  const errorMessages: Array<string> = [];
+  if (duplicateFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (duplicateFieldNames.length > 1 ? `s were` : ` was`) +
+        ` defined more than once: "` +
+        duplicateFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+        ` not part of a valid "cosmoStreams__DeliveryGuarantees" input definition: "` +
+        invalidFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidModeValue !== undefined) {
+    errorMessages.push(
+      `The value "${invalidModeValue}" provided to field "mode" is not a valid "cosmoStreams__DeliveryGuaranteeMode" enum value.`,
+    );
+  }
+  message +=
+    `\n However, the provided input was invalid for the following reason` +
+    (errorMessages.length > 1 ? `s` : ``) +
+    `:\n  ` +
+    errorMessages.join(`\n  `);
+  return message;
+}
+
+export const invalidDeliveryGuaranteesDefinitionErrorMessage =
+  ` The input object "cosmoStreams__DeliveryGuarantees" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  input cosmoStreams__DeliveryGuarantees {\n   mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }`;
+
+export const invalidDeliveryGuaranteeModeDefinitionErrorMessage =
+  ` The enum "cosmoStreams__DeliveryGuaranteeMode" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  enum cosmoStreams__DeliveryGuaranteeMode {\n   OFF\n   CURSOR\n  }`;
+
 export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
   ` instead have the following definition:\n  input edfs__NatsStreamConfiguration {\n   consumerInactiveThreshold: Int! = 30\n` +
