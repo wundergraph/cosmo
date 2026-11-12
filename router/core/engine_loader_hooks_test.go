@@ -991,3 +991,189 @@ func TestOnFinished_ResponseCacheStatus(t *testing.T) {
 		require.Contains(t, fields, "request_id")
 	})
 }
+
+// onFinishedCacheControl runs fetches through OnFinished under a cache
+// control policy and returns the client Cache-Control.
+func onFinishedCacheControl(t *testing.T, policy config.CacheControlPolicy, publicMode publicMergeMode, fetches ...resolve.DataSourceInfo) func(...*resolve.ResponseInfo) string {
+	return func(infos ...*resolve.ResponseInfo) string {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{}, CreateCacheControlPolicyHeaderRules(policy))
+		require.NoError(t, err)
+		propagation.missingNoStore = policy.MissingNoStore
+		propagation.publicMode = publicMode
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		for i, info := range infos {
+			hooks.OnFinished(ctx, fetches[i], info)
+		}
+		return client.header.Get(cacheControlKey)
+	}
+}
+
+func okResponse(cacheControl string) *resolve.ResponseInfo {
+	headers := http.Header{}
+	if cacheControl != "" {
+		headers.Set(cacheControlKey, cacheControl)
+	}
+	return &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseHeaders: headers}
+}
+
+func TestOnFinished_MissingNoStore(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	policy := config.CacheControlPolicy{Enabled: true, MissingNoStore: true}
+
+	t.Run("a fetch without an HTTP response is skipped", func(t *testing.T) {
+		t.Parallel()
+		// gRPC and plugin fetches: status 0, no headers.
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), &resolve.ResponseInfo{})
+		require.Equal(t, "max-age=300, public", got)
+	})
+
+	t.Run("an HTTP fetch without headers is no-store", func(t *testing.T) {
+		t.Parallel()
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		require.Equal(t, "no-store", got)
+	})
+
+	partialHit := func(cacheControl string) *resolve.ResponseInfo {
+		info := okResponse(cacheControl)
+		info.ResponseCacheTTL = 100 * time.Second
+		info.ResponseCache = resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusPartialHit, ClientTTL: 100 * time.Second, Public: true}
+		return info
+	}
+
+	// The hit's lifetime must not hide that the origin sent nothing.
+	for _, cacheControl := range []string{"", "foo"} {
+		t.Run("a partial hit with a silent origin is no-store: "+cacheControl, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, "no-store", onFinishedCacheControl(t, policy, publicRequiresAll, b)(partialHit(cacheControl)))
+		})
+	}
+
+	t.Run("a partial hit with an origin lifetime keeps it", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, publicRequiresAll, b)(partialHit("max-age=60")))
+	})
+
+	t.Run("a full hit has no origin to judge", func(t *testing.T) {
+		t.Parallel()
+		hit := &resolve.ResponseInfo{StatusCode: http.StatusOK, ResponseCacheTTL: 100 * time.Second,
+			ResponseCache: resolve.ResponseCacheInfo{Status: resolve.ResponseCacheStatusHit, ClientTTL: 100 * time.Second, Public: true}}
+		require.Equal(t, "max-age=100, public", onFinishedCacheControl(t, policy, publicRequiresAll, b)(hit))
+	})
+}
+
+func TestOnFinished_MissingNoStoreSetRule(t *testing.T) {
+	t.Parallel()
+
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	run := func(t *testing.T, name, value string) string {
+		rules := &config.HeaderRules{Subgraphs: map[string]*config.GlobalHeaderRule{"b": {Response: []*config.ResponseHeaderRule{
+			{Operation: config.HeaderRuleOperationSet, Name: name, Value: value},
+		}}}}
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), rules,
+			CreateCacheControlPolicyHeaderRules(config.CacheControlPolicy{Enabled: true}))
+		require.NoError(t, err)
+		propagation.missingNoStore = true
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		hooks.OnFinished(ctx, b, okResponse(""))
+		return client.header.Get(cacheControlKey)
+	}
+
+	t.Run("a set Cache-Control speaks for the subgraph", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60, public", run(t, "cache-control", "max-age=60, public"))
+	})
+
+	t.Run("a set with only unknown directives is still silent", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, "Cache-Control", "foo"))
+	})
+
+	t.Run("a set of another header is still silent", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, "X-Other", "1"))
+	})
+}
+
+func TestOnFinished_MissingNoStoreDefaults(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	run := func(t *testing.T, rules *config.HeaderRules, policy config.CacheControlPolicy) string {
+		propagation, err := NewHeaderPropagation(t.Context(), zap.NewNop(), rules, CreateCacheControlPolicyHeaderRules(policy))
+		require.NoError(t, err)
+		propagation.missingNoStore = true
+
+		tp := sdktrace.NewTracerProvider()
+		hooks := NewEngineRequestHooks(&spyMetricStore{}, nil, tp, nil, nil, nil, false, propagation, false, nil)
+		ctx, _ := setupTestContext(t, tp)
+		client := &responseHeaderPropagation{header: make(http.Header), m: &sync.Mutex{}}
+		ctx = context.WithValue(ctx, responseHeaderPropagationKey{}, client)
+		hooks.OnFinished(ctx, a, okResponse("max-age=300, public"))
+		hooks.OnFinished(ctx, b, okResponse(""))
+		return client.header.Get(cacheControlKey)
+	}
+
+	t.Run("a matching rule's default is never applied", func(t *testing.T) {
+		t.Parallel()
+		rules := &config.HeaderRules{All: &config.GlobalHeaderRule{Response: []*config.ResponseHeaderRule{{
+			Operation: config.HeaderRuleOperationPropagate,
+			Matching:  "^Cache-Control$",
+			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+			Default:   "max-age=60",
+		}}}}
+		require.Equal(t, "no-store", run(t, rules, config.CacheControlPolicy{}))
+	})
+
+	t.Run("a default without caching directives does not stand in", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "no-store", run(t, &config.HeaderRules{}, config.CacheControlPolicy{Enabled: true, Value: "foo"}))
+	})
+
+	t.Run("a default with caching directives stands in", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", run(t, &config.HeaderRules{}, config.CacheControlPolicy{Enabled: true, Value: "max-age=60"}))
+	})
+}
+
+func TestOnFinished_AnyPublicPerFetch(t *testing.T) {
+	t.Parallel()
+
+	a := resolve.DataSourceInfo{ID: "a", Name: "a"}
+	b := resolve.DataSourceInfo{ID: "b", Name: "b"}
+	policy := config.CacheControlPolicy{
+		Enabled:   true,
+		Value:     "max-age=600, public",
+		Subgraphs: []config.SubgraphCacheControlRule{{Name: "b", Value: "max-age=60"}},
+	}
+
+	t.Run("a subgraph value without public withholds it from its own fetch", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "max-age=60", onFinishedCacheControl(t, policy, publicRequiresAny, b)(okResponse("")))
+	})
+
+	t.Run("another public fetch still grants it", func(t *testing.T) {
+		t.Parallel()
+		got := onFinishedCacheControl(t, policy, publicRequiresAny, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		require.Equal(t, "max-age=60, public", got)
+	})
+
+	t.Run("without any public every fetch must grant it", func(t *testing.T) {
+		t.Parallel()
+		got := onFinishedCacheControl(t, policy, publicRequiresAll, a, b)(okResponse("max-age=300, public"), okResponse(""))
+		require.Equal(t, "max-age=60", got)
+	})
+}
