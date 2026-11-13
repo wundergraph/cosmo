@@ -103,7 +103,8 @@ If no graphs are explicitly assigned, the group will have access to all graphs i
 1. **Admin** — Read and write access to assigned subgraphs.
 2. **Publisher** — Read and write access to assigned subgraphs, but cannot create new ones.
 3. **Checker** — Grants read-only access to subgraphs as well as the ability to create subgraph checks.
-3. **Viewer** — Grants read-only access to subgraphs.
+4. **Viewer** — Grants read-only access to subgraphs.
+5. **Check Approver** — Allows forcing failed checks to succeed and overriding breaking changes for the assigned subgraphs. See [Check Approver](#check-approver) below.
 
 Subgraph resources can be assigned similarly:
 
@@ -111,6 +112,47 @@ Subgraph resources can be assigned similarly:
 - **Specific subgraphs**: Restricts access to only the selected subgraphs.
 
 If no subgraph resources are assigned, the group will have access to all subgraphs in the organization.
+
+#### Check Approver
+
+The **Check Approver** role lets the team that owns a subgraph accept breaking changes from a failed [schema check](/studio/schema-checks) of that subgraph, without giving the team write access to the federated graph.
+
+<Warning>
+  The role does not grant read access to anything. Members also need read access to the federated graph the check
+  belongs to, for example through the **Graph Viewer** role on that graph or the **Organization Viewer** role.
+  Without it, the role has no effect.
+</Warning>
+
+**What members can do**
+
+On a check whose subgraphs are all covered by the role, members with read access to the federated graph can:
+
+- **Force the check to succeed** with **Force Success** on the check page. If the check was created in a pull request with the [GitHub integration](/tutorial/pr-based-workflow-for-federation), the GitHub check run is marked as successful as well.
+- **Mark breaking changes as safe for an affected operation**, so future checks don't treat them as breaking for that operation. This works per change with the switch next to each change, per operation with **Ignore changes**, and for every affected operation of the check with **Ignore all changes**.
+- **Remove those change overrides** again from the same places.
+
+All of these actions are taken from the check page. Members can only override changes that the check reported, and only for the operations that the check found to be affected.
+
+**When the role applies**
+
+- The role must cover **every subgraph in the check**. A check can include several subgraphs, for example when it comes from a proposal. If the role covers only some of them, members cannot approve the check.
+- If a check includes a subgraph that **doesn't exist yet**, only members with write access to the federated graph can approve it, because the role cannot be assigned to a subgraph that doesn't exist.
+- Like other subgraph roles, the role can be assigned to specific subgraphs or to a namespace, which covers every subgraph in that namespace.
+
+**What members cannot do**
+
+- **Ignore whole operations.** **Ignore operation**, **Ignore all operations** and **Don't ignore this operation** remove an operation from all future checks, including changes from subgraphs the team doesn't own. These require write access to the federated graph, for example the **Graph Admin** role.
+- **Manage overrides on the federated graph's Overrides page.** That page isn't tied to a check, so it is read-only for Check Approvers.
+- **Make any other change** to the subgraph or the federated graph. To publish a subgraph or create checks, assign the **Publisher** or **Checker** role.
+
+**Example**
+
+The `employees` team should be able to approve breaking changes of the `employees` subgraph on the `production` federated graph. Assign their group two rules:
+
+1. **Subgraph** → **Check Approver**, with the `employees` subgraph selected.
+2. **Graph** → **Viewer**, with the `production` federated graph selected.
+
+Members can now approve a failed check of `employees` alone. They can't approve a check that also changes the `products` subgraph, unless the `products` subgraph is assigned to the rule too.
 
 ## Resources
 
