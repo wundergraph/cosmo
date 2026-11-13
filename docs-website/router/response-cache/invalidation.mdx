@@ -1,0 +1,199 @@
+---
+title: "Invalidation and CDN Purging"
+sidebarTitle: "Invalidation and CDN purging"
+description: "Remove cached entries before they expire, tag responses for a CDN, and keep both caches in step."
+icon: "broom"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha. The invalidation API can change between releases.
+</Danger>
+
+Entries leave the cache when their lifetime ends. To remove them earlier, send an invalidation request that names what changed. The router finds the entries through secondary indexes built when they were written.
+
+## Indexes
+
+Every stored entry is listed under up to three kinds of index tag:
+
+| Index | Lists | Switch |
+| --- | --- | --- |
+| Subgraph | Every entry a subgraph answered | `invalidation.subgraph` |
+| Type | Every entity of a `__typename`, per subgraph. Root entries are listed under their root type, such as `Query`. | `invalidation.type` |
+| Cache tag | Every entry a subgraph tagged with a tag it declared | `invalidation.cache_tag` |
+
+All three are on by default. Turning one off saves the writes that maintain it, and makes invalidation of that kind unavailable. With all three off, entries are written without index work and can only expire.
+
+## Cache tags
+
+A subgraph declares what a response is about by returning a tag extension. The router removes the extension before the response reaches the client.
+
+**Entity fetches** return `apolloEntityCacheTags`: one list per entity, in the order of `_entities`.
+
+```json
+{
+  "data": { "_entities": [{ "__typename": "User", "id": "1" }, { "__typename": "User", "id": "2" }] },
+  "extensions": { "apolloEntityCacheTags": [["users", "user-1"], ["users", "user-2"]] }
+}
+```
+
+**Root query fetches** return `apolloCacheTags`: one flat list for the whole answer.
+
+```json
+{
+  "data": { "homepage": { "title": "Hello" } },
+  "extensions": { "apolloCacheTags": ["homepage", "featured"] }
+}
+```
+
+Rules:
+
+- If the number of lists in `apolloEntityCacheTags` differs from the number of entities, every tag of the response is dropped. The entities are still stored.
+- A list with more than 10,000 tags, or more than 256 KiB of tags, is dropped as a whole.
+- A tag longer than 10,000 characters, an empty tag, or one with characters not allowed in a header is dropped on its own.
+- Values that are not strings are skipped.
+- Tags from a [merged entity fetch](/router/response-cache/limitations#merged-entity-fetches) are dropped, because the list does not say which alias each entry belongs to. Those entries can still be invalidated by subgraph or type.
+
+## Invalidation endpoint
+
+### Enable it
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  invalidation:
+    endpoint:
+      enabled: true
+      listen_addr: 'localhost:5027'
+      path: '/invalidation'
+      shared_key: '${INVALIDATION_SHARED_KEY}'
+```
+
+- The endpoint runs on its own listener, separate from the GraphQL port. It starts only when the response cache is enabled. A failure to bind it fails startup.
+- It speaks plain HTTP. Keep it on a private interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
+- The router's CORS settings apply to it when CORS is enabled.
+
+### Send a request
+
+`POST` a JSON array with the shared key as the `Authorization` header. There is no `Bearer` prefix.
+
+```bash
+curl -X POST "http://localhost:5027/invalidation" \
+  -H "Authorization: ${INVALIDATION_SHARED_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "kind": "subgraph", "subgraph": "products" },
+    { "kind": "type", "subgraph": "products", "type": "Product" },
+    { "kind": "cache_tag", "subgraphs": ["products", "reviews"], "cache_tag": "product-42" }
+  ]'
+```
+
+| `kind` | Removes | Fields |
+| --- | --- | --- |
+| `subgraph` | Every entry the subgraph answered | `subgraph` |
+| `type` | Every entry of that type the subgraph answered | `subgraph`, `type` |
+| `cache_tag` | Every entry the listed subgraphs tagged with it | `subgraphs`, `cache_tag` |
+
+Every element names a subgraph. A type or tag cannot be invalidated across all subgraphs in one element. List the subgraphs instead.
+
+A kind whose index is turned off is rejected.
+
+### Responses
+
+| Status | When | Body |
+| --- | --- | --- |
+| `202` | The entries were removed | `{"count": 12}`, the number of entries removed |
+| `400` | The body is not a JSON array, is empty, has unknown fields, or an element is invalid | Error details |
+| `401` | The `Authorization` header does not match `shared_key` | |
+| `405` | The method is not `POST` | |
+| `500` | The store failed | |
+
+The body may be up to 10 MiB.
+
+The whole array is validated before anything is removed. One invalid element rejects the request, so it can be fixed and sent again. Each error names its element:
+
+```json
+{ "errors": [{ "index": 1, "kind": "type", "message": "a \"type\" request requires a type" }] }
+```
+
+### What an invalidation guarantees
+
+- **In-flight writes do not survive.** An entry whose subgraph fetch started at or before the invalidation is not kept, even if its write lands afterwards. The router allows one second of clock skew. See [How invalidation works](/router/response-cache/how-it-works#invalidation).
+- **Removal is immediate for later lookups.** After a `202`, no lookup finds an entry that was removed.
+- **Tags can be outdated on Redis.** An entry stored again under different tags stays listed under its earlier tags until it expires. Invalidating an earlier tag still removes it. The memory provider lists an entry under the tags of its latest write only.
+- **The memory provider is per replica.** An invalidation reaches only the router it was sent to. Send it to every replica, or use Redis.
+
+## CDN purging
+
+A CDN in front of the router can cache whole responses and purge them by tag. With `cache_tag_header` enabled, the router returns the tags of each response in a header the CDN reads.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  cache_tag_header:
+    enabled: true
+    name: 'Surrogate-Key'
+    delimiter: ' '
+```
+
+| CDN | `name` | `delimiter` |
+| --- | --- | --- |
+| Cloudflare | `Cache-Tag` (default) | `,` (default) |
+| Fastly | `Surrogate-Key` | ` ` (space) |
+
+The header names what a response contains. It does not tell the CDN to cache it. The CDN caches according to the `Cache-Control` the router returns, which the [cache control policy](/router/proxy-capabilities/adjusting-cache-control) sets. On a hit, that lifetime is what the entry has left, so the CDN does not keep a response longer than the router does.
+
+### Tiers
+
+Each cacheable fetch contributes tags in three tiers, coarsest first:
+
+| Tier | Tag | Purge removes |
+| --- | --- | --- |
+| `subgraph` | `subgraph-{name}` | Every response with data from that subgraph |
+| `type` | `type-{subgraph}-{__typename}` | Every response holding an entity of that type |
+| `cache_tag` | The tag as declared | Every response the subgraph tagged with it |
+
+```
+Cache-Tag: subgraph-employees,subgraph-mood,type-mood-Employee,moods,employee-1,employee-10
+```
+
+- A root query fetch contributes its root type, such as `type-products-Query`.
+- `tiers` selects which tiers are sent. All three are sent by default.
+- Declared tags are passed through unchanged. Tags appear once each.
+- A tag that contains the delimiter, or a byte not valid in a header, is left out.
+- The `subgraph-` and `type-` prefixes are not reserved. Avoid them in declared tags, so that each header tag maps to one invalidation element.
+
+### When the header is sent
+
+- On hits and misses alike. A hit rebuilds the header from what was stored with the entry.
+- Only for fetches the cache handles. A response with no cacheable fetch has no header.
+- It does not depend on the `invalidation` indexes.
+
+It is not sent:
+
+- on responses with subgraph errors, which are marked `no-store`
+- on subscriptions and `@defer` responses
+- on WebSocket operations
+- on requests with `Cache-Control: no-cache, no-store`, which do not use the cache
+
+### Size
+
+`max_bytes` caps the header value. The default, 16384 bytes, is Cloudflare's limit for `Cache-Tag`. When the tags do not fit, `on_overflow` decides:
+
+- **`truncate`** (default). Tags are ordered coarsest first and the finest that do not fit are left out. A purge by a coarser tag still reaches the response.
+- **`private`**. The header is not sent and the response's `Cache-Control` becomes `private`, so a CDN does not cache a response it could not purge precisely.
+
+Both count `router.response_cache.cache_tag_header.overflows`.
+
+Fastly reads at most 1,024 bytes per key and ignores a longer key and every key after it. Keep each declared tag at or below 1,024 bytes when purging through Fastly.
+
+### Purge both caches
+
+A CDN purge removes the response from the CDN only. The next request reaches the router, which can still serve its own entry. Send the same change to the invalidation endpoint:
+
+| Header tag | Invalidation element |
+| --- | --- |
+| `subgraph-products` | `{ "kind": "subgraph", "subgraph": "products" }` |
+| `type-products-Product` | `{ "kind": "type", "subgraph": "products", "type": "Product" }` |
+| `product-42` | `{ "kind": "cache_tag", "subgraphs": ["products"], "cache_tag": "product-42" }` |
+
+Invalidate the router first and purge the CDN second, so the CDN's next request does not pick up the router's old entry.

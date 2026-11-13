@@ -172,3 +172,7 @@ cache_control_policy:
 <Warning>
     We do not recommend using this method, simply sticking to using the `subgraph` configuration in `cache_control_policy` makes things more explicit and clearer.
 </Warning>
+
+## With the Response Cache
+
+With the [response cache](/router/response-cache) enabled, a fetch served from the cache reports the lifetime its entry has left, and a stored miss reports the lifetime it was stored with. The policy then merges these like any other subgraph header. The policy and `set` rules change what the client receives. They do not change what the router stores. See [Client Cache-Control](/router/response-cache/how-it-works#client-cache-control).

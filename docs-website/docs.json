@@ -253,7 +253,18 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
-              "router/response-cache",
+              {
+                "group": "Response Cache",
+                "icon": "boxes-stacked",
+                "pages": [
+                  "router/response-cache",
+                  "router/response-cache/how-it-works",
+                  "router/response-cache/configuration",
+                  "router/response-cache/invalidation",
+                  "router/response-cache/observability",
+                  "router/response-cache/limitations"
+                ]
+              },
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",

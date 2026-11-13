@@ -1,0 +1,262 @@
+---
+title: "Monitor the Response Cache"
+sidebarTitle: "Monitoring"
+description: "Attributes, metrics, logs and queries for the hit rate, the store decision and the health of the cache."
+icon: "chart-line"
+---
+
+<Danger>
+  **Experimental feature.** Response caching is in alpha. Attribute and metric names can change between releases.
+</Danger>
+
+## Debug header
+
+For development, the router can report the cache result of each response in a header:
+
+```yaml config.yaml
+engine:
+  debug:
+    enable_cache_response_headers: true
+```
+
+Responses then carry `X-WG-Response-Cache` with `HIT`, `PARTIAL_HIT` or `MISS`. The header is sent on synchronous HTTP responses only. Do not enable it in production.
+
+For detail per fetch, use [Advanced Request Tracing](/router/advanced-request-tracing-art). The trace of each fetch shows its cache status, store decision, keys, entries found and written, the `Cache-Control` and `Vary` it was decided on, and any write error.
+
+## Logs
+
+At startup, the router logs the cache settings:
+
+```
+INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "response_cache"}
+```
+
+With the memory provider, `max_entries` replaces `key_prefix` and `storage_provider_id`. `fallback_ttl` is the value under `all`. `subgraph_overrides` counts the entries under `subgraphs`. When the invalidation endpoint is enabled, a second line reports its address and which indexes are on.
+
+A failed read or write never fails a request. The router serves from the subgraph and logs:
+
+```
+WARN  Response cache degraded, serving from the subgraph instead
+```
+
+The warning is sampled to one line per second. An unreachable store fails every cacheable fetch of every request, and unsampled logging would add to the outage. Every failure is counted in the [cache health metrics](#cache-health).
+
+## Per fetch
+
+While the cache is enabled, every subgraph fetch carries `wg.response_cache.status` on its metrics and its `Engine - Fetch` span.
+
+| Value | Meaning |
+| --- | --- |
+| `hit` | Answered from the cache. Nothing was sent to the subgraph. |
+| `partial_hit` | Part of a merged entity fetch was answered from the cache and the rest was sent. Needs `engine.enable_multi_fetch`. |
+| `miss` | The cache was asked and could not answer. The fetch was sent to the subgraph. A batch with some entities cached is a `miss`. |
+| `not_cacheable` | The cache was not asked: it is off for the subgraph, or the fetch is not one it stores, such as a mutation. |
+
+A hit still counts as a subgraph request, with a latency close to zero. The attribute sits next to `wg.subgraph.name` on `router.http.requests`, `router.http.request.duration_milliseconds` and `router.http.requests.error`.
+
+Hit rate per subgraph, among the fetches the cache was asked about:
+
+```promql
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status="hit"}[5m]))
+/
+sum by (wg_subgraph_name) (rate(router_http_requests_total{wg_response_cache_status=~"hit|partial_hit|miss"}[5m]))
+```
+
+Match `wg_response_cache_status!=""` in the denominator to measure against every fetch.
+
+Mean fetch duration by status. Compare means, not quantiles: the smallest Prometheus bucket is 10 ms, and every hit falls into it.
+
+```promql
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_sum{wg_response_cache_status!=""}[5m])
+)
+/
+sum by (wg_subgraph_name, wg_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_count{wg_response_cache_status!=""}[5m])
+)
+```
+
+A fetch's duration starts after the lookup. The time spent in the cache is not part of it.
+
+To break the hit rate down by operation, add the operation name to metrics. It is on every span, but not on metrics unless the router exports to Cosmo Cloud:
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    attributes:
+      - key: 'wg.operation.name'
+        value_from:
+          context_field: operation_name
+```
+
+The attribute is not attached while the cache is disabled. It can be dropped from metrics with `exclude_metric_labels` under `telemetry.metrics.prometheus` or `telemetry.metrics.otlp`.
+
+A hit sends no request, so it has no transport telemetry: no request or response size, no in-flight count, no connection metrics. Its subgraph access log line has no `method`, `path`, `url` or request header fields.
+
+### Store decision
+
+The `Engine - Fetch` span also carries:
+
+| Attribute | Meaning |
+| --- | --- |
+| `wg.entity.type` | The type the fetch resolves: the entity type, or `Query` for a root fetch. The types of a merged fetch are joined with a comma. |
+| `wg.response_cache.store_decision` | What happened to the response of a fetch that was sent. |
+| `wg.response_cache.lookup_duration_ms` | Time spent reading the cache. Not part of the fetch duration. |
+
+The store decision explains why a type is never served from the cache. The rules behind each value are in [What is stored](/router/response-cache/how-it-works#what-is-stored).
+
+| `wg.response_cache.store_decision` | The response was |
+| --- | --- |
+| `stored` | stored. A type that is stored on every miss and never hit has a lifetime too short for its traffic, or a key that never repeats. |
+| `fetch_failed` | a failed request, an empty body, or a status of 400 or higher. |
+| `uncacheable_status` | sent with a status other than 200 or 203. |
+| `invalid_response` | not JSON, or not the shape that was asked for. |
+| `response_errors` | carrying GraphQL errors. |
+| `invalid_cache_control` | sent with a `Cache-Control` that could not be read. |
+| `no_store` | sent with `no-store`. |
+| `no_cache` | sent with unqualified `no-cache`. |
+| `no_directive` | sent without a caching directive, so `fallback_ttl` did not apply. |
+| `no_lifetime` | sent with a lifetime of zero or less, after `Age`. |
+| `unusable_vary` | sent with `Vary: *`, or a `Vary` naming more than 100 headers. |
+| `private_without_id` | private, for a request without a private id. |
+| `no_entity` | without anything to store, such as an entity that does not exist. |
+
+The decision is absent for a fetch answered from the cache and for one that is not cacheable. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
+
+## Per response
+
+The router request carries `wg.operation.response_cache.status` on its metrics, its root span and its `Operation - Execute` span. It summarizes the fetches of one response.
+
+| Value | Meaning |
+| --- | --- |
+| `hit` | Every fetch was answered from the cache. No subgraph was contacted. |
+| `partial_hit` | At least one fetch was answered from the cache, in whole or in part. |
+| `miss` | No fetch was answered from the cache. |
+
+A fetch that was not answered from the cache counts against a hit, whether it missed or was not cacheable. A response whose fetches were all not cacheable reports `miss`.
+
+The attribute is absent for mutations, subscriptions, WebSocket operations, introspection, and requests that failed before execution.
+
+Share of responses served entirely from the cache:
+
+```promql
+sum(rate(router_http_requests_total{wg_operation_response_cache_status="hit"}[5m]))
+/
+sum(rate(router_http_requests_total{wg_operation_response_cache_status!=""}[5m]))
+```
+
+The router request duration includes the time spent in the cache. It is the figure to compare a hit and a miss by:
+
+```promql
+sum by (wg_operation_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_sum{wg_operation_response_cache_status!=""}[5m])
+)
+/
+sum by (wg_operation_response_cache_status) (
+  rate(router_http_request_duration_milliseconds_count{wg_operation_response_cache_status!=""}[5m])
+)
+```
+
+## Expressions and access logs
+
+[Template expressions](/router/configuration/template-expressions) expose the same values:
+
+- `response.cache.status` for the response.
+- `subgraph.response.cache.status`, `storeDecision`, `lookupDuration` and `entityType` for a fetch.
+
+```yaml config.yaml
+access_logs:
+  router:
+    fields:
+      - key: 'cache_status'
+        value_from:
+          expression: 'response.cache.status'
+```
+
+## Cache health
+
+Metrics for the store itself are off by default:
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    otlp:
+      response_cache: true
+    prometheus:
+      response_cache: true
+```
+
+| Metric | Counts |
+| --- | --- |
+| `router.response_cache.operations` | Calls to the store, by operation (`lookup`, `write`, `invalidate`, `engine`) and error type |
+| `router.response_cache.operation.duration_seconds` | Duration of those calls |
+| `router.response_cache.keys` | Keys per call, by result (`found`, `missing`, `stored`, `failed`, `removed`) |
+| `router.response_cache.write.ttl_seconds` | The shortest lifetime in each write |
+| `router.response_cache.fetches` | Subgraph fetches by subgraph, type, status and store decision |
+| `router.response_cache.cache_tag_header.overflows` | Responses whose tags exceeded `max_bytes` |
+
+The full list of attributes is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics).
+
+A lookup asks for the shared key and, for a request with a private id, the private key too. At most one of the two is found. Keys counted as `missing` are therefore no measure of the hit rate. Use the [per-fetch status](#per-fetch) for that.
+
+Failed calls by operation and cause. `canceled` is a client that went away, not a failing store:
+
+```promql
+sum by (wg_response_cache_operation, wg_error_type) (
+  rate(router_response_cache_operations_total{wg_error_type!="", wg_error_type!="canceled"}[5m])
+)
+```
+
+Entries that were not written:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="failed"}[5m]))
+```
+
+Cost of the cache per call. Writes are synchronous, so their duration adds to the response time:
+
+```promql
+histogram_quantile(0.95,
+  sum by (wg_response_cache_operation, le) (
+    rate(router_response_cache_operation_duration_seconds_bucket[5m])
+  )
+)
+```
+
+Churn, as entries written per entry served. A value near or above one means entries are replaced about as often as they are used:
+
+```promql
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="write", wg_response_cache_result="stored"}[5m]))
+/
+sum(rate(router_response_cache_keys_total{wg_response_cache_operation="lookup", wg_response_cache_result="found"}[5m]))
+```
+
+Lifetimes entries are written with:
+
+```promql
+histogram_quantile(0.5, sum by (le) (rate(router_response_cache_write_ttl_seconds_bucket[15m])))
+```
+
+### Cache-hostile types
+
+The types that miss most often, and why. A busy type can rank high even when most of its fetches hit, so compare with its hits:
+
+```promql
+topk(10,
+  sum by (wg_subgraph_name, wg_entity_type, wg_response_cache_store_decision) (
+    rate(router_response_cache_fetches_total{wg_response_cache_status="miss"}[15m])
+  )
+)
+```
+
+### Evictions
+
+Redis evicts under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):
+
+```promql
+rate(redis_evicted_keys_total[5m])
+rate(redis_expired_keys_total[5m])
+redis_memory_used_bytes / (redis_memory_max_bytes > 0)
+```
+
+The last query needs a `maxmemory`. These count the whole Redis instance, including other data on it.
