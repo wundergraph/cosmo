@@ -15,6 +15,7 @@ import {
   type ObjectDefinitionData,
   OVERRIDE,
   parse,
+  QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
   subgraphValidationError,
@@ -22,6 +23,7 @@ import {
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -785,6 +787,120 @@ describe('@override directive tests', () => {
           ],
         ]),
       );
+    });
+
+    test('that overriding with an optional argument does not propagate the argument into the federated schemas if it is not defined in all subgraphs', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            a: ID
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Query {
+            a(a: ID): ID @override(from: "a")
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, subgraphConfigBySubgraphName, warnings } =
+        federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+          
+          type Query {
+            a: ID
+          }
+        `),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+          
+          type Query {
+            a: ID
+          }
+        `),
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(a.name);
+      expect(aConfig).toBeDefined();
+      expect(aConfig!.configurationDataByTypeName).toStrictEqual(new Map<TypeName, ConfigurationData>());
+      const bConfig = subgraphConfigBySubgraphName.get(b.name);
+      expect(bConfig).toBeDefined();
+      expect(bConfig!.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            QUERY,
+            {
+              fieldNames: new Set<string>(['a']),
+              isRootNode: true,
+              typeName: QUERY,
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that overriding without an optional argument does not propagate the argument into the federated schemas', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            a: ID @override(from: "b")
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Query {
+            a(a: ID): ID
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema, subgraphConfigBySubgraphName, warnings } =
+        federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+          
+          type Query {
+            a: ID
+          }
+        `),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+          
+          type Query {
+            a: ID
+          }
+        `),
+      );
+      const aConfig = subgraphConfigBySubgraphName.get(a.name);
+      expect(aConfig).toBeDefined();
+      expect(aConfig!.configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
+          [
+            QUERY,
+            {
+              fieldNames: new Set<string>(['a']),
+              isRootNode: true,
+              typeName: QUERY,
+            },
+          ],
+        ]),
+      );
+      const bConfig = subgraphConfigBySubgraphName.get(b.name);
+      expect(bConfig).toBeDefined();
+      expect(bConfig!.configurationDataByTypeName).toStrictEqual(new Map<TypeName, ConfigurationData>());
+      expect(warnings).toHaveLength(0);
     });
   });
 });
