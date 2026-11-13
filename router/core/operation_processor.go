@@ -116,13 +116,6 @@ type OperationProcessorOptions struct {
 	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache                         bool
-	PersistedOpsNormalizationCache                         *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache                                     *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                                        *ristretto.Cache[uint64, ComplexityCacheEntry]
-	VariablesNormalizationCache                            *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	RemapVariablesCache                                    *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	ValidationCache                                        *ristretto.Cache[uint64, bool]
-	OperationHashCache                                     *ristretto.Cache[uint64, string]
 	ParseKitPoolSize                                       int
 	IntrospectionEnabled                                   bool
 	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
@@ -136,6 +129,9 @@ type OperationProcessorOptions struct {
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
+
+	// Caches is required.
+	Caches *OperationCaches
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -145,6 +141,7 @@ type OperationProcessor struct {
 	maxOperationSizeInBytes  int64
 	persistedOperationClient *persistedoperation.Client
 	operationCache           *OperationCache
+	caches                   *OperationCaches
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
 	introspectionEnabled     bool
@@ -1763,11 +1760,15 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 	return astvalidation.DefaultOperationValidator(opts...)
 }
 
-func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
+func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor, error) {
+	if opts.Caches == nil {
+		return nil, errors.New("operation processor: Caches is required")
+	}
 	if opts.ParseKitPoolSize <= 0 {
 		opts.ParseKitPoolSize = 1
 	}
 	processor := &OperationProcessor{
+		caches:                   opts.Caches,
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
 		persistedOperationClient: opts.PersistedOperationClient,
@@ -1792,25 +1793,26 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		processor.parseKitSemaphore <- i
 		processor.parseKits[i] = createParseKit(i, processor.parseKitOptions)
 	}
-	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache ||
-		opts.VariablesNormalizationCache != nil || opts.RemapVariablesCache != nil {
+	caches := opts.Caches
+	if caches.Normalization != nil || caches.Validation != nil || caches.ComplexityCalculation != nil || caches.OperationHash != nil || opts.EnablePersistedOperationsCache ||
+		caches.VariablesNormalization != nil || caches.RemapVariables != nil {
 		processor.operationCache = &OperationCache{
-			normalizationCache:          opts.NormalizationCache,
-			validationCache:             opts.ValidationCache,
-			complexityCache:             opts.QueryDepthCache,
-			operationHashCache:          opts.OperationHashCache,
-			variablesNormalizationCache: opts.VariablesNormalizationCache,
-			remapVariablesCache:         opts.RemapVariablesCache,
+			normalizationCache:          caches.Normalization,
+			validationCache:             caches.Validation,
+			complexityCache:             caches.ComplexityCalculation,
+			operationHashCache:          caches.OperationHash,
+			variablesNormalizationCache: caches.VariablesNormalization,
+			remapVariablesCache:         caches.RemapVariables,
 		}
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache.automaticPersistedOperationCacheTtl = float64(opts.AutomaticPersistedOperationCacheTtl)
 		processor.operationCache.persistedOperationVariableNames = map[string]persistedOperationVariableNames{}
 		processor.operationCache.persistedOperationVariableNamesLock = &sync.RWMutex{}
-		processor.operationCache.persistedOperationNormalizationCache = opts.PersistedOpsNormalizationCache
+		processor.operationCache.persistedOperationNormalizationCache = caches.PersistedOperation
 	}
 
-	return processor
+	return processor, nil
 }
 
 func (p *OperationProcessor) getKit() *parseKit {

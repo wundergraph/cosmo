@@ -616,6 +616,9 @@ func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) b
 
 // handleOperation reads, parses, normalizes, validates and plans the operation of the request.
 func (s *handlerScope) handleOperation() error {
+	release := s.h.operationProcessor.caches.Acquire()
+	defer release()
+
 	operationKit, err := s.h.operationProcessor.NewKit()
 	if err != nil {
 		return err
