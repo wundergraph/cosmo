@@ -33,11 +33,13 @@ func (s *ManifestWarmupSource) LoadItems(ctx context.Context, log *zap.Logger) (
 	for sha256Hash, body := range ops {
 		matches := persistedoperation.OperationIDMatchesBody(sha256Hash, body)
 		// Requests reject these at lookup, so warming them would let cache hits bypass that.
-		if !matches && !s.client.AllowsMismatchedSHA256IDs() {
-			log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
-			continue
-		}
 		if !matches {
+			if !s.client.AllowsMismatchedSHA256IDs() {
+				// Requests reject these at lookup, so warming them would let cache hits bypass that.
+				log.Warn("Skipping PQL manifest operation whose SHA256 ID doesn't match its body", zap.String("id", sha256Hash))
+				continue
+			}
+
 			mismatchedIDs = append(mismatchedIDs, sha256Hash)
 		}
 		items = append(items, &nodev1.Operation{
