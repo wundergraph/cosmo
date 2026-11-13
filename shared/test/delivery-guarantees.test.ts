@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { type ConfigurationData, type EventConfiguration, type TypeName } from '@wundergraph/composition';
-import { DeliveryGuaranteeMode } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { DeliveryGuaranteeMode, EngineEventConfigurationSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { configurationDatasToDataSourceConfiguration } from '../src/router-config/graphql-configuration';
 
 function subscriptionConfigurationData(events: Array<EventConfiguration>): Map<TypeName, ConfigurationData> {
@@ -31,7 +31,13 @@ describe('Delivery guarantees proto generation tests', () => {
         },
       ]),
     );
-    expect(events.kafka[0].engineEventConfiguration?.deliveryGuarantees?.mode).toBe(DeliveryGuaranteeMode.CURSOR);
+    expect(events.kafka).toMatchObject([
+      {
+        engineEventConfiguration: {
+          deliveryGuarantees: { mode: DeliveryGuaranteeMode.CURSOR },
+        },
+      },
+    ]);
   });
 
   test('that deliveryGuarantees is not set if it is absent from the event configuration', () => {
@@ -46,6 +52,6 @@ describe('Delivery guarantees proto generation tests', () => {
         },
       ]),
     );
-    expect(events.kafka[0].engineEventConfiguration?.deliveryGuarantees).toBeUndefined();
+    expect(events.kafka[0].engineEventConfiguration).not.toHaveProperty('deliveryGuarantees');
   });
 });
