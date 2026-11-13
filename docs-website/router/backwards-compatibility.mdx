@@ -51,12 +51,8 @@ backwards_compatibility:
 The router then serves the published body for these IDs and includes them in cache warmup. It logs a warning at startup while the option is enabled. With cache warmup enabled, every warmup also logs `Serving PQL manifest operations whose SHA256 ID doesn't match their body`, with the number of affected operations and their IDs, so you can track what is left to migrate.
 
 <Warning>
-With this option, an ID that breaks the rule names two operations: the published body, and the query whose SHA256 hash the ID is. The router can't tell them apart:
-
-- With APQ enabled, a request that sends the ID together with the query that hashes to it executes either that query or the published body, depending on what the router has cached for the ID. The request can also register that query under the ID: always with a Redis APQ store, and with the in-memory APQ store when operations aren't loaded from a manifest. Requests that send only the ID then execute the registered query instead of the published body until the APQ entry expires.
-- Without APQ, a request that sends the ID together with that query executes the published body instead of the query that was sent. So does a request that sends only that query, when safelisting or `log_unknown` looks it up by its SHA256 hash.
-
-This is harmless when both texts are the same operation, such as when only the order of fragments differs. If they could differ in meaning, don't enable the option.
+Only enable this option if the published operation and the query whose hash matches the ID do the same thing, for example if only the fragment order differs.
+Otherwise, the router can run the wrong operation, depending on APQ settings and what's cached.
 </Warning>
 
 To migrate away from the option, publish the affected operations again under new IDs, and keep the old ones until no client sends them:
