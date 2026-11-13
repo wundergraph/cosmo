@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -1843,10 +1844,27 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 				statusCode: http.StatusRequestEntityTooLarge,
 			}
 		}
+		if isNetTimeoutError(err) {
+			return nil, newRequestBodyTimeoutError()
+		}
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
 	return buf.Bytes(), nil
+}
+
+// isNetTimeoutError reports whether err was caused by a network timeout, e.g. the server's read
+// deadline expiring while a slow client is still sending the request body.
+func isNetTimeoutError(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+func newRequestBodyTimeoutError() error {
+	return &httpGraphqlError{
+		message:    "timeout while reading the request body",
+		statusCode: http.StatusRequestTimeout,
+	}
 }
 
 // NewKit creates a new OperationKit. The kit is used to parse, normalize and

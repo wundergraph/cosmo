@@ -350,3 +350,59 @@ func TestServer_DrainThenShutdown_NoEOFForKeepAliveClient(t *testing.T) {
 	defer errsMu.Unlock()
 	assert.Zero(t, failures, "first error: %v", firstErr)
 }
+
+func TestNewServer_Timeouts(t *testing.T) {
+	t.Parallel()
+
+	newTestServer := func(t *testing.T, opts httpServerOptions) *server {
+		t.Helper()
+		logger := zap.NewNop()
+		opts.addr = "127.0.0.1:0"
+		opts.logger = logger
+		opts.healthcheck = health.New(&health.Options{Logger: logger})
+		opts.healthCheckPath = "/health"
+		opts.livenessCheckPath = "/health/live"
+		opts.readinessCheckPath = "/health/ready"
+		srv, err := newServer(&opts)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = srv.listener.Close() })
+		return srv
+	}
+
+	t.Run("unset read timeout falls back to the default", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{})
+		require.Equal(t, defaultServerReadTimeout, srv.httpServer.ReadTimeout)
+		require.Zero(t, srv.httpServer.ReadHeaderTimeout)
+		require.Zero(t, srv.httpServer.IdleTimeout)
+		require.Zero(t, srv.httpServer.WriteTimeout)
+	})
+
+	t.Run("configured timeouts are applied", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{
+			readTimeout:       30 * time.Second,
+			readHeaderTimeout: 5 * time.Second,
+			idleTimeout:       2 * time.Minute,
+			writeTimeout:      3 * time.Minute,
+		})
+		require.Equal(t, 30*time.Second, srv.httpServer.ReadTimeout)
+		require.Equal(t, 5*time.Second, srv.httpServer.ReadHeaderTimeout)
+		require.Equal(t, 2*time.Minute, srv.httpServer.IdleTimeout)
+		require.Equal(t, 3*time.Minute, srv.httpServer.WriteTimeout)
+	})
+
+	t.Run("negative timeouts fall back instead of disabling", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{
+			readTimeout:       -time.Second,
+			readHeaderTimeout: -time.Second,
+			idleTimeout:       -time.Second,
+			writeTimeout:      -time.Second,
+		})
+		require.Equal(t, defaultServerReadTimeout, srv.httpServer.ReadTimeout)
+		require.Zero(t, srv.httpServer.ReadHeaderTimeout)
+		require.Zero(t, srv.httpServer.IdleTimeout)
+		require.Zero(t, srv.httpServer.WriteTimeout)
+	})
+}
