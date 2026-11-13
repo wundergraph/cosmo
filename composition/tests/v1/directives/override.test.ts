@@ -12,6 +12,7 @@ import {
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
   invalidOverrideTargetSubgraphNameWarning,
+  invalidRequiredInputValueError,
   type ObjectDefinitionData,
   OVERRIDE,
   parse,
@@ -20,6 +21,7 @@ import {
   type Subgraph,
   subgraphValidationError,
   type TypeName,
+  undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
@@ -900,6 +902,79 @@ describe('@override directive tests', () => {
       const bConfig = subgraphConfigBySubgraphName.get(b.name);
       expect(bConfig).toBeDefined();
       expect(bConfig!.configurationDataByTypeName).toStrictEqual(new Map<TypeName, ConfigurationData>());
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned when overriding with a required argument that is not defined in all subgraphs', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            a: ID
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Query {
+            a(a: ID!): ID @override(from: "a")
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidRequiredInputValueError(
+          'field',
+          'Query.a',
+          [
+            {
+              inputValueName: 'a',
+              missingSubgraphs: [a.name],
+              requiredSubgraphs: [b.name],
+            },
+          ],
+          true,
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is return when overriding without a required argument', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            a(a: ID!): ID @override(from: "b")
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Query {
+            a: ID
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidRequiredInputValueError(
+          'field',
+          'Query.a',
+          [
+            {
+              inputValueName: 'a',
+              missingSubgraphs: [b.name],
+              requiredSubgraphs: [a.name],
+            },
+          ],
+          true,
+        ),
+      ]);
       expect(warnings).toHaveLength(0);
     });
   });
