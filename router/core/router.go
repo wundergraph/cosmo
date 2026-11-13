@@ -716,9 +716,11 @@ func (r *Router) initModules(ctx context.Context) error {
 		moduleInstance := moduleInfo.New()
 
 		mc := &ModuleContext{
-			Context: ctx,
-			Module:  moduleInstance,
-			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Context:                 ctx,
+			Module:                  moduleInstance,
+			Logger:                  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			PrometheusMeterProvider: r.promMeterProvider,
+			OTLPMeterProvider:       r.otlpMeterProvider,
 		}
 
 		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]
