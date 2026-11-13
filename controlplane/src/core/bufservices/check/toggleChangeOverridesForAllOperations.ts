@@ -42,6 +42,10 @@ export function toggleChangeOverridesForAllOperations(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+
     const check = await new SubgraphRepository(logger, opts.db, authContext.organizationId).checkById({
       id: req.checkId,
       federatedGraphTargetId: graph.targetId,

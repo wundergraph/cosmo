@@ -44,6 +44,10 @@ export function forceCheckSuccess(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+
     const check = await subgraphRepo.checkById({
       id: req.checkId,
       federatedGraphTargetId: graph.targetId,

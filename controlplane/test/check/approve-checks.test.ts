@@ -250,6 +250,23 @@ describe('Check approval RBAC', () => {
     ]);
   });
 
+  test('Check approver without read access to a graph cannot tell which checks belong to it', async () => {
+    const { client, checkId, employeesTargetId, graphViewer, approverOf, loginAs } = await setup();
+
+    const otherGraphName = genID('otherFedGraph');
+    await createFederatedGraph(
+      client,
+      otherGraphName,
+      DEFAULT_NAMESPACE,
+      [joinLabel(genUniqueLabel())],
+      'http://localhost:3003',
+    );
+
+    loginAs(graphViewer, approverOf(employeesTargetId));
+
+    expect(await approveCheck(client, otherGraphName, checkId)).toEqual(denied);
+  });
+
   test('Check approver without graph read access cannot approve the check', async () => {
     const { client, graphName, checkId, employeesTargetId, approverOf, loginAs } = await setup();
 
