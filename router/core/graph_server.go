@@ -1846,9 +1846,10 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 			}
 
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:    s.logger,
-				Endpoint:  sg.RoutingUrl,
-				TLSConfig: grpcTLS,
+				Logger:     s.logger,
+				Endpoint:   sg.RoutingUrl,
+				TLSConfig:  grpcTLS,
+				Propagator: s.compositePropagator,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
