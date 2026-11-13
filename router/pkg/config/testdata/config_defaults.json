@@ -776,6 +776,11 @@
     "Name": "",
     "Version": ""
   },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    }
+  },
   "Plugins": {
     "Enabled": false,
     "Path": "plugins",

@@ -1521,12 +1521,18 @@ func (r *Router) buildClients(ctx context.Context) error {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
+		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
+			r.logger.Warn("allow_mismatched_sha256_ids is enabled: requests for persisted operations whose SHA256 ID doesn't match their body may run a different operation")
+		}
+
 		c, err := persistedoperation.NewClient(&persistedoperation.Options{
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			APQStore:       apqStore,
 			PQLStore:       pqlStore,
+
+			AllowMismatchedSHA256IDs: r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs,
 		})
 		if err != nil {
 			return err
@@ -2845,6 +2851,12 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlags) Option {
 	return func(r *Router) {
 		r.apolloRouterCompatibilityFlags = cfg
+	}
+}
+
+func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
+	return func(r *Router) {
+		r.backwardsCompatibility = cfg
 	}
 }
 

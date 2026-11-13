@@ -1558,7 +1558,7 @@ func (s *graphServer) buildGraphMux(
 				Workers:        manifestWarmup.Workers,
 				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 				Timeout:        manifestWarmup.Timeout,
-				Source:         NewManifestWarmupSource(pqlStore),
+				Source:         NewManifestWarmupSource(s.persistedOperationClient),
 				AfterOperation: manifestAfterOperation,
 			}
 
@@ -1577,7 +1577,7 @@ func (s *graphServer) buildGraphMux(
 					Workers:        manifestWarmup.Workers,
 					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 					Timeout:        manifestWarmup.Timeout,
-					Source:         NewManifestWarmupSource(pqlStore),
+					Source:         NewManifestWarmupSource(s.persistedOperationClient),
 					AfterOperation: manifestAfterOperation,
 				}
 

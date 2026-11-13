@@ -232,3 +232,69 @@ func TestCustomOperationIDManifestReload(t *testing.T) {
 		}, 5*time.Second, 10*time.Millisecond)
 	})
 }
+
+// A manifest operation whose ID is a SHA256 hash, but of a different text than its
+// body, as when a tool reorders fragments after hashing. These are rejected unless
+// backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids is enabled.
+func TestMismatchedSHA256OperationIDs(t *testing.T) {
+	t.Parallel()
+
+	const body = `query {
+  employees {
+    id
+  }
+}`
+	id := strings.Repeat("a", 64)
+	const employees = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
+	// request starts a router with id in its manifest and requests it.
+	request := func(t *testing.T, allowMismatched, warmup bool) *testenv.TestResponse {
+		t.Helper()
+		cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.True(t, strings.HasSuffix(r.URL.Path, "/operations/manifest.json"))
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"version": 1, "revision": "one", "operations": map[string]string{id: body},
+			}))
+		}))
+		t.Cleanup(cdn.Close)
+		var res *testenv.TestResponse
+		testenv.Run(t, &testenv.Config{
+			CdnSever:      cdn,
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{Manifest: config.PQLManifestConfig{
+					Enabled: true, Warmup: config.PQLManifestWarmupConfig{Enabled: warmup, Workers: 1, Timeout: 5 * time.Second},
+				}}),
+				core.WithBackwardsCompatibility(config.BackwardsCompatibilityConfiguration{
+					PersistedOperations: config.PersistedOperationsBackwardsCompatibility{AllowMismatchedSHA256IDs: allowMismatched},
+				}),
+			},
+		}, func(t *testing.T, e *testenv.Environment) {
+			var err error
+			res, err = e.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: fmt.Appendf(nil, `{"persistedQuery":{"version":1,"sha256Hash":%q}}`, id),
+			})
+			require.NoError(t, err)
+		})
+		return res
+	}
+
+	t.Run("rejected by default", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, http.StatusInternalServerError, request(t, false, true).Response.StatusCode)
+	})
+
+	t.Run("served and warmed when allowed", func(t *testing.T) {
+		t.Parallel()
+		res := request(t, true, true)
+		assert.Equal(t, employees, res.Body)
+		assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+
+	t.Run("served without warmup when allowed", func(t *testing.T) {
+		t.Parallel()
+		res := request(t, true, false)
+		assert.Equal(t, employees, res.Body)
+		assert.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+	})
+}

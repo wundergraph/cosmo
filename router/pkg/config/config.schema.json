@@ -4720,6 +4720,24 @@
         }
       }
     },
+    "backwards_compatibility": {
+      "type": "object",
+      "description": "Options that restore behavior of older router versions. Each option gives up a guarantee of the current behavior, so enable one only while migrating away from what it supports.",
+      "additionalProperties": false,
+      "properties": {
+        "persisted_operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_mismatched_sha256_ids": {
+              "type": "boolean",
+              "default": false,
+              "description": "Serve published operations whose ID looks like a SHA256 hash (64 lowercase hexadecimal characters) but isn't the SHA256 hash of their body, as routers before 0.355.0 did. Such an ID is ambiguous: a request whose query hashes to it can execute a different operation than the published one, and with APQ enabled it can register that query under the ID. Republish the operations with matching IDs and disable this option."
+            }
+          }
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
