@@ -8,7 +8,6 @@ dist:
   version: 0.103.0-dev
   otelcol_version: 0.103.0
 
-
 extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.103.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.103.0
