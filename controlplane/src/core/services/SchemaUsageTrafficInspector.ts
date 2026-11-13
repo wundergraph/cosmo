@@ -170,6 +170,10 @@ export interface InspectorOperationResult {
 
 @traced
 export class SchemaUsageTrafficInspector {
+  // Shared across all inspect() calls on this instance. Callers may inspect several compositions concurrently
+  // with the same inspector, so a per-call limiter would multiply the number of in-flight ClickHouse queries.
+  private readonly limit = pLimit(5);
+
   constructor(private client: ClickHouseClient) {}
 
   /**
@@ -183,10 +187,8 @@ export class SchemaUsageTrafficInspector {
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    const limit = pLimit(5);
-
     const tasks = changes.map((change) =>
-      limit(async () => {
+      this.limit(async () => {
         try {
           const where: string[] = [];
           const params: Record<string, string | number | boolean> = {

@@ -1026,10 +1026,23 @@ cors:
 
 Configure your cache control policy. More information on this feature can be found here: [#cache-control-policy](/router/proxy-capabilities#cache-control-policy)
 
-| Environment Variable         | YAML    | Required               | Description                                                                                                                 | Default Value |
-| ---------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| CACHE_CONTROL_POLICY_ENABLED | enabled | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
-| CACHE_CONTROL_POLICY_VALUE   | value   | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| Environment Variable                  | YAML             | Required               | Description                                                                                                                 | Default Value |
+| ------------------------------------- | ---------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| CACHE_CONTROL_POLICY_ENABLED          | enabled          | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
+| CACHE_CONTROL_POLICY_VALUE            | value            | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| CACHE_CONTROL_POLICY_MISSING_NO_STORE | missing_no_store | <Icon icon="square" /> | Treats a subgraph response without caching information as `no-store`. See [Missing caching information](#missing-caching-information). | false         |
+
+### Missing Caching Information
+
+A subgraph response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
+
+By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way, as long as it parses and has a caching directive.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
+
+<Note>
+  `missing_no_store` does not apply to gRPC subgraphs, including router plugins. The router does not read gRPC response metadata, so it cannot tell whether such a subgraph sent caching information, and their responses are ignored as they are without the setting. To restrict caching for a gRPC subgraph, set a `value` for it under `subgraphs`.
+</Note>
 
 ### Example YAML Config:
 
@@ -1039,6 +1052,7 @@ version: "1"
 cache_control_policy:
   enabled: true
   value: "max-age=180, public"
+  missing_no_store: false
   subgraphs:
     - name: "products"
       value: "max-age=60, public"
@@ -2880,6 +2894,20 @@ Skips the validation error raised when `null` is supplied for a variable of a no
 | ------------------------------------------------------------- | ------------------------- | ---------------------- | ----------------------------------------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_ENABLED | skip_null_variables_error | <Icon icon="square" /> | Skips the error when a null variable is supplied for a non-nullable type. | false         |
 
+### Apollo Router Compatibility Cache Control Any Public
+
+Changes how the [restrictive cache control policy](/router/proxy-capabilities/adjusting-cache-control) merges `public` across subgraph fetches, matching Apollo Router behavior. By default, the response is `public` only when every fetch that sets `Cache-Control` is `public`. With this flag, one `public` fetch is enough. Within a single fetch, the global and subgraph values still both have to grant `public`. So when a subgraph sends no `Cache-Control` of its own, a subgraph value without `public` withholds it from that fetch. When the subgraph sends its own header, configured values only cap its lifetime. `private` and `no-store` still win.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends `max-age=60`. By default the router sends `max-age=60`. With this flag it sends `max-age=60, public`.
+
+<Warning>
+  Shared caches store responses to requests with `Authorization` only when they are `public`. With this flag, data from a subgraph that did not send `public` can end up in a shared cache. Enable it only when no subgraph returns per-user data without `private`.
+</Warning>
+
+| Environment Variable                                         | YAML                     | Required               | Description                                          | Default Value |
+| ------------------------------------------------------------ | ------------------------ | ---------------------- | ---------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_ENABLED | cache_control_any_public | <Icon icon="square" /> | Sends `public` when any subgraph fetch is `public`. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2889,6 +2917,8 @@ apollo_router_compatibility_flags:
   replace_invalid_var_errors:
     enabled: true
   skip_null_variables_error:
+    enabled: true
+  cache_control_any_public:
     enabled: true
 ```
 
