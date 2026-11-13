@@ -35,10 +35,12 @@ jobs:
       has_skip_label: ${{ steps.check_label_skip.outputs.has_label }}
       # The celestial check runs for a query-planner label, an engine bump or a composition change,
       # unless skipped by label.
+      # Fork PRs get no secrets, so a composition change alone does not start the check for them.
       run_query_planner: >-
         ${{ (steps.check_label.outputs.has_label == 'true'
         || steps.check_engine_changes.outputs.engine_changed == 'true'
-        || steps.check_composition_changes.outputs.composition_changed == 'true')
+        || (steps.check_composition_changes.outputs.composition_changed == 'true'
+        && github.event.pull_request.head.repo.full_name == github.repository))
         && steps.check_label_skip.outputs.has_label != 'true' }}
     steps:
       - name: Checkout Code
