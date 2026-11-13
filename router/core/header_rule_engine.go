@@ -73,6 +73,20 @@ type responseHeaderPropagation struct {
 	header               http.Header
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
+	// fetch, when set, collects one fetch's cache control rules before they
+	// join previousCacheControl.
+	fetch *fetchCacheControl
+}
+
+// fetchCacheControl is one fetch's policy across its rules. Rules of one fetch
+// merge strictly; only fetches merge with any public.
+type fetchCacheControl struct {
+	policy  *cachedirective.Object
+	expires bool
+	// injected is set when a set rule wrote Cache-Control or Expires.
+	injected bool
+	// defaulted is set when a rule applied a default with caching directives.
+	defaulted bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -190,6 +204,10 @@ type HeaderPropagation struct {
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
 	postResponseRules       *PostResponseRules
+	// publicMode decides when fetches merge as public.
+	publicMode publicMergeMode
+	// missingNoStore makes a fetch with no caching directives no-store.
+	missingNoStore bool
 }
 
 // FileSourceContent is a wrapper around a bytes.Buffer that is used to store the content of a file source.
@@ -598,33 +616,98 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-// usesMostRestrictiveCacheControl reports whether a response rule with the most
-// restrictive cache control algorithm applies to a fetch of subgraphName.
-func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
-	lists := [][]*config.ResponseHeaderRule{h.rules.All.Response}
+// eachMostRestrictiveCacheControlRule calls fn for each response rule with the
+// most restrictive cache control algorithm that applies to a fetch of
+// subgraphName, until fn returns false.
+func (h *HeaderPropagation) eachMostRestrictiveCacheControlRule(subgraphName string, fn func(*config.ResponseHeaderRule) bool) {
+	lists := [4][]*config.ResponseHeaderRule{h.rules.All.Response}
 	if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
-		lists = append(lists, subgraphRules.Response)
+		lists[1] = subgraphRules.Response
 	}
 	if h.postResponseRules != nil {
-		lists = append(lists, h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName])
+		lists[2], lists[3] = h.postResponseRules.All, h.postResponseRules.Subgraphs[subgraphName]
 	}
 	for _, rules := range lists {
 		for _, rule := range rules {
-			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
-				return true
+			if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl && !fn(rule) {
+				return
 			}
 		}
 	}
-	return false
+}
+
+// usesMostRestrictiveCacheControl reports whether a response rule with the most
+// restrictive cache control algorithm applies to a fetch of subgraphName.
+func (h *HeaderPropagation) usesMostRestrictiveCacheControl(subgraphName string) bool {
+	found := false
+	h.eachMostRestrictiveCacheControlRule(subgraphName, func(*config.ResponseHeaderRule) bool {
+		found = true
+		return false
+	})
+	return found
+}
+
+// silentOrigin reports whether a subgraph's own response has no caching
+// directives. Status 0 is no HTTP response (gRPC, plugins): no headers to
+// judge. Failed fetches are no-store already.
+func silentOrigin(headers http.Header, statusCode int) bool {
+	if statusCode == 0 || statusCode >= http.StatusBadRequest {
+		return false
+	}
+	dir, err := parseFreshness(headers)
+	return err == nil && !hasCachingDirectives(dir)
+}
+
+// noStoreSilentFetch makes a silent fetch's policy no-store, unless no rule
+// covers it or a rule applied a default for it.
+func (h *HeaderPropagation) noStoreSilentFetch(fetch *fetchCacheControl, ctx context.Context, subgraphName string) {
+	// Mutations are no-cache already.
+	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
+		return
+	}
+	if fetch.defaulted || !h.usesMostRestrictiveCacheControl(subgraphName) {
+		return
+	}
+	fetch.policy = &cachedirective.Object{RespDirectives: noStoreDirectives()}
+}
+
+// commitFetchCacheControl merges a fetch's policy into the response's.
+func (h *HeaderPropagation) commitFetchCacheControl(propagation *responseHeaderPropagation, fetch *fetchCacheControl) {
+	if fetch.policy == nil {
+		return
+	}
+	propagation.m.Lock()
+	defer propagation.m.Unlock()
+	policies := []*cachedirective.Object{fetch.policy}
+	if propagation.previousCacheControl != nil {
+		policies = append(policies, propagation.previousCacheControl)
+	}
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.publicMode)
+	propagation.previousCacheControl = restrictivePolicy
+	if cacheControlHeader != "" {
+		propagation.header.Set(cacheControlKey, cacheControlHeader)
+	}
+	if fetch.expires && !restrictivePolicy.RespExpiresHeader.IsZero() {
+		propagation.header.Set(expiresKey, restrictivePolicy.RespExpiresHeader.Format(http.TimeFormat))
+	}
 }
 
 // ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
-// Called from OnFinished for every fetch (both singleflight leaders and followers).
 func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
-	propagation := getResponseHeaderPropagation(ctx)
-	if propagation == nil {
+	h.applyResponseHeaderRules(ctx, headers, subgraphName, statusCode, request, h.missingNoStore && silentOrigin(headers, statusCode))
+}
+
+// applyResponseHeaderRules is called from OnFinished for every fetch (both
+// singleflight leaders and followers). silent is judged on the subgraph's own
+// headers, before a cache hit's lifetime is merged into them.
+func (h *HeaderPropagation) applyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request, silent bool) {
+	shared := getResponseHeaderPropagation(ctx)
+	if shared == nil {
 		return
 	}
+	// Same header and lock, own cache control stage.
+	fetch := &fetchCacheControl{}
+	propagation := &responseHeaderPropagation{header: shared.header, m: shared.m, fetch: fetch}
 
 	resp := &http.Response{
 		StatusCode: statusCode,
@@ -661,6 +744,16 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 			}
 		}
 	}
+
+	// A set rule speaks for the subgraph: judge what it wrote.
+	if silent && fetch.injected {
+		silent = silentOrigin(resp.Header, statusCode)
+	}
+	// Per fetch, not per rule: any rule's default may stand in.
+	if silent {
+		h.noStoreSilentFetch(fetch, resp.Request.Context(), subgraphName)
+	}
+	h.commitFetchCacheControl(shared, fetch)
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
@@ -677,6 +770,9 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 		// came from the subgraph. Downstream rules (propagate, cache control
 		// algorithm, etc.) will process it naturally.
 		res.Header.Set(rule.Name, rule.Value)
+		if propagation.fetch != nil && (strings.EqualFold(rule.Name, cacheControlKey) || strings.EqualFold(rule.Name, expiresKey)) {
+			propagation.fetch.injected = true
+		}
 		return
 	}
 
@@ -949,6 +1045,25 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		// Unreadable freshness, or a failed fetch, is not cacheable.
 		resDir = noStoreDirectives()
 	}
+	// An unparseable default stands in for nothing.
+	var defaultDir *cachedirective.ResponseCacheDirectives
+	if rule.Default != "" {
+		if d, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
+			markStale(d)
+			defaultDir = d
+		}
+	}
+	// Only a default that says something about caching stands in.
+	standsIn := defaultDir != nil && hasCachingDirectives(defaultDir)
+	// No header, or only unknown directives.
+	silent := h.missingNoStore && !hasCachingDirectives(resDir)
+	if silent && !standsIn {
+		// noStoreSilentFetch decides, once every rule has run.
+		return
+	}
+	if standsIn && propagation.fetch != nil {
+		propagation.fetch.defaulted = true
+	}
 	obj := &cachedirective.Object{
 		RespDirectives:         resDir,
 		RespHeaders:            res.Header,
@@ -971,34 +1086,41 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	)
 
 	var defaultPolicy *cachedirective.Object
-	if rule.Default != "" {
-		if defaultResponseCache, err := cachedirective.ParseResponseCacheControl(rule.Default); err == nil {
-			markStale(defaultResponseCache)
-			// The default stands in for a missing header. Against a fetch's own
-			// header it only caps the lifetime, so it can't withdraw public.
-			if resCacheHeader != "" {
-				defaultResponseCache.Public = resDir.Public
-			} else {
-				// Nothing of its own: the fetch is as public as the default.
-				resDir.Public = defaultResponseCache.Public
-			}
-			defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+	if defaultDir != nil {
+		// The default stands in for a missing header. Against a fetch's own
+		// header it only caps the lifetime, so it can't withdraw public.
+		if resCacheHeader != "" && !silent {
+			defaultDir.Public = resDir.Public
+		} else {
+			// Nothing of its own: the fetch is as public as the default.
+			resDir.Public = defaultDir.Public
 		}
+		defaultPolicy = &cachedirective.Object{RespDirectives: defaultDir}
+	}
+
+	policies := []*cachedirective.Object{obj}
+	if defaultPolicy != nil {
+		policies = append(policies, defaultPolicy)
+	}
+	if fetch := propagation.fetch; fetch != nil {
+		// Rules of one fetch describe the same data: strict merge.
+		if fetch.policy != nil {
+			policies = append(policies, fetch.policy)
+		}
+		fetch.policy, _ = createMostRestrictivePolicy(policies, publicRequiresAll)
+		fetch.expires = fetch.expires || !expiresHeader.IsZero()
+		return
 	}
 
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
 	// Merge with the current shared state under lock to avoid lost updates when
 	// multiple subgraph responses compute policies concurrently.
-	policies := []*cachedirective.Object{obj}
-	if defaultPolicy != nil {
-		policies = append(policies, defaultPolicy)
-	}
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies)
+	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies, h.publicMode)
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
@@ -1120,6 +1242,15 @@ func markStale(dir *cachedirective.ResponseCacheDirectives) {
 	}
 }
 
+// hasCachingDirectives reports whether dir says anything about caching.
+func hasCachingDirectives(dir *cachedirective.ResponseCacheDirectives) bool {
+	return dir.MaxAge != -1 || dir.SMaxAge != -1 ||
+		dir.NoCachePresent || dir.NoStore ||
+		dir.Public || dir.PrivatePresent ||
+		dir.MustRevalidate || dir.ProxyRevalidate ||
+		dir.StaleIfError != -1 || dir.StaleWhileRevalidate != -1
+}
+
 func noStoreDirectives() *cachedirective.ResponseCacheDirectives {
 	return &cachedirective.ResponseCacheDirectives{
 		NoStore:              true,
@@ -1130,7 +1261,18 @@ func noStoreDirectives() *cachedirective.ResponseCacheDirectives {
 	}
 }
 
-func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
+// publicMergeMode decides when the merged policy is public.
+type publicMergeMode int
+
+const (
+	// publicRequiresAll keeps public only when every policy is public.
+	publicRequiresAll publicMergeMode = iota
+	// publicRequiresAny keeps public when at least one policy is public.
+	publicRequiresAny
+)
+
+func createMostRestrictivePolicy(policies []*cachedirective.Object, publicMode publicMergeMode) (*cachedirective.Object, string) {
+	anyPublic := publicMode == publicRequiresAny
 	result := cachedirective.Object{
 		RespDirectives: &cachedirective.ResponseCacheDirectives{},
 	}
@@ -1139,8 +1281,8 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	var minShared cachedirective.DeltaSeconds = -1
 	hasSMaxAge := false
 	isPrivate := false
-	// public grants sharing, so it holds only when every policy grants it.
-	isPublic := len(policies) > 0
+	// public grants sharing, so by default it holds only when every policy grants it.
+	isPublic := !anyPublic && len(policies) > 0
 	// Field-specific no-cache only bars the named headers; bare no-cache bars all.
 	noCacheFields := cachedirective.FieldNames{}
 	mustRevalidate, proxyRevalidate := false, false
@@ -1180,7 +1322,9 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 		if policy.RespDirectives.PrivatePresent {
 			isPrivate = true
 		}
-		if !policy.RespDirectives.Public {
+		if anyPublic {
+			isPublic = isPublic || policy.RespDirectives.Public
+		} else if !policy.RespDirectives.Public {
 			isPublic = false
 		}
 
