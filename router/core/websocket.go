@@ -72,6 +72,9 @@ type WebsocketMiddlewareOptions struct {
 	DisableVariablesRemapping bool
 
 	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
+
+	// ConnectionInitHandlers are the modules' WebSocketConnectionInitHandler hooks.
+	ConnectionInitHandlers []func(WebSocketConnectionInitHandlerContext) error
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -92,6 +95,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		clientHeader:              opts.ClientHeader,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+		connectionInitHandlers:    opts.ConnectionInitHandlers,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -415,6 +419,8 @@ type WebsocketHandler struct {
 	disableVariablesRemapping bool
 
 	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+
+	connectionInitHandlers []func(WebSocketConnectionInitHandlerContext) error
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -476,11 +482,14 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(h.ctx, c, h.readTimeout, h.writeTimeout, h.netPoll != nil)
+	// The connection's own context lets a module's close wake its reader.
+	connectionCtx, cancelConnection := context.WithCancel(h.ctx)
+	conn := newWSConnectionWrapper(connectionCtx, c, h.readTimeout, h.writeTimeout, h.netPoll != nil)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
 		_ = conn.Close()
+		cancelConnection()
 		return
 	}
 
@@ -491,6 +500,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = conn.Close()
+		cancelConnection()
 		return
 	}
 
@@ -514,6 +524,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		ResponseWriter:               w,
 		Request:                      r,
 		Connection:                   conn,
+		CancelConnection:             cancelConnection,
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
@@ -583,6 +594,18 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		}
 
 		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
+	}
+
+	// Modules learn about the connection once it is authenticated, before any of its operations is read.
+	if len(h.connectionInitHandlers) > 0 {
+		initContext := newWebSocketConnectionInitHandlerContext(handler, requestLogger)
+		for _, onInit := range h.connectionInitHandlers {
+			if err := onInit(initContext); err != nil {
+				requestLogger.Debug("A module refused the websocket connection", zap.Error(err))
+				handler.Close(false, wsproto.CloseKindForbidden)
+				return
+			}
+		}
 	}
 
 	conn.reader.MarkInitialized()
@@ -924,6 +947,7 @@ type WebSocketConnectionHandlerOptions struct {
 	ResponseWriter               http.ResponseWriter
 	Request                      *http.Request
 	Connection                   *wsConnectionWrapper
+	CancelConnection             context.CancelFunc
 	Protocol                     wsproto.Proto
 	Logger                       *zap.Logger
 	Stats                        statistics.EngineStatistics
@@ -954,6 +978,15 @@ type WebSocketConnectionHandler struct {
 	protocol   wsproto.Proto
 	clientInfo *ClientInfo
 	logger     *zap.Logger
+
+	// cancelConnection ends the context the connection's reader watches, which wakes a blocked read.
+	cancelConnection context.CancelFunc
+	// requestedClose is the close kind a module asked for, which the connection's teardown sends.
+	requestedClose *wsproto.CloseKind
+	closeMu        sync.Mutex
+	// closed ends once the connection has closed, which markClosed marks.
+	closed     context.Context
+	markClosed context.CancelFunc
 
 	initialPayload            json.RawMessage
 	upgradeRequestHeaders     json.RawMessage
@@ -988,6 +1021,7 @@ type forwardConfig struct {
 var detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
+	closed, markClosed := context.WithCancel(context.Background())
 	return &WebSocketConnectionHandler{
 		ctx:                          ctx,
 		operationProcessor:           opts.OperationProcessor,
@@ -999,6 +1033,9 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		w:                            opts.ResponseWriter,
 		request:                      opts.Request,
 		conn:                         opts.Connection,
+		cancelConnection:             opts.CancelConnection,
+		closed:                       closed,
+		markClosed:                   markClosed,
 		protocol:                     opts.Protocol,
 		logger:                       opts.Logger,
 		connectionID:                 opts.ConnectionID,
@@ -1550,7 +1587,35 @@ func (h *WebSocketConnectionHandler) shouldComputeOperationSha256(operationKit *
 	return false
 }
 
+// requestClose asks the connection to close with kind, as a module may. The connection's read loop owns the teardown,
+// so this only wakes it: ending the connection's context wakes a goroutine reader, and shutting down the socket's read
+// side wakes the net poller. Either way the teardown then sends kind.
+func (h *WebSocketConnectionHandler) requestClose(kind wsproto.CloseKind) {
+	h.closeMu.Lock()
+	if h.requestedClose != nil {
+		h.closeMu.Unlock()
+		return
+	}
+	h.requestedClose = &kind
+	h.closeMu.Unlock()
+
+	if h.cancelConnection != nil {
+		h.cancelConnection()
+	}
+	if reader, ok := underlyingConn(h.conn.conn).(interface{ CloseRead() error }); ok {
+		if err := reader.CloseRead(); err != nil {
+			h.logger.Debug("Shutting down websocket reads", zap.Error(err))
+		}
+	}
+}
+
 func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind wsproto.CloseKind) {
+	h.closeMu.Lock()
+	if h.requestedClose != nil {
+		closeKind = *h.requestedClose
+	}
+	h.closeMu.Unlock()
+
 	if unsubscribe {
 		// Remove any pending IDs associated with this connection
 		err := h.graphqlHandler.executor.Resolver.UnsubscribeClient(h.connectionID)
@@ -1566,4 +1631,9 @@ func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind wsproto.C
 	if err := h.conn.Close(); err != nil {
 		h.logger.Debug("Closing websocket connection", zap.Error(err))
 	}
+
+	if h.cancelConnection != nil {
+		h.cancelConnection()
+	}
+	h.markClosed()
 }

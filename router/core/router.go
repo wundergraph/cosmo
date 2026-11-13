@@ -25,6 +25,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -695,6 +696,22 @@ func (r *Router) listenAndServe() error {
 	return nil
 }
 
+// moduleMeterProviders are the router's meter providers for its enabled Prometheus and OpenTelemetry metrics, for a
+// module to record its own metrics on. Each module gets a list of its own.
+func (r *Router) moduleMeterProviders() []otelmetric.MeterProvider {
+	if !r.metricConfig.IsEnabled() {
+		return nil
+	}
+	var providers []otelmetric.MeterProvider
+	if r.metricConfig.Prometheus.Enabled && r.promMeterProvider != nil {
+		providers = append(providers, r.promMeterProvider)
+	}
+	if r.metricConfig.OpenTelemetry.Enabled && r.otlpMeterProvider != nil {
+		providers = append(providers, r.otlpMeterProvider)
+	}
+	return providers
+}
+
 func (r *Router) initModules(ctx context.Context) error {
 	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
 
@@ -716,9 +733,10 @@ func (r *Router) initModules(ctx context.Context) error {
 		moduleInstance := moduleInfo.New()
 
 		mc := &ModuleContext{
-			Context: ctx,
-			Module:  moduleInstance,
-			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Context:        ctx,
+			Module:         moduleInstance,
+			Logger:         r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			MeterProviders: r.moduleMeterProviders(),
 		}
 
 		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]
@@ -773,6 +791,10 @@ func (r *Router) initModules(ctx context.Context) error {
 
 		if handler, ok := moduleInstance.(EnginePostOriginHandler); ok {
 			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
+		}
+
+		if handler, ok := moduleInstance.(WebSocketConnectionInitHandler); ok {
+			r.webSocketConnectionInitHandlers = append(r.webSocketConnectionInitHandlers, handler.OnWebSocketConnectionInit)
 		}
 
 		if handler, ok := moduleInstance.(TracePropagationProvider); ok {

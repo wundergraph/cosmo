@@ -126,6 +126,7 @@ type Config struct {
 	routerMiddlewares               []func(http.Handler) http.Handler
 	preOriginHandlers               []TransportPreHandler
 	postOriginHandlers              []TransportPostHandler
+	webSocketConnectionInitHandlers []func(WebSocketConnectionInitHandlerContext) error
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions

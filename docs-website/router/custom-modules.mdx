@@ -10,7 +10,8 @@ The Cosmo Router can be easily extended by providing custom modules. Modules are
 - `core.RouterMiddlewareHandler` Implements a custom middleware on the router. The middleware is called for every client request. It allows you to modify the request before it is processed by the GraphQL engine. **Use case:** Logging, Caching, Early return, Request Validation, Header manipulation.
 - `core.EnginePreOriginHandler` Implements a custom handler that is executed before the request is sent to the subgraph. This handler is called for every subgraph request. **Use case:** Logging, Request signing, Short-circuiting with mock responses. For setting headers that affect request identity (e.g. tenant IDs), use `RouterOnRequestHandler` or `RouterMiddlewareHandler` instead — see [Request Deduplication](/router/request-deduplication).
 - `core.EnginePostOriginHandler` Implement a custom handler executed after the request to the subgraph but before the response is passed to the GraphQL engine. This handler is called for every subgraph response. **Use cases:** Logging, Caching.
-- `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration.
+- `core.WebSocketConnectionInitHandler` Implements a hook that is called once for each WebSocket connection, after the router has initialized and authenticated it and before it reads any of the connection's operations. It receives the connection's upgrade request, authentication and initial payload, and a handle that closes the connection at any later time. **Use cases:** Refusing connections, Closing connections whose credentials expire or are revoked. See [WebSocket connection lifecycle](#websocket-connection-lifecycle).
+- `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration. Its context also carries the router's meter providers, see [Module metrics](#module-metrics).
 - `core.Cleaner` Implements a Module lifecycle hook that is executed after the server is shutdown. Use it to close connections gracefully or for any other cleanup.
 
 <Info>
@@ -380,6 +381,94 @@ Incoming client request
        │
        └─▶ "Fulfill subgraph response"
 ```
+
+### WebSocket connection lifecycle
+
+A WebSocket connection carries many operations, and the router authenticates it once, when it opens. `core.RouterOnRequestHandler` runs for its upgrade request, but `core.RouterMiddlewareHandler` runs for neither the connection nor its operations, so checks made there don't apply to them.
+
+```
+Incoming WebSocket upgrade
+    │
+    └─▶ core.RouterOnRequestHandler (Early return)
+    │
+    └─▶ Authentication, from the upgrade request or the connection's initial payload
+    │
+    └─▶ core.WebSocketConnectionInitHandler (Refuse the connection, Keep a handle to close it later)
+    │
+    └─▶ Each operation on the connection
+       │
+       └─▶ core.EnginePreOriginHandler (for each HTTP request to a subgraph)
+       │
+       └─▶ "Request to the subgraph"
+       │
+       └─▶ core.EnginePostOriginHandler
+```
+
+Returning an error from `OnWebSocketConnectionInit` closes the connection with the close code 4403 (Forbidden). Otherwise the hook can keep the connection's handle, `ctx.Connection()`:
+
+- `Close(code, reason)` closes the connection, and the router ends its subscriptions as it does when a client disconnects. It may be called from any goroutine, at any time and more than once; only the first call has an effect. The code is 1000, or from 3000 to 4999, and any other code is sent as 1008 (policy violation). A reason longer than 123 bytes is cut short.
+- `Context()` ends once the connection has closed, whatever closed it. To forget the connection then, use `context.AfterFunc`, which keeps no goroutine waiting for each connection.
+
+<Warning>
+  The hook doesn't authorize the connection's operations, and the router doesn't check the connection's credentials again after it opens. A module that needs either checks each operation in `core.EnginePreOriginHandler`, which runs for every HTTP request to a subgraph whatever transport the client used, and closes the connection itself, for example when its token expires. Operations the router answers on its own, like introspection, make no request to a subgraph.
+</Warning>
+
+```go
+// ExpiryModule closes each WebSocket connection when the token it was authenticated with expires.
+type ExpiryModule struct{}
+
+func (m *ExpiryModule) OnWebSocketConnectionInit(ctx core.WebSocketConnectionInitHandlerContext) error {
+	auth := ctx.Authentication()
+	if auth == nil {
+		return nil
+	}
+	exp, ok := auth.Claims()["exp"].(float64)
+	if !ok {
+		return errors.New("token has no expiry")
+	}
+	connection := ctx.Connection()
+	timer := time.AfterFunc(time.Until(time.Unix(int64(exp), 0)), func() {
+		// graphql-ws clients reconnect after 4403, but not after 4401.
+		connection.Close(4403, "Token expired")
+	})
+	// Stop the timer if the connection closes first.
+	context.AfterFunc(connection.Context(), func() { timer.Stop() })
+	return nil
+}
+```
+
+### Module metrics
+
+In `Provision`, `ctx.MeterProviders` are the router's own meter providers: the one behind its Prometheus endpoint when that is enabled, and the one behind its OpenTelemetry exporters when OpenTelemetry metrics are enabled. A module that creates each instrument once on every provider, and records on all of them, exports its metrics wherever the router exports its own. The list is empty when the router's metrics are disabled.
+
+```go
+// RequestCountModule counts the requests it sees.
+type RequestCountModule struct {
+	requests []metric.Int64Counter
+}
+
+func (m *RequestCountModule) Provision(ctx *core.ModuleContext) error {
+	for _, provider := range ctx.MeterProviders {
+		requests, err := provider.Meter("request-count-module").Int64Counter("request_count_module.requests")
+		if err != nil {
+			return err
+		}
+		m.requests = append(m.requests, requests)
+	}
+	return nil
+}
+
+func (m *RequestCountModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	for _, requests := range m.requests {
+		requests.Add(ctx.Request().Context(), 1)
+	}
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+<Note>
+  OpenTelemetry's global meter provider doesn't reach the router's Prometheus endpoint: the router sets it only for its OpenTelemetry exporters. Keep attributes low-cardinality, as for any Prometheus metric. The Prometheus `exclude_metrics` setting applies to module metrics too.
+</Note>
 
 ### Module Configuration
 
