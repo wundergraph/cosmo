@@ -486,7 +486,7 @@ interface A{
           InputObjectTypeDefinition: {
             requiredSuffixes: ['Input'],
             ignorePattern:
-              '^(edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
+              '^(cosmoStreams__DeliveryGuarantees|edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
           },
           allowLeadingUnderscore: true,
         },
@@ -519,12 +519,27 @@ type edfs__PublishResult {
     expect(lintIssues.errors).toHaveLength(0);
   });
 
-  test("Should ignore prefixing of 'edfs__' and 'openfed__' inputs", () => {
+  test("Should ignore prefixing of 'edfs__', 'openfed__' and 'cosmoStreams__' inputs", () => {
     const schema = `directive @edfs__natsSubscribe(
 subjects: [String!]!,
 providerId: String! = "default",
 streamConfiguration: edfs__NatsStreamConfiguration
 ) on FIELD_DEFINITION
+
+directive @edfs__kafkaSubscribe(
+topics: [String!]!,
+providerId: String! = "default",
+deliveryGuarantees: cosmoStreams__DeliveryGuarantees
+) on FIELD_DEFINITION
+
+enum cosmoStreams__DeliveryGuaranteeMode {
+    OFF
+    CURSOR
+}
+
+input cosmoStreams__DeliveryGuarantees {
+    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF
+}
 
 input edfs__NatsStreamConfiguration {
     consumerInactiveThreshold: Int! = 30
