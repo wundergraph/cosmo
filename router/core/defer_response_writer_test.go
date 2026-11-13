@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"context"
+	"io"
+	"mime/multipart"
 	"net/http/httptest"
 	"testing"
 
@@ -39,9 +41,58 @@ func TestHttpDeferWriterEndsEachPartWithItsBoundary(t *testing.T) {
 
 	assert.Equal(t,
 		"--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":{\"a\":1},\"hasNext\":true}\r\n--graphql\r\n"+
-			"Content-Type: application/json\r\n\r\n{\"incremental\":[{\"data\":{\"b\":2}}],\"hasNext\":false}\r\n--graphql\r\n"+
-			"\r\n--graphql--",
+			"Content-Type: application/json\r\n\r\n{\"incremental\":[{\"data\":{\"b\":2}}],\"hasNext\":false}\r\n--graphql--",
 		rec.Body.String())
+}
+
+func TestHttpDeferWriterHasNoEmptyFinalPart(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		payloads []string
+	}{
+		{
+			name: "deferred response",
+			payloads: []string{
+				`{"data":{"hasNext":false},"hasNext":true}`,
+				`{"incremental":[{"data":{"a":1}}],"hasNext":true}`,
+				`{"incremental":[{"data":{"b":2}}], "hasNext": false}`,
+			},
+		},
+		{
+			name:     "single final payload",
+			payloads: []string{`{"data":null,"hasNext":false}`},
+		},
+		{
+			// The engine omits hasNext when no deferred anchor survives.
+			name:     "no surviving defers",
+			payloads: []string{`{"data":{"hasNext":true}}`},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			w, rec := newTestDeferWriter(t)
+			for _, payload := range tc.payloads {
+				_, err := io.WriteString(w, payload+"\n")
+				require.NoError(t, err)
+				require.NoError(t, w.Flush())
+			}
+			w.Complete()
+
+			reader := multipart.NewReader(rec.Body, multipartBoundary)
+			for _, payload := range tc.payloads {
+				part, err := reader.NextPart()
+				require.NoError(t, err)
+				assert.Equal(t, jsonContent, part.Header.Get("Content-Type"))
+				body, err := io.ReadAll(part)
+				require.NoError(t, err)
+				assert.Equal(t, payload, string(body))
+			}
+			_, err := reader.NextPart()
+			require.ErrorIs(t, err, io.EOF, "the last JSON payload must be followed by the closing boundary, not an empty part")
+		})
+	}
 }
 
 func TestHttpDeferWriterCompleteWithoutParts(t *testing.T) {
