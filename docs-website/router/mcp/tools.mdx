@@ -7,7 +7,7 @@ icon: 'wrench'
 The MCP server gives AI models a set of tools they can discover and execute. It exposes two kinds:
 
 - **Built-in tools** provided by the server itself, for discovering your API and, optionally, running arbitrary GraphQL.
-- **Tools you create**, each defined by a GraphQL operation in a `.graphql` file. The operation determines the tool's name, description, input schema, and the data it returns.
+- **Tools you create**, each defined by a GraphQL operation in a `.graphql` file or an [operation manifest](#operation-manifest). The operation determines the tool's name, description, input schema, and the data it returns.
 
 ## Built-in Tools
 
@@ -115,6 +115,29 @@ Key points:
 - All `.graphql` and `.gql` files in this directory **and subdirectories** will be loaded
 - Duplicate operation names across files are rejected (the second file is skipped with an error log)
 
+### Operation Manifest
+
+As an alternative to a directory, you can define all tools in one JSON file. Set [`storage.object_path`](/router/mcp/configuration#operation-manifest) to its path in the storage provider:
+
+```json
+{
+  "version": 1,
+  "revision": "2026-01-15-1",
+  "generatedAt": "2026-01-15T10:00:00Z",
+  "operations": {
+    "7693b76d7cc349bc8bb5fc44336997abfe45115131a72b05e7128940ac60927b": "query GetUsers { users { id name email } }",
+    "45f9f313dd581d594a1729ad1cc88d7aacb75bc21604340b4114ea39833fabab": "mutation CreateUser($name: String!, $email: String!) { createUser(input: { name: $name, email: $email }) { id name email } }"
+  }
+}
+```
+
+- `version` must be `1`.
+- `revision` identifies the content. Change it on every edit, or the router ignores the edit.
+- `generatedAt` is an ISO 8601 timestamp. It is for information only.
+- `operations` maps each operation document's SHA-256 hash to its body, using the same operations-map format as persisted operation manifests. The key does not determine the tool name (see [Tool Naming](#tool-naming)).
+
+Each MCP manifest document must contain one named operation. Anonymous operations are logged and skipped. Operations are processed in manifest-key order; if multiple documents declare the same operation name, the first valid operation wins and later duplicates are logged and skipped. These MCP restrictions do not apply to persisted operation manifests. For how the router polls the manifest, see [Operation Manifest](/router/mcp/configuration#operation-manifest).
+
 ### Validation
 
 Operations are validated against your GraphQL schema at load time. Invalid operations are logged as errors and skipped - they will not appear as MCP tools. Subscription operations are not supported and are also skipped.
@@ -130,6 +153,10 @@ Each tool's name is derived from its operation name:
 | `GetUserById`  | `execute_operation_get_user_by_id` |
 
 Operation names are converted to `snake_case` for tool naming consistency.
+
+This naming rule applies to both directories and [operation manifests](#operation-manifest). For example, `query GetUsers { ... }` becomes `execute_operation_get_users` regardless of its manifest hash key. Anonymous operations in directories retain the filename (without its extension) as the fallback operation name.
+
+Distinct operation names that normalize to the same final tool name collide: the first registered tool wins, and later tools are logged and skipped, with or without the prefix.
 
 ### Omitting the Tool Name Prefix
 

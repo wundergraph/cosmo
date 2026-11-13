@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -15,6 +17,7 @@ import (
 	aiv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/ai/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
@@ -77,6 +80,15 @@ query GetOperationInfo {
 }
 `
 
+// testSchemaDoc parses testSchema and merges it with the base schema.
+func testSchemaDoc(t *testing.T) ast.Document {
+	t.Helper()
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	return schemaDoc
+}
+
 func writeOperationFiles(t *testing.T, dir string, files map[string]string) {
 	t.Helper()
 	for filename, content := range files {
@@ -95,10 +107,7 @@ func TestReload_NoToolDuplication(t *testing.T) {
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -130,6 +139,220 @@ func TestReload_NoToolDuplication(t *testing.T) {
 		"no tool name collision errors should be logged on reload")
 }
 
+func TestReload(t *testing.T) {
+	t.Parallel()
+
+	const countEmployeesOp = `
+query CountEmployees {
+  employees {
+    id
+  }
+}
+`
+
+	t.Run("keeps tools of operations that stay available while tools are swapped", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+		writeOperationFiles(t, tempDir, map[string]string{
+			"FindEmployee.graphql":  findEmployeeOp,
+			"ListEmployees.graphql": listEmployeesOp,
+		})
+
+		schemaDoc := testSchemaDoc(t)
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithOperationsDir(tempDir),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+
+		serverTransport, clientTransport := mcp.NewInMemoryTransports()
+		_, err = srv.server.Connect(t.Context(), serverTransport, nil)
+		require.NoError(t, err)
+		session, err := mcp.NewClient(&mcp.Implementation{Name: "test"}, nil).Connect(t.Context(), clientTransport, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = session.Close() })
+
+		// List tools and call get_schema continuously while the operation set alternates
+		// between {FindEmployee, ListEmployees} and {ListEmployees, CountEmployees}.
+		done := make(chan struct{})
+		var wg sync.WaitGroup
+		var missing []string
+		stop := sync.OnceFunc(func() {
+			close(done)
+			wg.Wait()
+		})
+		t.Cleanup(stop)
+		wg.Go(func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+				result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
+				if err != nil {
+					missing = append(missing, err.Error())
+					continue
+				}
+				names := make([]string, 0, len(result.Tools))
+				for _, tool := range result.Tools {
+					names = append(names, tool.Name)
+				}
+				if !slices.Contains(names, "list_employees") {
+					missing = append(missing, "list_employees missing")
+				}
+				if _, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "get_schema"}); err != nil {
+					missing = append(missing, err.Error())
+				}
+			}
+		})
+
+		for i := range 20 {
+			if i%2 == 0 {
+				require.NoError(t, os.Remove(filepath.Join(tempDir, "FindEmployee.graphql")))
+				writeOperationFiles(t, tempDir, map[string]string{"CountEmployees.graphql": countEmployeesOp})
+			} else {
+				require.NoError(t, os.Remove(filepath.Join(tempDir, "CountEmployees.graphql")))
+				writeOperationFiles(t, tempDir, map[string]string{"FindEmployee.graphql": findEmployeeOp})
+			}
+			require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+		}
+		stop()
+
+		require.Empty(t, missing)
+
+		result, err := session.ListTools(t.Context(), &mcp.ListToolsParams{})
+		require.NoError(t, err)
+		names := make([]string, 0, len(result.Tools))
+		for _, tool := range result.Tools {
+			names = append(names, tool.Name)
+		}
+		require.ElementsMatch(t, []string{"get_schema", "list_employees", "find_employee", "get_operation_info"}, names)
+		require.ElementsMatch(t, names, srv.registeredTools)
+	})
+}
+
+func TestManifestOperations(t *testing.T) {
+	t.Parallel()
+
+	schemaDoc := testSchemaDoc(t)
+
+	manifest := map[string]string{
+		"a": findEmployeeOp,
+		"b": getOperationInfoOp,
+		"c": listEmployeesOp,
+		"d": `query find_employee { employees { id } }`,
+	}
+
+	t.Run("uses document names and skips normalized collisions with the prefix", func(t *testing.T) {
+		t.Parallel()
+
+		core, logs := observer.New(zap.ErrorLevel)
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+			WithLogger(zap.New(core)),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+
+		require.ElementsMatch(t, []string{
+			"get_schema",
+			"execute_operation_find_employee",
+			"execute_operation_get_operation_info",
+			"execute_operation_list_employees",
+			"get_operation_info",
+		}, srv.registeredTools)
+		collisions := logs.FilterMessage("Skipping operation due to tool name collision").All()
+		require.Len(t, collisions, 1)
+		require.Equal(t, "find_employee", collisions[0].ContextMap()["operation"])
+	})
+
+	t.Run("uses document names and skips normalized and reserved collisions without the prefix", func(t *testing.T) {
+		t.Parallel()
+
+		core, logs := observer.New(zap.ErrorLevel)
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+			WithOmitToolNamePrefix(true),
+			WithLogger(zap.New(core)),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+
+		require.ElementsMatch(t, []string{"get_schema", "find_employee", "list_employees", "get_operation_info"}, srv.registeredTools)
+		require.Equal(t, 2, logs.FilterMessage("Skipping operation due to tool name collision").Len())
+	})
+}
+
+func TestTransitionToolScopes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("requires one old and one new scope group for a tool that keeps its name", func(t *testing.T) {
+		t.Parallel()
+
+		got := transitionToolScopes(
+			map[string][][]string{"kept": {{"old-a"}, {"old-b"}}, "removed": {{"gone"}}},
+			map[string][][]string{"kept": {{"new-a", "new-b"}}, "added": {{"fresh"}}},
+		)
+
+		require.Equal(t, map[string][][]string{
+			"kept":    {{"old-a", "new-a", "new-b"}, {"old-b", "new-a", "new-b"}},
+			"removed": {{"gone"}},
+			"added":   {{"fresh"}},
+		}, got)
+	})
+}
+
+func TestManifestUpdated(t *testing.T) {
+	t.Parallel()
+
+	schemaDoc := testSchemaDoc(t)
+
+	t.Run("swaps tools to the operations of the new manifest", func(t *testing.T) {
+		t.Parallel()
+
+		manifest := map[string]string{"find": findEmployeeOp, "list": listEmployeesOp}
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+			WithOmitToolNamePrefix(true),
+		)
+		require.NoError(t, err)
+		require.NoError(t, srv.Reload(&schemaDoc, nil, "schema-version-test"))
+		require.ElementsMatch(t, []string{"get_schema", "find_employee", "list_employees", "get_operation_info"}, srv.registeredTools)
+
+		manifest = map[string]string{"list": listEmployeesOp, "again": `query ListAgain { employees { id } }`}
+		srv.ManifestUpdated()
+
+		require.Equal(t, []string{"get_schema", "list_again", "list_employees", "get_operation_info"}, srv.registeredTools)
+	})
+
+	t.Run("does nothing before the first reload", func(t *testing.T) {
+		t.Parallel()
+
+		srv, err := NewGraphQLSchemaServer(
+			t.Context(),
+			"http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return map[string]string{"list": listEmployeesOp} }),
+		)
+		require.NoError(t, err)
+
+		srv.ManifestUpdated()
+
+		require.Empty(t, srv.registeredTools)
+	})
+}
+
 func TestReload_ReservedToolNameCollision(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
@@ -142,10 +365,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 		"ListEmployees.graphql":    listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -186,10 +406,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"ListEmployees.graphql":    listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -225,10 +442,7 @@ func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -252,11 +466,10 @@ func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.
 	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
 	require.False(t, report.HasErrors())
 
-	operations := srv.operationsManager.GetOperations()
+	operations := srv.operationsManager.Load().GetOperations()
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	srv.registeredTools = nil
 	require.NoError(t, srv.registerTools())
 
 	assert.Contains(t, srv.registeredTools, "list_employees")
@@ -273,9 +486,7 @@ func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
 		"ListEmployees.graphql": listEmployeesOp,
 	})
 
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
-	require.False(t, report.HasErrors())
-	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+	schemaDoc := testSchemaDoc(t)
 
 	srv, err := NewGraphQLSchemaServer(
 		t.Context(),
@@ -294,11 +505,10 @@ func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
 	brokenDoc, report := astparser.ParseGraphqlDocumentString(`query ListEmployees { bogus }`)
 	require.False(t, report.HasErrors())
 
-	operations := srv.operationsManager.GetOperations()
+	operations := srv.operationsManager.Load().GetOperations()
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	srv.registeredTools = nil
 	require.NoError(t, srv.registerTools())
 
 	assert.Contains(t, srv.registeredTools, "list_employees")

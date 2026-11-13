@@ -19,22 +19,8 @@ func NewSchemaBuilder(schemaDoc *ast.Document) *SchemaBuilder {
 	}
 }
 
-// BuildSchemasForOperations builds JSON schemas for all input objects used in operations
-// and adds the schema information directly to the operations
-func (b *SchemaBuilder) BuildSchemasForOperations(operations []Operation) error {
-	for i := range operations {
-		// Build schema for this operation
-		err := b.buildSchemaForOperation(&operations[i])
-		if err != nil {
-			return fmt.Errorf("failed to build schema for operation %s: %w", operations[i].Name, err)
-		}
-	}
-
-	return nil
-}
-
-// buildSchemaForOperation builds JSON schema for input objects in a single operation
-func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
+// BuildSchemaForOperation builds JSON schema for input objects in a single operation
+func (b *SchemaBuilder) BuildSchemaForOperation(operation *Operation) error {
 	schema, err := jsonschema.BuildJsonSchema(&operation.Document, b.schemaDoc)
 	if err != nil {
 		return fmt.Errorf("failed to build JSON schema: %w", err)

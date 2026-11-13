@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -178,7 +179,7 @@ type Employee { id: ID! name: String! }
 	ops := []Operation{{Name: "FindEmployee", Document: opDoc}}
 
 	builder := NewSchemaBuilder(&schemaDoc)
-	require.NoError(t, builder.BuildSchemasForOperations(ops))
+	require.NoError(t, builder.BuildSchemaForOperation(&ops[0]))
 
 	var inputSchema struct {
 		Properties map[string]struct {
@@ -241,7 +242,7 @@ query GetCountry(
 
 	// ...and still reaches the JSON schema built from the loaded Document.
 	builder := NewSchemaBuilder(&schemaDoc)
-	require.NoError(t, builder.BuildSchemasForOperations(operations))
+	require.NoError(t, builder.BuildSchemaForOperation(&operations[0]))
 	require.Contains(t, string(operations[0].JSONSchema), "The ISO 3166-1 alpha-2 code",
 		"variable description must still reach the MCP tool input schema")
 }
@@ -317,4 +318,63 @@ func TestLoadOperationsFromEmptyDirectory(t *testing.T) {
 	operations, err := loader.LoadOperationsFromDirectory(tempDir)
 	require.NoError(t, err)
 	assert.Len(t, operations, 0, "Empty directory should return no operations")
+}
+
+func TestLoadOperationsFromManifest(t *testing.T) {
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(`
+schema {
+	query: Query
+	subscription: Subscription
+}
+
+type Query {
+	employees: [Employee!]!
+}
+
+type Subscription {
+	employeeUpdated: Employee!
+}
+
+type Employee {
+	id: ID!
+}
+`)
+	require.False(t, report.HasErrors())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schemaDoc))
+
+	t.Run("uses document names and skips anonymous and duplicate operations in key order", func(t *testing.T) {
+		const namedOp = `query ListEmployees { employees { id } }`
+		const duplicateOp = `query ListEmployees { employees { id } } # duplicate`
+		const anonymousOp = `{ employees { id } }`
+
+		core, logs := observer.New(zap.ErrorLevel)
+		loader := NewOperationLoader(zap.New(core), &schemaDoc)
+		operations := loader.LoadOperationsFromManifest(map[string]string{
+			"a": namedOp,
+			"b": duplicateOp,
+			"c": anonymousOp,
+		})
+
+		require.Len(t, operations, 1)
+		require.Equal(t, "ListEmployees", operations[0].Name)
+		require.Equal(t, namedOp, operations[0].OperationString)
+		anonymous := logs.FilterMessage("Skipping anonymous MCP operation").All()
+		require.Len(t, anonymous, 1)
+		require.Equal(t, "c", anonymous[0].ContextMap()["manifest_key"])
+		duplicates := logs.FilterMessage("MCP operation already exists").All()
+		require.Len(t, duplicates, 1)
+		require.Equal(t, "b", duplicates[0].ContextMap()["manifest_key"])
+		require.Equal(t, "ListEmployees", duplicates[0].ContextMap()["operation"])
+	})
+
+	t.Run("skips invalid and subscription operations", func(t *testing.T) {
+		loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+		operations := loader.LoadOperationsFromManifest(map[string]string{
+			"invalid":      `query Invalid { unknownField }`,
+			"unparsable":   `query {`,
+			"subscription": `subscription Updates { employeeUpdated { id } }`,
+		})
+
+		require.Empty(t, operations)
+	})
 }

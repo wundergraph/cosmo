@@ -205,7 +205,9 @@
       }
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "ObjectPath": "",
+      "PollInterval": 10000000000
     },
     "Session": {
       "Stateless": true
