@@ -15,6 +15,7 @@ import { NewBillingPlan } from '../db/models.js';
 
 const billingSchema = z.object({
   plans: z.record(
+    z.string(),
     z.object({
       name: z.string(),
       price: z.number(),

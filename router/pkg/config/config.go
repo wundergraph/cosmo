@@ -315,9 +315,11 @@ type SubgraphCacheControlRule struct {
 }
 
 type CacheControlPolicy struct {
-	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
-	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
-	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value   string `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
+	// MissingNoStore merges a fetch with no caching directives as no-store.
+	MissingNoStore bool                       `yaml:"missing_no_store" envDefault:"false" env:"CACHE_CONTROL_POLICY_MISSING_NO_STORE"`
+	Subgraphs      []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
 }
 
 // HeaderRules configures header propagation between the client, the router and
@@ -1482,6 +1484,7 @@ type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
 	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
+	CacheControlAnyPublic   ApolloCompatibilityFlag `yaml:"cache_control_any_public" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_"`
 }
 
 type ApolloCompatibilityFlag struct {

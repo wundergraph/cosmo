@@ -104,8 +104,13 @@ func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
 		return
 	}
 
+	c.enqueue(setRequest[V]{key: key, value: value, dur: duration})
+}
+
+// enqueue sends req to processWrites, or drops it if the buffer is full.
+func (c *Cache[V]) enqueue(req setRequest[V]) {
 	select {
-	case c.writeCh <- setRequest[V]{key: key, value: value, dur: duration}:
+	case c.writeCh <- req:
 	default:
 	}
 }
@@ -117,11 +122,20 @@ func (c *Cache[V]) Wait() {
 		return
 	}
 
+	c.waitForWrites()
+}
+
+// waitForWrites blocks until processWrites has handled the buffered writes or stopped.
+func (c *Cache[V]) waitForWrites() {
 	ch := make(chan struct{})
 
 	select {
 	case c.writeCh <- setRequest[V]{waitCh: ch}:
-		<-ch
+		// Close may stop processWrites before it reaches the request.
+		select {
+		case <-ch:
+		case <-c.done:
+		}
 	case <-c.done:
 	}
 }
@@ -219,8 +233,6 @@ func (c *Cache[V]) Close() {
 		close(c.stop)
 		<-c.done
 
-		// This downside is also there in ristretto (if set is called concurrently)
-		// it is even documented in the ristretto code as a comment
-		close(c.writeCh)
+		// writeCh stays open: a concurrent Set or Wait may still send on it.
 	})
 }

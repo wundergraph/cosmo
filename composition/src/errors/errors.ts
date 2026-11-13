@@ -600,14 +600,16 @@ export function invalidInterfaceImplementationError(
         invalidImplementedArguments,
         isInaccessible,
         originalResponseType,
-        unfederatedArguments,
+        unfederatedOptionalArguments,
+        unfederatedRequiredArguments,
         unimplementedArguments,
       },
     ] of implementationErrors.invalidFieldImplementations) {
       const unimplementedArgumentsSize = unimplementedArguments.size;
       const invalidArgumentsLength = invalidImplementedArguments.length;
       const invalidAdditionalArgumentsSize = invalidAdditionalArguments.size;
-      const unfederatedArgumentsSize = unfederatedArguments?.size;
+      const unfederatedOptionalArgsSize = unfederatedOptionalArguments?.size;
+      const unfederatedRequiredArgsSize = unfederatedRequiredArguments?.size;
       message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
@@ -615,13 +617,22 @@ export function invalidInterfaceImplementationError(
           [...unimplementedArguments].join('", "') +
           '"\n';
       }
-      if (unfederatedArgumentsSize) {
+
+      if (unfederatedOptionalArgsSize) {
         message +=
           `   Optional arguments that are not defined in all subgraphs that define its parent field must be` +
           ` removed from the federated schema to prevent run-time errors.\n` +
-          `    However, this caused the following argument implementation${unfederatedArgumentsSize > 1 ? 's' : ''}` +
+          `    However, this caused the following argument implementation${unfederatedOptionalArgsSize > 1 ? 's' : ''}` +
           ` to be removed and the federated definition of "${interfaceName}.${fieldName}" is no longer satisfied: "` +
-          [...unfederatedArguments].join(QUOTATION_JOIN) +
+          [...unfederatedOptionalArguments].join(QUOTATION_JOIN) +
+          `"\n`;
+      }
+
+      if (unfederatedRequiredArgsSize) {
+        message +=
+          `    The following argument implementation${unfederatedRequiredArgsSize > 1 ? 's are' : ' is'}` +
+          ` required and must be defined on all implementations of the field: "` +
+          [...unfederatedRequiredArguments].join(QUOTATION_JOIN) +
           `"\n`;
       }
 
@@ -1357,6 +1368,61 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
 export const invalidEdfsPublishResultObjectErrorMessage =
   ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
+
+const invalidDeliveryGuaranteesInputErrorMessage =
+  `The "deliveryGuarantees" argument must be a valid input object with the following form:\n` +
+  `  input cosmoStreams__DeliveryGuarantees {\n    mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }\n` +
+  `  enum cosmoStreams__DeliveryGuaranteeMode {\n    OFF\n    CURSOR\n  }`;
+
+export function invalidDeliveryGuaranteesInputFieldsErrorMessage({
+  duplicateFieldNames,
+  invalidFieldNames,
+  invalidModeValue,
+}: {
+  duplicateFieldNames: Array<string>;
+  invalidFieldNames: Array<string>;
+  invalidModeValue?: string;
+}): string {
+  let message = invalidDeliveryGuaranteesInputErrorMessage;
+  const errorMessages: Array<string> = [];
+  if (duplicateFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (duplicateFieldNames.length > 1 ? `s were` : ` was`) +
+        ` defined more than once: "` +
+        duplicateFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+        ` not part of a valid "cosmoStreams__DeliveryGuarantees" input definition: "` +
+        invalidFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidModeValue !== undefined) {
+    errorMessages.push(
+      `The value "${invalidModeValue}" provided to field "mode" is not a valid "cosmoStreams__DeliveryGuaranteeMode" enum value.`,
+    );
+  }
+  message +=
+    `\n However, the provided input was invalid for the following reason` +
+    (errorMessages.length > 1 ? `s` : ``) +
+    `:\n  ` +
+    errorMessages.join(`\n  `);
+  return message;
+}
+
+export const invalidDeliveryGuaranteesDefinitionErrorMessage =
+  ` The input object "cosmoStreams__DeliveryGuarantees" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  input cosmoStreams__DeliveryGuarantees {\n   mode: cosmoStreams__DeliveryGuaranteeMode! = OFF\n  }`;
+
+export const invalidDeliveryGuaranteeModeDefinitionErrorMessage =
+  ` The enum "cosmoStreams__DeliveryGuaranteeMode" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  enum cosmoStreams__DeliveryGuaranteeMode {\n   OFF\n   CURSOR\n  }`;
 
 export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
