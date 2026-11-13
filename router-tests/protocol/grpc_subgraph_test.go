@@ -6,12 +6,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -1013,6 +1019,118 @@ func TestGRPCSubgraph(t *testing.T) {
 				}
 			}
 			require.True(t, found, "parent span %s not found among router spans", parts[2])
+		})
+	})
+
+	t.Run("Should record remote gRPC service metrics only when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		const scopeName = "github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
+
+		type result struct {
+			otlpScope    *metricdata.ScopeMetrics
+			promFamilies map[string]*io_prometheus_client.MetricFamily
+		}
+
+		run := func(t *testing.T, otlpEnabled, promEnabled bool) result {
+			t.Helper()
+
+			metricReader := sdkmetric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
+			var res result
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
+				MetricOptions: testenv.MetricOptions{
+					EnableOTLPGRPCServiceMetrics:       otlpEnabled,
+					EnablePrometheusGRPCServiceMetrics: promEnabled,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+
+				var rm metricdata.ResourceMetrics
+				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				res.otlpScope = testutils.GetMetricScopeByName(rm.ScopeMetrics, scopeName)
+
+				families, err := promRegistry.Gather()
+				require.NoError(t, err)
+				res.promFamilies = make(map[string]*io_prometheus_client.MetricFamily)
+				for _, f := range families {
+					if strings.HasPrefix(f.GetName(), "router_grpc_service_") {
+						res.promFamilies[f.GetName()] = f
+					}
+				}
+			})
+
+			return res
+		}
+
+		requireOTLPMetrics := func(t *testing.T, scope *metricdata.ScopeMetrics) {
+			t.Helper()
+
+			require.NotNil(t, scope)
+			requests := testutils.GetMetricByName(scope, "router.grpc.service.requests")
+			require.NotNil(t, requests)
+			sum, ok := requests.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("wg.subgraph.name", "projects")))
+			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("rpc.grpc.status_code", "OK")))
+			require.NotNil(t, testutils.GetMetricByName(scope, "router.grpc.service.request.duration_milliseconds"))
+		}
+
+		requirePrometheusMetrics := func(t *testing.T, families map[string]*io_prometheus_client.MetricFamily) {
+			t.Helper()
+
+			requests, ok := families["router_grpc_service_requests_total"]
+			require.True(t, ok, "missing router_grpc_service_requests_total")
+			require.NotEmpty(t, requests.GetMetric())
+
+			labels := map[string]string{}
+			for _, l := range requests.GetMetric()[0].GetLabel() {
+				labels[l.GetName()] = l.GetValue()
+			}
+			require.Equal(t, "projects", labels["wg_subgraph_name"])
+			require.Equal(t, "OK", labels["rpc_grpc_status_code"])
+
+			_, ok = families["router_grpc_service_request_duration_milliseconds"]
+			require.True(t, ok, "missing router_grpc_service_request_duration_milliseconds")
+		}
+
+		t.Run("disabled by default", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, false, false)
+			require.Nil(t, res.otlpScope, "no OTLP gRPC service metrics should be recorded unless enabled")
+			require.Empty(t, res.promFamilies, "no Prometheus gRPC service metrics should be recorded unless enabled")
+		})
+
+		t.Run("enabled for OTLP only", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, true, false)
+			requireOTLPMetrics(t, res.otlpScope)
+			require.Empty(t, res.promFamilies)
+		})
+
+		t.Run("enabled for Prometheus only", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, false, true)
+			require.Nil(t, res.otlpScope)
+			requirePrometheusMetrics(t, res.promFamilies)
+		})
+
+		t.Run("enabled for OTLP and Prometheus", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, true, true)
+			requireOTLPMetrics(t, res.otlpScope)
+			requirePrometheusMetrics(t, res.promFamilies)
 		})
 	})
 }
