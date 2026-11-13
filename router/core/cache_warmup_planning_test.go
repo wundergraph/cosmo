@@ -43,11 +43,13 @@ func TestCacheWarmupPlanningProcessorPersistedCacheHit(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Cleanup(cache.Close)
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	caches := NewOperationCaches()
+	caches.PersistedOperation = cache
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                       &Executor{ClientSchema: &schema},
 		PersistedOperationClient:       client,
 		EnablePersistedOperationsCache: true,
-		PersistedOpsNormalizationCache: cache,
+		Caches:                         caches,
 	})
 
 	// Populate the normalization cache as a live persisted-operation request would.

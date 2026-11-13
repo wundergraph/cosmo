@@ -685,7 +685,8 @@ func requireNoDangling(t *testing.T, mr *miniredis.Miniredis, item enginecache.I
 	}
 }
 
-// zmembers is the cache keys a tag set lists, without its walk count.
+// zmembers is the cache keys a tag set lists, without its walk count or
+// invalidation time.
 func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	t.Helper()
 	if !mr.Exists(key) {
@@ -693,7 +694,7 @@ func zmembers(t *testing.T, mr *miniredis.Miniredis, key string) []string {
 	}
 	members, err := mr.ZMembers(key)
 	require.NoError(t, err)
-	return slices.DeleteFunc(members, func(m string) bool { return m == walksMember })
+	return slices.DeleteFunc(members, reservedMember)
 }
 
 var errInjected = errors.New("injected failure")

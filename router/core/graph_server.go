@@ -20,7 +20,6 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/cloudflare/backoff"
-	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -688,15 +687,7 @@ type graphMux struct {
 	// tears the mux down.
 	inFlightRequests atomic.Int64
 
-	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
-	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
-	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
-	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
-	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
-	variablesNormalizationCache *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	remapVariablesCache         *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	validationCache             *ristretto.Cache[uint64, bool]
-	operationHashCache          *ristretto.Cache[uint64, string]
+	caches *OperationCaches
 
 	accessLogsFileLogger      *logging.BufferedLogger
 	metricStore               rmetric.Store
@@ -709,196 +700,6 @@ type graphMux struct {
 	skipUnavailableProviders bool
 
 	logger *zap.Logger
-}
-
-// buildOperationCaches creates the caches for the graph mux.
-// The caches are created based on the engine configuration.
-func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, err error) {
-	// We create a new execution plan cache for each operation planner which is coupled to
-	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
-	//
-	// when an execution plan was generated, which can be quite expensive, we want to cache it
-	// this means that we can hash the input and cache the generated plan
-	// the next time we get the same input, we can just return the cached plan
-	// the engine is smart enough to first do normalization and then hash the input
-	// this means that we can cache the normalized input and don't have to worry about
-	// different inputs that would generate the same execution plan
-
-	if srv.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
-		planCacheConfig := &ristretto.Config[uint64, *planWithMetaData]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.engineExecutionConfiguration.ExecutionPlanCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
-			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
-				// This could be called before planFallbackCache is set, but it's not a problem
-				// because there is a nil guard inside, as well as items should not really be evicted
-				// on startup
-				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
-			}
-		}
-		s.planCache, err = ristretto.NewCache(planCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create planner cache: %w", err)
-		}
-	}
-
-	if srv.engineExecutionConfiguration.EnablePersistedOperationsCache || srv.automaticPersistedQueriesConfig.Enabled {
-		cacheSize := int64(1024)
-		persistedOperationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			MaxCost:            cacheSize,
-			NumCounters:        cacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-			Metrics:            true,
-		}
-
-		s.persistedOperationCache, _ = ristretto.NewCache(persistedOperationCacheConfig)
-	}
-
-	if srv.engineExecutionConfiguration.EnableNormalizationCache && srv.engineExecutionConfiguration.NormalizationCacheSize > 0 {
-		normalizationCacheConfig := &ristretto.Config[uint64, NormalizationCacheEntry]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		s.normalizationCache, err = ristretto.NewCache(normalizationCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
-		}
-
-		variablesNormalizationCacheConfig := &ristretto.Config[uint64, VariablesNormalizationCacheEntry]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		s.variablesNormalizationCache, err = ristretto.NewCache(variablesNormalizationCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create variables normalization cache: %w", err)
-		}
-
-		remapVariablesCacheConfig := &ristretto.Config[uint64, RemapVariablesCacheEntry]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		s.remapVariablesCache, err = ristretto.NewCache(remapVariablesCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create remap variables cache: %w", err)
-		}
-	}
-
-	if srv.engineExecutionConfiguration.EnableValidationCache && srv.engineExecutionConfiguration.ValidationCacheSize > 0 {
-		validationCacheConfig := &ristretto.Config[uint64, bool]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.engineExecutionConfiguration.ValidationCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.ValidationCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		s.validationCache, err = ristretto.NewCache(validationCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create validation cache: %w", err)
-		}
-	}
-
-	if srv.securityConfiguration.ComplexityCalculationCache != nil && srv.securityConfiguration.ComplexityCalculationCache.Enabled && srv.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
-		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-			MaxCost:            srv.securityConfiguration.ComplexityCalculationCache.CacheSize,
-			NumCounters:        srv.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		s.complexityCalculationCache, err = ristretto.NewCache(complexityCalculationCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create query depth cache: %w", err)
-		}
-	}
-
-	// Currently, we only support custom attributes from the context for OTLP metrics
-	if !computeSha256 && len(srv.metricConfig.Attributes) > 0 {
-		for _, customAttribute := range srv.metricConfig.Attributes {
-			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
-				computeSha256 = true
-				break
-			}
-		}
-	}
-
-	if !computeSha256 && srv.accessLogsConfig != nil {
-		for _, customAttribute := range append(srv.accessLogsConfig.Attributes, srv.accessLogsConfig.SubgraphAttributes...) {
-			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
-				computeSha256 = true
-				break
-			}
-		}
-	}
-
-	if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
-		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
-		// is present in the Persisted Operation cache
-		computeSha256 = true
-	}
-
-	// Prometheus schema field usage metrics can use sha256, so we need to ensure it is computed
-	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
-		computeSha256 = true
-	}
-
-	if computeSha256 {
-		operationHashCacheConfig := &ristretto.Config[uint64, string]{
-			MaxCost:            srv.engineExecutionConfiguration.OperationHashCacheSize,
-			NumCounters:        srv.engineExecutionConfiguration.OperationHashCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
-		}
-		s.operationHashCache, err = ristretto.NewCache(operationHashCacheConfig)
-		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create operation hash cache: %w", err)
-		}
-	}
-
-	return computeSha256, nil
-}
-
-// waitForCaches blocks until all pending ristretto async writes have been applied.
-// This ensures that items stored during one warmup pass are visible to the next pass.
-func (s *graphMux) waitForCaches() {
-	if s.planCache != nil {
-		s.planCache.Wait()
-	}
-	if s.persistedOperationCache != nil {
-		s.persistedOperationCache.Wait()
-	}
-	if s.normalizationCache != nil {
-		s.normalizationCache.Wait()
-	}
-	if s.variablesNormalizationCache != nil {
-		s.variablesNormalizationCache.Wait()
-	}
-	if s.remapVariablesCache != nil {
-		s.remapVariablesCache.Wait()
-	}
-	if s.validationCache != nil {
-		s.validationCache.Wait()
-	}
-	if s.operationHashCache != nil {
-		s.operationHashCache.Wait()
-	}
-	if s.complexityCalculationCache != nil {
-		s.complexityCalculationCache.Wait()
-	}
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
@@ -929,32 +730,32 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 	var metricInfos []rmetric.CacheMetricInfo
 
-	if s.planCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("plan", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.planCache.Metrics))
+	if s.caches.Plan != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("plan", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.caches.Plan.Metrics))
 	}
 
-	if s.normalizationCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
+	if s.caches.Normalization != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.caches.Normalization.Metrics))
 	}
 
-	if s.variablesNormalizationCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("variables_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.variablesNormalizationCache.Metrics))
+	if s.caches.VariablesNormalization != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("variables_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.caches.VariablesNormalization.Metrics))
 	}
 
-	if s.remapVariablesCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("remap_variables", srv.engineExecutionConfiguration.NormalizationCacheSize, s.remapVariablesCache.Metrics))
+	if s.caches.RemapVariables != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("remap_variables", srv.engineExecutionConfiguration.NormalizationCacheSize, s.caches.RemapVariables.Metrics))
 	}
 
-	if s.persistedOperationCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.persistedOperationCache.Metrics))
+	if s.caches.PersistedOperation != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.caches.PersistedOperation.Metrics))
 	}
 
-	if s.validationCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.validationCache.Metrics))
+	if s.caches.Validation != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.caches.Validation.Metrics))
 	}
 
-	if s.operationHashCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_hash", srv.engineExecutionConfiguration.OperationHashCacheSize, s.operationHashCache.Metrics))
+	if s.caches.OperationHash != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_hash", srv.engineExecutionConfiguration.OperationHashCacheSize, s.caches.OperationHash.Metrics))
 	}
 
 	if s.otelCacheMetrics != nil {
@@ -1000,15 +801,8 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
 	s.cancel()
 
-	s.planCache.Close()
-	s.planFallbackCache.Close()
-	s.persistedOperationCache.Close()
-	s.normalizationCache.Close()
-	s.variablesNormalizationCache.Close()
-	s.remapVariablesCache.Close()
-	s.complexityCalculationCache.Close()
-	s.validationCache.Close()
-	s.operationHashCache.Close()
+	// Operations still being prepared keep the caches open until they are done.
+	s.caches.Close()
 
 	var err error
 
@@ -1060,6 +854,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
 ) (_ *graphMux, resErr error) {
+	caches, computeSha256, err := buildOperationCaches(s)
+	if err != nil {
+		return nil, err
+	}
+
 	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
 
 	gm := &graphMux{
@@ -1069,6 +868,7 @@ func (s *graphServer) buildGraphMux(
 		streamMetricStore:        rmetric.NewNoopStreamMetricStore(),
 		skipUnavailableProviders: s.eventsConfig.SkipUnavailableProviders,
 		logger:                   s.logger,
+		caches:                   caches,
 	}
 
 	// A failed mux isn't in s.graphMuxList yet (added on success below), so the graph
@@ -1205,11 +1005,6 @@ func (s *graphServer) buildGraphMux(
 		s.overrides,
 		false,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	computeSha256, err := gm.buildOperationCaches(s)
 	if err != nil {
 		return nil, err
 	}
@@ -1589,19 +1384,12 @@ func (s *graphServer) buildGraphMux(
 		return nil, pErr
 	}
 
-	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
+	operationProcessor, err := NewOperationProcessor(OperationProcessorOptions{
 		Executor:                            executor,
 		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistedOperationClient:            s.persistedOperationClient,
 		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
-		NormalizationCache:                  gm.normalizationCache,
-		VariablesNormalizationCache:         gm.variablesNormalizationCache,
-		RemapVariablesCache:                 gm.remapVariablesCache,
-		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.complexityCalculationCache,
-		OperationHashCache:                  gm.operationHashCache,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.introspection,
 		ParserTokenizerLimits: astparser.TokenizerLimits{
@@ -1618,11 +1406,15 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 		CostControl:                                            s.securityConfiguration.CostControl,
 		ValidateInlineArguments:                                s.engineExecutionConfiguration.ValidateInlineArguments,
+		Caches:                                                 gm.caches,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
 		var err error
-		gm.planFallbackCache, err = slowplancache.New[*planWithMetaData](
+		gm.caches.PlanFallback, err = slowplancache.New[*planWithMetaData](
 			int(s.engineExecutionConfiguration.SlowPlanCacheSize),
 			s.engineExecutionConfiguration.SlowPlanCacheThreshold,
 		)
@@ -1631,7 +1423,7 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride)
+	operationPlanner := NewOperationPlanner(executor, gm.caches.Plan, gm.caches.PlanFallback, s.planningDurationOverride)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1695,7 +1487,7 @@ func (s *graphServer) buildGraphMux(
 			// We first utilize the existing cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.caches.PlanFallback)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1705,7 +1497,7 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.caches.PlanFallback)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
@@ -1723,10 +1515,10 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	// Flush all ristretto async writes so that items cached during the warmup pass above
+	// Flush all pending cache writes so that items cached during the warmup pass above
 	// are visible to the manifest warmup below. This ensures overlapping operations hit
 	// the plan cache instead of being planned again.
-	gm.waitForCaches()
+	gm.caches.Wait()
 
 	// Prewarm all persisted operations from the PQL manifest so that the first request is served from cache.
 	// This runs sequentially after the cache warmup above — the plan cache handles dedup naturally.
@@ -1898,7 +1690,7 @@ func (s *graphServer) buildGraphMux(
 
 	var waitForCacheWrites func()
 	if s.engineExecutionConfiguration.Debug.SynchronousCacheWrites {
-		waitForCacheWrites = gm.waitForCaches
+		waitForCacheWrites = gm.caches.Wait
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{

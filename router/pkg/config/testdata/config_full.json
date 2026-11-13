@@ -258,6 +258,7 @@
   "CacheControl": {
     "Enabled": true,
     "Value": "max-age=180, public",
+    "MissingNoStore": true,
     "Subgraphs": [
       {
         "Name": "products",
@@ -1309,6 +1310,9 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": true
     }
   },
   "ClientHeader": {

@@ -123,7 +123,7 @@ describe('PromptToQueryService', () => {
     } as FederatedGraphDTO);
     vi.spyOn(FederatedGraphRepository.prototype, 'getSdlBasedOnSchemaVersion').mockResolvedValue({
       sdl: schemaSDL,
-      clientSchema: null,
+      clientSchema: schemaSDL,
     });
 
     vi.spyOn(OrganizationRepository.prototype, 'isFeatureTermsAccepted').mockResolvedValueOnce(true);

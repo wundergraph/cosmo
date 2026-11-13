@@ -2311,6 +2311,11 @@
           "description": "Global cache control value.",
           "examples": ["max-age=180, public"]
         },
+        "missing_no_store": {
+          "type": "boolean",
+          "default": false,
+          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, a response with neither header is ignored, and one with only such directives withdraws public. gRPC subgraphs are skipped, as the router does not read their response metadata."
+        },
         "subgraphs": {
           "type": "array",
           "description": "Subgraph-specific cache control settings.",
@@ -4763,6 +4768,17 @@
         "skip_null_variables_error": {
           "type": "object",
           "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "cache_control_any_public": {
+          "type": "object",
+          "description": "Merges cache control as public when any fetch is public, unless one is private, similar to Apollo Router. By default, every fetch must be public.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

@@ -1,6 +1,5 @@
 import { OpenAI, ClientOptions } from 'openai';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import pRetry, { AbortError } from 'p-retry';
 
 export class OpenAIGraphql {
@@ -95,7 +94,7 @@ export class OpenAIGraphql {
             name: 'store_sdl',
             description:
               'This function allows the Agent to store the fixed SDL. The SDL must be returned in plain text as a GraphQL Schema.',
-            parameters: zodToJsonSchema(out),
+            parameters: z.toJSONSchema(out, { target: 'draft-7' }),
           },
         ],
       },
