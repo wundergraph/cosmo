@@ -42,7 +42,23 @@ export function toggleChangeOverridesForAllOperations(
       };
     }
 
-    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+    const check = await new SubgraphRepository(logger, opts.db, authContext.organizationId).checkById({
+      id: req.checkId,
+      federatedGraphTargetId: graph.targetId,
+      federatedGraphId: graph.id,
+    });
+
+    if (!check || !check.affectedGraphs.some((ag) => ag.id === graph.id)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Requested check does not exist',
+        },
+      };
+    }
+
+    const checkedSubgraphs = await new SchemaCheckRepository(opts.db).getCheckedSubgraphTargets({ checkId: check.id });
+    if (!authContext.rbac.canApproveCheck(graph, checkedSubgraphs)) {
       throw new UnauthorizedError();
     }
 

@@ -85,11 +85,11 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { MdOutlineExtension } from 'react-icons/md';
 import { buildUrl } from '@/lib/build-url';
 
-const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
+const ForceSuccess: React.FC<{ onSubmit: () => void; disabled: boolean }> = (props) => {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button className="flex-shrink-0 space-x-2" variant="secondary" size="sm">
+        <Button className="flex-shrink-0 space-x-2" variant="secondary" size="sm" disabled={props.disabled}>
           <CheckCircledIcon /> <span>Force Success</span>
         </Button>
       </AlertDialogTrigger>
@@ -1363,6 +1363,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                         {data.check.isForcedSuccess ? (
                           <div className="mt-2 flex space-x-2">
                             <ForceSuccess
+                              disabled={!data.canApproveChecks}
                               onSubmit={() =>
                                 forceSuccess({
                                   checkId: id,
@@ -1389,6 +1390,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                         {data.check.isForcedSuccess ? (
                           <div className="mt-2 flex space-x-2">
                             <ForceSuccess
+                              disabled={!data.canApproveChecks}
                               onSubmit={() =>
                                 forceSuccess({
                                   checkId: id,
@@ -1411,6 +1413,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                               caption={`${data.changes.length} subgraph changes found`}
                               trafficCheckDays={data.trafficCheckDays}
                               createdAt={data.check.timestamp}
+                              canApproveChecks={data.canApproveChecks}
                             />
                           </>
                         )}

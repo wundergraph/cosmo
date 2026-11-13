@@ -6530,6 +6530,7 @@ type GetCheckSummaryResponse struct {
 	ProposalMatches               []*GetCheckSummaryResponse_ProposalSchemaMatch `protobuf:"bytes,14,rep,name=proposalMatches,proto3" json:"proposalMatches,omitempty"`
 	IsProposalsEnabled            bool                                           `protobuf:"varint,15,opt,name=isProposalsEnabled,proto3" json:"isProposalsEnabled,omitempty"`
 	ComposedSchemaBreakingChanges []*FederatedGraphSchemaChange                  `protobuf:"bytes,16,rep,name=composedSchemaBreakingChanges,proto3" json:"composedSchemaBreakingChanges,omitempty"`
+	CanApproveChecks              bool                                           `protobuf:"varint,17,opt,name=can_approve_checks,json=canApproveChecks,proto3" json:"can_approve_checks,omitempty"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -6669,6 +6670,13 @@ func (x *GetCheckSummaryResponse) GetComposedSchemaBreakingChanges() []*Federate
 	return nil
 }
 
+func (x *GetCheckSummaryResponse) GetCanApproveChecks() bool {
+	if x != nil {
+		return x.CanApproveChecks
+	}
+	return false
+}
+
 type GetCheckOperationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CheckId       string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
@@ -6763,6 +6771,8 @@ type GetCheckOperationsResponse struct {
 	TotalOperationsCount                         int32                                        `protobuf:"varint,6,opt,name=totalOperationsCount,proto3" json:"totalOperationsCount,omitempty"`
 	DoAllOperationsHaveIgnoreAllOverride         bool                                         `protobuf:"varint,7,opt,name=doAllOperationsHaveIgnoreAllOverride,proto3" json:"doAllOperationsHaveIgnoreAllOverride,omitempty"`
 	DoAllOperationsHaveAllTheirChangesMarkedSafe bool                                         `protobuf:"varint,8,opt,name=doAllOperationsHaveAllTheirChangesMarkedSafe,proto3" json:"doAllOperationsHaveAllTheirChangesMarkedSafe,omitempty"`
+	CanApproveChecks                             bool                                         `protobuf:"varint,9,opt,name=can_approve_checks,json=canApproveChecks,proto3" json:"can_approve_checks,omitempty"`
+	CanIgnoreOperations                          bool                                         `protobuf:"varint,10,opt,name=can_ignore_operations,json=canIgnoreOperations,proto3" json:"can_ignore_operations,omitempty"`
 	unknownFields                                protoimpl.UnknownFields
 	sizeCache                                    protoimpl.SizeCache
 }
@@ -6849,6 +6859,20 @@ func (x *GetCheckOperationsResponse) GetDoAllOperationsHaveIgnoreAllOverride() b
 func (x *GetCheckOperationsResponse) GetDoAllOperationsHaveAllTheirChangesMarkedSafe() bool {
 	if x != nil {
 		return x.DoAllOperationsHaveAllTheirChangesMarkedSafe
+	}
+	return false
+}
+
+func (x *GetCheckOperationsResponse) GetCanApproveChecks() bool {
+	if x != nil {
+		return x.CanApproveChecks
+	}
+	return false
+}
+
+func (x *GetCheckOperationsResponse) GetCanIgnoreOperations() bool {
+	if x != nil {
+		return x.CanIgnoreOperations
 	}
 	return false
 }
@@ -16515,6 +16539,7 @@ type CreateOperationOverridesRequest struct {
 	OperationHash string                 `protobuf:"bytes,3,opt,name=operation_hash,json=operationHash,proto3" json:"operation_hash,omitempty"`
 	OperationName string                 `protobuf:"bytes,4,opt,name=operation_name,json=operationName,proto3" json:"operation_name,omitempty"`
 	Changes       []*OverrideChange      `protobuf:"bytes,5,rep,name=changes,proto3" json:"changes,omitempty"`
+	CheckId       *string                `protobuf:"bytes,6,opt,name=check_id,json=checkId,proto3,oneof" json:"check_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -16582,6 +16607,13 @@ func (x *CreateOperationOverridesRequest) GetChanges() []*OverrideChange {
 		return x.Changes
 	}
 	return nil
+}
+
+func (x *CreateOperationOverridesRequest) GetCheckId() string {
+	if x != nil && x.CheckId != nil {
+		return *x.CheckId
+	}
+	return ""
 }
 
 type CreateOperationOverridesResponse struct {
@@ -16746,6 +16778,7 @@ type RemoveOperationOverridesRequest struct {
 	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	OperationHash string                 `protobuf:"bytes,3,opt,name=operation_hash,json=operationHash,proto3" json:"operation_hash,omitempty"`
 	Changes       []*OverrideChange      `protobuf:"bytes,4,rep,name=changes,proto3" json:"changes,omitempty"`
+	CheckId       *string                `protobuf:"bytes,5,opt,name=check_id,json=checkId,proto3,oneof" json:"check_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -16806,6 +16839,13 @@ func (x *RemoveOperationOverridesRequest) GetChanges() []*OverrideChange {
 		return x.Changes
 	}
 	return nil
+}
+
+func (x *RemoveOperationOverridesRequest) GetCheckId() string {
+	if x != nil && x.CheckId != nil {
+		return *x.CheckId
+	}
+	return ""
 }
 
 type RemoveOperationOverridesResponse struct {
@@ -17017,12 +17057,13 @@ func (x *GetOperationOverridesRequest) GetOperationHash() string {
 }
 
 type GetOperationOverridesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Response      *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Changes       []*OverrideChange      `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
-	IgnoreAll     bool                   `protobuf:"varint,3,opt,name=ignore_all,json=ignoreAll,proto3" json:"ignore_all,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Response           *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Changes            []*OverrideChange      `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
+	IgnoreAll          bool                   `protobuf:"varint,3,opt,name=ignore_all,json=ignoreAll,proto3" json:"ignore_all,omitempty"`
+	CanManageOverrides bool                   `protobuf:"varint,4,opt,name=can_manage_overrides,json=canManageOverrides,proto3" json:"can_manage_overrides,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetOperationOverridesResponse) Reset() {
@@ -17072,6 +17113,13 @@ func (x *GetOperationOverridesResponse) GetChanges() []*OverrideChange {
 func (x *GetOperationOverridesResponse) GetIgnoreAll() bool {
 	if x != nil {
 		return x.IgnoreAll
+	}
+	return false
+}
+
+func (x *GetOperationOverridesResponse) GetCanManageOverrides() bool {
+	if x != nil {
+		return x.CanManageOverrides
 	}
 	return false
 }
@@ -36730,7 +36778,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tnamespace\x18\x03 \x01(\tR\tnamespace\"J\n" +
 	"\fChangeCounts\x12\x1c\n" +
 	"\tadditions\x18\x01 \x01(\x05R\tadditions\x12\x1c\n" +
-	"\tdeletions\x18\x02 \x01(\x05R\tdeletions\"\xef\f\n" +
+	"\tdeletions\x18\x02 \x01(\x05R\tdeletions\"\x9d\r\n" +
 	"\x17GetCheckSummaryResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x127\n" +
 	"\x05check\x18\x02 \x01(\v2!.wg.cosmo.platform.v1.SchemaCheckR\x05check\x12d\n" +
@@ -36751,7 +36799,8 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\fproposalName\x18\r \x01(\tH\x02R\fproposalName\x88\x01\x01\x12k\n" +
 	"\x0fproposalMatches\x18\x0e \x03(\v2A.wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatchR\x0fproposalMatches\x12.\n" +
 	"\x12isProposalsEnabled\x18\x0f \x01(\bR\x12isProposalsEnabled\x12v\n" +
-	"\x1dcomposedSchemaBreakingChanges\x18\x10 \x03(\v20.wg.cosmo.platform.v1.FederatedGraphSchemaChangeR\x1dcomposedSchemaBreakingChanges\x1a\xdb\x02\n" +
+	"\x1dcomposedSchemaBreakingChanges\x18\x10 \x03(\v20.wg.cosmo.platform.v1.FederatedGraphSchemaChangeR\x1dcomposedSchemaBreakingChanges\x12,\n" +
+	"\x12can_approve_checks\x18\x11 \x01(\bR\x10canApproveChecks\x1a\xdb\x02\n" +
 	"\rAffectedGraph\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12traffic_check_days\x18\x02 \x01(\x05R\x10trafficCheckDays\x12\x12\n" +
@@ -36781,7 +36830,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06offset\x18\x05 \x01(\x05R\x06offset\x12\x1b\n" +
 	"\x06search\x18\x06 \x01(\tH\x00R\x06search\x88\x01\x01B\t\n" +
-	"\a_search\"\xe6\x06\n" +
+	"\a_search\"\xc8\a\n" +
 	"\x1aGetCheckOperationsResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12_\n" +
 	"\n" +
@@ -36793,7 +36842,10 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x1cclient_traffic_check_skipped\x18\x05 \x01(\bR\x19clientTrafficCheckSkipped\x122\n" +
 	"\x14totalOperationsCount\x18\x06 \x01(\x05R\x14totalOperationsCount\x12R\n" +
 	"$doAllOperationsHaveIgnoreAllOverride\x18\a \x01(\bR$doAllOperationsHaveIgnoreAllOverride\x12b\n" +
-	",doAllOperationsHaveAllTheirChangesMarkedSafe\x18\b \x01(\bR,doAllOperationsHaveAllTheirChangesMarkedSafe\x1a\xb0\x02\n" +
+	",doAllOperationsHaveAllTheirChangesMarkedSafe\x18\b \x01(\bR,doAllOperationsHaveAllTheirChangesMarkedSafe\x12,\n" +
+	"\x12can_approve_checks\x18\t \x01(\bR\x10canApproveChecks\x122\n" +
+	"\x15can_ignore_operations\x18\n" +
+	" \x01(\bR\x13canIgnoreOperations\x1a\xb0\x02\n" +
 	"\x0eCheckOperation\x12\x12\n" +
 	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -37626,14 +37678,16 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"changeType\x18\x01 \x01(\tR\n" +
 	"changeType\x12\x17\n" +
 	"\x04path\x18\x02 \x01(\tH\x00R\x04path\x88\x01\x01B\a\n" +
-	"\x05_path\"\xec\x01\n" +
+	"\x05_path\"\x99\x02\n" +
 	"\x1fCreateOperationOverridesRequest\x12\x1d\n" +
 	"\n" +
 	"graph_name\x18\x01 \x01(\tR\tgraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12%\n" +
 	"\x0eoperation_hash\x18\x03 \x01(\tR\roperationHash\x12%\n" +
 	"\x0eoperation_name\x18\x04 \x01(\tR\roperationName\x12>\n" +
-	"\achanges\x18\x05 \x03(\v2$.wg.cosmo.platform.v1.OverrideChangeR\achanges\"^\n" +
+	"\achanges\x18\x05 \x03(\v2$.wg.cosmo.platform.v1.OverrideChangeR\achanges\x12\x1e\n" +
+	"\bcheck_id\x18\x06 \x01(\tH\x00R\acheckId\x88\x01\x01B\v\n" +
+	"\t_check_id\"^\n" +
 	" CreateOperationOverridesResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xb4\x01\n" +
 	"'CreateOperationIgnoreAllOverrideRequest\x12\x1d\n" +
@@ -37643,13 +37697,15 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x0eoperation_hash\x18\x03 \x01(\tR\roperationHash\x12%\n" +
 	"\x0eoperation_name\x18\x04 \x01(\tR\roperationName\"f\n" +
 	"(CreateOperationIgnoreAllOverrideResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xc5\x01\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xf2\x01\n" +
 	"\x1fRemoveOperationOverridesRequest\x12\x1d\n" +
 	"\n" +
 	"graph_name\x18\x01 \x01(\tR\tgraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12%\n" +
 	"\x0eoperation_hash\x18\x03 \x01(\tR\roperationHash\x12>\n" +
-	"\achanges\x18\x04 \x03(\v2$.wg.cosmo.platform.v1.OverrideChangeR\achanges\"^\n" +
+	"\achanges\x18\x04 \x03(\v2$.wg.cosmo.platform.v1.OverrideChangeR\achanges\x12\x1e\n" +
+	"\bcheck_id\x18\x05 \x01(\tH\x00R\acheckId\x88\x01\x01B\v\n" +
+	"\t_check_id\"^\n" +
 	" RemoveOperationOverridesResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\x8d\x01\n" +
 	"'RemoveOperationIgnoreAllOverrideRequest\x12\x1d\n" +
@@ -37663,12 +37719,13 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
 	"graph_name\x18\x01 \x01(\tR\tgraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12%\n" +
-	"\x0eoperation_hash\x18\x03 \x01(\tR\roperationHash\"\xba\x01\n" +
+	"\x0eoperation_hash\x18\x03 \x01(\tR\roperationHash\"\xec\x01\n" +
 	"\x1dGetOperationOverridesResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12>\n" +
 	"\achanges\x18\x02 \x03(\v2$.wg.cosmo.platform.v1.OverrideChangeR\achanges\x12\x1d\n" +
 	"\n" +
-	"ignore_all\x18\x03 \x01(\bR\tignoreAll\"\x83\x01\n" +
+	"ignore_all\x18\x03 \x01(\bR\tignoreAll\x120\n" +
+	"\x14can_manage_overrides\x18\x04 \x01(\bR\x12canManageOverrides\"\x83\x01\n" +
 	"\x16GetAllOverridesRequest\x12\x1d\n" +
 	"\n" +
 	"graph_name\x18\x01 \x01(\tR\tgraphName\x12\x1c\n" +
@@ -41081,6 +41138,8 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[231].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[233].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[235].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[236].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[240].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[264].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[272].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[277].OneofWrappers = []any{}

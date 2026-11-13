@@ -7,6 +7,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../../repositories/GitHubRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -43,23 +44,24 @@ export function forceCheckSuccess(
       };
     }
 
-    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
-      throw new UnauthorizedError();
-    }
-
     const check = await subgraphRepo.checkById({
       id: req.checkId,
       federatedGraphTargetId: graph.targetId,
       federatedGraphId: graph.id,
     });
 
-    if (!check) {
+    if (!check || !check.affectedGraphs.some((ag) => ag.id === graph.id)) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested check does not exist',
         },
       };
+    }
+
+    const checkedSubgraphs = await new SchemaCheckRepository(opts.db).getCheckedSubgraphTargets({ checkId: check.id });
+    if (!authContext.rbac.canApproveCheck(graph, checkedSubgraphs)) {
+      throw new UnauthorizedError();
     }
 
     const githubDetails = await subgraphRepo.forceCheckSuccess(check.id);
