@@ -70,7 +70,7 @@ func TestPersistedOperationIDValidation(t *testing.T) {
 		t.Run(mode.name, func(t *testing.T) {
 			t.Parallel()
 
-			processor := NewOperationProcessor(OperationProcessorOptions{
+			processor := newTestOperationProcessor(t, OperationProcessorOptions{
 				Executor:                 &Executor{},
 				PersistedOperationClient: mode.client,
 			})
@@ -178,7 +178,7 @@ func TestPersistedOperationCacheKey(t *testing.T) {
 		},
 	}
 
-	processor := NewOperationProcessor(OperationProcessorOptions{Executor: &Executor{}})
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{Executor: &Executor{}})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
