@@ -947,7 +947,7 @@ describe('@override directive tests', () => {
         'a',
         `
           type Query {
-            a(a: ID!): ID @override(from: "b")
+            a: ID @override(from: "b")
           }
         `,
       );
@@ -955,7 +955,7 @@ describe('@override directive tests', () => {
         'b',
         `
           type Query {
-            a: ID
+            a(a: ID!): ID
           }
         `,
       );
@@ -968,8 +968,8 @@ describe('@override directive tests', () => {
           [
             {
               inputValueName: 'a',
-              missingSubgraphs: [b.name],
-              requiredSubgraphs: [a.name],
+              missingSubgraphs: [a.name],
+              requiredSubgraphs: [b.name],
             },
           ],
           true,
