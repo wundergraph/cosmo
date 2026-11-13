@@ -36,7 +36,7 @@ jobs:
       run_query_planner: ${{ (steps.check_label.outputs.has_label == 'true' || steps.check_engine_changes.outputs.engine_changed == 'true') && steps.check_label_skip.outputs.has_label != 'true' }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Setup Go
@@ -99,10 +99,10 @@ jobs:
       cli_changed: ${{ steps.filter.outputs.cli }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Filter Changes
         id: filter
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
             router:
@@ -125,7 +125,7 @@ jobs:
       image_ref: ${{ steps.build_push_image.outputs.image_ref }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/build-push-image
         id: build_push_image
         with:
@@ -144,7 +144,7 @@ jobs:
     outputs:
       wgc: ${{ steps.cli-build.outputs.artifact-url }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/cli-build
         id: cli-build
         with:
