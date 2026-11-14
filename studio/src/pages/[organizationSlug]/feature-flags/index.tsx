@@ -3,12 +3,12 @@ import { EmptyState } from '@/components/empty-state';
 import { FeatureFlagsTable } from '@/components/feature-flags-table';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Loader } from '@/components/ui/loader';
 import { NextPageWithLayout } from '@/lib/page';
 import { useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getFeatureFlags } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 
@@ -56,24 +56,15 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="relative mb-4">
-        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-        <Input
-          placeholder="Search by name"
-          className="pl-8 pr-10"
-          value={search}
-          onChange={(e) => setSearch({ search: e.target.value, page: null })}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => setSearch({ search: null, page: null })}
-          >
-            <Cross1Icon />
-          </Button>
-        )}
-      </div>
+      <ClearableInput
+        icon={<MagnifyingGlassIcon />}
+        containerClassName="mb-4"
+        placeholder="Search by name"
+        clearLabel="Clear search"
+        value={search}
+        onChange={(e) => setSearch({ search: e.target.value, page: null })}
+        onClear={search ? () => setSearch({ search: null, page: null }) : undefined}
+      />
       {content}
     </div>
   );

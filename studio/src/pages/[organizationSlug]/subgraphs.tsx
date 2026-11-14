@@ -3,12 +3,12 @@ import { EmptyState } from '@/components/empty-state';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { SubgraphPageTabs, SubgraphsTable } from '@/components/subgraphs-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Loader } from '@/components/ui/loader';
 import { NextPageWithLayout } from '@/lib/page';
 import { useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFeatureSubgraphs,
@@ -100,24 +100,15 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   return (
     <div className="flex h-full flex-col">
       <SubgraphPageTabs />
-      <div className="relative mb-4 mt-8">
-        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-        <Input
-          placeholder="Search by ID or Name"
-          className="pl-8 pr-10"
-          value={search}
-          onChange={(e) => setSearch({ search: e.target.value, page: null })}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => setSearch({ search: null, page: null })}
-          >
-            <Cross1Icon />
-          </Button>
-        )}
-      </div>
+      <ClearableInput
+        icon={<MagnifyingGlassIcon />}
+        containerClassName="mb-4 mt-8"
+        placeholder="Search by ID or Name"
+        clearLabel="Clear search"
+        value={search}
+        onChange={(e) => setSearch({ search: e.target.value, page: null })}
+        onClear={search ? () => setSearch({ search: null, page: null }) : undefined}
+      />
       {content}
     </div>
   );
