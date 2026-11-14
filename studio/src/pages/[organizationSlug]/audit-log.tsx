@@ -1,5 +1,6 @@
 import { useApplyParams } from '@/components/analytics/use-apply-params';
 import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { AuditLogStreamDialog } from '@/components/audit-log-stream-dialog';
 import { AuditLogTable, Empty } from '@/components/audit-log-table';
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
 import { EmptyState } from '@/components/empty-state';
@@ -10,6 +11,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { Toolbar } from '@/components/ui/toolbar';
 import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { useUser } from '@/hooks/use-user';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { createDateRange } from '@/lib/insights-helpers';
 import { NextPageWithLayout } from '@/lib/page';
 import { useQuery } from '@connectrpc/connect-query';
@@ -94,6 +96,8 @@ const AuditLogToolbar = () => {
   };
 
   const auditLogRetention = useFeatureLimit('analytics-retention', 7);
+  const checkUserAccess = useCheckUserAccess();
+  const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
 
   return (
     <Toolbar>
@@ -103,6 +107,11 @@ const AuditLogToolbar = () => {
         onChange={onDateRangeChange}
         calendarDaysLimit={auditLogRetention}
       />
+      {isAdmin && (
+        <div className="ml-auto">
+          <AuditLogStreamDialog />
+        </div>
+      )}
     </Toolbar>
   );
 };
