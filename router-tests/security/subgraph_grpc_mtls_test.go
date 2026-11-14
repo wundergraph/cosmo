@@ -3,6 +3,7 @@ package integration
 import (
 	"crypto/tls"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -14,6 +15,51 @@ const projectsExpectedData = `{"data":{"projects":[{"id":"1","name":"Cloud Migra
 
 func TestSubgraphGRPCmTLS(t *testing.T) {
 	t.Parallel()
+
+	t.Run("presents the replacement client certificate when its files change", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := replaceTLSFiles(t, dir, "../testdata/tls/cert-2.pem", "../testdata/tls/key-2.pem")
+		serverTLS, _ := grpcSubgraphTLSServerConfig(t, true)
+		routerTLS := config.TLSConfiguration{
+			Watch:         true,
+			WatchInterval: 100 * time.Millisecond,
+			ClientGRPC: config.GRPCClientTLSConfiguration{
+				All: config.GRPCTLSClientCertConfiguration{
+					Enabled: true,
+					TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+						CertFile:                   certPath,
+						KeyFile:                    keyPath,
+						InsecureSkipCaVerification: true,
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			RouterOptions:            []core.Option{core.WithTLSConfig(routerTLS)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{GRPCTLSConfig: serverTLS},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			request := testenv.GraphQLRequest{Query: `query { projects { id name } }`}
+			res, err := xEnv.MakeGraphQLRequest(request)
+			require.NoError(t, err)
+			require.Contains(t, res.Body, "Failed to fetch from Subgraph")
+
+			replaceTLSFiles(t, dir, "../testdata/tls/cert.pem", "../testdata/tls/key.pem")
+
+			// gRPC redials with backoff after a failed handshake.
+			require.Eventually(t, func() bool {
+				res, err := xEnv.MakeGraphQLRequest(request)
+
+				return err == nil && res.Body == projectsExpectedData
+			}, 30*time.Second, 200*time.Millisecond, "router did not present the new client certificate to the gRPC subgraph")
+		})
+	})
 
 	t.Run("InsecureSkipVerify", func(t *testing.T) {
 		t.Parallel()

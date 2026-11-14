@@ -184,7 +184,9 @@
         "Enabled": false
       },
       "Subgraphs": null
-    }
+    },
+    "Watch": false,
+    "WatchInterval": 1000000000
   },
   "CacheControl": {
     "Enabled": false,

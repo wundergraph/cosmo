@@ -49,6 +49,46 @@ var (
 func TestSubgraphMTLS(t *testing.T) {
 	t.Parallel()
 
+	t.Run("presents the replacement client certificate when its files change", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		certPath, keyPath := replaceTLSFiles(t, dir, "../testdata/tls/cert-2.pem", "../testdata/tls/key-2.pem")
+		routerTLS := config.TLSConfiguration{
+			Watch:         true,
+			WatchInterval: 100 * time.Millisecond,
+			Client: config.HTTPClientTLSConfiguration{
+				All: config.HTTPTLSClientCertConfiguration{
+					TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+						CertFile:                   certPath,
+						KeyFile:                    keyPath,
+						InsecureSkipCaVerification: true,
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithTLSConfig(routerTLS)},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{TLSConfig: subgraphMTLSServerConfig(t, true)},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			request := testenv.GraphQLRequest{Query: `query { employees { id } }`}
+			res, err := xEnv.MakeGraphQLRequest(request)
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `Failed to fetch from Subgraph 'employees'`)
+
+			replaceTLSFiles(t, dir, "../testdata/tls/cert.pem", "../testdata/tls/key.pem")
+
+			require.Eventually(t, func() bool {
+				res, err := xEnv.MakeGraphQLRequest(request)
+
+				return err == nil && res.Body == testutils.EmployeesIDData
+			}, 10*time.Second, 50*time.Millisecond, "router did not present the new client certificate")
+		})
+	})
+
 	t.Run("InsecureSkipVerify", func(t *testing.T) {
 		t.Parallel()
 
@@ -825,14 +865,19 @@ func loadConfigFromEnv(t *testing.T) config.Config {
 }
 
 // loadSubgraphMTLSCACertPool loads a CA certificate pool from a PEM file.
-func loadSubgraphMTLSCACertPool(t *testing.T, caFile string) *x509.CertPool {
+func loadSubgraphMTLSCACertPool(t *testing.T, caFiles ...string) *x509.CertPool {
 	t.Helper()
-	caCert, err := os.ReadFile(caFile)
-	require.NoError(t, err)
 
 	pool := x509.NewCertPool()
-	ok := pool.AppendCertsFromPEM(caCert)
-	require.True(t, ok, "failed to append CA cert to pool")
+
+	for _, caFile := range caFiles {
+		caCert, err := os.ReadFile(caFile)
+		require.NoError(t, err)
+
+		ok := pool.AppendCertsFromPEM(caCert)
+		require.True(t, ok, "failed to append CA cert to pool")
+	}
+
 	return pool
 }
 

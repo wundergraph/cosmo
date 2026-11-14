@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap/zapcore"
@@ -304,6 +306,67 @@ func TestHotReload_PartialFeatureFlagChange_ReusesUnchangedMuxes(t *testing.T) {
 			"the base mux and the unchanged feature-flag mux must be reused")
 		require.ElementsMatch(t, []string{ff1, ff3}, shutDownKeys,
 			"the modified feature-flag mux and the removed feature-flag mux must both be torn down")
+	})
+}
+
+func TestGraphServerTLSReload(t *testing.T) {
+	t.Parallel()
+
+	t.Run("rereads HTTP and gRPC certificate files on graph reload when watching is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		httpCert, grpcCert := filepath.Join(dir, "http.pem"), filepath.Join(dir, "grpc.pem")
+		cert, err := os.ReadFile("../testdata/tls/cert.pem")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(httpCert, cert, 0o600))
+		require.NoError(t, os.WriteFile(grpcCert, cert, 0o600))
+
+		poller := newFakeConfigPoller(buildHelloRouterConfig("initial", "hello", nil))
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(*nodev1.RouterConfig) configpoller.ConfigPoller { return poller },
+			},
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithTLSConfig(config.TLSConfiguration{
+					Client: config.HTTPClientTLSConfiguration{
+						All: config.HTTPTLSClientCertConfiguration{
+							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+								CertFile: httpCert, KeyFile: "../testdata/tls/key.pem",
+							},
+						},
+					},
+					ClientGRPC: config.GRPCClientTLSConfiguration{
+						All: config.GRPCTLSClientCertConfiguration{
+							Enabled: true,
+							TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+								CertFile: grpcCert, KeyFile: "../testdata/tls/key.pem",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			next := buildHelloRouterConfig("replacement", "hello", nil)
+
+			require.NoError(t, os.WriteFile(httpCert, []byte("invalid"), 0o600))
+			require.ErrorContains(t, poller.Emit(t, next, nil), "could not build subgraph client TLS config")
+			require.NoError(t, os.WriteFile(httpCert, cert, 0o600))
+
+			require.NoError(t, os.WriteFile(grpcCert, []byte("invalid"), 0o600))
+			require.ErrorContains(t, poller.Emit(t, next, nil), "could not build gRPC subgraph client TLS config")
+
+			res := env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			require.NoError(t, os.WriteFile(grpcCert, cert, 0o600))
+			require.NoError(t, poller.Emit(t, next, nil))
+
+			res = env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
+			require.Equal(t, "replacement", res.Response.Header.Get("X-Router-Config-Version"))
+		})
 	})
 }
 

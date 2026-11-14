@@ -36,6 +36,8 @@ router_registration: true
 graphql_path: /graphql
 dev_mode: false
 tls:
+  watch: true
+  watch_interval: 5s
   server:
     enabled: false
   client:

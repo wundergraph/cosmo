@@ -16,6 +16,11 @@ type Options struct {
 	Callback   func()
 	TickSource <-chan time.Time
 
+	// CallbackOnStart runs Callback once right after the initial file state is
+	// recorded, so a change made between loading the files and starting the
+	// watcher is not missed.
+	CallbackOnStart bool
+
 	// FileInfoProvider is a function that returns the file info for a given path
 	// This is used for testing purposes
 	// If not provided, the default os.Stat function is used
@@ -67,6 +72,10 @@ func New(options Options) (WatcherFunc, error) {
 			}
 		}
 
+		if options.CallbackOnStart {
+			options.Callback()
+		}
+
 		pendingCallback := false
 
 		for {
@@ -88,7 +97,8 @@ func New(options Options) (WatcherFunc, error) {
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
 
-					if stat.ModTime().After(prevModTimes[path]) {
+					// Any different mod time counts, so a rollback to an older file is seen too.
+					if !stat.ModTime().Equal(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
 						changesDetected = true
 					}
