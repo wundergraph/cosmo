@@ -23,7 +23,7 @@ Organization admins can stream audit logs to a Splunk HTTP Event Collector (HEC)
 Configure the stream with the platform API's `UpsertAuditLogStreamConfig`, `GetAuditLogStreamConfig`, `TestAuditLogStreamConfig` and `DeleteAuditLogStreamConfig` methods, or with `wgc`:
 
 ```bash
-COSMO_HEC_TOKEN=<token> wgc audit-log stream set --endpoint https://splunk.example.com:8088 --index cosmo
+COSMO_HEC_TOKEN=<token> wgc audit-log stream set splunk --endpoint https://splunk.example.com:8088 --index cosmo
 wgc audit-log stream test
 wgc audit-log stream show
 wgc audit-log stream delete
