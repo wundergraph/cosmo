@@ -11,6 +11,9 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
+import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import { canOverrideOperationChanges } from '../../util/check/permissions.js';
 
 export function removeOperationOverrides(
   opts: RouterOptions,
@@ -41,7 +44,17 @@ export function removeOperationOverrides(
       };
     }
 
-    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+    if (
+      !(await canOverrideOperationChanges({
+        subgraphRepo: new SubgraphRepository(logger, opts.db, authContext.organizationId),
+        schemaCheckRepo: new SchemaCheckRepository(opts.db),
+        authContext,
+        graph,
+        checkId: req.checkId,
+        operationHash: req.operationHash,
+        changes: req.changes,
+      }))
+    ) {
       throw new UnauthorizedError();
     }
 

@@ -33,6 +33,8 @@ export function getCheckOperations(
 
     if (!graph) {
       return {
+        canApproveChecks: false,
+        canIgnoreOperations: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested graph does not exist',
@@ -66,6 +68,8 @@ export function getCheckOperations(
 
     if (!check || !checkDetails) {
       return {
+        canApproveChecks: false,
+        canIgnoreOperations: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested check not found',
@@ -114,7 +118,11 @@ export function getCheckOperations(
         ignoreAllOverrides,
       });
 
+    const checkedSubgraphTargets = await schemaCheckRepo.getCheckedSubgraphTargets({ checkId: check.id });
+
     return {
+      canApproveChecks: authContext.rbac.canApproveCheck(graph, checkedSubgraphTargets),
+      canIgnoreOperations: authContext.rbac.hasFederatedGraphWriteAccess(graph),
       response: {
         code: EnumStatusCode.OK,
       },

@@ -46,6 +46,7 @@ export function getCheckSummary(
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
+        canApproveChecks: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Namespace '${req.namespace}' not found`,
@@ -70,6 +71,7 @@ export function getCheckSummary(
 
     if (!graph) {
       return {
+        canApproveChecks: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested graph does not exist',
@@ -109,6 +111,7 @@ export function getCheckSummary(
 
     if (!check || !checkDetails) {
       return {
+        canApproveChecks: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested check not found',
@@ -140,6 +143,7 @@ export function getCheckSummary(
     const currentAffectedGraph = check.affectedGraphs.find((ag) => ag.id === graph.id);
     if (!currentAffectedGraph) {
       return {
+        canApproveChecks: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Check not found for the current graph',
@@ -272,7 +276,10 @@ export function getCheckSummary(
       federatedGraphId: graph.id,
     });
 
+    const checkedSubgraphTargets = await schemaCheckRepo.getCheckedSubgraphTargets({ checkId: check.id });
+
     return {
+      canApproveChecks: authContext.rbac.canApproveCheck(graph, checkedSubgraphTargets),
       response: {
         code: EnumStatusCode.OK,
       },

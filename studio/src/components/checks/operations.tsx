@@ -138,6 +138,9 @@ export const CheckOperations = () => {
     },
   );
 
+  const canApproveChecks = data?.canApproveChecks ?? false;
+  const canIgnoreOperations = data?.canIgnoreOperations ?? false;
+
   const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(createOperationOverrides, {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
@@ -324,14 +327,14 @@ export const CheckOperations = () => {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary">
+            <Button variant="secondary" disabled={!canApproveChecks && !canIgnoreOperations}>
               Overrides
               <ChevronDownIcon className="ml-2" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              disabled={togglingGlobalChangeOverrides}
+              disabled={!canApproveChecks || togglingGlobalChangeOverrides}
               onClick={() => {
                 toggleGlobalChangeOverrides({
                   checkId: id,
@@ -352,7 +355,7 @@ export const CheckOperations = () => {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              disabled={creatingGlobalIgnoreOverrides || doAllOperationsHaveIgnoreAllOverride}
+              disabled={!canIgnoreOperations || creatingGlobalIgnoreOverrides || doAllOperationsHaveIgnoreAllOverride}
               onClick={() => {
                 createGlobalIgnoreOverrides({
                   checkId: id,
@@ -443,20 +446,25 @@ export const CheckOperations = () => {
                           {!hasIgnoreAllOverride && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="secondary">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={!canApproveChecks && !canIgnoreOperations}
+                                >
                                   Overrides
                                   <ChevronDownIcon className="ml-2" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  disabled={removingOverrides || creatingOverrides}
+                                  disabled={!canApproveChecks || removingOverrides || creatingOverrides}
                                   onClick={() => {
                                     doAllChangesHaveOverrides
                                       ? removeOverrides({
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
+                                          checkId: id,
                                           changes: impactingChanges.map((c) =>
                                             create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
                                           ),
@@ -466,6 +474,7 @@ export const CheckOperations = () => {
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
                                           operationName: name,
+                                          checkId: id,
                                           changes: impactingChanges.map((c) =>
                                             create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
                                           ),
@@ -482,7 +491,7 @@ export const CheckOperations = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  disabled={ignoring}
+                                  disabled={!canIgnoreOperations || ignoring}
                                   onClick={() => {
                                     createIgnoreAll({
                                       operationHash: hash,
@@ -514,6 +523,7 @@ export const CheckOperations = () => {
                             size="sm"
                             variant="secondary"
                             className="mt-4"
+                            disabled={!canIgnoreOperations}
                             isLoading={removing}
                             onClick={() =>
                               removeIgnoreAll({
@@ -540,6 +550,7 @@ export const CheckOperations = () => {
                         }
                         trafficCheckDays={data.trafficCheckDays}
                         createdAt={data.createdAt}
+                        canApproveChecks={canApproveChecks}
                       />
                     </div>
                   </AccordionContent>

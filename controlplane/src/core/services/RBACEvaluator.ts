@@ -157,6 +157,26 @@ export class RBACEvaluator {
     return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
+  /**
+   * `null` stands for a checked subgraph that does not exist yet, which only graph writers can approve.
+   */
+  canApproveCheck(graph: Target, checkedSubgraphs: (Target | null)[]) {
+    if (this.hasFederatedGraphWriteAccess(graph)) {
+      return true;
+    }
+
+    return (
+      this.hasFederatedGraphReadAccess(graph) &&
+      checkedSubgraphs.length > 0 &&
+      checkedSubgraphs.every(
+        (subgraph) =>
+          subgraph !== null &&
+          this.checkTargetAccess(subgraph, ['subgraph-check-approver']) &&
+          this.isAllowedByIdpGate(subgraph.namespaceId),
+      )
+    );
+  }
+
   canCreateSubGraph(namespace: Namespace) {
     const baseAllowed =
       this.isOrganizationAdminOrDeveloper ||
