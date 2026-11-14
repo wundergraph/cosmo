@@ -60,6 +60,7 @@ import {
   createDeactivateOrganizationWorker,
   DeactivateOrganizationQueue,
 } from './workers/DeactivateOrganizationWorker.js';
+import { AuditLogStreamQueue, createAuditLogStreamWorker } from './workers/AuditLogStreamWorker.js';
 import { createDeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
 import {
   createReactivateOrganizationWorker,
@@ -437,6 +438,16 @@ export default async function build(opts: BuildConfig) {
   const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(logger, fastify.redisForQueue);
   bullWorkers.push(
     createDeleteOrganizationAuditLogsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+    }),
+  );
+
+  const auditLogStreamQueue = new AuditLogStreamQueue(logger, fastify.redisForQueue);
+  await auditLogStreamQueue.schedule();
+  bullWorkers.push(
+    createAuditLogStreamWorker({
       redisConnection: fastify.redisForWorker,
       db: fastify.db,
       logger,
