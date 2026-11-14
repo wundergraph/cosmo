@@ -113,7 +113,9 @@ describe('sendToHec', () => {
   test('reports the underlying reason when the collector cannot be reached', async (testContext) => {
     const cause = Object.assign(new Error('self-signed certificate'), { code: 'DEPTH_ZERO_SELF_SIGNED_CERT' });
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('fetch failed', { cause })));
-    testContext.onTestFinished(() => vi.unstubAllGlobals());
+    testContext.onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
 
     const target = {
       organizationId: genID('org'),
