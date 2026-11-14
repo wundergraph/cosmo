@@ -19,6 +19,14 @@ The playground is enhanced with visual representations of the query execution pl
 For more information about Advanced Request Tracing (ART) click [here](/router/advanced-request-tracing-art)
 </Info>
 
+## Response validation limits
+
+For incremental responses, each multipart payload can contain at most 1,000 `pending` entries and 1,000 `incremental` entries. Each pending path can contain at most 1,000 segments. Exceeding a limit stops processing the stream with a validation error.
+
+Defer Advisor probes accept at most 1,000 GraphQL errors per response. Larger error collections cause the probe to fail with `Response is not a GraphQL response`.
+
+These limits bound collection validation per payload. They do not limit the total size or duration of a streamed response.
+
 ## Choosing what to query
 
 The dropdown in the playground toolbar selects what the editor validates against and where requests are sent:

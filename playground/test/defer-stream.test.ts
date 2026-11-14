@@ -32,6 +32,29 @@ const collect = async (parts: AsyncIterable<unknown[]>) => {
 };
 
 describe('readDeferStream', () => {
+  test.each(['pending', 'incremental'])('bounds %s entries before validating them', async (field) => {
+    const valid = Array.from({ length: 1000 }, (_, i) => ({ id: String(i), path: [], data: { value: i } }));
+    const body = (entries: unknown[]) =>
+      `--graphql\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ [field]: entries })}\r\n--graphql--`;
+    const parts = await collect(readDeferStream(responseOf(body(valid), 4096)));
+    expect(parts).toHaveLength(field === 'incremental' ? 1000 : 0);
+
+    await expect(
+      collect(readDeferStream(responseOf(body(Array.from({ length: 1001 }, () => ({}))), 4096))),
+    ).rejects.toMatchObject({
+      issues: [{ code: 'too_big', path: [field] }],
+    });
+  });
+
+  test('bounds pending paths', async () => {
+    const body = (length: number) =>
+      `--graphql\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ pending: [{ id: '1', path: Array.from({ length }, () => 'field') }] })}\r\n--graphql--`;
+    await expect(collect(readDeferStream(responseOf(body(1000), 4096)))).resolves.toEqual([]);
+    await expect(collect(readDeferStream(responseOf(body(1001), 4096)))).rejects.toMatchObject({
+      issues: [{ code: 'too_big', path: ['pending', 0, 'path'] }],
+    });
+  });
+
   for (const size of [1, 7, 4096]) {
     test(`yields path-based parts from the v0.2 body (chunks of ${size} bytes)`, async () => {
       const parts = await collect(readDeferStream(responseOf(ROUTER_V02_BODY, size)));

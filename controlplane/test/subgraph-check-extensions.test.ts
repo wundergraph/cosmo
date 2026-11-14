@@ -130,6 +130,76 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     await afterAllSetup(dbname);
   });
 
+  test('bounds extension findings across subgraphs before validating entries', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name, subgraph2Name, fedGraphName } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const cases = [
+      {
+        data: { errors: Array.from({ length: 1000 }, () => 'extension error') },
+        error: Array.from({ length: 1000 }, () => 'extension error').join('\n'),
+      },
+      {
+        data: {
+          errors: Array.from({ length: 999 }, () => 'extension error'),
+          lintIssues: {
+            [subgraph1Name]: [
+              { lintRuleType: 'custom', severity: 0, message: 'lint warning', issueLocation: { line: 1, column: 1 } },
+            ],
+          },
+        },
+        error: Array.from({ length: 999 }, () => 'extension error').join('\n'),
+      },
+      { data: { errors: Array.from({ length: 1001 }, () => ({})) }, error: 'too_big' },
+      {
+        data: { lintIssues: { [subgraph1Name]: Array.from({ length: 1001 }, () => ({})) } },
+        error: 'more than 1000 findings',
+      },
+      {
+        data: {
+          errors: ['extension error'],
+          lintIssues: {
+            [subgraph1Name]: Array.from({ length: 500 }, () => ({})),
+            [subgraph2Name]: Array.from({ length: 500 }, () => ({})),
+          },
+        },
+        error: 'more than 1000 findings',
+      },
+      {
+        data: { lintIssues: Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`subgraph-${i}`, []])) },
+        error: undefined,
+      },
+      {
+        data: { lintIssues: Object.fromEntries(Array.from({ length: 1001 }, (_, i) => [`subgraph-${i}`, []])) },
+        error: 'more than 1000 subgraphs',
+      },
+    ];
+
+    for (const { data, error } of cases) {
+      postSpy.mockResolvedValue({ status: 200, data });
+      const response = await client.checkSubgraphSchema({
+        subgraphName: subgraph1Name,
+        schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+        namespace: 'default',
+      });
+      expect(response.response?.code).toBe(EnumStatusCode.OK);
+      if (error === undefined || error.startsWith('extension error')) {
+        expect(response.checkExtensionErrorMessage).toBe(error);
+      } else {
+        expect(response.checkExtensionErrorMessage).toContain('Check extension returned an invalid response:');
+        expect(response.checkExtensionErrorMessage).toContain(error);
+        expect(response.checkExtensionErrorMessage).not.toContain('invalid_type');
+      }
+      const summary = await client.getCheckSummary({
+        namespace: 'default',
+        graphName: fedGraphName,
+        checkId: response.checkId,
+      });
+      expect(summary.check?.checkExtensionErrorMessage).toBe(response.checkExtensionErrorMessage);
+    }
+  });
+
   test('Should enable subgraph check extensions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
     testContext.onTestFinished(() => server.close());
