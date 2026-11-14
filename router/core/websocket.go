@@ -1050,6 +1050,9 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegistration) (*ParsedOperation, *operationContext, error) {
+	release := h.operationProcessor.caches.Acquire()
+	defer release()
+
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, nil, err

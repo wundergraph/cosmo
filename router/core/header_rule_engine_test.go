@@ -158,7 +158,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result, header := createMostRestrictivePolicy(tt.policies)
+			result, header := createMostRestrictivePolicy(tt.policies, publicRequiresAll)
 			assert.Equal(t, tt.expectedHeader, header)
 			require.NotNil(t, result)
 			require.NotNil(t, result.RespDirectives)
@@ -308,8 +308,8 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 		for _, tt := range roundTripTests {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
-				previous, _ := createMostRestrictivePolicy(tt.first)
-				_, header := createMostRestrictivePolicy([]*cachedirective.Object{tt.second, previous})
+				previous, _ := createMostRestrictivePolicy(tt.first, publicRequiresAll)
+				_, header := createMostRestrictivePolicy([]*cachedirective.Object{tt.second, previous}, publicRequiresAll)
 				assert.Equal(t, tt.expectedHeader, header)
 			})
 		}
@@ -327,11 +327,87 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 				RespExpiresHeader: time.Now().Add(5 * time.Minute),
 			},
 		}
-		result, header := createMostRestrictivePolicy(policies)
+		result, header := createMostRestrictivePolicy(policies, publicRequiresAll)
 		assert.Equal(t, "", header)
 		assert.NotNil(t, result)
 		assert.False(t, result.RespExpiresHeader.IsZero())
 		assert.True(t, result.RespExpiresHeader.Before(time.Now().Add(6*time.Minute)))
+	})
+
+	t.Run("any public", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			name           string
+			policies       []*cachedirective.Object
+			expectedHeader string
+			wantPublic     bool
+		}{
+			{
+				name: "one public policy is enough",
+				policies: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60}},
+				},
+				expectedHeader: "max-age=60, public",
+				wantPublic:     true,
+			},
+			{
+				name: "private wins over public",
+				policies: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, PrivatePresent: true}},
+				},
+				expectedHeader: "max-age=60, private",
+			},
+			{
+				name: "no-store wins over public",
+				policies: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{NoStore: true}},
+				},
+				expectedHeader: "no-store",
+			},
+			{
+				name: "no public policy",
+				policies: []*cachedirective.Object{
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300}},
+					{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60}},
+				},
+				expectedHeader: "max-age=60",
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+				result, header := createMostRestrictivePolicy(tt.policies, publicRequiresAny)
+				assert.Equal(t, tt.expectedHeader, header)
+				assert.Equal(t, tt.wantPublic, result.RespDirectives.Public)
+			})
+		}
+
+		t.Run("a later policy without public keeps it", func(t *testing.T) {
+			t.Parallel()
+			previous, _ := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+			}, publicRequiresAny)
+			_, header := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60}},
+				previous,
+			}, publicRequiresAny)
+			assert.Equal(t, "max-age=60, public", header)
+		})
+
+		t.Run("an earlier private blocks a later public", func(t *testing.T) {
+			t.Parallel()
+			previous, _ := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 60, PrivatePresent: true}},
+			}, publicRequiresAny)
+			_, header := createMostRestrictivePolicy([]*cachedirective.Object{
+				{RespDirectives: &cachedirective.ResponseCacheDirectives{MaxAge: 300, Public: true}},
+				previous,
+			}, publicRequiresAny)
+			assert.Equal(t, "max-age=60, private", header)
+		})
 	})
 }
 
@@ -949,6 +1025,39 @@ func TestMarkStale(t *testing.T) {
 	require.NoError(t, err)
 	subtractAge(dir, "30")
 	markStale(dir)
-	_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: dir}})
+	_, header := createMostRestrictivePolicy([]*cachedirective.Object{{RespDirectives: dir}}, publicRequiresAll)
 	require.Equal(t, "no-cache", header, "a stale response is bare no-cache, not field-specific")
+}
+
+func TestHasCachingDirectives(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		header http.Header
+		want   bool
+	}{
+		{name: "no header", header: http.Header{}, want: false},
+		{name: "unknown directives", header: http.Header{"Cache-Control": {"foo, bar=1"}}, want: false},
+		{name: "no-transform only", header: http.Header{"Cache-Control": {"no-transform"}}, want: false},
+		{name: "immutable only", header: http.Header{"Cache-Control": {"immutable"}}, want: false},
+		{name: "expires only", header: http.Header{"Expires": {"Wed, 21 Oct 2026 12:00:00 GMT"}}, want: true},
+		{name: "max-age", header: http.Header{"Cache-Control": {"max-age=60"}}, want: true},
+		{name: "s-maxage", header: http.Header{"Cache-Control": {"s-maxage=60"}}, want: true},
+		{name: "public", header: http.Header{"Cache-Control": {"public"}}, want: true},
+		{name: "private", header: http.Header{"Cache-Control": {"private"}}, want: true},
+		{name: "no-cache", header: http.Header{"Cache-Control": {"no-cache"}}, want: true},
+		{name: "no-store", header: http.Header{"Cache-Control": {"no-store"}}, want: true},
+		{name: "must-revalidate", header: http.Header{"Cache-Control": {"must-revalidate"}}, want: true},
+		{name: "proxy-revalidate", header: http.Header{"Cache-Control": {"proxy-revalidate"}}, want: true},
+		{name: "stale-if-error", header: http.Header{"Cache-Control": {"stale-if-error=60"}}, want: true},
+		{name: "stale-while-revalidate", header: http.Header{"Cache-Control": {"stale-while-revalidate=60"}}, want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir, err := parseFreshness(tc.header)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, hasCachingDirectives(dir))
+		})
+	}
 }
