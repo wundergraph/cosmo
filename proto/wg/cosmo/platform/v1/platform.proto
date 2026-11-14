@@ -3771,6 +3771,53 @@ message FinishOnboardingResponse {
   string finishedAt = 3;
 }
 
+message AuditLogStreamConfig {
+  // Splunk HTTP Event Collector URL, e.g. https://splunk.example.com:8088
+  string endpoint = 1;
+  // Last four characters of the HEC token. The full token is never returned.
+  string token_suffix = 2;
+  optional string index = 3;
+  optional string source = 4;
+  string sourcetype = 5;
+  bool enabled = 6;
+  optional string last_success_at = 7;
+  optional string last_error = 8;
+  optional string last_error_at = 9;
+}
+
+message GetAuditLogStreamConfigRequest {}
+
+message GetAuditLogStreamConfigResponse {
+  Response response = 1;
+  optional AuditLogStreamConfig config = 2;
+}
+
+message UpsertAuditLogStreamConfigRequest {
+  string endpoint = 1;
+  // Required when creating. When updating, leave empty to keep the stored token.
+  optional string token = 2;
+  optional string index = 3;
+  optional string source = 4;
+  optional string sourcetype = 5;
+  bool enabled = 6;
+}
+
+message UpsertAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
+message DeleteAuditLogStreamConfigRequest {}
+
+message DeleteAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
+message TestAuditLogStreamConfigRequest {}
+
+message TestAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3994,6 +4041,15 @@ service PlatformService {
   rpc UpdateIntegrationConfig(UpdateIntegrationConfigRequest) returns (UpdateIntegrationConfigResponse) {}
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
+
+  // GetAuditLogStreamConfig returns the organization's audit log stream (Splunk HEC) configuration
+  rpc GetAuditLogStreamConfig(GetAuditLogStreamConfigRequest) returns (GetAuditLogStreamConfigResponse) {}
+  // UpsertAuditLogStreamConfig creates or updates the organization's audit log stream configuration
+  rpc UpsertAuditLogStreamConfig(UpsertAuditLogStreamConfigRequest) returns (UpsertAuditLogStreamConfigResponse) {}
+  // DeleteAuditLogStreamConfig removes the organization's audit log stream configuration
+  rpc DeleteAuditLogStreamConfig(DeleteAuditLogStreamConfigRequest) returns (DeleteAuditLogStreamConfigResponse) {}
+  // TestAuditLogStreamConfig sends a single test event to the configured collector
+  rpc TestAuditLogStreamConfig(TestAuditLogStreamConfigRequest) returns (TestAuditLogStreamConfigResponse) {}
 
   // DeleteUser deletes the user
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
