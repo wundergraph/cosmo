@@ -1,10 +1,9 @@
 import { parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { SubgraphPageTabs, SubgraphsTable } from '@/components/subgraphs-table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { NextPageWithLayout } from '@/lib/page';
-import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { pageParam, usePaginationParams } from '@/hooks/use-pagination-params';
 import { useContext, useEffect, useState } from 'react';
 import Fuse from 'fuse.js';
@@ -70,24 +69,15 @@ const SubGraphsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="relative mb-4">
-        <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-        <Input
-          placeholder="Search by ID or Name"
-          className="pl-8 pr-10"
-          value={search}
-          onChange={(e) => setSearch({ search: e.target.value, page: null })}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-            onClick={() => setSearch({ search: null, page: null })}
-          >
-            <Cross1Icon />
-          </Button>
-        )}
-      </div>
+      <ClearableInput
+        icon={<MagnifyingGlassIcon />}
+        containerClassName="mb-4"
+        placeholder="Search by ID or Name"
+        clearLabel="Clear search"
+        value={search}
+        onChange={(e) => setSearch({ search: e.target.value, page: null })}
+        onClear={search ? () => setSearch({ search: null, page: null }) : undefined}
+      />
       <div className={cn('scrollbar-custom relative w-full', isFetching ? 'overflow-hidden' : 'overflow-auto')}>
         {isFetching && (
           <div className="absolute h-full w-full bg-background/50 p-24">
