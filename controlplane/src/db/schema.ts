@@ -2161,7 +2161,9 @@ export const auditLogs = pgTable(
   },
   (t) => {
     return {
-      organizationIdIndex: index('auditlogs_organization_idx').on(t.organizationId),
+      // Serves the Audit Log page, which filters by organization and date and sorts by date, from the index alone.
+      // Also covers lookups by organization only, so it replaces the single-column index.
+      organizationCreatedAtIdIndex: index('auditlogs_org_created_at_id_idx').on(t.organizationId, t.createdAt, t.id),
       createdAtIndex: index('auditlogs_created_at_idx').on(t.createdAt),
     };
   },

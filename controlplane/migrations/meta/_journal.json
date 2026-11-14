@@ -1072,6 +1072,13 @@
       "when": 1793359585864,
       "tag": "0152_api_key_hash_column",
       "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "7",
+      "when": 1794663962335,
+      "tag": "0153_audit_logs_org_created_at_index",
+      "breakpoints": true
     }
   ]
 }
