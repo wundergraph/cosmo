@@ -5,6 +5,7 @@ import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist
 import { eq } from 'drizzle-orm';
 import { pino } from 'pino';
 import { uid } from 'uid';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import {
@@ -16,7 +17,7 @@ import {
 } from '../src/core/test-util.js';
 import { OrganizationRole } from '../src/db/models.js';
 import * as schema from '../src/db/schema.js';
-import { SetupTest } from './test-util.js';
+import { createFederatedGraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -206,6 +207,95 @@ describe('API Keys', (ctx) => {
     expect(authContext.apiKeyName).toBe(name);
     const keyHash = createHash('sha256').update(response.apiKey).digest('hex');
     await expect(authenticator.authenticate(keyHash)).rejects.toThrow('Invalid api key');
+  });
+
+  test('that adding an API key with an unknown expiry fails', async (testContext) => {
+    const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const name = uid(8);
+    const repo = new ApiKeyRepository(server.db);
+    expect(() =>
+      repo.addAPIKey({
+        key: `cosmo_${uid(32)}`,
+        name,
+        organizationID: users.adminAliceCompanyA.organizationId,
+        userID: users.adminAliceCompanyA.userId,
+        expiresAt: 999 as ExpiresAt,
+        groupId: adminGroup.groupId,
+        permissions: [],
+        isExternal: false,
+      }),
+    ).toThrow('ExpiresAt value does not exist');
+
+    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
+    expect(stored).toBeUndefined();
+  });
+
+  test('that the same API key cannot be added twice', async (testContext) => {
+    const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const key = `cosmo_${uid(32)}`;
+    const input = {
+      key,
+      organizationID: users.adminAliceCompanyA.organizationId,
+      userID: users.adminAliceCompanyA.userId,
+      expiresAt: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+      permissions: [],
+      isExternal: false,
+    };
+    const repo = new ApiKeyRepository(server.db);
+    await repo.addAPIKey({ ...input, name: uid(8) });
+
+    const secondName = uid(8);
+    await expect(repo.addAPIKey({ ...input, name: secondName })).rejects.toThrow();
+
+    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, secondName) });
+    expect(stored).toBeUndefined();
+  });
+
+  test('that an API key scoped to one target cannot access another', async (testContext) => {
+    const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const allowedGraphName = uid(8);
+    const otherGraphName = uid(8);
+    await createFederatedGraph(client, allowedGraphName, 'default', [], 'http://localhost:8080');
+    await createFederatedGraph(client, otherGraphName, 'default', [], 'http://localhost:8081');
+    const allowedGraph = await client.getFederatedGraphByName({ name: allowedGraphName, namespace: 'default' });
+    const otherGraph = await client.getFederatedGraphByName({ name: otherGraphName, namespace: 'default' });
+    const allowedTargetId = allowedGraph.graph!.targetId;
+    const otherTargetId = otherGraph.graph!.targetId;
+
+    const name = uid(8);
+    const key = `cosmo_${uid(32)}`;
+    const repo = new ApiKeyRepository(server.db);
+    await repo.addAPIKey({
+      key,
+      name,
+      organizationID: users.adminAliceCompanyA.organizationId,
+      userID: users.adminAliceCompanyA.userId,
+      expiresAt: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+      permissions: [],
+      isExternal: false,
+    });
+    const stored = await server.db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.name, name) });
+    await repo.addAPIKeyResources({ resources: [{ apiKeyId: stored!.id, targetId: allowedTargetId }] });
+
+    await expect(repo.verifyAPIKeyResources({ apiKey: key, accessedTargetId: allowedTargetId })).resolves.toBe(true);
+    await expect(repo.verifyAPIKeyResources({ apiKey: key, accessedTargetId: otherTargetId })).resolves.toBe(false);
   });
 
   test('that an "organization-apikey-manager" cannot create API keys with admin role', async (testContext) => {
