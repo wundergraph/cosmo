@@ -302,7 +302,7 @@ describe('Audit log stream delivery', () => {
       );
     };
 
-    const deliver = async () => deliverAuditLogs({ repo, config: (await repo.get(org.id))!, logger });
+    const deliver = () => deliverAuditLogs({ repo, organizationId: org.id, logger });
 
     // Only logs written after the stream was configured are delivered.
     await db.execute(
@@ -360,6 +360,46 @@ describe('Audit log stream delivery', () => {
     expect(hec.received.flatMap((r) => r.events)).toHaveLength(2);
     expect(hec.received.map((r) => r.channel)).toEqual([org.id]);
     expect((await repo.get(org.id))?.lastError).toBeNull();
+  });
+
+  test('stops delivering once the config is disabled or deleted', async (testContext) => {
+    const hec = await startFakeHec('good-token');
+    testContext.onTestFinished(() => hec.close());
+    const { org, repo, addLogs, deliver } = await setup(hec.url);
+
+    await addLogs(1);
+    await repo.upsert({
+      organizationId: org.id,
+      endpoint: normalizeHecEndpoint(hec.url)!,
+      index: null,
+      source: 'cosmo',
+      sourcetype: 'wundergraph:cosmo:audit',
+      enabled: false,
+    });
+    await deliver();
+    expect(hec.received).toHaveLength(0);
+
+    await repo.delete(org.id);
+    await deliver();
+    expect(hec.received).toHaveLength(0);
+  });
+
+  test('a save without a token does not recreate a deleted config', async (testContext) => {
+    const hec = await startFakeHec('good-token');
+    testContext.onTestFinished(() => hec.close());
+    const { org, repo } = await setup(hec.url);
+
+    await repo.delete(org.id);
+    const saved = await repo.upsert({
+      organizationId: org.id,
+      endpoint: normalizeHecEndpoint(hec.url)!,
+      index: null,
+      source: 'cosmo',
+      sourcetype: 'wundergraph:cosmo:audit',
+      enabled: true,
+    });
+    expect(saved).toBe(false);
+    expect(await repo.get(org.id)).toBeUndefined();
   });
 
   test('holds back logs that have not settled yet', async (testContext) => {

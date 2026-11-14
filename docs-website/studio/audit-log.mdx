@@ -49,4 +49,4 @@ sourcetype="wundergraph:cosmo:audit" action="federated_graph.*" actor.type="api_
 | table _time, organization.slug, actor.name, actor.api_key_name, action, object.name
 ```
 
-Delivery is at least once. Use `id` to discard duplicates. Fields are only ever added to this body. If the collector rejects a batch, delivery pauses and retries every 30 seconds from the same point. The last error is shown in Studio and by `wgc audit-log stream show`.
+Delivery is at least once. Use `id` to discard duplicates. Fields are only ever added to this body. If the collector rejects a batch, delivery pauses and retries every 30 seconds from the same point. `GetAuditLogStreamConfig` returns the last error and when the last batch was delivered.

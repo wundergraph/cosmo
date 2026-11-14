@@ -27,24 +27,30 @@ export class AuditLogStreamRepository {
   }
 
   /**
-   * Creates or replaces the organization's config. Leaving out the token keeps the stored one. Any previous error is
-   * cleared, so a fixed config doesn't show the old error.
+   * Creates or replaces the organization's config. Leaving out the token keeps the stored one, and only updates an
+   * existing config, so a config deleted in the meantime is never recreated without a token. Returns whether a config
+   * was saved. Any previous error is cleared, so a fixed config doesn't show the old error.
    */
   public async upsert(input: Omit<AuditLogStreamConfigInput, 'token'> & { token?: string }) {
     const { organizationId, token, ...fields } = input;
-    const set = {
-      ...fields,
-      ...(token === undefined ? {} : { token }),
-      lastError: null,
-      lastErrorAt: null,
-      updatedAt: new Date(),
-    };
+    const set = { ...fields, lastError: null, lastErrorAt: null, updatedAt: new Date() };
+
+    if (token === undefined) {
+      const updated = await this.db
+        .update(auditLogStreamConfigs)
+        .set(set)
+        .where(eq(auditLogStreamConfigs.organizationId, organizationId))
+        .returning({ organizationId: auditLogStreamConfigs.organizationId })
+        .execute();
+      return updated.length > 0;
+    }
+
     await this.db
       .insert(auditLogStreamConfigs)
-      // The handler rejects a new config without a token, so the empty string is never stored.
-      .values({ organizationId, token: token ?? '', ...fields })
-      .onConflictDoUpdate({ target: auditLogStreamConfigs.organizationId, set })
+      .values({ organizationId, token, ...fields })
+      .onConflictDoUpdate({ target: auditLogStreamConfigs.organizationId, set: { ...set, token } })
       .execute();
+    return true;
   }
 
   public async delete(organizationId: string) {

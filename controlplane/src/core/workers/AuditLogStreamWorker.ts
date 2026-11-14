@@ -3,7 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { sendToHec, toHecEvent } from '../audit-log-stream/splunk-hec.js';
-import { AuditLogStreamConfig, AuditLogStreamRepository } from '../repositories/AuditLogStreamRepository.js';
+import { AuditLogStreamRepository } from '../repositories/AuditLogStreamRepository.js';
 
 const QueueName = 'organization.audit_log_stream';
 const WorkerName = 'AuditLogStreamWorker';
@@ -34,10 +34,12 @@ export class AuditLogStreamQueue {
 
   /**
    * Registers the repeating tick. Upserting by id means every controlplane replica can call this on boot and only one
-   * schedule exists.
+   * schedule exists. A tick can outlast the interval, so the queue runs one job at a time across all replicas; two
+   * overlapping ticks would send the same batches and could move a cursor backwards.
    */
-  public schedule() {
-    return this.queue.upsertJobScheduler(SchedulerId, { every: TICK_INTERVAL_MS }, { name: SchedulerId });
+  public async schedule() {
+    await this.queue.setGlobalConcurrency(1);
+    await this.queue.upsertJobScheduler(SchedulerId, { every: TICK_INTERVAL_MS }, { name: SchedulerId });
   }
 }
 
@@ -47,12 +49,18 @@ export class AuditLogStreamQueue {
  */
 export async function deliverAuditLogs(input: {
   repo: AuditLogStreamRepository;
-  config: AuditLogStreamConfig;
+  organizationId: string;
   logger: pino.Logger;
 }) {
-  const { repo, config, logger } = input;
+  const { repo, organizationId, logger } = input;
 
   for (let i = 0; i < MAX_BATCHES_PER_TICK; i++) {
+    // Re-read before every batch, so disabling, replacing or deleting the config takes effect mid-tick.
+    const config = await repo.get(organizationId);
+    if (!config?.enabled) {
+      return;
+    }
+
     const logs = await repo.getPendingLogs(config.organizationId, BATCH_SIZE);
     const last = logs.at(-1);
     if (!last) {
@@ -91,7 +99,7 @@ export const createAuditLogStreamWorker = (input: {
       const configs = await repo.listEnabled();
       for (const config of configs) {
         try {
-          await deliverAuditLogs({ repo, config, logger: log });
+          await deliverAuditLogs({ repo, organizationId: config.organizationId, logger: log });
         } catch (err: unknown) {
           log.error({ organizationId: config.organizationId, err }, 'Audit log stream delivery failed');
         }

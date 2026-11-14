@@ -50,8 +50,8 @@ export function upsertAuditLogStreamConfig(
       };
     }
 
-    await opts.db.transaction(async (tx) => {
-      await new AuditLogStreamRepository(tx).upsert({
+    const saved = await opts.db.transaction(async (tx) => {
+      const saved = await new AuditLogStreamRepository(tx).upsert({
         organizationId: authContext.organizationId,
         endpoint,
         token,
@@ -60,6 +60,9 @@ export function upsertAuditLogStreamConfig(
         sourcetype: req.sourcetype?.trim() || DEFAULT_SOURCETYPE,
         enabled: req.enabled,
       });
+      if (!saved) {
+        return false;
+      }
 
       await new AuditLogRepository(tx).addAuditLog({
         organizationId: authContext.organizationId,
@@ -73,7 +76,18 @@ export function upsertAuditLogStreamConfig(
         apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
+      return true;
     });
+
+    // The config was deleted after it was read, and there's no token to recreate it with.
+    if (!saved) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'No audit log stream is configured',
+        },
+      };
+    }
 
     return {
       response: { code: EnumStatusCode.OK },
