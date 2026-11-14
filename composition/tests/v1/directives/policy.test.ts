@@ -791,6 +791,58 @@ describe('@policy directive tests', () => {
       );
     });
 
+    test('that @policy on an @interfaceObject field is propagated to the interface and its implementations', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            node: Node
+          }
+
+          type Node @key(fields: "id") @interfaceObject {
+            id: ID!
+            secret: String @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          interface Node @key(fields: "id") {
+            id: ID!
+          }
+
+          type User implements Node @key(fields: "id") {
+            id: ID!
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          interface Node {
+            id: ID!
+            secret: String @policy(policies: [["p"]])
+          }
+
+          type Query {
+            node: Node
+          }
+
+          type User implements Node {
+            id: ID!
+            secret: String @policy(policies: [["p"]])
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
     test('that @policy is not propagated from union members to the union', () => {
       const a = createSubgraph(
         'a',
@@ -1200,6 +1252,72 @@ describe('@policy directive tests', () => {
 
           type Query {
             node: Node
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that @policy on an @interfaceObject field is propagated to the other interfaces of its implementations', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            node: Node
+          }
+
+          type Node @key(fields: "id") @interfaceObject {
+            id: ID!
+            x: Int @policy(policies: [["p"]])
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Query {
+            other: Other
+          }
+
+          interface Node @key(fields: "id") {
+            id: ID!
+          }
+
+          interface Other {
+            x: Int
+          }
+
+          type User implements Node & Other @key(fields: "id") {
+            id: ID!
+            x: Int @external
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          interface Node {
+            id: ID!
+            x: Int @policy(policies: [["p"]])
+          }
+
+          interface Other {
+            x: Int @policy(policies: [["p"]])
+          }
+
+          type Query {
+            node: Node
+            other: Other
+          }
+
+          type User implements Node & Other {
+            id: ID!
+            x: Int @policy(policies: [["p"]])
           }
 
           ${FEDERATION_POLICY_SCALAR}

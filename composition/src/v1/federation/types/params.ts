@@ -38,6 +38,7 @@ export type ValidateOneOfDirectiveParams = {
 };
 
 export type MergePolicyDirectivesParams = {
+  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   subgraphs: Array<InternalSubgraph>;
 };
