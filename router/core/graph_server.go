@@ -60,6 +60,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -1395,6 +1396,9 @@ func (s *graphServer) buildGraphMux(
 		ParserTokenizerLimits: astparser.TokenizerLimits{
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
+		},
+		NormalizationLimits: astnormalization.Limits{
+			MaxSelections: s.securityConfiguration.NormalizationLimits.MaxSelections,
 		},
 		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,

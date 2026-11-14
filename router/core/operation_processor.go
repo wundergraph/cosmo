@@ -126,6 +126,7 @@ type OperationProcessorOptions struct {
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	NormalizationLimits                                    astnormalization.Limits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
@@ -1681,10 +1682,11 @@ type parseKitOptions struct {
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
+	normalizationLimits                                    astnormalization.Limits
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
-	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
+	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments, options.normalizationLimits)
 
 	return &parseKit{
 		i:                   i,
@@ -1712,8 +1714,9 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 	}
 }
 
-func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
+func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments, limits astnormalization.Limits) []astnormalization.Option {
 	opts := []astnormalization.Option{
+		astnormalization.WithLimits(limits),
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveFragmentDefinitions(),
@@ -1787,6 +1790,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
+			normalizationLimits:                                    opts.NormalizationLimits,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

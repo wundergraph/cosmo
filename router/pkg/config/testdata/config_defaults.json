@@ -520,6 +520,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 10000
+    },
     "OperationNameLengthLimit": 512
   },
   "EngineExecutionConfiguration": {

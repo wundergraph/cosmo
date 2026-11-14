@@ -4108,6 +4108,19 @@
               "minimum": 0
             }
           }
+        },
+        "normalization_limits": {
+          "type": "object",
+          "description": "The configuration to enforce limits on normalized operations. Operations above the limits are rejected before they are validated and planned.",
+          "additionalProperties": false,
+          "properties": {
+            "max_selections": {
+              "type": "integer",
+              "description": "The maximum number of selections a GraphQL document may hold while its fragment spreads are expanded. The count covers the whole document: the selections as sent, fragment definitions included, plus the copies and inline fragment wrappers added for every fragment spread. It applies to every operation, whether or not it uses fragments. Set to 0 to disable.",
+              "default": 10000,
+              "minimum": 0
+            }
+          }
         }
       }
     },

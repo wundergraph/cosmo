@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -109,6 +110,24 @@ func TestParserHardLimits(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 			})
 		})
+	})
+}
+
+func TestNormalizationLimits(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+			securityConfiguration.NormalizationLimits.MaxSelections = 7
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			// The document holds 7 selections as sent and exceeds the limit during fragment expansion.
+			Query: `{ a: employee(id:1) { ...F } b: employee(id:2) { ...F } } fragment F on Employee { id details { forename } }`,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"normalization limit \"max_selections\" of 7 exceeded","extensions":{"code":"NORMALIZATION_LIMIT_EXCEEDED"}}]}`, res.Body)
 	})
 }
 
