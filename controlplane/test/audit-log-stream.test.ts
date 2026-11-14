@@ -235,7 +235,7 @@ describe('Audit log streaming', () => {
     const good = await client.testAuditLogStreamConfig({});
     expect(good.response?.code).toBe(EnumStatusCode.OK);
     expect(hec.received).toHaveLength(1);
-    expect(hec.received[0].channel).toMatch(/^[0-9a-f-]{36}$/);
+    expect(hec.received[0].channel).toMatch(/^[\da-f-]{36}$/);
     expect(hec.received[0].events[0]).toMatchObject({
       sourcetype: 'wundergraph:cosmo:audit',
       event: { schema_version: 1, action: 'audit_log_stream_config.tested' },
