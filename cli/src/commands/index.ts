@@ -9,6 +9,7 @@ import DemoCommands from './demo/index.js';
 import MonographCommands from './graph/monograph/index.js';
 import FederatedGraphCommands from './graph/federated-graph/index.js';
 import NamespaceCommands from './namespace/index.js';
+import AuditLogCommands from './audit-log/index.js';
 import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
@@ -82,6 +83,11 @@ program.addCommand(
 );
 program.addCommand(
   NamespaceCommands({
+    client,
+  }),
+);
+program.addCommand(
+  AuditLogCommands({
     client,
   }),
 );

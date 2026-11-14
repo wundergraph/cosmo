@@ -20,7 +20,14 @@ Navigate to your organization's page and click on "Audit Log." You will see all 
 
 Organization admins can stream audit logs to a Splunk HTTP Event Collector (HEC). New entries are delivered within about a minute of being written. Entries written before the stream was configured are not sent.
 
-Configure the stream with the platform API's `UpsertAuditLogStreamConfig`, `GetAuditLogStreamConfig`, `TestAuditLogStreamConfig` and `DeleteAuditLogStreamConfig` methods.
+Configure the stream with the platform API's `UpsertAuditLogStreamConfig`, `GetAuditLogStreamConfig`, `TestAuditLogStreamConfig` and `DeleteAuditLogStreamConfig` methods, or with `wgc`:
+
+```bash
+COSMO_HEC_TOKEN=<token> wgc audit-log stream set --endpoint https://splunk.example.com:8088 --index cosmo
+wgc audit-log stream test
+wgc audit-log stream show
+wgc audit-log stream delete
+```
 
 The endpoint can be the collector's base URL or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA; Splunk Enterprise's default self-signed HEC certificate is rejected. The token is stored by Cosmo and is never returned. Deleting the configuration stops the stream and removes the stored URL and token.
 
@@ -49,4 +56,4 @@ sourcetype="wundergraph:cosmo:audit" action="federated_graph.*" actor.type="api_
 | table _time, organization.slug, actor.name, actor.api_key_name, action, object.name
 ```
 
-Delivery is at least once. Use `id` to discard duplicates. Fields are only ever added to this body. If the collector rejects a batch, delivery pauses and retries every 30 seconds from the same point. `GetAuditLogStreamConfig` returns the last error and when the last batch was delivered.
+Delivery is at least once. Use `id` to discard duplicates. Fields are only ever added to this body. If the collector rejects a batch, delivery pauses and retries every 30 seconds from the same point. `GetAuditLogStreamConfig` and `wgc audit-log stream show` return the last error and when the last batch was delivered.
