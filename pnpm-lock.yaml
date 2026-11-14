@@ -102,13 +102,15 @@ catalogs:
     vitest:
       specifier: 5.0.5
       version: 5.0.5
+    zod:
+      specifier: ^4.6.7
+      version: 4.6.7
 
 overrides:
   react: 18.3.1
   graphql: 16.9.0
   cross-spawn: 7.0.6
   next: 15.5.28
-  zod: ^3.25.0
   debug: <4.4.2
   supports-color: <10.2.1
   wrap-ansi: <9.0.1
@@ -339,7 +341,7 @@ importers:
         version: 11.0.0(graphql@16.9.0(patch_hash=5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f))
       '@modelcontextprotocol/sdk':
         specifier: 1.26.0
-        version: 1.26.0(supports-color@10.2.0)(zod@3.25.76)
+        version: 1.26.0(supports-color@10.2.0)(zod@4.6.7)
       '@octokit/rest':
         specifier: 22.0.0
         version: 22.0.0
@@ -452,8 +454,8 @@ importers:
         specifier: 6.27.0
         version: 6.27.0
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@types/bun':
         specifier: 1.2.3
@@ -725,8 +727,8 @@ importers:
         specifier: ^4.1.3
         version: 4.1.3
       openai:
-        specifier: ^4.104.0
-        version: 4.104.0(encoding@0.1.13)(ws@8.21.0)(zod@3.25.76)
+        specifier: ^6.49.0
+        version: 6.49.0(@aws-sdk/credential-provider-node@3.972.11)(ws@8.21.0)(zod@4.6.7)
       p-limit:
         specifier: ^6.1.0
         version: 6.1.0
@@ -767,11 +769,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-      zod-to-json-schema:
-        specifier: ^3.22.4
-        version: 3.22.4(zod@3.25.76)
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@bufbuild/protoc-gen-es':
         specifier: 'catalog:'
@@ -970,8 +969,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0(react@18.3.1)
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.10
@@ -1157,8 +1156,8 @@ importers:
         specifier: ^2.0.18
         version: 2.0.18(react@18.3.1)
       '@hookform/resolvers':
-        specifier: ^4.1.3
-        version: 4.1.3(react-hook-form@7.45.1(react@18.3.1))
+        specifier: ^5.9.2
+        version: 5.9.2(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.18.0))(ajv@8.18.0)(react-hook-form@7.91.0(@types/react@18.3.3)(react@18.3.1))(zod@4.6.7)
       '@markdoc/markdoc':
         specifier: ^0.4.0
         version: 0.4.0(@types/react@18.3.3)(react@18.3.1)
@@ -1241,8 +1240,8 @@ importers:
         specifier: ^2.2.1
         version: 2.2.2
       '@t3-oss/env-nextjs':
-        specifier: ^0.4.1
-        version: 0.4.1(typescript@6.0.3)(zod@3.25.76)
+        specifier: ^0.13.11
+        version: 0.13.11(typescript@6.0.3)(zod@4.6.7)
       '@tanstack/react-query':
         specifier: ^5.37.1
         version: 5.37.1(react@18.3.1)
@@ -1376,8 +1375,8 @@ importers:
         specifier: 'catalog:'
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.45.1
-        version: 7.45.1(react@18.3.1)
+        specifier: ^7.55.0
+        version: 7.91.0(@types/react@18.3.3)(react@18.3.1)
       react-icons:
         specifier: ^5.2.1
         version: 5.2.1(react@18.3.1)
@@ -1424,8 +1423,8 @@ importers:
         specifier: ^1.8.1
         version: 1.8.1(react@18.3.1)
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.9
@@ -3639,7 +3638,7 @@ packages:
       '@modelcontextprotocol/sdk': ^1.25.1
       hono: 4.12.25
       hono-rate-limiter: ^0.4.2
-      zod: ^3.25.0
+      zod: ^3.25.0 || ^4.0.0
 
   '@hono/node-server@1.19.13':
     resolution: {integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==}
@@ -3647,10 +3646,83 @@ packages:
     peerDependencies:
       hono: 4.12.25
 
-  '@hookform/resolvers@4.1.3':
-    resolution: {integrity: sha512-Jsv6UOWYTrEFJ/01ZrnwVXs7KDvP8XIo115i++5PWvNkNvkrsTfGiLS6w+eJ57CYtUtDQalUWovCZDHFJ8u1VQ==}
+  '@hookform/resolvers@5.9.2':
+    resolution: {integrity: sha512-RtjTnZqsC38s4NKp2XO3fD8IA5uyN4tB7McQ5C6uiMPcV+WWO8F+wVa3e+BXUpH2ScgxghAlwFRMVqjT9WChAQ==}
     peerDependencies:
-      react-hook-form: ^7.0.0
+      '@sinclair/typebox': '>=0.25.24'
+      '@standard-schema/spec': ^1.0.0
+      '@typeschema/main': '>=0.13.7'
+      '@vinejs/vine': ^2.0.0 || ^3.0.0 || ^4.0.0
+      ajv: ^8.12.0
+      ajv-errors: ^3.0.0
+      ajv-formats: ^2.1.1
+      arktype: ^2.0.0
+      ata-validator: ^1.23.0
+      class-transformer: '>=0.4.0'
+      class-validator: '>=0.12.0'
+      computed-types: ^1.0.0
+      effect: ^3.10.3
+      fluentvalidation-ts: ^3.0.0
+      fp-ts: ^2.7.0
+      io-ts: ^2.0.0
+      joi: ^17.0.0 || ^18.0.0
+      nope-validator: '>=0.12.0'
+      react-hook-form: ^7.55.0
+      superstruct: '>=0.12.0'
+      typanion: ^3.3.2
+      valibot: '>=0.31.0 || ^1.0.0-beta.4 || ^1.0.0-rc'
+      vest: '>=6.0.0'
+      yup: ^1.0.0
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@sinclair/typebox':
+        optional: true
+      '@standard-schema/spec':
+        optional: true
+      '@typeschema/main':
+        optional: true
+      '@vinejs/vine':
+        optional: true
+      ajv:
+        optional: true
+      ajv-errors:
+        optional: true
+      ajv-formats:
+        optional: true
+      arktype:
+        optional: true
+      ata-validator:
+        optional: true
+      class-transformer:
+        optional: true
+      class-validator:
+        optional: true
+      computed-types:
+        optional: true
+      effect:
+        optional: true
+      fluentvalidation-ts:
+        optional: true
+      fp-ts:
+        optional: true
+      io-ts:
+        optional: true
+      joi:
+        optional: true
+      nope-validator:
+        optional: true
+      superstruct:
+        optional: true
+      typanion:
+        optional: true
+      valibot:
+        optional: true
+      vest:
+        optional: true
+      yup:
+        optional: true
+      zod:
+        optional: true
 
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
@@ -4066,7 +4138,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25.0
+      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -7039,7 +7111,9 @@ packages:
   '@smithy/smithy-client@4.11.7':
     resolution: {integrity: sha512-gQP2J3qB/Wmc26gdmB8gA6zq2o2spG5sEU3o7TaTATBJEk29sYGWdEFoGEy91BczSpifTo0DQhVYjZXBEVcrpA==}
     engines: {node: '>=18.0.0'}
-    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with
+        this version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/types@4.12.1':
     resolution: {integrity: sha512-ow30Ze/DD02KH2p0eMyIF2+qJzGyNb0kFrnTRtPpuOkQ4hrgvLdaU4YC6r/K8aOrCML4FH0Cmm0aI4503L1Hwg==}
@@ -7164,17 +7238,39 @@ packages:
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
-  '@t3-oss/env-core@0.4.1':
-    resolution: {integrity: sha512-JZI8vxlHwtiZO7OYS3qSX9Ngt7UcdqsugLwhBwx7UVi5wp1PtRo2tzMyNoBEGbfHdmkd2QU9IbvYjqtaLUA7TQ==}
+  '@t3-oss/env-core@0.13.11':
+    resolution: {integrity: sha512-sM7GYY+KL7H/Hl0BE0inWfk3nRHZOLhmVn7sHGxaZt9FAR6KqREXAE+6TqKfiavfXmpRxO/OZ2QgKRd+oiBYRQ==}
     peerDependencies:
-      typescript: '>=4.7.2'
-      zod: ^3.25.0
+      arktype: ^2.1.0
+      typescript: '>=5.0.0'
+      valibot: ^1.0.0-beta.7 || ^1.0.0
+      zod: ^3.24.0 || ^4.0.0
+    peerDependenciesMeta:
+      arktype:
+        optional: true
+      typescript:
+        optional: true
+      valibot:
+        optional: true
+      zod:
+        optional: true
 
-  '@t3-oss/env-nextjs@0.4.1':
-    resolution: {integrity: sha512-lDbewJvZwOW7bFwHzdKtAH4+YcVTvGU7UEJfHwlb1RqVe9ejPrKn6ax2OGv/nFji1JXGKecKYHz3Xkpru6TFbw==}
+  '@t3-oss/env-nextjs@0.13.11':
+    resolution: {integrity: sha512-NC+3j7YWgpzdFu1t5y/8wqibTK0lm5RS4bjXA1n8uwik3wIR4iZM4Fa+U2BaMa5k3Qk8RZiYhoAIX0WogmGkzg==}
     peerDependencies:
-      typescript: '>=4.7.2'
-      zod: ^3.25.0
+      arktype: ^2.1.0
+      typescript: '>=5.0.0'
+      valibot: ^1.0.0-beta.7 || ^1.0.0
+      zod: ^3.24.0 || ^4.0.0
+    peerDependenciesMeta:
+      arktype:
+        optional: true
+      typescript:
+        optional: true
+      valibot:
+        optional: true
+      zod:
+        optional: true
 
   '@tailwindcss/typography@0.5.13':
     resolution: {integrity: sha512-ADGcJ8dX21dVVHIwTRgzrcunY6YY9uSlAHHGVKvkA+vLc5qLwEszvKts40lx7z0qc4clpjclwLeK5rVCV2P/uw==}
@@ -7652,12 +7748,6 @@ packages:
   '@types/mysql@2.15.27':
     resolution: {integrity: sha512-YfWiV16IY0OeBfBCk8+hXKmdTKrKlwKN1MNKAPBu5JYxLwBEZl7QzeEpGnlZb3VMGJrrGmB84gXiH+ofs/TezA==}
 
-  '@types/node-fetch@2.6.11':
-    resolution: {integrity: sha512-24xFj9R5+rfQJLRyM56qh+wnVSYhyXC2tkoBndtY0U+vubqNsYXGjufB2nn8Q6gt0LrARwL6UBtMCSVCwl4B1g==}
-
-  '@types/node@18.19.21':
-    resolution: {integrity: sha512-2Q2NeB6BmiTFQi4DHBzncSoq/cJMLDdhPaAoJFnFCyD9a8VPZRf7a1GAwp1Edb7ROaZc5Jz/tnZyL6EsWMRaqw==}
-
   '@types/node@22.17.0':
     resolution: {integrity: sha512-bbAKTCqX5aNVryi7qXVMi+OkB3w/OyblodicMbvE38blyAz7GxXf6XYhklokijuPwwVg9sDLKRxt0ZHXQwZVfQ==}
 
@@ -8052,10 +8142,6 @@ packages:
     resolution: {integrity: sha512-QT8i0hCz6C/KQ+KTAbSNwCHDGdmUJl2tp2ZpNlGSWCfhUNVbYG2WLE3MdZGBAgXPV4GAvjGMxo+C1hroyxmZEg==}
     engines: {node: '>= 14'}
 
-  agentkeepalive@4.5.0:
-    resolution: {integrity: sha512-5GG/5IbQQpC9FpkRGsSvZI5QYeSCzlJHdpBQntCsuTOxhKD8lqKhrleg2Yi7yvMIf82Ycmmqln9U8V9qwEiJew==}
-    engines: {node: '>= 8.0.0'}
-
   aggregate-error@4.0.1:
     resolution: {integrity: sha512-0poP0T7el6Vq3rstR8Mn4V/IQrpBLO6POkUSrN7RhyY+GF/InCFShQzsQ39T25gkHhLgSLByyAz+Kjb+c2L98w==}
     engines: {node: '>=12'}
@@ -8257,6 +8343,7 @@ packages:
 
   axios-retry@4.5.0:
     resolution: {integrity: sha512-aR99oXhpEDGo0UuAlYcn2iGRds30k366Zfa05XWScR9QaQD4JYiP3/1Qt1u7YlefUOK+cn0CcwoL1oefavQUlQ==}
+    deprecated: axios-retry is no longer maintained. See https://github.com/softonic/axios-retry for alternatives.
     peerDependencies:
       axios: 0.x || 1.x
 
@@ -10034,9 +10121,6 @@ packages:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
 
-  form-data-encoder@1.7.2:
-    resolution: {integrity: sha512-qfqtYan3rxrnCk1VYaA4H+Ms9xdpPqvLZa6xmMgFvhO32x7/3J/ExcTd6qpxM0vH2GdMI+poehyBZvqfMTto8A==}
-
   form-data@4.0.4:
     resolution: {integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==}
     engines: {node: '>= 6'}
@@ -10044,10 +10128,6 @@ packages:
   form-data@4.0.6:
     resolution: {integrity: sha512-vKatAh4SlVfgbv+YtmhiRjhEMJsYpsG1Y2rMQtR+SVSbytsSD1YGzDIcrAJmdFec88u/+VoGmxnl+80gL1tRCQ==}
     engines: {node: '>= 6'}
-
-  formdata-node@4.4.1:
-    resolution: {integrity: sha512-0iirZp3uVDjVGt9p49aTaqjk84TrglENEDuqfdlZQ1roC9CWlPk6Avf8EEnZNcAqPonwkG35x4n3ww/1THYAeQ==}
-    engines: {node: '>= 12.20'}
 
   forwarded-parse@2.1.2:
     resolution: {integrity: sha512-alTFZZQDKMporBH77856pXgzhEzaUVmLCDk+egLgIgHst3Tpndzz8MnKe+GzRJRfvVdn69HhpW7cmXzvtLvJAw==}
@@ -10532,9 +10612,6 @@ packages:
   human-signals@8.0.1:
     resolution: {integrity: sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ==}
     engines: {node: '>=18.18.0'}
-
-  humanize-ms@1.2.1:
-    resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
 
   husky@8.0.3:
     resolution: {integrity: sha512-+dQSyqPh4x1hlO1swXBiNb2HzTDN1I2IGLQx1GrBuiqFJfoMrnZWwVmatvSiO+Iz8fBUnf+lekwNo4c2LlXItg==}
@@ -11725,11 +11802,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
-
-  node-domexception@1.0.0:
-    resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
-    engines: {node: '>=10.5.0'}
-    deprecated: Use your platform's native DOMException instead
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-fetch@2.6.13:
     resolution: {integrity: sha512-StxNAxh15zr77QvvkmveSQ8uCQ4+v5FkvNTj0OESmiHu+VRi/gXArXtkWMElOsOUNLtUEvI4yS+rdtOHZTwlQA==}
@@ -12099,13 +12172,21 @@ packages:
     resolution: {integrity: sha512-OS+QTnw1/4vrf+9hh1jc1jnYjzSG4ttTBB8UxOwAnInG3Uo4ssetzC1ihqaIHjLJnA5GGlRl6QlZXOTQhRBUvg==}
     engines: {node: '>=14.16'}
 
-  openai@4.104.0:
-    resolution: {integrity: sha512-p99EFNsA/yX6UhVO93f5kJsDRLAg+CTA2RBqdHK4RtK8u5IJw32Hyb2dTGKbnnFmnuoBv5r7Z2CURI9sGZpSuA==}
-    hasBin: true
+  openai@6.49.0:
+    resolution: {integrity: sha512-aYCc0C6L864eR6WSYIwQGyXriw/nIyZx0ObvhzOEVuk0zoBDpynjSbrionWI7q65B5H8jJX0DXR9snEzM6bfPg==}
     peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
       ws: 8.21.0
-      zod: ^3.25.0
+      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
       ws:
         optional: true
       zod:
@@ -12819,11 +12900,15 @@ packages:
       '@types/react':
         optional: true
 
-  react-hook-form@7.45.1:
-    resolution: {integrity: sha512-6dWoFJwycbuFfw/iKMcl+RdAOAOHDiF11KWYhNDRN/OkUt+Di5qsZHwA0OwsVnu9y135gkHpTw9DJA+WzCeR9w==}
-    engines: {node: '>=12.22.0'}
+  react-hook-form@7.91.0:
+    resolution: {integrity: sha512-5BEBUnCBwa28AFXYTYmOaB/+CSpJ/+CWVASHEvIGUzFdHyUiPHeRhG7r5hOZ8nZi0yP7pbHdFNXO/p31EKTJFQ==}
+    engines: {node: '>=18.0.0'}
     peerDependencies:
+      '@types/react': '*'
       react: 18.3.1
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   react-icons@4.12.0:
     resolution: {integrity: sha512-IBaDuHiShdZqmfc/TwHu6+d6k2ltNCf3AszxNmjJc1KUfXdEeRJOKyNvLmAHaarhzGmTSVygNdyu8/opXv2gaw==}
@@ -14058,9 +14143,6 @@ packages:
   unbzip2-stream@1.4.3:
     resolution: {integrity: sha512-mlExGW4w71ebDJviH16lQLtZS32VKqsSfk80GCfUlwT/4/hNRFsoscrF/c++9xinkMzECL1uL9DDwXqFWkruPg==}
 
-  undici-types@5.26.5:
-    resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
-
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -14423,10 +14505,6 @@ packages:
     resolution: {integrity: sha512-e0MO3wdXWKrLbL0DgGnUV7WHVuw9OUvL4hjgnPkIeEvESk74gAITi5G606JtZPp39cd8HA9VQzCIvA49LpPN5Q==}
     engines: {node: '>= 8'}
 
-  web-streams-polyfill@4.0.0-beta.3:
-    resolution: {integrity: sha512-QW95TCTaHmsYfHDybGMwO5IJIM93I/6vTRk+daHTWFPhwh+C8Cg7j7XyKrwrj8Ib6vYXe0ocYNrmzY4xAAN6ug==}
-    engines: {node: '>= 14'}
-
   web-vitals@5.3.0:
     resolution: {integrity: sha512-q6LWsLatGYZp5VGBIOvbTj6JBV2nOmC8KvWztXBmwJcfFAzhwKwbOxhUH306XY3CcaZDUlSmSuNPBsCn0bFu+g==}
 
@@ -14674,18 +14752,13 @@ packages:
   zeptomatch@2.1.0:
     resolution: {integrity: sha512-KiGErG2J0G82LSpniV0CtIzjlJ10E04j02VOudJsPyPwNZgGnRKQy7I1R7GMyg/QswnE4l7ohSGrQbQbjXPPDA==}
 
-  zod-to-json-schema@3.22.4:
-    resolution: {integrity: sha512-2Ed5dJ+n/O3cU383xSY28cuVi0BCQhF8nYqWU5paEpl7fVdqdAmiLdqLyfblbNdfOFwFfi/mqU4O1pwc60iBhQ==}
-    peerDependencies:
-      zod: ^3.25.0
-
   zod-to-json-schema@3.25.1:
     resolution: {integrity: sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA==}
     peerDependencies:
-      zod: ^3.25.0
+      zod: ^3.25 || ^4
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zustand@4.4.3:
     resolution: {integrity: sha512-oRy+X3ZazZvLfmv6viIaQmtLOMeij1noakIsK/Y47PWYhT8glfXzQ4j0YcP5i0P0qI1A4rIB//SGROGyZhx91A==}
@@ -14903,15 +14976,15 @@ snapshots:
       '@smithy/smithy-client': 4.11.7
       '@smithy/types': 4.12.1
       '@smithy/url-parser': 4.2.9
-      '@smithy/util-base64': 4.3.0
-      '@smithy/util-body-length-browser': 4.2.0
+      '@smithy/util-base64': 4.3.1
+      '@smithy/util-body-length-browser': 4.2.1
       '@smithy/util-body-length-node': 4.2.1
       '@smithy/util-defaults-mode-browser': 4.3.34
       '@smithy/util-defaults-mode-node': 4.2.37
       '@smithy/util-endpoints': 3.2.9
       '@smithy/util-middleware': 4.2.9
       '@smithy/util-retry': 4.2.9
-      '@smithy/util-utf8': 4.2.0
+      '@smithy/util-utf8': 4.2.1
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
@@ -15165,15 +15238,15 @@ snapshots:
       '@smithy/smithy-client': 4.11.7
       '@smithy/types': 4.12.1
       '@smithy/url-parser': 4.2.9
-      '@smithy/util-base64': 4.3.0
-      '@smithy/util-body-length-browser': 4.2.0
+      '@smithy/util-base64': 4.3.1
+      '@smithy/util-body-length-browser': 4.2.1
       '@smithy/util-body-length-node': 4.2.1
       '@smithy/util-defaults-mode-browser': 4.3.34
       '@smithy/util-defaults-mode-node': 4.2.37
       '@smithy/util-endpoints': 3.2.9
       '@smithy/util-middleware': 4.2.9
       '@smithy/util-retry': 4.2.9
-      '@smithy/util-utf8': 4.2.0
+      '@smithy/util-utf8': 4.2.1
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
@@ -17395,22 +17468,27 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  '@hono/mcp@0.2.5(@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@3.25.76)':
+  '@hono/mcp@0.2.5(@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@4.6.7))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@4.6.7)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.26.0(supports-color@10.2.0)(zod@3.25.76)
+      '@modelcontextprotocol/sdk': 1.26.0(supports-color@10.2.0)(zod@4.6.7)
       hono: 4.12.25
       hono-rate-limiter: 0.4.2(hono@4.12.25)
       pkce-challenge: 5.0.0
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@hono/node-server@1.19.13(hono@4.12.25)':
     dependencies:
       hono: 4.12.25
 
-  '@hookform/resolvers@4.1.3(react-hook-form@7.45.1(react@18.3.1))':
+  '@hookform/resolvers@5.9.2(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.18.0))(ajv@8.18.0)(react-hook-form@7.91.0(@types/react@18.3.3)(react@18.3.1))(zod@4.6.7)':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.45.1(react@18.3.1)
+      react-hook-form: 7.91.0(@types/react@18.3.3)(react@18.3.1)
+    optionalDependencies:
+      '@standard-schema/spec': 1.1.0
+      ajv: 8.18.0
+      ajv-formats: 2.1.1(ajv@8.18.0)
+      zod: 4.6.7
 
   '@humanwhocodes/config-array@0.13.0(supports-color@10.2.0)':
     dependencies:
@@ -17925,7 +18003,7 @@ snapshots:
 
   '@microsoft/tsdoc@0.16.0': {}
 
-  '@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@3.25.76)':
+  '@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.25)
       ajv: 8.18.0
@@ -17942,8 +18020,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.0
       raw-body: 3.0.2
-      zod: 3.25.76
-      zod-to-json-schema: 3.25.1(zod@3.25.76)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.1(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -21648,10 +21726,10 @@ snapshots:
 
   '@spotlightjs/spotlight@4.11.3(hono-rate-limiter@0.4.2(hono@4.12.25))(supports-color@10.2.0)':
     dependencies:
-      '@hono/mcp': 0.2.5(@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@3.25.76))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@3.25.76)
+      '@hono/mcp': 0.2.5(@modelcontextprotocol/sdk@1.26.0(supports-color@10.2.0)(zod@4.6.7))(hono-rate-limiter@0.4.2(hono@4.12.25))(hono@4.12.25)(zod@4.6.7)
       '@hono/node-server': 1.19.13(hono@4.12.25)
       '@jridgewell/trace-mapping': 0.3.31
-      '@modelcontextprotocol/sdk': 1.26.0(supports-color@10.2.0)(zod@3.25.76)
+      '@modelcontextprotocol/sdk': 1.26.0(supports-color@10.2.0)(zod@4.6.7)
       '@sentry/core': 10.49.0
       '@sentry/node': 10.49.0(supports-color@10.2.0)
       anser: 2.3.5
@@ -21665,7 +21743,7 @@ snapshots:
       semver: 7.7.4
       uuidv7: 1.2.1
       yaml: 2.8.3
-      zod: 3.25.76
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@opentelemetry/exporter-trace-otlp-http'
@@ -21684,16 +21762,17 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@t3-oss/env-core@0.4.1(typescript@6.0.3)(zod@3.25.76)':
-    dependencies:
+  '@t3-oss/env-core@0.13.11(typescript@6.0.3)(zod@4.6.7)':
+    optionalDependencies:
       typescript: 6.0.3
-      zod: 3.25.76
+      zod: 4.6.7
 
-  '@t3-oss/env-nextjs@0.4.1(typescript@6.0.3)(zod@3.25.76)':
+  '@t3-oss/env-nextjs@0.13.11(typescript@6.0.3)(zod@4.6.7)':
     dependencies:
-      '@t3-oss/env-core': 0.4.1(typescript@6.0.3)(zod@3.25.76)
+      '@t3-oss/env-core': 0.13.11(typescript@6.0.3)(zod@4.6.7)
+    optionalDependencies:
       typescript: 6.0.3
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@tailwindcss/typography@0.5.13(tailwindcss@3.4.15(ts-node@10.9.2(@types/node@22.17.0)(typescript@6.0.3)))':
     dependencies:
@@ -22234,15 +22313,6 @@ snapshots:
     dependencies:
       '@types/node': 22.17.0
 
-  '@types/node-fetch@2.6.11':
-    dependencies:
-      '@types/node': 22.17.0
-      form-data: 4.0.6
-
-  '@types/node@18.19.21':
-    dependencies:
-      undici-types: 5.26.5
-
   '@types/node@22.17.0':
     dependencies:
       undici-types: 6.21.0
@@ -22762,10 +22832,6 @@ snapshots:
   agent-base@7.1.4: {}
 
   agent-base@8.0.0: {}
-
-  agentkeepalive@4.5.0:
-    dependencies:
-      humanize-ms: 1.2.1
 
   aggregate-error@4.0.1:
     dependencies:
@@ -25065,8 +25131,6 @@ snapshots:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
-  form-data-encoder@1.7.2: {}
-
   form-data@4.0.4:
     dependencies:
       asynckit: 0.4.0
@@ -25082,11 +25146,6 @@ snapshots:
       es-set-tostringtag: 2.1.0
       hasown: 2.0.4
       mime-types: 2.1.35
-
-  formdata-node@4.4.1:
-    dependencies:
-      node-domexception: 1.0.0
-      web-streams-polyfill: 4.0.0-beta.3
 
   forwarded-parse@2.1.2: {}
 
@@ -25658,10 +25717,6 @@ snapshots:
   human-signals@8.0.0: {}
 
   human-signals@8.0.1: {}
-
-  humanize-ms@1.2.1:
-    dependencies:
-      ms: 2.1.3
 
   husky@8.0.3: {}
 
@@ -27086,8 +27141,6 @@ snapshots:
 
   node-abort-controller@3.1.1: {}
 
-  node-domexception@1.0.0: {}
-
   node-fetch@2.6.13(encoding@0.1.13):
     dependencies:
       whatwg-url: 5.0.0
@@ -27327,20 +27380,11 @@ snapshots:
       is-inside-container: 1.0.0
       is-wsl: 2.2.0
 
-  openai@4.104.0(encoding@0.1.13)(ws@8.21.0)(zod@3.25.76):
-    dependencies:
-      '@types/node': 18.19.21
-      '@types/node-fetch': 2.6.11
-      abort-controller: 3.0.0
-      agentkeepalive: 4.5.0
-      form-data-encoder: 1.7.2
-      formdata-node: 4.4.1
-      node-fetch: 2.6.13(encoding@0.1.13)
+  openai@6.49.0(@aws-sdk/credential-provider-node@3.972.11)(ws@8.21.0)(zod@4.6.7):
     optionalDependencies:
+      '@aws-sdk/credential-provider-node': 3.972.11
       ws: 8.21.0
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - encoding
+      zod: 4.6.7
 
   optionator@0.9.3:
     dependencies:
@@ -28114,9 +28158,11 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  react-hook-form@7.45.1(react@18.3.1):
+  react-hook-form@7.91.0(@types/react@18.3.3)(react@18.3.1):
     dependencies:
       react: 18.3.1
+    optionalDependencies:
+      '@types/react': 18.3.3
 
   react-icons@4.12.0(react@18.3.1):
     dependencies:
@@ -29556,8 +29602,6 @@ snapshots:
       buffer: 5.7.1
       through: 2.3.8
 
-  undici-types@5.26.5: {}
-
   undici-types@6.21.0: {}
 
   undici@6.27.0: {}
@@ -29937,8 +29981,6 @@ snapshots:
 
   web-streams-polyfill@3.2.1: {}
 
-  web-streams-polyfill@4.0.0-beta.3: {}
-
   web-vitals@5.3.0: {}
 
   webcrypto-core@1.7.8:
@@ -30201,15 +30243,11 @@ snapshots:
       grammex: 3.1.12
       graphmatch: 1.1.1
 
-  zod-to-json-schema@3.22.4(zod@3.25.76):
+  zod-to-json-schema@3.25.1(zod@4.6.7):
     dependencies:
-      zod: 3.25.76
+      zod: 4.6.7
 
-  zod-to-json-schema@3.25.1(zod@3.25.76):
-    dependencies:
-      zod: 3.25.76
-
-  zod@3.25.76: {}
+  zod@4.6.7: {}
 
   zustand@4.4.3(@types/react@18.3.3)(react@18.3.1):
     dependencies:

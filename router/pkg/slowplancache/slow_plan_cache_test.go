@@ -3,6 +3,7 @@ package slowplancache
 import (
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -394,6 +395,26 @@ func TestCache_WaitAfterClose(t *testing.T) {
 	// Wait after Close should not deadlock or panic
 	require.NotPanics(t, func() {
 		c.Wait()
+	})
+}
+
+// A Set or Wait that passed the closed check may still send after Close.
+func TestCloseDuringSetAndWait(t *testing.T) {
+	t.Parallel()
+	synctest.Test(t, func(t *testing.T) {
+		c, err := New[*testPlan](10, 0)
+		require.NoError(t, err)
+		c.Close()
+
+		require.NotPanics(t, func() {
+			c.enqueue(setRequest[*testPlan]{key: 1, value: &testPlan{content: "q1"}, dur: time.Millisecond})
+		})
+
+		// The select in waitForWrites picks at random between sending and done,
+		// so repeat to hit the send. synctest reports a deadlock if it blocks.
+		for range 100 {
+			c.waitForWrites()
+		}
 	})
 }
 

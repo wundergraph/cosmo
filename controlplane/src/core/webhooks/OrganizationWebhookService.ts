@@ -45,7 +45,7 @@ const subgraphCheckExtensionSchema = z.object({
       z.array(
         z.object({
           lintRuleType: z.string().trim(),
-          severity: z.nativeEnum(LintSeverity),
+          severity: z.enum(LintSeverity),
           message: z.string().trim(),
           issueLocation: z.object({
             line: z.number().int().positive(),
@@ -772,7 +772,7 @@ export class OrganizationWebhookService {
       requestHeaders: {},
     };
 
-    const response = await this.#sendWebhookRequest<SubgraphCheckExtensionResponse>(
+    const response = await this.#sendWebhookRequest<unknown>(
       sceConfig.endpoint,
       sceConfig.secretKey,
       payload,

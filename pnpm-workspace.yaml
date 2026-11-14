@@ -37,7 +37,6 @@ overrides:
   graphql: 16.9.0
   cross-spawn: 7.0.6
   next: 15.5.28
-  zod: ^3.25.0
   debug: <4.4.2
   supports-color: <10.2.1
   wrap-ansi: <9.0.1
@@ -120,7 +119,7 @@ catalog:
 
   # Runtime deps
   graphql: ^16.9.0
-  zod: ^3.25.0
+  zod: ^4.6.7
   axios: 1.19.0
   dotenv: 16.6.0
   date-fns: ^3.6.0

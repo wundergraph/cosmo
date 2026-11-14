@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.265.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.264.0...controlplane@0.265.0) (2026-11-13)
+
+### Features
+
+* **controlplane:** add deliveryGuarantees to proto and controlplane ([#3434](https://github.com/wundergraph/cosmo/issues/3434)) ([5a5f8c3](https://github.com/wundergraph/cosmo/commit/5a5f8c3f157dd2cce655705908647045112cee92)) (@dkorittki)
+* update clickhouse query ([#3526](https://github.com/wundergraph/cosmo/issues/3526)) ([91595fa](https://github.com/wundergraph/cosmo/commit/91595fa08a872faed234828226b8f631e52cacf9)) (@wilsonrivera)
+
+## [0.264.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.263.0...controlplane@0.264.0) (2026-11-12)
+
+### Features
+
+* **controlplane:** add publish improvements to subgraph check ([#3439](https://github.com/wundergraph/cosmo/issues/3439)) ([bde32e4](https://github.com/wundergraph/cosmo/commit/bde32e4e19933a40df4685d704bba50ec37c9fa5)) (@wilsonrivera)
+
+## [0.263.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.262.1...controlplane@0.263.0) (2026-11-12)
+
+### Features
+
+* send the client schema instead of the federated schema to the prompt to query service ([#3490](https://github.com/wundergraph/cosmo/issues/3490)) ([6063223](https://github.com/wundergraph/cosmo/commit/6063223d27453c1142419e6e8ac6c573af5bf3a2)) (@wilsonrivera)
+
+### Bug Fixes
+
+* migrate all packages to Zod v4 ([#3511](https://github.com/wundergraph/cosmo/issues/3511)) ([68cc6a9](https://github.com/wundergraph/cosmo/commit/68cc6a9631b45ba4614963299dbc1186c661bdff)) (@comatory)
+* show all permitted federated graphs when rules mix namespaces and graphs ([#3510](https://github.com/wundergraph/cosmo/issues/3510)) ([c3b4d25](https://github.com/wundergraph/cosmo/commit/c3b4d25f90be67f5782939ddc2295579ab030583)) (@JivusAyrus)
+
 ## [0.262.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.262.0...controlplane@0.262.1) (2026-11-10)
 
 **Note:** Version bump only for package controlplane
