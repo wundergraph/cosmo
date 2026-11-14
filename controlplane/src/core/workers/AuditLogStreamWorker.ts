@@ -51,8 +51,10 @@ export async function deliverAuditLogs(input: {
   repo: AuditLogStreamRepository;
   organizationId: string;
   logger: pino.Logger;
+  /** Only for tests. */
+  settleDelay?: string;
 }) {
-  const { repo, organizationId, logger } = input;
+  const { repo, organizationId, logger, settleDelay } = input;
 
   for (let i = 0; i < MAX_BATCHES_PER_TICK; i++) {
     // Re-read before every batch, so disabling, replacing or deleting the config takes effect mid-tick.
@@ -61,7 +63,8 @@ export async function deliverAuditLogs(input: {
       return;
     }
 
-    const logs = await repo.getPendingLogs(config.organizationId, BATCH_SIZE);
+    const cutoff = await repo.getSettleCutoff(settleDelay);
+    const logs = await repo.getPendingLogs(config.organizationId, BATCH_SIZE, cutoff);
     const last = logs.at(-1);
     if (!last) {
       return;

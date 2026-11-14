@@ -6,10 +6,10 @@ import { auditLogs, auditLogStreamConfigs } from '../../db/schema.js';
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 /**
- * Audit logs are only delivered once they are this old. created_at is set when the row is inserted, so a transaction
- * that commits late can make a row visible after newer rows were already delivered and the cursor passed it.
+ * Audit logs are only delivered once they are this old. A cheap guard for short transactions; getSettleCutoff covers
+ * the long ones.
  */
-const SETTLE_DELAY = '30 seconds';
+export const SETTLE_DELAY = '30 seconds';
 
 export type AuditLogStreamConfig = typeof auditLogStreamConfigs.$inferSelect;
 type AuditLogStreamConfigInput = Pick<
@@ -69,9 +69,37 @@ export class AuditLogStreamRepository {
   }
 
   /**
-   * Returns the next audit logs after the config's cursor, oldest first.
+   * Returns the time before which no more audit logs can appear, as text to keep Postgres' microseconds.
+   *
+   * created_at defaults to now(), the start of the inserting transaction, but the row only becomes visible when that
+   * transaction commits. A transaction still open now can only commit rows created at or after its own start, so
+   * nothing older than the oldest open transaction can still appear. Delivering past that point could move the cursor
+   * beyond a row that is about to commit.
+   *
+   * This must be read in its own statement before getPendingLogs. Within one statement, the rows are read from a
+   * snapshot taken first and pg_stat_activity later, so a transaction committing in between would be in neither.
+   *
+   * pg_stat_activity only shows xact_start for sessions of the same role unless the role has pg_read_all_stats, so
+   * every writer of audit logs must connect as the controlplane role. Prepared transactions don't appear in it; the
+   * controlplane doesn't use them. A long unrelated transaction delays delivery but never loses rows.
    */
-  public getPendingLogs(organizationId: string, limit: number) {
+  public async getSettleCutoff(settleDelay = SETTLE_DELAY): Promise<string> {
+    const result = await this.db.execute<{ cutoff: string }>(sql`
+      select least(
+        now() - ${settleDelay}::interval,
+        (
+          select min(xact_start) from pg_stat_activity
+          where datname = current_database() and backend_type = 'client backend' and pid <> pg_backend_pid()
+        )
+      )::text as cutoff
+    `);
+    return result[0].cutoff;
+  }
+
+  /**
+   * Returns the next audit logs after the config's cursor and before the cutoff from getSettleCutoff, oldest first.
+   */
+  public getPendingLogs(organizationId: string, limit: number, cutoff: string) {
     return this.db
       .select()
       .from(auditLogs)
@@ -84,7 +112,7 @@ export class AuditLogStreamRepository {
             from ${auditLogStreamConfigs}
             where ${auditLogStreamConfigs.organizationId} = ${organizationId}
           )`,
-          sql`${auditLogs.createdAt} < now() - ${SETTLE_DELAY}::interval`,
+          sql`${auditLogs.createdAt} < ${cutoff}::timestamptz`,
         ),
       )
       .orderBy(asc(auditLogs.createdAt), asc(auditLogs.id))

@@ -402,6 +402,31 @@ describe('Audit log stream delivery', () => {
     expect(await repo.get(org.id)).toBeUndefined();
   });
 
+  test('does not skip a log whose transaction commits after newer logs', async (testContext) => {
+    const hec = await startFakeHec('good-token');
+    testContext.onTestFinished(() => hec.close());
+    const { org, repo } = await setup(hec.url);
+    // Without the settle delay, so only the open-transaction cutoff holds rows back.
+    const deliver = () => deliverAuditLogs({ repo, organizationId: org.id, logger, settleDelay: '0 seconds' });
+    const insert = (conn: postgres.Sql, name: string) => conn`
+      insert into audit_logs (organization_id, organization_slug, audit_action, action, actor_display_name, actor_type, auditable_type, auditable_display_name)
+      values (${org.id}, ${org.slug}, 'namespace.created', 'created', 'cosmo-bot', 'system', 'namespace', ${name})
+    `;
+
+    const slow = await queryConnection.reserve();
+    testContext.onTestFinished(() => slow.release());
+    await slow`begin`;
+    await insert(slow, 'slow');
+    await insert(queryConnection, 'fast');
+
+    await deliver();
+    expect(hec.received).toHaveLength(0);
+
+    await slow`commit`;
+    await deliver();
+    expect(hec.received.flatMap((r) => r.events).map((e) => e.event.object.name)).toEqual(['slow', 'fast']);
+  });
+
   test('holds back logs that have not settled yet', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
