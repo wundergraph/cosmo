@@ -1275,6 +1275,11 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	})
 
 	reqContext.operation.protocol = OperationProtocolWS
+	reqContext.writeSubscriptionError = func(err error) {
+		if wErr := h.writeErrorMessage(registration.msg.ID, err); wErr != nil {
+			h.logger.Warn("writing subscription error message", zap.Error(wErr))
+		}
+	}
 	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
 	reqContext.operation.traceOptions = h.plannerOptions.TraceOptions
 
