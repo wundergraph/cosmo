@@ -193,7 +193,7 @@ flowchart TD
   M --> N[Send the client response]
 ```
 
-1. **Inbound deduplication.** Identical client requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its client response. See [Deduplication](#deduplication).
+1. **Inbound deduplication.** Identical client requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its client response. See [Request Deduplication](/router/request-deduplication#with-the-response-cache).
 2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
 3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
 4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With `only-if-cached`, it fails instead. The client response gets `504`, except batched and `@defer` requests, which get fetch errors. Identical subgraph requests in flight share one call.
@@ -340,14 +340,6 @@ With one, the router first replaces each fetch's `Cache-Control` with what the c
 - A fetch without `Cache-Control` or `Expires` is ignored, unless `cache_control_policy.value` stands in for it or `cache_control_policy.missing_no_store` is enabled. See [Adjusting Cache Control](/router/proxy-capabilities/adjusting-cache-control).
 
 Client responses to mutations carry `no-cache`. A client response with subgraph errors carries `no-store, no-cache, must-revalidate`.
-
-## Deduplication
-
-The cache and [request deduplication](/router/request-deduplication) work together:
-
-- **Inbound deduplication** runs before the cache. Only the leading client request looks up and writes. Requests with different private ids never share a flight.
-- **Subgraph deduplication** runs after the lookup. Requests that miss on the same fetch at the same time send the subgraph one call between them. Every participant then writes the same entries.
-- A client request with `Cache-Control: no-cache`, `max-age=0` or `only-if-cached` is not deduplicated with other client requests.
 
 ## Storage
 

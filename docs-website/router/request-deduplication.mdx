@@ -25,10 +25,12 @@ Only `Query` operations are eligible. Mutations and subscriptions are never dedu
 Deduplicates identical client requests before the engine even starts resolving. The key is:
 
 ```
-xxhash64(normalizedOperationHash + variablesHash + combinedSubgraphHeadersHash)
+xxhash64(normalizedOperationHash + variablesHash + combinedSubgraphHeadersHash) + privateIdDigest
 ```
 
 If two concurrent clients send the same query with the same variables and the same forwarded headers, only one resolution is performed and the result is shared.
+
+`privateIdDigest` is only set when the [response cache](/router/response-cache) has a [`private_id`](/router/response-cache/configuration#private-responses). See [With the response cache](#with-the-response-cache).
 
 ## How Header Hashes Are Computed
 
@@ -70,6 +72,15 @@ Incoming HTTP Request
     │
     └── Response to client
 ```
+
+## With the Response Cache
+
+The [response cache](/router/response-cache) and both layers of deduplication work together:
+
+- **Inbound deduplication runs before the cache.** Only the leading client request looks up and writes cache entries. The others receive its client response.
+- **Client requests with different private ids never share a flight.** The private id is part of the inbound key, so one user never receives another user's cached private data.
+- **Subgraph deduplication runs after the cache lookup.** Client requests that miss on the same fetch at the same time send the subgraph one call between them. Each of them then writes the same cache entries.
+- **Some client requests are not deduplicated.** A client request with `Cache-Control: no-cache`, `max-age=0` or `only-if-cached` resolves on its own, because it may need a different answer from the cache than the request it would join.
 
 ## Configuration Reference
 
