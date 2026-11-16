@@ -1,7 +1,8 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { auditLogs, auditLogStreamConfigs } from '../../db/schema.js';
+import { auditLogs, auditLogStreamConfigs, organizations } from '../../db/schema.js';
+import type { OrganizationRepository } from './OrganizationRepository.js';
 
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -10,6 +11,11 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000';
  * the long ones.
  */
 export const SETTLE_DELAY = '30 seconds';
+
+export async function isAuditLogStreamingEnabled(orgRepo: OrganizationRepository, organizationId: string) {
+  const feature = await orgRepo.getFeature({ organizationId, featureId: 'audit-log-streaming' });
+  return !!feature?.enabled;
+}
 
 export type AuditLogStreamConfig = typeof auditLogStreamConfigs.$inferSelect;
 type AuditLogStreamConfigInput = Pick<
@@ -62,10 +68,18 @@ export class AuditLogStreamRepository {
     return deleted[0];
   }
 
-  public listEnabled() {
-    return this.db.query.auditLogStreamConfigs.findMany({
-      where: eq(auditLogStreamConfigs.enabled, true),
-    });
+  /**
+   * Lists the enabled configs of organizations that are not deactivated. A deactivated organization's cursor stays in
+   * place, so its backlog is delivered once it is reactivated.
+   */
+  public async listEnabled() {
+    const rows = await this.db
+      .select({ config: auditLogStreamConfigs })
+      .from(auditLogStreamConfigs)
+      .innerJoin(organizations, eq(organizations.id, auditLogStreamConfigs.organizationId))
+      .where(and(eq(auditLogStreamConfigs.enabled, true), sql`${organizations.isDeactivated} is not true`))
+      .execute();
+    return rows.map((r) => r.config);
   }
 
   /**

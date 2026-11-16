@@ -7,7 +7,8 @@ import {
 import { UnauthorizedError } from '../../errors/errors.js';
 import { DEFAULT_SOURCE, DEFAULT_SOURCETYPE, normalizeHecEndpoint } from '../../audit-log-stream/splunk-hec.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { AuditLogStreamRepository } from '../../repositories/AuditLogStreamRepository.js';
+import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../../repositories/AuditLogStreamRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
@@ -25,6 +26,16 @@ export function upsertAuditLogStreamConfig(
 
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
+    }
+
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    if (!(await isAuditLogStreamingEnabled(orgRepo, authContext.organizationId))) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: 'Audit log streaming is not enabled for this organization',
+        },
+      };
     }
 
     const endpoint = normalizeHecEndpoint(req.endpoint);

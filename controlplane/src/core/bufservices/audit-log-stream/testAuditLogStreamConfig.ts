@@ -7,7 +7,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { sendToHec, toHecEvent } from '../../audit-log-stream/splunk-hec.js';
-import { AuditLogStreamRepository } from '../../repositories/AuditLogStreamRepository.js';
+import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../../repositories/AuditLogStreamRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
@@ -25,6 +26,16 @@ export function testAuditLogStreamConfig(
 
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
+    }
+
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    if (!(await isAuditLogStreamingEnabled(orgRepo, authContext.organizationId))) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: 'Audit log streaming is not enabled for this organization',
+        },
+      };
     }
 
     const repo = new AuditLogStreamRepository(opts.db);

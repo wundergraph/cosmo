@@ -18,11 +18,15 @@ Navigate to your organization's page and click on "Audit Log." You will see all 
 
 ## Streaming to Splunk
 
+<Note>
+  Audit log streaming is an Enterprise plan feature.
+</Note>
+
 Organization admins can stream audit logs to a Splunk HTTP Event Collector (HEC). New entries are delivered within about a minute of being written. Entries written before the stream was configured are not sent.
 
 Configure the stream with the platform API's `UpsertAuditLogStreamConfig`, `GetAuditLogStreamConfig`, `TestAuditLogStreamConfig` and `DeleteAuditLogStreamConfig` methods.
 
-The endpoint can be the collector's base URL or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA; Splunk Enterprise's default self-signed HEC certificate is rejected. The token is stored by Cosmo and is never returned. Deleting the configuration stops the stream and removes the stored URL and token.
+The endpoint can be the collector's base URL or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA; Splunk Enterprise's default self-signed HEC certificate is rejected. `localhost` is not accepted. The token is stored by Cosmo and is never returned. Deleting the configuration stops the stream and removes the stored URL and token.
 
 Tokens with indexer acknowledgement enabled are supported. Cosmo sends your organization ID as the request channel but does not poll for acknowledgements, so an event counts as delivered once the collector accepts it.
 

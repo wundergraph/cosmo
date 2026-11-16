@@ -3,7 +3,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { sendToHec, toHecEvent } from '../audit-log-stream/splunk-hec.js';
-import { AuditLogStreamRepository } from '../repositories/AuditLogStreamRepository.js';
+import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../repositories/AuditLogStreamRepository.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 const QueueName = 'organization.audit_log_stream';
 const WorkerName = 'AuditLogStreamWorker';
@@ -88,32 +89,45 @@ export async function deliverAuditLogs(input: {
   }
 }
 
+/**
+ * Runs one tick: delivers for every enabled config whose organization is active and still has the feature. An
+ * organization that loses the feature keeps its cursor, so its backlog is delivered if it gets the feature back.
+ */
+export async function deliverAllAuditLogs(input: {
+  repo: AuditLogStreamRepository;
+  orgRepo: OrganizationRepository;
+  logger: pino.Logger;
+}) {
+  const { repo, orgRepo, logger } = input;
+
+  const configs = await repo.listEnabled();
+  for (const config of configs) {
+    try {
+      if (!(await isAuditLogStreamingEnabled(orgRepo, config.organizationId))) {
+        continue;
+      }
+      await deliverAuditLogs({ repo, organizationId: config.organizationId, logger });
+    } catch (err: unknown) {
+      logger.error({ organizationId: config.organizationId, err }, 'Audit log stream delivery failed');
+    }
+  }
+}
+
 export const createAuditLogStreamWorker = (input: {
   redisConnection: ConnectionOptions;
   db: PostgresJsDatabase<typeof schema>;
   logger: pino.Logger;
+  defaultBillingPlanId?: string;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
   const repo = new AuditLogStreamRepository(input.db);
+  const orgRepo = new OrganizationRepository(log, input.db, input.defaultBillingPlanId);
 
-  const worker = new Worker(
-    QueueName,
-    async () => {
-      const configs = await repo.listEnabled();
-      for (const config of configs) {
-        try {
-          await deliverAuditLogs({ repo, organizationId: config.organizationId, logger: log });
-        } catch (err: unknown) {
-          log.error({ organizationId: config.organizationId, err }, 'Audit log stream delivery failed');
-        }
-      }
-    },
-    {
-      connection: input.redisConnection,
-      // A single tick at a time keeps cursor updates ordered.
-      concurrency: 1,
-    },
-  );
+  const worker = new Worker(QueueName, () => deliverAllAuditLogs({ repo, orgRepo, logger: log }), {
+    connection: input.redisConnection,
+    // A single tick at a time keeps cursor updates ordered.
+    concurrency: 1,
+  });
 
   worker.on('stalled', (jobId) => {
     log.warn({ jobId }, 'Job stalled');

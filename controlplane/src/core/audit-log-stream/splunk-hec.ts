@@ -1,5 +1,4 @@
 import * as schema from '../../db/schema.js';
-import { isValidLocalhostOrSecureEndpoint } from '../util.js';
 
 export const DEFAULT_SOURCETYPE = 'wundergraph:cosmo:audit';
 export const DEFAULT_SOURCE = 'cosmo';
@@ -30,6 +29,8 @@ class HecError extends Error {}
 /**
  * Accepts the base URL of the collector (https://splunk.example.com:8088), its /services/collector path, or the full
  * /services/collector/event URL, and returns the event endpoint. Returns undefined when the URL can't be used.
+ *
+ * Endpoints must be HTTPS and not localhost, which on a hosted controlplane is the controlplane itself.
  */
 export function normalizeHecEndpoint(input: string): string | undefined {
   let url: URL;
@@ -39,7 +40,7 @@ export function normalizeHecEndpoint(input: string): string | undefined {
     return undefined;
   }
 
-  if (!isValidLocalhostOrSecureEndpoint(input.trim()) || url.username || url.password) {
+  if (url.protocol !== 'https:' || url.hostname === 'localhost' || url.username || url.password) {
     return undefined;
   }
 

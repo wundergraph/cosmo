@@ -451,6 +451,7 @@ export default async function build(opts: BuildConfig) {
       redisConnection: fastify.redisForWorker,
       db: fastify.db,
       logger,
+      defaultBillingPlanId: opts.stripe?.defaultPlanId,
     }),
   );
 

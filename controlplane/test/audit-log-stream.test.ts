@@ -1,15 +1,16 @@
 import { createServer, IncomingMessage, Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { normalizeHecEndpoint, sendToHec } from '../src/core/audit-log-stream/splunk-hec.js';
 import { AuditLogStreamRepository } from '../src/core/repositories/AuditLogStreamRepository.js';
-import { deliverAuditLogs } from '../src/core/workers/AuditLogStreamWorker.js';
+import { deliverAllAuditLogs, deliverAuditLogs } from '../src/core/workers/AuditLogStreamWorker.js';
 import { AuditLogRepository } from '../src/core/repositories/AuditLogRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { RunMigration } from '../src/core/migrate.js';
 import * as schema from '../src/db/schema.js';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
@@ -75,7 +76,8 @@ async function startFakeHec(token: string, opts: { requireChannel?: boolean } = 
   const { port } = server.address() as AddressInfo;
 
   return {
-    url: `http://localhost:${port}`,
+    // Plain HTTP on localhost, which normalizeHecEndpoint rejects, so tests store it directly.
+    endpoint: `http://localhost:${port}/services/collector/event`,
     received,
     failNextRequests: (n: number) => {
       failNext = n;
@@ -93,7 +95,6 @@ describe('normalizeHecEndpoint', () => {
       'https://http-inputs-acme.splunkcloud.com/services/collector/event',
       'https://http-inputs-acme.splunkcloud.com/services/collector/event',
     ],
-    ['http://localhost:8088', 'http://localhost:8088/services/collector/event'],
   ])('%s', (input, expected) => {
     expect(normalizeHecEndpoint(input)).toBe(expected);
   });
@@ -104,6 +105,8 @@ describe('normalizeHecEndpoint', () => {
     'ftp://splunk.example.com',
     'https://u:p@splunk.example.com',
     'http://127.0.0.1:8088',
+    'http://localhost:8088',
+    'https://localhost:8088',
   ])('rejects %s', (input) => {
     expect(normalizeHecEndpoint(input)).toBeUndefined();
   });
@@ -141,7 +144,7 @@ describe('Audit log streaming', () => {
   });
 
   test('configures the stream without ever returning the token', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['audit-log-streaming'] });
     testContext.onTestFinished(() => server.close());
 
     expect((await client.getAuditLogStreamConfig({})).config).toBeUndefined();
@@ -204,7 +207,11 @@ describe('Audit log streaming', () => {
   });
 
   test('only organization admins can manage the stream', async (testContext) => {
-    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { client, server, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+      enabledFeatures: ['audit-log-streaming'],
+    });
     testContext.onTestFinished(() => server.close());
 
     authenticator.changeUser(TestUser.devJoeCompanyA);
@@ -217,15 +224,39 @@ describe('Audit log streaming', () => {
     expect(res.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
   });
 
-  test('test event reports collector errors', async (testContext) => {
+  test('only organizations with the feature can configure or test the stream', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const upsert = await client.upsertAuditLogStreamConfig({
+      endpoint: 'https://splunk.example.com',
+      token: 'secret',
+      enabled: true,
+    });
+    expect(upsert.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+    expect((await client.testAuditLogStreamConfig({})).response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+
+    // Reading and deleting stay available, so an organization that loses the feature can still remove its config.
+    expect((await client.getAuditLogStreamConfig({})).response?.code).toBe(EnumStatusCode.OK);
+    expect((await client.deleteAuditLogStreamConfig({})).response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+  });
+
+  test('test event reports collector errors', async (testContext) => {
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['audit-log-streaming'] });
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(async () => {
       await hec.close();
       await server.close();
     });
+    const configure = async (token: string) => {
+      await client.upsertAuditLogStreamConfig({ endpoint: 'https://splunk.example.com', token, enabled: true });
+      await server.db
+        .update(schema.auditLogStreamConfigs)
+        .set({ endpoint: hec.endpoint })
+        .where(eq(schema.auditLogStreamConfigs.organizationId, users.adminAliceCompanyA.organizationId));
+    };
 
-    await client.upsertAuditLogStreamConfig({ endpoint: hec.url, token: 'bad-token', enabled: true });
+    await configure('bad-token');
     const bad = await client.testAuditLogStreamConfig({});
     expect(bad.response?.code).toBe(EnumStatusCode.ERR);
     expect(bad.response?.details).toBe('Collector responded with 403: Invalid token');
@@ -233,7 +264,7 @@ describe('Audit log streaming', () => {
       'Collector responded with 403: Invalid token',
     );
 
-    await client.upsertAuditLogStreamConfig({ endpoint: hec.url, token: 'good-token', enabled: true });
+    await configure('good-token');
     const good = await client.testAuditLogStreamConfig({});
     expect(good.response?.code).toBe(EnumStatusCode.OK);
     expect(hec.received).toHaveLength(1);
@@ -275,7 +306,7 @@ describe('Audit log stream delivery', () => {
     const repo = new AuditLogStreamRepository(db);
     await repo.upsert({
       organizationId: org.id,
-      endpoint: normalizeHecEndpoint(endpoint)!,
+      endpoint,
       token: 'good-token',
       index: 'cosmo',
       source: 'cosmo',
@@ -315,7 +346,7 @@ describe('Audit log stream delivery', () => {
   test('delivers pending logs in order and retries from the cursor after a failure', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { org, repo, addLogs, deliver } = await setup(hec.url);
+    const { org, repo, addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(3);
 
@@ -351,7 +382,7 @@ describe('Audit log stream delivery', () => {
   test('delivers to a token with indexer acknowledgement enabled', async (testContext) => {
     const hec = await startFakeHec('good-token', { requireChannel: true });
     testContext.onTestFinished(() => hec.close());
-    const { org, repo, addLogs, deliver } = await setup(hec.url);
+    const { org, repo, addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(2);
     await deliver();
@@ -365,12 +396,12 @@ describe('Audit log stream delivery', () => {
   test('stops delivering once the config is disabled or deleted', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { org, repo, addLogs, deliver } = await setup(hec.url);
+    const { org, repo, addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(1);
     await repo.upsert({
       organizationId: org.id,
-      endpoint: normalizeHecEndpoint(hec.url)!,
+      endpoint: hec.endpoint,
       index: null,
       source: 'cosmo',
       sourcetype: 'wundergraph:cosmo:audit',
@@ -387,12 +418,12 @@ describe('Audit log stream delivery', () => {
   test('a save without a token does not recreate a deleted config', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { org, repo } = await setup(hec.url);
+    const { org, repo } = await setup(hec.endpoint);
 
     await repo.delete(org.id);
     const saved = await repo.upsert({
       organizationId: org.id,
-      endpoint: normalizeHecEndpoint(hec.url)!,
+      endpoint: hec.endpoint,
       index: null,
       source: 'cosmo',
       sourcetype: 'wundergraph:cosmo:audit',
@@ -405,7 +436,7 @@ describe('Audit log stream delivery', () => {
   test('does not skip a log whose transaction commits after newer logs', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { org, repo } = await setup(hec.url);
+    const { org, repo } = await setup(hec.endpoint);
     // Without the settle delay, so only the open-transaction cutoff holds rows back.
     const deliver = () => deliverAuditLogs({ repo, organizationId: org.id, logger, settleDelay: '0 seconds' });
     const insert = (conn: postgres.Sql, name: string) => conn`
@@ -428,7 +459,7 @@ describe('Audit log stream delivery', () => {
   test('holds back logs that have not settled yet', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { addLogs, deliver } = await setup(hec.url);
+    const { addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(1, "interval '0 seconds'");
     await deliver();
@@ -438,7 +469,7 @@ describe('Audit log stream delivery', () => {
   test('does not redeliver a log whose timestamp has sub-millisecond precision', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { org, addLogs, deliver } = await setup(hec.url);
+    const { org, addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(1);
     await db.execute(
@@ -453,10 +484,45 @@ describe('Audit log stream delivery', () => {
   test('sends large backlogs in batches', async (testContext) => {
     const hec = await startFakeHec('good-token');
     testContext.onTestFinished(() => hec.close());
-    const { addLogs, deliver } = await setup(hec.url);
+    const { addLogs, deliver } = await setup(hec.endpoint);
 
     await addLogs(150);
     await deliver();
     expect(hec.received.map((r) => r.events.length)).toEqual([100, 50]);
+  });
+
+  test('only delivers for active organizations with the feature', async (testContext) => {
+    const hec = await startFakeHec('good-token');
+    testContext.onTestFinished(() => hec.close());
+    const orgRepo = new OrganizationRepository(logger, db);
+    const deliverAll = () => deliverAllAuditLogs({ repo: new AuditLogStreamRepository(db), orgRepo, logger });
+    const deliveredOrgIds = () => new Set(hec.received.flatMap((r) => r.events).map((e) => e.event.organization.id));
+
+    const entitled = await setup(hec.endpoint);
+    const deactivated = await setup(hec.endpoint);
+    const notEntitled = await setup(hec.endpoint);
+    for (const { addLogs } of [entitled, deactivated, notEntitled]) {
+      await addLogs(1);
+    }
+    for (const { org } of [entitled, deactivated]) {
+      await orgRepo.updateFeature({ organizationId: org.id, id: 'audit-log-streaming', enabled: true });
+    }
+    await db
+      .update(schema.organizations)
+      .set({ isDeactivated: true })
+      .where(sql`${schema.organizations.id} = ${deactivated.org.id}`);
+
+    await deliverAll();
+    expect(deliveredOrgIds()).toEqual(new Set([entitled.org.id]));
+
+    // Both kept their cursor, so the backlog goes out once they qualify again.
+    await db
+      .update(schema.organizations)
+      .set({ isDeactivated: false })
+      .where(sql`${schema.organizations.id} = ${deactivated.org.id}`);
+    await orgRepo.updateFeature({ organizationId: notEntitled.org.id, id: 'audit-log-streaming', enabled: true });
+
+    await deliverAll();
+    expect(deliveredOrgIds()).toEqual(new Set([entitled.org.id, deactivated.org.id, notEntitled.org.id]));
   });
 });
