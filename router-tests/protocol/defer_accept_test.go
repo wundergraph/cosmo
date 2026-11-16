@@ -2,16 +2,19 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 // TestDeferAcceptHeader verifies how the router negotiates the Accept header of
@@ -99,4 +102,69 @@ func TestDeferAcceptHeader(t *testing.T) {
 			assert.Equal(t, `{"errors":[{"message":"the router received a query with the @defer directive but the client requested the incremental delivery format 'deferSpec=20220824', while the router implements 'incrementalSpec=v0.2'. Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler","extensions":{"code":"DEFER_UNSUPPORTED_SPEC"}}]}`, body)
 		})
 	})
+}
+
+// TestDeferErrorAfterStreamStarted verifies that an error after the initial
+// payload leaves the multipart stream unterminated instead of appending an
+// error response, which would add an empty part and an untagged error part.
+func TestDeferErrorAfterStreamStarted(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		NoRetryClient: true,
+		Subgraphs: testenv.SubgraphsConfig{
+			Availability: testenv.SubgraphConfig{Delay: 2 * time.Second},
+		},
+		RouterOptions: []core.Option{
+			core.WithCustomModules(&requestDeadlineModule{timeout: 500 * time.Millisecond}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		payload, err := json.Marshal(map[string]any{"query": `query { employees { id ... @defer { isAvailable } } }`})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(payload))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "multipart/mixed;incrementalSpec=v0.2,application/json;q=0.9")
+
+		res, err := xEnv.RouterClient.Do(req)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, res.Body.Close()) }()
+
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		assert.True(t, strings.HasPrefix(string(body), "--graphql\r\nContent-Type: application/json\r\n\r\n{\"data\":"), string(body))
+		assert.True(t, strings.HasSuffix(string(body), "\"hasNext\":true}\r\n--graphql\r\n"), string(body))
+		assert.NotContains(t, string(body), "--graphql--")
+		assert.NotContains(t, string(body), "\"errors\"")
+	})
+}
+
+var (
+	_ core.Module                 = (*requestDeadlineModule)(nil)
+	_ core.RouterOnRequestHandler = (*requestDeadlineModule)(nil)
+)
+
+// requestDeadlineModule bounds every request with a deadline, so execution
+// fails with context.DeadlineExceeded rather than context.Canceled.
+type requestDeadlineModule struct {
+	timeout time.Duration
+}
+
+func (m *requestDeadlineModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID:       "requestDeadlineModule",
+		Priority: 1,
+		New: func() core.Module {
+			return &requestDeadlineModule{timeout: m.timeout}
+		},
+	}
+}
+
+func (m *requestDeadlineModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	reqCtx, cancel := context.WithTimeout(ctx.Request().Context(), m.timeout)
+	defer cancel()
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request().WithContext(reqCtx))
 }

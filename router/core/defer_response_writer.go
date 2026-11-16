@@ -35,6 +35,12 @@ func (f *HttpDeferWriter) Complete() {
 	f.buf.Reset()
 }
 
+// Committed reports whether a part has reached the client. After that the
+// response is a multipart stream, so a later error cannot become an error response.
+func (f *HttpDeferWriter) Committed() bool {
+	return f.started
+}
+
 func (f *HttpDeferWriter) Write(p []byte) (n int, err error) {
 	if err = f.ctx.Err(); err != nil {
 		return
