@@ -71,6 +71,15 @@ With `engine.enable_multi_fetch`, which is on by default, entity fetches can be 
 - **One `Vary` covers all aliases.** The merged response's `Vary` applies to every alias.
 - **Dependent fetches are skipped on failure.** When the request for the uncached aliases fails, fetches that depend on the merged fetch are skipped, including those that need only cached aliases. Their fields are `null` without an error.
 
+### Varied headers changed by custom modules
+
+For a subgraph response with `Vary`, the router keys the entry by the header values it built, before custom modules run.
+
+- If a module changes a varied header, the subgraph response is not stored.
+- `Accept`, `Accept-Encoding` and `Content-Type` are not checked. If a module changes one of them based on other input, such as a client header the subgraph does not vary on, different requests can share an entry and get each other's answers.
+
+See [Varying responses](/router/response-cache/how-it-works#varying-responses).
+
 ### No stale serving or revalidation
 
 Entries are served until they expire and never after. The cache never revalidates with the subgraph. See [Lifetime](/router/response-cache/how-it-works#lifetime).
