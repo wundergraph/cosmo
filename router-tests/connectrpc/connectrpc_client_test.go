@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -51,7 +50,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		resp, err := client.GetEmployeeById(context.Background(), req)
+		resp, err := client.GetEmployeeById(t.Context(), req)
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
@@ -81,7 +80,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		resp, err := client.GetEmployeeById(context.Background(), req)
+		resp, err := client.GetEmployeeById(t.Context(), req)
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
@@ -101,7 +100,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		resp, err := client.GetEmployeeById(context.Background(), req)
+		resp, err := client.GetEmployeeById(t.Context(), req)
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
@@ -132,7 +131,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 999,
 		})
 
-		_, err = client.GetEmployeeById(context.Background(), req)
+		_, err = client.GetEmployeeById(t.Context(), req)
 		require.Error(t, err)
 
 		var connectErr *connect.Error
@@ -179,7 +178,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		_, err = client.GetEmployeeById(context.Background(), req)
+		_, err = client.GetEmployeeById(t.Context(), req)
 		// Per GraphQL spec, errors at top level should result in an error
 		require.Error(t, err)
 
@@ -206,7 +205,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		_, err = client.GetEmployeeById(context.Background(), req)
+		_, err = client.GetEmployeeById(t.Context(), req)
 		require.Error(t, err)
 
 		var connectErr *connect.Error
@@ -231,7 +230,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		_, err = client.GetEmployeeById(context.Background(), req)
+		_, err = client.GetEmployeeById(t.Context(), req)
 		require.Error(t, err)
 
 		var connectErr *connect.Error
@@ -283,7 +282,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		_, err = client.GetEmployeeById(context.Background(), req)
+		_, err = client.GetEmployeeById(t.Context(), req)
 		require.Error(t, err)
 
 		var connectErr *connect.Error
