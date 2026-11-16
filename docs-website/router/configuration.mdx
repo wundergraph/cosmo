@@ -1034,15 +1034,7 @@ Configure your cache control policy. More information on this feature can be fou
 
 ### Missing Caching Information
 
-A subgraph response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
-
-By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way, as long as it parses and has a caching directive.
-
-For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
-
-<Note>
-  `missing_no_store` does not apply to gRPC subgraphs, including router plugins. The router does not read gRPC response metadata, so it cannot tell whether such a subgraph sent caching information, and their responses are ignored as they are without the setting. To restrict caching for a gRPC subgraph, set a `value` for it under `subgraphs`.
-</Note>
+How `missing_no_store` treats subgraph responses without caching information is described under [Subgraphs without caching information](/router/proxy-capabilities/adjusting-cache-control#subgraphs-without-caching-information).
 
 ### Example YAML Config:
 
@@ -1454,7 +1446,7 @@ Use the `rediss://` scheme instead of `redis://` to connect over TLS. There is n
 | dial_timeout       | Timeout for establishing a new connection, e.g. `5s`.                             | 5s            |
 | read_timeout       | Socket read timeout, e.g. `3s`. Also the basis for the default `pool_timeout`.     | 3s            |
 | write_timeout      | Socket write timeout, e.g. `3s`.                                                  | read timeout  |
-| max_retries        | Number of retries before giving up on a command. `-1` disables retries.           | 3             |
+| max_retries        | Number of retries before giving up on a command. `-1` disables retries. `0` uses the default. | 3             |
 | min_retry_backoff  | Minimum backoff between retries, e.g. `8ms`. `-1` disables backoff.               | 8ms           |
 | max_retry_backoff  | Maximum backoff between retries, e.g. `512ms`. `-1` disables backoff.             | 512ms         |
 | client_name        | Name sent to Redis with `CLIENT SETNAME`, which makes the router's connections identifiable in `CLIENT LIST`. |               |
@@ -1472,7 +1464,7 @@ These apply when `cluster_enabled: true`.
 
 | Parameter        | Description                                                                                | Default Value |
 | ---------------- | ------------------------------------------------------------------------------------------ | ------------- |
-| max_redirects    | Number of MOVED/ASK redirects to follow before giving up on a command.                      | 3             |
+| max_redirects    | Number of times a command is retried after a MOVED/ASK redirect or a retryable error such as a timeout, independent of `max_retries`. `-1` disables them. `0` uses the default. | 3             |
 | read_only        | Route read-only commands to a replica of the shard that owns the key, instead of its master. Requires a cluster that has replicas, see [Reading from replicas](/router/configuration#reading-from-replicas). | false         |
 | route_by_latency | Route read-only commands to whichever node of the shard has the lowest measured latency, the master included. Implies `read_only`. | false         |
 | route_randomly   | Route read-only commands to a random node of the shard, the master included. Implies `read_only`. | false         |

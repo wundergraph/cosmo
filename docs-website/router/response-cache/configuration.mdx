@@ -43,20 +43,16 @@ Give the cache its own storage provider entry. Timeouts and pool settings in the
 
 #### Redis timeouts
 
-The response cache has no timeout of its own. Without limits on the Redis URL, a Redis instance that accepts connections but does not answer holds each request for many seconds. The client defaults are a 3-second read timeout and 3 retries.
+The response cache has no timeout of its own. With the Redis client's defaults, a 3-second read timeout and 3 retries, a Redis instance that accepts connections but does not answer holds each request for many seconds. Set tighter limits as query parameters on the Redis URL. The parameters are described under [Redis Connection URLs](/router/configuration#redis-connection-urls).
 
-Set the client's limits as query parameters on the Redis URL:
-
-| Parameter | Meaning | Suggested |
-| --- | --- | --- |
-| `read_timeout` | Longest wait for a reply | `250ms` |
-| `write_timeout` | Longest wait to send a command | `250ms` |
-| `dial_timeout` | Longest wait to open a connection | `500ms` |
-| `pool_timeout` | Longest wait for a free connection | `250ms` |
-| `max_retries` | Retries per command. `-1` disables retries. `0` means the default of 3. | `-1` |
-| `max_redirects` | Cluster only. Retries per command after a redirect or a timeout, independent of `max_retries`. `-1` disables them. `0` means the default of 3. | `-1` |
-
-In cluster mode, the parameters are read from the first URL. With `max_redirects=-1`, a command that meets a slot redirect during resharding fails and counts as a miss.
+| Parameter | Suggested for the cache |
+| --- | --- |
+| `read_timeout` | `250ms` |
+| `write_timeout` | `250ms` |
+| `dial_timeout` | `500ms` |
+| `pool_timeout` | `250ms` |
+| `max_retries` | `-1`, so a failing Redis is not asked again |
+| `max_redirects` | `-1` on Redis Cluster. It also retries timeouts, independent of `max_retries`. A command that meets a slot redirect during resharding then fails and counts as a miss. |
 
 Each timeout applies per Redis round trip, not per fetch, and a fetch can make several. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss, and a timed-out write can still land. See [Storage](/router/response-cache/how-it-works#redis). An invalidation of a large tag also takes many round trips and can fail on a short timeout.
 

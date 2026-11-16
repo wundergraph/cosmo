@@ -205,11 +205,13 @@ telemetry:
 * `router_response_cache_keys_total`: Counter of the entries the store was asked for, found, stored or removed.
 * `router_response_cache_write_ttl_seconds`: Histogram of the lifetime entries are written with, in seconds. One value per write, the shortest of its entries.
 * `router_response_cache_fetches_total`: Counter of subgraph fetches, by what the cache did for them.
+* `router_response_cache_cache_tag_header_overflows_total`: Counter of responses whose tags did not fit `cache_tag_header.max_bytes`.
 
 #### Attributes
 
 * `wg_response_cache_provider`: The storage provider, `redis` or `memory`. On every metric.
 * `wg_response_cache_operation`: `lookup`, `write` or `invalidate`. `engine` counts a failure around the store, such as an entry that could not be read.
+* `wg_response_cache_tag_header_overflow`: On `router_response_cache_cache_tag_header_overflows_total`. `truncate` or `private`.
 * `wg_response_cache_result`: On `router_response_cache_keys_total`. `found` or `missing` for a lookup, `stored` or `failed` for a write, `removed` for an invalidation.
 * `wg_error_type`: On `router_response_cache_operations_total`, only for a call that failed. One of `canceled`, `timeout`, `partial_write`, `invalid_argument`, `other`. For the `engine` operation `invalid_entry` or `invalid_response`, with the `wg_subgraph_name` it happened for.
 
@@ -218,7 +220,7 @@ telemetry:
 * `wg_subgraph_name`: The name of the subgraph.
 * `wg_entity_type`: The type the fetch resolves fields of.
 * `wg_response_cache_status`: `hit`, `partial_hit`, `miss` or `not_cacheable`.
-* `wg_response_cache_store_decision`: `stored`, or the [reason](/router/response-cache/observability#store-decision) the response was not stored.
+* `wg_response_cache_store_decision`: `stored`, or the [reason](/router/response-cache/how-it-works#what-is-stored) the response was not stored.
 
 #### Examples
 

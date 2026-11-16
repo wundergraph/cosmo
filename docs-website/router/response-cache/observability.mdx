@@ -163,27 +163,7 @@ access_logs:
 
 ## Cache health
 
-Metrics for the store itself are off by default:
-
-```yaml config.yaml
-telemetry:
-  metrics:
-    otlp:
-      response_cache: true
-    prometheus:
-      response_cache: true
-```
-
-| Metric | Counts |
-| --- | --- |
-| `router.response_cache.operations` | Store calls by operation (`lookup`, `write`, `invalidate`), and engine-side failures (`engine`), by error type |
-| `router.response_cache.operation.duration_seconds` | Duration of those calls |
-| `router.response_cache.keys` | Keys by result (`found`, `missing`, `stored`, `failed`, `removed`) |
-| `router.response_cache.write.ttl_seconds` | The shortest lifetime in each write |
-| `router.response_cache.fetches` | Subgraph fetches by subgraph, type, status and store decision |
-| `router.response_cache.cache_tag_header.overflows` | Responses whose tags exceeded `max_bytes` |
-
-The full list of attributes is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics).
+Metrics for the store itself are off by default. The metrics, their attributes and how to turn them on are listed under [Response Cache Metrics](/router/metrics-and-monitoring#response-cache-metrics). The queries below use them.
 
 A lookup asks for the shared key and, for a request with a private id, the private key too. Usually only one of the two is found. Keys counted as `missing` are therefore no measure of the hit rate. Use the [per-fetch status](#per-fetch) for that.
 

@@ -54,7 +54,17 @@ The algorithm evaluates the following in order:
 
 5. `public`: The response is `public` only when every subgraph that sets `Cache-Control` sends `public`. `private` always wins. To send `public` when any subgraph does, enable the [`cache_control_any_public`](/router/configuration#apollo-router-compatibility-cache-control-any-public) compatibility flag.
 
-6. Subgraphs without caching information: A subgraph response with no `Cache-Control` or `Expires` header is ignored. One with only directives that do not affect caching sets no lifetime but withdraws `public`. To treat both as `no-store` instead, set [`missing_no_store: true`](/router/configuration#missing-caching-information). A configured default stands in for such a response either way. gRPC subgraphs and router plugins cannot send `Cache-Control`, so `missing_no_store` skips them. Set a subgraph `value` to restrict them.
+6. Subgraphs without caching information are ignored, unless `missing_no_store` is set. See [Subgraphs without caching information](#subgraphs-without-caching-information).
+
+### Subgraphs without caching information
+
+A subgraph response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
+
+By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way, as long as it parses and has a caching directive.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
+
+`missing_no_store` does not apply to gRPC subgraphs, including router plugins. The router does not read gRPC response metadata, so it cannot tell whether such a subgraph sent caching information. To restrict caching for a gRPC subgraph, set a `value` for it under `subgraphs`.
 
 <Info>
   **`no-cache`/`no-store` always wins**
