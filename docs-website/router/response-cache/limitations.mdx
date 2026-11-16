@@ -31,6 +31,10 @@ A key includes every variable value of the subgraph request. Operations with man
 
 Use the [store decision](/router/response-cache/observability#store-decision) and the churn query to find such operations. Send `no-store` from the subgraph for responses that are not worth caching.
 
+### In-memory provider
+
+An in-memory storage provider exists, set with `storage.provider: 'memory'`. It is not suitable for production. Each router replica has its own cache, nothing survives a restart, and an invalidation reaches only the replica it was sent to. Use Redis.
+
 ### Secure the invalidation endpoint
 
 - Bind it to a private interface or put TLS in front of it.
