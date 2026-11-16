@@ -114,6 +114,7 @@ type Config struct {
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
+	backwardsCompatibility          config.BackwardsCompatibilityConfiguration
 	storageProviders                config.StorageProviders
 	providerRegistry                *ProviderRegistry
 	demoMode                        bool
@@ -219,6 +220,8 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
 	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
 	usage["apollo_router_compatibility_flags_cache_control_any_public_enabled"] = c.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
+
+	usage["backwards_compatibility_persisted_operations_allow_mismatched_sha256_ids"] = c.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs
 
 	usage["demo_mode"] = c.demoMode
 

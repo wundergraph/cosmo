@@ -36,6 +36,8 @@ router_registration: true
 graphql_path: /graphql
 dev_mode: false
 tls:
+  watch: true
+  watch_interval: 5s
   server:
     enabled: false
   client:
@@ -683,6 +685,10 @@ router_config_path: 'latest.json'
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
+
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: false
 
 apollo_compatibility_flags:
   enable_all: false

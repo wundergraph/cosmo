@@ -253,7 +253,9 @@
           "Enabled": true
         }
       }
-    }
+    },
+    "Watch": true,
+    "WatchInterval": 5000000000
   },
   "CacheControl": {
     "Enabled": true,
@@ -1318,6 +1320,11 @@
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    }
   },
   "Plugins": {
     "Enabled": true,

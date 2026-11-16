@@ -184,7 +184,9 @@
         "Enabled": false
       },
       "Subgraphs": null
-    }
+    },
+    "Watch": false,
+    "WatchInterval": 1000000000
   },
   "CacheControl": {
     "Enabled": false,
@@ -775,6 +777,11 @@
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    }
   },
   "Plugins": {
     "Enabled": false,

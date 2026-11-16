@@ -1042,6 +1042,12 @@ type TLSConfiguration struct {
 	Server     TLSServerConfiguration     `yaml:"server"`
 	Client     HTTPClientTLSConfiguration `yaml:"client"`
 	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
+
+	// Watch reloads router server and HTTP/gRPC subgraph client certificate and key files.
+	// CA bundles and NATS TLS files are not watched.
+	// Open connections keep the material they were established with.
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"TLS_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"TLS_WATCH_INTERVAL"`
 }
 
 type TLSServerConfiguration struct {
@@ -1406,6 +1412,19 @@ type PersistedOperationsConfig struct {
 	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
+// BackwardsCompatibilityConfiguration restores behavior of older router versions.
+// Each option gives up a guarantee of the current behavior, so enable one only
+// while migrating away from what it supports.
+type BackwardsCompatibilityConfiguration struct {
+	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+}
+
+type PersistedOperationsBackwardsCompatibility struct {
+	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
+	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
+	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
+}
+
 type SafelistConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
@@ -1761,6 +1780,8 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
