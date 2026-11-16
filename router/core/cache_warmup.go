@@ -291,6 +291,8 @@ type CacheWarmupPlanningProcessor struct {
 }
 
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
+	release := c.operationProcessor.caches.Acquire()
+	defer release()
 
 	var (
 		skipParse bool

@@ -618,6 +618,19 @@
       "additionalProperties": false,
       "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router.",
       "properties": {
+        "watch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reload router server and HTTP/gRPC subgraph client certificate and key files from disk when they change. New connections use the new files. Open connections are not affected. CA bundles and NATS TLS files are not watched. A file that fails to load is reported and the previous one stays in use. The default value is false."
+        },
+        "watch_interval": {
+          "type": "string",
+          "description": "The interval at which the certificate files are checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s",
+          "duration": {
+            "minimum": "100ms"
+          }
+        },
         "server": {
           "type": "object",
           "description": "The configuration for the server TLS. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
@@ -2310,6 +2323,11 @@
           "type": "string",
           "description": "Global cache control value.",
           "examples": ["max-age=180, public"]
+        },
+        "missing_no_store": {
+          "type": "boolean",
+          "default": false,
+          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, a response with neither header is ignored, and one with only such directives withdraws public. gRPC subgraphs are skipped, as the router does not read their response metadata."
         },
         "subgraphs": {
           "type": "array",
@@ -4715,6 +4733,24 @@
         }
       }
     },
+    "backwards_compatibility": {
+      "type": "object",
+      "description": "Options that restore behavior of older router versions. Each option gives up a guarantee of the current behavior, so enable one only while migrating away from what it supports.",
+      "additionalProperties": false,
+      "properties": {
+        "persisted_operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_mismatched_sha256_ids": {
+              "type": "boolean",
+              "default": false,
+              "description": "Serve published operations whose ID looks like a SHA256 hash (64 lowercase hexadecimal characters) but isn't the SHA256 hash of their body, as routers before 0.355.0 did. Such an ID is ambiguous: a request whose query hashes to it can execute a different operation than the published one, and with APQ enabled it can register that query under the ID. Republish the operations with matching IDs and disable this option."
+            }
+          }
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
@@ -4745,6 +4781,17 @@
         "skip_null_variables_error": {
           "type": "object",
           "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "cache_control_any_public": {
+          "type": "object",
+          "description": "Merges cache control as public when any fetch is public, unless one is private, similar to Apollo Router. By default, every fetch must be public.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

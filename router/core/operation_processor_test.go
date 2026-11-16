@@ -25,7 +25,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationProcessorOptions{
+	parser := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -86,7 +86,7 @@ func TestPersistedOperationCachePopulatesOperationName(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        1,
@@ -113,7 +113,7 @@ func TestPersistedOperationCacheOperationNameIsStableAcrossKitReuse(t *testing.T
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        1,
@@ -153,7 +153,7 @@ func TestParseOperationProcessor(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationProcessorOptions{
+	parser := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -311,7 +311,7 @@ func TestNormalizeVariablesOperationProcessor(t *testing.T) {
 				RenameTypeNames: nil,
 				ClientSchema:    &clientSchema,
 			}
-			parser := NewOperationProcessor(OperationProcessorOptions{
+			parser := newTestOperationProcessor(t, OperationProcessorOptions{
 				Executor:                executor,
 				MaxOperationSizeInBytes: 10 << 20,
 				ParseKitPoolSize:        4,
@@ -346,7 +346,7 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationProcessorOptions{
+	parser := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -431,7 +431,7 @@ func TestUnmarshalOperationFromBody(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationProcessorOptions{
+	parser := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -527,7 +527,7 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 		Resolver:        nil,
 		RenameTypeNames: nil,
 	}
-	parser := NewOperationProcessor(OperationProcessorOptions{
+	parser := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -664,7 +664,7 @@ func TestSkipIncludeVariableNamesStableAfterKitReuse(t *testing.T) {
 		RenameTypeNames: nil,
 	}
 	// Pool of exactly one kit so that kit2 is guaranteed to reuse kit1's buffer.
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        1,
@@ -726,12 +726,14 @@ func newValidationCacheProcessor(t *testing.T, clientSchemaSDL string) (*Operati
 		BufferItems:        64,
 	})
 	require.NoError(t, err)
+	caches := NewOperationCaches()
+	caches.Validation = validationCache
 
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                &Executor{ClientSchema: &clientSchema},
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
-		ValidationCache:         validationCache,
+		Caches:                  caches,
 	})
 
 	return processor, validationCache
@@ -844,7 +846,7 @@ func TestOperationProcessorValidationCache(t *testing.T) {
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaSDL)
 		require.False(t, report.HasErrors())
 		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
-		p := NewOperationProcessor(OperationProcessorOptions{
+		p := newTestOperationProcessor(t, OperationProcessorOptions{
 			Executor:                &Executor{ClientSchema: &clientSchema},
 			MaxOperationSizeInBytes: 10 << 20,
 			ParseKitPoolSize:        4,
@@ -887,7 +889,7 @@ func newDeferOperationKit(t *testing.T, enableDefer bool) *OperationKit {
 		PlanConfig:   plan.Configuration{},
 		ClientSchema: &clientSchema,
 	}
-	processor := NewOperationProcessor(OperationProcessorOptions{
+	processor := newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
@@ -1088,27 +1090,20 @@ func TestOperationProcessorParserLimitsOnCachedNormalizedOperation(t *testing.T)
 		require.False(t, report.HasErrors(), "failed to parse client schema")
 		require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
 
-		normalizationCache := newTestRistrettoCache[NormalizationCacheEntry](t)
-		variablesNormalizationCache := newTestRistrettoCache[VariablesNormalizationCacheEntry](t)
-		remapVariablesCache := newTestRistrettoCache[RemapVariablesCacheEntry](t)
+		caches := NewOperationCaches()
+		caches.Normalization = newTestRistrettoCache[NormalizationCacheEntry](t)
+		caches.VariablesNormalization = newTestRistrettoCache[VariablesNormalizationCacheEntry](t)
+		caches.RemapVariables = newTestRistrettoCache[RemapVariablesCacheEntry](t)
 
-		processor := NewOperationProcessor(OperationProcessorOptions{
-			Executor:                    &Executor{ClientSchema: &clientSchema},
-			MaxOperationSizeInBytes:     10 << 20,
-			ParseKitPoolSize:            4,
-			ParserTokenizerLimits:       limits,
-			NormalizationCache:          normalizationCache,
-			VariablesNormalizationCache: variablesNormalizationCache,
-			RemapVariablesCache:         remapVariablesCache,
+		processor := newTestOperationProcessor(t, OperationProcessorOptions{
+			Executor:                &Executor{ClientSchema: &clientSchema},
+			MaxOperationSizeInBytes: 10 << 20,
+			ParseKitPoolSize:        4,
+			ParserTokenizerLimits:   limits,
+			Caches:                  caches,
 		})
 
-		waitForCaches := func() {
-			normalizationCache.Wait()
-			variablesNormalizationCache.Wait()
-			remapVariablesCache.Wait()
-		}
-
-		return processor, waitForCaches
+		return processor, caches.Wait
 	}
 
 	type cacheHits struct {
@@ -1195,4 +1190,15 @@ func TestOperationProcessorParserLimitsOnCachedNormalizedOperation(t *testing.T)
 		require.NoError(t, err)
 		require.Equal(t, "Q", kit.parsedOperation.Request.OperationName)
 	})
+}
+
+func newTestOperationProcessor(t *testing.T, opts OperationProcessorOptions) *OperationProcessor {
+	t.Helper()
+
+	if opts.Caches == nil {
+		opts.Caches = NewOperationCaches()
+	}
+	processor, err := NewOperationProcessor(opts)
+	require.NoError(t, err)
+	return processor
 }
