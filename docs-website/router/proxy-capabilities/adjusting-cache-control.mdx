@@ -48,11 +48,13 @@ The algorithm evaluates the following in order:
 
 2. `max-age` values: The smallest `max-age` value from any subgraph (or the default, if specified in the configuration) is selected.
 
-3. `Expires` header: The earliest expiration date will be used if `Expires` headers are provided.
+3. `s-maxage` values: When any subgraph sends `s-maxage`, the smallest shared lifetime is selected. A subgraph's shared lifetime is its `s-maxage`, or its `max-age` if it has none.
 
-4. `public`: The response is `public` only when every subgraph that sets `Cache-Control` sends `public`. `private` always wins. To send `public` when any subgraph does, enable the [`cache_control_any_public`](/router/configuration#apollo-router-compatibility-cache-control-any-public) compatibility flag.
+4. `Expires` header: The earliest expiration date will be used if `Expires` headers are provided.
 
-5. Subgraphs without caching information: A subgraph response with no `Cache-Control` or `Expires` header is ignored. One with only directives that do not affect caching sets no lifetime but withdraws `public`. To treat both as `no-store` instead, set [`missing_no_store: true`](/router/configuration#missing-caching-information). A configured default stands in for such a response either way. gRPC subgraphs and router plugins cannot send `Cache-Control`, so `missing_no_store` skips them. Set a subgraph `value` to restrict them.
+5. `public`: The response is `public` only when every subgraph that sets `Cache-Control` sends `public`. `private` always wins. To send `public` when any subgraph does, enable the [`cache_control_any_public`](/router/configuration#apollo-router-compatibility-cache-control-any-public) compatibility flag.
+
+6. Subgraphs without caching information: A subgraph response with no `Cache-Control` or `Expires` header is ignored. One with only directives that do not affect caching sets no lifetime but withdraws `public`. To treat both as `no-store` instead, set [`missing_no_store: true`](/router/configuration#missing-caching-information). A configured default stands in for such a response either way. gRPC subgraphs and router plugins cannot send `Cache-Control`, so `missing_no_store` skips them. Set a subgraph `value` to restrict them.
 
 <Info>
   **`no-cache`/`no-store` always wins**
@@ -175,4 +177,4 @@ cache_control_policy:
 
 ## With the Response Cache
 
-With the [response cache](/router/response-cache) enabled, a fetch served from the cache reports the lifetime its entry has left, and a stored miss reports the lifetime it was stored with. The policy then merges these like any other subgraph header. The policy and `set` rules change what the client receives. They do not change what the router stores. See [Client Cache-Control](/router/response-cache/how-it-works#client-cache-control).
+With the [response cache](/router/response-cache) enabled, a fetch served from the cache reports the lifetime its entry has left, and a stored miss reports the lifetime it was stored with. The policy then merges these like any other subgraph header. The policy and `set` rules change what the client receives. They do not change what the router stores. See [Cache-Control of cached fetches](/router/response-cache/how-it-works#cache-control-of-cached-fetches).

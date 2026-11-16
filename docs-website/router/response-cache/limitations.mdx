@@ -114,7 +114,7 @@ response_cache:
 
 ### Cache-Control on the client response
 
-- Without a cache control policy, the client response gets no `Cache-Control` from the cache. See [Client Cache-Control](/router/response-cache/how-it-works#client-cache-control).
+- Without a cache control policy, the client response gets no `Cache-Control` from the cache. See [Cache-Control of cached fetches](/router/response-cache/how-it-works#cache-control-of-cached-fetches).
 - `must-revalidate` and `proxy-revalidate` are reported on a miss but not on a hit. `stale-while-revalidate` and `stale-if-error` are never reported.
 - Batched operations receive no `Cache-Control` from the cache.
 
