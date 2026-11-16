@@ -23,7 +23,6 @@ icon: "triangle-exclamation"
 - Set `maxmemory` and an eviction policy such as `volatile-ttl` or `allkeys-lru`. Every entry has an expiry.
 - Each entity is a separate key. A root fetch is one key, however many entities it returns. An entity fetch that follows it for 100 distinct entities adds 100 keys.
 - Every index tag is a sorted set. With all indexes on, an entity entry is listed in at least two sets: its subgraph and its type.
-- Watch evictions. An evicted entry is a miss on the next request. An evicted tag set loses its index, and the entries it listed can no longer be invalidated by that tag until they expire. See [Evictions](/router/response-cache/observability#evictions).
 
 ### Key cardinality
 
