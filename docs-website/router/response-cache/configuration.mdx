@@ -97,12 +97,6 @@ With `all.enabled: false`, only subgraphs whose entry sets `enabled: true` are c
 
 The indexes, the invalidation endpoint and the cache tag header apply to all subgraphs.
 
-### Feature flags
-
-A feature flag graph uses the same settings. A feature subgraph is configured, cached and invalidated under its own name, not the name of the subgraph it replaces.
-
-An entry naming a subgraph that a graph does not have is kept, because another graph may have it. The router logs a warning per graph that lacks it.
-
 ## Private responses
 
 A subgraph whose answer depends on who is asking marks it `Cache-Control: private`. Such a response must not be served to anyone else. It can still be cached for the context it was produced in.
