@@ -26,7 +26,7 @@ These are never cached:
 - Operations sent over WebSocket.
 - Requests that upload files.
 - Introspection.
-- Root fetches to non-GraphQL data sources, such as gRPC subgraphs.
+- gRPC subgraphs and router plugins. Their root fetches are not looked up. Their entity fetches are looked up but never stored, because the responses carry no caching headers.
 
 ## Subgraphs decide what is cached
 

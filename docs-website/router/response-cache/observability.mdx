@@ -251,6 +251,8 @@ topk(10,
 )
 ```
 
+Entity types of gRPC subgraphs and router plugins always appear here with `no_directive`. They are looked up but never stored. See [gRPC subgraphs and plugins](/router/response-cache/limitations#grpc-subgraphs-and-plugins).
+
 ### Evictions
 
 Redis evicts under its `maxmemory` policy, and the router does not see it. Read it from Redis, for example with [redis_exporter](https://github.com/oliver006/redis_exporter):

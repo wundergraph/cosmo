@@ -89,7 +89,16 @@ Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `
 - Every operation sent over WebSocket, queries included.
 - Requests that upload files.
 - Introspection.
-- Root fetches to non-GraphQL data sources, such as gRPC subgraphs.
+- gRPC subgraphs and router plugins. See [gRPC subgraphs and plugins](#grpc-subgraphs-and-plugins).
+
+### gRPC subgraphs and plugins
+
+Nothing from a gRPC subgraph or router plugin is stored.
+
+- Root fetches are not looked up. They report `not_cacheable`.
+- Entity fetches are looked up on every request, but their responses carry no `Cache-Control` or `Expires`. They report `miss` with store decision `no_directive`.
+
+Set `enabled: false` for these subgraphs under [`subgraphs`](/router/response-cache/configuration#per-subgraph-configuration) to skip the lookup.
 
 ### Cache-Control on the client response
 
