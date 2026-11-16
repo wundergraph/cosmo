@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,6 +130,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 								"findEmployeesNoCriteria_defer_10_extensive_parallel":        {},
 								"full_defer_03_multiple_fields_deferred":                     {},
 								"full_defer_07_parallel_defers":                              {},
+								"full_defer_09_duplicated_field_across_defer":                {},
 								"full_defer_10_extensive_parallel":                           {},
 								"full_defer_11_fragment_around_and_inside":                   {},
 								"products_defer_01_single_defer":                             {},
@@ -222,7 +224,10 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 //
 // The merge target of an incremental item is pending[id].path + item.subPath.
 func reconstructDeferResponse(body []byte) ([]byte, error) {
-	parts := parseMultipartParts(body)
+	parts, err := parseMultipartParts(body)
+	if err != nil {
+		return nil, err
+	}
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no parts in multipart response")
 	}
@@ -375,29 +380,53 @@ func appendArrayValues(a, b *astjson.Value) *astjson.Value {
 	return out
 }
 
-// parseMultipartParts splits a multipart/mixed body on the --graphql boundary
-// and returns the raw JSON bytes of each part.
-func parseMultipartParts(body []byte) [][]byte {
-	// Each part is delimited by the --graphql boundary. The first part has no
-	// leading CRLF (the body starts directly with the boundary), so we split on
-	// the boundary itself rather than "\r\n--graphql". Empty leading segments and
-	// the closing "--" terminator are skipped below.
-	boundary := []byte("--graphql")
-	parts := bytes.Split(body, boundary)
-	var result [][]byte
-	for _, part := range parts {
-		if bytes.HasPrefix(part, []byte("--")) {
-			continue
+// parseMultipartParts validates MIME framing and JSON for every part, including
+// the final part. Empty parts and missing closing boundaries must not be skipped.
+func parseMultipartParts(body []byte) ([][]byte, error) {
+	reader := multipart.NewReader(bytes.NewReader(body), "graphql")
+	var parts [][]byte
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			return parts, nil
 		}
-		_, jsonBody, found := bytes.Cut(part, []byte("\r\n\r\n"))
-		if !found {
-			continue
+		if err != nil {
+			return nil, err
 		}
-		jsonBody = bytes.TrimSpace(jsonBody)
-		if len(jsonBody) == 0 {
-			continue
+		payload, err := io.ReadAll(part)
+		if err != nil {
+			return nil, err
 		}
-		result = append(result, jsonBody)
+		if !json.Valid(payload) {
+			return nil, fmt.Errorf("multipart part %d contains invalid JSON", len(parts))
+		}
+		parts = append(parts, payload)
 	}
-	return result
+}
+
+func TestDeferMultipartFraming(t *testing.T) {
+	t.Parallel()
+
+	const header = "--graphql\r\nContent-Type: application/json\r\n\r\n"
+	const payload = `{"data":{},"hasNext":false}`
+	for _, tc := range []struct {
+		name  string
+		wire  string
+		valid bool
+	}{
+		{name: "valid", wire: header + payload + "\r\n--graphql--", valid: true},
+		{name: "empty trailing part", wire: header + payload + "\r\n" + header + "\r\n--graphql--"},
+		{name: "missing close", wire: header + payload},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			parts, err := parseMultipartParts([]byte(tc.wire))
+			if !tc.valid {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, [][]byte{[]byte(payload)}, parts)
+		})
+	}
 }

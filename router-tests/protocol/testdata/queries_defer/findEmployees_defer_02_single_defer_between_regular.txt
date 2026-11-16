@@ -6,6 +6,4 @@ Content-Type: application/json
 Content-Type: application/json
 
 {"incremental":[{"data":{"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":false}
---graphql
-
 --graphql--
