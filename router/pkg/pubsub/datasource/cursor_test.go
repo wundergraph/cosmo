@@ -475,20 +475,6 @@ func TestCursorKeyRotation(t *testing.T) {
 	})
 }
 
-type testCursorSubscriptionConfig struct {
-	providerType ProviderType
-	providerID   string
-	topics       []string
-}
-
-func (c testCursorSubscriptionConfig) ProviderID() string         { return c.providerID }
-func (c testCursorSubscriptionConfig) ProviderType() ProviderType { return c.providerType }
-func (c testCursorSubscriptionConfig) RootFieldName() string      { return "field" }
-func (c testCursorSubscriptionConfig) CursorTopics() []string     { return c.topics }
-func (c testCursorSubscriptionConfig) DeliveryGuaranteeMode() DeliveryGuaranteeMode {
-	return ""
-}
-
 func TestCursorClientBinding(t *testing.T) {
 	t.Parallel()
 
