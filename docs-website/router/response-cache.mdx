@@ -9,71 +9,6 @@ icon: "boxes-stacked"
   **Experimental feature.** Response caching is in alpha. Its behaviour and configuration can change between releases. Do not use it in production environments.
 </Danger>
 
-The response cache stores the answers your subgraphs give the router. When a later query needs the same data, the router serves it from the cache and does not send that request to the subgraph.
-
-The cache works per subgraph fetch, not per client response. One client query can be answered partly from the cache and partly by subgraphs. Each fetch is looked up and stored on its own.
-
-## What is cached
-
-The router caches two kinds of subgraph fetch:
-
-- **Root query fetches.** The request the router sends a subgraph for the root `Query` fields of an operation. The whole answer is stored as one entry.
-- **Entity fetches.** The `_entities` requests the router sends to fetch an entity's fields from the subgraph that defines them. Every entity is stored as its own entry, so a later query that needs the same entity can reuse it.
-
-These are never cached:
-
-- Mutations and subscriptions, including the entity fetches they make.
-- Operations sent over WebSocket.
-- Requests that upload files.
-- Introspection.
-- gRPC subgraphs and router plugins, which are not supported. See [Limitations](/router/response-cache/limitations#grpc-subgraphs-and-plugins-are-not-supported).
-
-## Subgraphs decide what is cached
-
-Enabling the response cache does not make anything cacheable on its own. A subgraph opts a response in through its `Cache-Control` response header, or an `Expires` header in the future:
-
-```http
-Cache-Control: public, max-age=60
-```
-
-The router stores a response only when its headers allow it, and for as long as they allow. A response with no `Cache-Control` and no `Expires` is never stored. See [What is stored](/router/response-cache/how-it-works#what-is-stored) for the full rules.
-
-If nothing appears to be cached, check the subgraph response headers first.
-
-## Quick start
-
-1. Declare a Redis instance and turn the cache on:
-
-   ```yaml config.yaml
-   storage_providers:
-     redis:
-       - id: 'response_cache'
-         urls:
-           - 'redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&max_retries=-1'
-
-   response_cache:
-     enabled: true
-     storage:
-       provider: 'redis'
-       provider_id: 'response_cache'
-   ```
-
-   Redis 7.0 or newer is required. The query parameters bound how long a request waits on Redis. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
-
-2. Return `Cache-Control` from a subgraph, for example `public, max-age=60`.
-
-3. Send the same query twice. To see the result per request, enable the debug header:
-
-   ```yaml config.yaml
-   engine:
-     debug:
-       enable_cache_response_headers: true
-   ```
-
-   The response then carries `X-WG-Response-Cache: HIT`, `PARTIAL_HIT` or `MISS`. In production, use the `wg.operation.response_cache.status` attribute described in [Monitoring](/router/response-cache/observability).
-
-## In this section
-
 <CardGroup cols={2}>
   <Card title="How it works" icon="gears" href="/router/response-cache/how-it-works">
     Keys, lookups, what is stored, lifetimes, the client header and the storage layout.
@@ -91,9 +26,3 @@ If nothing appears to be cached, check the subgraph response headers first.
     What to plan for before you rely on the cache, and what it does not do.
   </Card>
 </CardGroup>
-
-## Related
-
-- [Adjusting Cache Control](/router/proxy-capabilities/adjusting-cache-control) sets the `Cache-Control` the client and any CDN in front of the router receive.
-- [Request Deduplication](/router/request-deduplication) collapses identical requests in flight. It works alongside the cache.
-- [Cache Warmer](/concepts/cache-warmer) is a different cache. It pre-populates the query plan cache and does not cache subgraph responses.
