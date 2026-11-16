@@ -161,6 +161,7 @@ type Prometheus struct {
 	EngineStats         EngineStats                `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	CostStats           CostStats                  `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
 	CircuitBreaker      bool                       `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
+	GRPCService         bool                       `yaml:"grpc_service" envDefault:"false" env:"PROMETHEUS_GRPC_SERVICE"`
 	ExcludeMetrics      RegExArray                 `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray                 `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool                       `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
@@ -179,6 +180,7 @@ type MetricsOTLP struct {
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
+	GRPCService         bool                  `yaml:"grpc_service" envDefault:"false" env:"METRICS_OTLP_GRPC_SERVICE"`
 	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`

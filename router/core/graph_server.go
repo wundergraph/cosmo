@@ -1845,10 +1845,23 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				grpcTLS = opts.defaultClientTLS
 			}
 
+			// Remote gRPC service metrics are opt-in via metrics.otlp.grpc_service
+			// and metrics.prometheus.grpc_service.
+			var grpcMeterProviders []otelmetric.MeterProvider
+			if s.metricConfig.OpenTelemetry.Enabled && s.metricConfig.OpenTelemetry.GRPCService && s.otlpMeterProvider != nil {
+				grpcMeterProviders = append(grpcMeterProviders, s.otlpMeterProvider)
+			}
+			if s.metricConfig.Prometheus.Enabled && s.metricConfig.Prometheus.GRPCService && s.promMeterProvider != nil {
+				grpcMeterProviders = append(grpcMeterProviders, s.promMeterProvider)
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:    s.logger,
-				Endpoint:  sg.RoutingUrl,
-				TLSConfig: grpcTLS,
+				Logger:         s.logger,
+				Endpoint:       sg.RoutingUrl,
+				TLSConfig:      grpcTLS,
+				Propagator:     s.compositePropagator,
+				SubgraphName:   sg.Name,
+				MeterProviders: grpcMeterProviders,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)

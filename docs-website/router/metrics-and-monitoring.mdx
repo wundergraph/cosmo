@@ -423,6 +423,35 @@ telemetry:
 
 * `router.http.client.time_to_last_byte`: Histogram (ms) of the duration from receiving the first response byte to consuming the last response byte. Recorded only when a first response byte is observed and the full body is consumed, either to EOF or through the declared `Content-Length`. A response that cannot carry a body completes when its headers have been read.
 
+### gRPC Service Metrics
+
+These metrics cover requests from the router to [gRPC services](/router/gRPC/grpc-services) that run as standalone remote subgraphs. They are off by default and are enabled separately for OTLP and Prometheus. When enabled for either exporter, the router also logs every failed request at error level with the subgraph name, RPC method and gRPC status code.
+
+<CodeGroup>
+```yaml config.yaml
+telemetry:
+  metrics:
+    otlp:
+      grpc_service: true
+    prometheus:
+      grpc_service: true
+  ```
+</CodeGroup>
+
+#### Metrics
+
+* `router.grpc.service.requests`: Counter of gRPC requests sent to gRPC services. Exported to Prometheus as `router_grpc_service_requests_total`.
+
+* `router.grpc.service.request.duration_milliseconds`: Histogram (ms) of the duration of gRPC requests to gRPC services. Exported to Prometheus as `router_grpc_service_request_duration_milliseconds`.
+
+#### Attributes
+
+In Prometheus, dots in attribute names are replaced with underscores, for example `wg_subgraph_name`.
+
+* `wg.subgraph.name`: The name of the subgraph.
+* `rpc.method`: The full gRPC method name in the form `/<package>.<Service>/<Method>`.
+* `rpc.grpc.status_code`: The gRPC status code of the response, for example `OK`, `Unavailable` or `DeadlineExceeded`. Errors that carry no gRPC status are reported as `Unknown`.
+
 ## Custom Attributes
 
 You can also add custom attributes to OTEL and Prometheus. Please refer to the [Custom Attributes](/router/open-telemetry/custom-attributes) section.

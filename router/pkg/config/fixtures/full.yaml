@@ -224,6 +224,7 @@ telemetry:
       graphql_cache: true
       response_cache: true
       connection_stats: true
+      grpc_service: true
       network:
         enabled: true
       resolver:
@@ -258,6 +259,7 @@ telemetry:
       graphql_cache: true
       response_cache: true
       connection_stats: true
+      grpc_service: true
       network:
         enabled: true
       resolver:

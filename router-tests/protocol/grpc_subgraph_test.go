@@ -3,16 +3,24 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestGRPCSubgraph(t *testing.T) {
@@ -952,6 +960,177 @@ func TestGRPCSubgraph(t *testing.T) {
 				require.Equal(t, []string{"rojo=00f067aa0ba902b7"}, captured.Get("tracestate"))
 				require.Equal(t, []string{"de-DE,de;q=0.9,en;q=0.8"}, captured.Get("accept-language"))
 			})
+		})
+	})
+
+	t.Run("Should propagate trace context to the remote gRPC subgraph", func(t *testing.T) {
+		// Without any header propagation rule, the router must inject its own
+		// trace context (W3C traceparent) into the outgoing gRPC metadata so the
+		// remote service can continue the trace.
+		t.Parallel()
+
+		const (
+			incomingTraceID = "0af7651916cd43dd8448eb211c80319c"
+			incomingSpanID  = "b7ad6b7169203332"
+		)
+
+		var captured metadata.MD
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			TraceExporter:            exporter,
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{
+					GRPCInterceptor: func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+						md, _ := metadata.FromIncomingContext(ctx)
+						captured = md.Copy()
+						return handler(ctx, req)
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { projects { id name } }`,
+				Header: http.Header{
+					"Traceparent": []string{"00-" + incomingTraceID + "-" + incomingSpanID + "-01"},
+				},
+			})
+
+			traceparent := captured.Get("traceparent")
+			require.Len(t, traceparent, 1)
+
+			// traceparent format: version-traceid-parentid-flags
+			parts := strings.Split(traceparent[0], "-")
+			require.Len(t, parts, 4)
+			require.Equal(t, incomingTraceID, parts[1], "subgraph should continue the incoming trace")
+			require.NotEqual(t, incomingSpanID, parts[2], "parent span should be created by the router, not forwarded from the client")
+			require.Equal(t, "01", parts[3])
+
+			// The parent span id received by the subgraph must belong to a span
+			// exported by the router.
+			var found bool
+			for _, s := range exporter.GetSpans().Snapshots() {
+				if s.SpanContext().SpanID().String() == parts[2] {
+					require.Equal(t, incomingTraceID, s.SpanContext().TraceID().String())
+					found = true
+					break
+				}
+			}
+			require.True(t, found, "parent span %s not found among router spans", parts[2])
+		})
+	})
+
+	t.Run("Should record remote gRPC service metrics only when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		const scopeName = "github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
+
+		type result struct {
+			otlpScope    *metricdata.ScopeMetrics
+			promFamilies map[string]*io_prometheus_client.MetricFamily
+		}
+
+		run := func(t *testing.T, otlpEnabled, promEnabled bool) result {
+			t.Helper()
+
+			metricReader := sdkmetric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
+			var res result
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
+				MetricOptions: testenv.MetricOptions{
+					EnableOTLPGRPCServiceMetrics:       otlpEnabled,
+					EnablePrometheusGRPCServiceMetrics: promEnabled,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+
+				var rm metricdata.ResourceMetrics
+				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				res.otlpScope = testutils.GetMetricScopeByName(rm.ScopeMetrics, scopeName)
+
+				families, err := promRegistry.Gather()
+				require.NoError(t, err)
+				res.promFamilies = make(map[string]*io_prometheus_client.MetricFamily)
+				for _, f := range families {
+					if strings.HasPrefix(f.GetName(), "router_grpc_service_") {
+						res.promFamilies[f.GetName()] = f
+					}
+				}
+			})
+
+			return res
+		}
+
+		requireOTLPMetrics := func(t *testing.T, scope *metricdata.ScopeMetrics) {
+			t.Helper()
+
+			require.NotNil(t, scope)
+			requests := testutils.GetMetricByName(scope, "router.grpc.service.requests")
+			require.NotNil(t, requests)
+			sum, ok := requests.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("wg.subgraph.name", "projects")))
+			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("rpc.grpc.status_code", "OK")))
+			require.NotNil(t, testutils.GetMetricByName(scope, "router.grpc.service.request.duration_milliseconds"))
+		}
+
+		requirePrometheusMetrics := func(t *testing.T, families map[string]*io_prometheus_client.MetricFamily) {
+			t.Helper()
+
+			requests, ok := families["router_grpc_service_requests_total"]
+			require.True(t, ok, "missing router_grpc_service_requests_total")
+			require.NotEmpty(t, requests.GetMetric())
+
+			labels := map[string]string{}
+			for _, l := range requests.GetMetric()[0].GetLabel() {
+				labels[l.GetName()] = l.GetValue()
+			}
+			require.Equal(t, "projects", labels["wg_subgraph_name"])
+			require.Equal(t, "OK", labels["rpc_grpc_status_code"])
+
+			_, ok = families["router_grpc_service_request_duration_milliseconds"]
+			require.True(t, ok, "missing router_grpc_service_request_duration_milliseconds")
+		}
+
+		t.Run("disabled by default", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, false, false)
+			require.Nil(t, res.otlpScope, "no OTLP gRPC service metrics should be recorded unless enabled")
+			require.Empty(t, res.promFamilies, "no Prometheus gRPC service metrics should be recorded unless enabled")
+		})
+
+		t.Run("enabled for OTLP only", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, true, false)
+			requireOTLPMetrics(t, res.otlpScope)
+			require.Empty(t, res.promFamilies)
+		})
+
+		t.Run("enabled for Prometheus only", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, false, true)
+			require.Nil(t, res.otlpScope)
+			requirePrometheusMetrics(t, res.promFamilies)
+		})
+
+		t.Run("enabled for OTLP and Prometheus", func(t *testing.T) {
+			t.Parallel()
+
+			res := run(t, true, true)
+			requireOTLPMetrics(t, res.otlpScope)
+			requirePrometheusMetrics(t, res.promFamilies)
 		})
 	})
 }

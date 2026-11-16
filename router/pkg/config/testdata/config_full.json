@@ -78,6 +78,7 @@
           "ActualEnabled": false
         },
         "CircuitBreaker": false,
+        "GRPCService": true,
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
@@ -123,6 +124,7 @@
           "ActualEnabled": false
         },
         "CircuitBreaker": false,
+        "GRPCService": true,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": true,
