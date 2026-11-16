@@ -190,7 +190,7 @@ The cache does not revalidate entries and does not serve expired entries. `stale
 
 ## Client Cache-Control
 
-The router sets the client's `Cache-Control` only when a `most_restrictive_cache_control` algorithm is configured: [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control), or a response header rule with that algorithm. Without one, the response cache adds no `Cache-Control` on a hit or a miss. Two exceptions: a `propagate` rule on `Cache-Control` forwards the subgraph's value when the subgraph was called, or its `default` on a full hit, and [`cache_tag_header.on_overflow: private`](/router/response-cache/invalidation#size) sets `private`.
+The router sets the client's `Cache-Control` only when a `most_restrictive_cache_control` algorithm is configured: [`cache_control_policy`](/router/proxy-capabilities/adjusting-cache-control), or a response header rule with that algorithm. Without one, the response cache adds no `Cache-Control` on a hit or a miss. There are two exceptions. A `propagate` rule on `Cache-Control` forwards the subgraph's value or an earlier `set` rule's value. On a full hit it forwards only the `set` value or its `default`. [`cache_tag_header.on_overflow: private`](/router/response-cache/invalidation#size) sets `private`.
 
 With one, the router first replaces each fetch's `Cache-Control` with what the cache knows, and then merges all fetches with the most restrictive algorithm.
 
@@ -271,6 +271,6 @@ An invalidation request names a [tag](/router/response-cache/invalidation). The 
 2. Walks the tag's index and deletes every entry it lists.
 3. Marks entries it walked so that a write racing with the walk is detected.
 
-A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. A response fetched before the invalidation is therefore not left in the cache by a write that lands after it. The invalidation is remembered for at least five minutes after it ran. A write that lands later is not checked against it.
+A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. The invalidation is remembered for at least five minutes after it ran. While it is, a response fetched before the invalidation is not left in the cache by a write that lands after it. Once it is forgotten, such a write can store a stale entry.
 
 Only indexed entries can be invalidated. With every index turned off, entries leave the cache only when they expire.

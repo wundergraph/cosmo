@@ -93,7 +93,7 @@ Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `
 
 ### Cache-Control on the client response
 
-- Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data. A `propagate` rule on `Cache-Control` forwards the subgraph's value when the subgraph was called, or its `default` on a full hit, and `cache_tag_header.on_overflow: private` sets `private`.
+- Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data. A `propagate` rule on `Cache-Control` forwards the subgraph's value or an earlier `set` rule's value. On a full hit it forwards only the `set` value or its `default`. `cache_tag_header.on_overflow: private` sets `private`.
 - `must-revalidate` and `proxy-revalidate` are reported on a miss but not on a hit. `stale-while-revalidate` and `stale-if-error` are never reported.
 - Responses with subgraph errors receive `no-store, no-cache, must-revalidate`.
 - Batched operations receive no `Cache-Control` from the cache.

@@ -306,7 +306,7 @@ Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated]
 
 The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses, with two exceptions:
 
-- A `propagate` rule on `Cache-Control` forwards the subgraph's own value when the subgraph was called. A full hit forwards only the rule's `default`, if any.
+- A `propagate` rule on `Cache-Control` forwards the subgraph's value, or the value an earlier `set` rule wrote. A full hit has no subgraph value. It forwards only a `set` value or the rule's `default`.
 - `cache_tag_header.on_overflow: private` sets `private`.
 
 ```yaml config.yaml
