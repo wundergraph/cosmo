@@ -14,14 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Loader } from '@/components/ui/loader';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDateTime } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { CheckCircleIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
-import { ChevronDownIcon, Cross1Icon, InfoCircledIcon, MagnifyingGlassIcon, Share1Icon } from '@radix-ui/react-icons';
+import { ChevronDownIcon, InfoCircledIcon, MagnifyingGlassIcon, Share1Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createIgnoreOverridesForAllOperations,
@@ -313,24 +313,15 @@ export const CheckOperations = () => {
   return (
     <div className=" flex h-full flex-col px-4 lg:px-6">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by hash or name"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => setSearch({ search: e.target.value, page: null })}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => setSearch({ search: null, page: null })}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
-        </div>
+        <ClearableInput
+          icon={<MagnifyingGlassIcon />}
+          containerClassName="flex-1"
+          placeholder="Search by hash or name"
+          clearLabel="Clear search"
+          value={search}
+          onChange={(e) => setSearch({ search: e.target.value, page: null })}
+          onClear={search ? () => setSearch({ search: null, page: null }) : undefined}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary">
