@@ -58,7 +58,7 @@ Set the client's limits as query parameters on the Redis URL:
 
 In cluster mode, the parameters are read from the first URL. With `max_redirects=-1`, a command that meets a slot redirect during resharding fails and counts as a miss.
 
-Each timeout applies per round trip, not per fetch. A lookup takes one round trip, or two when the subgraph sends `Vary`. A write takes one, or up to three for a tagged entry. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write drops the entry. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
+Each timeout applies per round trip, not per fetch. A lookup takes one round trip, or two when the subgraph sends `Vary`. A write takes one, or up to three for a tagged entry. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write can still land in Redis. If its later steps fail, a tagged entry expires with its 10-second lease. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
 
 ### Memory
 
@@ -265,7 +265,7 @@ A subgraph request that carries an `Authorization` header produces a private res
 
 This applies only when `Authorization` is propagated to the subgraph. A subgraph that serves the same data to every authenticated caller should say `public`.
 
-- The miss response does not carry `private` from this rule. Its hits do. Send `private` from the subgraph so that a CDN never sees the miss as shareable.
+- The miss response does not carry `private` from this rule. Its hits do. To keep such responses out of a CDN, send `private` from the subgraph, configure a [client Cache-Control](#client-cache-control) policy, and make sure no `set` rule replaces `private`.
 - Only `Authorization` triggers the rule. Other credentials, such as `Cookie` or a custom header, do not make a response private.
 
 ## Varying responses
@@ -275,9 +275,9 @@ A subgraph whose answer depends on a request header, such as `Accept-Language`, 
 - The first response stores the names from `Vary` as a record at the entry's key, and the body under a variant key.
 - A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant. A varying fetch costs two round trips to the store. A fetch without `Vary` costs one.
 - Values are taken from the request as the subgraph receives it, after header propagation. A named header the router does not send counts as empty.
-- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module.
+- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module. `Accept`, `Accept-Encoding` and `Content-Type` are not checked. A module that changes them must not vary the answer on its own input.
 - A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
-- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. Older variants stay reachable while the record lives. The record takes the newest response's lifetime, and a response without `Vary` replaces it.
+- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. An older variant stays reachable while both it and the record live. The record takes the newest response's lifetime, and a response without `Vary` replaces it.
 - With `engine.enable_multi_fetch`, one `Vary` applies to every alias of a merged fetch. Keep the subgraph's `Vary` to the headers each response depends on.
 
 ## Request directives
@@ -301,7 +301,10 @@ Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated]
 
 ## Client Cache-Control
 
-The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses, except `private` from `cache_tag_header.on_overflow: private`.
+The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses, with two exceptions:
+
+- A `propagate` rule on `Cache-Control` forwards the subgraph's own value on a miss. A hit has no subgraph response, so nothing is forwarded.
+- `cache_tag_header.on_overflow: private` sets `private`.
 
 ```yaml config.yaml
 cache_control_policy:

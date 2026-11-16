@@ -23,7 +23,7 @@ flowchart TD
   D --> E[Build cache keys for each fetch]
   E --> F[Look up all keys]
   F -- every key found --> G[Serve the fetch from the cache]
-  F -- any key missing --> H[Send the fetch to the subgraph]
+  F -- any key missing --> H[Send the fetch to the subgraph,<br/>or fail it with only-if-cached]
   H --> I[Decide whether to store the response]
   I -- stored --> J[Write entries and index tags]
   I -- not stored --> K[Keep the response for this request only]
@@ -37,7 +37,7 @@ flowchart TD
 1. **Inbound deduplication.** Identical query requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its response. See [Deduplication](#deduplication).
 2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
 3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
-4. **Origin.** A fetch that is not a full hit is sent to the subgraph. Identical subgraph requests in flight share one call.
+4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With `only-if-cached`, it fails instead and the request gets `504`. Identical subgraph requests in flight share one call.
 5. **Store decision.** The subgraph's status, body and headers decide whether the response is stored and for how long. See [What is stored](#what-is-stored).
 6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the response waits for it. See [Storage](#storage).
 7. **Response headers.** The router turns the lifetimes of the fetches into the client's `Cache-Control`. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
@@ -129,7 +129,7 @@ An entity the subgraph returns as `null` is not stored. A batch that includes it
 
 The decision is made from the subgraph's raw response, before any [response header rules](/router/proxy-capabilities/subgraph-response-header-operations) run. A `cache_control_policy` value or a `set` rule on `Cache-Control` changes what the client receives. It never changes what is stored.
 
-The checks run in this order. The first that applies decides.
+The checks run in this order. The first that applies decides. A merged entity fetch is decided per alias, and reports `stored` when any alias was stored.
 
 | Check | Outcome | Store decision |
 | --- | --- | --- |
@@ -269,6 +269,6 @@ An invalidation request names a [tag](/router/response-cache/invalidation). The 
 2. Walks the tag's index and deletes every entry it lists.
 3. Marks entries it walked so that a write racing with the walk is detected.
 
-A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. A response fetched before the invalidation is therefore not left in the cache by a write that lands after it.
+A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. A response fetched before the invalidation is therefore not left in the cache by a write that lands after it. The invalidation is remembered for five minutes. A fetch that started earlier than that can still store its entry.
 
 Only indexed entries can be invalidated. With every index turned off, entries leave the cache only when they expire.
