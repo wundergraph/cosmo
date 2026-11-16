@@ -30,13 +30,13 @@ These are never cached:
 
 ## Subgraphs decide what is cached
 
-Enabling the response cache does not make anything cacheable on its own. A subgraph opts a response in through its `Cache-Control` response header:
+Enabling the response cache does not make anything cacheable on its own. A subgraph opts a response in through its `Cache-Control` response header, or an `Expires` header in the future:
 
 ```http
 Cache-Control: public, max-age=60
 ```
 
-The router stores a response only when its headers allow it, and for as long as they allow. A response without caching directives is never stored. See [What is stored](/router/response-cache/how-it-works#what-is-stored) for the full rules.
+The router stores a response only when its headers allow it, and for as long as they allow. A response with no `Cache-Control` and no `Expires` is never stored. See [What is stored](/router/response-cache/how-it-works#what-is-stored) for the full rules.
 
 If nothing appears to be cached, check the subgraph response headers first.
 
@@ -70,7 +70,7 @@ If nothing appears to be cached, check the subgraph response headers first.
        enable_cache_response_headers: true
    ```
 
-   The response then carries `X-WG-Response-Cache: HIT`, `PARTIAL_HIT` or `MISS`. In production, use the `wg.response_cache.status` attribute described in [Monitoring](/router/response-cache/observability).
+   The response then carries `X-WG-Response-Cache: HIT`, `PARTIAL_HIT` or `MISS`. In production, use the `wg.operation.response_cache.status` attribute described in [Monitoring](/router/response-cache/observability).
 
 ## In this section
 

@@ -15,13 +15,13 @@ icon: "triangle-exclamation"
 
 - **Startup depends on Redis.** The router pings Redis at startup and does not start if it is unreachable.
 - **Writes are synchronous.** A stored fetch waits for its write before the response is sent. An untagged entry costs one round trip. An entry with index tags costs up to three. Measure `router.response_cache.operation.duration_seconds` for `write` and keep Redis close to the router.
-- **There is no cache-specific timeout.** A Redis that accepts connections but stops answering holds every cacheable fetch for the client's read timeout, on the lookup and again on the write, including retries. Set timeouts and `max_retries=-1` on the Redis URL. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
-- **Failures degrade to the subgraph.** A failed lookup is a miss and a failed write drops the entry. The request still succeeds. Your subgraphs must be able to take the full traffic while Redis is down.
+- **There is no cache-specific timeout.** A Redis that accepts connections but stops answering holds every cacheable fetch for the client's read timeout on each lookup and write round trip, including retries. Set timeouts and `max_retries=-1` on the Redis URL, and `max_redirects=-1` for Redis Cluster. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
+- **Failures degrade to the subgraph.** A failed lookup is a miss and a failed write drops the entry. The request still succeeds, unless it was sent with `only-if-cached`. Your subgraphs must be able to take the full traffic while Redis is down.
 
 ### Size Redis for the cache
 
 - Set `maxmemory` and an eviction policy such as `volatile-ttl` or `allkeys-lru`. Every entry has an expiry.
-- Each entity is a separate key. A list of 100 entities is 100 keys, plus the root entry.
+- Each entity is a separate key. A root fetch is one key, however many entities it returns. An entity fetch that follows it for 100 distinct entities adds 100 keys.
 - Every index tag is a sorted set. With all indexes on, an entity entry is listed in at least two sets: its subgraph and its type.
 - Watch evictions. An evicted entry is a miss on the next request. An evicted tag set loses its index, and the entries it listed can no longer be invalidated by that tag until they expire. See [Evictions](/router/response-cache/observability#evictions).
 
@@ -68,7 +68,7 @@ With `engine.enable_multi_fetch`, entity fetches to the same subgraph in the sam
 - **Entries are not shared with plain entity fetches.** An entry's key includes the rendered subgraph request. The merged request differs from a plain `_entities` request for the same entity and fields. An entity cached by one is a miss for the other. How fetches are merged depends on the shape of the operation, so two operations that need the same entities can use different entries.
 - **Each alias is all or nothing**, like a batch. Warm aliases are left out of the request.
 - **Declared cache tags are dropped.** Such entries can be invalidated by subgraph or type, but not by cache tag.
-- **One `Vary` covers all aliases.** An alias is stored under the widest set of headers any alias varied on.
+- **One `Vary` covers all aliases.** The merged response's `Vary` applies to every alias.
 - **Dependent fetches are skipped on failure.** When the request for cold aliases fails, warm aliases keep their data. Fetches that depend on the merged fetch are skipped, including those that need only warm aliases.
 
 ### Subgraph data is not validated before storing
@@ -100,6 +100,6 @@ Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `
 
 A hit sends no subgraph request, so it has no transport telemetry. Request size, response size, in-flight counts and connection metrics are not recorded. The fetch is still recorded with `wg.response_cache.status="hit"`.
 
-### Tags on Redis can outlive a re-tag
+### Tags can outlive a re-tag
 
-An entry stored again under different tags stays listed under its earlier tags until it expires. Invalidating an earlier tag still removes it.
+On Redis and in memory, an entry stored again under different tags stays listed under its earlier tags until its earlier lifetime ends. Invalidating an earlier tag still removes it.

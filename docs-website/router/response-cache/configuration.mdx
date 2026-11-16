@@ -54,10 +54,11 @@ Set the client's limits as query parameters on the Redis URL:
 | `dial_timeout` | Longest wait to open a connection | `500ms` |
 | `pool_timeout` | Longest wait for a free connection | `250ms` |
 | `max_retries` | Retries per command. `-1` disables retries. `0` means the default of 3. | `-1` |
+| `max_redirects` | Cluster only. Retries per command after a redirect or a timeout, independent of `max_retries`. `-1` disables them. `0` means the default of 3. | `-1` |
 
-The same parameters apply in cluster mode, read from the first URL.
+In cluster mode, the parameters are read from the first URL. With `max_redirects=-1`, a command that meets a slot redirect during resharding fails and counts as a miss.
 
-These settings bound the worst case to the timeouts of one lookup and one write per cacheable fetch. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write drops the entry. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
+Each timeout applies per round trip, not per fetch. A lookup takes one round trip, or two when the subgraph sends `Vary`. A write takes one, or up to three for a tagged entry. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write drops the entry. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
 
 ### Memory
 
@@ -126,7 +127,7 @@ response_cache:
       path: '/invalidation'
       # Expected Authorization header value. At least 32 characters.
       # Required when the endpoint is enabled.
-      shared_key: ''
+      # shared_key: '<at least 32 characters>'
 
   cache_tag_header:
     # Send the tags of a response in a header a CDN can purge by.
@@ -179,9 +180,11 @@ The invalidation and cache tag header settings are described in [Invalidation an
 Environment variables bypass schema validation. The router still checks these at startup and refuses to start if one fails:
 
 - `fallback_ttl` is greater than zero, under `all` when it is enabled and in every enabled entry under `subgraphs`.
-- Every `private_id` compiles.
+- Every `private_id` under an enabled `all` or entry compiles.
 - `storage.provider` is `redis` or `memory`, and `provider_id` names a declared Redis provider.
+- `storage.max_entries` is 1 to 100000 for the memory provider.
 - `shared_key` has at least 32 characters when the endpoint is enabled.
+- `invalidation.endpoint.path` starts with `/`.
 - `cache_tag_header.name` is a valid header name and is not `Content-Length`, `Content-Type` or `Transfer-Encoding`.
 - `cache_tag_header.delimiter` is not empty and is valid in a header.
 - `cache_tag_header.max_bytes` is greater than zero, and `tiers` and `on_overflow` hold known values.
@@ -268,7 +271,7 @@ A subgraph whose answer depends on a request header, such as `Accept-Language`, 
 - The first response stores the names from `Vary` as a record at the entry's key, and the body under a variant key.
 - A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant. A varying fetch costs two round trips to the store. A fetch without `Vary` costs one.
 - Values are taken from the request as the subgraph receives it, after header propagation. A named header the router does not send counts as empty.
-- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names.
+- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module.
 - A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
 - When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. Older variants stay reachable until they expire.
 - With `engine.enable_multi_fetch`, one `Vary` applies to every alias of a merged fetch. Keep the subgraph's `Vary` to the headers each response depends on.

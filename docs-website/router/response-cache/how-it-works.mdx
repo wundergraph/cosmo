@@ -21,7 +21,7 @@ flowchart TD
   B -- yes --> C[Wait and reuse its response]
   B -- no --> D[Plan subgraph fetches]
   D --> E[Build cache keys for each fetch]
-  E --> F[Look up all keys in one call]
+  E --> F[Look up all keys]
   F -- every key found --> G[Serve the fetch from the cache]
   F -- any key missing --> H[Send the fetch to the subgraph]
   H --> I[Decide whether to store the response]
@@ -36,13 +36,13 @@ flowchart TD
 
 1. **Inbound deduplication.** Identical query requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its response. See [Deduplication](#deduplication).
 2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
-3. **Lookup.** All keys of a fetch are read from the store in one call.
+3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
 4. **Origin.** A fetch that is not a full hit is sent to the subgraph. Identical subgraph requests in flight share one call.
 5. **Store decision.** The subgraph's status, body and headers decide whether the response is stored and for how long. See [What is stored](#what-is-stored).
 6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the response waits for it. See [Storage](#storage).
 7. **Response headers.** The router turns the lifetimes of the fetches into the client's `Cache-Control`. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
 
-A cache failure never fails a request. A failed lookup is a miss. A failed write is logged and counted, and the response is sent as usual.
+A cache failure does not fail a request, except one sent with `only-if-cached`. A failed lookup is a miss. A failed write is logged and counted, and the response is sent as usual.
 
 ## Which fetches are cached
 
@@ -94,7 +94,7 @@ The selection digest covers the whole rendered request. A merged entity fetch pu
 
 ### What else is part of the key
 
-- **Forwarded client extensions.** When [`forward-client-extensions`](/router/proxy-capabilities/forward-client-extensions) is on, the extensions sent to the subgraph are part of the selection digest.
+- **Client extensions.** Extensions the client sends, other than `persistedQuery`, are forwarded to subgraphs and are part of the selection digest.
 - **Undefined variables.** A variable that was omitted is keyed apart from one sent as `null`, because the subgraph receives different requests.
 - **Private id.** A `private` response is stored under a key that adds a digest of the request's [`private_id`](/router/response-cache/configuration#private-responses).
 - **Vary.** A response with a `Vary` header is stored under a variant key derived from the values of the named headers. See [Varying responses](/router/response-cache/configuration#varying-responses).
@@ -115,7 +115,7 @@ Entities are stored individually, so a later batch made only of cached entities 
 
 A merged fetch is looked up per alias. Warm aliases are left out of the subgraph request and the request is rebuilt for the cold ones. Each alias is still all or nothing. The fetch status is `partial_hit` when some aliases were warm, and `hit` when all were.
 
-When the request for the cold aliases fails, the warm aliases keep their cached data.
+When the request for the cold aliases fails, the warm aliases keep their cached data. Fetches that depend on the merged fetch are still skipped. See [Limitations](/router/response-cache/limitations#merged-entity-fetches).
 
 ### Private and shared entries
 
@@ -142,7 +142,7 @@ The checks run in this order. The first that applies decides.
 | Unqualified `no-cache` | Not stored | `no_cache` |
 | No lifetime and no directive that allows a default | Not stored | `no_directive` |
 | The lifetime is zero or less | Not stored | `no_lifetime` |
-| `Vary: *`, or more than 100 names in `Vary` | Not stored | `unusable_vary` |
+| `Vary: *`, more than 100 names in `Vary`, or a varied header changed after the router built the request | Not stored | `unusable_vary` |
 | `private`, and the request has no private id | Not stored | `private_without_id` |
 | Nothing to store, such as an entity that does not exist | Not stored | `no_entity` |
 | Otherwise | Stored | `stored` |
@@ -153,7 +153,7 @@ The store decision is reported per fetch. See [Store decision](/router/response-
 
 - Directive names are case-insensitive.
 - Several `Cache-Control` header lines are read as one, joined by commas.
-- When a lifetime directive appears twice, the first one counts.
+- When a lifetime directive appears twice, the first one counts. The second is ignored, even if invalid.
 - An invalid value in a known directive, such as `max-age=abc` or `max-age=-1`, makes the whole header invalid. Nothing is stored, even if `no-store` is also present.
 - Qualified `no-cache`, such as `no-cache="Set-Cookie"`, does not prevent storing. Entries hold no response headers, so there is nothing to strip. `no-cache=""` counts as unqualified.
 - `private` in any form, including `private="Set-Cookie"`, makes the whole response private.
@@ -191,9 +191,9 @@ The router sets the client's `Cache-Control` only when a `most_restrictive_cache
 
 With one, the router first replaces each fetch's `Cache-Control` with what the cache knows, and then merges all fetches with the most restrictive algorithm.
 
-**A miss that was stored** reports the subgraph's directives with the lifetimes capped at the stored lifetime, net of `Age`. When the subgraph gave no `max-age` or `s-maxage`:
+**A miss that was stored** reports the subgraph's directives with the lifetimes capped at the stored lifetime, net of `Age`. When the subgraph gave no `max-age`:
 
-- a `public` response, or one with `s-maxage`, gets the stored lifetime as `s-maxage`
+- a non-private response that is `public` or has `s-maxage` gets the stored lifetime as `s-maxage`
 - any other response gets it as `max-age`
 
 **A hit** reports the time the entry has left:
@@ -209,7 +209,7 @@ With one, the router first replaces each fetch's `Cache-Control` with what the c
 
 - Any `no-store` makes the response `no-store`.
 - `no-cache` replaces all lifetimes.
-- The smallest `max-age` and the smallest `s-maxage` win.
+- The smallest `max-age` wins. `s-maxage` is the smallest shared lifetime: a fetch's `s-maxage`, else its `max-age`.
 - `private` wins if any fetch is private.
 - `public` is kept only if every fetch is public. With `apollo_router_compatibility_flags.cache_control_any_public` enabled, `public` is kept if any fetch is public and none is private.
 - A fetch without `Cache-Control` or `Expires` is ignored, unless `cache_control_policy.value` stands in for it or `cache_control_policy.missing_no_store` is enabled. See [Client Cache-Control settings](/router/response-cache/configuration#client-cache-control).
@@ -238,9 +238,9 @@ Redis 7.0 or newer is required. Standalone and cluster deployments are supported
 - the entry's cache tag header values
 - the subgraph data: the `data` object of a root fetch, or one entity object
 
-Response headers and the original `Cache-Control` are not stored.
+Response headers and the original `Cache-Control` are not stored. For a varying response, the entry at the base key holds the `Vary` record, and the data sits under the variant key.
 
-**Tag index.** Each [index tag](/router/response-cache/invalidation#indexes) is a sorted set `<key_prefix>t:<tag>`. Members are entry keys. Scores are their expiry times. Expired members are pruned on write. The set expires five minutes after its last member.
+**Tag index.** Each [index tag](/router/response-cache/invalidation#indexes) is a sorted set `<key_prefix>t:<tag>`. Members are entry keys. Scores are their expiry times. Members more than five minutes past expiry are pruned on write. The set expires five minutes after its last member.
 
 **Reads.** A lookup pipelines `GET` and `PTTL` for each key. The remaining time becomes the entry's reported lifetime.
 
@@ -256,7 +256,7 @@ A writer that dies between the steps leaves an entry that expires with its lease
 
 ### Memory
 
-The memory provider keeps entries in a bounded in-process cache with `max_entries` slots. A write can be refused when the cache is full. Tags are indexed in maps that are pruned every 30 seconds.
+The memory provider keeps entries in a bounded in-process cache with `max_entries` slots. A write can be refused when the cache is full. Tags are indexed in maps that are pruned on write, at most every 30 seconds.
 
 Each router replica has its own cache. Nothing is shared between replicas, and nothing survives a restart.
 
@@ -268,6 +268,6 @@ An invalidation request names a [tag](/router/response-cache/invalidation). The 
 2. Walks the tag's index and deletes every entry it lists.
 3. Marks entries it walked so that a write racing with the walk is detected.
 
-A write checks the recorded time. An entry whose fetch started at or before the invalidation, allowing one second of clock skew, is deleted instead of kept. A response fetched before the invalidation is therefore not left in the cache by a write that lands after it.
+A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. A response fetched before the invalidation is therefore not left in the cache by a write that lands after it.
 
 Only indexed entries can be invalidated. With every index turned off, entries leave the cache only when they expire.

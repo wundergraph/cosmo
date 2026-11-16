@@ -33,13 +33,15 @@ INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "
 
 With the memory provider, `max_entries` replaces `key_prefix` and `storage_provider_id`. `fallback_ttl` is the value under `all`. `subgraph_overrides` counts the entries under `subgraphs`. When the invalidation endpoint is enabled, a second line reports its address and which indexes are on.
 
-A failed read or write never fails a request. The router serves from the subgraph and logs:
+A failed read or write does not fail a request. The router serves from the subgraph and logs:
 
 ```
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-The warning is sampled to one line per second. An unreachable store fails every cacheable fetch of every request, and unsampled logging would add to the outage. Every failure is counted in the [cache health metrics](#cache-health).
+A request sent with [`only-if-cached`](/router/response-cache/configuration#request-directives) is the exception: a failed lookup fails its fetch.
+
+The warning is sampled to one line per second. An unreachable store fails every cacheable fetch of every request, and unsampled logging would add to the outage. Every failure is counted in the [cache health metrics](#cache-health), when they are enabled.
 
 ## Per fetch
 
@@ -117,11 +119,11 @@ The store decision explains why a type is never served from the cache. The rules
 | `no_cache` | sent with unqualified `no-cache`. |
 | `no_directive` | sent without a caching directive, so `fallback_ttl` did not apply. |
 | `no_lifetime` | sent with a lifetime of zero or less, after `Age`. |
-| `unusable_vary` | sent with `Vary: *`, or a `Vary` naming more than 100 headers. |
+| `unusable_vary` | sent with `Vary: *`, a `Vary` naming more than 100 headers, or a varied header changed after the request was built. |
 | `private_without_id` | private, for a request without a private id. |
 | `no_entity` | without anything to store, such as an entity that does not exist. |
 
-The decision is absent for a fetch answered from the cache and for one that is not cacheable. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
+The decision is absent for a fetch answered from the cache, for one that is not cacheable, and for a request sent with `no-store`. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
 
 ## Per response
 
@@ -197,7 +199,7 @@ telemetry:
 
 The full list of attributes is in the [metrics reference](/router/metrics-and-monitoring#response-cache-metrics).
 
-A lookup asks for the shared key and, for a request with a private id, the private key too. At most one of the two is found. Keys counted as `missing` are therefore no measure of the hit rate. Use the [per-fetch status](#per-fetch) for that.
+A lookup asks for the shared key and, for a request with a private id, the private key too. Usually only one of the two is found. Keys counted as `missing` are therefore no measure of the hit rate. Use the [per-fetch status](#per-fetch) for that.
 
 Failed calls by operation and cause. `canceled` is a client that went away, not a failing store:
 
