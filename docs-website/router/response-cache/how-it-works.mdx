@@ -32,7 +32,7 @@ query {
   topProducts {
     name
     price
-    reviews { body }
+    reviews { body rating }
   }
 }
 ```
@@ -52,7 +52,7 @@ The subgraph answers with two products. The router stores the whole `data` objec
 ```graphql
 query($representations: [_Any!]!) {
   _entities(representations: $representations) {
-    ... on Product { reviews { body } }
+    ... on Product { reviews { body rating } }
   }
 }
 ```
@@ -82,7 +82,7 @@ A different query can reuse an entry when it leads to the same subgraph request.
 query {
   product(upc: "1") {
     name
-    reviews { body }
+    reviews { body rating }
   }
 }
 ```
@@ -90,23 +90,23 @@ query {
 The router plans two fetches again:
 
 1. A root fetch to `products`: `{ product(upc: "1") { __typename upc name } }`. This request differs from `topProducts`, so it is a miss. Its answer is stored as a new entry.
-2. An entity fetch to `reviews` for `{"__typename":"Product","upc":"1"}`, asking for `... on Product { reviews { body } }`. This is the same request the first query made for product `1`. It finds the entry `9f2c…:5feb…`, and `reviews` is not called.
+2. An entity fetch to `reviews` for `{"__typename":"Product","upc":"1"}`, asking for `... on Product { reviews { body rating } }`. This is the same request the first query made for product `1`. It finds the entry `9f2c…:5feb…`, and `reviews` is not called.
 
 ### When the selection changes
 
-An entity entry is only reused when the same fields are asked for. The fields an entity fetch asks for are its selection set: `reviews { body }` in the example.
+An entity entry is only reused when the same fields are asked for. The fields an entity fetch asks for are its selection set: `reviews { body rating }` in the example.
 
-A query that asks for one more field gets a different request, even for the same product:
+A query that asks for one field less gets a different request, even for the same product:
 
 ```graphql
 query {
   product(upc: "1") {
-    reviews { body rating }
+    reviews { body }
   }
 }
 ```
 
-The `reviews` fetch now asks for `... on Product { reviews { body rating } }`. That is a different selection, so it is a miss, and the router stores a second entry for product `1` next to the first one. The same happens when an argument changes, such as `reviews(first: 5)` instead of `reviews(first: 10)`. Each distinct selection is cached separately. A cached `body` is not reused for a query that also needs `rating`.
+The `reviews` fetch now asks for `... on Product { reviews { body } }`. That is a different selection, so it is a miss, even though the cached entry already holds `body`. The router stores a second entry for product `1` next to the first one. The same happens when an argument changes, such as `reviews(first: 5)` instead of `reviews(first: 10)`. Each distinct selection is cached separately. The cache never answers a request from part of an entry that holds more fields.
 
 How the router turns a request into a key is covered next.
 
