@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_response_cache_status_5_30 (
    CacheStatus LowCardinality(String) CODEC (ZSTD(3)),
    -- Summed from delta points only. A cumulative point repeats its running total on every export, so summing it overcounts.
    TotalFetches UInt64 CODEC(ZSTD(3)),
-   -- Points that were not delta. Tells a router that exports cumulative metrics apart from a router with no traffic.
+   -- Points that were not delta, so they are not in TotalFetches. Above zero means the total is incomplete, for example a router exporting cumulative metrics.
+   -- Readers must sum rows: the engine merges rows with the same key in the background, so one key can span several rows.
    NonDeltaPoints UInt64 CODEC(ZSTD(3))
 ) ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
