@@ -413,16 +413,14 @@ describe('Audit log stream delivery', () => {
       values (${org.id}, ${org.slug}, 'namespace.created', 'created', 'cosmo-bot', 'system', 'namespace', ${name})
     `;
 
-    const slow = await queryConnection.reserve();
-    testContext.onTestFinished(() => slow.release());
-    await slow`begin`;
-    await insert(slow, 'slow');
-    await insert(queryConnection, 'fast');
+    await queryConnection.begin(async (slow) => {
+      await insert(slow, 'slow');
+      await insert(queryConnection, 'fast');
 
-    await deliver();
-    expect(hec.received).toHaveLength(0);
+      await deliver();
+      expect(hec.received).toHaveLength(0);
+    });
 
-    await slow`commit`;
     await deliver();
     expect(hec.received.flatMap((r) => r.events).map((e) => e.event.object.name)).toEqual(['slow', 'fast']);
   });
