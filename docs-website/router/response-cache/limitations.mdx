@@ -45,7 +45,7 @@ The cache trusts what subgraphs say about their responses.
 - **Send a caching directive on every cacheable response.** See [What is stored](/router/response-cache/how-it-works#what-is-stored).
 - **Name request headers in `Vary`.** A forwarded header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. See [Varying responses](/router/response-cache/how-it-works#varying-responses).
 - **Mark per-caller data `private`, and configure a `private_id`.** See [Private responses](/router/response-cache/configuration#private-responses).
-- **Know the `Authorization` rule.** Other credentials, such as `Cookie`, do not make a response private. See [Authorization](/router/response-cache/how-it-works#authorization).
+- **Mark responses that depend on other credentials `private`.** See [Only `Authorization` makes a response private](#only-authorization-makes-a-response-private).
 - **Report failures as failures.** A `200` with wrong data is stored. See [Subgraph data is not validated](#subgraph-data-is-not-validated-before-storing).
 
 ## Limitations
@@ -70,6 +70,10 @@ With `engine.enable_multi_fetch`, which is on by default, entity fetches can be 
 - **Declared cache tags are dropped.** Such entries can be invalidated by subgraph or type, but not by cache tag.
 - **One `Vary` covers all aliases.** The merged response's `Vary` applies to every alias.
 - **Dependent fetches are skipped on failure.** When the request for the uncached aliases fails, fetches that depend on the merged fetch are skipped, including those that need only cached aliases. Their fields are `null` without an error.
+
+### Only `Authorization` makes a response private
+
+A subgraph request that carries a forwarded `Authorization` header makes the subgraph response private, unless it says `public`, `s-maxage` or `must-revalidate`. No other credential has this effect. A subgraph that authenticates with `Cookie` or a custom header, and sends `max-age` without `private`, has its answer stored as a shared entry and served to every caller. Such subgraphs must send `private`. See [Authorization](/router/response-cache/how-it-works#authorization).
 
 ### Varied headers changed by custom modules
 
