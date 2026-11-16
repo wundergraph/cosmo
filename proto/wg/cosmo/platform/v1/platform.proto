@@ -731,6 +731,7 @@ message GetCheckSummaryResponse {
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
   repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 16;
+  bool can_approve_checks = 17;
 }
 
 message GetCheckOperationsRequest {
@@ -762,6 +763,8 @@ message GetCheckOperationsResponse {
   int32 totalOperationsCount = 6;
   bool doAllOperationsHaveIgnoreAllOverride = 7;
   bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
+  bool can_approve_checks = 9;
+  bool can_ignore_operations = 10;
 }
 
 message GetOperationContentRequest {
@@ -1885,6 +1888,7 @@ message CreateOperationOverridesRequest {
   string operation_hash = 3;
   string operation_name = 4;
   repeated OverrideChange changes = 5;
+  optional string check_id = 6;
 }
 
 message CreateOperationOverridesResponse {
@@ -1907,6 +1911,7 @@ message RemoveOperationOverridesRequest {
   string namespace = 2;
   string operation_hash = 3;
   repeated OverrideChange changes = 4;
+  optional string check_id = 5;
 }
 
 message RemoveOperationOverridesResponse {
@@ -1933,6 +1938,7 @@ message GetOperationOverridesResponse {
   Response response = 1;
   repeated OverrideChange changes = 2;
   bool ignore_all = 3;
+  bool can_manage_overrides = 4;
 }
 
 message GetAllOverridesRequest {
