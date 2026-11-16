@@ -107,7 +107,7 @@ A kind whose index is turned off is rejected.
 | `400` | The body is not a JSON array, is empty, has unknown fields, or an element is invalid | Error details |
 | `401` | The `Authorization` header does not match `shared_key` | Error details |
 | `405` | The method is not `POST` | Error details |
-| `500` | The store failed | Error details |
+| `500` | The store failed. Entries removed before the failure stay removed. Retry the request. | Error details |
 
 The body may be up to 10 MiB.
 
@@ -175,6 +175,7 @@ It is not sent:
 - on responses with subgraph errors, which are marked `no-store`
 - on subscriptions and `@defer` responses
 - on WebSocket operations
+- on batched operations
 - on requests with `Cache-Control: no-cache, no-store` or `max-age=0, no-store`, which do not use the cache
 
 ### Size

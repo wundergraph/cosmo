@@ -48,7 +48,7 @@ The cache trusts what subgraphs say about their responses.
 - **Send a caching directive on every cacheable response.** A response with no `Cache-Control` and no `Expires` is not stored, whatever `fallback_ttl` says.
 - **Name request headers in `Vary`.** A propagated header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. Headers are not part of the key on their own.
 - **Mark per-caller data `private`.** Configure a [`private_id`](/router/response-cache/configuration#private-responses) that identifies who may share it. Without one, `private` responses are not cached.
-- **Know the `Authorization` rule.** When `Authorization` is propagated, a response without `public`, `s-maxage` or `must-revalidate` is treated as private.
+- **Know the `Authorization` rule.** When `Authorization` is propagated, a response without `public`, `s-maxage` or `must-revalidate` is treated as private. Other credentials, such as `Cookie`, are not. Mark those responses `private` yourself.
 - **Report failures as failures.** A status of 400 or higher, or a GraphQL `errors` entry, prevents storing. A `200` with wrong data is stored.
 
 ## Limitations
@@ -63,13 +63,13 @@ An entity the subgraph returns as `null` is not stored. A batch that contains on
 
 ### Merged entity fetches
 
-With `engine.enable_multi_fetch`, entity fetches to the same subgraph in the same step are merged into one request with aliased `_entities` fields.
+With `engine.enable_multi_fetch`, which is on by default, entity fetches to the same subgraph in the same step are merged into one request with aliased `_entities` fields.
 
 - **Entries are not shared with plain entity fetches.** An entry's key includes the rendered subgraph request. The merged request differs from a plain `_entities` request for the same entity and fields. An entity cached by one is a miss for the other. How fetches are merged depends on the shape of the operation, so two operations that need the same entities can use different entries.
 - **Each alias is all or nothing**, like a batch. Warm aliases are left out of the request.
 - **Declared cache tags are dropped.** Such entries can be invalidated by subgraph or type, but not by cache tag.
 - **One `Vary` covers all aliases.** The merged response's `Vary` applies to every alias.
-- **Dependent fetches are skipped on failure.** When the request for cold aliases fails, warm aliases keep their data. Fetches that depend on the merged fetch are skipped, including those that need only warm aliases.
+- **Dependent fetches are skipped on failure.** When the request for cold aliases fails, warm aliases keep their data. Fetches that depend on the merged fetch are skipped, including those that need only warm aliases. Their fields are `null` without an error.
 
 ### Subgraph data is not validated before storing
 
@@ -88,12 +88,13 @@ Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `
 - Mutations and subscriptions, including their entity fetches.
 - Every operation sent over WebSocket, queries included.
 - Requests that upload files.
+- Introspection.
 - Root fetches to non-GraphQL data sources, such as gRPC subgraphs.
 
 ### Cache-Control on the client response
 
 - Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data.
-- Directives other than lifetimes, `public` and `private`, such as `must-revalidate` or `stale-while-revalidate`, are reported on a miss but not on a hit.
+- `must-revalidate` and `proxy-revalidate` are reported on a miss but not on a hit. `stale-while-revalidate` and `stale-if-error` are never reported.
 - Responses with subgraph errors receive `no-store, no-cache, must-revalidate`.
 
 ### Telemetry on hits

@@ -19,7 +19,7 @@ engine:
     enable_cache_response_headers: true
 ```
 
-Responses then carry `X-WG-Response-Cache` with `HIT`, `PARTIAL_HIT` or `MISS`. The header is sent on synchronous HTTP responses only. Do not enable it in production.
+Responses then carry `X-WG-Response-Cache` with `HIT`, `PARTIAL_HIT` or `MISS`. The header is sent on synchronous HTTP responses only, not on `@defer` responses or batched operations. Do not enable it in production.
 
 For detail per fetch, use [Advanced Request Tracing](/router/advanced-request-tracing-art). The trace of each fetch shows its cache status, store decision, keys, entries found and written, the `Cache-Control` and `Vary` it was decided on, and any write error.
 
@@ -50,9 +50,9 @@ While the cache is enabled, every subgraph fetch carries `wg.response_cache.stat
 | Value | Meaning |
 | --- | --- |
 | `hit` | Answered from the cache. Nothing was sent to the subgraph. |
-| `partial_hit` | Part of a merged entity fetch was answered from the cache and the rest was sent. Needs `engine.enable_multi_fetch`. |
+| `partial_hit` | Part of a merged entity fetch was answered from the cache and the rest was sent. Only merged entity fetches report it (`engine.enable_multi_fetch`, on by default). |
 | `miss` | The cache was asked and could not answer. The fetch was sent to the subgraph. A batch with some entities cached is a `miss`. |
-| `not_cacheable` | The cache was not asked: it is off for the subgraph, or the fetch is not one it stores, such as a mutation. |
+| `not_cacheable` | The cache was not asked: it is off for the subgraph, the fetch is not one it stores, such as a mutation, or the request sent `no-cache, no-store`. |
 
 A hit still counts as a subgraph request, with a latency close to zero. The attribute sits next to `wg.subgraph.name` on `router.http.requests`, `router.http.request.duration_milliseconds` and `router.http.requests.error`.
 
@@ -123,7 +123,7 @@ The store decision explains why a type is never served from the cache. The rules
 | `private_without_id` | private, for a request without a private id. |
 | `no_entity` | without anything to store, such as an entity that does not exist. |
 
-The decision is absent for a fetch answered from the cache, for one that is not cacheable, and for a request sent with `no-store`. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
+The decision is absent for a fetch answered from the cache and for one that is not cacheable. A request sent with `no-store` reports it as absent instead of `stored`. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
 
 ## Per response
 
