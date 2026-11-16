@@ -272,7 +272,9 @@ The checks run in this order. The first that applies decides. In a merged entity
 
 The store decision is reported per fetch. See [Store decision](/router/response-cache/observability#store-decision).
 
-### Reading Cache-Control
+### How the subgraph's Cache-Control is read
+
+These rules apply to the `Cache-Control` header of the subgraph response. The `Cache-Control` a client sends in its request is covered under [Request directives](/router/response-cache/configuration#request-directives).
 
 - Directive names are case-insensitive.
 - Several `Cache-Control` header lines are read as one, joined by commas.
