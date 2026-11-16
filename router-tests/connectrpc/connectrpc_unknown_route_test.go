@@ -44,7 +44,11 @@ func TestConnectRPCUnknownRoute(t *testing.T) {
 	t.Run("unary Connect gets HTTP 404 with a JSON error", func(t *testing.T) {
 		t.Parallel()
 
-		resp, err := http.Post(url, "application/json", strings.NewReader(`{}`))
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, strings.NewReader(`{}`))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Connect-Protocol-Version", "1")
+		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
