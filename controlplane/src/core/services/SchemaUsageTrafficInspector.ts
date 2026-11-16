@@ -11,6 +11,7 @@ import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { traced } from '../tracing.js';
+import { QUERY_MAX_EXECUTION_TIME_SECONDS } from '../plugins/clickhouse.js';
 
 export enum FieldTypeChangeCategory {
   /**
@@ -209,7 +210,9 @@ export class SchemaUsageTrafficInspector {
                 return `'${escaped}'`;
               })
               .join(',');
-            where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
+
+            where.push(`hasAll(Path, [${escapedPath}])`);
+            where.push(`Path = [${escapedPath}]`);
           }
           if (change.namedType) {
             params.namedType = change.namedType;
@@ -253,6 +256,9 @@ export class SchemaUsageTrafficInspector {
               OrganizationID = {organizationId:String} AND
               ${where.join(' AND ')}
             GROUP BY OperationHash
+            -- Stop on the server once the HTTP client has given up (see the client timeout), instead of
+            -- keeping the CPU busy and slowing down the queries that follow.
+            SETTINGS max_execution_time = ${QUERY_MAX_EXECUTION_TIME_SECONDS}, timeout_before_checking_execution_speed = 0
           `;
 
           const res: {

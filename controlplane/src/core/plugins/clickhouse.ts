@@ -2,6 +2,8 @@ import fp from 'fastify-plugin';
 import { BaseLogger } from 'pino';
 import { ClickHouseClient } from '../clickhouse/index.js';
 
+export const QUERY_MAX_EXECUTION_TIME_SECONDS = 60;
+
 declare module 'fastify' {
   interface FastifyInstance {
     ch?: ClickHouseClient;
@@ -19,7 +21,7 @@ export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done
     dsn: opts.dsn,
     logger: opts.logger,
     httpConfig: {
-      timeout: 60_000,
+      timeout: QUERY_MAX_EXECUTION_TIME_SECONDS * 1000,
     },
   });
 
