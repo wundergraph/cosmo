@@ -43,7 +43,8 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = server.Stop(t.Context())
+		ctx := context.Background()
+		err = server.Stop(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "server is not started")
 	})
@@ -96,7 +97,7 @@ func TestConnectRPC_ServerLifecycle_GracefulShutdown(t *testing.T) {
 		require.NoError(t, err)
 
 		// Use a reasonable timeout
-		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		startTime := time.Now()
