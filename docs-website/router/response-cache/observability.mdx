@@ -119,7 +119,7 @@ The store decision explains why a type is never served from the cache. The rules
 | `no_cache` | sent with unqualified `no-cache`. |
 | `no_directive` | sent without a caching directive, so `fallback_ttl` did not apply. |
 | `no_lifetime` | sent with a lifetime of zero or less, after `Age`. |
-| `unusable_vary` | sent with `Vary: *`, a `Vary` naming more than 100 headers, or a varied header changed after the request was built. |
+| `unusable_vary` | sent with `Vary: *`, a `Vary` naming more than 100 headers, or a varied header other than `Accept`, `Accept-Encoding` or `Content-Type` changed after the request was built. |
 | `private_without_id` | private, for a request without a private id. |
 | `no_entity` | without anything to store, such as an entity that does not exist. |
 

@@ -16,7 +16,7 @@ icon: "triangle-exclamation"
 - **Startup depends on Redis.** The router pings Redis at startup and does not start if it is unreachable.
 - **Writes are synchronous.** A stored fetch waits for its write before the response is sent. An untagged entry costs one round trip. An entry with index tags costs up to three. Measure `router.response_cache.operation.duration_seconds` for `write` and keep Redis close to the router.
 - **There is no cache-specific timeout.** A Redis that accepts connections but stops answering holds every cacheable fetch for the client's read timeout on each lookup and write round trip, including retries. Set timeouts and `max_retries=-1` on the Redis URL, and `max_redirects=-1` for Redis Cluster. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
-- **Failures degrade to the subgraph.** A failed lookup is a miss and a failed write drops the entry. The request still succeeds, unless it was sent with `only-if-cached`. Your subgraphs must be able to take the full traffic while Redis is down.
+- **Failures degrade to the subgraph.** A failed lookup is a miss. A failed write is counted, and its entry may or may not be stored. The request still succeeds, unless it was sent with `only-if-cached`. Your subgraphs must be able to take the full traffic while Redis is down.
 
 ### Size Redis for the cache
 
@@ -93,7 +93,7 @@ Clients can bypass the cache with `no-cache` or `max-age=0`, skip storing with `
 
 ### Cache-Control on the client response
 
-- Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data, except `private` from `cache_tag_header.on_overflow: private`.
+- Without a `cache_control_policy` or a `most_restrictive_cache_control` response header rule, the router sends no `Cache-Control` for cached data. A `propagate` rule on `Cache-Control` forwards the subgraph's value when the subgraph was called, or its `default` on a full hit, and `cache_tag_header.on_overflow: private` sets `private`.
 - `must-revalidate` and `proxy-revalidate` are reported on a miss but not on a hit. `stale-while-revalidate` and `stale-if-error` are never reported.
 - Responses with subgraph errors receive `no-store, no-cache, must-revalidate`.
 - Batched operations receive no `Cache-Control` from the cache.
