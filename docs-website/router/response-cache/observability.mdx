@@ -39,7 +39,7 @@ A failed read or write does not fail a request. The router serves from the subgr
 WARN  Response cache degraded, serving from the subgraph instead
 ```
 
-A request sent with [`only-if-cached`](/router/response-cache/configuration#request-directives) is the exception: a failed lookup fails its fetch.
+A request sent with [`only-if-cached`](/router/response-cache/how-it-works#request-directives) is the exception: a failed lookup fails its fetch.
 
 The warning is sampled to one line per second. An unreachable store fails every cacheable fetch of every request, and unsampled logging would add to the outage. Every failure is counted in the [cache health metrics](#cache-health), when they are enabled.
 

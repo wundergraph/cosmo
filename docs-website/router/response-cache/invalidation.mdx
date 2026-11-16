@@ -112,6 +112,8 @@ A kind whose index is turned off is rejected.
 
 The body may be up to 10 MiB.
 
+A large tag takes many Redis round trips to invalidate. On a short [Redis timeout](/router/response-cache/configuration#redis-timeouts), the request can fail with `500` partway through.
+
 The whole array is validated before anything is removed. One invalid element rejects the request, so it can be fixed and sent again. Each error names its element. An error not about an element, such as a bad key, has `index` 0:
 
 ```json

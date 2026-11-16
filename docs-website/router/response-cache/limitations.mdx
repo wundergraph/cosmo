@@ -43,9 +43,9 @@ Anyone with the shared key can empty the cache and push the full load onto your 
 The cache trusts what subgraphs say about their responses.
 
 - **Send a caching directive on every cacheable response.** See [What is stored](/router/response-cache/how-it-works#what-is-stored).
-- **Name request headers in `Vary`.** A forwarded header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. See [Varying responses](/router/response-cache/configuration#varying-responses).
+- **Name request headers in `Vary`.** A forwarded header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. See [Varying responses](/router/response-cache/how-it-works#varying-responses).
 - **Mark per-caller data `private`, and configure a `private_id`.** See [Private responses](/router/response-cache/configuration#private-responses).
-- **Know the `Authorization` rule.** Other credentials, such as `Cookie`, do not make a response private. See [Authorization](/router/response-cache/configuration#authorization).
+- **Know the `Authorization` rule.** Other credentials, such as `Cookie`, do not make a response private. See [Authorization](/router/response-cache/how-it-works#authorization).
 - **Report failures as failures.** A `200` with wrong data is stored. See [Subgraph data is not validated](#subgraph-data-is-not-validated-before-storing).
 
 ## Limitations
@@ -77,7 +77,7 @@ Entries are served until they expire and never after. The cache never revalidate
 
 ### Clients can bypass the cache
 
-Any client can send `Cache-Control: no-cache` to skip the cache, and these directives cannot be turned off. See [Request directives](/router/response-cache/configuration#request-directives).
+Any client can send `Cache-Control: no-cache` to skip the cache, and these directives cannot be turned off. See [Request directives](/router/response-cache/how-it-works#request-directives).
 
 ### Operations that are never cached
 

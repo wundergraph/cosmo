@@ -131,7 +131,7 @@ Redis stores it with `key_prefix` and `e:` in front, for example `cosmo_response
 - **Entity part.** Which object, or which whole request, the entry is about.
 - **Selection part.** What was asked about it: the query text and variables of the request.
 - **Private part.** Only for `private` subgraph responses. See [Private and shared entries](#private-and-shared-entries).
-- **Vary part.** Only for subgraph responses with a `Vary` header. See [Varying responses](/router/response-cache/configuration#varying-responses).
+- **Vary part.** Only for subgraph responses with a `Vary` header. See [Varying responses](#varying-responses).
 
 ### Root fetches
 
@@ -164,7 +164,7 @@ The selection part covers the whole request, aliases included. A merged request 
 - **Client extensions.** Extensions the client sends, other than `persistedQuery`, are forwarded to subgraphs and are part of the selection digest.
 - **Undefined variables.** A variable that was omitted is keyed apart from one sent as `null`, because the subgraph receives different requests.
 - **Private id.** A `private` subgraph response is stored under a key that adds a digest of the client request's [`private_id`](/router/response-cache/configuration#private-responses).
-- **Vary.** A subgraph response with a `Vary` header is stored under a variant key derived from the values of the named headers. See [Varying responses](/router/response-cache/configuration#varying-responses).
+- **Vary.** A subgraph response with a `Vary` header is stored under a variant key derived from the values of the named headers. See [Varying responses](#varying-responses).
 
 Request headers the router forwards to the subgraph are not part of the key, unless the subgraph names them in `Vary`.
 
@@ -195,8 +195,8 @@ flowchart TD
 
 1. **Inbound deduplication.** Identical client requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its client response. See [Request Deduplication](/router/request-deduplication#with-the-response-cache).
 2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
-3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
-4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With [`only-if-cached`](/router/response-cache/configuration#request-directives), it fails instead. Identical subgraph requests in flight share one call.
+3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](#varying-responses).
+4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With [`only-if-cached`](#request-directives), it fails instead. Identical subgraph requests in flight share one call.
 5. **Store decision.** The status, body and headers of the subgraph response decide whether it is stored and for how long. See [What is stored](#what-is-stored).
 6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the client response waits for it. See [Storage](#storage).
 7. **Client response headers.** The router turns the lifetimes of the fetches into the `Cache-Control` of the client response. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
@@ -243,9 +243,25 @@ Most entries are shared: every fetch with the same key gets the same answer. A `
 
 A client request with a private id looks up both keys of every object in one call. The private entry wins when both exist.
 
+- The private part of the key is a SHA-256 digest of the id. Raw ids are never written to Redis.
+- A client request without a private id does not store or read private entries. The subgraph is asked every time.
+- Invalidation by subgraph, type or tag also removes private entries.
+- A [`set` response header rule](/router/proxy-capabilities/subgraph-response-header-operations) on `Cache-Control` can replace `private` in the client response. It does not change how the entry is stored.
+
 ### Objects that do not exist
 
 An object the subgraph returns as `null` is not stored, so a fetch that includes it is never a hit. See [Limitations](/router/response-cache/limitations#entities-that-do-not-exist-are-not-cached).
+
+## Varying responses
+
+A subgraph whose answer depends on a request header, such as `Accept-Language`, names it in a `Vary` response header. The router keeps one entry per combination of values it sent.
+
+- The first subgraph response stores the names from `Vary` as a record at the entry's key, and the body under a variant key.
+- A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant.
+- Values are taken from the request the router builds, after header propagation. A named header the router does not set counts as empty.
+- `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module. `Accept`, `Accept-Encoding` and `Content-Type` are not checked. The entry is keyed by the value the router built, not the one sent. A module that changes them based on other input can cause wrong hits.
+- A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
+- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. An older variant stays reachable while both it and the record live. The record takes the newest response's lifetime, and a response without `Vary` replaces it.
 
 ## What is stored
 
@@ -264,7 +280,7 @@ The checks run in this order. The first that applies decides. In a merged entity
 | Unqualified `no-cache` | Not stored | `no_cache` |
 | No lifetime and no directive that allows a default | Not stored | `no_directive` |
 | The lifetime is zero or less | Not stored | `no_lifetime` |
-| `Vary` cannot be used, such as `Vary: *`. See [Varying responses](/router/response-cache/configuration#varying-responses). | Not stored | `unusable_vary` |
+| `Vary` cannot be used, such as `Vary: *`. See [Varying responses](#varying-responses). | Not stored | `unusable_vary` |
 | `private`, and the client request has no private id | Not stored | `private_without_id` |
 | `_entities` is missing or has the wrong length | Not stored | `invalid_response` |
 | Nothing to store, such as an entity that does not exist | Not stored | `no_entity` |
@@ -274,7 +290,7 @@ The store decision is reported per fetch. See [Store decision](/router/response-
 
 ### How the subgraph's Cache-Control is read
 
-These rules apply to the `Cache-Control` header of the subgraph response. The `Cache-Control` a client sends in its request is covered under [Request directives](/router/response-cache/configuration#request-directives).
+These rules apply to the `Cache-Control` header of the subgraph response. The `Cache-Control` a client sends in its request is covered under [Request directives](#request-directives).
 
 - Directive names are case-insensitive.
 - Several `Cache-Control` header lines are read as one, joined by commas.
@@ -282,7 +298,19 @@ These rules apply to the `Cache-Control` header of the subgraph response. The `C
 - An invalid value in a known directive, such as `max-age=abc` or `max-age=-1`, makes the whole header invalid. Nothing is stored, even if `no-store` is also present.
 - Qualified `no-cache`, such as `no-cache="Set-Cookie"`, does not prevent storing. Entries hold no response headers, so there is nothing to strip. `no-cache=""` counts as unqualified.
 - `private` in any form, including `private="Set-Cookie"`, makes the whole subgraph response private.
-- A subgraph request that carried `Authorization` can make the subgraph response private. See [Authorization](/router/response-cache/configuration#authorization).
+- A subgraph request that carried `Authorization` can make the subgraph response private. See [Authorization](#authorization).
+
+### Authorization
+
+A subgraph request that carries an `Authorization` header produces a private response unless the response says `public`, `s-maxage` or `must-revalidate`. Without a `private_id`, such a response is not stored.
+
+This applies only when `Authorization` is propagated to the subgraph. A subgraph that serves the same data to every authenticated caller should say `public`.
+
+- The miss response does not carry `private` from this rule. Its hits do. To keep such responses out of a CDN:
+  - Send `private` from the subgraph.
+  - Configure a [cache control policy](/router/proxy-capabilities/adjusting-cache-control).
+  - Make sure no `set` rule replaces `private`.
+- Only `Authorization` triggers the rule. Other credentials, such as `Cookie` or a custom header, do not make a response private.
 
 ### Lifetime
 
@@ -339,6 +367,25 @@ With one, the router first replaces each fetch's `Cache-Control` with what the c
 
 Client responses to mutations carry `no-cache`. A client response with subgraph errors carries `no-store, no-cache, must-revalidate`.
 
+## Request directives
+
+A client can control the cache for its own request with the `Cache-Control` request header.
+
+| Request directive | Effect |
+| --- | --- |
+| `no-cache`, or `max-age=0` | Not answered from the cache. Every fetch goes to its subgraph and the responses are stored, so the entries are refreshed. |
+| `no-store` | Nothing is stored. Existing entries can still answer the request. |
+| `no-cache, no-store` | The cache is neither read nor written. |
+| `only-if-cached` | Every fetch must be answered from the cache. Otherwise the request fails with status `504`. Batched and `@defer` requests get fetch errors instead of `504`. Combined with `no-cache` or `max-age=0`, it always fails. Fetches to subgraphs the cache is off for fail too, and so do mutations, which then do not run. Introspection is exempt. |
+
+`max-age` greater than zero, `min-fresh` and `max-stale` are ignored. So is the `Pragma` header. A `Cache-Control` request header that cannot be parsed is ignored.
+
+Requests with `no-cache`, `max-age=0` or `only-if-cached` skip [inbound deduplication](/router/request-deduplication#with-the-response-cache).
+
+<Warning>
+  Any client can send these directives. They cannot be turned off. A client that sends `no-cache` on every request bypasses the cache, and its subgraphs see all of its traffic.
+</Warning>
+
 ## Storage
 
 ### Redis
@@ -371,5 +418,7 @@ The headers of the subgraph response, including its `Cache-Control`, are not sto
 3. The entry's lifetime is extended to its full value, or the entry is deleted if a tag was invalidated since step 1.
 
 An entry with a lifetime of 10 seconds or less is written with its full lifetime in step 1 and skips the later checks. A router that stops between the steps leaves an entry that expires with its lease.
+
+A write that times out is counted as failed, but can still land. An untagged entry then lives its full lifetime. A tagged entry is removed, kept for its lease, or kept for its full lifetime, depending on the step that timed out.
 
 **Cluster.** Redis Cluster spreads keys over nodes by hash slot, and one command cannot touch keys in different slots. Every command the cache sends touches one key, so it works with any key layout. Keys use no hash tags.
