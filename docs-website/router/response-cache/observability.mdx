@@ -105,23 +105,9 @@ The `Engine - Fetch` span also carries:
 | `wg.response_cache.store_decision` | What happened to the response of a fetch that was sent. |
 | `wg.response_cache.lookup_duration_ms` | Time spent reading the cache. Not part of the fetch duration. |
 
-The store decision explains why a type is never served from the cache. The rules behind each value are in [What is stored](/router/response-cache/how-it-works#what-is-stored).
+The store decision explains why a type is never served from the cache. Its values are `stored`, `fetch_failed`, `uncacheable_status`, `invalid_response`, `response_errors`, `invalid_cache_control`, `no_store`, `no_cache`, `no_directive`, `no_lifetime`, `unusable_vary`, `private_without_id` and `no_entity`. [What is stored](/router/response-cache/how-it-works#what-is-stored) lists when each one applies.
 
-| `wg.response_cache.store_decision` | The response was |
-| --- | --- |
-| `stored` | stored. A type that is stored on every miss and never hit has a lifetime too short for its traffic, or a key that never repeats. |
-| `fetch_failed` | a failed request, an empty body, or a status of 400 or higher. |
-| `uncacheable_status` | sent with a status other than 200 or 203. |
-| `invalid_response` | not JSON, or not the shape that was asked for. |
-| `response_errors` | carrying GraphQL errors. |
-| `invalid_cache_control` | sent with a `Cache-Control` that could not be read. |
-| `no_store` | sent with `no-store`. |
-| `no_cache` | sent with unqualified `no-cache`. |
-| `no_directive` | sent without a caching directive, so `fallback_ttl` did not apply. |
-| `no_lifetime` | sent with a lifetime of zero or less, after `Age`. |
-| `unusable_vary` | sent with `Vary: *`, a `Vary` naming more than 100 headers, or a varied header other than `Accept`, `Accept-Encoding` or `Content-Type` changed after the request was built. |
-| `private_without_id` | private, for a request without a private id. |
-| `no_entity` | without anything to store, such as an entity that does not exist. |
+A type that is `stored` on every miss and never hit has a lifetime too short for its traffic, or a key that never repeats.
 
 The decision is absent for a fetch answered from the cache and for one that is not cacheable. A request sent with `no-store` reports it as absent instead of `stored`. The `subgraph.response.cache.storeDecision` expression reads `empty` for these. The decision is taken before the write, which can still fail.
 

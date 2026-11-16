@@ -155,7 +155,7 @@ A later fetch for the same fields of the same object reuses the entry, wherever 
 
 ### Keys in merged entity fetches
 
-With `engine.enable_multi_fetch`, which is on by default, the router can combine several entity fetches to the same subgraph into one request. Each part of that request is an `_entities` field under its own alias, such as `a0: _entities(...)` and `a1: _entities(...)`.
+With `engine.enable_multi_fetch`, which is on by default, the router can combine entity fetches to the same subgraph that run at the same step of the plan into one request. Each part of that request is an `_entities` field under its own alias, such as `a0: _entities(...)` and `a1: _entities(...)`.
 
 The selection part covers the whole request, aliases included. A merged request therefore has a different selection part from a plain `_entities` request for the same objects and fields. The two do not share entries. See [Limitations](/router/response-cache/limitations#merged-entity-fetches).
 
@@ -196,7 +196,7 @@ flowchart TD
 1. **Inbound deduplication.** Identical client requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its client response. See [Request Deduplication](/router/request-deduplication#with-the-response-cache).
 2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
 3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
-4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With `only-if-cached`, it fails instead. The client response gets `504`, except batched and `@defer` requests, which get fetch errors. Identical subgraph requests in flight share one call.
+4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With [`only-if-cached`](/router/response-cache/configuration#request-directives), it fails instead. Identical subgraph requests in flight share one call.
 5. **Store decision.** The status, body and headers of the subgraph response decide whether it is stored and for how long. See [What is stored](#what-is-stored).
 6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the client response waits for it. See [Storage](#storage).
 7. **Client response headers.** The router turns the lifetimes of the fetches into the `Cache-Control` of the client response. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
@@ -245,7 +245,7 @@ A client request with a private id looks up both keys of every object in one cal
 
 ### Objects that do not exist
 
-An object the subgraph returns as `null` is not stored. A fetch that includes it is never a hit, so it reaches the subgraph every time.
+An object the subgraph returns as `null` is not stored, so a fetch that includes it is never a hit. See [Limitations](/router/response-cache/limitations#entities-that-do-not-exist-are-not-cached).
 
 ## What is stored
 
@@ -264,7 +264,7 @@ The checks run in this order. The first that applies decides. In a merged entity
 | Unqualified `no-cache` | Not stored | `no_cache` |
 | No lifetime and no directive that allows a default | Not stored | `no_directive` |
 | The lifetime is zero or less | Not stored | `no_lifetime` |
-| `Vary: *`, more than 100 names in `Vary`, or a varied header other than `Accept`, `Accept-Encoding` or `Content-Type` changed after the router built the request | Not stored | `unusable_vary` |
+| `Vary` cannot be used, such as `Vary: *`. See [Varying responses](/router/response-cache/configuration#varying-responses). | Not stored | `unusable_vary` |
 | `private`, and the client request has no private id | Not stored | `private_without_id` |
 | `_entities` is missing or has the wrong length | Not stored | `invalid_response` |
 | Nothing to store, such as an entity that does not exist | Not stored | `no_entity` |
@@ -282,7 +282,7 @@ These rules apply to the `Cache-Control` header of the subgraph response. The `C
 - An invalid value in a known directive, such as `max-age=abc` or `max-age=-1`, makes the whole header invalid. Nothing is stored, even if `no-store` is also present.
 - Qualified `no-cache`, such as `no-cache="Set-Cookie"`, does not prevent storing. Entries hold no response headers, so there is nothing to strip. `no-cache=""` counts as unqualified.
 - `private` in any form, including `private="Set-Cookie"`, makes the whole subgraph response private.
-- If the subgraph request carried an `Authorization` header and the subgraph response has none of `public`, `s-maxage` or `must-revalidate`, it is treated as private. This applies only when `Authorization` is propagated to the subgraph.
+- A subgraph request that carried `Authorization` can make the subgraph response private. See [Authorization](/router/response-cache/configuration#authorization).
 
 ### Lifetime
 
@@ -306,9 +306,7 @@ The cache does not revalidate entries and does not serve expired entries. `stale
 - A single or batch fetch whose subgraph response has any GraphQL error stores nothing, including the entities that resolved.
 - In a merged fetch, an error whose path starts at an alias excludes that alias only. An error with no alias in its path excludes every alias.
 
-<Warning>
-  The data a subgraph returns is stored before the router checks it against the schema. A wrong type, or `null` in a non-null field, is stored and served from the cache until it expires. This is a known issue.
-</Warning>
+Data is stored before it is checked against the schema. See [Limitations](/router/response-cache/limitations#subgraph-data-is-not-validated-before-storing).
 
 ## Client Cache-Control
 
@@ -344,8 +342,6 @@ Client responses to mutations carry `no-cache`. A client response with subgraph 
 ## Storage
 
 ### Redis
-
-Redis 7.0 or newer is required. Standalone and cluster deployments are supported.
 
 The cache keeps two kinds of Redis key:
 

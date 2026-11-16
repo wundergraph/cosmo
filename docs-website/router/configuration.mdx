@@ -1098,7 +1098,7 @@ storage_providers:
   redis:
     - id: "response_cache"
       urls:
-        - "redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&max_retries=-1"
+        - "redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&dial_timeout=500ms&pool_timeout=250ms&max_retries=-1"
 
 response_cache:
   enabled: true

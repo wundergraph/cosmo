@@ -72,6 +72,7 @@ response_cache:
 
 - The endpoint runs on its own listener, separate from the GraphQL port. It starts only when the response cache is enabled. A failure to bind it fails startup.
 - It speaks plain HTTP. Keep it on a private interface, or terminate TLS in front of it, so the shared key is not sent in the clear.
+- `shared_key` must have at least 32 characters. Use a random value.
 - The router's CORS settings apply to it when CORS is enabled.
 
 ### Send a request
@@ -187,7 +188,7 @@ Cache-Tag: subgraph-employees,type-employees-Query,subgraph-mood,type-mood-Emplo
 
 It is not sent:
 
-- on responses with subgraph errors, which are marked `no-store`
+- on responses with subgraph errors, which receive `no-store, no-cache, must-revalidate`
 - on subscriptions and `@defer` responses
 - on WebSocket operations
 - on batched operations

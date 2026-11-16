@@ -58,7 +58,7 @@ Set the client's limits as query parameters on the Redis URL:
 
 In cluster mode, the parameters are read from the first URL. With `max_redirects=-1`, a command that meets a slot redirect during resharding fails and counts as a miss.
 
-Each timeout applies per round trip, not per fetch. A lookup takes one round trip, or two when the subgraph sends `Vary`. A write takes one, or up to three for a tagged entry. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write is counted as failed, but it can still land. An untagged entry then lives its full lifetime. A tagged entry is removed, kept for its lease of up to 10 seconds, or kept for its full lifetime, depending on the step. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
+Each timeout applies per Redis round trip, not per fetch, and a fetch can make several. See [Storage](/router/response-cache/how-it-works#redis). Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write is counted as failed, but it can still land. An untagged entry then lives its full lifetime. A tagged entry is removed, kept for its lease of up to 10 seconds, or kept for its full lifetime, depending on the step. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
 
 ## Configuration reference
 
@@ -144,12 +144,11 @@ This applies only when `Authorization` is propagated to the subgraph. A subgraph
 A subgraph whose answer depends on a request header, such as `Accept-Language`, names it in a `Vary` response header. The router keeps one entry per combination of values it sent.
 
 - The first response stores the names from `Vary` as a record at the entry's key, and the body under a variant key.
-- A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant. A varying fetch costs two round trips to the store. A fetch without `Vary` costs one.
+- A later lookup reads the record, digests the values of those headers in the current subgraph request, and reads the variant.
 - Values are taken from the request the router builds, after header propagation. A named header the router does not set counts as empty.
 - `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module. `Accept`, `Accept-Encoding` and `Content-Type` are not checked. The entry is keyed by the value the router built, not the one sent. A module that changes them based on other input can cause wrong hits.
 - A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
 - When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. An older variant stays reachable while both it and the record live. The record takes the newest response's lifetime, and a response without `Vary` replaces it.
-- With `engine.enable_multi_fetch`, one `Vary` applies to every alias of a merged fetch. Keep the subgraph's `Vary` to the headers each response depends on.
 
 ## Request directives
 
@@ -164,7 +163,7 @@ A client can control the cache for its own request with the `Cache-Control` requ
 
 `max-age` greater than zero, `min-fresh` and `max-stale` are ignored. So is the `Pragma` header. A `Cache-Control` request header that cannot be parsed is ignored.
 
-Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated](/router/request-deduplication) with other requests in flight.
+Requests with `no-cache`, `max-age=0` or `only-if-cached` skip [inbound deduplication](/router/request-deduplication#with-the-response-cache).
 
 <Warning>
   Any client can send these directives. They cannot be turned off. A client that sends `no-cache` on every request bypasses the cache, and its subgraphs see all of its traffic.
