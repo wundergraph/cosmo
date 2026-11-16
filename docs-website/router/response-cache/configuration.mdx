@@ -1,7 +1,7 @@
 ---
 title: "Configure the Response Cache"
 sidebarTitle: "Configuration"
-description: "Storage, per-subgraph settings, private responses, Vary, request directives and the client Cache-Control."
+description: "Storage, per-subgraph settings, private responses, Vary and request directives."
 icon: "sliders"
 ---
 
@@ -135,7 +135,7 @@ This applies only when `Authorization` is propagated to the subgraph. A subgraph
 
 - The miss response does not carry `private` from this rule. Its hits do. To keep such responses out of a CDN:
   - Send `private` from the subgraph.
-  - Configure a [client Cache-Control](#client-cache-control) policy.
+  - Configure a [cache control policy](/router/proxy-capabilities/adjusting-cache-control).
   - Make sure no `set` rule replaces `private`.
 - Only `Authorization` triggers the rule. Other credentials, such as `Cookie` or a custom header, do not make a response private.
 
@@ -169,32 +169,3 @@ Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated]
 <Warning>
   Any client can send these directives. They cannot be turned off. A client that sends `no-cache` on every request bypasses the cache, and its subgraphs see all of its traffic.
 </Warning>
-
-## Client Cache-Control
-
-The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses, with two exceptions:
-
-- A `propagate` rule on `Cache-Control` forwards the subgraph's value, or the value an earlier `set` rule wrote. A full hit has no subgraph value. It forwards only a `set` value or the rule's `default`.
-- `cache_tag_header.on_overflow: private` sets `private`.
-
-```yaml config.yaml
-cache_control_policy:
-  enabled: true
-  # Optional. Stands in for a subgraph that sends no Cache-Control.
-  value: 'max-age=60, public'
-  # Optional. A subgraph without caching directives makes the response no-store.
-  missing_no_store: false
-
-apollo_router_compatibility_flags:
-  cache_control_any_public:
-    # Keep public when any fetch is public and none is private.
-    enabled: false
-```
-
-How each setting interacts with the cache:
-
-- **`value`** is used for fetches whose subgraph sent no caching directives. It caps the lifetime of fetches that sent their own. It does not make a response storable.
-- **`missing_no_store`** makes the response `no-store` when a fetch had no caching directives and no `value` stands in for it. A fetch answered fully from the cache does not count, since no subgraph response was received.
-- **`cache_control_any_public`** changes how `public` is merged. By default, every fetch must be public for the response to be public.
-
-With a policy in place, a cached fetch reports its remaining lifetime. See [Client Cache-Control](/router/response-cache/how-it-works#client-cache-control) for the exact rules.

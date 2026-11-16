@@ -215,7 +215,7 @@ With one, the router first replaces each fetch's `Cache-Control` with what the c
 - The smallest `max-age` wins. `s-maxage` is the smallest shared lifetime: a fetch's `s-maxage`, else its `max-age`. It is sent only when a fetch has `s-maxage`.
 - `private` wins if any fetch is private.
 - `public` is kept only if every fetch is public. With `apollo_router_compatibility_flags.cache_control_any_public` enabled, `public` is kept if any fetch is public and none is private.
-- A fetch without `Cache-Control` or `Expires` is ignored, unless `cache_control_policy.value` stands in for it or `cache_control_policy.missing_no_store` is enabled. See [Client Cache-Control settings](/router/response-cache/configuration#client-cache-control).
+- A fetch without `Cache-Control` or `Expires` is ignored, unless `cache_control_policy.value` stands in for it or `cache_control_policy.missing_no_store` is enabled. See [Adjusting Cache Control](/router/proxy-capabilities/adjusting-cache-control).
 
 Mutations receive `no-cache`. A response with subgraph errors receives `no-store, no-cache, must-revalidate`.
 

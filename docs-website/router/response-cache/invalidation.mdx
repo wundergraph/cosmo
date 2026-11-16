@@ -185,7 +185,7 @@ A response can mix cached fetches with fetches the cache does not handle. A fetc
 To keep such responses out of a CDN:
 
 - Have the subgraph send `no-store`.
-- Enable [`cache_control_policy.missing_no_store`](/router/response-cache/configuration#client-cache-control). It does not apply when a `value` stands in for the subgraph, or to gRPC subgraphs and router plugins, which send no headers.
+- Enable [`cache_control_policy.missing_no_store`](/router/configuration#missing-caching-information). It does not apply when a `value` stands in for the subgraph, or to gRPC subgraphs and router plugins, which send no headers.
 - For gRPC subgraphs and plugins, set a `cache_control_policy` subgraph `value` such as `no-store`.
 
 ### Size
