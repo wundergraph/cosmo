@@ -117,7 +117,7 @@ How the router turns a request into a key is covered next.
 
 ## Keys
 
-A key says which subgraph request an entry answers. The router never compares requests directly. It hashes them with SHA-256 and compares the hashes, called digests. Equal digests mean equal requests.
+A key says which subgraph request an entry answers. The key does not hold the subgraph request itself, which can be large. It holds SHA-256 hashes of its parts, called digests. Two subgraph requests with the same parts produce the same digests, so they get the same key.
 
 A key has two required parts and up to two optional ones:
 
