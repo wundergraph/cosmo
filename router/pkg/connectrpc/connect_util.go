@@ -2,6 +2,7 @@ package connectrpc
 
 import (
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 )
@@ -77,4 +78,68 @@ func ConnectCodeToHTTPStatus(code connect.Code) int {
 	default:
 		return http.StatusInternalServerError // 500
 	}
+}
+
+func (r *GraphQLResponse) ConnectCode() connect.Code {
+	code, ok := unanimousConnectCode(len(r.Errors), func(i int) (connect.Code, bool) {
+		return r.errorConnectCode(r.Errors[i].Extensions)
+	})
+	if !ok {
+		return connect.CodeUnknown
+	}
+	return code
+}
+
+func (r *GraphQLResponse) errorConnectCode(extensions map[string]any) (connect.Code, bool) {
+	code, _ := extensions["code"].(string)
+	if code == "UNAUTHORIZED_FIELD_OR_TYPE" {
+		return r.fieldAuthorizationDenialCode(), true
+	}
+	if c, ok := connectCodeFromGRPCStatusName(code); ok {
+		return c, true
+	}
+	wrappedSubgraphErrors, _ := extensions["errors"].([]any)
+	return unanimousConnectCode(len(wrappedSubgraphErrors), func(i int) (connect.Code, bool) {
+		subgraphError, _ := wrappedSubgraphErrors[i].(map[string]any)
+		subgraphErrorExtensions, _ := subgraphError["extensions"].(map[string]any)
+		return r.errorConnectCode(subgraphErrorExtensions)
+	})
+}
+
+// fieldAuthorizationDenialCode relies on the router's authorizer recording missing scopes
+// only for authenticated requests. Authentication is per request, so without them every
+// denial in the response was for a missing token.
+func (r *GraphQLResponse) fieldAuthorizationDenialCode() connect.Code {
+	if len(r.Extensions.Authorization.MissingScopes) > 0 {
+		return connect.CodePermissionDenied
+	}
+	return connect.CodeUnauthenticated
+}
+
+func unanimousConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.Code, bool) {
+	if n == 0 {
+		return 0, false
+	}
+	var code connect.Code
+	for i := range n {
+		c, ok := codeAt(i)
+		if !ok || (i > 0 && c != code) {
+			return 0, false
+		}
+		code = c
+	}
+	return code, true
+}
+
+func connectCodeFromGRPCStatusName(name string) (connect.Code, bool) {
+	if name == "" {
+		return 0, false
+	}
+	normalized := strings.ToLower(strings.ReplaceAll(name, "_", ""))
+	for c := connect.CodeCanceled; c <= connect.CodeUnauthenticated; c++ {
+		if strings.ReplaceAll(c.String(), "_", "") == normalized {
+			return c, true
+		}
+	}
+	return 0, false
 }
