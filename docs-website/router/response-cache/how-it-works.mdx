@@ -364,7 +364,7 @@ The cache keeps two kinds of Redis key:
 
 The headers of the subgraph response, including its `Cache-Control`, are not stored. For a subgraph response with a `Vary` header, the entry at the key holds the list of header names instead, and the data sits under a second key that adds the vary part.
 
-**Tag sets.** An invalidation needs to find every entry with a given tag. Each tag therefore has a sorted set listing the keys of its entries. A set member's score is the time that entry expires. Members more than five minutes past expiry are removed on the next write. The set itself expires five minutes after its last member.
+**Tag sets.** An [invalidation](/router/response-cache/invalidation#how-an-invalidation-runs) needs to find every entry with a given tag. Each tag therefore has a sorted set listing the keys of its entries. A set member's score is the time that entry expires. Members more than five minutes past expiry are removed on the next write. The set itself expires five minutes after its last member.
 
 **Reads.** A lookup sends `GET` and `PTTL` for each key in one batch. `PTTL` returns the time the entry has left, which becomes the lifetime reported to the client.
 
@@ -377,21 +377,3 @@ The headers of the subgraph response, including its `Cache-Control`, are not sto
 An entry with a lifetime of 10 seconds or less is written with its full lifetime in step 1 and skips the later checks. A router that stops between the steps leaves an entry that expires with its lease.
 
 **Cluster.** Redis Cluster spreads keys over nodes by hash slot, and one command cannot touch keys in different slots. Every command the cache sends touches one key, so it works with any key layout. Keys use no hash tags.
-
-## Invalidation
-
-An invalidation request names a [tag](/router/response-cache/invalidation). The router then:
-
-1. Records the time of the invalidation in the tag's set.
-2. Reads the set and deletes every entry it lists.
-3. Marks the entries it read, so that a write running at the same time sees the invalidation.
-
-Every write checks the recorded time. An entry whose subgraph fetch started at or before the invalidation is deleted instead of kept, so a subgraph response fetched before the invalidation does not reappear. Redis allows one second of clock skew between routers.
-
-This protection has limits:
-
-- **The record lasts at least five minutes.** Once it is gone, a write whose fetch started before the invalidation can store a stale entry.
-- **A rejected write is briefly visible.** On Redis, the entry is written first and deleted one or two round trips later. A lookup in between can read it. If the delete fails, the entry stays until its lease of up to 10 seconds ends.
-- **Short entries are not checked again.** An entry with a lifetime of 10 seconds or less skips the later write checks. Its write can land after an invalidation deleted it, most likely on Redis Cluster. It then stays until it expires.
-
-Only entries listed in a tag set can be invalidated. With every [index](/router/response-cache/invalidation#indexes) turned off, entries leave the cache only when they expire.
