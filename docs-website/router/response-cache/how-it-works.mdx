@@ -72,58 +72,44 @@ cosmo_response_cache:e:2:9f2c…:5feb…   reviews of Product upc 1
 cosmo_response_cache:e:2:c71d…:5feb…   reviews of Product upc 2
 ```
 
-The same query again finds all three entries, and neither subgraph is called. A different query that needs the reviews of product `1` also finds that entry, because the router sends `reviews` the same request for it.
+The same query again finds all three entries, and neither subgraph is called.
 
-## Request lifecycle
+### Reusing an entry from another query
 
-The router plans an operation into subgraph fetches. The cache acts on each fetch separately.
+A different query can reuse an entry when it leads to the same subgraph request. This query asks for one product:
 
-```mermaid
-flowchart TD
-  A[Client request] --> B{Identical request<br/>already in flight?}
-  B -- yes --> C[Wait and reuse its response]
-  B -- no --> D[Plan subgraph fetches]
-  D --> E[Build cache keys for each fetch]
-  E --> F[Look up all keys]
-  F -- every key found --> G[Serve the fetch from the cache]
-  F -- any key missing --> H[Send the fetch to the subgraph]
-  F -- "any key missing, and the client sent<br/>Cache-Control: only-if-cached" --> X[Fail the fetch with 504]
-  X --> L
-  H --> I[Decide whether to store the response]
-  I -- stored --> J[Write entries and tag sets]
-  I -- not stored --> K[Keep the response for this request only]
-  G --> L[Merge fetch results into the response]
-  J --> L
-  K --> L
-  L --> M[Set Cache-Control and Cache-Tag]
-  M --> N[Send the response]
+```graphql
+query {
+  product(upc: "1") {
+    name
+    reviews { body }
+  }
+}
 ```
 
-1. **Inbound deduplication.** Identical query requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its response. See [Deduplication](#deduplication).
-2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
-3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
-4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With `only-if-cached`, it fails instead. The request gets `504`, except batched and `@defer` requests, which get fetch errors. Identical subgraph requests in flight share one call.
-5. **Store decision.** The subgraph's status, body and headers decide whether the response is stored and for how long. See [What is stored](#what-is-stored).
-6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the response waits for it. See [Storage](#storage).
-7. **Response headers.** The router turns the lifetimes of the fetches into the client's `Cache-Control`. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
+The router plans two fetches again:
 
-A cache failure does not fail a request, except one sent with `only-if-cached`. A failed lookup is a miss. A failed write is logged and counted, and the response is sent as usual.
+1. A root fetch to `products`: `{ product(upc: "1") { __typename upc name } }`. This request differs from `topProducts`, so it is a miss. Its answer is stored as a new entry.
+2. An entity fetch to `reviews` for `{"__typename":"Product","upc":"1"}`, asking for `... on Product { reviews { body } }`. This is the same request the first query made for product `1`. It finds the entry `9f2c…:5feb…`, and `reviews` is not called.
 
-## Which fetches are cached
+### When the selection changes
 
-| Fetch | Cached | Entries |
-| --- | --- | --- |
-| Root query fetch to a GraphQL subgraph | Yes | One entry for the whole answer |
-| Entity fetch (`_entities`) | Yes | One entry per entity |
-| Batch entity fetch | Yes | One entry per unique representation |
-| Merged entity fetch (`engine.enable_multi_fetch`, on by default) | Yes | One entry per entity, per alias |
-| Fetches in a mutation or subscription | No | |
-| Any fetch of a WebSocket operation | No | |
-| Any fetch of a request that uploads files | No | |
-| Any fetch to a gRPC subgraph or router plugin | No, not supported. See [Limitations](/router/response-cache/limitations#grpc-subgraphs-and-plugins-are-not-supported). | |
-| Introspection | No | |
+An entity entry is only reused when the same fields are asked for. The fields an entity fetch asks for are its selection set: `reviews { body }` in the example.
 
-Fetches inside `@defer` groups are cached like any other fetch of a query. A `@defer` response always receives `Cache-Control: no-cache`.
+A query that asks for one more field gets a different request, even for the same product:
+
+```graphql
+query {
+  product(upc: "1") {
+    reviews { body rating }
+  }
+}
+```
+
+The `reviews` fetch now asks for `... on Product { reviews { body rating } }`. That is a different selection, so it is a miss, and the router stores a second entry for product `1` next to the first one. The same happens when an argument changes, such as `reviews(first: 5)` instead of `reviews(first: 10)`. Each distinct selection is cached separately. A cached `body` is not reused for a query that also needs `rating`.
+
+How the router turns a request into a key is covered next.
+
 
 ## Keys
 
@@ -177,6 +163,57 @@ The selection part covers the whole request, aliases included. A merged request 
 - **Vary.** A response with a `Vary` header is stored under a variant key derived from the values of the named headers. See [Varying responses](/router/response-cache/configuration#varying-responses).
 
 Request headers the router forwards to the subgraph are not part of the key, unless the subgraph names them in `Vary`.
+
+## Request lifecycle
+
+The router plans an operation into subgraph fetches. The cache acts on each fetch separately.
+
+```mermaid
+flowchart TD
+  A[Client request] --> B{Identical request<br/>already in flight?}
+  B -- yes --> C[Wait and reuse its response]
+  B -- no --> D[Plan subgraph fetches]
+  D --> E[Build cache keys for each fetch]
+  E --> F[Look up all keys]
+  F -- every key found --> G[Serve the fetch from the cache]
+  F -- any key missing --> H[Send the fetch to the subgraph]
+  F -- "any key missing, and the client sent<br/>Cache-Control: only-if-cached" --> X[Fail the fetch with 504]
+  X --> L
+  H --> I[Decide whether to store the response]
+  I -- stored --> J[Write entries and tag sets]
+  I -- not stored --> K[Keep the response for this request only]
+  G --> L[Merge fetch results into the response]
+  J --> L
+  K --> L
+  L --> M[Set Cache-Control and Cache-Tag]
+  M --> N[Send the response]
+```
+
+1. **Inbound deduplication.** Identical query requests in flight at the same time share one execution. Only the request that executes reads and writes the cache. The others receive its response. See [Deduplication](#deduplication).
+2. **Key building.** The router renders each fetch's subgraph request and derives one key per entry from it. See [Keys](#keys).
+3. **Lookup.** All keys of a fetch are read from the store in one call, or two when the entry varies. See [Varying responses](/router/response-cache/configuration#varying-responses).
+4. **Origin.** A fetch that is not a full hit is sent to the subgraph. With `only-if-cached`, it fails instead. The request gets `504`, except batched and `@defer` requests, which get fetch errors. Identical subgraph requests in flight share one call.
+5. **Store decision.** The subgraph's status, body and headers decide whether the response is stored and for how long. See [What is stored](#what-is-stored).
+6. **Write.** Stored entries are written before the fetch completes. The write is synchronous: the response waits for it. See [Storage](#storage).
+7. **Response headers.** The router turns the lifetimes of the fetches into the client's `Cache-Control`. It also builds the `Cache-Tag` header when that is enabled. See [Client Cache-Control](#client-cache-control).
+
+A cache failure does not fail a request, except one sent with `only-if-cached`. A failed lookup is a miss. A failed write is logged and counted, and the response is sent as usual.
+
+## Which fetches are cached
+
+| Fetch | Cached | Entries |
+| --- | --- | --- |
+| Root query fetch to a GraphQL subgraph | Yes | One entry for the whole answer |
+| Entity fetch (`_entities`) | Yes | One entry per entity |
+| Batch entity fetch | Yes | One entry per unique representation |
+| Merged entity fetch (`engine.enable_multi_fetch`, on by default) | Yes | One entry per entity, per alias |
+| Fetches in a mutation or subscription | No | |
+| Any fetch of a WebSocket operation | No | |
+| Any fetch of a request that uploads files | No | |
+| Any fetch to a gRPC subgraph or router plugin | No, not supported. See [Limitations](/router/response-cache/limitations#grpc-subgraphs-and-plugins-are-not-supported). | |
+| Introspection | No | |
+
+Fetches inside `@defer` groups are cached like any other fetch of a query. A `@defer` response always receives `Cache-Control: no-cache`.
 
 ## Lookups
 
