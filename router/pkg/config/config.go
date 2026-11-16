@@ -1042,6 +1042,12 @@ type TLSConfiguration struct {
 	Server     TLSServerConfiguration     `yaml:"server"`
 	Client     HTTPClientTLSConfiguration `yaml:"client"`
 	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
+
+	// Watch reloads router server and HTTP/gRPC subgraph client certificate and key files.
+	// CA bundles and NATS TLS files are not watched.
+	// Open connections keep the material they were established with.
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"TLS_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"TLS_WATCH_INTERVAL"`
 }
 
 type TLSServerConfiguration struct {
