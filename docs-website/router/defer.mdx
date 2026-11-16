@@ -98,7 +98,7 @@ The router accepts these forms:
 
 The `Accept` header can allow none of these forms.
 If the operation contains an active `@defer`, the router answers with a GraphQL error.
-The status code is 200, or 406 with [`graphql_over_http.status_codes: spec`](/router/configuration#graphql-over-http):
+The status code is 200, or 406 with [`graphql_over_http.status_codes: September2026`](/router/configuration#graphql-over-http):
 
 ```json
 {
@@ -117,7 +117,7 @@ A client can ask for a different incremental delivery format, such as `multipart
 Apollo Router uses that older format.
 Such a client parses the response incorrectly and loses the deferred data.
 The router rejects the request with the error code `DEFER_UNSUPPORTED_SPEC`.
-The status code is 200, or 406 with [`graphql_over_http.status_codes: spec`](/router/configuration#graphql-over-http):
+The status code is 200, or 406 with [`graphql_over_http.status_codes: September2026`](/router/configuration#graphql-over-http):
 
 ```json
 {

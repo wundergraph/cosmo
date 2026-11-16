@@ -394,7 +394,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 		statusCode := httpErr.StatusCode()
 		if gqlErr, ok := errors.AsType[*httpGraphqlError](err); ok {
 			switch statusCodes {
-			case config.GraphQLOverHTTPStatusCodesSpec:
+			case config.GraphQLOverHTTPStatusCodesSeptember2026:
 				if specStatusCode, ok := specStatusCodes[gqlErr.kind]; ok {
 					statusCode = specStatusCode
 				}

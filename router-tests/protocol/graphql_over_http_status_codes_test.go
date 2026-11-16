@@ -13,7 +13,7 @@ import (
 
 // TestGraphQLOverHTTPStatusCodes verifies that request errors, which are written
 // without a "data" entry, use the 4xx status codes of the GraphQL over HTTP spec
-// instead of 200. See https://github.com/graphql/graphql-over-http/blob/d438b209d60fa3d34b0530b605e60d5640c7ef9b/spec/GraphQLOverHTTP.md#status-codes
+// instead of 200. See https://http-spec.graphql.org/September2026/#sec-Status-Codes
 func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 	t.Parallel()
 
@@ -32,7 +32,7 @@ func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 		require.Equal(t, expectedStatus, res.Response.StatusCode)
 	}
 
-	specStatusCodes := config.GraphQLOverHTTPConfiguration{StatusCodes: config.GraphQLOverHTTPStatusCodesSpec}
+	specStatusCodes := config.GraphQLOverHTTPConfiguration{StatusCodes: config.GraphQLOverHTTPStatusCodesSeptember2026}
 
 	// blockedBy only matches requests that carry the given X-Block header value,
 	// so the block rules don't interfere with the other cases sharing the router.

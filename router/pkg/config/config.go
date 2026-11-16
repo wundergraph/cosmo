@@ -1130,9 +1130,19 @@ type GraphQLOverHTTPStatusCodes string
 const (
 	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
 	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
-	// GraphQLOverHTTPStatusCodesSpec returns the 4xx status codes of the GraphQL over HTTP spec for request errors
-	GraphQLOverHTTPStatusCodesSpec GraphQLOverHTTPStatusCodes = "spec"
+	// GraphQLOverHTTPStatusCodesSeptember2026 returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for request errors
+	GraphQLOverHTTPStatusCodesSeptember2026 GraphQLOverHTTPStatusCodes = "September2026"
 )
+
+// IsValid returns true if the status codes are valid
+func (c GraphQLOverHTTPStatusCodes) IsValid() bool {
+	switch c {
+	case GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026:
+		return true
+	}
+
+	return false
+}
 
 type GraphQLOverHTTPConfiguration struct {
 	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
@@ -1925,6 +1935,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	// Validate the status codes configuration
+	if statusCodes := cfg.Config.GraphQLOverHTTP.StatusCodes; !statusCodes.IsValid() {
+		return nil, fmt.Errorf("graphql_over_http.status_codes must be %q or %q, got %q",
+			GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026, statusCodes)
 	}
 
 	// Post-process the config

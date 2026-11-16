@@ -127,6 +127,37 @@ router_config_path: "config.json"
 	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
 }
 
+func TestGraphQLOverHTTPStatusCodesFromEnv(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+
+	t.Run("loads a valid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "September2026")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesSeptember2026, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("falls back to legacy for an empty value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesLegacy, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("fails for an invalid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "september2026")
+
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, `graphql_over_http.status_codes must be "legacy" or "September2026", got "september2026"`)
+	})
+}
+
 func TestCustomBytesExtension(t *testing.T) {
 	t.Parallel()
 

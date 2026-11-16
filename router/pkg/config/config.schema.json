@@ -4727,9 +4727,9 @@
       "properties": {
         "status_codes": {
           "type": "string",
-          "enum": ["legacy", "spec"],
+          "enum": ["legacy", "September2026"],
           "default": "legacy",
-          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'spec' returns the 4xx status codes of the GraphQL over HTTP spec, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'spec'."
+          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'September2026' returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'September2026'."
         }
       }
     },

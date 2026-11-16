@@ -1316,7 +1316,7 @@
     }
   },
   "GraphQLOverHTTP": {
-    "StatusCodes": "spec"
+    "StatusCodes": "September2026"
   },
   "ClientHeader": {
     "Name": "Client-Name",
