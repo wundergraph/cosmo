@@ -80,7 +80,7 @@ The [response cache](/router/response-cache) and both layers of deduplication wo
 - **Inbound deduplication runs before the cache.** Only the leading client request looks up and writes cache entries. The others receive its client response.
 - **Client requests with different private ids never share a flight.** The private id is part of the inbound key, so one user never receives another user's cached private data.
 - **Subgraph deduplication runs after the cache lookup.** Client requests that miss on the same fetch at the same time send the subgraph one call between them. Each of them then writes the same cache entries.
-- **Some client requests are not deduplicated.** A client request with `Cache-Control: no-cache`, `max-age=0` or `only-if-cached` resolves on its own, because it may need a different answer from the cache than the request it would join.
+- **Some client requests skip inbound deduplication.** A client request with `Cache-Control: no-cache`, `max-age=0` or `only-if-cached` resolves on its own, because it may need a different answer from the cache than the request it would join. Its subgraph fetches are still deduplicated.
 
 ## Configuration Reference
 
