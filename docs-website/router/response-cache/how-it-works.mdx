@@ -24,7 +24,7 @@ flowchart TD
   E --> F[Look up all keys]
   F -- every key found --> G[Serve the fetch from the cache]
   F -- any key missing --> H[Send the fetch to the subgraph]
-  F -- any key missing,<br/>only-if-cached --> X[Fail the fetch]
+  F -- "any key missing, and the client sent<br/>Cache-Control: only-if-cached" --> X[Fail the fetch with 504]
   X --> L
   H --> I[Decide whether to store the response]
   I -- stored --> J[Write entries and index tags]
