@@ -51,6 +51,18 @@ export default async function setup() {
       if (!found) {
         throw new Error(`Realm "${TEST_REALM}" is not yet readable`);
       }
+
+      // Make sure that existing realms use the same settings as a new realm.
+      await keycloakClient.client.realms.update(
+        {
+          realm: TEST_REALM,
+        },
+        {
+          enabled: true,
+          displayName: TEST_REALM,
+          registrationEmailAsUsername: true,
+        },
+      );
     },
     { attempts: 30, baseInterval: 500, maxInterval: 500 },
   );

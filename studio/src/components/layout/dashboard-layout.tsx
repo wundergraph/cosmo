@@ -32,6 +32,7 @@ import { UserGroupIcon } from '@heroicons/react/24/outline';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useUser } from '@/hooks/use-user';
 import { useStarBannerDisabled } from '@/hooks/use-star-banner-disabled';
+import { useBannerCount } from '@/hooks/use-banner-count';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { buildUrl } from '@/lib/build-url';
 
@@ -79,6 +80,20 @@ export const OrganizationBanner = () => {
   const org = useCurrentOrganization();
 
   if (!org?.deactivation && !org?.deletion) {
+    if (org?.billing?.isBillDue) {
+      return (
+        <div className="flex w-full bg-destructive text-xs lg:justify-center xl:text-sm">
+          <p className="flex items-center gap-x-2 px-4 py-2">
+            <ExclamationTriangleIcon className="flex-shrink-0" />
+            <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
+              Your account has an unpaid balance and some features may be paused soon. To keep uninterrupted access to
+              Cosmo, please contact your admin.
+            </span>
+          </p>
+        </div>
+      );
+    }
+
     return null;
   }
 
@@ -116,10 +131,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
   const isApiKeyManager = checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
-  const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
-  const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
-
-  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
+  const bannerCount = useBannerCount();
 
   const plans = useQuery(
     getBillingPlans,
@@ -321,12 +333,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         className={cn(
           'flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x',
           {
-            'min-h-[calc(100vh-36px)]': isBannerDisplayed,
-            'min-h-screen': !isBannerDisplayed,
+            'min-h-[calc(100vh-72px)]': bannerCount === 2,
+            'min-h-[calc(100vh-36px)]': bannerCount === 1,
+            'min-h-screen': bannerCount === 0,
           },
         )}
       >
-        <SideNav links={links} isBannerDisplayed={isBannerDisplayed}>
+        <SideNav links={links} bannerCount={bannerCount}>
           {bodyContent}
         </SideNav>
         <main className="flex-1 lg:pt-0">{bodyContent}</main>

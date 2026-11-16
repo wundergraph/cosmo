@@ -143,6 +143,7 @@
       "Content-Length",
       "Content-Type"
     ],
+    "ExposeHeaders": null,
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -188,6 +189,7 @@
   "CacheControl": {
     "Enabled": false,
     "Value": "",
+    "MissingNoStore": false,
     "Subgraphs": null
   },
   "MCP": {
@@ -768,6 +770,9 @@
       "Enabled": false
     },
     "SkipNullVariablesError": {
+      "Enabled": false
+    },
+    "CacheControlAnyPublic": {
       "Enabled": false
     }
   },

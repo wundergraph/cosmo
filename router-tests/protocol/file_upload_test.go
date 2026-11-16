@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -197,7 +199,7 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 			w := multipart.NewWriter(&b)
 
 			// create file part
-			filePart, err := w.CreateFormFile("variables.file", uuid.NewString())
+			filePart, err := w.CreateFormFile("0", uuid.NewString())
 			require.NoError(t, err)
 			_, err = io.Copy(filePart, bytes.NewReader(gqlReq.Files[0].FileContent))
 			require.NoError(t, err)
@@ -478,4 +480,181 @@ func TestFileUpload_UploadDisabled(t *testing.T) {
 		})
 		require.Equal(t, `{"errors":[{"message":"file upload disabled"}]}`, res.Body)
 	})
+}
+
+func TestFileUpload(t *testing.T) {
+	t.Parallel()
+
+	// Go randomizes the iteration order of maps, so each request is sent several times
+	// to catch files that only end up under the wrong path by chance.
+	const attempts = 10
+
+	subgraphRequests := make(chan capturedRequest, attempts)
+
+	// sendUpload sends a single file in a multipart field named fieldName, with uploadsMap as the map field.
+	sendUpload := func(t *testing.T, xEnv *testenv.Environment, fieldName, uploadsMap string) *testenv.TestResponse {
+		t.Helper()
+
+		operations, err := json.Marshal(testenv.GraphQLRequest{
+			Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
+			Variables: []byte(`{"file":null}`),
+		})
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		w := multipart.NewWriter(&body)
+		require.NoError(t, w.WriteField("operations", string(operations)))
+		require.NoError(t, w.WriteField("map", uploadsMap))
+		filePart, err := w.CreateFormFile(fieldName, uuid.NewString())
+		require.NoError(t, err)
+		_, err = filePart.Write([]byte("file content"))
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), &body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", w.FormDataContentType())
+
+		res, err := xEnv.MakeGraphQLRequestRaw(req)
+		require.NoError(t, err)
+		return res
+	}
+
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: captureSubgraphRequests(subgraphRequests),
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("sends each file of a list under its own variable path", func(t *testing.T) {
+			for range attempts {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `mutation($files: [Upload!]!) { multipleUpload(files: $files) }`,
+					Variables: []byte(`{"files":[null,null,null]}`),
+					Files: []testenv.FileUpload{
+						{VariablesPath: "variables.files.0", FileContent: []byte("file 0")},
+						{VariablesPath: "variables.files.1", FileContent: []byte("file 1")},
+						{VariablesPath: "variables.files.2", FileContent: []byte("file 2")},
+					},
+				})
+
+				// The mutation succeeds
+				require.JSONEq(t, `{"data":{"multipleUpload":true}}`, res.Body)
+
+				// The subgraph receives every file under the list index it was uploaded for.
+				// The variable is not renamed, so the paths are the same as in the client request.
+				require.Equal(t, map[string]string{
+					"variables.files.0": "file 0",
+					"variables.files.1": "file 1",
+					"variables.files.2": "file 2",
+				}, uploadsByPath(t, <-subgraphRequests))
+			}
+		})
+
+		t.Run("keeps each file under its own variable path when normalization moves the files", func(t *testing.T) {
+			// Normalization extracts the inline input object into a new variable, which moves
+			// both files. The files are sent in the opposite order of their use in the query.
+			for range attempts {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `mutation($first: Upload!, $second: Upload!) { singleUploadWithInput(arg: {nested: {file: $first}, nestedList: [$second]}) }`,
+					Variables: []byte(`{"first":null,"second":null}`),
+					Files: []testenv.FileUpload{
+						{VariablesPath: "variables.second", FileContent: []byte("second")},
+						{VariablesPath: "variables.first", FileContent: []byte("first")},
+					},
+				})
+
+				// The mutation succeeds
+				require.JSONEq(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+
+				// The subgraph receives the inline input object as the extracted variable $a.
+				// $first is now at a.nested.file and $second at a.nestedList.0, and each
+				// path must still carry the content that was uploaded for that variable.
+				require.Equal(t, map[string]string{
+					"variables.a.nested.file":  "first",
+					"variables.a.nestedList.0": "second",
+				}, uploadsByPath(t, <-subgraphRequests))
+			}
+		})
+
+		t.Run("rejects the request when a file field has no entry in the upload map", func(t *testing.T) {
+			// The file is sent in field "1", but the upload map only has an entry for "0"
+			res := sendUpload(t, xEnv, "1", `{"0": ["variables.file"]}`)
+
+			// The router rejects the request itself instead of forwarding a file without a path to the subgraph
+			require.Equal(t, `{"errors":[{"message":"file \"1\" has no entry in the upload map"}]}`, res.Body)
+		})
+
+		t.Run("rejects the request when the upload path is empty", func(t *testing.T) {
+			res := sendUpload(t, xEnv, "0", `{"0": [""]}`)
+
+			// The empty path is rejected while parsing the upload map
+			require.Equal(t, `{"errors":[{"message":"empty variable name for upload index 0"}]}`, res.Body)
+		})
+	})
+}
+
+type capturedRequest struct {
+	contentType string
+	body        []byte
+}
+
+// captureSubgraphRequests returns a subgraph middleware that sends a copy of every request to requests.
+func captureSubgraphRequests(requests chan<- capturedRequest) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+
+			requests <- capturedRequest{contentType: r.Header.Get("Content-Type"), body: body}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// uploadsByPath returns the content of each file in a multipart subgraph request by the
+// variable path it is mapped to.
+func uploadsByPath(t *testing.T, request capturedRequest) map[string]string {
+	t.Helper()
+
+	mediaType, params, err := mime.ParseMediaType(request.contentType)
+	require.NoError(t, err)
+	require.Equal(t, "multipart/form-data", mediaType)
+
+	var uploadsMap map[string][]string
+	contentByPart := make(map[string]string)
+
+	reader := multipart.NewReader(bytes.NewReader(request.body), params["boundary"])
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+
+		content, err := io.ReadAll(part)
+		require.NoError(t, err)
+
+		switch part.FormName() {
+		case "operations":
+		case "map":
+			require.NoError(t, json.Unmarshal(content, &uploadsMap))
+		default:
+			contentByPart[part.FormName()] = string(content)
+		}
+	}
+
+	result := make(map[string]string)
+	for partName, paths := range uploadsMap {
+		for _, path := range paths {
+			result[path] = contentByPart[partName]
+		}
+	}
+	return result
 }

@@ -65,6 +65,7 @@ export interface Organization {
   billing: {
     plan: string;
     email?: string;
+    isBillDue?: boolean;
   };
   acceptedFeatureTerms: {
     featureId: string;

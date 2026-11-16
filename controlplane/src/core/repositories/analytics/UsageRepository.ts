@@ -4,7 +4,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange, Field, TimeFilters } from '../../../types/index.js';
+import { DateRange, Field, GraphFieldUsage, TimeFilters } from '../../../types/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { traced } from '../../tracing.js';
 import { parseTimeFilters } from './util.js';
@@ -200,6 +200,89 @@ export class UsageRepository {
       clients,
       meta,
     };
+  }
+
+  // Same filters and exact window as getFieldUsage's client totals, so counts match those in Studio.
+  // https://cosmo-docs.wundergraph.com/studio/analytics/schema-field-usage
+  public async getGraphFieldUsage({
+    organizationId,
+    federatedGraphId,
+    dateRange,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    dateRange: DateRange<number>;
+  }): Promise<GraphFieldUsage[]> {
+    // The count is a string so it stays exact above 2^53 when the client parses the JSON response.
+    const query = `
+      WITH
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
+      SELECT
+        TypeName AS typeName,
+        FieldName AS fieldName,
+        SubgraphIDs AS subgraphIds,
+        toString(sum(TotalUsages)) AS requestCount
+      FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
+      ARRAY JOIN arrayDistinct(TypeNames) AS TypeName
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND IsArgument = false
+        AND IsInput = false
+        AND IsIndirectFieldUsage = false
+        AND IsNull = false
+      GROUP BY TypeName, FieldName, SubgraphIDs
+    `;
+
+    const params = {
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId,
+    };
+
+    const res = await this.client.queryPromise<{
+      typeName: string;
+      fieldName: string;
+      subgraphIds: string[];
+      requestCount: string;
+    }>(query, params);
+
+    if (!Array.isArray(res)) {
+      return [];
+    }
+
+    const fields = new Map<
+      string,
+      { typeName: string; fieldName: string; requestCount: bigint; subgraphs: Map<string, bigint> }
+    >();
+    for (const row of res) {
+      const key = `${row.typeName}.${row.fieldName}`;
+      let field = fields.get(key);
+      if (!field) {
+        field = {
+          typeName: row.typeName,
+          fieldName: row.fieldName,
+          requestCount: 0n,
+          subgraphs: new Map<string, bigint>(),
+        };
+        fields.set(key, field);
+      }
+      const count = BigInt(row.requestCount);
+      field.requestCount += count;
+      // Every subgraph that resolved the field gets the full count, as the subgraph filter of schema checks does.
+      for (const subgraphId of row.subgraphIds) {
+        field.subgraphs.set(subgraphId, (field.subgraphs.get(subgraphId) ?? 0n) + count);
+      }
+    }
+
+    return [...fields.values()].map((field) => ({
+      typeName: field.typeName,
+      fieldName: field.fieldName,
+      requestCount: field.requestCount,
+      subgraphs: [...field.subgraphs].map(([subgraphId, requestCount]) => ({ subgraphId, requestCount })),
+    }));
   }
 
   public async getUnusedFields({

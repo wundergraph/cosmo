@@ -484,6 +484,9 @@ const (
 	// PlatformServiceGetFieldUsageProcedure is the fully-qualified name of the PlatformService's
 	// GetFieldUsage RPC.
 	PlatformServiceGetFieldUsageProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFieldUsage"
+	// PlatformServiceGetGraphFieldUsageProcedure is the fully-qualified name of the PlatformService's
+	// GetGraphFieldUsage RPC.
+	PlatformServiceGetGraphFieldUsageProcedure = "/wg.cosmo.platform.v1.PlatformService/GetGraphFieldUsage"
 	// PlatformServiceGetOrganizationRequestsCountProcedure is the fully-qualified name of the
 	// PlatformService's GetOrganizationRequestsCount RPC.
 	PlatformServiceGetOrganizationRequestsCountProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationRequestsCount"
@@ -935,6 +938,7 @@ type PlatformServiceClient interface {
 	GetSubgraphMetrics(context.Context, *connect.Request[v1.GetSubgraphMetricsRequest]) (*connect.Response[v1.GetSubgraphMetricsResponse], error)
 	GetSubgraphMetricsErrorRate(context.Context, *connect.Request[v1.GetSubgraphMetricsErrorRateRequest]) (*connect.Response[v1.GetSubgraphMetricsErrorRateResponse], error)
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
+	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	// EnableLintingForTheNamespace enables the lint check for the namespace passed.
@@ -1968,6 +1972,13 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
+		getGraphFieldUsage: connect.NewClient[v1.GetGraphFieldUsageRequest, v1.GetGraphFieldUsageResponse](
+			httpClient,
+			baseURL+PlatformServiceGetGraphFieldUsageProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetGraphFieldUsage")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
 		getOrganizationRequestsCount: connect.NewClient[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationRequestsCountProcedure,
@@ -2471,6 +2482,7 @@ type platformServiceClient struct {
 	getSubgraphMetrics                                 *connect.Client[v1.GetSubgraphMetricsRequest, v1.GetSubgraphMetricsResponse]
 	getSubgraphMetricsErrorRate                        *connect.Client[v1.GetSubgraphMetricsErrorRateRequest, v1.GetSubgraphMetricsErrorRateResponse]
 	getFieldUsage                                      *connect.Client[v1.GetFieldUsageRequest, v1.GetFieldUsageResponse]
+	getGraphFieldUsage                                 *connect.Client[v1.GetGraphFieldUsageRequest, v1.GetGraphFieldUsageResponse]
 	getOrganizationRequestsCount                       *connect.Client[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse]
 	createOrganization                                 *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
 	enableLintingForTheNamespace                       *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
@@ -3308,6 +3320,11 @@ func (c *platformServiceClient) GetFieldUsage(ctx context.Context, req *connect.
 	return c.getFieldUsage.CallUnary(ctx, req)
 }
 
+// GetGraphFieldUsage calls wg.cosmo.platform.v1.PlatformService.GetGraphFieldUsage.
+func (c *platformServiceClient) GetGraphFieldUsage(ctx context.Context, req *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error) {
+	return c.getGraphFieldUsage.CallUnary(ctx, req)
+}
+
 // GetOrganizationRequestsCount calls
 // wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount.
 func (c *platformServiceClient) GetOrganizationRequestsCount(ctx context.Context, req *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error) {
@@ -3895,6 +3912,7 @@ type PlatformServiceHandler interface {
 	GetSubgraphMetrics(context.Context, *connect.Request[v1.GetSubgraphMetricsRequest]) (*connect.Response[v1.GetSubgraphMetricsResponse], error)
 	GetSubgraphMetricsErrorRate(context.Context, *connect.Request[v1.GetSubgraphMetricsErrorRateRequest]) (*connect.Response[v1.GetSubgraphMetricsErrorRateResponse], error)
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
+	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	// EnableLintingForTheNamespace enables the lint check for the namespace passed.
@@ -4924,6 +4942,13 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetGraphFieldUsageHandler := connect.NewUnaryHandler(
+		PlatformServiceGetGraphFieldUsageProcedure,
+		svc.GetGraphFieldUsage,
+		connect.WithSchema(platformServiceMethods.ByName("GetGraphFieldUsage")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetOrganizationRequestsCountHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationRequestsCountProcedure,
 		svc.GetOrganizationRequestsCount,
@@ -5574,6 +5599,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetSubgraphMetricsErrorRateHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFieldUsageProcedure:
 			platformServiceGetFieldUsageHandler.ServeHTTP(w, r)
+		case PlatformServiceGetGraphFieldUsageProcedure:
+			platformServiceGetGraphFieldUsageHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationRequestsCountProcedure:
 			platformServiceGetOrganizationRequestsCountHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOrganizationProcedure:
@@ -6297,6 +6324,10 @@ func (UnimplementedPlatformServiceHandler) GetSubgraphMetricsErrorRate(context.C
 
 func (UnimplementedPlatformServiceHandler) GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFieldUsage is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetGraphFieldUsage is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error) {

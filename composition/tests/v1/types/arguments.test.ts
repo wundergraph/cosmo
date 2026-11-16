@@ -3,6 +3,7 @@ import {
   duplicateArgumentsError,
   FIELD,
   FLOAT_SCALAR,
+  inaccessibleRequiredInputValueError,
   incompatibleInputValueDefaultValuesError,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleMergedTypesError,
@@ -18,8 +19,9 @@ import {
   subgraphValidationError,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -28,7 +30,7 @@ import {
 } from '../../utils/utils';
 import { Kind } from 'graphql';
 
-describe('Argument federation tests', () => {
+describe('Argument tests', () => {
   const prefix = 'argument "input"';
   const argumentCoords = 'Object.field(input: ...)';
 
@@ -181,25 +183,163 @@ describe('Argument federation tests', () => {
   });
 
   test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
-    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-      normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          `
-      interface Interface {
-        field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
-      }
-    
-      type Object implements Interface {
-        field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
-      }
-      
-      type Query {
-        dummy: String!
-      }
-    `,
-      ),
+    const a = createSubgraph(
+      'a',
+      `
+        interface Interface {
+          field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
+        }
+        
+        type Object implements Interface @shareable {
+          field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
+        }
+        
+        type Query {
+          dummy: String! @shareable
+        }
+      `,
     );
+    const b = createSubgraph(
+      'b',
+      `
+        interface Interface {
+          field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
+        }
+        
+        type Object implements Interface @shareable {
+          field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        interface Interface {
+          field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
+        }
+      
+        type Object implements Interface {
+          field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
+        }
+        
+        type Query {
+          dummy: String!
+        }
+      `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        interface Interface {
+          field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
+        }
+      
+        type Object implements Interface {
+          field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
+        }
+        
+        type Query {
+          dummy: String!
+        }
+      `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an @inaccessible optional argument is not included in the client schema #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID): ID
+        }
+      `,
+    );
+
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        type Query {
+          a: ID
+        }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        ${INACCESSIBLE_DIRECTIVE}
+        
+        type Query {
+          a(a: ID @inaccessible): ID
+        }
+      `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an @inaccessible optional argument is not included in the client schema #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        type Query {
+          a: ID
+        }
+    `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+        
+        ${INACCESSIBLE_DIRECTIVE}
+        
+        type Query {
+          a(a: ID @inaccessible): ID
+        }
+      `),
+    );
+    expect(warnings).toHaveLength(0);
   });
 
   test('that if a required argument is not defined in all definitions of a field, an error is returned', () => {
@@ -366,6 +506,101 @@ describe('Argument federation tests', () => {
       ),
     );
   });
+
+  test('that an error is returned if a required argument is declared @inaccessible #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID! @inaccessible): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if a required argument is declared @inaccessible #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that only a single error is returned if a required argument is declared @inaccessible', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+    const c = createSubgraph(
+      'c',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b, c], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
 });
 
 function subgraphWithArgument(name: string, typeName: string): Subgraph {
@@ -412,20 +647,6 @@ const subgraphA = {
     
     type Object implements Interface @shareable {
       field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
-    }
-  `),
-};
-
-const subgraphB = {
-  name: 'subgraph-b',
-  url: '',
-  definitions: parse(`
-    interface Interface {
-      field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
-    }
-    
-    type Object implements Interface @shareable {
-      field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
     }
   `),
 };

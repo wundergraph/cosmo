@@ -20,6 +20,7 @@
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
           "Headers": {},
+          "SamplingRate": 0.5,
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -194,6 +195,9 @@
       "Content-Length",
       "Content-Type"
     ],
+    "ExposeHeaders": [
+      "x-trace-id"
+    ],
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -254,6 +258,7 @@
   "CacheControl": {
     "Enabled": true,
     "Value": "max-age=180, public",
+    "MissingNoStore": true,
     "Subgraphs": [
       {
         "Name": "products",
@@ -424,8 +429,22 @@
           "ValueFrom": null,
           "FromFile": {
             "Path": "/etc/secrets/api-key",
-            "RefreshInterval": 60000000000
+            "RefreshInterval": 60000000000,
+            "Prefix": "Bearer "
           }
+        },
+        {
+          "Operation": "remove",
+          "Matching": "(?i)^X-Custom-Internal-.*",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": null
         }
       ],
       "Response": [
@@ -452,6 +471,19 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null,
+            "FromFile": null
+          },
+          {
+            "Operation": "remove",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-API-Key",
+            "Rename": "",
+            "Default": "",
             "Name": "",
             "Value": "",
             "Expression": "",
@@ -691,7 +723,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -710,7 +743,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -726,7 +760,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         }
       ],
       "ScopeClaim": "customscp",
@@ -1279,6 +1314,9 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": true
     }
   },
   "ClientHeader": {

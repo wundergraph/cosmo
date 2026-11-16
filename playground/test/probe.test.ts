@@ -1,0 +1,196 @@
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { parseVariables, probeRootFields, PROBE_RUNS } from '../src/components/playground/defer-advisor/probe';
+
+// graphql's printer breaks selections across lines; compare the shape, not the layout.
+const squash = (query: string) => query.replace(/\s+/g, ' ').trim();
+
+type SentRequest = { query: string; variables: Record<string, unknown>; headers: Record<string, string> };
+
+const captureRequests = async (run: () => Promise<unknown>): Promise<SentRequest[]> => {
+  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ data: {} }) }));
+  vi.stubGlobal('fetch', fetchMock);
+  await run();
+  return fetchMock.mock.calls.map(([, init]) => {
+    const requestInit = init as RequestInit;
+    const body = JSON.parse(String(requestInit.body));
+    return {
+      query: squash(body.query),
+      variables: body.variables,
+      headers: requestInit.headers as Record<string, string>,
+    };
+  });
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('probe documents with named fragments', () => {
+  test('a field whose selection spreads a fragment carries the fragment definition', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { user { ...UserFields } } fragment UserFields on User { id name }'),
+    );
+    expect(sent).toHaveLength(PROBE_RUNS);
+    expect(sent[0]?.query).toBe('{ user { ...UserFields } } fragment UserFields on User { id name }');
+  });
+
+  test('fragments reached through another fragment are included transitively', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields(
+        'http://router',
+        'query { user { ...A } } fragment A on User { ...B } fragment B on User { id } fragment Unused on User { x }',
+      ),
+    );
+    expect(sent[0]?.query).toBe('{ user { ...A } } fragment A on User { ...B } fragment B on User { id }');
+  });
+
+  test('a root field from a root fragment is probed on its own', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { ...F } fragment F on Query { a }'),
+    );
+    expect(sent[0]?.query).toBe('{ a }');
+  });
+});
+
+describe('probe response keys', () => {
+  test('occurrences that share a response key are probed in one document', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { a: user { id } a: user { name } }'),
+    );
+    expect(sent).toHaveLength(PROBE_RUNS);
+    expect(sent[0]?.query).toBe('{ a: user { id } a: user { name } }');
+  });
+
+  test('a shared response key keeps its named fragment and variable', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields(
+        'http://router',
+        'query($id: ID!) { a: user(id: $id) { ...F } a: user(id: $id) { id } } fragment F on User { name }',
+        { headers: {}, variables: { id: '1' } },
+      ),
+    );
+    expect(sent[0]?.query).toBe(
+      'query($id: ID!) { a: user(id: $id) { ...F } a: user(id: $id) { id } } fragment F on User { name }',
+    );
+    expect(sent[0]?.variables).toEqual({ id: '1' });
+  });
+});
+
+describe('probe variables', () => {
+  test('sends the definition and value of a variable the field uses', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query($id: ID!) { user(id: $id) { id } }', {
+        headers: {},
+        variables: { id: '1' },
+      }),
+    );
+    expect(sent[0]?.query).toBe('query($id: ID!) { user(id: $id) { id } }');
+    expect(sent[0]?.variables).toEqual({ id: '1' });
+  });
+
+  test('drops variables the probed field does not use', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query($id: ID!, $unused: Int) { user(id: $id) { id } other }', {
+        headers: {},
+        variables: { id: '1', unused: 2 },
+      }),
+    );
+    expect(sent.find((r) => r.query.includes('user'))).toEqual(
+      expect.objectContaining({ query: 'query($id: ID!) { user(id: $id) { id } }', variables: { id: '1' } }),
+    );
+    expect(sent.find((r) => r.query.includes('other'))?.variables).toEqual({});
+  });
+
+  test('a variable used only inside a spread fragment is still defined', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields(
+        'http://router',
+        'query($id: ID!) { user { ...U } } fragment U on User { friend(id: $id) { id } }',
+        {
+          headers: {},
+          variables: { id: '7' },
+        },
+      ),
+    );
+    expect(sent[0]?.query).toBe('query($id: ID!) { user { ...U } } fragment U on User { friend(id: $id) { id } }');
+    expect(sent[0]?.variables).toEqual({ id: '7' });
+  });
+});
+
+describe('probe headers', () => {
+  test('sends the editor headers with the JSON content type', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { a }', { headers: { authorization: 'Bearer t' }, variables: {} }),
+    );
+    expect(sent[0]?.headers).toEqual({ 'content-type': 'application/json', authorization: 'Bearer t' });
+  });
+
+  test('an editor header can override the default content type, as a normal run allows', async () => {
+    const sent = await captureRequests(() =>
+      probeRootFields('http://router', 'query { a }', {
+        headers: { 'content-type': 'application/graphql' },
+        variables: {},
+      }),
+    );
+    expect(sent[0]?.headers).toEqual({ 'content-type': 'application/graphql' });
+  });
+});
+
+describe('parseVariables', () => {
+  test('keeps a JSON object', () => {
+    expect(parseVariables('{"id":"1"}')).toEqual({ variables: { id: '1' } });
+  });
+
+  test('explains invalid JSON and drops the values', () => {
+    expect(parseVariables('{"id":')).toEqual({
+      variables: {},
+      variablesError: 'Variables are not valid JSON. Probes run without them.',
+    });
+  });
+
+  test('explains a non-object JSON value', () => {
+    expect(parseVariables('[1,2]')).toEqual({
+      variables: {},
+      variablesError: 'Variables must be a JSON object. Probes run without them.',
+    });
+  });
+});
+
+describe('probe cancellation', () => {
+  test('aborting the signal rejects the in-flight requests', async () => {
+    const abort = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+          }),
+      ),
+    );
+    const pending = probeRootFields('http://router', 'query { a }', undefined, abort.signal);
+    abort.abort();
+    const results = await pending;
+    expect(results.a.ok).toBe(false);
+  });
+});
+
+describe('probe HTTP status', () => {
+  test('a non-2xx response fails the field even when its body has no errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 401, statusText: 'Unauthorized', json: async () => ({ data: {} }) })),
+    );
+    const results = await probeRootFields('http://router', 'query { a }');
+    expect(results.a).toEqual({ ok: false, reason: 'HTTP 401 Unauthorized' });
+  });
+
+  test('a 2xx body that is not a GraphQL response fails the field', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: async () => 'not graphql' })),
+    );
+    const results = await probeRootFields('http://router', 'query { a }');
+    expect(results.a.ok).toBe(false);
+  });
+});

@@ -3,6 +3,8 @@ package redis
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,4 +79,177 @@ func TestProviderAdapter_ConnectionCleanupOnUnsubscribe(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return redis.CurrentConnectionCount() <= baselineCount
 	}, 2*time.Second, 10*time.Millisecond, "expected connection count to return to baseline after unsubscribe")
+}
+
+type recordingUpdater struct {
+	noopUpdater
+	mu       sync.Mutex
+	payloads []string
+}
+
+func (r *recordingUpdater) Update(events []datasource.StreamEvent) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, event := range events {
+		r.payloads = append(r.payloads, string(event.GetData()))
+	}
+}
+
+func (r *recordingUpdater) received() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.payloads)
+}
+
+func TestProviderAdapter_SubscribeUsesChannelsForLiteralNamesAndPatternsForGlobs(t *testing.T) {
+	t.Parallel()
+
+	redis := miniredis.RunT(t)
+
+	ctx := context.Background()
+	adapter := NewProviderAdapter(ctx, zaptest.NewLogger(t), []string{fmt.Sprintf("redis://%s", redis.Addr())}, false, datasource.ProviderOpts{})
+	require.NoError(t, adapter.Startup(ctx))
+	t.Cleanup(func() {
+		_ = adapter.Shutdown(ctx)
+	})
+
+	updater := &recordingUpdater{}
+	conf := &SubscriptionEventConfiguration{
+		Provider:  "test-provider",
+		Channels:  []string{"orders:org-1", "invoices:*"},
+		FieldName: "testField",
+	}
+	require.NoError(t, adapter.Subscribe(ctx, conf, updater))
+
+	require.Eventually(t, func() bool {
+		return redis.PubSubNumSub("orders:org-1")["orders:org-1"] == 1 && redis.PubSubNumPat() == 1
+	}, 2*time.Second, 10*time.Millisecond, "expected one channel and one pattern subscription")
+
+	redis.Publish("orders:org-2", "other-org")
+	redis.Publish("orders:org-1", "literal")
+	redis.Publish("invoices:org-1", "glob")
+
+	require.Eventually(t, func() bool {
+		return len(updater.received()) == 2
+	}, 2*time.Second, 10*time.Millisecond, "expected the literal and glob messages")
+	require.ElementsMatch(t, []string{"literal", "glob"}, updater.received())
+}
+
+func newStartedAdapter(t *testing.T, redis *miniredis.Miniredis) datasource.Adapter {
+	t.Helper()
+
+	ctx := context.Background()
+	adapter := NewProviderAdapter(ctx, zaptest.NewLogger(t), []string{fmt.Sprintf("redis://%s", redis.Addr())}, false, datasource.ProviderOpts{})
+	require.NoError(t, adapter.Startup(ctx))
+	t.Cleanup(func() {
+		_ = adapter.Shutdown(ctx)
+	})
+	return adapter
+}
+
+func TestProviderAdapter_SubscribeWithOnlyPatterns(t *testing.T) {
+	t.Parallel()
+
+	redis := miniredis.RunT(t)
+	adapter := newStartedAdapter(t, redis)
+
+	updater := &recordingUpdater{}
+	conf := &SubscriptionEventConfiguration{
+		Provider:  "test-provider",
+		Channels:  []string{"invoices:*", `orders:\*`},
+		FieldName: "testField",
+	}
+	require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+
+	require.Eventually(t, func() bool {
+		return redis.PubSubNumPat() == 2 && len(redis.PubSubChannels("")) == 0
+	}, 2*time.Second, 10*time.Millisecond, "expected two pattern subscriptions and no channel subscription")
+
+	redis.Publish("orders:org-1", "escaped-glob-must-not-match")
+	redis.Publish("orders:*", "escaped-glob")
+	redis.Publish("invoices:org-1", "glob")
+
+	require.Eventually(t, func() bool {
+		return len(updater.received()) == 2
+	}, 2*time.Second, 10*time.Millisecond, "expected the glob and escaped-glob messages")
+	require.ElementsMatch(t, []string{"glob", "escaped-glob"}, updater.received())
+}
+
+func TestProviderAdapter_SubscribeUsesPatternsForEachGlobCharacter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		channel  string
+		match    string
+		nonMatch string
+	}{
+		{name: "star", channel: "orders:*", match: "orders:1", nonMatch: "invoices:1"},
+		{name: "question mark", channel: "orders:?", match: "orders:1", nonMatch: "orders:12"},
+		{name: "character class", channel: "orders:[ab]", match: "orders:a", nonMatch: "orders:c"},
+		// Redis reads a backslash in a pattern as an escape, so `orders:a\b` matches `orders:ab`.
+		{name: "backslash", channel: `orders:a\b`, match: "orders:ab", nonMatch: `orders:a\b`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			redis := miniredis.RunT(t)
+			adapter := newStartedAdapter(t, redis)
+
+			updater := &recordingUpdater{}
+			conf := &SubscriptionEventConfiguration{
+				Provider:  "test-provider",
+				Channels:  []string{tt.channel},
+				FieldName: "testField",
+			}
+			require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+
+			require.Eventually(t, func() bool {
+				return redis.PubSubNumPat() == 1 && len(redis.PubSubChannels("")) == 0
+			}, 2*time.Second, 10*time.Millisecond, "expected one pattern subscription and no channel subscription")
+
+			redis.Publish(tt.nonMatch, "non-match")
+			redis.Publish(tt.match, "match")
+
+			require.Eventually(t, func() bool {
+				return len(updater.received()) == 1
+			}, 2*time.Second, 10*time.Millisecond, "expected the matching message")
+			require.Equal(t, []string{"match"}, updater.received())
+		})
+	}
+}
+
+func TestProviderAdapter_SubscribeWhileRedisIsDownRecoversAfterRestart(t *testing.T) {
+	t.Parallel()
+
+	redis := miniredis.RunT(t)
+	adapter := newStartedAdapter(t, redis)
+
+	redis.Close()
+
+	updater := &recordingUpdater{}
+	conf := &SubscriptionEventConfiguration{
+		Provider:  "test-provider",
+		Channels:  []string{"orders:org-1", "invoices:*"},
+		FieldName: "testField",
+	}
+	// go-redis keeps the channels and patterns of a failed subscribe and sends them again on
+	// reconnect, so a short outage must not fail the subscription.
+	require.NoError(t, adapter.Subscribe(context.Background(), conf, updater))
+
+	require.NoError(t, redis.Restart())
+
+	require.Eventually(t, func() bool {
+		return redis.PubSubNumSub("orders:org-1")["orders:org-1"] == 1 && redis.PubSubNumPat() == 1
+	}, 10*time.Second, 50*time.Millisecond, "expected the subscriptions to be restored after the restart")
+
+	redis.Publish("orders:org-1", "literal")
+	redis.Publish("invoices:org-1", "glob")
+
+	require.Eventually(t, func() bool {
+		return len(updater.received()) == 2
+	}, 2*time.Second, 10*time.Millisecond, "expected the literal and glob messages after the restart")
+	require.ElementsMatch(t, []string{"literal", "glob"}, updater.received())
 }

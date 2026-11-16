@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -38,7 +39,7 @@ import { NextPageWithLayout } from '@/lib/page';
 import { extractVariablesFromGraphQL, useParseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { ArchiveBoxXMarkIcon, CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { CopyIcon, Cross1Icon, MagnifyingGlassIcon, PlayIcon, PlusIcon } from '@radix-ui/react-icons';
+import { CopyIcon, MagnifyingGlassIcon, PlayIcon, PlusIcon } from '@radix-ui/react-icons';
 import { useQuery, useMutation } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -332,24 +333,14 @@ const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAd
 
     content = (
       <div>
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by Name or ID"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => setSearch(null)}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
-        </div>
+        <ClearableInput
+          icon={<MagnifyingGlassIcon />}
+          placeholder="Search by Name or ID"
+          clearLabel="Clear search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={search ? () => setSearch(null) : undefined}
+        />
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
             const [base, _] = window.location.href.split('?');

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -128,7 +129,22 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		return datasource.NewError("redis connection not initialized", nil)
 	}
 
-	sub := p.conn.PSubscribe(ctx, subConf.Channels...)
+	// Redis matches every PUBLISH against every registered pattern, so pattern
+	// subscriptions on literal channel names make each publish O(patterns). Only
+	// channels with glob syntax need PSUBSCRIBE.
+	var channels, patterns []string
+	for _, channel := range subConf.Channels {
+		if strings.ContainsAny(channel, `*?[\`) {
+			patterns = append(patterns, channel)
+		} else {
+			channels = append(channels, channel)
+		}
+	}
+
+	sub := p.conn.Subscribe(ctx, channels...)
+	if len(patterns) > 0 {
+		_ = sub.PSubscribe(ctx, patterns...)
+	}
 	msgChan := sub.Channel()
 
 	cleanup := func() {

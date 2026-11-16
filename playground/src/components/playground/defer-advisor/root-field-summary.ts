@@ -1,7 +1,7 @@
 import { countDeferFragmentsByLabel, listDeferredFields, listNestedDeferLabels } from './defer-transform';
-import { collectRootOccurrences, getOperation, ParsedQuery } from './operation';
+import { collectRootOccurrences, getFragments, getOperation, ParsedQuery } from './operation';
 
-type RootFieldRow = {
+export type RootFieldRow = {
   name: string;
   undeferred: number;
   deferredLabels: string[];
@@ -15,7 +15,7 @@ export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldR
     return [];
   }
 
-  const occurrences = collectRootOccurrences(operation.selectionSet.selections);
+  const occurrences = collectRootOccurrences(operation.selectionSet.selections, getFragments(parsed.doc));
   const deferred = listDeferredFields(parsed);
   const names = [...new Set(occurrences.map((o) => o.name))];
 
@@ -27,12 +27,14 @@ export const summarizeRootFields = (parsed: ParsedQuery | undefined): RootFieldR
     fragmentCounts.get(label) === 1 && fieldsUnder(label).size === 1 && !nestedLabels.has(label);
   const labelsFor = (name: string) => [...new Set(deferred.filter((d) => d.field === name).map((d) => d.label))];
 
+  const hasUndeferred = new Set(occurrences.filter((o) => !o.deferred).map((o) => o.name));
+
   return names
     .map((name) => ({
       name,
-      undeferred: occurrences.filter((o) => o.name === name && !o.deferred).length,
+      undeferred: occurrences.filter((o) => o.name === name && !o.deferred && o.inBody).length,
       deferredLabels: labelsFor(name),
       eagerLabels: labelsFor(name).filter(isSoleFragment),
     }))
-    .filter((row) => row.undeferred > 0 || row.deferredLabels.length > 0);
+    .filter((row) => hasUndeferred.has(row.name) || row.deferredLabels.length > 0);
 };

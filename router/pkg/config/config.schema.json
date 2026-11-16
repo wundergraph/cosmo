@@ -1332,6 +1332,12 @@
                       "type": "string"
                     }
                   },
+                  "sampling_rate": {
+                    "type": "number",
+                    "description": "The share of the recorded traces sent to this exporter. For traces the router samples itself, the effective rate is the lower of this and the global sampling rate. Defaults to 1, which sends every recorded trace.",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
                   "batch_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
@@ -1930,6 +1936,12 @@
             "type": "string"
           }
         },
+        "expose_headers": {
+          "type": "array",
+          "description": "The exposed CORS HTTP headers. These are values browser clients are allowed to read from regular responses. Defaults to an empty list.",
+          "default": [],
+          "items": {"type": "string"}
+        },
         "allow_credentials": {
           "type": "boolean",
           "default": true,
@@ -2240,6 +2252,9 @@
                   },
                   {
                     "$ref": "#/$defs/set_header_rule"
+                  },
+                  {
+                    "$ref": "#/$defs/remove_header_rule"
                   }
                 ]
               }
@@ -2274,6 +2289,9 @@
                     },
                     {
                       "$ref": "#/$defs/set_header_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/remove_header_rule"
                     }
                   ]
                 }
@@ -2328,6 +2346,11 @@
           "type": "string",
           "description": "Global cache control value.",
           "examples": ["max-age=180, public"]
+        },
+        "missing_no_store": {
+          "type": "boolean",
+          "default": false,
+          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, a response with neither header is ignored, and one with only such directives withdraws public. gRPC subgraphs are skipped, as the router does not read their response metadata."
         },
         "subgraphs": {
           "type": "array",
@@ -2389,6 +2412,15 @@
                     "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "issuers": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "secret": {
@@ -2979,6 +3011,15 @@
                     "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "issuers": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "The accepted issuers of the JWT. If set, the token's 'iss' claim must exactly match one of these values. Tokens without an 'iss' claim are rejected.",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "secret": {
@@ -4752,6 +4793,17 @@
               "default": false
             }
           }
+        },
+        "cache_control_any_public": {
+          "type": "object",
+          "description": "Merges cache control as public when any fetch is public, unless one is private, similar to Apollo Router. By default, every fetch must be public.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
@@ -5272,6 +5324,40 @@
       },
       "required": ["name", "expression"]
     },
+    "remove_header_rule": {
+      "type": "object",
+      "description": "The configuration for removing headers. This is used to remove headers from the requests forwarded to the subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "const": "remove",
+          "description": "The 'remove' operation is used to remove the named or matching headers that previous rules added to the subgraph request."
+        },
+        "matching": {
+          "type": "string",
+          "examples": ["(?i)^X-Internal-.*"],
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
+        },
+        "named": {
+          "type": "string",
+          "examples": ["X-Test-Header"],
+          "description": "The name of the header to remove. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
+      },
+      "not": {
+        "required": ["named", "matching"]
+      },
+      "required": ["op"]
+    },
     "set_header_rule": {
       "type": "object",
       "description": "The configuration for setting headers. This is used to set specific headers in requests or responses.",
@@ -5328,6 +5414,11 @@
               },
               "default": "1m",
               "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
+            },
+            "prefix": {
+              "type": "string",
+              "examples": ["Bearer "],
+              "description": "A static value prepended to the file's contents, e.g. 'Bearer ' when the file holds a raw token. Include any separator, such as a trailing space, in the prefix."
             }
           }
         }

@@ -576,7 +576,7 @@ telemetry:
 | Environment Variable                 | YAML                         | Required                                      | Description                                                                                                                                                                                                                                                                          | Default Value |
 | ------------------------------------ | ---------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
 | TRACING_ENABLED                      | enabled                      | <Icon icon="square" />                        |                                                                                                                                                                                                                                                                                      | true          |
-| TRACING_SAMPLING_RATE                | sampling_rate                | <Icon icon="square-check" iconType="solid" /> | The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. For managed plans, the trace sampling rate will not exceed the rate imposed by the organization limit of the plan. | 1             |
+| TRACING_SAMPLING_RATE                | sampling_rate                | <Icon icon="square-check" iconType="solid" /> | The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. For managed plans, the Cosmo Cloud exporter's sampling rate will not exceed your account's trace sampling limit.   | 1             |
 | TRACING_PARENT_BASED_SAMPLER         | parent_based_sampler         | <Icon icon="square-check" iconType="solid" /> | Enable the parent-based sampler. The parent-based sampler is used to sample the traces based on the parent trace.                                                                                                                                                                    | true          |
 | TRACING_BATCH_TIMEOUT                | batch_timeout                | <Icon icon="square" />                        | The maximum delay allowed before spans are exported.                                                                                                                                                                                                                                 | 10s           |
 | TRACING_EXPORT_GRAPHQL_VARIABLES     | export_graphql_variables     | <Icon icon="square" />                        | Export GraphQL variables as span attribute. Variables may contain sensitive data.                                                                                                                                                                                                    | false         |
@@ -611,13 +611,14 @@ telemetry:
 
 ### Exporters
 
-| Environment Variable | YAML     | Required               | Description       | Default Value |
-| -------------------- | -------- | ---------------------- | ----------------- | ------------- |
-|                      | diabled  | <Icon icon="square" /> | bool              |               |
-|                      | exporter | <Icon icon="square" /> | one of: http,grpc |               |
-|                      | endpoint | <Icon icon="square" /> |                   |               |
-|                      | path     | <Icon icon="square" /> |                   |               |
-|                      | headers  | <Icon icon="square" /> |                   |               |
+| Environment Variable | YAML          | Required               | Description                                                                                                                        | Default Value |
+| -------------------- | ------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                      | disabled      | <Icon icon="square" /> | bool                                                                                                                               |               |
+|                      | exporter      | <Icon icon="square" /> | one of: http,grpc                                                                                                                  |               |
+|                      | endpoint      | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | path          | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | headers       | <Icon icon="square" /> |                                                                                                                                    |               |
+|                      | sampling_rate | <Icon icon="square" /> | The share of the recorded traces sent to this exporter. See [Per-exporter sampling](/router/open-telemetry#per-exporter-sampling). | 1             |
 
 ### Example YAML config:
 
@@ -636,6 +637,8 @@ telemetry:
         # headers: {Authorization: Bearer <my-token>}
         batch_timeout: 10s
         export_timeout: 30s
+        # Defaults to 1, every recorded trace.
+        sampling_rate: 0.5
 ```
 
 ### Propagation
@@ -957,10 +960,13 @@ pyroscope:
 | CORS_MATCH_ORIGINS     | match_origins     | <Icon icon="square" /> | Go regular expressions matched against the lowercased origin in addition to `allow_origins`. Patterns are compiled as written and matching is unanchored. Separate patterns with semicolons in the environment variable. | []                            |
 | CORS_ALLOW_METHODS     | allow_methods     | <Icon icon="square" /> |                                                                                                                                              | HEAD,GET,POST                        |
 | CORS_ALLOW_HEADERS     | allow_headers     | <Icon icon="square" /> |                                                                                                                                              | Origin, Content-Length, Content-Type |
+| CORS_EXPOSE_HEADERS    | expose_headers    | <Icon icon="square" /> | Set this to control the list of response headers browser clients can access. When empty, no `Access-Control-Expose-Headers` header is sent.  | []                                   |
 | CORS_ALLOW_CREDENTIALS | allow_credentials | <Icon icon="square" /> |                                                                                                                                              | true                                 |
 | CORS_MAX_AGE           | max_age           | <Icon icon="square" /> |                                                                                                                                              | 5m                                   |
 
 Origins in `allow_origins` can use any URL scheme. Wildcard patterns are supported. The default `["*"]` allows all origins, regardless of scheme.
+
+Setting `expose_headers` to `["*"]` exposes all response headers, but browsers only treat `*` as a wildcard for requests without credentials. Because `allow_credentials` defaults to `true`, list the headers explicitly (for example `["X-custom-header"]`) if browser clients send cookies or authorization headers.
 
 ### Regular expression origins
 
@@ -1020,10 +1026,23 @@ cors:
 
 Configure your cache control policy. More information on this feature can be found here: [#cache-control-policy](/router/proxy-capabilities#cache-control-policy)
 
-| Environment Variable         | YAML    | Required               | Description                                                                                                                 | Default Value |
-| ---------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| CACHE_CONTROL_POLICY_ENABLED | enabled | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
-| CACHE_CONTROL_POLICY_VALUE   | value   | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| Environment Variable                  | YAML             | Required               | Description                                                                                                                 | Default Value |
+| ------------------------------------- | ---------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| CACHE_CONTROL_POLICY_ENABLED          | enabled          | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
+| CACHE_CONTROL_POLICY_VALUE            | value            | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| CACHE_CONTROL_POLICY_MISSING_NO_STORE | missing_no_store | <Icon icon="square" /> | Treats a subgraph response without caching information as `no-store`. See [Missing caching information](#missing-caching-information). | false         |
+
+### Missing Caching Information
+
+A subgraph response has no caching information when it has no `Cache-Control` or `Expires` header, or when its `Cache-Control` only has directives that do not affect caching, such as `no-transform` or unknown extensions.
+
+By default the router ignores a response with neither header. One with only such directives sets no lifetime, but it is not `public`, so it withdraws `public` from the merged header. With `missing_no_store: true` both count as `no-store`, so the client receives `Cache-Control: no-store`. A configured `value`, global or for the subgraph, stands in for the response either way, as long as it parses and has a caching directive.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends no `Cache-Control`. By default the router sends `max-age=300, public`. With `missing_no_store: true` it sends `no-store`.
+
+<Note>
+  `missing_no_store` does not apply to gRPC subgraphs, including router plugins. The router does not read gRPC response metadata, so it cannot tell whether such a subgraph sent caching information, and their responses are ignored as they are without the setting. To restrict caching for a gRPC subgraph, set a `value` for it under `subgraphs`.
+</Note>
 
 ### Example YAML Config:
 
@@ -1033,6 +1052,7 @@ version: "1"
 cache_control_policy:
   enabled: true
   value: "max-age=180, public"
+  missing_no_store: false
   subgraphs:
     - name: "products"
       value: "max-age=60, public"
@@ -1161,9 +1181,10 @@ Apply to requests to specific Subgraphs.
 
 | Environment Variable | YAML                       | Required                                      | Description                                                                                                                                                                       | Default Value |
 | -------------------- | -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set                                                                                                                                                              |               |
-|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against                                                                                                                            |               |
-|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match                                                                                                                                           |               |
+|                      | op                         | <Icon icon="square-check" iconType="solid" /> | oneof=propagate, set, remove                                                                                                                                                      |               |
+|                      | matching                   | <Icon icon="square" />                        | matching is the regex to match the header name against. If `op` is `remove`, set exactly one of `matching` or `named`                                                             |               |
+|                      | negate_match               | <Icon icon="square" />                        | If set to true, the result of the `matching` regex will be inverted. Requires `matching`                                                                                          |               |
+|                      | named                      | <Icon icon="square" />                        | named is the exact header name to match. If `op` is `remove`, set exactly one of `named` or `matching`                                                                            |               |
 |                      | rename                     | <Icon icon="square" />                        | renames the header's key to the provided value                                                                                                                                    |               |
 |                      | default                    | <Icon icon="square" />                        | default is the default value to set if the header is not present                                                                                                                  |               |
 |                      | name                       | <Icon icon="square" />                        | If `op` is `set`, `name` is the name of the desired header to set                                                                                                                 |               |
@@ -1172,6 +1193,7 @@ Apply to requests to specific Subgraphs.
 |                      | from_file                  | <Icon icon="square" />                        | If `op` is `set`, sources the header value from a file's contents. The file is loaded into memory and refreshed on a polling interval, so request-time reads do not touch disk. Request rules only. |               |
 |                      | from_file.path             | <Icon icon="square-check" iconType="solid" /> | Absolute path to the file whose contents become the header value.                                                                                                                 |               |
 |                      | from_file.refresh_interval | <Icon icon="square-check" iconType="solid" /> | Determines how often the file is checked for changes and re-read into memory. The minimum value is `100ms`.                                                                       | `1m`          |
+|                      | from_file.prefix           | <Icon icon="square" />                        | A static value prepended to the file's contents, e.g. `"Bearer "` when the file holds a raw token. Include any separator, such as a trailing space, in the prefix.                |               |
 
 ### Example YAML config:
 
@@ -1201,6 +1223,10 @@ headers:
 
 <Note>
   `from_file` is request-only. It cannot be used in response header rules.
+</Note>
+
+<Note>
+  `remove` is request-only. It cannot be used in response header rules.
 </Note>
 
 ### Response Header Rule
@@ -1913,12 +1939,15 @@ This is useful when you have a symmetric key that you cannot expose through a JW
 | symmetric_algorithm                                                         |  <Icon icon="square-check" iconType="solid" /> | Specify which symmetric algorithm is used for signing, supported algorithms are "HS256", "HS384", "HS512"                                    |                     |
 
 
-#### Audience Validation
-In addition to the above JWKS configuration flavours, you can define a list of audiences of which one is required (if specified) with either options.
+#### Audience and Issuer Validation
+Both JWKS configuration flavours accept a list of audiences and a list of issuers. Each check runs only when its list is set.
 
 | YAML                                                                        | Required                                       | Description                                                                                                        | Default Value    |
 | --------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------|
 | audiences                                                                   | <Icon icon="square" />                         | The allowed list of audiences, of which at least one audience is required in the token                             | []               |
+| issuers                                                                     | <Icon icon="square" />                         | The allowed list of issuers. The token's `iss` claim must exactly match one of them. Tokens without `iss` are rejected. | []               |
+
+When several JWKS entries are configured, a token is only checked against the entries that list its issuer and the entries without `issuers`. Set `issuers` on each entry so that a `refresh_unknown_kid` refresh never runs for a token from another provider.
 
 
 ### JWT
@@ -2874,6 +2903,20 @@ Skips the validation error raised when `null` is supplied for a variable of a no
 | ------------------------------------------------------------- | ------------------------- | ---------------------- | ----------------------------------------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_ENABLED | skip_null_variables_error | <Icon icon="square" /> | Skips the error when a null variable is supplied for a non-nullable type. | false         |
 
+### Apollo Router Compatibility Cache Control Any Public
+
+Changes how the [restrictive cache control policy](/router/proxy-capabilities/adjusting-cache-control) merges `public` across subgraph fetches, matching Apollo Router behavior. By default, the response is `public` only when every fetch that sets `Cache-Control` is `public`. With this flag, one `public` fetch is enough. Within a single fetch, the global and subgraph values still both have to grant `public`. So when a subgraph sends no `Cache-Control` of its own, a subgraph value without `public` withholds it from that fetch. When the subgraph sends its own header, configured values only cap its lifetime. `private` and `no-store` still win.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends `max-age=60`. By default the router sends `max-age=60`. With this flag it sends `max-age=60, public`.
+
+<Warning>
+  Shared caches store responses to requests with `Authorization` only when they are `public`. With this flag, data from a subgraph that did not send `public` can end up in a shared cache. Enable it only when no subgraph returns per-user data without `private`.
+</Warning>
+
+| Environment Variable                                         | YAML                     | Required               | Description                                          | Default Value |
+| ------------------------------------------------------------ | ------------------------ | ---------------------- | ---------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_ENABLED | cache_control_any_public | <Icon icon="square" /> | Sends `public` when any subgraph fetch is `public`. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2883,6 +2926,8 @@ apollo_router_compatibility_flags:
   replace_invalid_var_errors:
     enabled: true
   skip_null_variables_error:
+    enabled: true
+  cache_control_any_public:
     enabled: true
 ```
 

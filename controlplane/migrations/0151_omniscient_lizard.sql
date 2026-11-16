@@ -1,0 +1,1 @@
+ALTER TABLE "organization_billing" ADD COLUMN "is_bill_due" boolean DEFAULT false NOT NULL;
