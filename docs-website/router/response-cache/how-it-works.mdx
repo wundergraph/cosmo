@@ -257,12 +257,6 @@ A writer that dies between the steps leaves an entry that expires with its lease
 
 **Cluster.** Every script touches one key, and multi-key work is pipelined per key, so no request spans hash slots. Keys use no hash tags.
 
-### Memory
-
-The memory provider keeps entries in a bounded in-process cache with `max_entries` slots. A write can be dropped when the cache is full or under contention. Tags are indexed in maps that are pruned on write, at most every 30 seconds.
-
-Each router replica has its own cache. Nothing is shared between replicas, and nothing survives a restart.
-
 ## Invalidation
 
 An invalidation request names a [tag](/router/response-cache/invalidation). The store:

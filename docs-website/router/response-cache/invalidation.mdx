@@ -121,8 +121,7 @@ The whole array is validated before anything is removed. One invalid element rej
 
 - **In-flight writes are rejected while the invalidation is remembered.** An entry whose subgraph fetch started at or before the invalidation is not kept, even if its write lands afterwards. The router remembers an invalidation for at least five minutes. Once it is forgotten, a write whose fetch started before the invalidation can store a stale entry. Redis allows one second of clock skew. A rejected Redis write is readable from when it lands until the router removes it, one or two round trips later. If the removal fails, it stays readable until its lease of up to 10 seconds ends. An entry with a lifetime of 10 seconds or less is not checked after it is written. Its write can land after an invalidation deleted it, most likely on Redis Cluster. It then stays readable until it expires. See [How invalidation works](/router/response-cache/how-it-works#invalidation).
 - **Removal is immediate for later lookups.** After a `202`, no lookup finds an entry that was removed. This does not hold when lookups read from Redis replicas, such as with `read_only=true` on a cluster URL.
-- **Tags can be outdated.** An entry stored again under different tags stays listed under its earlier tags until its earlier lifetime ends. Invalidating an earlier tag still removes it. This applies to both providers.
-- **The memory provider is per replica.** An invalidation reaches only the router it was sent to. Send it to every replica, or use Redis.
+- **Tags can be outdated.** An entry stored again under different tags stays listed under its earlier tags until its earlier lifetime ends. Invalidating an earlier tag still removes it.
 
 ## CDN purging
 

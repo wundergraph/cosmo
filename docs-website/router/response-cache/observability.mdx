@@ -31,7 +31,7 @@ At startup, the router logs the cache settings:
 INFO  Response cache enabled  {"fallback_ttl": "30s", "subgraph_overrides": 0, "storage_provider": "redis", "key_prefix": "cosmo_response_cache:", "storage_provider_id": "response_cache"}
 ```
 
-With the memory provider, `max_entries` replaces `key_prefix` and `storage_provider_id`. `fallback_ttl` is the value under `all`. `subgraph_overrides` counts the entries under `subgraphs`. When the invalidation endpoint is enabled, a second line reports its address and which indexes are on.
+`fallback_ttl` is the value under `all`. `subgraph_overrides` counts the entries under `subgraphs`. When the invalidation endpoint is enabled, a second line reports its address and which indexes are on.
 
 A failed read or write does not fail a request. The router serves from the subgraph and logs:
 

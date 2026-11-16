@@ -31,10 +31,6 @@ A key includes every variable value of the subgraph request. Operations with man
 
 Use the [store decision](/router/response-cache/observability#store-decision) and the churn query to find such operations. Send `no-store` from the subgraph for responses that are not worth caching.
 
-### Several router replicas
-
-Use Redis. With the memory provider, each replica caches separately, hit rates drop as replicas are added, and an invalidation reaches one replica only.
-
 ### Secure the invalidation endpoint
 
 - Bind it to a private interface or put TLS in front of it.
@@ -124,4 +120,4 @@ A hit sends no subgraph request, so it has no transport telemetry. Request size,
 
 ### Tags can outlive a re-tag
 
-On Redis and in memory, an entry stored again under different tags stays listed under its earlier tags until its earlier lifetime ends. Invalidating an earlier tag still removes it.
+An entry stored again under different tags stays listed under its earlier tags until its earlier lifetime ends. Invalidating an earlier tag still removes it.

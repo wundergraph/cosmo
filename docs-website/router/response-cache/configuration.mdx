@@ -11,7 +11,7 @@ icon: "sliders"
 
 ## Storage
 
-The cache needs a store. `storage` is required when `enabled` is `true`.
+The cache stores entries in Redis. `storage` is required when `enabled` is `true`.
 
 ### Redis
 
@@ -60,29 +60,13 @@ In cluster mode, the parameters are read from the first URL. With `max_redirects
 
 Each timeout applies per round trip, not per fetch. A lookup takes one round trip, or two when the subgraph sends `Vary`. A write takes one, or up to three for a tagged entry. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss. A timed-out write is counted as failed, but it can still land. An untagged entry then lives its full lifetime. A tagged entry is removed, kept for its lease of up to 10 seconds, or kept for its full lifetime, depending on the step. An invalidation of a large tag runs longer than a single read and can fail on a short timeout.
 
-### Memory
-
-Each replica holds its own cache. Nothing survives a restart, and no Redis is needed.
-
-```yaml config.yaml
-response_cache:
-  enabled: true
-  storage:
-    provider: 'memory'
-    max_entries: 10000
-```
-
-`provider` defaults to `redis`, so the memory provider must be named. This prevents a missing `provider_id` from turning one shared cache into one cache per replica.
-
-`max_entries` accepts 1 to 100000. Use the memory provider for development or for a single router instance. With several replicas, each has its own entries and an [invalidation](/router/response-cache/invalidation) reaches only the replica it was sent to.
-
 ## Configuration reference
 
 ```yaml config.yaml
 response_cache:
   # Turn the response cache on. Default: false.
   enabled: true
-  # Prepended to every Redis key. Ignored by the memory provider.
+  # Prepended to every Redis key.
   # Default: cosmo_response_cache:
   key_prefix: 'cosmo_response_cache:'
 
@@ -105,12 +89,10 @@ response_cache:
       fallback_ttl: 5m
 
   storage:
-    # redis or memory. Default: redis.
+    # Default: redis.
     provider: 'redis'
-    # Id of an entry under storage_providers.redis. Required for redis.
+    # Id of an entry under storage_providers.redis. Required.
     provider_id: 'response_cache'
-    # Memory provider only. 1 to 100000. Default: 10000.
-    max_entries: 10000
 
   invalidation:
     # Secondary indexes built over entries. Each defaults to true.
@@ -158,7 +140,6 @@ The invalidation and cache tag header settings are described in [Invalidation an
 | `RESPONSE_CACHE_ALL_PRIVATE_ID` | `all.private_id` |
 | `RESPONSE_CACHE_STORAGE_PROVIDER` | `storage.provider` |
 | `RESPONSE_CACHE_STORAGE_PROVIDER_ID` | `storage.provider_id` |
-| `RESPONSE_CACHE_STORAGE_MAX_ENTRIES` | `storage.max_entries` |
 | `RESPONSE_CACHE_INVALIDATION_CACHE_TAG` | `invalidation.cache_tag` |
 | `RESPONSE_CACHE_INVALIDATION_SUBGRAPH` | `invalidation.subgraph` |
 | `RESPONSE_CACHE_INVALIDATION_TYPE` | `invalidation.type` |
@@ -181,8 +162,7 @@ Environment variables bypass schema validation. The router still checks these at
 
 - `fallback_ttl` is greater than zero, under `all` when it is enabled and in every enabled entry under `subgraphs`.
 - Every `private_id` under an enabled `all` or entry compiles.
-- `storage.provider` is `redis` or `memory`, and `provider_id` names a declared Redis provider.
-- `storage.max_entries` is 1 to 100000 for the memory provider.
+- `provider_id` names a declared Redis provider.
 - `shared_key` has at least 32 characters when the endpoint is enabled.
 - `invalidation.endpoint.path` starts with `/` when the endpoint is enabled.
 - When `cache_tag_header` is enabled:
