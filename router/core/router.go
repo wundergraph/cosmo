@@ -359,6 +359,13 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Covers headers and cache_control_policy rules alike.
+	if r.headerPropagation != nil {
+		if r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled {
+			r.headerPropagation.publicMode = publicRequiresAny
+		}
+		r.headerPropagation.missingNoStore = r.cacheControlPolicy.MissingNoStore
+	}
 
 	defaultCorsHeaders := []string{
 		// Common headers
@@ -730,9 +737,11 @@ func (r *Router) initModules(ctx context.Context) error {
 		moduleInstance := moduleInfo.New()
 
 		mc := &ModuleContext{
-			Context: ctx,
-			Module:  moduleInstance,
-			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Context:                 ctx,
+			Module:                  moduleInstance,
+			Logger:                  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			PrometheusMeterProvider: r.promMeterProvider,
+			OTLPMeterProvider:       r.otlpMeterProvider,
 		}
 
 		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]

@@ -191,6 +191,7 @@
   "CacheControl": {
     "Enabled": false,
     "Value": "",
+    "MissingNoStore": false,
     "Subgraphs": null
   },
   "MCP": {
@@ -767,6 +768,9 @@
       "Enabled": false
     },
     "SkipNullVariablesError": {
+      "Enabled": false
+    },
+    "CacheControlAnyPublic": {
       "Enabled": false
     }
   },
