@@ -1060,6 +1060,78 @@ cache_control_policy:
       value: "no-cache"
 ```
 
+## Response Cache
+
+Configure the response cache. More information on this feature can be found here: [Response Cache](/router/response-cache). For how each setting behaves, see [Configure the Response Cache](/router/response-cache/configuration).
+
+| Environment Variable | YAML | Required | Description | Default Value |
+| --- | --- | --- | --- | --- |
+| RESPONSE_CACHE_ENABLED | enabled | <Icon icon="square" /> | Enable the response cache. | `false` |
+| RESPONSE_CACHE_KEY_PREFIX | key_prefix | <Icon icon="square" /> | Prepended to every Redis key. | `cosmo_response_cache:` |
+| RESPONSE_CACHE_ALL_ENABLED | all.enabled | <Icon icon="square" /> | Cache every subgraph without an entry under `subgraphs`. Set to `false` to cache only the subgraphs listed there. | `true` |
+| RESPONSE_CACHE_ALL_FALLBACK_TTL | all.fallback_ttl | <Icon icon="square" /> | Lifetime of a response with a directive that allows a default but no lifetime of its own. Minimum `1s`. | `30s` |
+| RESPONSE_CACHE_ALL_PRIVATE_ID | all.private_id | <Icon icon="square" /> | [Expression](/router/configuration/template-expressions) naming the private context of a request, so `private` responses can be cached per context. |  |
+|  | subgraphs | <Icon icon="square" /> | Per-subgraph settings keyed by subgraph name: `enabled`, `fallback_ttl`, `private_id`. An entry replaces `all` for that subgraph. Config file only. |  |
+| RESPONSE_CACHE_STORAGE_PROVIDER | storage.provider | <Icon icon="square" /> | `redis`, or `memory`. The memory provider is not suitable for production. | `redis` |
+| RESPONSE_CACHE_STORAGE_PROVIDER_ID | storage.provider_id | <Icon icon="square-check" /> | Id of an entry under `storage_providers.redis`. Required for `redis`. |  |
+| RESPONSE_CACHE_STORAGE_MAX_ENTRIES | storage.max_entries | <Icon icon="square" /> | Memory provider only. 1 to 100000. | `10000` |
+| RESPONSE_CACHE_INVALIDATION_CACHE_TAG | invalidation.cache_tag | <Icon icon="square" /> | Index entries by the cache tags subgraphs declare. | `true` |
+| RESPONSE_CACHE_INVALIDATION_SUBGRAPH | invalidation.subgraph | <Icon icon="square" /> | Index entries by subgraph. | `true` |
+| RESPONSE_CACHE_INVALIDATION_TYPE | invalidation.type | <Icon icon="square" /> | Index entries by type. | `true` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_ENABLED | invalidation.endpoint.enabled | <Icon icon="square" /> | Serve the invalidation endpoint on its own listener. | `false` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_LISTEN_ADDR | invalidation.endpoint.listen_addr | <Icon icon="square" /> | Address of the invalidation listener. | `localhost:5027` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_PATH | invalidation.endpoint.path | <Icon icon="square" /> | Path of the invalidation endpoint. Must start with `/`. | `/invalidation` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_SHARED_KEY | invalidation.endpoint.shared_key | <Icon icon="square" /> | Expected `Authorization` header value. At least 32 characters. Required when the endpoint is enabled. |  |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_ENABLED | cache_tag_header.enabled | <Icon icon="square" /> | Send the tags of a response in a header a CDN can purge by. | `false` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_NAME | cache_tag_header.name | <Icon icon="square" /> | Header name. | `Cache-Tag` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_DELIMITER | cache_tag_header.delimiter | <Icon icon="square" /> | Separator between tags. | `,` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_TIERS | cache_tag_header.tiers | <Icon icon="square" /> | Which tags to send: `subgraph`, `type`, `cache_tag`. | `subgraph, type, cache_tag` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_MAX_BYTES | cache_tag_header.max_bytes | <Icon icon="square" /> | Largest header value in bytes. | `16384` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_ON_OVERFLOW | cache_tag_header.on_overflow | <Icon icon="square" /> | What to do when the tags do not fit: `truncate` or `private`. | `truncate` |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+storage_providers:
+  redis:
+    - id: "response_cache"
+      urls:
+        - "redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&max_retries=-1"
+
+response_cache:
+  enabled: true
+  key_prefix: "cosmo_response_cache:"
+  all:
+    enabled: true
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    products:
+      enabled: true
+      fallback_ttl: 5m
+  storage:
+    provider: "redis"
+    provider_id: "response_cache"
+  invalidation:
+    cache_tag: true
+    subgraph: true
+    type: true
+    endpoint:
+      enabled: true
+      listen_addr: "localhost:5027"
+      path: "/invalidation"
+      shared_key: "${INVALIDATION_SHARED_KEY}"
+  cache_tag_header:
+    enabled: false
+    name: "Cache-Tag"
+    delimiter: ","
+    tiers: ["subgraph", "type", "cache_tag"]
+    max_bytes: 16384
+    on_overflow: "truncate"
+```
+
 ## Custom Modules
 
 Configure your custom Modules. More information on this feature can be found here: [Custom Modules](/router/custom-modules)

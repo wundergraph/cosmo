@@ -33,7 +33,7 @@ Use the [store decision](/router/response-cache/observability#store-decision) an
 
 ### In-memory provider
 
-An in-memory storage provider exists, set with `storage.provider: 'memory'`. It is not suitable for production. Each router replica has its own cache, nothing survives a restart, and an invalidation reaches only the replica it was sent to. Use Redis.
+An in-memory storage provider exists, set with [`storage.provider: 'memory'`](/router/configuration#response-cache). It is not suitable for production. Each router replica has its own cache, nothing survives a restart, and an invalidation reaches only the replica it was sent to. Use Redis.
 
 ### Secure the invalidation endpoint
 
