@@ -26,7 +26,7 @@ These are never cached:
 - Operations sent over WebSocket.
 - Requests that upload files.
 - Introspection.
-- gRPC subgraphs and router plugins. Their root fetches are not looked up. Their entity fetches are looked up but never stored, because the responses carry no caching headers.
+- gRPC subgraphs and router plugins, which are not supported. See [Limitations](/router/response-cache/limitations#grpc-subgraphs-and-plugins-are-not-supported).
 
 ## Subgraphs decide what is cached
 

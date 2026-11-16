@@ -57,8 +57,7 @@ A cache failure does not fail a request, except one sent with `only-if-cached`. 
 | Fetches in a mutation or subscription | No | |
 | Any fetch of a WebSocket operation | No | |
 | Any fetch of a request that uploads files | No | |
-| Root fetch to a gRPC subgraph or router plugin | No | |
-| Entity fetch to a gRPC subgraph or router plugin | Looked up, never stored | No caching headers, so `no_directive` |
+| Any fetch to a gRPC subgraph or router plugin | No, not supported. See [Limitations](/router/response-cache/limitations#grpc-subgraphs-and-plugins-are-not-supported). | |
 | Introspection | No | |
 
 Fetches inside `@defer` groups are cached like any other fetch of a query. A `@defer` response always receives `Cache-Control: no-cache`.
