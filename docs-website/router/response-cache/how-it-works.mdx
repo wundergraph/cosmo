@@ -249,9 +249,9 @@ Response headers and the original `Cache-Control` are not stored. For a varying 
 
 **Writes.** An untagged entry is one `SET` with its lifetime. A tagged entry takes up to three round trips:
 
-1. The entry is added to each tag set and written with a short lease of up to 10 seconds.
+1. The entry is added to each tag set and written with a short lease of up to 10 seconds. An entry with a lifetime of 10 seconds or less is written with its full lifetime and is not confirmed or extended.
 2. Each tag set confirms the entry. If an invalidation ran in the meantime, the entry is deleted.
-3. The entry's expiry is extended to its full lifetime, or the entry is deleted if a tag set no longer lists it.
+3. The entry's expiry is extended to its full lifetime, or the entry is deleted if a tag was invalidated since step 1.
 
 A writer that dies between the steps leaves an entry that expires with its lease.
 
@@ -271,6 +271,6 @@ An invalidation request names a [tag](/router/response-cache/invalidation). The 
 2. Walks the tag's index and deletes every entry it lists.
 3. Marks entries it walked so that a write racing with the walk is detected.
 
-A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. The invalidation is remembered for at least five minutes after it ran. While it is, a response fetched before the invalidation is not left in the cache by a write that lands after it. Once it is forgotten, such a write can store a stale entry. On Redis, a rejected entry is written first and removed one or two round trips later. Lookups can read it in between. If the removal fails, it stays readable until its lease of up to 10 seconds ends. On Redis Cluster, an entry with a lifetime of 10 seconds or less can be written after an invalidation has finished. It is not checked again and stays readable until it expires.
+A write checks the recorded time. An entry whose fetch started at or before the invalidation is deleted instead of kept. Redis allows one second of clock skew. The invalidation is remembered for at least five minutes after it ran. While it is, a response fetched before the invalidation is not left in the cache by a write that lands after it. Once it is forgotten, such a write can store a stale entry. On Redis, a rejected entry is written first and removed one or two round trips later. Lookups can read it in between. If the removal fails, it stays readable until its lease of up to 10 seconds ends. An entry with a lifetime of 10 seconds or less is not checked after it is written. Its write can land after an invalidation deleted it, most likely on Redis Cluster. It then stays readable until it expires.
 
 Only indexed entries can be invalidated. With every index turned off, entries leave the cache only when they expire.
