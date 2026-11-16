@@ -1,12 +1,9 @@
 import { meros } from 'meros/browser';
 import { z } from 'zod';
 
-const MAX_INCREMENTAL_ENTRIES = 1000;
-const MAX_PENDING_PATH_SEGMENTS = 1000;
-
 const pendingEntrySchema = z.object({
   id: z.string(),
-  path: z.array(z.unknown()).max(MAX_PENDING_PATH_SEGMENTS),
+  path: z.array(z.unknown()),
   label: z.string().optional(),
 });
 
@@ -14,7 +11,7 @@ const v02PayloadSchema = z.object({
   data: z.unknown().optional(),
   errors: z.unknown().optional(),
   extensions: z.unknown().optional(),
-  pending: z.array(pendingEntrySchema).max(MAX_INCREMENTAL_ENTRIES).optional(),
+  pending: z.array(pendingEntrySchema).optional(),
   incremental: z
     .array(
       z.object({
@@ -24,7 +21,6 @@ const v02PayloadSchema = z.object({
         extensions: z.unknown().optional(),
       }),
     )
-    .max(MAX_INCREMENTAL_ENTRIES)
     .optional(),
   hasNext: z.boolean().optional(),
 });

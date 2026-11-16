@@ -21,13 +21,7 @@ export type ProbeRequest = {
 const variablesSchema = z.record(z.string(), z.unknown());
 
 // Only the errors matter here. A 2xx body that is not a GraphQL object is a failure, not a measurement.
-const MAX_PROBE_ERRORS = 1000;
-const responseSchema = z.object({
-  errors: z
-    .array(z.object({ message: z.string() }))
-    .max(MAX_PROBE_ERRORS)
-    .optional(),
-});
+const responseSchema = z.object({ errors: z.array(z.object({ message: z.string() })).optional() });
 
 // The variables pane is free text while typing. A broken pane probes without values,
 // and the router then reports the missing variables for each field.
