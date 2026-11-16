@@ -212,6 +212,59 @@ func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext
   https://github.com/wundergraph/cosmo/tree/main/router/cmd/custom
 </Info>
 
+### Add custom metrics
+
+`core.ModuleContext` exposes the router's OpenTelemetry meter providers in the `Provision` hook:
+
+- `PrometheusMeterProvider`: instruments are served on the router's [Prometheus](/router/metrics-and-monitoring) endpoint.
+- `OTLPMeterProvider`: instruments are exported through the router's [OTLP exporters](/router/open-telemetry).
+
+The two providers are independent. Create an instrument from each provider whose exporter you want to use. Both providers are always set. If an exporter is disabled, instruments created from its provider are not exported.
+
+Module instruments follow the same telemetry configuration as the router's own metrics, including `exclude_metrics`, `exclude_metric_labels` and `exclude_scope_info`.
+
+The following module counts subgraph requests per subgraph and tenant. The tenant is read from a request header in `Middleware`, stored on the request context, and read again for every subgraph request.
+
+```go
+type MetricsModule struct {
+	promCounter metric.Int64Counter
+	otlpCounter metric.Int64Counter
+}
+
+func (m *MetricsModule) Provision(ctx *core.ModuleContext) error {
+	var err error
+	m.promCounter, err = ctx.PrometheusMeterProvider.Meter("my-module").
+		Int64Counter("module.subgraph.requests")
+	if err != nil {
+		return err
+	}
+	m.otlpCounter, err = ctx.OTLPMeterProvider.Meter("my-module").
+		Int64Counter("module.subgraph.requests")
+	return err
+}
+
+func (m *MetricsModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	ctx.Set("tenant", ctx.Request().Header.Get("X-Tenant"))
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+
+func (m *MetricsModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	attrs := metric.WithAttributes(
+		attribute.String("subgraph", ctx.ActiveSubgraph(req).Name),
+		attribute.String("tenant", ctx.GetString("tenant")),
+	)
+	m.promCounter.Add(req.Context(), 1, attrs)
+	m.otlpCounter.Add(req.Context(), 1, attrs)
+	return req, nil
+}
+```
+
+In Prometheus, this counter is exported as `module_subgraph_requests_total`.
+
+<Warning>
+  Every distinct combination of attribute values creates a new time series. Do not use unbounded values such as user IDs or request IDs as attributes.
+</Warning>
+
 ### Access authentication information
 
 Authentication information, including claims and the provider that authenticated the request, can be accessed through `core.RequestContext.Authentication()`

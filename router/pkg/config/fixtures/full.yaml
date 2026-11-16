@@ -209,6 +209,8 @@ telemetry:
         export_timeout: 30s
         path: '/v1/traces'
         headers: {}
+        # Defaults to 1, every recorded trace.
+        sampling_rate: 0.5
     attributes:
       - key: 'wg.tracing.custom.conn.subgraph.hostport'
         value_from:
@@ -277,6 +279,7 @@ telemetry:
 cache_control_policy:
   enabled: true
   value: 'max-age=180, public'
+  missing_no_store: true
   subgraphs:
     - name: 'products'
       value: 'max-age=60, public'
@@ -350,6 +353,9 @@ headers:
         from_file:
           path: '/etc/secrets/api-key'
           refresh_interval: 1m
+          prefix: 'Bearer '
+      - op: 'remove' # Remove headers added by previous rules
+        matching: (?i)^X-Custom-Internal-.*
     response:
       - op: 'propagate'
         algorithm: 'append'
@@ -360,6 +366,8 @@ headers:
         - op: 'propagate'
           named: Subgraph-Secret
           default: 'some-secret'
+        - op: 'remove'
+          named: 'X-API-Key'
       response:
         - op: 'set'
           name: 'X-Subgraph-Key'
@@ -683,4 +691,8 @@ apollo_compatibility_flags:
   replace_undefined_op_field_errors:
     enabled: true
   use_graphql_validation_failed_status:
+    enabled: true
+
+apollo_router_compatibility_flags:
+  cache_control_any_public:
     enabled: true

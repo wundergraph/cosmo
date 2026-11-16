@@ -941,7 +941,7 @@ func (p *reuseTrackingProvider) Shutdown(context.Context) error {
 func TestGraphServerShutdown(t *testing.T) {
 	t.Run("releases replaced muxes while their builder remains reachable", func(t *testing.T) {
 		build := func() (*graphServer, weak.Pointer[graphMux]) {
-			mux := &graphMux{mux: chi.NewMux(), cancel: func() {}}
+			mux := &graphMux{mux: chi.NewMux(), cancel: func() {}, caches: NewOperationCaches()}
 			// As in buildGraphMux, the routing handlers retain their owning mux.
 			mux.mux.Get("/", func(http.ResponseWriter, *http.Request) {
 				runtime.KeepAlive(mux)
@@ -1004,7 +1004,7 @@ func TestGraphServerShutdown(t *testing.T) {
 		defer cancel()
 
 		provider := &reuseTrackingProvider{}
-		mux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}, cancel: func() {}}
+		mux := &graphMux{mux: chi.NewMux(), pubSubProviders: []datasource.Provider{provider}, cancel: func() {}, caches: NewOperationCaches()}
 
 		srv := &graphServer{
 			Config:            &Config{logger: zap.NewNop()},

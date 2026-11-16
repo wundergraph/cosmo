@@ -14,6 +14,10 @@ jobs:
     name: Build and Release Router Binaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Keep the module cache inside the workspace so the containerized release
+    # action can reuse the modules that the host downloads below.
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.gomodcache
 
     strategy:
       matrix:
@@ -33,6 +37,14 @@ jobs:
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: router/go.sum
+      - name: Download Go modules
+        working-directory: router
+        run: |
+          for attempt in 1 2 3; do
+            timeout --kill-after=5s 120s go mod download && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1
 
       - uses: winterjung/split@v2
         id: split
@@ -52,7 +64,9 @@ jobs:
           # Where to run `go build .`
           project_path: "router/cmd/router"
           binary_name: "router"
-          pre_command: export CGO_ENABLED=0
+          # The action evals this unquoted, so keep it on one line. The container
+          # sees the workspace at /github/workspace.
+          pre_command: export CGO_ENABLED=0 GOMODCACHE=/github/workspace/.gomodcache
           build_flags: -trimpath
           ldflags: -extldflags -static -X "github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/router/core.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/router/core.Commit=${{ github.sha }}"
           overwrite: true

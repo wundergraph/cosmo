@@ -52,6 +52,7 @@ type JWKSConfig struct {
 	KeyId     string
 
 	Audiences []string
+	Issuers   []string
 
 	RefreshUnknownKID RefreshUnknownKIDConfig
 }
@@ -73,8 +74,40 @@ type audienceSet map[string]struct{}
 type keyFuncEntry struct {
 	jwks              keyfunc.Keyfunc
 	aud               audienceSet
+	issuers           []string
 	allowedAlgorithms []string
 	allowedUse        []string
+}
+
+// newIssuerRoutes maps each configured issuer to the entries allowed to validate
+// its tokens, in config order. The "" key holds the entries without issuers,
+// which accept tokens with any issuer, including an unknown or missing one.
+// Configured issuers are never empty, so they cannot collide with "".
+func newIssuerRoutes(entries []keyFuncEntry) map[string][]*keyFuncEntry {
+	// acceptedBy returns the entries that accept iss, in config order.
+	// An entry without issuers accepts any issuer.
+	acceptedBy := func(iss string) []*keyFuncEntry {
+		var accepted []*keyFuncEntry
+		for i := range entries {
+			if len(entries[i].issuers) == 0 || slices.Contains(entries[i].issuers, iss) {
+				accepted = append(accepted, &entries[i])
+			}
+		}
+		return accepted
+	}
+
+	routes := make(map[string][]*keyFuncEntry)
+	for i := range entries {
+		e := &entries[i]
+		if len(e.issuers) == 0 {
+			routes[""] = append(routes[""], e)
+			continue
+		}
+		for _, iss := range e.issuers {
+			routes[iss] = acceptedBy(iss)
+		}
+	}
+	return routes
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
@@ -83,6 +116,10 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	entries := make([]keyFuncEntry, 0, len(configs))
 
 	for _, c := range configs {
+		if slices.Contains(c.Issuers, "") {
+			return nil, errors.New("JWKS issuers must not contain an empty issuer")
+		}
+
 		if c.URL != "" {
 			key := configKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
@@ -136,6 +173,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
+				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
@@ -196,15 +234,33 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			entries = append(entries, keyFuncEntry{
 				jwks:              jwks,
 				aud:               audiencesMap[key],
+				issuers:           c.Issuers,
 				allowedAlgorithms: c.AllowedAlgorithms,
 				allowedUse:        c.AllowedUse,
 			})
 		}
 	}
 
+	routes := newIssuerRoutes(entries)
+
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for _, entry := range entries {
+
+		// A non-string iss returns an error and "", which routes like a missing iss.
+		tokenIssuer, err := token.Claims.GetIssuer()
+		if err != nil {
+			errJoin = errors.Join(errJoin, fmt.Errorf("could not get issuer from token claims: %w", err))
+		}
+		// An unknown or missing issuer falls back to the entries that accept any issuer.
+		candidates, ok := routes[tokenIssuer]
+		if !ok {
+			candidates = routes[""]
+		}
+		if len(candidates) == 0 {
+			errJoin = errors.Join(errJoin, errUnacceptableIss)
+		}
+
+		for _, entry := range candidates {
 			if len(entry.aud) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {

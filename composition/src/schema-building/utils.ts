@@ -559,14 +559,20 @@ export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): Mutab
   const directives = getClientFederatedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
   for (const inputValueData of fieldData.argumentDataByName.values()) {
-    if (isNodeDataInaccessible(inputValueData) || doesArgumentDefineFromContext(inputValueData)) {
+    if (
+      isNodeDataInaccessible(inputValueData) ||
+      doesArgumentDefineFromContext(inputValueData) ||
+      inputValueData.subgraphNames.size !== fieldData.subgraphNames.size
+    ) {
       continue;
     }
+
     argumentNodes.push({
       ...inputValueData.node,
       directives: getClientFederatedDirectiveNodes(inputValueData),
     });
   }
+
   return {
     ...fieldData.node,
     directives,

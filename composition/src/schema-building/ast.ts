@@ -15,12 +15,10 @@ import {
   type StringValueNode,
   type TypeNode,
 } from 'graphql';
-import { extractExecutableDirectiveLocations, formatDescription, stringToNameNode } from '../ast/utils';
+import { formatDescription, stringToNameNode } from '../ast/utils';
 import {
   duplicateDirectiveDefinitionLocationError,
-  duplicateDirectiveDefinitionLocationErrorMessage,
   invalidDirectiveDefinitionLocationError,
-  invalidDirectiveDefinitionLocationErrorMessage,
   maximumTypeNestingExceededError,
   unexpectedTypeNodeKindFatalError,
 } from '../errors/errors';

@@ -17,6 +17,8 @@ import {
   argumentsInKeyFieldSetErrorMessage,
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
+  invalidCacheTagBraceErrorMessage,
+  invalidCacheTagPlaceholderErrorMessage,
   invalidDirectiveError,
   invalidEventSubjectsArgumentErrorMessage,
   invalidFieldLinkDirectiveImportObjectError,
@@ -39,7 +41,13 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
-import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
+import {
+  BASE_SCALARS,
+  CACHE_TAG_BRACE_REGEXP,
+  CACHE_TAG_PLACEHOLDER_REGEXP,
+  CACHE_TAG_SEGMENT_REGEXP,
+  EDFS_ARGS_REGEXP,
+} from '../constants/constants';
 import { type RequiredFieldConfiguration } from '../../router-configuration/types';
 import { type CompositeOutputData, type InputValueData } from '../../schema-building/types/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
@@ -136,7 +144,13 @@ import {
   CACHE_TAG,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
+import {
+  type CacheTagPlaceholder,
+  type FieldSetData,
+  type KeyFieldSetData,
+  type LinkImportData,
+  type ParsedCacheTagFormat,
+} from './types/types';
 import { type DirectiveName } from '../../types/types';
 import {
   type ExtractImportUrlSegmentsResult,
@@ -477,6 +491,32 @@ export function validateArgumentTemplateReferences(
   for (const invalidArg of invalidArgs) {
     errorMessages.push(invalidEventSubjectsArgumentErrorMessage(invalidArg));
   }
+}
+
+/* Returns the placeholders of a @cacheTag format and its normalized form,
+ * and pushes an error message for each malformed placeholder.
+ * The normalized form removes the whitespace within each placeholder,
+ * so formats that produce the same tags are equal.
+ * Whether a placeholder's namespace and reference are valid for the field is checked by the caller.
+ */
+export function parseCacheTagFormat(format: string, errorMessages: Array<string>): ParsedCacheTagFormat {
+  const placeholders: Array<CacheTagPlaceholder> = [];
+  const normalizedFormat = format.replace(CACHE_TAG_SEGMENT_REGEXP, (segment: string, body: string) => {
+    const match = CACHE_TAG_PLACEHOLDER_REGEXP.exec(body);
+    if (!match) {
+      errorMessages.push(invalidCacheTagPlaceholderErrorMessage(body));
+      return segment;
+    }
+    // The only whitespace a reference can contain surrounds its periods.
+    const placeholder: CacheTagPlaceholder = { namespace: match[1], reference: match[2].replace(/\s/g, '') };
+    placeholders.push(placeholder);
+    return `{$${placeholder.namespace}.${placeholder.reference}}`;
+  });
+  // A brace that remains once every placeholder is removed is unpaired.
+  if (CACHE_TAG_BRACE_REGEXP.test(format.replace(CACHE_TAG_SEGMENT_REGEXP, ''))) {
+    errorMessages.push(invalidCacheTagBraceErrorMessage(format));
+  }
+  return { normalizedFormat, placeholders };
 }
 
 export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefinitionData> {

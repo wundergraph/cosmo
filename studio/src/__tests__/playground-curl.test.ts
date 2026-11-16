@@ -96,9 +96,17 @@ describe('buildCurlCommand', () => {
   });
 
   test.each([
-    ['an array', '[1, 2]', 'Variables were excluded from the cURL command: Expected object, received array.'],
-    ['null', 'null', 'Variables were excluded from the cURL command: Expected object, received null.'],
-    ['a scalar', '"nope"', 'Variables were excluded from the cURL command: Expected object, received string.'],
+    [
+      'an array',
+      '[1, 2]',
+      'Variables were excluded from the cURL command: Invalid input: expected record, received array.',
+    ],
+    ['null', 'null', 'Variables were excluded from the cURL command: Invalid input: expected record, received null.'],
+    [
+      'a scalar',
+      '"nope"',
+      'Variables were excluded from the cURL command: Invalid input: expected record, received string.',
+    ],
   ])('warns when variables are valid json but %s rather than an object', (_label, variables, warning) => {
     const { command, warnings } = buildCurlCommand({ url, query, variables });
 

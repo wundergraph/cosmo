@@ -1,6 +1,13 @@
 package responsecaching
 
-import "context"
+import (
+	"context"
+	"time"
+)
+
+// InvalidationWindow is how long a store remembers an invalidation of a tag,
+// to drop writes read before it. It outlasts any fetch in flight then.
+const InvalidationWindow = 5 * time.Minute
 
 // Invalidator removes cached entries by the tags they were indexed under. It is
 // declared here rather than beside the engine's Cache because invalidation is

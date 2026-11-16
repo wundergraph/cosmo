@@ -18,11 +18,12 @@ func (c *InMemoryCache) InvalidateByTags(_ context.Context, tags []string) (int,
 		// take removes the tag as it reads it, which is the whole of what
 		// deleting the index entry means for this store.
 		for _, key := range c.tags.take(tag, now) {
-			if _, ok := c.cache.Get(key); !ok {
-				continue
+			// Deleted whether or not it is visible yet: a write may still be in
+			// ristretto's buffers.
+			if _, ok := c.cache.Get(key); ok {
+				removed++
 			}
 			c.cache.Del(key)
-			removed++
 		}
 	}
 
