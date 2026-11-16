@@ -137,7 +137,7 @@ The router request carries `wg.operation.response_cache.status` on its metrics, 
 
 A fetch that was not answered from the cache counts against a hit, whether it missed or was not cacheable. A response whose fetches were all not cacheable reports `miss`.
 
-The attribute is absent for mutations, subscriptions, WebSocket operations, introspection, and requests that failed before execution.
+The attribute is absent for mutations, subscriptions, WebSocket operations, introspection, requests that failed before execution, and requests deduplicated onto another in flight. The debug header is absent for the same requests.
 
 Share of responses served entirely from the cache:
 
@@ -190,9 +190,9 @@ telemetry:
 
 | Metric | Counts |
 | --- | --- |
-| `router.response_cache.operations` | Calls to the store, by operation (`lookup`, `write`, `invalidate`, `engine`) and error type |
+| `router.response_cache.operations` | Store calls by operation (`lookup`, `write`, `invalidate`), and engine-side failures (`engine`), by error type |
 | `router.response_cache.operation.duration_seconds` | Duration of those calls |
-| `router.response_cache.keys` | Keys per call, by result (`found`, `missing`, `stored`, `failed`, `removed`) |
+| `router.response_cache.keys` | Keys by result (`found`, `missing`, `stored`, `failed`, `removed`) |
 | `router.response_cache.write.ttl_seconds` | The shortest lifetime in each write |
 | `router.response_cache.fetches` | Subgraph fetches by subgraph, type, status and store decision |
 | `router.response_cache.cache_tag_header.overflows` | Responses whose tags exceeded `max_bytes` |

@@ -95,7 +95,7 @@ curl -X POST "http://localhost:5027/invalidation" \
 | `type` | Every entry of that type the subgraph answered | `subgraph`, `type` |
 | `cache_tag` | Every entry the listed subgraphs tagged with it | `subgraphs`, `cache_tag` |
 
-Every element names a subgraph. A type or tag cannot be invalidated across all subgraphs in one element. List the subgraphs instead.
+Every element names a subgraph. A type or tag cannot be invalidated across all subgraphs in one element. For `type`, send one element per subgraph. For `cache_tag`, list them in `subgraphs`.
 
 A kind whose index is turned off is rejected.
 
@@ -103,7 +103,7 @@ A kind whose index is turned off is rejected.
 
 | Status | When | Body |
 | --- | --- | --- |
-| `202` | The entries were removed | `{"count": 12}`, the number of keys removed. A response stored with `Vary` counts as two. |
+| `202` | The entries were removed | `{"count": 12}`, the number of keys removed. Each `Vary` variant and its record count separately. |
 | `400` | The body is not a JSON array, is empty, has unknown fields, or an element is invalid | Error details |
 | `401` | The `Authorization` header does not match `shared_key` | Error details |
 | `405` | The method is not `POST` | Error details |
@@ -166,8 +166,8 @@ Cache-Tag: subgraph-employees,type-employees-Query,subgraph-mood,type-mood-Emplo
 
 ### When the header is sent
 
-- On hits, and on misses whose response is stored. A hit rebuilds the header from what was stored with the entry.
-- Only for fetches the cache handles. A fetch whose response is not stored adds no tags. A response with no such fetch has no header.
+- On hits, and on misses whose response is cacheable, including requests sent with `no-store`. A hit rebuilds the header from what was stored with the entry.
+- Only for fetches the cache handles. A fetch whose response is not cacheable adds no tags. A response with no such fetch has no header.
 - It does not depend on the `invalidation` indexes.
 
 It is not sent:

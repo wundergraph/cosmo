@@ -135,7 +135,7 @@ The checks run in this order. The first that applies decides.
 | --- | --- | --- |
 | The request failed, the body is empty, or the status is 400 or higher | Not stored | `fetch_failed` |
 | The status is not 200 or 203 (for example 206 or 304) | Not stored | `uncacheable_status` |
-| The body is not valid JSON, or `_entities` is missing or has the wrong length | Not stored | `invalid_response` |
+| The body is not valid JSON | Not stored | `invalid_response` |
 | The body has a non-empty `errors` array | Not stored | `response_errors` |
 | `Cache-Control` has an invalid value | Not stored | `invalid_cache_control` |
 | `no-store` | Not stored | `no_store` |
@@ -144,6 +144,7 @@ The checks run in this order. The first that applies decides.
 | The lifetime is zero or less | Not stored | `no_lifetime` |
 | `Vary: *`, more than 100 names in `Vary`, or a varied header changed after the router built the request | Not stored | `unusable_vary` |
 | `private`, and the request has no private id | Not stored | `private_without_id` |
+| `_entities` is missing or has the wrong length | Not stored | `invalid_response` |
 | Nothing to store, such as an entity that does not exist | Not stored | `no_entity` |
 | Otherwise | Stored | `stored` |
 

@@ -277,7 +277,7 @@ A subgraph whose answer depends on a request header, such as `Accept-Language`, 
 - Values are taken from the request as the subgraph receives it, after header propagation. A named header the router does not send counts as empty.
 - `Vary: *` is not stored. Neither is a `Vary` with more than 100 names, nor a response whose varied header was changed after the router built the request, for example by a custom module.
 - A header with a value per caller, such as `Cookie` or `Authorization`, yields one entry per caller. Such entries are rarely reused. Use `private` instead.
-- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. Older variants stay reachable until they expire.
+- When the subgraph changes the names it varies on, the new set is added to the record. A record keeps up to 8 sets, newest first. Older variants stay reachable while the record lives. The record takes the newest response's lifetime, and a response without `Vary` replaces it.
 - With `engine.enable_multi_fetch`, one `Vary` applies to every alias of a merged fetch. Keep the subgraph's `Vary` to the headers each response depends on.
 
 ## Request directives
@@ -289,7 +289,7 @@ A client can control the cache for its own request with the `Cache-Control` requ
 | `no-cache`, or `max-age=0` | Not answered from the cache. Every fetch goes to its subgraph and the responses are stored, so the entries are refreshed. |
 | `no-store` | Nothing is stored. Existing entries can still answer the request. |
 | `no-cache, no-store` | The cache is neither read nor written. |
-| `only-if-cached` | Every fetch must be answered from the cache. Otherwise the request fails with status `504`. Fetches to subgraphs the cache is off for fail too, and so do mutations, which then do not run. Introspection is exempt. |
+| `only-if-cached` | Every fetch must be answered from the cache. Otherwise the request fails with status `504`, or with fetch errors only on batched and `@defer` requests. Combined with `no-cache` or `max-age=0`, it always fails. Fetches to subgraphs the cache is off for fail too, and so do mutations, which then do not run. Introspection is exempt. |
 
 `max-age` greater than zero, `min-fresh` and `max-stale` are ignored. So is the `Pragma` header. A `Cache-Control` request header that cannot be parsed is ignored.
 
@@ -301,7 +301,7 @@ Requests with `no-cache`, `max-age=0` or `only-if-cached` are not [deduplicated]
 
 ## Client Cache-Control
 
-The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses.
+The `Cache-Control` the client receives comes from the [cache control policy](/router/proxy-capabilities/adjusting-cache-control), or from a response header rule with the `most_restrictive_cache_control` algorithm. Without either, the router sends no `Cache-Control` for cached responses, except `private` from `cache_tag_header.on_overflow: private`.
 
 ```yaml config.yaml
 cache_control_policy:

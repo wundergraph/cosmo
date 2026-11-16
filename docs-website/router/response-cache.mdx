@@ -18,7 +18,7 @@ The cache works per subgraph fetch, not per client response. One client query ca
 The router caches two kinds of subgraph fetch:
 
 - **Root query fetches.** The request the router sends a subgraph for the root `Query` fields of an operation. The whole answer is stored as one entry.
-- **Entity fetches.** The `_entities` requests the router sends to resolve fields of an entity that another subgraph owns. Every entity is stored as its own entry, so a later query that needs the same entity can reuse it.
+- **Entity fetches.** The `_entities` requests the router sends to fetch an entity's fields from the subgraph that defines them. Every entity is stored as its own entry, so a later query that needs the same entity can reuse it.
 
 These are never cached:
 
