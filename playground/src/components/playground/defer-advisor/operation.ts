@@ -45,6 +45,11 @@ export const getFragments = (doc: DocumentNode | undefined): FragmentMap =>
     (doc?.definitions ?? []).flatMap((d) => (d.kind === Kind.FRAGMENT_DEFINITION ? [[d.name.value, d] as const] : [])),
   );
 
+export const parseOperation = (query: string) => {
+  const doc = parseQuery(query)?.doc;
+  return { operation: getOperation(doc), fragments: getFragments(doc) };
+};
+
 type RootField = {
   field: FieldNode;
   // True when an enclosing fragment is a @defer.
