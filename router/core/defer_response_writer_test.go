@@ -121,7 +121,6 @@ func TestHttpDeferWriterCompleteLeavesInterruptedStreamIncomplete(t *testing.T) 
 	_, err = io.WriteString(w, `{"incremental":[`)
 	require.NoError(t, err)
 	w.Complete()
-	require.Zero(t, w.buf.Len())
 	require.Equal(t, wire, rec.Body.String())
 	require.NotContains(t, rec.Body.String(), deferCloseLine)
 }

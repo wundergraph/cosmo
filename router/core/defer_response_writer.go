@@ -29,11 +29,10 @@ const (
 	deferCloseLine       = "--" + multipartBoundary + "--"
 )
 
-// Complete discards buffered data on exit. Flush(true) closes a successful
-// response; an execution that stops before it must remain an incomplete stream.
-func (f *HttpDeferWriter) Complete() {
-	f.buf.Reset()
-}
+// Complete only satisfies resolve.DeferResponseWriter; Flush owns all output.
+// Flush(true) closes a successful response, and an execution that stops before
+// it must remain an incomplete stream, so there is nothing left to write here.
+func (f *HttpDeferWriter) Complete() {}
 
 // Committed reports whether a part has reached the client. After that the
 // response is a multipart stream, so a later error cannot become an error response.
