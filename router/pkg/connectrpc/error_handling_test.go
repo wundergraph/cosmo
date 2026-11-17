@@ -181,6 +181,21 @@ func TestErrorHandling(t *testing.T) {
 			expectedErrorContains: "GraphQL operation failed",
 		},
 		{
+			name:       "gRPC spelling of canceled",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "request canceled",
+						"extensions": {"code": "CANCELLED"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeCanceled,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
 			name:       "Field authorization without a token",
 			httpStatus: http.StatusOK,
 			graphqlResponse: `{

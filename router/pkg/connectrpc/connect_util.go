@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/errorcodes"
 )
 
 // HTTPStatusToConnectCode maps HTTP status codes to Connect error codes.
@@ -92,7 +93,7 @@ func (r *GraphQLResponse) ConnectCode() connect.Code {
 
 func (r *GraphQLResponse) errorConnectCode(extensions map[string]any) (connect.Code, bool) {
 	code, _ := extensions["code"].(string)
-	if code == "UNAUTHORIZED_FIELD_OR_TYPE" {
+	if code == errorcodes.UnauthorizedFieldOrType {
 		return r.fieldAuthorizationDenialCode(), true
 	}
 	if c, ok := connectCodeFromGRPCStatusName(code); ok {
@@ -133,15 +134,20 @@ func commonConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.
 	return code, true
 }
 
-func connectCodeFromGRPCStatusName(name string) (connect.Code, bool) {
-	if name == "" {
-		return 0, false
+// connectCodesByStatusName is keyed by lower-case status names without underscores, so
+// "NotFound", "NOT_FOUND" and "not_found" all match.
+var connectCodesByStatusName = func() map[string]connect.Code {
+	codes := map[string]connect.Code{
+		// gRPC spells it with two Ls, Connect with one.
+		"cancelled": connect.CodeCanceled,
 	}
-	normalized := strings.ToLower(strings.ReplaceAll(name, "_", ""))
 	for c := connect.CodeCanceled; c <= connect.CodeUnauthenticated; c++ {
-		if strings.ReplaceAll(c.String(), "_", "") == normalized {
-			return c, true
-		}
+		codes[strings.ReplaceAll(c.String(), "_", "")] = c
 	}
-	return 0, false
+	return codes
+}()
+
+func connectCodeFromGRPCStatusName(name string) (connect.Code, bool) {
+	c, ok := connectCodesByStatusName[strings.ToLower(strings.ReplaceAll(name, "_", ""))]
+	return c, ok
 }
