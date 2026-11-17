@@ -52,14 +52,14 @@ type ProviderAdapter struct {
 type PollerOpts struct {
 	providerId     string
 	trackPositions bool
-	resumeFrom     *streamsv1.KafkaCursorPosition
+	startFrom      *streamsv1.KafkaCursorPosition
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
 	var positions map[string]map[int32]*streamsv1.KafkaPartitionOffset
 	if pollerOpts.trackPositions {
-		positions = seedPositions(pollerOpts.resumeFrom)
+		positions = seedPositions(pollerOpts.startFrom)
 	}
 
 	for {
@@ -154,9 +154,8 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 	}
 }
 
-// seedPositions returns the tracked positions a resumed subscription starts out with,
-// deep-copied from the cursor it resumes from. A nil position seeds an empty tracker,
-// which is what a fresh subscription uses.
+// seedPositions returns the tracked positions a subscription starts out with, deep-copied from
+// the position it starts from. A nil position seeds an empty tracker.
 func seedPositions(from *streamsv1.KafkaCursorPosition) map[string]map[int32]*streamsv1.KafkaPartitionOffset {
 	positions := make(map[string]map[int32]*streamsv1.KafkaPartitionOffset, len(from.GetTopics()))
 	for topic, partitions := range from.GetTopics() {
@@ -194,16 +193,103 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		return datasource.NewError("invalid event type for Kafka adapter", nil)
 	}
 
+	startedAt := time.Now().UnixMilli()
+	pollerOpts, err := p.buildPollerOpts(ctx, subConf, guarantee, startedAt)
+	if err != nil {
+		return err
+	}
+
 	return p.subscribe(ctx, subConf, updater, []kgo.Opt{
 		kgo.ConsumeTopics(subConf.Topics...),
 		// We want to consume the events produced after the first subscription was created
 		// Messages are shared among all subscriptions, therefore old events are not redelivered
 		// This replicates a stateless publish-subscribe model
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
-	}, PollerOpts{
-		providerId:     conf.ProviderID(),
+		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(startedAt)),
+	}, pollerOpts)
+}
+
+func (p *ProviderAdapter) buildPollerOpts(ctx context.Context, subConf *SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, startedAt int64) (PollerOpts, error) {
+	opts := PollerOpts{
+		providerId:     subConf.ProviderID(),
 		trackPositions: guarantee == datasource.DeliveryGuaranteeCursor,
-	})
+	}
+
+	if opts.trackPositions {
+		startFrom, err := p.resolveStartPosition(ctx, subConf.Topics, startedAt)
+		if err != nil {
+			return PollerOpts{}, datasource.NewError("failed to resolve the start position of the subscription", err)
+		}
+		opts.startFrom = startFrom
+	}
+	return opts, nil
+}
+
+// resolveStartPosition returns, for every partition of topics, the offset
+// right before the first message consumed at or after startedAt.
+func (p *ProviderAdapter) resolveStartPosition(ctx context.Context, topics []string, startedAt int64) (*streamsv1.KafkaCursorPosition, error) {
+	partitions, _, err := p.fetchTopicPartitions(ctx, topics)
+	if err != nil {
+		return nil, err
+	}
+
+	topicPartitionOffsets, err := p.listOffsets(ctx, partitions, startedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.resolveMissingOffsetsToEnd(ctx, topicPartitionOffsets)
+	if err != nil {
+		return nil, err
+	}
+
+	return positionBefore(topicPartitionOffsets), nil
+}
+
+// positionBefore returns the cursor position right before the given offsets, so that resuming
+// from it starts reading at those offsets. A cursor holds the last delivered offset, and nothing
+// was delivered at or after the offsets yet. A partition whose offset is 0 ends up at -1,
+// which resumes at its first record.
+func positionBefore(offsets partitionOffsets) *streamsv1.KafkaCursorPosition {
+	position := &streamsv1.KafkaCursorPosition{Topics: make(map[string]*streamsv1.KafkaPartitionPositions, len(offsets))}
+	for topic, partitions := range offsets {
+		resolved := make(map[int32]*streamsv1.KafkaPartitionOffset, len(partitions))
+		for partition, offset := range partitions {
+			resolved[partition] = &streamsv1.KafkaPartitionOffset{Epoch: offset.epoch, Offset: offset.offset - 1}
+		}
+		position.Topics[topic] = &streamsv1.KafkaPartitionPositions{Partitions: resolved}
+	}
+	return position
+}
+
+// resolveMissingOffsetsToEnd replaces every entry of starts that has no offset
+// with the end offset of its partition. A partition has no offset when it holds no message at or
+// after the timestamp starts was resolved for, so the consumer starts at its end.
+func (p *ProviderAdapter) resolveMissingOffsetsToEnd(ctx context.Context, starts partitionOffsets) error {
+	withoutOffset := make(map[string][]int32)
+	for topic, partitions := range starts {
+		for partition, start := range partitions {
+			if start.offset < 0 {
+				withoutOffset[topic] = append(withoutOffset[topic], partition)
+			}
+		}
+	}
+	if len(withoutOffset) == 0 {
+		return nil
+	}
+
+	ends, err := p.listOffsets(ctx, withoutOffset, listOffsetsLatest)
+	if err != nil {
+		return err
+	}
+	for topic, partitions := range ends {
+		for partition, end := range partitions {
+			if end.offset < 0 {
+				return fmt.Errorf("no end offset for partition %d of topic %q", partition, topic)
+			}
+			starts[topic][partition] = end
+		}
+	}
+	return nil
 }
 
 // SubscribeFrom subscribes like Subscribe, but seeks the consumer to the position in cursor,
@@ -235,7 +321,7 @@ func (p *ProviderAdapter) SubscribeFrom(ctx context.Context, conf datasource.Sub
 	return p.subscribe(ctx, subConf, updater, consumeOpts, PollerOpts{
 		providerId:     conf.ProviderID(),
 		trackPositions: true,
-		resumeFrom:     position.Kafka,
+		startFrom:      position.Kafka,
 	})
 }
 
@@ -328,8 +414,9 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *Su
 				// value and passes through unchanged.
 				partAssign[partition] = kgo.NewOffset().At(offset.GetOffset() + 1).WithEpoch(offset.GetEpoch())
 			} else {
-				// A partition the cursor never saw starts where a fresh subscribe would have
-				// started it, so the client gets neither a gap nor an unbounded replay.
+				// Cursors cover every partition the subscription started on, so this partition was
+				// created afterwards. It starts where a fresh subscribe would have started it, which
+				// is a time approximation, so the client gets neither a gap nor an unbounded replay.
 				partAssign[partition] = kgo.NewOffset().AfterMilli(issuedAt)
 			}
 		}
@@ -345,6 +432,73 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *Su
 	}
 
 	return opts, nil
+}
+
+// listOffsetsLatest is the timestamp that makes a ListOffsets request return the end of a partition.
+const listOffsetsLatest = -1
+
+// partitionOffset is a resolved offset of a partition and the leader epoch the broker reports for it.
+type partitionOffset struct {
+	offset int64
+	epoch  int32
+}
+
+// partitionOffsets holds a partitionOffset per partition, grouped by topic. It is indexed as
+// partitionOffsets[topic][partition]: the outer key is the topic name, the inner key is the
+// partition number within that topic.
+type partitionOffsets map[string]map[int32]partitionOffset
+
+// listOffsets resolves a timestamp to an offset for every given partition with a single request:
+// the first offset with a record at or after timestamp, or listOffsetsLatest for the end of the
+// partition. The offset is -1 for a partition that has no record. Like the
+// consumer, which reads uncommitted by default, it does not hide records of open transactions.
+func (p *ProviderAdapter) listOffsets(ctx context.Context, partitions map[string][]int32, timestamp int64) (partitionOffsets, error) {
+	if p.writeClient == nil {
+		return nil, errors.New("kafka client not initialized")
+	}
+
+	req := kmsg.NewPtrListOffsetsRequest()
+	for topic, topicPartitions := range partitions {
+		rt := kmsg.NewListOffsetsRequestTopic()
+		rt.Topic = topic
+		for _, partition := range topicPartitions {
+			rp := kmsg.NewListOffsetsRequestTopicPartition()
+			rp.Partition = partition
+			rp.Timestamp = timestamp
+			rt.Partitions = append(rt.Partitions, rp)
+		}
+		req.Topics = append(req.Topics, rt)
+	}
+
+	kresp, err := p.writeClient.Request(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	resp, ok := kresp.(*kmsg.ListOffsetsResponse)
+	if !ok {
+		return nil, fmt.Errorf("unexpected list offsets response type %T", kresp)
+	}
+
+	result := make(partitionOffsets, len(resp.Topics))
+	for _, t := range resp.Topics {
+		offsets := make(map[int32]partitionOffset, len(t.Partitions))
+		for _, part := range t.Partitions {
+			if err := kerr.ErrorForCode(part.ErrorCode); err != nil {
+				return nil, fmt.Errorf("list offsets error for partition %d of topic %q: %w", part.Partition, t.Topic, err)
+			}
+			offsets[part.Partition] = partitionOffset{offset: part.Offset, epoch: part.LeaderEpoch}
+		}
+		result[t.Topic] = offsets
+	}
+
+	for topic, topicPartitions := range partitions {
+		for _, partition := range topicPartitions {
+			if _, ok := result[topic][partition]; !ok {
+				return nil, fmt.Errorf("no offset returned for partition %d of topic %q", partition, topic)
+			}
+		}
+	}
+	return result, nil
 }
 
 // fetchTopicPartitions enumerates every partition of every given topic with a single metadata
