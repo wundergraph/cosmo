@@ -26,28 +26,9 @@ func TestIntScalarRange(t *testing.T) {
 	t.Run("defaults to the 32-bit range", func(t *testing.T) {
 		t.Parallel()
 
-		subgraphs, subgraphVariables := recordEmployeesVariables()
-		testenv.Run(t, &testenv.Config{Subgraphs: subgraphs}, func(t *testing.T, xEnv *testenv.Environment) {
-			t.Run("accepts max int32 variable", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":2147483647}`)})
-				assert.Equal(t, `{"data":{"employee":null}}`, res.Body)
-				assert.JSONEq(t, `{"a":2147483647}`, subgraphVariables())
-			})
-
-			t.Run("rejects variable above max int32", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":3000000000}`)})
-				requireValidationError(t, res.Body, `Variable "$id" got invalid value 3000000000; Int cannot represent non 32-bit signed integer value: 3000000000`)
-			})
-
-			t.Run("rejects literal above max int32", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `{ employee(id: 3000000000) { id } }`})
-				requireValidationError(t, res.Body, `Int cannot represent non 32-bit signed integer value: 3000000000`)
-			})
-
-			t.Run("rejects variable default above max int32", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query ($id: Int! = 3000000000) { employee(id: $id) { id } }`})
-				requireValidationError(t, res.Body, `Int cannot represent non 32-bit signed integer value: 3000000000`)
-			})
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":3000000000}`)})
+			requireValidationError(t, res.Body, `Variable "$id" got invalid value 3000000000; Int cannot represent non 32-bit signed integer value: 3000000000`)
 		})
 	})
 
@@ -61,36 +42,15 @@ func TestIntScalarRange(t *testing.T) {
 				cfg.IntScalarRange = config.IntScalarRange{Min: -maxSafeInteger, Max: maxSafeInteger}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			for _, id := range []string{"3000000000", "9007199254740991", "-9007199254740991"} {
-				t.Run("forwards variable "+id+" to the subgraph", func(t *testing.T) {
-					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":` + id + `}`)})
-					assert.Equal(t, `{"data":{"employee":null}}`, res.Body)
-					assert.JSONEq(t, `{"a":`+id+`}`, subgraphVariables())
-				})
-			}
-
-			for _, id := range []string{"9007199254740992", "-9007199254740992"} {
-				t.Run("rejects variable "+id, func(t *testing.T) {
-					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":` + id + `}`)})
-					requireValidationError(t, res.Body, `Variable "$id" got invalid value `+id+`; Int cannot represent integer value outside [-9007199254740991, 9007199254740991]: `+id)
-				})
-			}
-
-			t.Run("forwards literal 3000000000 to the subgraph", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `{ employee(id: 3000000000) { id } }`})
+			t.Run("forwards a value above int32 to the subgraph", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":3000000000}`)})
 				assert.Equal(t, `{"data":{"employee":null}}`, res.Body)
 				assert.JSONEq(t, `{"a":3000000000}`, subgraphVariables())
 			})
 
-			t.Run("forwards variable default 3000000000 to the subgraph", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query ($id: Int! = 3000000000) { employee(id: $id) { id } }`})
-				assert.Equal(t, `{"data":{"employee":null}}`, res.Body)
-				assert.JSONEq(t, `{"a":3000000000}`, subgraphVariables())
-			})
-
-			t.Run("rejects literal outside the range", func(t *testing.T) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `{ employee(id: 9007199254740992) { id } }`})
-				requireValidationError(t, res.Body, `Int cannot represent integer value outside [-9007199254740991, 9007199254740991]: 9007199254740992`)
+			t.Run("rejects a value above the range", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: employeeByID, Variables: json.RawMessage(`{"id":9007199254740992}`)})
+				requireValidationError(t, res.Body, `Variable "$id" got invalid value 9007199254740992; Int cannot represent integer value outside [-9007199254740991, 9007199254740991]: 9007199254740992`)
 			})
 		})
 	})

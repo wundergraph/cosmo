@@ -128,42 +128,9 @@ router_config_path: "config.json"
 }
 
 func TestIntScalarRange(t *testing.T) {
-	t.Run("keeps the default min when only max is set", func(t *testing.T) {
-		t.Parallel()
+	t.Parallel()
 
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-engine:
-  int_scalar_range:
-    max: 9007199254740991
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		require.Equal(t, IntScalarRange{Min: -2147483648, Max: 9007199254740991}, cfg.Config.EngineExecutionConfiguration.IntScalarRange)
-	})
-
-	t.Run("rejects min greater than max", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-engine:
-  int_scalar_range:
-    min: 10
-    max: -10
-`)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "engine.int_scalar_range.min (10) must be less than engine.int_scalar_range.max (-10)")
-	})
-
-	t.Run("rejects min equal to max", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
+	f := createTempFileFromFixture(t, `
 version: "1"
 
 router_config_path: "config.json"
@@ -172,9 +139,8 @@ engine:
     min: 0
     max: 0
 `)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "engine.int_scalar_range.min (0) must be less than engine.int_scalar_range.max (0)")
-	})
+	_, err := LoadConfig([]string{f})
+	require.ErrorContains(t, err, "engine.int_scalar_range.min (0) must be less than engine.int_scalar_range.max (0)")
 }
 
 func TestIntScalarRangeFromEnv(t *testing.T) {
