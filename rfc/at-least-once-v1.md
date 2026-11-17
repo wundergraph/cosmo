@@ -63,7 +63,7 @@ sequenceDiagram
     Client--xRouter: disconnected
 
     Note over Client,Router: resume from last stored cursor
-    Client->>Router: subscribe (cursor: B)
+    Client->>Router: subscribe (cosmoDeliveryGuarantee: cursor, streamsCursor: B)
     Router->>Router: verify HMAC tag, decode position
     Router->>Broker: SubscribeFrom(position B)
     Broker-->>Router: event (position after B)
@@ -720,7 +720,7 @@ The WebSocket binding provides:
   `payload.extensions` on every subscribe, and the router's confirmation (or a
   `DELIVERY_GUARANTEE_UNSUPPORTED` error) is surfaced as a typed result instead of a raw GraphQL
   error, so users can decide whether to fall back to at-most-once or fail loudly.
-- **Cursor extraction**: incoming `next` messages are unwrapped and the `extensions.cursor` value is
+- **Cursor extraction**: incoming `next` messages are unwrapped and the `extensions.streamsCursor` value is
   handed to the user alongside the payload, so nobody has to know the wire format.
 - **Explicit commit**: each delivered message carries an `ack()` (name TBD) the user calls once the
   event has actually been processed. This matches the commit point argued for in
@@ -754,7 +754,7 @@ work exactly as they do over WebSockets. The SSE binding differs in three places
 
 - **Handshake**: graphql-sse has two modes — one HTTP request per operation, or one shared stream
   with a reservation. Both send a GraphQL request body on subscribe, so `cosmoDeliveryGuarantee` and
-  `cursor` go into `extensions` the same way in both.
+  `streamsCursor` go into `extensions` the same way in both.
 - **Negotiation confirmation**: the graphql-sse client never hands the caller the HTTP `Response`,
   so the `x-cosmo-at-least-once-capabilities` header is awkward to read, and on a shared stream it
   arrives on a different request than the events. **Recommended RFC change**: confirm in-band on the
