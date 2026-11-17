@@ -13,7 +13,7 @@ import { AuditLogRepository } from '../src/core/repositories/AuditLogRepository.
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { RunMigration } from '../src/core/migrate.js';
 import * as schema from '../src/db/schema.js';
-import { afterAllSetup, beforeAllSetup, createTestContext, genID, TestUser } from '../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -231,10 +231,7 @@ describe('Audit log streaming', () => {
     });
     testContext.onTestFinished(() => server.close());
 
-    const { organizationName, organizationId } = users.adminAliceCompanyA;
-    authenticator.changeUserWithSuppliedContext(
-      createTestContext(organizationName, organizationId, ['organization-admin'], true),
-    );
+    authenticator.changeUserWithSuppliedContext({ ...users.adminAliceCompanyA, organizationDeactivated: true });
 
     const responses = await Promise.all([
       client.getAuditLogStreamConfig({}),
