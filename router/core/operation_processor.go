@@ -123,6 +123,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError       bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	AllowStringLiteralsForEnums                            bool
+	IntScalarRange                                         config.IntScalarRange
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
@@ -1679,6 +1680,7 @@ type parseKitOptions struct {
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
+	intRange                                               ast.IntRange
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
 }
@@ -1706,6 +1708,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
+			IntRange:                        options.intRange,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
@@ -1750,7 +1753,7 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 		apollocompatibility.Flags{
 			UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
 		},
-	))
+	), astvalidation.WithIntRange(options.intRange))
 	if options.relaxSubgraphOperationFieldSelectionMergingNullability {
 		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
 	}
@@ -1786,6 +1789,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
+			intRange:                                               ast.IntRange{Min: opts.IntScalarRange.Min, Max: opts.IntScalarRange.Max},
 			validateInlineArguments:                                opts.ValidateInlineArguments,
 		},
 	}

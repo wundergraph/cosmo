@@ -570,7 +570,15 @@ type EngineExecutionConfiguration struct {
 
 	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
 
+	IntScalarRange IntScalarRange `yaml:"int_scalar_range,omitempty" envPrefix:"ENGINE_INT_SCALAR_RANGE_"`
+
 	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
+}
+
+// IntScalarRange is the inclusive range of values the router accepts for the Int scalar.
+type IntScalarRange struct {
+	Min int64 `yaml:"min" envDefault:"-2147483648" env:"MIN"`
+	Max int64 `yaml:"max" envDefault:"2147483647" env:"MAX"`
 }
 
 type BlockOperationConfiguration struct {
@@ -1944,6 +1952,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	if r := cfg.Config.EngineExecutionConfiguration.IntScalarRange; r.Min >= r.Max {
+		return nil, fmt.Errorf("engine.int_scalar_range.min (%d) must be less than engine.int_scalar_range.max (%d)", r.Min, r.Max)
 	}
 
 	// Post-process the config

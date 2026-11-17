@@ -1104,6 +1104,10 @@
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
     "AllowStringLiteralsForEnums": false,
+    "IntScalarRange": {
+      "Min": -9007199254740991,
+      "Max": 9007199254740991
+    },
     "ValidateInlineArguments": {
       "Mode": "off",
       "EnforceHTTPStatusCode": 400,

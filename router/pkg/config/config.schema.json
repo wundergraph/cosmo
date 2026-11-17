@@ -4534,6 +4534,23 @@
           "type": "boolean",
           "default": false,
           "description": "Enables a deliberate deviation from the GraphQL specification that accepts a string literal where an enum value is expected, as long as the string content matches one of the enum's values (e.g. f(arg: \"VALUE1\") for enum SomeEnum { VALUE1 }). When disabled, only enum literals are valid inline values for enum types."
+        },
+        "int_scalar_range": {
+          "type": "object",
+          "description": "The inclusive range of values the router accepts for the Int scalar, in variables and inline literals. The GraphQL specification defines Int as a 32-bit signed integer. Widening the range is a deliberate deviation from the specification, e.g. min -9007199254740991 and max 9007199254740991 accept every JavaScript safe integer. Subgraphs must accept the wider values too. min must be less than max.",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "default": -2147483648,
+              "description": "The smallest accepted Int value."
+            },
+            "max": {
+              "type": "integer",
+              "default": 2147483647,
+              "description": "The largest accepted Int value."
+            }
+          }
         }
       }
     },

@@ -482,6 +482,9 @@ engine:
   websocket_client_ack_timeout: 30s
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
+  int_scalar_range:
+    min: -9007199254740991
+    max: 9007199254740991
   debug:
     report_websocket_connections: false
     report_memory_usage: false
