@@ -298,8 +298,8 @@
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true,
       "ResponseCompressionMinSize": 4096,
-      "ReadTimeout": 60000000000,
-      "ReadHeaderTimeout": 0,
+      "RequestReadTimeout": 60000000000,
+      "RequestHeaderReadTimeout": 0,
       "IdleTimeout": 0,
       "WriteTimeout": 0
     },

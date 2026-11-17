@@ -138,8 +138,8 @@ router_config_path: "config.json"
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, 60*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
-		require.Zero(t, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+		require.Equal(t, 60*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
 		require.Zero(t, cfg.Config.TrafficShaping.Router.IdleTimeout)
 		require.Zero(t, cfg.Config.TrafficShaping.Router.WriteTimeout)
 	})
@@ -154,15 +154,15 @@ router_config_path: "config.json"
 
 traffic_shaping:
   router:
-    read_timeout: 30s
-    read_header_timeout: 5s
+    request_read_timeout: 30s
+    request_header_read_timeout: 5s
     idle_timeout: 2m
     write_timeout: 3m
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, 30*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
-		require.Equal(t, 5*time.Second, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+		require.Equal(t, 30*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+		require.Equal(t, 5*time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
 		require.Equal(t, 2*time.Minute, cfg.Config.TrafficShaping.Router.IdleTimeout)
 		require.Equal(t, 3*time.Minute, cfg.Config.TrafficShaping.Router.WriteTimeout)
 	})
@@ -177,18 +177,18 @@ router_config_path: "config.json"
 
 traffic_shaping:
   router:
-    read_timeout: 0s
+    request_read_timeout: 0s
 `)
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/traffic_shaping/router/read_timeout': duration must be greater or equal than 1s", js.Causes[0].Error())
+		require.Equal(t, "at '/traffic_shaping/router/request_read_timeout': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
 
 func TestRouterTrafficTimeoutsFromEnv(t *testing.T) {
-	t.Setenv("TRAFFIC_SHAPING_ROUTER_READ_TIMEOUT", "20s")
-	t.Setenv("TRAFFIC_SHAPING_ROUTER_READ_HEADER_TIMEOUT", "3s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT", "20s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT", "3s")
 	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "45s")
 	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "50s")
 
@@ -199,10 +199,32 @@ router_config_path: "config.json"
 `)
 	cfg, err := LoadConfig([]string{f})
 	require.NoError(t, err)
-	require.Equal(t, 20*time.Second, cfg.Config.TrafficShaping.Router.ReadTimeout)
-	require.Equal(t, 3*time.Second, cfg.Config.TrafficShaping.Router.ReadHeaderTimeout)
+	require.Equal(t, 20*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+	require.Equal(t, 3*time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
 	require.Equal(t, 45*time.Second, cfg.Config.TrafficShaping.Router.IdleTimeout)
 	require.Equal(t, 50*time.Second, cfg.Config.TrafficShaping.Router.WriteTimeout)
+}
+
+// Environment variables don't go through the JSON schema validation, so negative durations are
+// loaded as-is. The HTTP server guards against them, see TestNewServer_NegativeTimeoutsFromEnv in
+// router/core.
+func TestRouterTrafficTimeoutsFromEnvAreNotValidated(t *testing.T) {
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "-1s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.IdleTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.WriteTimeout)
 }
 
 func TestCustomBytesExtension(t *testing.T) {

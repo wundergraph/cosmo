@@ -36,35 +36,38 @@ func TestSlowClientTimeouts(t *testing.T) {
 		return conn
 	}
 
-	// requireClosedByServer waits for the server to close the connection and returns how long it took.
+	// requireClosedByServer waits for the server to close the connection and returns how long it took
+	// since start. It reads from r rather than from conn, so callers that already wrapped conn in a
+	// bufio.Reader (to parse a response) pass that reader and no bytes it buffered are skipped. conn is
+	// only used to set a read deadline, so the test fails instead of hanging if the server never closes it.
 	requireClosedByServer := func(t *testing.T, r io.Reader, conn net.Conn, start time.Time) time.Duration {
 		t.Helper()
-		// Guard against the test hanging if the server never closes the connection.
 		require.NoError(t, conn.SetReadDeadline(time.Now().Add(10*time.Second)))
 		buf := make([]byte, 1)
 		n, err := r.Read(buf)
 		require.Zero(t, n)
 		require.Error(t, err)
-		var netErr net.Error
-		require.False(t, errors.As(err, &netErr) && netErr.Timeout(), "server did not close the connection")
+		netErr, ok := errors.AsType[net.Error](err)
+		require.False(t, ok && netErr.Timeout(), "server did not close the connection")
 		return time.Since(start)
 	}
 
-	t.Run("partial headers are cut off by read_header_timeout", func(t *testing.T) {
+	t.Run("request_header_read_timeout closes the connection before request_read_timeout when headers never complete", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-					MaxRequestBodyBytes: 5 << 20,
-					ReadTimeout:         30 * time.Second,
-					ReadHeaderTimeout:   500 * time.Millisecond,
+					MaxRequestBodyBytes:      5 << 20,
+					RequestReadTimeout:       30 * time.Second,
+					RequestHeaderReadTimeout: 500 * time.Millisecond,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Start timing before dialing: the server starts its deadline after accepting the connection.
+			start := time.Now()
 			conn := dialRouter(t, xEnv)
 
-			start := time.Now()
 			// The request line and one header, but never the blank line that terminates the headers.
 			_, err := fmt.Fprintf(conn, "POST /graphql HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n")
 			require.NoError(t, err)
@@ -72,47 +75,48 @@ func TestSlowClientTimeouts(t *testing.T) {
 			// net/http closes the connection without writing a response when reading the headers times out.
 			elapsed := requireClosedByServer(t, conn, conn, start)
 			require.GreaterOrEqual(t, elapsed, 500*time.Millisecond)
-			require.Less(t, elapsed, 10*time.Second, "read_header_timeout should apply, not read_timeout")
+			require.Less(t, elapsed, 10*time.Second, "request_header_read_timeout should apply, not request_read_timeout")
 		})
 	})
 
-	t.Run("partial headers are cut off by read_timeout when read_header_timeout is unset", func(t *testing.T) {
+	t.Run("request_read_timeout closes the connection when headers never complete and request_header_read_timeout is unset", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes: 5 << 20,
-					ReadTimeout:         500 * time.Millisecond,
+					RequestReadTimeout:  500 * time.Millisecond,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Start timing before dialing: the server starts its deadline after accepting the connection.
+			start := time.Now()
 			conn := dialRouter(t, xEnv)
 
-			start := time.Now()
 			_, err := fmt.Fprintf(conn, "POST /graphql HTTP/1.1\r\nHost: localhost\r\n")
 			require.NoError(t, err)
 
 			elapsed := requireClosedByServer(t, conn, conn, start)
-			// The read deadline starts when the server begins reading, which can be before start.
-			require.GreaterOrEqual(t, elapsed, 400*time.Millisecond)
+			require.GreaterOrEqual(t, elapsed, 500*time.Millisecond)
 		})
 	})
 
-	t.Run("partial body is cut off by read_timeout with 408", func(t *testing.T) {
+	t.Run("request_read_timeout responds with 408 and closes the connection when the body never completes", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes: 5 << 20,
-					ReadTimeout:         500 * time.Millisecond,
+					RequestReadTimeout:  500 * time.Millisecond,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Start timing before dialing: the server starts its deadline after accepting the connection.
+			start := time.Now()
 			conn := dialRouter(t, xEnv)
 
-			start := time.Now()
 			// Complete headers announcing the full body, then only half of it.
 			_, err := fmt.Fprintf(conn, "POST /graphql HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
 				len(operation), operation[:len(operation)/2])
@@ -123,8 +127,7 @@ func TestSlowClientTimeouts(t *testing.T) {
 			res, err := http.ReadResponse(br, nil)
 			require.NoError(t, err)
 			defer func() { _ = res.Body.Close() }()
-			// The read deadline starts when the server begins reading, which can be before start.
-			require.GreaterOrEqual(t, time.Since(start), 400*time.Millisecond)
+			require.GreaterOrEqual(t, time.Since(start), 500*time.Millisecond)
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
@@ -136,21 +139,22 @@ func TestSlowClientTimeouts(t *testing.T) {
 		})
 	})
 
-	t.Run("partial multipart body is cut off by read_timeout with 408", func(t *testing.T) {
+	t.Run("request_read_timeout responds with 408 and closes the connection when the multipart body never completes", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes: 5 << 20,
-					ReadTimeout:         500 * time.Millisecond,
+					RequestReadTimeout:  500 * time.Millisecond,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Start timing before dialing: the server starts its deadline after accepting the connection.
+			start := time.Now()
 			conn := dialRouter(t, xEnv)
 
 			part := "--boundary\r\nContent-Disposition: form-data; name=\"operations\"\r\n\r\n" + operation + "\r\n"
-			start := time.Now()
 			_, err := fmt.Fprintf(conn, "POST /graphql HTTP/1.1\r\nHost: localhost\r\nContent-Type: multipart/form-data; boundary=boundary\r\nContent-Length: %d\r\n\r\n%s",
 				len(part)*2, part)
 			require.NoError(t, err)
@@ -160,8 +164,7 @@ func TestSlowClientTimeouts(t *testing.T) {
 			res, err := http.ReadResponse(br, nil)
 			require.NoError(t, err)
 			defer func() { _ = res.Body.Close() }()
-			// The read deadline starts when the server begins reading, which can be before start.
-			require.GreaterOrEqual(t, time.Since(start), 400*time.Millisecond)
+			require.GreaterOrEqual(t, time.Since(start), 500*time.Millisecond)
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
@@ -172,20 +175,23 @@ func TestSlowClientTimeouts(t *testing.T) {
 		})
 	})
 
-	t.Run("idle keep-alive connection is closed by idle_timeout", func(t *testing.T) {
+	t.Run("idle_timeout closes an idle keep-alive connection before request_read_timeout", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes: 5 << 20,
-					ReadTimeout:         30 * time.Second,
+					RequestReadTimeout:  30 * time.Second,
 					IdleTimeout:         500 * time.Millisecond,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := dialRouter(t, xEnv)
 
+			// Start timing before sending the request: the idle timeout starts once the server has
+			// written the response, which can happen before the client has finished reading it.
+			start := time.Now()
 			_, err := fmt.Fprintf(conn, "POST /graphql HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
 				len(operation), operation)
 			require.NoError(t, err)
@@ -200,10 +206,9 @@ func TestSlowClientTimeouts(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.True(t, strings.Contains(string(body), `"employees"`), string(body))
 
-			start := time.Now()
 			elapsed := requireClosedByServer(t, br, conn, start)
-			require.GreaterOrEqual(t, elapsed, 400*time.Millisecond)
-			require.Less(t, elapsed, 10*time.Second, "idle_timeout should apply, not read_timeout")
+			require.GreaterOrEqual(t, elapsed, 500*time.Millisecond)
+			require.Less(t, elapsed, 10*time.Second, "idle_timeout should apply, not request_read_timeout")
 		})
 	})
 }
