@@ -2478,6 +2478,26 @@ engine:
     return_in_response_extensions: false
 ```
 
+### Int Scalar Range
+
+The [range of values accepted for the Int scalar](/router/int-scalar-range) in variables and inline literals. Widening the range is a deviation from the GraphQL specification. `min` must be less than `max`.
+
+| Environment Variable        | YAML | Required               | Description                      | Default Value |
+|-----------------------------|------|------------------------|----------------------------------|---------------|
+| ENGINE_INT_SCALAR_RANGE_MIN | min  | <Icon icon="square" /> | The smallest accepted Int value. | -2147483648   |
+| ENGINE_INT_SCALAR_RANGE_MAX | max  | <Icon icon="square" /> | The largest accepted Int value.  | 2147483647    |
+
+#### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+engine:
+  int_scalar_range:
+    min: -9007199254740991
+    max: 9007199254740991
+```
+
 ## Rate Limiting
 
 Configures a rate limiter on the outgoing subgraphs requests. When enabled, a rate of 10 req/s with a burst of 10 requests is configured.

@@ -315,6 +315,7 @@
               },
               "router/relaxed-field-selection-merging-nullability",
               "router/string-literals-for-enums",
+              "router/int-scalar-range",
               "router/file-upload",
               "router/access-logs",
               "router/profiling",

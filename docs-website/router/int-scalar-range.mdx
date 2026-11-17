@@ -1,0 +1,77 @@
+---
+title: "Int Scalar Range"
+icon: "hashtag"
+description: "Accept Int values outside the 32-bit range as an opt-in deviation from the GraphQL specification."
+---
+
+The GraphQL specification defines `Int` as a 32-bit signed integer, from `-2147483648` to `2147483647`. By default, the router rejects an `Int` variable outside this range:
+
+```
+Variable "$id" got invalid value 3000000000; Int cannot represent non 32-bit signed integer value: 3000000000
+```
+
+An inline `Int` literal outside this range is rejected the same way:
+
+```
+Int cannot represent non 32-bit signed integer value: 3000000000
+```
+
+The `int_scalar_range` option sets the inclusive range the router accepts for `Int`. It applies to variables, inline literals, and variable default values. Values outside the configured range are still rejected:
+
+```
+Variable "$id" got invalid value 9007199254740992; Int cannot represent integer value outside [-9007199254740991, 9007199254740991]: 9007199254740992
+```
+
+<Warning>
+  This is a deviation from the GraphQL specification. The router forwards accepted values to subgraphs unchanged. Every subgraph that receives a wider value must accept it. Many GraphQL servers reject `Int` values outside the 32-bit range.
+</Warning>
+
+## Choosing a range
+
+The range `-9007199254740991` to `9007199254740991` accepts every JavaScript safe integer (`Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`). JavaScript clients and servers represent these values without losing precision.
+
+The router compares variable values as 64-bit floating point numbers. Keep both bounds within the safe integer range so that the comparison is exact.
+
+## Examples
+
+Given the schema:
+
+```graphql
+type Query {
+  employee(id: Int!): Employee
+}
+```
+
+With `min: -9007199254740991` and `max: 9007199254740991`, the following operations behave as listed:
+
+```graphql
+{ employee(id: 3000000000) { id } }        # Valid. Invalid with the default range.
+{ employee(id: 9007199254740992) { id } }  # Invalid. Outside the configured range.
+
+query ($id: Int!) { employee(id: $id) { id } }
+# variables: {"id": 9007199254740991} is valid
+# variables: {"id": 9007199254740992} is invalid
+```
+
+## Configuration
+
+<Tabs>
+  <Tab title="Environment Variable">
+    ```bash
+    ENGINE_INT_SCALAR_RANGE_MIN=-9007199254740991
+    ENGINE_INT_SCALAR_RANGE_MAX=9007199254740991
+    ```
+  </Tab>
+  <Tab title="YAML">
+    ```yaml config.yaml
+    version: "1"
+
+    engine:
+      int_scalar_range:
+        min: -9007199254740991
+        max: 9007199254740991
+    ```
+  </Tab>
+</Tabs>
+
+The default range is `-2147483648` to `2147483647`. A bound that is not set keeps its default. `min` must be less than `max`, or the router fails to start. See the [Router Configuration reference](/router/configuration#int-scalar-range) for all engine options.
