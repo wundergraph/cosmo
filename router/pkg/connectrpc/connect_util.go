@@ -83,7 +83,7 @@ func ConnectCodeToHTTPStatus(code connect.Code) int {
 
 func (r *GraphQLResponse) ConnectCode() connect.Code {
 	code, ok := commonConnectCode(len(r.Errors), func(i int) (connect.Code, bool) {
-		return r.errorConnectCode(r.Errors[i].Extensions)
+		return r.routerErrorConnectCode(r.Errors[i].Extensions)
 	})
 	if !ok {
 		return connect.CodeUnknown
@@ -91,19 +91,23 @@ func (r *GraphQLResponse) ConnectCode() connect.Code {
 	return code
 }
 
-func (r *GraphQLResponse) errorConnectCode(extensions map[string]any) (connect.Code, bool) {
-	code, _ := extensions["code"].(string)
-	if code == errorcodes.UnauthorizedFieldOrType {
+func (r *GraphQLResponse) routerErrorConnectCode(extensions map[string]any) (connect.Code, bool) {
+	if code, _ := extensions["code"].(string); code == errorcodes.UnauthorizedFieldOrType {
 		return r.fieldAuthorizationDenialCode(), true
 	}
-	if c, ok := connectCodeFromGRPCStatusName(code); ok {
+	return statusErrorConnectCode(extensions)
+}
+
+func statusErrorConnectCode(extensions map[string]any) (connect.Code, bool) {
+	code, _ := extensions["code"].(string)
+	if c, ok := connectCodeFromStatusName(code); ok {
 		return c, true
 	}
 	wrappedSubgraphErrors, _ := extensions["errors"].([]any)
 	return commonConnectCode(len(wrappedSubgraphErrors), func(i int) (connect.Code, bool) {
 		subgraphError, _ := wrappedSubgraphErrors[i].(map[string]any)
 		subgraphErrorExtensions, _ := subgraphError["extensions"].(map[string]any)
-		return r.errorConnectCode(subgraphErrorExtensions)
+		return statusErrorConnectCode(subgraphErrorExtensions)
 	})
 }
 
@@ -117,8 +121,6 @@ func (r *GraphQLResponse) fieldAuthorizationDenialCode() connect.Code {
 	return connect.CodeUnauthenticated
 }
 
-// commonConnectCode returns the code that all n errors map to. It reports false if there
-// are no errors, any error has no code, or the errors disagree.
 func commonConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.Code, bool) {
 	if n == 0 {
 		return 0, false
@@ -134,20 +136,23 @@ func commonConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.
 	return code, true
 }
 
-// connectCodesByStatusName is keyed by lower-case status names without underscores, so
-// "NotFound", "NOT_FOUND" and "not_found" all match.
-var connectCodesByStatusName = func() map[string]connect.Code {
+const grpcCanceledStatusName = "CANCELLED"
+
+var connectCodesByNormalizedStatusName = func() map[string]connect.Code {
 	codes := map[string]connect.Code{
-		// gRPC spells it with two Ls, Connect with one.
-		"cancelled": connect.CodeCanceled,
+		normalizeStatusName(grpcCanceledStatusName): connect.CodeCanceled,
 	}
 	for c := connect.CodeCanceled; c <= connect.CodeUnauthenticated; c++ {
-		codes[strings.ReplaceAll(c.String(), "_", "")] = c
+		codes[normalizeStatusName(c.String())] = c
 	}
 	return codes
 }()
 
-func connectCodeFromGRPCStatusName(name string) (connect.Code, bool) {
-	c, ok := connectCodesByStatusName[strings.ToLower(strings.ReplaceAll(name, "_", ""))]
+func normalizeStatusName(name string) string {
+	return strings.ToLower(strings.ReplaceAll(name, "_", ""))
+}
+
+func connectCodeFromStatusName(name string) (connect.Code, bool) {
+	c, ok := connectCodesByNormalizedStatusName[normalizeStatusName(name)]
 	return c, ok
 }

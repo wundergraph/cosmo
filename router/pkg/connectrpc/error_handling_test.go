@@ -151,6 +151,46 @@ func TestErrorHandling(t *testing.T) {
 			},
 		},
 		{
+			// The outer response's missing scopes describe this router's authorizer, not the
+			// subgraph's, so they can't say whether the subgraph's caller was authenticated.
+			name:       "Wrapped subgraph field authorization error stays unknown",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'users'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "Unauthorized to load field 'Query.secret'.",
+									"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+								}
+							],
+							"statusCode": 200
+						}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeUnknown,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "gRPC subgraph error that is not a gRPC status",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "failed to dial subgraph",
+						"extensions": {"code": "Internal"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeInternal,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
 			name:       "gRPC subgraph NotFound in pass-through mode",
 			httpStatus: http.StatusOK,
 			graphqlResponse: `{
