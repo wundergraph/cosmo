@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { auditLogs, auditLogStreamConfigs, organizations } from '../../db/schema.js';
@@ -77,7 +77,12 @@ export class AuditLogStreamRepository {
       .select({ config: auditLogStreamConfigs })
       .from(auditLogStreamConfigs)
       .innerJoin(organizations, eq(organizations.id, auditLogStreamConfigs.organizationId))
-      .where(and(eq(auditLogStreamConfigs.enabled, true), sql`${organizations.isDeactivated} is not true`))
+      .where(
+        and(
+          eq(auditLogStreamConfigs.enabled, true),
+          or(eq(organizations.isDeactivated, false), isNull(organizations.isDeactivated)),
+        ),
+      )
       .execute();
     return rows.map((r) => r.config);
   }

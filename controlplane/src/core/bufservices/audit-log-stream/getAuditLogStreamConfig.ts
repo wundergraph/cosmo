@@ -21,7 +21,7 @@ export function getAuditLogStreamConfig(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.rbac.isOrganizationAdmin) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 

@@ -13,7 +13,7 @@ import { AuditLogRepository } from '../src/core/repositories/AuditLogRepository.
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { RunMigration } from '../src/core/migrate.js';
 import * as schema from '../src/db/schema.js';
-import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, createTestContext, genID, TestUser } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -222,6 +222,29 @@ describe('Audit log streaming', () => {
       enabled: true,
     });
     expect(res.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+  });
+
+  test('deactivated organizations cannot use the stream endpoints', async (testContext) => {
+    const { client, server, authenticator, users } = await SetupTest({
+      dbname,
+      enabledFeatures: ['audit-log-streaming'],
+    });
+    testContext.onTestFinished(() => server.close());
+
+    const { organizationName, organizationId } = users.adminAliceCompanyA;
+    authenticator.changeUserWithSuppliedContext(
+      createTestContext(organizationName, organizationId, ['organization-admin'], true),
+    );
+
+    const responses = await Promise.all([
+      client.getAuditLogStreamConfig({}),
+      client.upsertAuditLogStreamConfig({ endpoint: 'https://splunk.example.com', token: 'secret', enabled: true }),
+      client.testAuditLogStreamConfig({}),
+      client.deleteAuditLogStreamConfig({}),
+    ]);
+    for (const res of responses) {
+      expect(res.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+    }
   });
 
   test('only organizations with the feature can configure or test the stream', async (testContext) => {
