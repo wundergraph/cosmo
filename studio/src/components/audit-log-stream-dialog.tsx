@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +18,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { formatDateTime } from '@/lib/format-date';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   deleteAuditLogStreamConfig,
@@ -71,7 +73,7 @@ export const AuditLogStreamDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data, isLoading, refetch } = useQuery(getAuditLogStreamConfig, {}, { enabled: isOpen });
+  const { data, isLoading, error, refetch } = useQuery(getAuditLogStreamConfig, {}, { enabled: isOpen });
   const config = data?.config;
 
   const { mutate: upsert, isPending: isSaving } = useMutation(upsertAuditLogStreamConfig);
@@ -100,6 +102,11 @@ export const AuditLogStreamDialog = () => {
   });
 
   const destination = form.watch('destination');
+  const { isDirty, isValid } = form.formState;
+  const isAlreadyNone = destination === 'none' && !config;
+  // Button ignores isLoading once disabled is passed, so the pending states must be checked here too.
+  const canSave = !isSaving && !isRemoving && (isValid || !isDirty) && !isAlreadyNone;
+  const canTest = !isTesting && !isDirty;
 
   const onSubmit: SubmitHandler<Input> = ({ destination, hasStoredToken, ...values }) => {
     if (destination === 'none') {
@@ -107,7 +114,7 @@ export const AuditLogStreamDialog = () => {
       return;
     }
     upsert(
-      { ...values, token: values.token || undefined },
+      { ...values, source: config?.source, token: values.token || undefined },
       handle('Audit log export saved', 'Could not save the audit log export'),
     );
   };
@@ -137,6 +144,13 @@ export const AuditLogStreamDialog = () => {
 
         {isLoading ? (
           <Loader className="my-8" />
+        ) : error || data?.response?.code !== EnumStatusCode.OK ? (
+          <EmptyState
+            icon={<ExclamationTriangleIcon />}
+            title="Could not retrieve the audit log export"
+            description={data?.response?.details || error?.message || 'Please try again'}
+            actions={<Button onClick={() => refetch()}>Retry</Button>}
+          />
         ) : (
           <Form {...form}>
             <form className="flex w-full flex-col gap-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -272,16 +286,13 @@ export const AuditLogStreamDialog = () => {
 
               <DialogFooter className="gap-2">
                 {config && destination === 'splunk' && (
-                  <Button type="button" variant="outline" isLoading={isTesting} onClick={onTest}>
-                    Send test event
-                  </Button>
+                  <span title={isDirty ? 'Save your changes before sending a test event' : undefined}>
+                    <Button type="button" variant="outline" isLoading={isTesting} disabled={!canTest} onClick={onTest}>
+                      Send test event
+                    </Button>
+                  </span>
                 )}
-                <Button
-                  type="submit"
-                  isLoading={isSaving || isRemoving}
-                  // Saving None is only meaningful when there's a destination to remove.
-                  disabled={(!form.formState.isValid && form.formState.isDirty) || (destination === 'none' && !config)}
-                >
+                <Button type="submit" isLoading={isSaving || isRemoving} disabled={!canSave}>
                   Save
                 </Button>
               </DialogFooter>
