@@ -103,20 +103,17 @@ func cursorClientIdentity(auth authentication.Authentication, identityClaim stri
 	}, nil
 }
 
-// claimString returns string claims as they are and JSON-encodes all other claims.
+// claimString JSON-encodes a claim, strings included, so the type survives:
+// the string claim "123" and the number claim 123 must not bind to the same client.
 func claimString(v any) string {
-	switch v := v.(type) {
-	case nil:
+	if v == nil {
 		return ""
-	case string:
-		return v
-	default:
-		b, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Sprint(v)
-		}
-		return string(b)
 	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprint(v)
+	}
+	return string(b)
 }
 
 // claimStrings returns a list claim like aud as strings. A single value is a list of one.
@@ -125,14 +122,19 @@ func claimStrings(v any) []string {
 	case nil:
 		return nil
 	case []string:
-		return v
+		return claimEach(v)
 	case []any:
-		out := make([]string, 0, len(v))
-		for _, item := range v {
-			out = append(out, claimString(item))
-		}
-		return out
+		return claimEach(v)
 	default:
 		return []string{claimString(v)}
 	}
+}
+
+// claimEach encodes every item of a list claim with claimString.
+func claimEach[T any](items []T) []string {
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		out = append(out, claimString(item))
+	}
+	return out
 }
