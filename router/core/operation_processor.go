@@ -1688,7 +1688,7 @@ type parseKitOptions struct {
 	disableExposingVariablesContentOnValidationError       bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
-	intRange                                               ast.IntRange
+	intScalarRange                                         ast.IntRange
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
 }
@@ -1716,7 +1716,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
-			IntRange:                        options.intRange,
+			IntRange:                        options.intScalarRange,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
@@ -1761,7 +1761,8 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 		apollocompatibility.Flags{
 			UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
 		},
-	), astvalidation.WithIntRange(options.intRange))
+	))
+	opts = append(opts, astvalidation.WithIntRange(options.intScalarRange))
 	if options.relaxSubgraphOperationFieldSelectionMergingNullability {
 		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
 	}
@@ -1797,7 +1798,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
-			intRange:                                               ast.IntRange{Min: opts.IntScalarRange.Min, Max: opts.IntScalarRange.Max},
+			intScalarRange:                                         ast.IntRange{Min: opts.IntScalarRange.Min, Max: opts.IntScalarRange.Max},
 			validateInlineArguments:                                opts.ValidateInlineArguments,
 		},
 	}

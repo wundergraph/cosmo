@@ -128,21 +128,9 @@ router_config_path: "config.json"
 }
 
 func TestIntScalarRange(t *testing.T) {
-	t.Run("reads min and max from the environment", func(t *testing.T) {
-		t.Setenv("ENGINE_INT_SCALAR_RANGE_MIN", "-9007199254740991")
-		t.Setenv("ENGINE_INT_SCALAR_RANGE_MAX", "9007199254740991")
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-router_config_path: "config.json"
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		require.Equal(t, IntScalarRange{Min: -9007199254740991, Max: 9007199254740991}, cfg.Config.EngineExecutionConfiguration.IntScalarRange)
-	})
-
 	t.Run("keeps the default min when only max is set", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -156,25 +144,51 @@ engine:
 		require.Equal(t, IntScalarRange{Min: -2147483648, Max: 9007199254740991}, cfg.Config.EngineExecutionConfiguration.IntScalarRange)
 	})
 
-	for name, intRange := range map[string]string{
-		"inverted": "min: 10\n    max: -10",
-		"empty":    "min: 0\n    max: 0",
-	} {
-		t.Run("rejects an "+name+" range", func(t *testing.T) {
-			t.Parallel()
+	t.Run("rejects min greater than max", func(t *testing.T) {
+		t.Parallel()
 
-			f := createTempFileFromFixture(t, `
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 router_config_path: "config.json"
 engine:
   int_scalar_range:
-    `+intRange+`
+    min: 10
+    max: -10
 `)
-			_, err := LoadConfig([]string{f})
-			require.ErrorContains(t, err, "engine.int_scalar_range.min")
-		})
-	}
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "engine.int_scalar_range.min (10) must be less than engine.int_scalar_range.max (-10)")
+	})
+
+	t.Run("rejects min equal to max", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+engine:
+  int_scalar_range:
+    min: 0
+    max: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "engine.int_scalar_range.min (0) must be less than engine.int_scalar_range.max (0)")
+	})
+}
+
+func TestIntScalarRangeFromEnv(t *testing.T) {
+	t.Setenv("ENGINE_INT_SCALAR_RANGE_MIN", "-9007199254740991")
+	t.Setenv("ENGINE_INT_SCALAR_RANGE_MAX", "9007199254740991")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, IntScalarRange{Min: -9007199254740991, Max: 9007199254740991}, cfg.Config.EngineExecutionConfiguration.IntScalarRange)
 }
 
 func TestGraphQLOverHTTPStatusCodesFromEnv(t *testing.T) {
