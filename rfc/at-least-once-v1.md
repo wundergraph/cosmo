@@ -2,7 +2,9 @@
 
 Status: Draft  
 Author: Dominik Korittki  
-Date: 2026.09.10
+Date: 2026.10.14
+
+Revision 2: Changed on/off toggle to per-subscriptions via schema directive
 
 ## The Problem
 
@@ -21,8 +23,7 @@ consequences:
 
 ### Goals
 
-- **Backwards-compatible**: Merging the feature doesn't break anything for any user. No schema
-  changes, no config changes.
+- **Backwards-compatible**: Merging the feature doesn't break anything for any user.
 - **Scalable**: Works with any number of router instances, routers behind load-balancers, etc.
 - **Works with WS / SSE**: Works on SSE and websocket connections
 - **Receive every message at least once**: despite transport problems or offline time
@@ -583,9 +584,7 @@ type SeekableAdapter interface {
 }
 ```
 
-An adapter that does not implement `SeekableAdapter` cannot serve the `cursor` guarantee. The router
-finds this out with a type assertion when it plans the subscription, and answers the handshake with
-`DELIVERY_GUARANTEE_UNSUPPORTED` if the assertion fails.
+An adapter that does not implement `SeekableAdapter` cannot serve the `cursor` guarantee.
 
 `DecodePosition` is used when a cursor needs to be unmarshaled from wire format into a concrete
 type.
@@ -595,16 +594,56 @@ For example Kafka will be a seekable adapter, so there is a concrete type called
 
 ### Config
 
+#### Enabling / Disabling cursors on subscriptions
+
+There is no global on/off switch for this feature. Whether a subscription field can serve cursors
+is a schema decision, made by the subgraph author on the subscription field itself, via a new
+optional argument shared by all three EDFS subscribe directives:
+
+```graphql
+directive @edfs__kafkaSubscribe(
+  topics: [String!]!
+  providerId: String! = "default"
+  deliveryGuarantee: edfs__DeliveryGuarantee
+) on FIELD_DEFINITION
+
+input edfs__DeliveryGuarantee {
+  mode: edfs__DeliveryGuaranteeMode! = OFF
+}
+
+enum edfs__DeliveryGuaranteeMode {
+  OFF
+  CURSOR
+}
+```
+
+The SDL above only shows Kafka as an example but the same field `deliveryGuarantee` is added to
+`@edfs__natsSubscribe` and `@edfs__redisSubscribe`, making it consistent for all providers.
+
+This schema change is fully backwards compatible. If not specified clients are served at-most-once
+like they used to. The default `mode` is `OFF`.
+
+In case a Cosmo user declares a subscription `mode = CURSOR` but that subscription is backed by a
+non-resumeable broker, the router prints an error and refuses to boot.
+
+The enum `edfs__DeliveryGuaranteeMode` is meant to be extensible. If we want to provide other
+at-least-once strategies we can extend this enum.
+
+A usage example would look like this:
+
+```graphql
+myEDFSSubscription(someArg: Int!): MyReturnType!
+  @edfs__kafkaSubscribe(topics: ["myKafkaTopic"], deliveryGuarantees: { mode: CURSOR })
+```
+
+#### Router yaml config
+
 Everything is configured under `events.delivery-guarantees.cursor-resume`
 
 ```yaml
 events:
   delivery-guarantees:
     cursor-resume:
-      # makes the router advertise cursor capabilities on handshakes.
-      # ignores client handshakes if false.
-      enabled: true # default false
-
       # how long the router accepts old cursors.
       # note: should not exceed the brokers retention window.
       max_resume_window: 24h # default 3h
