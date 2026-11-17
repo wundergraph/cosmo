@@ -2894,6 +2894,12 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
+func WithGraphQLOverHTTP(cfg config.GraphQLOverHTTPConfiguration) Option {
+	return func(r *Router) {
+		r.graphqlOverHTTP = cfg
+	}
+}
+
 func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
 	return func(r *Router) {
 		r.backwardsCompatibility = cfg

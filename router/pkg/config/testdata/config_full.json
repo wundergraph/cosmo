@@ -1321,6 +1321,9 @@
       "Enabled": true
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "September2026"
+  },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
