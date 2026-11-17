@@ -182,7 +182,7 @@ describe('Audit log streaming', () => {
       enabled: true,
     });
     expect(invalidToken.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-    expect(invalidToken.response?.details).not.toContain('secret');
+    expect(invalidToken.response?.details).toBe('The HEC token contains invalid characters');
 
     const created = await client.upsertAuditLogStreamConfig({
       endpoint: 'https://splunk.example.com:8088',
