@@ -30,6 +30,16 @@ import { AuditLogStreamConfig } from '@wundergraph/cosmo-connect/dist/platform/v
 import { useState } from 'react';
 import { z } from 'zod';
 
+/** The rules must match `normalizeHecEndpoint` in the controlplane, which makes the final decision. */
+const isValidHecEndpoint = (input: string) => {
+  try {
+    const url = new URL(input.trim());
+    return url.protocol === 'https:' && url.hostname !== 'localhost' && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+};
+
 const FormSchema = z
   .object({
     destination: z.enum(['none', 'splunk']),
@@ -45,8 +55,8 @@ const FormSchema = z
     if (values.destination === 'none') {
       return;
     }
-    if (!z.string().url().safeParse(values.endpoint).success) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endpoint'], message: 'Enter a valid URL' });
+    if (!isValidHecEndpoint(values.endpoint)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endpoint'], message: 'Enter a valid HTTPS URL' });
     }
     if (!values.token && !values.hasStoredToken) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['token'], message: 'A token is required' });
