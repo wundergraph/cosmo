@@ -23,14 +23,19 @@ Variable "$id" got invalid value 9007199254740992; Int cannot represent integer 
 ```
 
 <Warning>
-  This is a deviation from the GraphQL specification. The router forwards accepted values to subgraphs unchanged. Every subgraph that receives a wider value must accept it. Many GraphQL servers reject `Int` values outside the 32-bit range.
+  This is a deviation from the GraphQL specification. How a subgraph receives an accepted value depends on its protocol:
+
+  - HTTP subgraphs receive the integer in the JSON request. Many GraphQL servers reject `Int` values outside the 32-bit range.
+  - gRPC subgraphs and router plugins map `Int` to the protobuf `int32` type. The router truncates values outside the 32-bit range. For example, `3000000000` arrives as `-1294967296`.
+
+  Do not widen the range for `Int` values sent to gRPC subgraphs or router plugins. The exception is a proto field changed to a 64-bit type such as `int64`.
 </Warning>
 
 ## Choosing a range
 
-The range `-9007199254740991` to `9007199254740991` accepts every JavaScript safe integer (`Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`). JavaScript clients and servers represent these values without losing precision.
+Both bounds can be any 64-bit signed integer.
 
-The router compares variable values as 64-bit floating point numbers. Keep both bounds within the safe integer range so that the comparison is exact.
+The range `-9007199254740991` to `9007199254740991` accepts every JavaScript safe integer (`Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`). JavaScript clients and servers represent these values without losing precision. Stay within this range if any client or subgraph uses JavaScript.
 
 ## Examples
 
