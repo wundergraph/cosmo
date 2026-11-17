@@ -364,6 +364,18 @@ const (
 	// PlatformServiceDeleteIntegrationProcedure is the fully-qualified name of the PlatformService's
 	// DeleteIntegration RPC.
 	PlatformServiceDeleteIntegrationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteIntegration"
+	// PlatformServiceGetAuditLogStreamConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetAuditLogStreamConfig RPC.
+	PlatformServiceGetAuditLogStreamConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAuditLogStreamConfig"
+	// PlatformServiceUpsertAuditLogStreamConfigProcedure is the fully-qualified name of the
+	// PlatformService's UpsertAuditLogStreamConfig RPC.
+	PlatformServiceUpsertAuditLogStreamConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/UpsertAuditLogStreamConfig"
+	// PlatformServiceDeleteAuditLogStreamConfigProcedure is the fully-qualified name of the
+	// PlatformService's DeleteAuditLogStreamConfig RPC.
+	PlatformServiceDeleteAuditLogStreamConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteAuditLogStreamConfig"
+	// PlatformServiceTestAuditLogStreamConfigProcedure is the fully-qualified name of the
+	// PlatformService's TestAuditLogStreamConfig RPC.
+	PlatformServiceTestAuditLogStreamConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/TestAuditLogStreamConfig"
 	// PlatformServiceDeleteUserProcedure is the fully-qualified name of the PlatformService's
 	// DeleteUser RPC.
 	PlatformServiceDeleteUserProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteUser"
@@ -865,6 +877,14 @@ type PlatformServiceClient interface {
 	UpdateIntegrationConfig(context.Context, *connect.Request[v1.UpdateIntegrationConfigRequest]) (*connect.Response[v1.UpdateIntegrationConfigResponse], error)
 	// DeleteIntegration deletes an organization web integration hook
 	DeleteIntegration(context.Context, *connect.Request[v1.DeleteIntegrationRequest]) (*connect.Response[v1.DeleteIntegrationResponse], error)
+	// GetAuditLogStreamConfig returns the organization's audit log stream (Splunk HEC) configuration
+	GetAuditLogStreamConfig(context.Context, *connect.Request[v1.GetAuditLogStreamConfigRequest]) (*connect.Response[v1.GetAuditLogStreamConfigResponse], error)
+	// UpsertAuditLogStreamConfig creates or updates the organization's audit log stream configuration
+	UpsertAuditLogStreamConfig(context.Context, *connect.Request[v1.UpsertAuditLogStreamConfigRequest]) (*connect.Response[v1.UpsertAuditLogStreamConfigResponse], error)
+	// DeleteAuditLogStreamConfig removes the organization's audit log stream configuration
+	DeleteAuditLogStreamConfig(context.Context, *connect.Request[v1.DeleteAuditLogStreamConfigRequest]) (*connect.Response[v1.DeleteAuditLogStreamConfigResponse], error)
+	// TestAuditLogStreamConfig sends a single test event to the configured collector
+	TestAuditLogStreamConfig(context.Context, *connect.Request[v1.TestAuditLogStreamConfigRequest]) (*connect.Response[v1.TestAuditLogStreamConfigResponse], error)
 	// DeleteUser deletes the user
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
@@ -1725,6 +1745,30 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("DeleteIntegration")),
 			connect.WithClientOptions(opts...),
 		),
+		getAuditLogStreamConfig: connect.NewClient[v1.GetAuditLogStreamConfigRequest, v1.GetAuditLogStreamConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetAuditLogStreamConfigProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetAuditLogStreamConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertAuditLogStreamConfig: connect.NewClient[v1.UpsertAuditLogStreamConfigRequest, v1.UpsertAuditLogStreamConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceUpsertAuditLogStreamConfigProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpsertAuditLogStreamConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAuditLogStreamConfig: connect.NewClient[v1.DeleteAuditLogStreamConfigRequest, v1.DeleteAuditLogStreamConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteAuditLogStreamConfigProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("DeleteAuditLogStreamConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		testAuditLogStreamConfig: connect.NewClient[v1.TestAuditLogStreamConfigRequest, v1.TestAuditLogStreamConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceTestAuditLogStreamConfigProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("TestAuditLogStreamConfig")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteUser: connect.NewClient[v1.DeleteUserRequest, v1.DeleteUserResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteUserProcedure,
@@ -2442,6 +2486,10 @@ type platformServiceClient struct {
 	getOrganizationIntegrations                        *connect.Client[v1.GetOrganizationIntegrationsRequest, v1.GetOrganizationIntegrationsResponse]
 	updateIntegrationConfig                            *connect.Client[v1.UpdateIntegrationConfigRequest, v1.UpdateIntegrationConfigResponse]
 	deleteIntegration                                  *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
+	getAuditLogStreamConfig                            *connect.Client[v1.GetAuditLogStreamConfigRequest, v1.GetAuditLogStreamConfigResponse]
+	upsertAuditLogStreamConfig                         *connect.Client[v1.UpsertAuditLogStreamConfigRequest, v1.UpsertAuditLogStreamConfigResponse]
+	deleteAuditLogStreamConfig                         *connect.Client[v1.DeleteAuditLogStreamConfigRequest, v1.DeleteAuditLogStreamConfigResponse]
+	testAuditLogStreamConfig                           *connect.Client[v1.TestAuditLogStreamConfigRequest, v1.TestAuditLogStreamConfigResponse]
 	deleteUser                                         *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 	deleteOrganization                                 *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
 	restoreOrganization                                *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
@@ -3115,6 +3163,26 @@ func (c *platformServiceClient) UpdateIntegrationConfig(ctx context.Context, req
 // DeleteIntegration calls wg.cosmo.platform.v1.PlatformService.DeleteIntegration.
 func (c *platformServiceClient) DeleteIntegration(ctx context.Context, req *connect.Request[v1.DeleteIntegrationRequest]) (*connect.Response[v1.DeleteIntegrationResponse], error) {
 	return c.deleteIntegration.CallUnary(ctx, req)
+}
+
+// GetAuditLogStreamConfig calls wg.cosmo.platform.v1.PlatformService.GetAuditLogStreamConfig.
+func (c *platformServiceClient) GetAuditLogStreamConfig(ctx context.Context, req *connect.Request[v1.GetAuditLogStreamConfigRequest]) (*connect.Response[v1.GetAuditLogStreamConfigResponse], error) {
+	return c.getAuditLogStreamConfig.CallUnary(ctx, req)
+}
+
+// UpsertAuditLogStreamConfig calls wg.cosmo.platform.v1.PlatformService.UpsertAuditLogStreamConfig.
+func (c *platformServiceClient) UpsertAuditLogStreamConfig(ctx context.Context, req *connect.Request[v1.UpsertAuditLogStreamConfigRequest]) (*connect.Response[v1.UpsertAuditLogStreamConfigResponse], error) {
+	return c.upsertAuditLogStreamConfig.CallUnary(ctx, req)
+}
+
+// DeleteAuditLogStreamConfig calls wg.cosmo.platform.v1.PlatformService.DeleteAuditLogStreamConfig.
+func (c *platformServiceClient) DeleteAuditLogStreamConfig(ctx context.Context, req *connect.Request[v1.DeleteAuditLogStreamConfigRequest]) (*connect.Response[v1.DeleteAuditLogStreamConfigResponse], error) {
+	return c.deleteAuditLogStreamConfig.CallUnary(ctx, req)
+}
+
+// TestAuditLogStreamConfig calls wg.cosmo.platform.v1.PlatformService.TestAuditLogStreamConfig.
+func (c *platformServiceClient) TestAuditLogStreamConfig(ctx context.Context, req *connect.Request[v1.TestAuditLogStreamConfigRequest]) (*connect.Response[v1.TestAuditLogStreamConfigResponse], error) {
+	return c.testAuditLogStreamConfig.CallUnary(ctx, req)
 }
 
 // DeleteUser calls wg.cosmo.platform.v1.PlatformService.DeleteUser.
@@ -3839,6 +3907,14 @@ type PlatformServiceHandler interface {
 	UpdateIntegrationConfig(context.Context, *connect.Request[v1.UpdateIntegrationConfigRequest]) (*connect.Response[v1.UpdateIntegrationConfigResponse], error)
 	// DeleteIntegration deletes an organization web integration hook
 	DeleteIntegration(context.Context, *connect.Request[v1.DeleteIntegrationRequest]) (*connect.Response[v1.DeleteIntegrationResponse], error)
+	// GetAuditLogStreamConfig returns the organization's audit log stream (Splunk HEC) configuration
+	GetAuditLogStreamConfig(context.Context, *connect.Request[v1.GetAuditLogStreamConfigRequest]) (*connect.Response[v1.GetAuditLogStreamConfigResponse], error)
+	// UpsertAuditLogStreamConfig creates or updates the organization's audit log stream configuration
+	UpsertAuditLogStreamConfig(context.Context, *connect.Request[v1.UpsertAuditLogStreamConfigRequest]) (*connect.Response[v1.UpsertAuditLogStreamConfigResponse], error)
+	// DeleteAuditLogStreamConfig removes the organization's audit log stream configuration
+	DeleteAuditLogStreamConfig(context.Context, *connect.Request[v1.DeleteAuditLogStreamConfigRequest]) (*connect.Response[v1.DeleteAuditLogStreamConfigResponse], error)
+	// TestAuditLogStreamConfig sends a single test event to the configured collector
+	TestAuditLogStreamConfig(context.Context, *connect.Request[v1.TestAuditLogStreamConfigRequest]) (*connect.Response[v1.TestAuditLogStreamConfigResponse], error)
 	// DeleteUser deletes the user
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
@@ -4695,6 +4771,30 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("DeleteIntegration")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetAuditLogStreamConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetAuditLogStreamConfigProcedure,
+		svc.GetAuditLogStreamConfig,
+		connect.WithSchema(platformServiceMethods.ByName("GetAuditLogStreamConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpsertAuditLogStreamConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceUpsertAuditLogStreamConfigProcedure,
+		svc.UpsertAuditLogStreamConfig,
+		connect.WithSchema(platformServiceMethods.ByName("UpsertAuditLogStreamConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteAuditLogStreamConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteAuditLogStreamConfigProcedure,
+		svc.DeleteAuditLogStreamConfig,
+		connect.WithSchema(platformServiceMethods.ByName("DeleteAuditLogStreamConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceTestAuditLogStreamConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceTestAuditLogStreamConfigProcedure,
+		svc.TestAuditLogStreamConfig,
+		connect.WithSchema(platformServiceMethods.ByName("TestAuditLogStreamConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceDeleteUserHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteUserProcedure,
 		svc.DeleteUser,
@@ -5519,6 +5619,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateIntegrationConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteIntegrationProcedure:
 			platformServiceDeleteIntegrationHandler.ServeHTTP(w, r)
+		case PlatformServiceGetAuditLogStreamConfigProcedure:
+			platformServiceGetAuditLogStreamConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceUpsertAuditLogStreamConfigProcedure:
+			platformServiceUpsertAuditLogStreamConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteAuditLogStreamConfigProcedure:
+			platformServiceDeleteAuditLogStreamConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceTestAuditLogStreamConfigProcedure:
+			platformServiceTestAuditLogStreamConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteUserProcedure:
 			platformServiceDeleteUserHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationProcedure:
@@ -6164,6 +6272,22 @@ func (UnimplementedPlatformServiceHandler) UpdateIntegrationConfig(context.Conte
 
 func (UnimplementedPlatformServiceHandler) DeleteIntegration(context.Context, *connect.Request[v1.DeleteIntegrationRequest]) (*connect.Response[v1.DeleteIntegrationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteIntegration is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetAuditLogStreamConfig(context.Context, *connect.Request[v1.GetAuditLogStreamConfigRequest]) (*connect.Response[v1.GetAuditLogStreamConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAuditLogStreamConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpsertAuditLogStreamConfig(context.Context, *connect.Request[v1.UpsertAuditLogStreamConfigRequest]) (*connect.Response[v1.UpsertAuditLogStreamConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpsertAuditLogStreamConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteAuditLogStreamConfig(context.Context, *connect.Request[v1.DeleteAuditLogStreamConfigRequest]) (*connect.Response[v1.DeleteAuditLogStreamConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteAuditLogStreamConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) TestAuditLogStreamConfig(context.Context, *connect.Request[v1.TestAuditLogStreamConfigRequest]) (*connect.Response[v1.TestAuditLogStreamConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.TestAuditLogStreamConfig is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error) {
