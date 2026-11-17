@@ -666,7 +666,7 @@
                 "pages": [
                   "cli/audit-log",
                   "cli/audit-log/stream/set-splunk",
-                  "cli/audit-log/stream/show",
+                  "cli/audit-log/stream/get",
                   "cli/audit-log/stream/test",
                   "cli/audit-log/stream/delete"
                 ]

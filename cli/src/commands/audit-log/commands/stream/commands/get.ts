@@ -5,7 +5,7 @@ import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('show');
+  const command = new Command('get');
   command.description('Shows the audit log stream configuration and its delivery status.');
   command.option('--json', 'Prints the output as JSON.');
   command.action(async (options) => {
