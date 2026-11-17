@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -107,9 +108,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 						parts, err := parseMultipartParts(body, params["boundary"])
 						require.NoError(t, err, "body: %s", body)
 						require.NoError(t, validateDeferParts(parts), "body: %s", body)
-						// A response that announces nothing deferred would also pass the
-						// protocol checks, so require at least one deferred payload.
-						require.GreaterOrEqual(t, len(parts), 2, "nothing was deferred: %s", body)
+						require.NoError(t, validateDataWasDeferred(parts, expected), "body: %s", body)
 
 						reconstructed, err := reconstructDeferResponse(parts)
 						require.NoError(t, err)
@@ -373,6 +372,27 @@ func validateDeferParts(parts [][]byte) error {
 	return nil
 }
 
+// validateDataWasDeferred rejects a response whose initial payload already
+// holds the full result. Such a response passes the protocol checks, for
+// example by following it with a completion-only part, but defers nothing.
+func validateDataWasDeferred(parts [][]byte, expected []byte) error {
+	initial, err := reconstructDeferResponse(parts[:1])
+	if err != nil {
+		return err
+	}
+	var got, want any
+	if err := json.Unmarshal(initial, &got); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(expected, &want); err != nil {
+		return err
+	}
+	if reflect.DeepEqual(got, want) {
+		return fmt.Errorf("initial payload already holds the full response, nothing was deferred")
+	}
+	return nil
+}
+
 func TestDeferResponseValidation(t *testing.T) {
 	t.Parallel()
 
@@ -393,12 +413,16 @@ func TestDeferResponseValidation(t *testing.T) {
 		{name: "unknown patch id", body: strings.Replace(wire, `"incremental":[{"id":"0"`, `"incremental":[{"id":"9"`, 1), err: "patches inactive id"},
 		{name: "fragment never completed", body: strings.Replace(wire, `,"completed":[{"id":"0"}]`, "", 1), err: "1 pending fragments"},
 		{name: "hasNext false before last part", body: strings.Replace(wire, `"hasNext":true`, `"hasNext":false`, 1), err: "hasNext=false"},
+		{name: "deferred data in initial payload", body: header + `{"data":{"user":{"id":"1","name":"Ada"}},"pending":[{"id":"0","path":["user"]}],"hasNext":true}` + "\r\n" + header + `{"completed":[{"id":"0"}],"hasNext":false}` + "\r\n--graphql--", err: "nothing was deferred"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			parts, err := parseMultipartParts([]byte(tc.body), "graphql")
 			if err == nil {
 				err = validateDeferParts(parts)
+			}
+			if err == nil {
+				err = validateDataWasDeferred(parts, []byte(`{"data":{"user":{"id":"1","name":"Ada"}}}`))
 			}
 			if tc.err != "" {
 				require.ErrorContains(t, err, tc.err)
