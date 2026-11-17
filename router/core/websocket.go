@@ -1275,8 +1275,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	})
 
 	reqContext.operation.protocol = OperationProtocolWS
+	// Capture only the ID, so the closure does not keep the subscribe message alive.
+	operationID := registration.msg.ID
 	reqContext.writeSubscriptionError = func(err error) {
-		if wErr := h.writeErrorMessage(registration.msg.ID, err); wErr != nil {
+		if wErr := h.writeErrorMessage(operationID, err); wErr != nil {
 			h.logger.Warn("writing subscription error message", zap.Error(wErr))
 		}
 	}
