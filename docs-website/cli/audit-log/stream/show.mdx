@@ -1,0 +1,37 @@
+---
+title: "Show"
+description: "Shows the audit log stream configuration and its delivery status."
+icon: eye
+---
+
+## Usage
+
+```bash
+npx wgc audit-log stream show [--json]
+```
+
+## Description
+
+The `npx wgc audit-log stream show` command prints the organization's audit log stream configuration, when a batch was last delivered, and the last delivery error, if any. The token is masked to its last four characters.
+
+## Options
+
+- `--json` : Prints the configuration as JSON. Prints `null` if no stream is configured.
+
+## Examples
+
+```bash
+npx wgc audit-log stream show
+```
+
+```
+Endpoint:    https://splunk.example.com:8088/services/collector/event
+Token:       ****3f9a
+Index:       cosmo
+Source:      cosmo
+Sourcetype:  wundergraph:cosmo:audit
+Enabled:     yes
+Last sent:   2026-11-14T09:00:00.000Z
+```
+
+If the collector rejected the last batch, a `Last error` line shows when and why. Delivery retries every 30 seconds from the same point until it succeeds.

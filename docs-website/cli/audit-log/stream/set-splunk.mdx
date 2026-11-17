@@ -1,0 +1,59 @@
+---
+title: "Set Splunk"
+description: "Creates or replaces the audit log stream with a Splunk HTTP Event Collector destination."
+icon: plus
+---
+
+## Usage
+
+```bash
+npx wgc audit-log stream set splunk --endpoint <url> [--token <token>] [options]
+```
+
+## Description
+
+The `npx wgc audit-log stream set splunk` command streams the organization's audit logs to a Splunk HTTP Event Collector (HEC). It creates the stream if none exists and replaces it otherwise.
+
+Every option that is left out is reset to its default, except the token, which keeps its stored value. Pass `--index`, `--source` and `--sourcetype` again on every call that should keep them.
+
+Use a HEC token with indexer acknowledgement disabled. See [Streaming to Splunk](/studio/audit-log#streaming-to-splunk) for the event format and delivery guarantees.
+
+## Required Options
+
+```bash
+--endpoint <url>
+```
+
+The collector's base URL, e.g. `https://splunk.example.com:8088`, or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA. `localhost` is not accepted.
+
+## Options
+
+- `--token <token>` : The HEC token. Required when creating the stream. Can also be set with the `COSMO_HEC_TOKEN` environment variable, which keeps it out of shell history. If left out, the stored token is kept.
+
+- `--index <index>` : The Splunk index to write to. If left out, events go to the token's default index.
+
+- `--source <source>` : The Splunk source. Defaults to `cosmo`.
+
+- `--sourcetype <sourcetype>` : The Splunk sourcetype. Defaults to `wundergraph:cosmo:audit`.
+
+- `--disabled` : Saves the configuration without streaming. Running the command again without this flag enables the stream.
+
+## Examples
+
+```bash
+COSMO_HEC_TOKEN=<token> npx wgc audit-log stream set splunk --endpoint https://splunk.example.com:8088 --index cosmo
+```
+
+Streams audit logs to the `cosmo` index.
+
+```bash
+npx wgc audit-log stream set splunk --endpoint https://splunk.example.com:8088 --index cosmo --disabled
+```
+
+Pauses the stream, keeping the stored token.
+
+## Notes
+
+- The token is stored by Cosmo and is never returned. `npx wgc audit-log stream show` prints its last four characters.
+- Saving the configuration clears the last delivery error.
+- Entries written before the stream was configured are not sent.

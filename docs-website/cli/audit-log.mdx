@@ -1,0 +1,22 @@
+---
+title: "Audit Log"
+icon: circle-info
+sidebarTitle: Overview
+---
+
+The `npx wgc audit-log` commands manage the organization's [audit log](/studio/audit-log). They require an organization admin.
+
+## Stream
+
+`npx wgc audit-log stream` configures where audit logs are streamed. An organization has at most one destination. Splunk HTTP Event Collector (HEC) is the only one supported for now.
+
+<CardGroup>
+<Card title="Set Splunk" href="/cli/audit-log/stream/set-splunk" icon="plus" horizontal/>
+<Card title="Show" href="/cli/audit-log/stream/show" icon="eye" horizontal/>
+<Card title="Test" href="/cli/audit-log/stream/test" icon="vial" horizontal/>
+<Card title="Delete" href="/cli/audit-log/stream/delete" icon="trash" horizontal/>
+</CardGroup>
+
+<Note>
+  Audit log streaming is an Enterprise plan feature.
+</Note>
