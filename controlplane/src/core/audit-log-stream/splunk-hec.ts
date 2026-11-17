@@ -59,7 +59,7 @@ export function normalizeHecEndpoint(input: string): string | undefined {
 }
 
 export function isValidHecToken(token: string) {
-  return /^[\x21-\x7e]+$/.test(token);
+  return /^[\u0021-\u007E]+$/.test(token);
 }
 
 export function toHecEvent(log: AuditLogRow, target: Pick<HecTarget, 'index' | 'source' | 'sourcetype'>) {
