@@ -17,8 +17,11 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { formatDateTime } from '@/lib/format-date';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useFeature } from '@/hooks/use-feature';
+import { buildUrl } from '@/lib/build-url';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   deleteAuditLogStreamConfig,
@@ -27,6 +30,7 @@ import {
   upsertAuditLogStreamConfig,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { AuditLogStreamConfig } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
 import { useState } from 'react';
 import { z } from 'zod';
 
@@ -82,6 +86,8 @@ const toFormValues = (config?: AuditLogStreamConfig): Input => ({
 export const AuditLogStreamDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const organization = useCurrentOrganization();
+  const isEntitled = !!useFeature('audit-log-streaming')?.enabled;
 
   const { data, isLoading, error, refetch } = useQuery(getAuditLogStreamConfig, {}, { enabled: isOpen });
   const config = data?.config;
@@ -115,7 +121,9 @@ export const AuditLogStreamDialog = () => {
   const { isDirty, isValid } = form.formState;
   const isAlreadyNone = destination === 'none' && !config;
   // Button ignores isLoading once disabled is passed, so the pending states must be checked here too.
-  const canSave = !isSaving && !isRemoving && isDirty && isValid && !isAlreadyNone;
+  // An organization that lost the feature can still remove its config, which no longer streams.
+  const canSave =
+    !isSaving && !isRemoving && isDirty && isValid && !isAlreadyNone && (isEntitled || destination === 'none');
   const canTest = !isTesting && !isDirty;
 
   const onSubmit: SubmitHandler<Input> = ({ destination, hasStoredToken, ...values }) => {
@@ -161,6 +169,19 @@ export const AuditLogStreamDialog = () => {
             description={data?.response?.details || error?.message || 'Please try again'}
             actions={<Button onClick={() => refetch()}>Retry</Button>}
           />
+        ) : !isEntitled && !config ? (
+          <EmptyState
+            icon={<InformationCircleIcon />}
+            title="Audit log export is not available"
+            description="Upgrade to the Enterprise plan to stream your organization's audit logs to Splunk."
+            actions={
+              <Button asChild>
+                <Link href={buildUrl('/:organizationSlug/billing', { organizationSlug: organization?.slug })}>
+                  Upgrade
+                </Link>
+              </Button>
+            }
+          />
         ) : (
           <Form {...form}>
             <form className="flex w-full flex-col gap-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -185,11 +206,20 @@ export const AuditLogStreamDialog = () => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="splunk">Splunk HTTP Event Collector</SelectItem>
+                        <SelectItem value="splunk" disabled={!isEntitled}>
+                          Splunk HTTP Event Collector
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    {destination === 'splunk' && (
-                      <FormDescription>New entries are streamed within about a minute.</FormDescription>
+                    {!isEntitled ? (
+                      <FormDescription className="text-destructive">
+                        Your plan no longer includes audit log export, so nothing is being sent. Choose None and save to
+                        remove the stored URL and token.
+                      </FormDescription>
+                    ) : (
+                      destination === 'splunk' && (
+                        <FormDescription>New entries are streamed within about a minute.</FormDescription>
+                      )
                     )}
                   </FormItem>
                 )}
@@ -295,7 +325,7 @@ export const AuditLogStreamDialog = () => {
               )}
 
               <DialogFooter className="gap-2">
-                {config && destination === 'splunk' && (
+                {config && isEntitled && destination === 'splunk' && (
                   <span title={isDirty ? 'Save your changes before sending a test event' : undefined}>
                     <Button type="button" variant="outline" isLoading={isTesting} disabled={!canTest} onClick={onTest}>
                       Send test event
