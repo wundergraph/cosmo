@@ -81,7 +81,7 @@ func ConnectCodeToHTTPStatus(code connect.Code) int {
 }
 
 func (r *GraphQLResponse) ConnectCode() connect.Code {
-	code, ok := unanimousConnectCode(len(r.Errors), func(i int) (connect.Code, bool) {
+	code, ok := commonConnectCode(len(r.Errors), func(i int) (connect.Code, bool) {
 		return r.errorConnectCode(r.Errors[i].Extensions)
 	})
 	if !ok {
@@ -99,7 +99,7 @@ func (r *GraphQLResponse) errorConnectCode(extensions map[string]any) (connect.C
 		return c, true
 	}
 	wrappedSubgraphErrors, _ := extensions["errors"].([]any)
-	return unanimousConnectCode(len(wrappedSubgraphErrors), func(i int) (connect.Code, bool) {
+	return commonConnectCode(len(wrappedSubgraphErrors), func(i int) (connect.Code, bool) {
 		subgraphError, _ := wrappedSubgraphErrors[i].(map[string]any)
 		subgraphErrorExtensions, _ := subgraphError["extensions"].(map[string]any)
 		return r.errorConnectCode(subgraphErrorExtensions)
@@ -116,7 +116,9 @@ func (r *GraphQLResponse) fieldAuthorizationDenialCode() connect.Code {
 	return connect.CodeUnauthenticated
 }
 
-func unanimousConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.Code, bool) {
+// commonConnectCode returns the code that all n errors map to. It reports false if there
+// are no errors, any error has no code, or the errors disagree.
+func commonConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.Code, bool) {
 	if n == 0 {
 		return 0, false
 	}
