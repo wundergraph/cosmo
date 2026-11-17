@@ -462,3 +462,17 @@ func WrapExprError(err error) error {
 	}
 	return &ExprWrapError{Err: err}
 }
+
+// isNetTimeoutError reports whether err was caused by a network timeout, e.g. the server's read
+// deadline expiring while a slow client is still sending the request body.
+func isNetTimeoutError(err error) bool {
+	netErr, ok := errors.AsType[net.Error](err)
+	return ok && netErr.Timeout()
+}
+
+func newRequestBodyTimeoutError() error {
+	return &httpGraphqlError{
+		message:    "timeout while reading the request body",
+		statusCode: http.StatusRequestTimeout,
+	}
+}

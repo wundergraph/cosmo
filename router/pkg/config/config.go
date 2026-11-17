@@ -238,6 +238,18 @@ type RouterTrafficConfiguration struct {
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
 	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
+	// RequestReadTimeout is the maximum duration for reading the entire client request, including headers and body.
+	// A zero or negative value falls back to the default of 60s.
+	RequestReadTimeout time.Duration `yaml:"request_read_timeout" envDefault:"60s" env:"ROUTER_REQUEST_READ_TIMEOUT"`
+	// RequestHeaderReadTimeout is the maximum duration for reading the client request headers.
+	// A zero or negative value falls back to RequestReadTimeout.
+	RequestHeaderReadTimeout time.Duration `yaml:"request_header_read_timeout" envDefault:"0s" env:"ROUTER_REQUEST_HEADER_READ_TIMEOUT"`
+	// IdleTimeout is the maximum duration to wait for the next request on a keep-alive client connection.
+	// A zero or negative value falls back to RequestReadTimeout.
+	IdleTimeout time.Duration `yaml:"idle_timeout" envDefault:"0s" env:"ROUTER_IDLE_TIMEOUT"`
+	// WriteTimeout is the maximum duration before timing out writes of the response to the client.
+	// It is disabled by default because it also caps long-lived responses such as SSE and multipart subscriptions.
+	WriteTimeout time.Duration `yaml:"write_timeout" envDefault:"0s" env:"ROUTER_WRITE_TIMEOUT"`
 }
 
 type GlobalSubgraphRequestRule struct {
