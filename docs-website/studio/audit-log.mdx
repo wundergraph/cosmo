@@ -35,7 +35,7 @@ wgc audit-log stream delete
 
 The endpoint can be the collector's base URL or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA; Splunk Enterprise's default self-signed HEC certificate is rejected. `localhost` is not accepted. The token is stored by Cosmo and is never returned. Deleting the configuration stops the stream and removes the stored URL and token.
 
-Tokens with indexer acknowledgement enabled are supported. Cosmo sends your organization ID as the request channel but does not poll for acknowledgements, so an event counts as delivered once the collector accepts it.
+Use a token with indexer acknowledgement disabled. Cosmo does not poll for acknowledgements. An event counts as delivered once the collector accepts it.
 
 Each event is sent with sourcetype `wundergraph:cosmo:audit` and source `cosmo` unless overridden. The event body looks like this:
 
