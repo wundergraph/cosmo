@@ -113,6 +113,9 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []*
 	reader := multipart.NewReader(r.Body, boundary)
 	p.form, err = reader.ReadForm(0)
 	if err != nil {
+		if isNetTimeoutError(err) {
+			return body, p.files, newRequestBodyTimeoutError()
+		}
 		return body, p.files, &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,

@@ -1845,6 +1845,9 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 				statusCode: http.StatusRequestEntityTooLarge,
 			}
 		}
+		if isNetTimeoutError(err) {
+			return nil, newRequestBodyTimeoutError()
+		}
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 

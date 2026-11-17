@@ -876,6 +876,10 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
@@ -1813,6 +1817,10 @@ func (r *Router) Start(ctx context.Context) error {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
@@ -2640,6 +2648,7 @@ func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes:        1000 * 1000 * 5, // 5 MB
 		ResponseCompressionMinSize: 1024 * 4,        // 4 KiB
+		RequestReadTimeout:         defaultServerReadTimeout,
 	}
 }
 
