@@ -139,7 +139,7 @@ When the `OnReceiveEvents` handler returns an error, the router takes the follow
 2. **Subscription Closure**: The affected subscription is immediately closed for the client that encountered the error
 3. **Error Logging**: The error is logged by the router with details about the subscription, provider, and field name
 4. **Error Deduplication**: If multiple subscriptions experience the same error for the same events, the router deduplicates the error messages in the logs to prevent spam
-5. **No Error Propagation**: The error is **not** sent directly to the GraphQL client - the subscription simply closes
+5. **Error Propagation**: For WebSocket subscriptions, the error is sent to the client as an `error` message for that subscription before it closes, the same way a `SubscriptionOnStart` error is. The error's message reaches the client as-is, so return only messages that are safe to show
 
 <Warning>
 Returning an error from `OnReceiveEvents` will close the subscription for that specific client. Use this only when you want to terminate the subscription due to unrecoverable conditions. For filtering events, return an empty event list instead of an error.
