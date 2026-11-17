@@ -331,6 +331,8 @@ const REJECTED_CURSOR_CODES = ['CURSOR_EXPIRED', 'CURSOR_INVALID', 'CURSOR_CLIEN
 
 let lastCursor: string | undefined = loadCursor(); // from durable storage
 let retries = 0;
+// Messages are handled one at a time, in delivery order.
+let queue: Promise<void> = Promise.resolve();
 
 const client = createClient({
   url: 'wss://router.example.com/graphql',
@@ -342,7 +344,8 @@ const client = createClient({
 function resubscribe() {
   if (retries >= MAX_RETRIES) return; // give up, or fall back to a fresh subscription
   retries++;
-  setTimeout(subscribe, Math.min(1000 * 2 ** retries, 30_000));
+  // Wait for queued messages so `lastCursor` is up to date before resubscribing.
+  queue.then(() => setTimeout(subscribe, Math.min(1000 * 2 ** retries, 30_000)));
 }
 
 function subscribe() {
@@ -358,14 +361,16 @@ function subscribe() {
       },
     },
     {
-      next: async (result) => {
+      next: (result) => {
         retries = 0;
-        await handle(result.data); // process first ...
-        const cursor = result.extensions?.streamsCursor;
-        if (typeof cursor === 'string') {
-          lastCursor = cursor; // ... then commit
-          saveCursor(cursor);
-        }
+        queue = queue.then(async () => {
+          await handle(result.data); // process first ...
+          const cursor = result.extensions?.streamsCursor;
+          if (typeof cursor === 'string') {
+            lastCursor = cursor; // ... then commit
+            saveCursor(cursor);
+          }
+        });
       },
       error: (err) => {
         // GraphQL errors arrive as an array, connection errors as a CloseEvent or Error.
