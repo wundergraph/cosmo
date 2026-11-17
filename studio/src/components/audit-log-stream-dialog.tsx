@@ -115,7 +115,7 @@ export const AuditLogStreamDialog = () => {
   const { isDirty, isValid } = form.formState;
   const isAlreadyNone = destination === 'none' && !config;
   // Button ignores isLoading once disabled is passed, so the pending states must be checked here too.
-  const canSave = !isSaving && !isRemoving && (isValid || !isDirty) && !isAlreadyNone;
+  const canSave = !isSaving && !isRemoving && isDirty && isValid && !isAlreadyNone;
   const canTest = !isTesting && !isDirty;
 
   const onSubmit: SubmitHandler<Input> = ({ destination, hasStoredToken, ...values }) => {
