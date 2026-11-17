@@ -1014,27 +1014,35 @@ func TestReceiveHookErrorIsSentToTheClient(t *testing.T) {
 		}
 
 		accepted := subscribe(nil)
-		rejected := subscribe(http.Header{rejectHeader: []string{"true"}})
-
-		xEnv.WaitForSubscriptionCount(2, timeout)
+		xEnv.WaitForSubscriptionCount(1, timeout)
 		xEnv.WaitForTriggerCount(1, timeout)
 
-		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+		// Warm-up: confirm delivery works before the rejected client joins the trigger.
+		xEnv.RedisPublishUntilReceived(topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, timeout)
+		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
+			require.NoError(t, args.errValue)
+			require.JSONEq(t, `{"employeeUpdates":{"id":1}}`, string(args.dataValue))
+		})
+
+		rejected := subscribe(http.Header{rejectHeader: []string{"true"}})
+		xEnv.WaitForSubscriptionCount(2, timeout)
+
+		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 2,"update":{"name":"bar"}}`)
 
 		testenv.AwaitChannelWithT(t, timeout, rejected, func(t *testing.T, args subscriptionArgs) {
 			require.ErrorContains(t, args.errValue, "Unauthorized")
 		})
 		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
 			require.NoError(t, args.errValue)
-			require.JSONEq(t, `{"employeeUpdates":{"id":1}}`, string(args.dataValue))
+			require.JSONEq(t, `{"employeeUpdates":{"id":2}}`, string(args.dataValue))
 		})
 
 		// The rejected subscription is closed; the other one still receives events.
 		xEnv.WaitForSubscriptionCount(1, timeout)
-		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 2,"update":{"name":"bar"}}`)
+		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 3,"update":{"name":"baz"}}`)
 		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
 			require.NoError(t, args.errValue)
-			require.JSONEq(t, `{"employeeUpdates":{"id":2}}`, string(args.dataValue))
+			require.JSONEq(t, `{"employeeUpdates":{"id":3}}`, string(args.dataValue))
 		})
 		require.Empty(t, rejected, "the rejected client should receive nothing after the error")
 	})

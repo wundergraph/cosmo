@@ -1275,11 +1275,25 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	})
 
 	reqContext.operation.protocol = OperationProtocolWS
-	// Capture only the ID, so the closure does not keep the subscribe message alive.
+	// Capture only the IDs, so the closure does not keep the subscribe message alive.
 	operationID := registration.msg.ID
+	subscriptionID := registration.id.SubscriptionID
 	reqContext.writeSubscriptionError = func(err error) {
+		// Like websocketResponseWriter.Error, end the operation: remove its registration so the client
+		// can reuse the ID. If the client already completed it, or reused the ID for a new subscription,
+		// the error is not for that subscription, so send nothing.
+		if !h.subscriptions.CompareAndDelete(operationID, subscriptionID) {
+			return
+		}
 		if wErr := h.writeErrorMessage(operationID, err); wErr != nil {
 			h.logger.Warn("writing subscription error message", zap.Error(wErr))
+			return
+		}
+		// subscriptions-transport-ws clients need a "complete" to end the stream after an error.
+		if h.protocol.Subprotocol() == wsproto.SubscriptionsTransportWSSubprotocol {
+			if wErr := h.protocol.Complete(operationID); wErr != nil {
+				h.logger.Debug("Sending complete after error", zap.Error(wErr))
+			}
 		}
 	}
 	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
