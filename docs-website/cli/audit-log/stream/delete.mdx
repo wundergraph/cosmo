@@ -12,7 +12,7 @@ npx wgc audit-log stream delete
 
 ## Description
 
-The `npx wgc audit-log stream delete` command stops streaming the organization's audit logs and removes the configuration, including the stored URL and token. To pause the stream and keep the configuration, use `npx wgc audit-log stream set splunk --disabled` instead.
+The `npx wgc audit-log stream delete` command stops streaming the organization's audit logs and removes the configuration, including the stored URL and token. To pause the stream and keep the configuration, run [`npx wgc audit-log stream set splunk`](/cli/audit-log/stream/set-splunk) with `--disabled` instead, repeating `--endpoint` and any `--index`, `--source` and `--sourcetype` you want to keep.
 
 ## Examples
 
