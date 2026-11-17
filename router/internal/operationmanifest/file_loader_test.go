@@ -51,7 +51,7 @@ func TestFileLoader(t *testing.T) {
 		require.Equal(t, "rev-1", manifest.Revision)
 	})
 
-	t.Run("returns unchanged when the revision matches", func(t *testing.T) {
+	t.Run("returns a candidate for the poller when the revision matches", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
@@ -59,8 +59,9 @@ func TestFileLoader(t *testing.T) {
 
 		manifest, changed, err := NewFileLoader(dir, "manifest.json").Fetch(t.Context(), "rev-1")
 		require.NoError(t, err)
-		require.False(t, changed)
-		require.Nil(t, manifest)
+		require.True(t, changed)
+		require.NotNil(t, manifest)
+		require.Equal(t, "rev-1", manifest.Revision)
 	})
 
 	t.Run("returns an error when the manifest file is missing", func(t *testing.T) {

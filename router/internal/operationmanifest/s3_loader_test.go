@@ -90,7 +90,7 @@ func TestS3Loader(t *testing.T) {
 		}, received())
 	})
 
-	t.Run("compares revisions when the store ignores if-none-match", func(t *testing.T) {
+	t.Run("returns a candidate for the poller when the store ignores if-none-match", func(t *testing.T) {
 		t.Parallel()
 
 		loader, received := newServer(t, false)
@@ -100,8 +100,8 @@ func TestS3Loader(t *testing.T) {
 
 		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
 		require.NoError(t, err)
-		require.False(t, changed)
-		require.Nil(t, manifest)
+		require.True(t, changed)
+		require.Equal(t, expectedManifest, manifest)
 
 		manifest, changed, err = loader.Fetch(t.Context(), "rev-0")
 		require.NoError(t, err)

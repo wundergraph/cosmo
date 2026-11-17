@@ -128,7 +128,7 @@ func TestMCPManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("keeps the manifest tools after a graph config reload", func(t *testing.T) {
+	t.Run("keeps accepted tools after an invalid update and graph config reload then accepts a valid revision", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
@@ -141,6 +141,10 @@ func TestMCPManifest(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MCP:               mcpConfig,
 			MCPOperationsPath: dir,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
 					pm.initConfig = config
@@ -156,11 +160,30 @@ func TestMCPManifest(t *testing.T) {
 				assert.Equal(c, []string{"employee_moods", "get_operation_info"}, listToolNames(c, xEnv))
 			}, 10*time.Second, 100*time.Millisecond)
 
+			writeManifest(t, dir, "3", hashedOperations(
+				`query Added { employees { id } }`,
+				`query Invalid { unknownField }`,
+			))
+			require.Eventually(t, func() bool {
+				return xEnv.Observer().FilterMessage("Failed to rebuild MCP tools after manifest update").Len() > 0
+			}, 10*time.Second, 100*time.Millisecond)
+			require.Equal(t, []string{"employee_moods", "get_operation_info"}, listToolNames(t, xEnv))
+			result, err := xEnv.MCPClient.CallTool(xEnv.Context, mcp.CallToolRequest{
+				Params: mcp.CallToolParams{Name: "employee_moods", Arguments: map[string]any{}},
+			})
+			require.NoError(t, err)
+			require.False(t, result.IsError, "%+v", result.Content)
+
 			<-pm.ready
 			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			require.Equal(t, []string{"employee_moods", "get_operation_info"}, listToolNames(t, xEnv))
+
+			writeManifest(t, dir, "4", initialOperations)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.Equal(c, []string{"employee_ids", "get_operation_info", "my_employees"}, listToolNames(c, xEnv))
+			}, 10*time.Second, 100*time.Millisecond)
 		})
 	})
 }

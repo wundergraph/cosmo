@@ -349,12 +349,13 @@ type Employee {
 
 		core, logs := observer.New(zap.ErrorLevel)
 		loader := NewOperationLoader(zap.New(core), &schemaDoc)
-		operations := loader.LoadOperationsFromManifest(map[string]string{
+		operations, err := loader.LoadOperationsFromManifest(map[string]string{
 			"a": namedOp,
 			"b": duplicateOp,
 			"c": anonymousOp,
 		})
 
+		require.NoError(t, err)
 		require.Len(t, operations, 1)
 		require.Equal(t, "ListEmployees", operations[0].Name)
 		require.Equal(t, namedOp, operations[0].OperationString)
@@ -367,14 +368,31 @@ type Employee {
 		require.Equal(t, "ListEmployees", duplicates[0].ContextMap()["operation"])
 	})
 
-	t.Run("skips invalid and subscription operations", func(t *testing.T) {
+	t.Run("skips unsupported subscriptions when the manifest is otherwise valid", func(t *testing.T) {
 		loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
-		operations := loader.LoadOperationsFromManifest(map[string]string{
-			"invalid":      `query Invalid { unknownField }`,
-			"unparsable":   `query {`,
+		operations, err := loader.LoadOperationsFromManifest(map[string]string{
 			"subscription": `subscription Updates { employeeUpdated { id } }`,
 		})
 
+		require.NoError(t, err)
 		require.Empty(t, operations)
 	})
+
+	for _, candidate := range []struct {
+		name string
+		body string
+	}{
+		{"returns an error when an operation cannot be parsed", `query {`},
+		{"returns an error when an operation fails validation", `query Invalid { unknownField }`},
+	} {
+		t.Run(candidate.name, func(t *testing.T) {
+			loader := NewOperationLoader(zap.NewNop(), &schemaDoc)
+			operations, err := loader.LoadOperationsFromManifest(map[string]string{
+				"a": `query Valid { employees { id } }`,
+				"b": candidate.body,
+			})
+			require.Error(t, err)
+			require.Nil(t, operations)
+		})
+	}
 }

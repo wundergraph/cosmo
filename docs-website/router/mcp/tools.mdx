@@ -140,7 +140,7 @@ Each MCP manifest document must contain one named operation. Anonymous operation
 
 ### Validation
 
-Operations are validated against your GraphQL schema at load time. Invalid operations are logged as errors and skipped - they will not appear as MCP tools. Subscription operations are not supported and are also skipped.
+Operations are validated against your GraphQL schema at load time. In directory mode, invalid operations are logged as errors and skipped. In manifest mode, a GraphQL validation, input-schema preparation, or scope computation failure rejects the entire candidate: startup returns an error, and later updates retain the last accepted tools and authorization requirements. Subscription operations remain unsupported and are skipped in both modes.
 
 ## Tool Naming
 

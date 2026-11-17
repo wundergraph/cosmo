@@ -9,6 +9,9 @@ import (
 )
 
 // Loader fetches the manifest for the Poller.
+// Fetch returns a candidate and changed=true when content is fetched, or
+// changed=false for a no-change response (e.g. HTTP 304). The Poller compares
+// candidate revisions before publishing updates.
 type Loader interface {
 	Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error)
 }
@@ -54,7 +57,8 @@ func (p *Poller) FetchInitial(ctx context.Context) error {
 }
 
 // Poll runs a background goroutine loop that periodically fetches the manifest.
-// It sleeps for pollInterval + random jitter, fetches, and if changed updates the store.
+// It sleeps for pollInterval + random jitter, fetches, and updates the store
+// only when a changed, nonnil candidate has a different revision.
 // It exits when ctx is cancelled.
 func (p *Poller) Poll(ctx context.Context) {
 	for {
@@ -74,7 +78,7 @@ func (p *Poller) Poll(ctx context.Context) {
 			continue
 		}
 
-		if changed && manifest != nil {
+		if changed && manifest != nil && manifest.Revision != currentRevision {
 			p.store.Load(manifest)
 			p.logger.Debug("Updated manifest",
 				zap.String("revision", manifest.Revision),

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	aiv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/ai/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -317,6 +318,48 @@ func TestManifestUpdated(t *testing.T) {
 
 	schemaDoc := testSchemaDoc(t)
 
+	t.Run("rejects scope preparation failures without publishing candidate state", func(t *testing.T) {
+		t.Parallel()
+
+		manifest := map[string]string{"list": listEmployeesOp}
+		srv, err := NewGraphQLSchemaServer(t.Context(), "http://localhost:4000/graphql",
+			WithManifestOperations(func() map[string]string { return manifest }),
+		)
+		require.NoError(t, err)
+		srv.oauthConfig = &config.MCPOAuthConfiguration{MaxScopeCombinations: 2}
+		srv.authMiddleware = &MCPAuthMiddleware{}
+		fields := []*nodev1.FieldConfiguration{{
+			TypeName: "Employee", FieldName: "name",
+			AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
+				RequiredOrScopes: []*nodev1.Scopes{
+					{RequiredAndScopes: []string{"read:a"}},
+					{RequiredAndScopes: []string{"read:b"}},
+				},
+			},
+		}}
+		fields = append(fields, &nodev1.FieldConfiguration{
+			TypeName: "Employee", FieldName: "id",
+			AuthorizationConfiguration: fields[0].AuthorizationConfiguration,
+		})
+		require.ErrorContains(t, srv.Reload(&schemaDoc, fields, "invalid"), `operation "ListEmployees"`)
+		require.Nil(t, srv.operationsManager.Load())
+		require.Empty(t, srv.registeredTools)
+
+		manifest = map[string]string{"ids": `query Ids { employees { id } }`}
+		require.NoError(t, srv.Reload(&schemaDoc, fields, "accepted"))
+		manager := srv.operationsManager.Load()
+		extractor := srv.authMiddleware.getScopeExtractor()
+		tools := slices.Clone(srv.registeredTools)
+		scopes := srv.toolScopes
+
+		manifest = map[string]string{"list": listEmployeesOp}
+		srv.ManifestUpdated()
+		require.Same(t, manager, srv.operationsManager.Load())
+		require.Same(t, extractor, srv.authMiddleware.getScopeExtractor())
+		require.Equal(t, tools, srv.registeredTools)
+		require.Equal(t, scopes, srv.toolScopes)
+	})
+
 	t.Run("swaps tools to the operations of the new manifest", func(t *testing.T) {
 		t.Parallel()
 
@@ -470,7 +513,7 @@ func TestRegisterTools_OutputSchemaFailureRegistersToolWithoutSchema(t *testing.
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	require.NoError(t, srv.registerTools())
+	require.NoError(t, srv.registerTools(srv.operationsManager.Load(), nil))
 
 	assert.Contains(t, srv.registeredTools, "list_employees")
 	assert.Equal(t, 1, logs.FilterMessage("failed to build output schema for operation; registering tool without output schema").Len(),
@@ -509,7 +552,7 @@ func TestRegisterTools_NoOutputSchemaBuildWhenDisabled(t *testing.T) {
 	require.Len(t, operations, 1)
 	operations[0].Document = brokenDoc
 
-	require.NoError(t, srv.registerTools())
+	require.NoError(t, srv.registerTools(srv.operationsManager.Load(), nil))
 
 	assert.Contains(t, srv.registeredTools, "list_employees")
 	assert.Equal(t, 0, logs.FilterMessage("failed to build output schema for operation; registering tool without output schema").Len(),

@@ -76,8 +76,13 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
-		op, ok := l.loadOperation(validator, string(content), zap.String("file", path))
-		if !ok {
+		op, err := l.loadOperation(validator, string(content))
+		if err != nil {
+			l.Logger.Error("Failed to load MCP operation", zap.String("file", path), zap.Error(err))
+			return nil
+		}
+		if op.OperationType == "subscription" {
+			l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("file", path))
 			return nil
 		}
 
@@ -109,14 +114,19 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 
 // LoadOperationsFromManifest loads named MCP operations from a manifest, sorted by key.
 // Names come from the documents; anonymous and duplicate operations are logged and skipped.
-func (l *OperationLoader) LoadOperationsFromManifest(manifestOperations map[string]string) []Operation {
+// A parsing or validation failure rejects the entire manifest.
+func (l *OperationLoader) LoadOperationsFromManifest(manifestOperations map[string]string) ([]Operation, error) {
 	validator := astvalidation.DefaultOperationValidator()
 
 	operations := make([]Operation, 0, len(manifestOperations))
 	seen := make(map[string]bool, len(manifestOperations))
 	for _, key := range slices.Sorted(maps.Keys(manifestOperations)) {
-		op, ok := l.loadOperation(validator, manifestOperations[key], zap.String("manifest_key", key))
-		if !ok {
+		op, err := l.loadOperation(validator, manifestOperations[key])
+		if err != nil {
+			return nil, fmt.Errorf("manifest operation %q: %w", key, err)
+		}
+		if op.OperationType == "subscription" {
+			l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("manifest_key", key))
 			continue
 		}
 		if op.Name == "" {
@@ -131,18 +141,17 @@ func (l *OperationLoader) LoadOperationsFromManifest(manifestOperations map[stri
 		operations = append(operations, op)
 	}
 
-	return operations
+	return operations, nil
 }
 
 // loadOperation parses an operation, strips executable descriptions, and validates it
-// against the schema. It logs and reports false for operations that cannot be served.
+// against the schema. Unsupported subscriptions are left for callers to skip.
 // The returned name is empty for anonymous operations.
-func (l *OperationLoader) loadOperation(validator *astvalidation.OperationValidator, operationString string, source zap.Field) (Operation, bool) {
+func (l *OperationLoader) loadOperation(validator *astvalidation.OperationValidator, operationString string) (Operation, error) {
 	// Parse the operation
 	opDoc, err := parseOperation(operationString)
 	if err != nil {
-		l.Logger.Error("Failed to parse MCP operation", source, zap.Error(err))
-		return Operation{}, false
+		return Operation{}, fmt.Errorf("failed to parse MCP operation: %w", err)
 	}
 
 	// If the operation carries September-2025-spec executable descriptions
@@ -152,33 +161,26 @@ func (l *OperationLoader) loadOperation(validator *astvalidation.OperationValida
 	if HasExecutableDescriptions(&opDoc) {
 		operationString, err = PrintOperationWithoutDescriptions(&opDoc)
 		if err != nil {
-			l.Logger.Error("Failed to print MCP operation", source, zap.Error(err))
-			return Operation{}, false
+			return Operation{}, fmt.Errorf("failed to print MCP operation: %w", err)
 		}
 	}
 
 	// Extract the operation name and type
 	opName, opType, err := GetOperationNameAndType(&opDoc)
 	if err != nil {
-		l.Logger.Error("Failed to extract MCP operation name and type", zap.String("operation", opName), source, zap.Error(err))
-		return Operation{}, false
+		return Operation{}, fmt.Errorf("failed to extract MCP operation name and type: %w", err)
 	}
 
 	// Check if the operation type is supported
 	if opType == "subscription" {
-		l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("operation", opName), source)
-		return Operation{}, false
+		return Operation{Name: opName, OperationType: opType}, nil
 	}
 
 	// Validate operation against schema
 	validationReport := operationreport.Report{}
 	validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
 	if validationState == astvalidation.Invalid {
-		l.Logger.Error("Invalid MCP operation",
-			zap.String("operation", opName),
-			source,
-			zap.String("errors", validationReport.Error()))
-		return Operation{}, false
+		return Operation{}, fmt.Errorf("invalid MCP operation %q: %s", opName, validationReport.Error())
 	}
 
 	return Operation{
@@ -187,7 +189,7 @@ func (l *OperationLoader) loadOperation(validator *astvalidation.OperationValida
 		OperationString: operationString,
 		OperationType:   opType,
 		Description:     extractOperationDescription(&opDoc),
-	}, true
+	}, nil
 }
 
 // isGraphQLFile checks if a file is a GraphQL file based on its extension

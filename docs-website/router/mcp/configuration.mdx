@@ -139,9 +139,11 @@ storage_providers:
 Keep these points in mind:
 
 - Change the `revision` on every edit. If the revision stays the same, the router ignores the edit.
-- At startup, the router does not start if it cannot read or parse the manifest.
+- At startup, the router does not start if it cannot read, parse, or prepare the manifest's MCP operations.
 - If the router cannot read or parse a new manifest, it logs a warning and keeps the previous tools.
-- If one operation in a manifest cannot become a tool, for example because it exceeds `max_scope_combinations`, the router logs an error and skips that operation. The other operations still register.
+- If an operation fails GraphQL parsing or validation, input-schema building or compilation, or scope computation (for example, exceeding `max_scope_combinations`), the entire candidate manifest is rejected. The router logs an error and keeps the last accepted tools and authorization requirements. A later valid revision can replace them.
+- Graph-config reloads revalidate the last accepted manifest against the new schema, not a newer rejected candidate. An incompatible schema causes the MCP reload to fail.
+- Anonymous operations, duplicate operation names, normalized tool-name collisions, unsupported subscriptions, and mutations excluded by configuration are still skipped rather than registered.
 - Stateless MCP sessions see tool changes on their next `tools/list` request.
 - On S3, the router sends `If-None-Match` with the last ETag, so it only downloads a changed manifest. S3-compatible stores that do not support `If-None-Match` still work, but the router then downloads the manifest on every poll.
 

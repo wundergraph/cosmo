@@ -17,6 +17,7 @@ type OperationsManager struct {
 	operations       []schemaloader.Operation
 	logger           *zap.Logger
 	excludeMutations bool
+	fromManifest     bool
 }
 
 // NewOperationsManager creates a new operations manager
@@ -41,37 +42,49 @@ func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) e
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
-	om.setOperations(operations)
-	return nil
+	om.fromManifest = false
+	return om.setOperations(operations)
 }
 
 // LoadOperationsFromManifest loads MCP operations using the names in their documents.
-func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) {
+func (om *OperationsManager) LoadOperationsFromManifest(manifestOperations map[string]string) error {
 	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
-	om.setOperations(loader.LoadOperationsFromManifest(manifestOperations))
+	operations, err := loader.LoadOperationsFromManifest(manifestOperations)
+	if err != nil {
+		return err
+	}
+	om.fromManifest = true
+	return om.setOperations(operations)
 }
 
-// setOperations builds the schemas for operations and stores them. An operation
-// whose schema cannot be built is logged and skipped, so one bad operation does
-// not take the others down with it.
-func (om *OperationsManager) setOperations(operations []schemaloader.Operation) {
+// setOperations builds the input schemas for the candidate operations.
+func (om *OperationsManager) setOperations(operations []schemaloader.Operation) error {
 	builder := schemaloader.NewSchemaBuilder(om.schemaDoc)
-	om.operations = om.keep(operations, "Skipping MCP operation because its input schema cannot be built", builder.BuildSchemaForOperation)
+	var err error
+	om.operations, err = om.keep(operations, "Skipping MCP operation because its input schema cannot be built", builder.BuildSchemaForOperation)
+	return err
 }
 
-// keep runs fn on every operation in place and returns the ones fn accepted.
-// The rejected ones are logged with msg and dropped.
-func (om *OperationsManager) keep(operations []schemaloader.Operation, msg string, fn func(*schemaloader.Operation) error) []schemaloader.Operation {
+// keep rejects a manifest on preparation failure; directory operations are logged
+// and skipped. Excluded manifest mutations do not need preparation.
+func (om *OperationsManager) keep(operations []schemaloader.Operation, msg string, fn func(*schemaloader.Operation) error) ([]schemaloader.Operation, error) {
 	kept := operations[:0]
 	for i := range operations {
+		if om.fromManifest && om.excludeMutations && operations[i].OperationType == "mutation" {
+			kept = append(kept, operations[i])
+			continue
+		}
 		if err := fn(&operations[i]); err != nil {
+			if om.fromManifest {
+				return nil, fmt.Errorf("operation %q: %w", operations[i].Name, err)
+			}
 			om.logger.Error(msg, zap.String("operation", operations[i].Name), zap.Error(err))
 			continue
 		}
 		kept = append(kept, operations[i])
 	}
 	clear(operations[len(kept):])
-	return kept
+	return kept, nil
 }
 
 // GetOperations returns all loaded operations
@@ -109,12 +122,12 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 
 // ComputeToolScopes runs the scope extractor against all loaded operations,
 // populating each operation's RequiredScopes from @requiresScopes directives.
-// An operation that exceeds the scope combination limit has a pathological
-// @requiresScopes configuration. It is logged and dropped, so it never
-// registers as a tool and does not block the other operations.
-func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) {
+// Manifest candidates fail as a whole; directory operations retain their
+// log-and-skip behavior.
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) error {
 	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc, maxScopeCombinations)
-	om.operations = om.keep(om.operations, "Skipping MCP operation because its scopes cannot be computed", func(op *schemaloader.Operation) error {
+	var err error
+	om.operations, err = om.keep(om.operations, "Skipping MCP operation because its scopes cannot be computed", func(op *schemaloader.Operation) error {
 		fieldReqs, err := extractor.ExtractScopesForOperation(&op.Document)
 		if err != nil {
 			return err
@@ -122,6 +135,7 @@ func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfi
 		op.RequiredScopes, err = extractor.ComputeCombinedScopes(fieldReqs)
 		return err
 	})
+	return err
 }
 
 // GetSchema returns the schema document used by the operations manager

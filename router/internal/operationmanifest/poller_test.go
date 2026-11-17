@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-// fakeLoader serves a manifest from memory and counts fetches. It compares
-// revisions like the real loaders do.
+// fakeLoader serves a candidate without comparing revisions and counts fetches.
+// A nil manifest represents a no-change response, such as HTTP 304.
 type fakeLoader struct {
 	mu       sync.Mutex
 	manifest *Manifest
@@ -22,17 +22,14 @@ type fakeLoader struct {
 	fetches  int
 }
 
-func (l *fakeLoader) Fetch(_ context.Context, currentRevision string) (*Manifest, bool, error) {
+func (l *fakeLoader) Fetch(_ context.Context, _ string) (*Manifest, bool, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.fetches++
 	if l.err != nil {
 		return nil, false, l.err
 	}
-	if l.manifest.Revision == currentRevision {
-		return nil, false, nil
-	}
-	return l.manifest, true, nil
+	return l.manifest, l.manifest != nil, nil
 }
 
 func (l *fakeLoader) set(manifest *Manifest, err error) {
@@ -76,7 +73,7 @@ func TestPoller(t *testing.T) {
 		require.False(t, store.IsLoaded())
 	})
 
-	t.Run("Poll fetches once per interval and loads a changed manifest", func(t *testing.T) {
+	t.Run("Poll preserves the snapshot and signals subscribers only when the revision changes", func(t *testing.T) {
 		t.Parallel()
 
 		synctest.Test(t, func(t *testing.T) {
@@ -84,20 +81,28 @@ func TestPoller(t *testing.T) {
 			store := NewStore(zap.NewNop())
 			poller := NewPoller(loader, store, time.Second, 0, zap.NewNop())
 			require.NoError(t, poller.FetchInitial(t.Context()))
+			updates := store.Subscribe(t.Context())
 
 			go poller.Poll(t.Context())
 
-			// Three unchanged polls after the initial fetch.
+			// A full response can contain different content with the same revision.
+			loader.set(&Manifest{
+				Version:    1,
+				Revision:   rev1.Revision,
+				Operations: map[string]string{"replacement": "opaque content"},
+			}, nil)
 			time.Sleep(3 * time.Second)
 			synctest.Wait()
 			require.Equal(t, 4, loader.fetchCount())
-			require.Equal(t, rev1, store.Snapshot())
+			require.Same(t, rev1, store.Snapshot())
+			require.Len(t, updates, 0)
 
 			loader.set(rev2, nil)
 			time.Sleep(time.Second)
 			synctest.Wait()
 			require.Equal(t, 5, loader.fetchCount())
-			require.Equal(t, rev2, store.Snapshot())
+			require.Same(t, rev2, store.Snapshot())
+			require.Len(t, updates, 1)
 		})
 	})
 
