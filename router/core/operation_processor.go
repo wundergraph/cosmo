@@ -502,6 +502,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
+			kind:       errorKindPersistedQueryNotConfigured,
 		}
 	}
 	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
@@ -703,6 +704,7 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration",
 				statusCode: http.StatusOK,
+				kind:       errorKindNoIntrospection,
 			}
 		}
 	}
@@ -748,6 +750,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -755,6 +758,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -765,11 +769,13 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "operation name is required when multiple operations are defined",
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		} else {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		}
 	}
@@ -1495,6 +1501,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 				extensionCode: invalidVarErr.ExtensionCode,
 				message:       invalidVarErr.Error(),
 				statusCode:    http.StatusOK,
+				kind:          errorKindInvalidVariables,
 			}
 			if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
 				graphqlErr.statusCode = http.StatusBadRequest
@@ -1504,6 +1511,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidVariables,
 		}
 	}
 	return nil

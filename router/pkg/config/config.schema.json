@@ -4786,6 +4786,19 @@
         }
       }
     },
+    "graphql_over_http": {
+      "type": "object",
+      "description": "Configures how the router follows the GraphQL over HTTP spec.",
+      "additionalProperties": false,
+      "properties": {
+        "status_codes": {
+          "type": "string",
+          "enum": ["legacy", "September2026"],
+          "default": "legacy",
+          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'September2026' returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'September2026'."
+        }
+      }
+    },
     "backwards_compatibility": {
       "type": "object",
       "description": "Options that restore behavior of older router versions. Each option gives up a guarantee of the current behavior, so enable one only while migrating away from what it supports.",
