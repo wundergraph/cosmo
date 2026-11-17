@@ -876,6 +876,10 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
@@ -1548,12 +1552,18 @@ func (r *Router) buildClients(ctx context.Context) error {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
+		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
+			r.logger.Warn("allow_mismatched_sha256_ids is enabled: requests for persisted operations whose SHA256 ID doesn't match their body may run a different operation")
+		}
+
 		c, err := persistedoperation.NewClient(&persistedoperation.Options{
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			APQStore:       apqStore,
 			PQLStore:       pqlStore,
+
+			AllowMismatchedSHA256IDs: r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs,
 		})
 		if err != nil {
 			return err
@@ -1807,6 +1817,10 @@ func (r *Router) Start(ctx context.Context) error {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
@@ -2634,6 +2648,7 @@ func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes:        1000 * 1000 * 5, // 5 MB
 		ResponseCompressionMinSize: 1024 * 4,        // 4 KiB
+		RequestReadTimeout:         defaultServerReadTimeout,
 	}
 }
 
@@ -2876,6 +2891,18 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlags) Option {
 	return func(r *Router) {
 		r.apolloRouterCompatibilityFlags = cfg
+	}
+}
+
+func WithGraphQLOverHTTP(cfg config.GraphQLOverHTTPConfiguration) Option {
+	return func(r *Router) {
+		r.graphqlOverHTTP = cfg
+	}
+}
+
+func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
+	return func(r *Router) {
+		r.backwardsCompatibility = cfg
 	}
 }
 

@@ -1561,7 +1561,7 @@ func (s *graphServer) buildGraphMux(
 				Workers:        manifestWarmup.Workers,
 				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 				Timeout:        manifestWarmup.Timeout,
-				Source:         NewManifestWarmupSource(pqlStore),
+				Source:         NewManifestWarmupSource(s.persistedOperationClient),
 				AfterOperation: manifestAfterOperation,
 			}
 
@@ -1580,7 +1580,7 @@ func (s *graphServer) buildGraphMux(
 					Workers:        manifestWarmup.Workers,
 					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 					Timeout:        manifestWarmup.Timeout,
-					Source:         NewManifestWarmupSource(pqlStore),
+					Source:         NewManifestWarmupSource(s.persistedOperationClient),
 					AfterOperation: manifestAfterOperation,
 				}
 
@@ -1735,6 +1735,7 @@ func (s *graphServer) buildGraphMux(
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
 		WaitForCacheWrites:                     waitForCacheWrites,
+		GraphQLOverHTTPStatusCodes:             s.graphqlOverHTTP.StatusCodes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

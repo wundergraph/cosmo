@@ -100,6 +100,10 @@ import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
 import { createOrganizationWebhookConfig } from './notification/createOrganizationWebhookConfig.js';
 import { deleteIntegration } from './notification/deleteIntegration.js';
+import { getAuditLogStreamConfig } from './audit-log-stream/getAuditLogStreamConfig.js';
+import { upsertAuditLogStreamConfig } from './audit-log-stream/upsertAuditLogStreamConfig.js';
+import { deleteAuditLogStreamConfig } from './audit-log-stream/deleteAuditLogStreamConfig.js';
+import { testAuditLogStreamConfig } from './audit-log-stream/testAuditLogStreamConfig.js';
 import { deleteOrganizationWebhookConfig } from './notification/deleteOrganizationWebhookConfig.js';
 import { getOrganizationIntegrations } from './notification/getOrganizationIntegrations.js';
 import { getOrganizationWebhookConfigs } from './notification/getOrganizationWebhookConfigs.js';
@@ -463,6 +467,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deleteIntegration: (req, ctx) => {
       return deleteIntegration(opts, req, ctx);
+    },
+
+    getAuditLogStreamConfig: (req, ctx) => {
+      return getAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    upsertAuditLogStreamConfig: (req, ctx) => {
+      return upsertAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    deleteAuditLogStreamConfig: (req, ctx) => {
+      return deleteAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    testAuditLogStreamConfig: (req, ctx) => {
+      return testAuditLogStreamConfig(opts, req, ctx);
     },
 
     createOIDCProvider: (req, ctx) => {

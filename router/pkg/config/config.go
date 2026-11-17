@@ -238,6 +238,18 @@ type RouterTrafficConfiguration struct {
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
 	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
+	// RequestReadTimeout is the maximum duration for reading the entire client request, including headers and body.
+	// A zero or negative value falls back to the default of 60s.
+	RequestReadTimeout time.Duration `yaml:"request_read_timeout" envDefault:"60s" env:"ROUTER_REQUEST_READ_TIMEOUT"`
+	// RequestHeaderReadTimeout is the maximum duration for reading the client request headers.
+	// A zero or negative value falls back to RequestReadTimeout.
+	RequestHeaderReadTimeout time.Duration `yaml:"request_header_read_timeout" envDefault:"0s" env:"ROUTER_REQUEST_HEADER_READ_TIMEOUT"`
+	// IdleTimeout is the maximum duration to wait for the next request on a keep-alive client connection.
+	// A zero or negative value falls back to RequestReadTimeout.
+	IdleTimeout time.Duration `yaml:"idle_timeout" envDefault:"0s" env:"ROUTER_IDLE_TIMEOUT"`
+	// WriteTimeout is the maximum duration before timing out writes of the response to the client.
+	// It is disabled by default because it also caps long-lived responses such as SSE and multipart subscriptions.
+	WriteTimeout time.Duration `yaml:"write_timeout" envDefault:"0s" env:"ROUTER_WRITE_TIMEOUT"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -1131,6 +1143,29 @@ type TLSClientCertConfiguration struct {
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSeptember2026 returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for request errors
+	GraphQLOverHTTPStatusCodesSeptember2026 GraphQLOverHTTPStatusCodes = "September2026"
+)
+
+// IsValid returns true if the status codes are valid
+func (c GraphQLOverHTTPStatusCodes) IsValid() bool {
+	switch c {
+	case GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026:
+		return true
+	}
+
+	return false
+}
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
+}
+
 type SubgraphErrorPropagationMode string
 
 const (
@@ -1410,6 +1445,19 @@ type PersistedOperationsConfig struct {
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
 	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
+}
+
+// BackwardsCompatibilityConfiguration restores behavior of older router versions.
+// Each option gives up a guarantee of the current behavior, so enable one only
+// while migrating away from what it supports.
+type BackwardsCompatibilityConfiguration struct {
+	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+}
+
+type PersistedOperationsBackwardsCompatibility struct {
+	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
+	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
+	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
 }
 
 type SafelistConfiguration struct {
@@ -1766,7 +1814,10 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
@@ -1917,6 +1968,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	// Validate the status codes configuration
+	if statusCodes := cfg.Config.GraphQLOverHTTP.StatusCodes; !statusCodes.IsValid() {
+		return nil, fmt.Errorf("graphql_over_http.status_codes must be %q or %q, got %q",
+			GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026, statusCodes)
 	}
 
 	// Post-process the config

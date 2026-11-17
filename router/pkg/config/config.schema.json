@@ -2195,6 +2195,42 @@
               "bytes": {
                 "minimum": "1B"
               }
+            },
+            "request_read_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the entire client request, including headers and body. Slow clients that do not finish sending the request within this period have their connection closed. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "60s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "request_header_read_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the client request headers. Setting this to 0 falls back to request_read_timeout. Applies to HTTP/1 only; for HTTP/2 over TLS, idle_timeout limits slow headers, except while another stream on the same connection is open. The period is specified as a string with a number and a unit, e.g. 5s, 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "idle_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration to wait for the next request on a keep-alive client connection. Setting this to 0 falls back to request_read_timeout. The period is specified as a string with a number and a unit, e.g. 30s, 1m, 2m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "write_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for writing the response to the client, measured from the end of reading the request headers. Disabled by default (0). When set, it also terminates long-lived responses such as subscriptions over SSE or multipart once the duration elapses, so only set it if you don't use them. The period is specified as a string with a number and a unit, e.g. 30s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
             }
           }
         },
@@ -4728,6 +4764,37 @@
               "type": "boolean",
               "default": false,
               "description": "If true, the plugin registry is accessed over plaintext HTTP without authentication. Intended for local development against an unauthenticated registry; never enable in production."
+            }
+          }
+        }
+      }
+    },
+    "graphql_over_http": {
+      "type": "object",
+      "description": "Configures how the router follows the GraphQL over HTTP spec.",
+      "additionalProperties": false,
+      "properties": {
+        "status_codes": {
+          "type": "string",
+          "enum": ["legacy", "September2026"],
+          "default": "legacy",
+          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'September2026' returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'September2026'."
+        }
+      }
+    },
+    "backwards_compatibility": {
+      "type": "object",
+      "description": "Options that restore behavior of older router versions. Each option gives up a guarantee of the current behavior, so enable one only while migrating away from what it supports.",
+      "additionalProperties": false,
+      "properties": {
+        "persisted_operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_mismatched_sha256_ids": {
+              "type": "boolean",
+              "default": false,
+              "description": "Serve published operations whose ID looks like a SHA256 hash (64 lowercase hexadecimal characters) but isn't the SHA256 hash of their body, as routers before 0.355.0 did. Such an ID is ambiguous: a request whose query hashes to it can execute a different operation than the published one, and with APQ enabled it can register that query under the ID. Republish the operations with matching IDs and disable this option."
             }
           }
         }
