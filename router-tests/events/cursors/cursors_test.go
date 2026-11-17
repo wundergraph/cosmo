@@ -832,6 +832,18 @@ func subscribeQueryWithCursors(t *testing.T, c cursorClient, id string, query st
 	c.subscribe(t, id, query, extensions)
 }
 
+// readCursorNext reads the next message of subscription id, asserts it carries the employee
+// with employeeID and a cursor, and returns the cursor.
+func readCursorNext(t *testing.T, c cursorClient, id string, employeeID int) string {
+	t.Helper()
+
+	gotID, payload := c.readNext(t)
+	require.Equal(t, id, gotID)
+	require.JSONEq(t, `{"employeeUpdatedMyKafkaCursors":{"id":`+strconv.Itoa(employeeID)+`}}`, string(payload.Data))
+	require.NotEmpty(t, payload.Extensions.StreamsCursor)
+	return payload.Extensions.StreamsCursor
+}
+
 // employeeMessage is a Kafka message that resolves to the employee with id.
 func employeeMessage(id int) string {
 	return `{"__typename":"Employee","id":` + strconv.Itoa(id) + `}`
