@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../../../../../core/types/types.js';
-import Splunk from './commands/splunk.js';
+import SplunkHec from './commands/splunk-hec.js';
 
 /**
  * An organization has at most one destination. Each destination is a subcommand with its own options, so setting a
@@ -9,6 +9,6 @@ import Splunk from './commands/splunk.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('set');
   command.description('Creates or replaces the audit log stream destination.');
-  command.addCommand(Splunk(opts));
+  command.addCommand(SplunkHec(opts));
   return command;
 };

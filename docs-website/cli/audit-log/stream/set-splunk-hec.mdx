@@ -1,5 +1,5 @@
 ---
-title: "Set Splunk"
+title: "Set Splunk HEC"
 description: "Creates or replaces the audit log stream with a Splunk HTTP Event Collector destination."
 icon: plus
 ---
@@ -7,16 +7,16 @@ icon: plus
 ## Usage
 
 ```bash
-npx wgc audit-log stream set splunk --endpoint <url> [--token <token>] [options]
+npx wgc audit-log stream set splunk-hec --endpoint <url> [--token <token>] [options]
 ```
 
 ## Description
 
-The `npx wgc audit-log stream set splunk` command streams the organization's audit logs to a Splunk HTTP Event Collector (HEC). It creates the stream if none exists and replaces it otherwise.
+The `npx wgc audit-log stream set splunk-hec` command streams the organization's audit logs to a Splunk HTTP Event Collector (HEC). It creates the stream if none exists and replaces it otherwise.
 
 Every option that is left out is reset to its default, except the token, which keeps its stored value. Pass `--index`, `--source` and `--sourcetype` again on every call that should keep them.
 
-Use a HEC token with indexer acknowledgement disabled. See [Streaming to Splunk](/studio/audit-log#streaming-to-splunk) for the event format and delivery guarantees.
+Use a HEC token with indexer acknowledgement disabled. See [Streaming to Splunk HEC](/studio/audit-log#streaming-to-splunk-hec) for the event format and delivery guarantees.
 
 ## Required Options
 
@@ -41,13 +41,13 @@ The collector's base URL, e.g. `https://splunk.example.com:8088`, or the full `/
 ## Examples
 
 ```bash
-COSMO_HEC_TOKEN=<token> npx wgc audit-log stream set splunk --endpoint https://splunk.example.com:8088 --index cosmo
+COSMO_HEC_TOKEN=<token> npx wgc audit-log stream set splunk-hec --endpoint https://splunk.example.com:8088 --index cosmo
 ```
 
 Streams audit logs to the `cosmo` index.
 
 ```bash
-npx wgc audit-log stream set splunk --endpoint https://splunk.example.com:8088 --index cosmo --disabled
+npx wgc audit-log stream set splunk-hec --endpoint https://splunk.example.com:8088 --index cosmo --disabled
 ```
 
 Pauses the stream, keeping the stored token.

@@ -5,7 +5,7 @@ import { BaseCommandOptions } from '../../../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('splunk');
+  const command = new Command('splunk-hec');
   command.description(
     'Streams audit logs to a Splunk HTTP Event Collector (HEC). Options that are left out are reset to their defaults, except the token, which is kept.',
   );
