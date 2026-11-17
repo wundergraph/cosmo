@@ -173,7 +173,7 @@ export const AuditLogStreamDialog = () => {
           <EmptyState
             icon={<InformationCircleIcon />}
             title="Audit log export is not available"
-            description="Upgrade to the Enterprise plan to stream your organization's audit logs to Splunk."
+            description="Upgrade to the Enterprise plan to stream your organization's audit logs to Splunk HEC."
             actions={
               <Button asChild>
                 <Link href={buildUrl('/:organizationSlug/billing', { organizationSlug: organization?.slug })}>
@@ -207,7 +207,7 @@ export const AuditLogStreamDialog = () => {
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
                         <SelectItem value="splunk" disabled={!isEntitled}>
-                          Splunk HTTP Event Collector
+                          Splunk HEC
                         </SelectItem>
                       </SelectContent>
                     </Select>
