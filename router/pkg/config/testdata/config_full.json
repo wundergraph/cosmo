@@ -253,7 +253,9 @@
           "Enabled": true
         }
       }
-    }
+    },
+    "Watch": true,
+    "WatchInterval": 5000000000
   },
   "CacheControl": {
     "Enabled": true,
