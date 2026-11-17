@@ -1079,6 +1079,13 @@
       "when": 1794663962335,
       "tag": "0153_audit_logs_org_created_at_index",
       "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "7",
+      "when": 1794848265973,
+      "tag": "0154_audit_log_stream_configs",
+      "breakpoints": true
     }
   ]
 }

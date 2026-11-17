@@ -238,6 +238,18 @@ type RouterTrafficConfiguration struct {
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
 	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
+	// RequestReadTimeout is the maximum duration for reading the entire client request, including headers and body.
+	// A zero or negative value falls back to the default of 60s.
+	RequestReadTimeout time.Duration `yaml:"request_read_timeout" envDefault:"60s" env:"ROUTER_REQUEST_READ_TIMEOUT"`
+	// RequestHeaderReadTimeout is the maximum duration for reading the client request headers.
+	// A zero or negative value falls back to RequestReadTimeout.
+	RequestHeaderReadTimeout time.Duration `yaml:"request_header_read_timeout" envDefault:"0s" env:"ROUTER_REQUEST_HEADER_READ_TIMEOUT"`
+	// IdleTimeout is the maximum duration to wait for the next request on a keep-alive client connection.
+	// A zero or negative value falls back to RequestReadTimeout.
+	IdleTimeout time.Duration `yaml:"idle_timeout" envDefault:"0s" env:"ROUTER_IDLE_TIMEOUT"`
+	// WriteTimeout is the maximum duration before timing out writes of the response to the client.
+	// It is disabled by default because it also caps long-lived responses such as SSE and multipart subscriptions.
+	WriteTimeout time.Duration `yaml:"write_timeout" envDefault:"0s" env:"ROUTER_WRITE_TIMEOUT"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -1042,6 +1054,12 @@ type TLSConfiguration struct {
 	Server     TLSServerConfiguration     `yaml:"server"`
 	Client     HTTPClientTLSConfiguration `yaml:"client"`
 	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
+
+	// Watch reloads router server and HTTP/gRPC subgraph client certificate and key files.
+	// CA bundles and NATS TLS files are not watched.
+	// Open connections keep the material they were established with.
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"TLS_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"TLS_WATCH_INTERVAL"`
 }
 
 type TLSServerConfiguration struct {
@@ -1429,6 +1447,19 @@ type PersistedOperationsConfig struct {
 	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
+// BackwardsCompatibilityConfiguration restores behavior of older router versions.
+// Each option gives up a guarantee of the current behavior, so enable one only
+// while migrating away from what it supports.
+type BackwardsCompatibilityConfiguration struct {
+	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+}
+
+type PersistedOperationsBackwardsCompatibility struct {
+	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
+	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
+	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
+}
+
 type SafelistConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
@@ -1785,6 +1816,8 @@ type Config struct {
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
