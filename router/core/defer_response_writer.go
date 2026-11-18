@@ -29,19 +29,15 @@ const (
 	deferCloseLine       = "--" + multipartBoundary + "--"
 )
 
-func (f *HttpDeferWriter) Complete() {
-	if f.ctx.Err() != nil {
-		return
-	}
+// Complete only satisfies resolve.DeferResponseWriter; Flush owns all output.
+// Flush(true) closes a successful response, and an execution that stops before
+// it must remain an incomplete stream, so there is nothing left to write here.
+func (f *HttpDeferWriter) Complete() {}
 
-	// The close follows the last boundary, which leaves an empty part at the end.
-	if f.started {
-		_, _ = io.WriteString(f.writer, "\r\n")
-	}
-	_, _ = io.WriteString(f.writer, deferCloseLine)
-
-	// Flush before closing the writer to ensure all data is sent
-	f.flusher.Flush()
+// Committed reports whether a part has reached the client. After that the
+// response is a multipart stream, so a later error cannot become an error response.
+func (f *HttpDeferWriter) Committed() bool {
+	return f.started
 }
 
 func (f *HttpDeferWriter) Write(p []byte) (n int, err error) {
@@ -52,7 +48,7 @@ func (f *HttpDeferWriter) Write(p []byte) (n int, err error) {
 	return f.buf.Write(p)
 }
 
-func (f *HttpDeferWriter) Flush() (err error) {
+func (f *HttpDeferWriter) Flush(final bool) (err error) {
 	if err = f.ctx.Err(); err != nil {
 		return err
 	}
@@ -74,7 +70,14 @@ func (f *HttpDeferWriter) Flush() (err error) {
 	if _, err = f.writer.Write(resp); err != nil {
 		return err
 	}
-	if _, err = io.WriteString(f.writer, deferPartBoundary); err != nil {
+	// End each part immediately so clients can consume it without waiting for
+	// the next payload. A final payload closes the stream instead of opening
+	// another part, including an initial result with no surviving defers.
+	boundary := deferPartBoundary
+	if final {
+		boundary = "\r\n" + deferCloseLine
+	}
+	if _, err = io.WriteString(f.writer, boundary); err != nil {
 		return err
 	}
 
