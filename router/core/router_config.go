@@ -223,6 +223,7 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_router_compatibility_flags_cache_control_any_public_enabled"] = c.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
 
 	usage["backwards_compatibility_persisted_operations_allow_mismatched_sha256_ids"] = c.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs
+	usage["backwards_compatibility_variables_validation_allow_int64_values"] = c.backwardsCompatibility.VariablesValidation.AllowInt64Values
 	usage["graphql_over_http_status_codes"] = string(c.graphqlOverHTTP.StatusCodes)
 
 	usage["demo_mode"] = c.demoMode
