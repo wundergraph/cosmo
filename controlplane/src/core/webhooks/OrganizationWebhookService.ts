@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf';
+import * as Sentry from '@sentry/node';
 import {
   EventMeta,
   GraphSchemaUpdatedMetaSchema,
@@ -863,7 +864,14 @@ export class OrganizationWebhookService {
         }
       } else {
         overwriteErrorMessage = true;
-        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
+        deliveryInfo.errorMessage = `Check extension returned an invalid response:\n${z.prettifyError(parsedResponse.error)}`;
+        Sentry.captureException(new Error(deliveryInfo.errorMessage), {
+          extra: {
+            organizationId: this.organizationId,
+            schemaCheckId: input.schemaCheckID,
+            webhookDeliveryId: deliveryInfo.id,
+          },
+        });
       }
     }
 

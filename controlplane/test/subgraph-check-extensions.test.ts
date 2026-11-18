@@ -1,4 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import * as Sentry from '@sentry/node';
 import { afterAll, afterEach, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import axios from 'axios';
@@ -6,6 +7,11 @@ import { TestUser, afterAllSetup, beforeAllSetup, genUniqueLabel, genID } from '
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
+
+vi.mock('@sentry/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sentry/node')>()),
+  captureException: vi.fn(() => 'sentry-event-id'),
+}));
 
 const subgraph1Schema = `
 type Query {
@@ -146,6 +152,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.checkExtensionErrorMessage).toBe(validErrorMessages.join('\n'));
+    expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 
   test('accepts a large collection of lint issues', async (testContext) => {
@@ -170,6 +177,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.checkExtensionErrorMessage).toBeUndefined();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 
   test('accepts lint-issue collections for a large number of subgraphs', async (testContext) => {
@@ -206,10 +214,16 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response: ';
-    expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const validationErrors = JSON.parse(response.checkExtensionErrorMessage!.slice(prefix.length, -1));
-    expect(validationErrors).toEqual([expect.objectContaining({ path: ['errors', 0] })]);
+    expect(response.checkExtensionErrorMessage).toBe(
+      'Check extension returned an invalid response:\n✖ Invalid input: expected string, received object\n  → at errors[0]',
+    );
+    expect(Sentry.captureException).toHaveBeenCalledExactlyOnceWith(new Error(response.checkExtensionErrorMessage), {
+      extra: {
+        organizationId: expect.any(String),
+        schemaCheckId: response.checkId,
+        webhookDeliveryId: expect.any(String),
+      },
+    });
 
     const summary = await client.getCheckSummary({
       namespace: 'default',
@@ -234,12 +248,14 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response: ';
+    const prefix = 'Check extension returned an invalid response:\n';
     expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const validationErrors = JSON.parse(response.checkExtensionErrorMessage!.slice(prefix.length, -1));
-    expect(validationErrors).toEqual(
-      ['lintRuleType', 'severity', 'message', 'issueLocation'].map((field) =>
-        expect.objectContaining({ path: ['lintIssues', subgraph1Name, 0, field] }),
+    const diagnosticPaths = response
+      .checkExtensionErrorMessage!.split('\n')
+      .filter((line) => line.startsWith('  → at '));
+    expect(diagnosticPaths).toEqual(
+      ['lintRuleType', 'severity', 'message', 'issueLocation'].map(
+        (field) => `  → at lintIssues["${subgraph1Name}"][0].${field}`,
       ),
     );
   });
@@ -273,12 +289,14 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response: ';
+    const prefix = 'Check extension returned an invalid response:\n';
     expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const validationErrors = JSON.parse(response.checkExtensionErrorMessage!.slice(prefix.length, -1));
-    expect(validationErrors).toEqual(
-      ['lintRuleType', 'severity', 'message', 'issueLocation'].map((field) =>
-        expect.objectContaining({ path: ['lintIssues', subgraph2Name, 1, field] }),
+    const diagnosticPaths = response
+      .checkExtensionErrorMessage!.split('\n')
+      .filter((line) => line.startsWith('  → at '));
+    expect(diagnosticPaths).toEqual(
+      ['lintRuleType', 'severity', 'message', 'issueLocation'].map(
+        (field) => `  → at lintIssues["${subgraph2Name}"][1].${field}`,
       ),
     );
   });
@@ -306,10 +324,9 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response: ';
-    expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const validationErrors = JSON.parse(response.checkExtensionErrorMessage!.slice(prefix.length, -1));
-    expect(validationErrors).toEqual([expect.objectContaining({ path: ['lintIssues', subgraph1Name] })]);
+    expect(response.checkExtensionErrorMessage).toBe(
+      `Check extension returned an invalid response:\n✖ Invalid input: expected array, received null\n  → at lintIssues["${subgraph1Name}"]`,
+    );
   });
 
   test('Should enable subgraph check extensions', async (testContext) => {
