@@ -248,16 +248,17 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response:\n';
-    expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const diagnosticPaths = response
-      .checkExtensionErrorMessage!.split('\n')
-      .filter((line) => line.startsWith('  → at '));
-    expect(diagnosticPaths).toEqual(
-      ['lintRuleType', 'severity', 'message', 'issueLocation'].map(
-        (field) => `  → at lintIssues["${subgraph1Name}"][0].${field}`,
-      ),
-    );
+    expect(response.checkExtensionErrorMessage?.replaceAll(subgraph1Name, 'subgraph-1')).toMatchInlineSnapshot(`
+      "Check extension returned an invalid response:
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-1"][0].lintRuleType
+      ✖ Invalid option: expected one of 0|1
+        → at lintIssues["subgraph-1"][0].severity
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-1"][0].message
+      ✖ Invalid input: expected object, received undefined
+        → at lintIssues["subgraph-1"][0].issueLocation"
+    `);
   });
 
   test('stops at a lint issue that does not match the schema after earlier subgraphs pass schema validation', async (testContext) => {
@@ -289,16 +290,17 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    const prefix = 'Check extension returned an invalid response:\n';
-    expect(response.checkExtensionErrorMessage).toContain(prefix);
-    const diagnosticPaths = response
-      .checkExtensionErrorMessage!.split('\n')
-      .filter((line) => line.startsWith('  → at '));
-    expect(diagnosticPaths).toEqual(
-      ['lintRuleType', 'severity', 'message', 'issueLocation'].map(
-        (field) => `  → at lintIssues["${subgraph2Name}"][1].${field}`,
-      ),
-    );
+    expect(response.checkExtensionErrorMessage?.replaceAll(subgraph2Name, 'subgraph-2')).toMatchInlineSnapshot(`
+      "Check extension returned an invalid response:
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-2"][1].lintRuleType
+      ✖ Invalid option: expected one of 0|1
+        → at lintIssues["subgraph-2"][1].severity
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-2"][1].message
+      ✖ Invalid input: expected object, received undefined
+        → at lintIssues["subgraph-2"][1].issueLocation"
+    `);
   });
 
   test('reports schema validation errors only for the first lint-issue collection that does not match the schema', async (testContext) => {
