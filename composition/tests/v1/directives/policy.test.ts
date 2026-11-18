@@ -645,6 +645,197 @@ describe('@policy directive tests', () => {
       );
     });
 
+    test('that @policy is propagated from implementations to the interface', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            node: Node
+          }
+
+          interface Node {
+            id: ID
+            name: String
+          }
+
+          type A implements Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+            name: String
+          }
+
+          type B implements Node @policy(policies: [["typeB"]]) {
+            id: ID @policy(policies: [["fieldB"]])
+            name: String @policy(policies: [["nameB"]])
+          }
+
+          type C implements Node {
+            id: ID
+            name: String
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [a],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type A implements Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+            name: String
+          }
+
+          type B implements Node @policy(policies: [["typeB"]]) {
+            id: ID @policy(policies: [["fieldB"]])
+            name: String @policy(policies: [["nameB"]])
+          }
+
+          type C implements Node {
+            id: ID
+            name: String
+          }
+
+          interface Node @policy(policies: [["typeA", "typeB"]]) {
+            id: ID @policy(policies: [["fieldA", "fieldB"]])
+            name: String @policy(policies: [["nameB"]])
+          }
+
+          type Query {
+            node: Node
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type A implements Node {
+            id: ID
+            name: String
+          }
+
+          type B implements Node {
+            id: ID
+            name: String
+          }
+
+          type C implements Node {
+            id: ID
+            name: String
+          }
+
+          interface Node {
+            id: ID
+            name: String
+          }
+
+          type Query {
+            node: Node
+          }
+        `),
+      );
+    });
+
+    test('that @policy is propagated to an interface from an implementation in another subgraph', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            node: Node
+          }
+
+          interface Node {
+            id: ID
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          interface Node {
+            id: ID
+          }
+
+          type A implements Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type A implements Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+          }
+
+          interface Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+          }
+
+          type Query {
+            node: Node
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that @policy is not propagated from union members to the union', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            account: Account
+          }
+
+          union Account = A | B
+
+          type A @policy(policies: [["a"]]) {
+            id: ID
+          }
+
+          type B @policy(policies: [["b"]]) {
+            id: ID
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type A @policy(policies: [["a"]]) {
+            id: ID
+          }
+
+          union Account = A | B
+
+          type B @policy(policies: [["b"]]) {
+            id: ID
+          }
+
+          type Query {
+            account: Account
+          }
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
     test('that @policy is persisted alongside @requiresScopes', () => {
       const a = createSubgraph(
         'a',
@@ -957,6 +1148,59 @@ describe('@policy directive tests', () => {
           }
 
           scalar S @policy(policies: [["a", "b"]])
+
+          ${FEDERATION_POLICY_SCALAR}
+        `),
+      );
+    });
+
+    test('that @policy is propagated to every interface an implementation implements', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Query {
+            node: Node
+          }
+
+          interface Node {
+            id: ID
+          }
+
+          interface Named implements Node {
+            id: ID
+            name: String
+          }
+
+          type A implements Node & Named @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+            name: String
+          }
+        `,
+      );
+      const { federatedGraphSchema } = federateSubgraphsSuccess([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          ${POLICY_DIRECTIVE}
+
+          type A implements Named & Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+            name: String
+          }
+
+          interface Named implements Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+            name: String
+          }
+
+          interface Node @policy(policies: [["typeA"]]) {
+            id: ID @policy(policies: [["fieldA"]])
+          }
+
+          type Query {
+            node: Node
+          }
 
           ${FEDERATION_POLICY_SCALAR}
         `),
