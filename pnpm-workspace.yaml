@@ -56,7 +56,6 @@ overrides:
   js-yaml: 4.3.2
   fast-uri: 3.1.5
   tmp: 0.2.7
-  '@graphql-tools/utils@<12.0.2': 'catalog:'
   fast-xml-parser: 5.8.0
   '@aws-sdk/client-sesv2': ^3.996.0
   handlebars: 4.7.10
