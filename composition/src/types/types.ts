@@ -19,6 +19,8 @@ export type FieldCoords = string;
 
 export type InterfaceTypeName = string;
 
+export type PolicyName = string;
+
 export type SubgraphName = string;
 
 export type TypeName = string;
