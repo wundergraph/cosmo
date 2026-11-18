@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
 import { Pagination } from '@/components/ui/pagination';
@@ -30,7 +31,7 @@ import { useUser } from '@/hooks/use-user';
 import { NextPageWithLayout } from '@/lib/page';
 import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { EllipsisVerticalIcon, ExclamationTriangleIcon, UserPlusIcon } from '@heroicons/react/24/outline';
-import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrgMember } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -524,30 +525,24 @@ const MembersPage: NextPageWithLayout = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams({ search: e.target.value });
-            }}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch('');
-                applyParams({ search: null });
-              }}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
-        </div>
+        <ClearableInput
+          icon={<MagnifyingGlassIcon />}
+          placeholder="Search"
+          clearLabel="Clear search"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            applyParams({ search: e.target.value });
+          }}
+          onClear={
+            search
+              ? () => {
+                  setSearch('');
+                  applyParams({ search: null });
+                }
+              : undefined
+          }
+        />
       </div>
       {tab === 'current' ? <AcceptedMembers /> : <PendingInvitations />}
     </div>

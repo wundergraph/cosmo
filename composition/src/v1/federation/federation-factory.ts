@@ -432,7 +432,8 @@ export class FederationFactory {
         }
 
         const handledArguments = new Set<ArgumentName>();
-        const unsatisfiedArguments = new Set<ArgumentName>();
+        const unsatisfiedOptionalArgs = new Set<ArgumentName>();
+        const unsatisfiedRequiredArgs = new Set<ArgumentName>();
         for (const [argumentName, interfaceArg] of interfaceField.argumentDataByName) {
           handledArguments.add(argumentName);
           const implementationArgumentData = implField.argumentDataByName.get(argumentName);
@@ -445,7 +446,11 @@ export class FederationFactory {
           }
 
           if (interfaceField.subgraphNames.size === interfaceArg.subgraphNames.size) {
-            unsatisfiedArguments.add(argumentName);
+            if (interfaceArg.requiredSubgraphNames.size > 0) {
+              unsatisfiedRequiredArgs.add(argumentName);
+            } else {
+              unsatisfiedOptionalArgs.add(argumentName);
+            }
           }
 
           if (doesArgumentDefineFromContext(interfaceArg)) {
@@ -473,8 +478,10 @@ export class FederationFactory {
         // Additional arguments must be optional (nullable)
         for (const [argumentName, implArg] of implField.argumentDataByName) {
           if (implField.subgraphNames.size === implArg.subgraphNames.size) {
-            unsatisfiedArguments.delete(argumentName);
+            unsatisfiedOptionalArgs.delete(argumentName);
+            unsatisfiedRequiredArgs.delete(argumentName);
           }
+
           if (handledArguments.has(argumentName)) {
             continue;
           }
@@ -494,11 +501,18 @@ export class FederationFactory {
           invalidFieldImplementation.isInaccessible = true;
         }
 
-        // Remaining entries in this set are optional arguments the Interface needs that implementation does not satisfy
-        if (unsatisfiedArguments.size > 0) {
+        // Remaining entries in this set are optional Interface arguments that the implementation does not satisfy
+        if (unsatisfiedOptionalArgs.size > 0) {
           hasErrors = true;
           hasNestedErrors = true;
-          invalidFieldImplementation.unfederatedArguments = unsatisfiedArguments;
+          invalidFieldImplementation.unfederatedOptionalArguments = unsatisfiedOptionalArgs;
+        }
+
+        // Remaining entries in this set are required Interface arguments tthat the implementation does not satisfy
+        if (unsatisfiedRequiredArgs.size > 0) {
+          hasErrors = true;
+          hasNestedErrors = true;
+          invalidFieldImplementation.unfederatedRequiredArguments = unsatisfiedRequiredArgs;
         }
 
         if (hasNestedErrors) {
@@ -1898,6 +1912,7 @@ export class FederationFactory {
         // TODO error
         continue;
       }
+
       for (const subgraphName of entityInterfaceData.interfaceObjectSubgraphNames) {
         const internalSubgraph = getOrThrowError(
           this.internalSubgraphBySubgraphName,
@@ -1909,6 +1924,7 @@ export class FederationFactory {
         if (!concreteTypeNames) {
           continue;
         }
+
         const interfaceObjectConfiguration = getOrThrowError(
           configurationDataByTypeName,
           entityInterfaceTypeName,
@@ -1919,6 +1935,7 @@ export class FederationFactory {
           // TODO no keys error
           continue;
         }
+
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = new Set<TypeName>(
           entityInterfaceData.concreteTypeNames,
         );
@@ -1933,6 +1950,7 @@ export class FederationFactory {
           if (!isObjectDefinitionData(concreteTypeData)) {
             continue;
           }
+
           // The subgraph locations of the Interface Object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
@@ -1975,6 +1993,7 @@ export class FederationFactory {
           if (!isObjectDefinitionData(entityInterfaceSubgraphData)) {
             continue;
           }
+
           for (const [fieldName, fieldData] of entityInterfaceSubgraphData.fieldDataByName) {
             const fieldCoords = `${concreteTypeName}.${fieldName}`;
             getValueOrDefault(
@@ -1982,6 +2001,7 @@ export class FederationFactory {
               fieldData.namedTypeName,
               () => new Set<FieldCoords>(),
             ).add(fieldCoords);
+            this.upsertFieldData(concreteTypeData.fieldDataByName, fieldData, concreteTypeData.isInaccessible);
             const interfaceFieldAuthData = interfaceAuthData?.fieldAuthDataByFieldName.get(fieldName);
             if (interfaceFieldAuthData) {
               const concreteAuthData = getValueOrDefault(this.authorizationDataByParentTypeName, concreteTypeName, () =>
@@ -2001,6 +2021,7 @@ export class FederationFactory {
               if (!externalData) {
                 continue;
               }
+
               existingFieldData.externalFieldDataBySubgraphName.set(subgraphName, { ...externalData });
               continue;
             }

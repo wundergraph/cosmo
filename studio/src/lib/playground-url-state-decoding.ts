@@ -24,7 +24,7 @@ export const decompressState = (compressedState: string): PlaygroundUrlState => 
   const result = PlaygroundStateSchema.safeParse(parsedState);
 
   if (!result.success) {
-    throw new Error(`Invalid playground state: ${result.error.errors.map((e) => e.toString()).join('\n')}`);
+    throw new Error(`Invalid playground state: ${result.error.issues.map((e) => e.toString()).join('\n')}`);
   }
 
   if (process.env.NODE_ENV === 'development') {

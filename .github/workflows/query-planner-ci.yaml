@@ -14,6 +14,7 @@ on:
       - '.github/workflows/router-ci.yaml'
       - '.github/workflows/query-planner-ci.yaml'
       - 'cli/**/*'
+      - 'composition/src/**/*'
       - 'connect/**/*'
       - 'router/**/*'
       - 'pnpm-lock.yaml'
@@ -32,11 +33,18 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has_skip_label: ${{ steps.check_label_skip.outputs.has_label }}
-      # The celestial check runs for a query-planner label or an engine bump, unless skipped by label.
-      run_query_planner: ${{ (steps.check_label.outputs.has_label == 'true' || steps.check_engine_changes.outputs.engine_changed == 'true') && steps.check_label_skip.outputs.has_label != 'true' }}
+      # The celestial check runs for a query-planner label, an engine bump or a composition change,
+      # unless skipped by label.
+      # Fork PRs get no secrets, so a composition change alone does not start the check for them.
+      run_query_planner: >-
+        ${{ (steps.check_label.outputs.has_label == 'true'
+        || steps.check_engine_changes.outputs.engine_changed == 'true'
+        || (steps.check_composition_changes.outputs.composition_changed == 'true'
+        && github.event.pull_request.head.repo.full_name == github.repository))
+        && steps.check_label_skip.outputs.has_label != 'true' }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Setup Go
@@ -91,6 +99,20 @@ jobs:
             echo "engine_changed=false" >> $GITHUB_OUTPUT
             echo "Engine has not been changed"
           fi
+      # The engine check above verified that HEAD^1 is the base branch tip,
+      # so the diff holds only the changes of this PR.
+      - name: Check for changes in composition sources
+        id: check_composition_changes
+        run: |
+          changed_files=$(git diff --name-only HEAD^1 HEAD -- composition/src)
+          if [ -n "$changed_files" ]; then
+            echo "composition_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Composition sources have been changed:"
+            echo "$changed_files"
+          else
+            echo "composition_changed=false" >> "$GITHUB_OUTPUT"
+            echo "Composition sources have not been changed"
+          fi
 
   filter-changes:
     runs-on: ubuntu-latest
@@ -99,10 +121,10 @@ jobs:
       cli_changed: ${{ steps.filter.outputs.cli }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Filter Changes
         id: filter
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
             router:
@@ -111,8 +133,11 @@ jobs:
               - 'router-tests/**/*'
               - 'connect/**/*'
               - '.github/workflows/router-ci.yaml'
+            # wgc bundles the composition sources of the checkout,
+            # so a composition change needs a wgc built from this PR.
             cli:
               - 'cli/**/*'
+              - 'composition/src/**/*'
               - 'connect/**/*'
               - '.github/workflows/cli-ci.yaml'
   build-router:
@@ -125,7 +150,7 @@ jobs:
       image_ref: ${{ steps.build_push_image.outputs.image_ref }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/build-push-image
         id: build_push_image
         with:
@@ -144,7 +169,7 @@ jobs:
     outputs:
       wgc: ${{ steps.cli-build.outputs.artifact-url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/cli-build
         id: cli-build
         with:
