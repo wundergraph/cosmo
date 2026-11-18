@@ -49,10 +49,15 @@ func newRecordingUpdater(ctx context.Context, blockAfterFirst bool) *recordingUp
 
 func nextEvent(t *testing.T, u *recordingUpdater) datasource.StreamEvent {
 	t.Helper()
+	return nextEventWithin(t, u, EventWaitTimeout)
+}
+
+func nextEventWithin(t *testing.T, u *recordingUpdater, timeout time.Duration) datasource.StreamEvent {
+	t.Helper()
 	select {
 	case evt := <-u.events:
 		return evt
-	case <-time.After(EventWaitTimeout):
+	case <-time.After(timeout):
 		require.FailNow(t, "timed out waiting for an event")
 		return nil
 	}
@@ -163,4 +168,89 @@ func TestCursors_KafkaPartitions(t *testing.T) {
 			require.Equal(t, undelivered, string(nextEvent(t, resumed).GetData()))
 		})
 	}
+}
+
+// TestCursors_KafkaResumeNewPartition checks against the adapter directly that a resumed
+// subscription consumes a partition that is created while it is running.
+func TestCursors_KafkaResumeNewPartition(t *testing.T) {
+	t.Parallel()
+
+	const (
+		partitionRefreshInterval = 200 * time.Millisecond
+		newPartitionWait         = 10 * time.Second
+	)
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*newPartitionWait)
+	t.Cleanup(cancel)
+
+	topic := fmt.Sprintf("cursors_new_partition_%d", time.Now().UnixNano())
+
+	newProducer := func() *kgo.Client {
+		t.Helper()
+		producer, err := kgo.NewClient(
+			kgo.SeedBrokers(kafkaTestSeed),
+			kgo.RecordPartitioner(kgo.ManualPartitioner()),
+		)
+		require.NoError(t, err)
+		t.Cleanup(producer.Close)
+		return producer
+	}
+	produce := func(producer *kgo.Client, partition int32, value string) {
+		t.Helper()
+		require.NoError(t, producer.ProduceSync(ctx, &kgo.Record{Topic: topic, Partition: partition, Value: []byte(value)}).FirstErr())
+	}
+
+	producer := newProducer()
+	admin := kadm.NewClient(producer)
+	_, err := admin.CreateTopics(ctx, 1, 1, nil, topic)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = admin.DeleteTopics(context.Background(), topic) })
+
+	adapter, err := kafka.NewProviderAdapter(ctx, nil, []kgo.Opt{kgo.SeedBrokers(kafkaTestSeed)}, datasource.ProviderOpts{})
+	require.NoError(t, err)
+	// the default interval would make the test wait for it
+	adapter.SetPartitionRefreshInterval(partitionRefreshInterval)
+	require.NoError(t, adapter.Startup(ctx))
+	t.Cleanup(func() { require.NoError(t, adapter.Shutdown(context.Background())) })
+
+	conf := &kafka.SubscriptionEventConfiguration{
+		Provider:      "my-kafka",
+		Topics:        []string{topic},
+		FieldName:     "employeeUpdated",
+		GuaranteeMode: datasource.DeliveryGuaranteeModeCursor,
+	}
+
+	// a cursor from before the first record of the only partition
+	cursor := &streamsv1.Cursor{
+		ProviderId: "my-kafka",
+		IssuedAt:   time.Now().UnixMilli(),
+		Position: &streamsv1.Cursor_Kafka{Kafka: &streamsv1.KafkaCursorPosition{
+			Topics: map[string]*streamsv1.KafkaPartitionPositions{
+				topic: {Partitions: map[int32]*streamsv1.KafkaPartitionOffset{0: {Offset: -1}}},
+			},
+		}},
+	}
+
+	subCtx, cancelSub := context.WithCancel(ctx)
+	t.Cleanup(cancelSub)
+	updater := newRecordingUpdater(subCtx, false)
+	require.NoError(t, adapter.SubscribeFrom(subCtx, conf, cursor, updater))
+
+	// the subscription runs on the partition it was resumed with
+	produce(producer, 0, "record-0")
+	require.Equal(t, "record-0", string(nextEventWithin(t, updater, newPartitionWait).GetData()))
+
+	// a partition is created while the subscription runs, and a record lands on it
+	_, err = admin.UpdatePartitions(ctx, 2, topic)
+	require.NoError(t, err)
+	// a new producer, since a running one only learns about the partition with its next metadata refresh
+	produce(newProducer(), 1, "record-1")
+
+	// the watcher notices the partition within a few refreshes, so a record that has not arrived by
+	// then means it was not detected
+	require.Equal(t, "record-1", string(nextEventWithin(t, updater, newPartitionWait).GetData()))
 }
