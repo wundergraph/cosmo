@@ -11,7 +11,7 @@ The Cosmo Router can be easily extended by providing custom modules. Modules are
 - `core.EnginePreOriginHandler` Implements a custom handler that is executed before the request is sent to the subgraph. This handler is called for every subgraph request. **Use case:** Logging, Request signing, Short-circuiting with mock responses. For setting headers that affect request identity (e.g. tenant IDs), use `RouterOnRequestHandler` or `RouterMiddlewareHandler` instead — see [Request Deduplication](/router/request-deduplication).
 - `core.EnginePostOriginHandler` Implement a custom handler executed after the request to the subgraph but before the response is passed to the GraphQL engine. This handler is called for every subgraph response. **Use cases:** Logging, Caching.
 - `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration.
-- `core.RouterOnExecutionConfigChangeHandler` Receives a read-only base execution-config snapshot on initial load and every successful reload. Use it to build metadata from the schemas and subgraph routing URLs.
+- `core.ConfigHandler` Receives a read-only configuration snapshot on initial load and every successful execution config reload. Use it to build metadata from the schemas and subgraph routing URLs.
 - `core.Cleaner` Implements a Module lifecycle hook that is executed after the server is shutdown. Use it to close connections gracefully or for any other cleanup.
 
 <Info>
@@ -71,10 +71,11 @@ In this example, the module `myModule` has a priority of 1, meaning it will be l
 
 ### Access the execution config
 
-Implement `core.RouterOnExecutionConfigChangeHandler` to receive a `routerconfig.ExecutionConfig` snapshot. Import `context` and `github.com/wundergraph/cosmo/router/pkg/routerconfig`:
+Implement `core.ConfigHandler` to receive a `core.ModuleConfig` snapshot. Its `ExecutionConfig()` method returns the base graph’s `routerconfig.ExecutionConfig`.
 
 ```go
-func (m *MyModule) OnExecutionConfigChange(ctx context.Context, cfg routerconfig.ExecutionConfig) {
+func (m *MyModule) OnConfigChange(ctx context.Context, config core.ModuleConfig) {
+    cfg := config.ExecutionConfig()
     schema := cfg.Schema()
     clientSchema := cfg.ClientSchema()
     // Build metadata and publish it for request handlers.
@@ -89,7 +90,7 @@ func (m *MyModule) OnExecutionConfigChange(ctx context.Context, cfg routerconfig
 
 The hook runs after `Provision`, in module priority order. The router calls it after building the new graph server and before serving requests with that config. Configs that fail validation or graph-server construction do not invoke the hook. Updates with unchanged SDL still invoke it.
 
-The snapshot exposes these accessors:
+The execution config provides the following accessors.
 
 | Accessor | Meaning |
 | --- | --- |

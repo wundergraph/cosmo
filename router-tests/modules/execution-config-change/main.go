@@ -40,7 +40,8 @@ func (m *policyModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *policyModule) OnExecutionConfigChange(ctx context.Context, cfg routerconfig.ExecutionConfig) {
+func (m *policyModule) OnConfigChange(ctx context.Context, config core.ModuleConfig) {
+	cfg := config.ExecutionConfig()
 	schema, report := astparser.ParseGraphqlDocumentString(cfg.Schema())
 	if report.HasErrors() {
 		m.logger.Error("Cannot build policy metadata", zap.Error(&report))
@@ -93,9 +94,9 @@ func (m *policyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 }
 
 var (
-	_ core.Provisioner                          = (*policyModule)(nil)
-	_ core.RouterMiddlewareHandler              = (*policyModule)(nil)
-	_ core.RouterOnExecutionConfigChangeHandler = (*policyModule)(nil)
+	_ core.Provisioner             = (*policyModule)(nil)
+	_ core.RouterMiddlewareHandler = (*policyModule)(nil)
+	_ core.ConfigHandler           = (*policyModule)(nil)
 )
 
 func main() {

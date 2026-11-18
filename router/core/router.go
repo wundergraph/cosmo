@@ -686,10 +686,10 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 		return err
 	}
 
-	configChange := response.ExecutionConfig(server.graphMuxList[""].baseSubgraphs)
+	cfg := &moduleConfig{executionConfig: response.ExecutionConfig(server.graphMuxList[""].baseSubgraphs)}
 	for _, module := range r.modules {
-		if handler, ok := module.(RouterOnExecutionConfigChangeHandler); ok {
-			handler.OnExecutionConfigChange(ctx, configChange)
+		if handler, ok := module.(ConfigHandler); ok {
+			handler.OnConfigChange(ctx, cfg)
 		}
 	}
 

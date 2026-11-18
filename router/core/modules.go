@@ -165,8 +165,25 @@ type Provisioner interface {
 	Provision(*ModuleContext) error
 }
 
-// RouterOnExecutionConfigChangeHandler observes the initial execution config and
-// every successful reload. Only the base graph's config is provided.
+// ModuleConfig is the read-only configuration snapshot passed to a ConfigHandler.
+// Modules may retain it after the callback and read it concurrently. The router
+// supplies the implementation so future releases can add config accessors.
+type ModuleConfig interface {
+	// ExecutionConfig returns the base graph's execution config for this snapshot.
+	ExecutionConfig() routerconfig.ExecutionConfig
+
+	isModuleConfig()
+}
+
+type moduleConfig struct {
+	executionConfig routerconfig.ExecutionConfig
+}
+
+func (c *moduleConfig) ExecutionConfig() routerconfig.ExecutionConfig { return c.executionConfig }
+func (*moduleConfig) isModuleConfig()                                 {}
+
+// ConfigHandler observes the initial configuration and every successful
+// execution config reload.
 // The hook runs synchronously, in module priority order, after the new graph
 // server has been built and before it starts serving requests. Invalid configs
 // do not invoke it. The notification cannot reject a config.
@@ -177,8 +194,8 @@ type Provisioner interface {
 // A slow hook delays startup or reload. The config is an immutable snapshot that
 // can be retained independently of ctx. The context controls work performed by
 // the hook and should not be stored alongside the snapshot.
-type RouterOnExecutionConfigChangeHandler interface {
-	OnExecutionConfigChange(ctx stdContext.Context, cfg routerconfig.ExecutionConfig)
+type ConfigHandler interface {
+	OnConfigChange(ctx stdContext.Context, cfg ModuleConfig)
 }
 
 type Cleaner interface {

@@ -19,7 +19,7 @@ import (
 
 type executionConfigTestModule struct {
 	provisioned bool
-	updates     []routerconfig.ExecutionConfig
+	updates     []ModuleConfig
 	contexts    []context.Context
 	current     atomic.Value
 	beforeSwap  func()
@@ -34,7 +34,7 @@ func (m *executionConfigTestModule) Provision(*ModuleContext) error {
 	return nil
 }
 
-func (m *executionConfigTestModule) OnExecutionConfigChange(ctx context.Context, cfg routerconfig.ExecutionConfig) {
+func (m *executionConfigTestModule) OnConfigChange(ctx context.Context, cfg ModuleConfig) {
 	m.updates = append(m.updates, cfg)
 	m.contexts = append(m.contexts, ctx)
 	m.current.Store(cfg)
@@ -45,7 +45,7 @@ func (m *executionConfigTestModule) OnExecutionConfigChange(ctx context.Context,
 
 func (m *executionConfigTestModule) Middleware(ctx RequestContext, next http.Handler) {
 	if snapshot := m.current.Load(); snapshot != nil {
-		ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(snapshot.(routerconfig.ExecutionConfig).Schema()))))
+		ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(snapshot.(ModuleConfig).ExecutionConfig().Schema()))))
 	}
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
@@ -111,9 +111,9 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		_, err := r.NewServer(t.Context())
 		require.NoError(t, err)
 		require.Len(t, module.updates, 1)
-		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].Schema())
-		require.Equal(t, cfg.Version, module.updates[0].Version())
-		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ClientSchema())
+		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ExecutionConfig().Schema())
+		require.Equal(t, cfg.Version, module.updates[0].ExecutionConfig().Version())
+		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ExecutionConfig().ClientSchema())
 		require.Same(t, t.Context(), module.contexts[0])
 		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
 
@@ -122,10 +122,10 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		updated.EngineConfig.GraphqlSchema = strings.ReplaceAll(cfg.EngineConfig.GraphqlSchema, "reader", "writer")
 		require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{Config: updated}))
 		require.Len(t, module.updates, 2)
-		require.Equal(t, cfg.Version, module.updates[1].Version())
-		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[1].Schema())
-		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].Schema())
-		require.Equal(t, updated.EngineConfig.GetGraphqlClientSchema(), module.updates[1].ClientSchema())
+		require.Equal(t, cfg.Version, module.updates[1].ExecutionConfig().Version())
+		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[1].ExecutionConfig().Schema())
+		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ExecutionConfig().Schema())
+		require.Equal(t, updated.EngineConfig.GetGraphqlClientSchema(), module.updates[1].ExecutionConfig().ClientSchema())
 		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema)
 
 		// Config updates with identical SDL must still notify the module.
@@ -134,8 +134,8 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		configOnly.Version = "config-only"
 		require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{Config: configOnly}))
 		require.Len(t, module.updates, 3)
-		require.Equal(t, configOnly.Version, module.updates[2].Version())
-		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[2].Schema())
+		require.Equal(t, configOnly.Version, module.updates[2].ExecutionConfig().Version())
+		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[2].ExecutionConfig().Schema())
 		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema)
 	})
 
@@ -154,7 +154,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 			{ID: "2", Name: "virtual"},
 		}
 		require.Len(t, module.updates, 1)
-		require.Equal(t, want, module.updates[0].Subgraphs())
+		require.Equal(t, want, module.updates[0].ExecutionConfig().Subgraphs())
 		baseMux := r.httpServer.state.Load().graphServer.graphMuxList[""]
 
 		updated := proto.Clone(cfg).(*nodev1.RouterConfig)
@@ -171,7 +171,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		}))
 		require.Same(t, baseMux, r.httpServer.state.Load().graphServer.graphMuxList[""])
 		require.Len(t, module.updates, 2)
-		require.Equal(t, want, module.updates[1].Subgraphs())
+		require.Equal(t, want, module.updates[1].ExecutionConfig().Subgraphs())
 	})
 
 	t.Run("client schema defaults to router schema", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		_, err := r.NewServer(t.Context())
 		require.NoError(t, err)
 		require.Len(t, module.updates, 1)
-		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ClientSchema())
+		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ExecutionConfig().ClientSchema())
 		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
 	})
 
@@ -215,7 +215,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		invalid.EngineConfig.GraphqlClientSchema = &invalidClientSchema
 		require.Error(t, r.newServer(t.Context(), &routerconfig.Response{Config: invalid}))
 		require.Len(t, module.updates, 1)
-		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ClientSchema())
+		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ExecutionConfig().ClientSchema())
 		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
 
 		// A failure after a valid base graph has been built must not notify either.

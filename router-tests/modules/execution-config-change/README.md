@@ -10,7 +10,7 @@ Docker Compose builds the current checkout's wgc and a router containing the exa
 
 `composition.yaml` and `schema.graphql` are the wgc composition input. The generator invokes the actual `wgc router compose` command for every valid fixture. `compose.yaml` starts the generator, a GraphQL stub subgraph, the custom router, and the test client.
 
-The module implements `OnExecutionConfigChange(context.Context, routerconfig.ExecutionConfig)` and parses `Query.hello`'s `@modulePolicy(role: ...)` argument from `cfg.Schema()`. It publishes an immutable metadata snapshot through an atomic pointer. Response headers expose the role, router and client SDL hashes, execution-config version, subgraph ID, name, effective routing URL, and notification count for assertions.
+The module implements `OnConfigChange(context.Context, core.ModuleConfig)` and parses `Query.hello`'s `@modulePolicy(role: ...)` argument from `cfg.ExecutionConfig().Schema()`. It publishes an immutable metadata snapshot through an atomic pointer. Response headers expose the role, router and client SDL hashes, execution-config version, subgraph ID, name, effective routing URL, and notification count for assertions.
 
 The test verifies:
 
