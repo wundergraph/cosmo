@@ -2,14 +2,16 @@ schema @link(url: "https://example.com/translate/v1.0", import: ["@translate"]) 
   query: Query
 }
 
-directive @translate(from: String!, to: String!) on FIELD_DEFINITION
+directive @translate(language: String!) on FIELD_DEFINITION
 
 type Query {
-  greeting: String! @translate(from: "hello world", to: "Hola mundo") @tag(name: "internal")
+  greeting: String! @translate(language: "es") @tag(name: "internal")
+  farewell: String! @translate(language: "es")
+  unsupportedLanguage: String! @translate(language: "xx")
   card: Card!
 }
 
 type Card {
   greeting: String!
-  caption: String! @translate(from: "hello world", to: "Hola mundo")
+  caption: String! @translate(language: "es")
 }

@@ -18,20 +18,44 @@ import (
 )
 
 type coordinate struct{ parent, field string }
-type translation struct{ from, to string }
-type rules map[coordinate]translation
+type rules map[coordinate]string
+
+func translate(text, language string) (string, error) {
+	if text != "hello world" {
+		return "", fmt.Errorf("unsupported translation text %q", text)
+	}
+	switch language {
+	case "es":
+		return "Hola mundo", nil
+	case "de":
+		return "Hallo Welt", nil
+	case "fr":
+		return "Bonjour le monde", nil
+	case "it":
+		return "Ciao mondo", nil
+	default:
+		return "", fmt.Errorf("unsupported translation language %q", language)
+	}
+}
 
 func (r rules) RenderFieldValue(_ *resolve.Context, value resolve.FieldValue, out io.Writer) error {
-	rule, ok := r[coordinate{value.ParentType, value.Name}]
-	if ok && value.Type == "String" && string(value.ParsedData.GetStringBytes()) == rule.from {
-		data, err := json.Marshal(rule.to)
-		if err != nil {
-			return err
-		}
-		_, err = out.Write(data)
+	language, ok := r[coordinate{value.ParentType, value.Name}]
+	if !ok {
+		_, err := out.Write(value.Data)
 		return err
 	}
-	_, err := out.Write(value.Data)
+	if value.Type != "String" {
+		return fmt.Errorf("@translate requires a String field, got %s.%s of type %s", value.ParentType, value.Name, value.Type)
+	}
+	translated, err := translate(string(value.ParsedData.GetStringBytes()), language)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(translated)
+	if err != nil {
+		return err
+	}
+	_, err = out.Write(data)
 	return err
 }
 
@@ -53,13 +77,12 @@ func readSnapshot(cfg routerconfig.ExecutionConfig, updates uint64) snapshot {
 			if !ok {
 				continue
 			}
-			from, hasFrom := doc.DirectiveArgumentValueByName(directive, []byte("from"))
-			to, hasTo := doc.DirectiveArgumentValueByName(directive, []byte("to"))
-			if !hasFrom || !hasTo {
-				panic("composed @translate is missing a required argument")
+			language, ok := doc.DirectiveArgumentValueByName(directive, []byte("language"))
+			if !ok {
+				panic("composed @translate is missing its required language")
 			}
 			key := coordinate{doc.NodeNameString(parent), doc.FieldDefinitionNameString(field)}
-			translations[key] = translation{doc.ValueContentString(from), doc.ValueContentString(to)}
+			translations[key] = doc.ValueContentString(language)
 		}
 	}
 	data, err := json.Marshal(map[string]any{

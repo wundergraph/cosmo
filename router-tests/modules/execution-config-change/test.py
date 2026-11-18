@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import time
 import unittest
+import urllib.error
 import urllib.request
 
 DATA = Path("/data")
@@ -86,6 +87,17 @@ class ExecutionConfigHookTest(unittest.TestCase):
         self.assert_graph("languages", "Bonjour le monde", 4, flag="french", selected="french")
         self.assert_graph("languages", "Hola mundo", 4)
         self.assert_graph("languages", "Hola mundo", 4, flag="unknown")
+
+        for field, source in [("farewell", "goodbye"), ("unsupportedLanguage", HELLO)]:
+            with self.subTest(field=field):
+                operation = "{ " + field + " }"
+                _, origin = query(operation, url="http://subgraph:4001/graphql")
+                self.assertEqual(origin["data"][field], source)
+                with self.assertRaises(urllib.error.HTTPError) as failed:
+                    query(operation, flag="german")
+                with failed.exception as response:
+                    self.assertEqual(response.code, 500)
+                    self.assertEqual(json.load(response)["errors"], [{"message": "Internal server error"}])
 
         activate("renamed")
         wait_for(lambda: self.assert_graph("renamed", "Hola mundo", 5, flag="german", renamed=True))

@@ -8,6 +8,8 @@ class Subgraph(BaseHTTPRequestHandler):
         greeting = "hello world"
         data = {
             "greeting": greeting,
+            "farewell": "goodbye",
+            "unsupportedLanguage": greeting,
             "card": {"greeting": greeting, "caption": greeting, "welcome": greeting},
         }
         body = json.dumps({"data": data}).encode()

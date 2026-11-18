@@ -7,12 +7,13 @@ import { join } from 'node:path';
 const schema = readFileSync('/fixtures/schema.graphql', 'utf8');
 const composition = readFileSync('/fixtures/composition.yaml', 'utf8');
 const directory = mkdtempSync(join(tmpdir(), 'schema-hook-'));
-const translate = (greeting) => schema.replaceAll('Hola mundo', greeting);
-const changed = translate('Ciao mondo');
-const languages = { german: 'Hallo Welt', french: 'Bonjour le monde' };
+const schemaForLanguage = (language) =>
+  schema.replaceAll('@translate(language: "es")', `@translate(language: "${language}")`);
+const changed = schemaForLanguage('it');
+const languages = { german: 'de', french: 'fr' };
 let flagged = composition + '\nfeature_flags:\n';
-for (const [name, greeting] of Object.entries(languages)) {
-  writeFileSync(join(directory, name + '.graphql'), translate(greeting));
+for (const [name, language] of Object.entries(languages)) {
+  writeFileSync(join(directory, name + '.graphql'), schemaForLanguage(language));
   flagged += `  - name: ${name}
     feature_graphs:
       - name: greetings-${name}
@@ -29,9 +30,7 @@ const variants = [
   ['languages', schema, flagged],
   [
     'renamed',
-    schema
-      .replace('greeting: String! @translate(from: "hello world", to: "Hola mundo")', 'greeting: String!')
-      .replace('caption:', 'welcome:'),
+    schema.replace('greeting: String! @translate(language: "es")', 'greeting: String!').replace('caption:', 'welcome:'),
     composition,
   ],
   [
