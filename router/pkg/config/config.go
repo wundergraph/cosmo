@@ -1143,6 +1143,29 @@ type TLSClientCertConfiguration struct {
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSeptember2026 returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for request errors
+	GraphQLOverHTTPStatusCodesSeptember2026 GraphQLOverHTTPStatusCodes = "September2026"
+)
+
+// IsValid returns true if the status codes are valid
+func (c GraphQLOverHTTPStatusCodes) IsValid() bool {
+	switch c {
+	case GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026:
+		return true
+	}
+
+	return false
+}
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
+}
+
 type SubgraphErrorPropagationMode string
 
 const (
@@ -1791,6 +1814,7 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
 	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
@@ -1944,6 +1968,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	// Validate the status codes configuration
+	if statusCodes := cfg.Config.GraphQLOverHTTP.StatusCodes; !statusCodes.IsValid() {
+		return nil, fmt.Errorf("graphql_over_http.status_codes must be %q or %q, got %q",
+			GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026, statusCodes)
 	}
 
 	// Post-process the config

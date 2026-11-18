@@ -457,7 +457,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				reqCtx.logger.Debug("context canceled: unable to resolve defer response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
 				return
-			} else if errors.Is(err, ErrUnauthorized) {
+			}
+			// Once a part is on the wire, an error response would land inside the
+			// multipart stream. Leave it unterminated so the client sees it as incomplete.
+			if dw, ok := writer.(*HttpDeferWriter); ok && dw.Committed() {
+				reqCtx.logger.Error("unable to resolve defer response after streaming started", zap.Error(err))
+				trackFinalResponseError(resolveCtx.Context(), err)
+				return
+			}
+			if errors.Is(err, ErrUnauthorized) {
 				trackFinalResponseError(resolveCtx.Context(), err)
 				writeRequestErrors(writeRequestErrorsParams{
 					request:           r,
