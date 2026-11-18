@@ -679,6 +679,9 @@ type graphMux struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
+	// Captured after routing overrides and retained when the base mux is reused.
+	baseSubgraphs []routerconfig.Subgraph
+
 	mux       *chi.Mux
 	reused    atomic.Bool
 	finalized atomic.Bool
@@ -1010,6 +1013,13 @@ func (s *graphServer) buildGraphMux(
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.IsBaseGraph() {
+		gm.baseSubgraphs = make([]routerconfig.Subgraph, len(subgraphs))
+		for i, sg := range subgraphs {
+			gm.baseSubgraphs[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
+		}
 	}
 
 	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {

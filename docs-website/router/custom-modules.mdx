@@ -11,6 +11,7 @@ The Cosmo Router can be easily extended by providing custom modules. Modules are
 - `core.EnginePreOriginHandler` Implements a custom handler that is executed before the request is sent to the subgraph. This handler is called for every subgraph request. **Use case:** Logging, Request signing, Short-circuiting with mock responses. For setting headers that affect request identity (e.g. tenant IDs), use `RouterOnRequestHandler` or `RouterMiddlewareHandler` instead — see [Request Deduplication](/router/request-deduplication).
 - `core.EnginePostOriginHandler` Implement a custom handler executed after the request to the subgraph but before the response is passed to the GraphQL engine. This handler is called for every subgraph response. **Use cases:** Logging, Caching.
 - `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration.
+- `core.RouterOnExecutionConfigChangeHandler` Receives a read-only base execution-config snapshot on initial load and every successful reload. Use it to build metadata from the schemas and subgraph routing URLs.
 - `core.Cleaner` Implements a Module lifecycle hook that is executed after the server is shutdown. Use it to close connections gracefully or for any other cleanup.
 
 <Info>
@@ -67,6 +68,47 @@ core.ModuleInfo{
 ```
 
 In this example, the module `myModule` has a priority of 1, meaning it will be loaded before modules with higher priority values.
+
+### Access the execution config
+
+Implement `core.RouterOnExecutionConfigChangeHandler` to receive a `routerconfig.ExecutionConfig` snapshot. Import `context` and `github.com/wundergraph/cosmo/router/pkg/routerconfig`:
+
+```go
+func (m *MyModule) OnExecutionConfigChange(ctx context.Context, cfg routerconfig.ExecutionConfig) {
+    schema := cfg.Schema()
+    clientSchema := cfg.ClientSchema()
+    // Build metadata and publish it for request handlers.
+    m.Logger.Info("Execution config updated",
+        zap.String("version", cfg.Version()),
+        zap.Int("subgraphs", len(cfg.Subgraphs())),
+        zap.Int("schema_bytes", len(schema)),
+        zap.Int("client_schema_bytes", len(clientSchema)),
+    )
+}
+```
+
+The hook runs after `Provision`, in module priority order. The router calls it after building the new graph server and before serving requests with that config. Configs that fail validation or graph-server construction do not invoke the hook. Updates with unchanged SDL still invoke it.
+
+The snapshot exposes these accessors:
+
+| Accessor | Meaning |
+| --- | --- |
+| `Schema()` | The base graph's composed router schema as GraphQL SDL. It preserves the exact execution-config text, including composed custom directives and inaccessible elements. Runtime introspection definitions are not appended. |
+| `ClientSchema()` | The SDL used for validation, normalization, and introspection. A separately composed client schema excludes inaccessible elements and filters custom directives. If no non-empty client schema is supplied, this returns `Schema()`, matching runtime behavior. Runtime introspection definitions are not appended. |
+| `Version()` | The execution config's supplied version string. It may be empty in older configs and is not a unique content identifier. Local `wgc router compose` uses a constant version. Hash the schema text when identifying contents or caching metadata. |
+| `Subgraphs()` | A detached slice of `routerconfig.Subgraph` values in config order. Each value exposes `ID`, `Name`, and `RoutingURL`. The URL includes local routing overrides and may be empty for a virtual subgraph. Modules can sort or edit their copy. |
+
+Snapshots can be retained after the callback and read concurrently. Reloads do not modify previously supplied snapshots. The separate `context.Context` controls work performed during the callback and should not be retained with config metadata.
+
+Only the base graph's config is provided. A reload that changes feature flags can also invoke the hook with the base graph's snapshot.
+
+The hook is a notification and cannot reject a config. Handle metadata-building errors inside the module. It runs synchronously, so a slow hook delays startup or reload.
+
+<Warning>
+  Hooks can overlap requests using the previous graph. Synchronize access to derived metadata, for example by publishing immutable snapshots through an atomic pointer. Requests already in flight can observe the updated metadata.
+</Warning>
+
+See the [executable integration fixture](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/execution-config-change) for a module that reads a directive argument and updates request metadata on reload.
 
 ### Access the GraphQL operation
 

@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/pkg/errors"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"go.uber.org/zap"
@@ -162,6 +163,22 @@ type SpanNameFormatterProvider interface {
 type Provisioner interface {
 	// Provision is called before the server starts
 	Provision(*ModuleContext) error
+}
+
+// RouterOnExecutionConfigChangeHandler observes the initial execution config and
+// every successful reload. Only the base graph's config is provided.
+// The hook runs synchronously, in module priority order, after the new graph
+// server has been built and before it starts serving requests. Invalid configs
+// do not invoke it. The notification cannot reject a config.
+//
+// The hook can overlap requests using the previous graph. Modules must synchronize
+// access to derived metadata, for example by publishing immutable snapshots with
+// an atomic pointer. Requests already in flight can observe the updated metadata.
+// A slow hook delays startup or reload. The config is an immutable snapshot that
+// can be retained independently of ctx. The context controls work performed by
+// the hook and should not be stored alongside the snapshot.
+type RouterOnExecutionConfigChangeHandler interface {
+	OnExecutionConfigChange(ctx stdContext.Context, cfg routerconfig.ExecutionConfig)
 }
 
 type Cleaner interface {

@@ -1,0 +1,11 @@
+schema
+  @link(url: "https://example.com/module-policy/v1.0", import: ["@modulePolicy"])
+  @composeDirective(name: "@modulePolicy") {
+  query: Query
+}
+
+directive @modulePolicy(role: String!) on FIELD_DEFINITION
+
+type Query {
+  hello: String! @modulePolicy(role: "reader") @tag(name: "internal")
+}

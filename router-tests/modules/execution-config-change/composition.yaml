@@ -1,0 +1,6 @@
+version: 1
+subgraphs:
+  - name: policy
+    routing_url: http://subgraph:4001/graphql
+    schema:
+      file: schema.graphql

@@ -1,0 +1,24 @@
+version: '1'
+listen_addr: 0.0.0.0:3002
+log_level: debug
+execution_config:
+  file:
+    path: /data/active.json
+    watch: true
+    watch_interval: 100ms
+overrides:
+  subgraphs:
+    local-policy:
+      routing_url: http://subgraph:4001/local
+telemetry:
+  tracing:
+    enabled: false
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: false
+graphql_metrics:
+  enabled: false
+modules:
+  schemaPolicy: {}

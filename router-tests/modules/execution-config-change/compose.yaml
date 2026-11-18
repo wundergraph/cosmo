@@ -1,0 +1,45 @@
+services:
+  composer:
+    build:
+      context: ../../..
+      dockerfile: router-tests/modules/execution-config-change/Dockerfile
+      target: composer
+    volumes:
+      - .:/fixtures:ro
+      - execution-config:/data
+
+  subgraph:
+    image: python:3.13-alpine
+    command: ['python', '/fixtures/subgraph.py']
+    volumes:
+      - .:/fixtures:ro
+
+  router:
+    build:
+      context: ../../..
+      dockerfile: router-tests/modules/execution-config-change/Dockerfile
+      target: router
+    depends_on:
+      composer:
+        condition: service_completed_successfully
+      subgraph:
+        condition: service_started
+    volumes:
+      - .:/fixtures:ro
+      - execution-config:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3002/health/ready']
+      interval: 1s
+      timeout: 2s
+      retries: 60
+
+  test:
+    image: python:3.13-alpine
+    profiles: [test]
+    command: ['python', '/fixtures/test.py']
+    volumes:
+      - .:/fixtures:ro
+      - execution-config:/data
+
+volumes:
+  execution-config:

@@ -686,6 +686,13 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 		return err
 	}
 
+	configChange := response.ExecutionConfig(server.graphMuxList[""].baseSubgraphs)
+	for _, module := range r.modules {
+		if handler, ok := module.(RouterOnExecutionConfigChangeHandler); ok {
+			handler.OnExecutionConfigChange(ctx, configChange)
+		}
+	}
+
 	r.httpServer.SwapGraphServer(ctx, server)
 
 	// Cleanup any unused feature flags in case a feature flag was removed
