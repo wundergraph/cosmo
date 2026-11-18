@@ -1735,6 +1735,7 @@ func (s *graphServer) buildGraphMux(
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
 		WaitForCacheWrites:                     waitForCacheWrites,
+		GraphQLOverHTTPStatusCodes:             s.graphqlOverHTTP.StatusCodes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

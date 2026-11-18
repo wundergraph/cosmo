@@ -2,8 +2,10 @@ package connectrpc
 
 import (
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/errorcodes"
 )
 
 // HTTPStatusToConnectCode maps HTTP status codes to Connect error codes.
@@ -77,4 +79,80 @@ func ConnectCodeToHTTPStatus(code connect.Code) int {
 	default:
 		return http.StatusInternalServerError // 500
 	}
+}
+
+func (r *GraphQLResponse) ConnectCode() connect.Code {
+	code, ok := commonConnectCode(len(r.Errors), func(i int) (connect.Code, bool) {
+		return r.routerErrorConnectCode(r.Errors[i].Extensions)
+	})
+	if !ok {
+		return connect.CodeUnknown
+	}
+	return code
+}
+
+func (r *GraphQLResponse) routerErrorConnectCode(extensions map[string]any) (connect.Code, bool) {
+	if code, _ := extensions["code"].(string); code == errorcodes.UnauthorizedFieldOrType {
+		return r.fieldAuthorizationDenialCode(), true
+	}
+	return statusErrorConnectCode(extensions)
+}
+
+func statusErrorConnectCode(extensions map[string]any) (connect.Code, bool) {
+	code, _ := extensions["code"].(string)
+	if c, ok := connectCodeFromStatusName(code); ok {
+		return c, true
+	}
+	wrappedSubgraphErrors, _ := extensions["errors"].([]any)
+	return commonConnectCode(len(wrappedSubgraphErrors), func(i int) (connect.Code, bool) {
+		subgraphError, _ := wrappedSubgraphErrors[i].(map[string]any)
+		subgraphErrorExtensions, _ := subgraphError["extensions"].(map[string]any)
+		return statusErrorConnectCode(subgraphErrorExtensions)
+	})
+}
+
+// fieldAuthorizationDenialCode relies on the router's authorizer recording missing scopes
+// only for authenticated requests. Authentication is per request, so without them every
+// denial in the response was for a missing token.
+func (r *GraphQLResponse) fieldAuthorizationDenialCode() connect.Code {
+	if len(r.Extensions.Authorization.MissingScopes) > 0 {
+		return connect.CodePermissionDenied
+	}
+	return connect.CodeUnauthenticated
+}
+
+func commonConnectCode(n int, codeAt func(i int) (connect.Code, bool)) (connect.Code, bool) {
+	if n == 0 {
+		return 0, false
+	}
+	var code connect.Code
+	for i := range n {
+		c, ok := codeAt(i)
+		if !ok || (i > 0 && c != code) {
+			return 0, false
+		}
+		code = c
+	}
+	return code, true
+}
+
+const grpcCanceledStatusName = "CANCELLED"
+
+var connectCodesByNormalizedStatusName = func() map[string]connect.Code {
+	codes := map[string]connect.Code{
+		normalizeStatusName(grpcCanceledStatusName): connect.CodeCanceled,
+	}
+	for c := connect.CodeCanceled; c <= connect.CodeUnauthenticated; c++ {
+		codes[normalizeStatusName(c.String())] = c
+	}
+	return codes
+}()
+
+func normalizeStatusName(name string) string {
+	return strings.ToLower(strings.ReplaceAll(name, "_", ""))
+}
+
+func connectCodeFromStatusName(name string) (connect.Code, bool) {
+	c, ok := connectCodesByNormalizedStatusName[normalizeStatusName(name)]
+	return c, ok
 }
