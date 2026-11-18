@@ -184,7 +184,9 @@
         "Enabled": false
       },
       "Subgraphs": null
-    }
+    },
+    "Watch": false,
+    "WatchInterval": 1000000000
   },
   "CacheControl": {
     "Enabled": false,
@@ -297,7 +299,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 60000000000,
+      "RequestHeaderReadTimeout": 0,
+      "IdleTimeout": 0,
+      "WriteTimeout": 0
     },
     "Subgraphs": null
   },
@@ -772,9 +778,17 @@
       "Enabled": false
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "legacy"
+  },
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    }
   },
   "Plugins": {
     "Enabled": false,

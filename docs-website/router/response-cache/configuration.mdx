@@ -1,0 +1,116 @@
+---
+title: "Configure the Response Cache"
+sidebarTitle: "Configuration"
+description: "Storage, Redis timeouts, per-subgraph settings and private_id."
+icon: "sliders"
+---
+
+<Warning>
+  **Beta feature.** Response caching is a feature that has been released in beta status.
+</Warning>
+
+## Storage
+
+The cache stores entries in Redis. `storage` is required when `enabled` is `true`.
+
+### Redis
+
+Declare a [storage provider](/router/storage-providers) and reference it by `provider_id`.
+
+```yaml config.yaml
+storage_providers:
+  redis:
+    - id: 'response_cache'
+      cluster_enabled: false
+      urls:
+        - 'redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&dial_timeout=500ms&pool_timeout=250ms&max_retries=-1'
+
+response_cache:
+  enabled: true
+  key_prefix: 'cosmo_response_cache:'
+  storage:
+    provider: 'redis'
+    provider_id: 'response_cache'
+```
+
+- Redis 7.0 or newer is required.
+- Set `cluster_enabled: true` for Redis Cluster. List the nodes in `urls`.
+- Redis must be reachable at startup. **If it is not, the router does not start.**
+- An empty or unknown `provider_id` fails startup.
+- `key_prefix` is prepended to every key, so the cache can share a Redis instance with other data.
+
+Give the cache its own storage provider entry. Timeouts and pool settings in the URL then apply to the cache alone, and its keys can be told apart from other router features.
+
+#### Redis timeouts
+
+The response cache has no timeout of its own. With the Redis client's defaults, a 3-second read timeout and 3 retries, a Redis instance that accepts connections but does not answer holds each request for many seconds. Set tighter limits as query parameters on the Redis URL. The parameters are described under [Redis Connection URLs](/router/configuration#redis-connection-urls).
+
+| Parameter | Suggested for the cache |
+| --- | --- |
+| `read_timeout` | `250ms` |
+| `write_timeout` | `250ms` |
+| `dial_timeout` | `500ms` |
+| `pool_timeout` | `250ms` |
+| `max_retries` | `-1`, so a failing Redis is not asked again |
+| `max_redirects` | `-1` on Redis Cluster. It also retries timeouts, independent of `max_retries`. A command that meets a slot redirect during resharding then fails and counts as a miss. |
+
+Each timeout applies per Redis round trip, not per fetch, and a fetch can make several. Do not set them so low that a healthy but busy Redis times out. A timed-out lookup is a miss, and a timed-out write can still land. See [Storage](/router/response-cache/how-it-works#redis). An invalidation of a large tag also takes many round trips and can fail on a short timeout.
+
+## Configuration reference
+
+Every setting, its environment variable and its default are listed under [Response Cache](/router/configuration#response-cache) in the router configuration reference.
+
+## Per-subgraph configuration
+
+`all` applies to every subgraph. An entry under `subgraphs`, keyed by subgraph name, replaces `all` for that subgraph.
+
+```yaml config.yaml
+response_cache:
+  enabled: true
+  storage:
+    provider: 'redis'
+    provider_id: 'response_cache'
+  all:
+    fallback_ttl: 30s
+    private_id: 'request.auth.claims.sub'
+  subgraphs:
+    inventory:
+      enabled: false
+    products:
+      enabled: true
+      fallback_ttl: 5m
+```
+
+Here `inventory` is never cached. `products` uses a five-minute default lifetime. Every other subgraph uses thirty seconds.
+
+An entry is a full override. Nothing is inherited from `all` and nothing is defaulted:
+
+- `enabled` must be set. An entry without it does not cache the subgraph.
+- An enabled entry must set `fallback_ttl`. Otherwise startup fails and names the entry.
+- An entry without `private_id` has none. In the example, `products` does not cache `private` responses even though `all` sets an id. Repeat `private_id` in the entry to keep it.
+
+With `all.enabled: false`, only subgraphs whose entry sets `enabled: true` are cached. If no entry does, the router starts, caches nothing, and logs a warning.
+
+The indexes, the invalidation endpoint and the cache tag header apply to all subgraphs.
+
+## Private responses
+
+A subgraph marks an answer that depends on who is asking with `Cache-Control: private`. Such answers are only cached when a `private_id` is configured. See [Private and shared entries](/router/response-cache/how-it-works#private-and-shared-entries) for how they are stored.
+
+`private_id` is an [expression](/router/configuration/template-expressions) evaluated once per request. Its value names the context: a user, a tenant or any group of requests that may share a response.
+
+```yaml config.yaml
+response_cache:
+  all:
+    private_id: 'request.auth.claims.sub'
+```
+
+- An expression that yields nothing, such as for an anonymous request without the claim, means the request has no private id.
+- A value that is not a string is treated as no id and reported in the warning log.
+
+<Warning>
+  `private_id` decides who shares an entry. Two requests with the same id share it, whatever else differs between them.
+
+  - An id that the client can set itself, such as a plain request header, lets one client read another's entries. Prefer a verified claim.
+  - If a private answer also depends on a forwarded request header, include that header in the expression, or have the subgraph name it in `Vary`.
+</Warning>

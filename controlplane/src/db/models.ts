@@ -56,6 +56,7 @@ export type AuditableType =
   | 'api_key'
   | 'api_key_group'
   | 'webhook_config'
+  | 'audit_log_stream_config'
   | 'integration'
   | 'member_group'
   | 'user'
@@ -105,9 +106,14 @@ export type AuditLogAction =
   | 'removed'
   | 'linked'
   | 'unlinked'
-  | 'recomposed';
+  | 'recomposed'
+  | 'tested';
 
 export type AuditLogFullAction =
+  | 'audit_log_stream_config.created'
+  | 'audit_log_stream_config.updated'
+  | 'audit_log_stream_config.deleted'
+  | 'audit_log_stream_config.tested'
   | 'namespace.created'
   | 'namespace.deleted'
   | 'organization.created'

@@ -2161,11 +2161,39 @@ export const auditLogs = pgTable(
   },
   (t) => {
     return {
-      organizationIdIndex: index('auditlogs_organization_idx').on(t.organizationId),
+      // Serves the Audit Log page, which filters by organization and date and sorts by date, from the index alone.
+      // Also covers lookups by organization only, so it replaces the single-column index.
+      organizationCreatedAtIdIndex: index('auditlogs_org_created_at_id_idx').on(t.organizationId, t.createdAt, t.id),
       createdAtIndex: index('auditlogs_created_at_idx').on(t.createdAt),
     };
   },
 );
+
+/**
+ * Where an organization's audit logs are streamed. One per organization; only Splunk HEC for now.
+ */
+export const auditLogStreamConfigs = pgTable('audit_log_stream_configs', {
+  organizationId: uuid('organization_id')
+    .notNull()
+    .primaryKey()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  endpoint: text('endpoint').notNull(),
+  token: text('token').notNull(),
+  index: text('index'),
+  source: text('source').notNull(),
+  sourcetype: text('sourcetype').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  // The (created_at, id) of the last audit log delivered. Delivery resumes after this point.
+  cursorCreatedAt: timestamp('cursor_created_at', { withTimezone: true }).notNull().defaultNow(),
+  cursorId: uuid('cursor_id'),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  lastErrorAt: timestamp('last_error_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});
 
 export const graphCompositions = pgTable(
   'graph_compositions', // graphcomp
