@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.372.0](https://github.com/wundergraph/cosmo/compare/router@0.371.0...router@0.372.0) (2026-11-16)
+
+### Features
+
+* allow custom modules to push new metrics to prometheus and otlp ([#3527](https://github.com/wundergraph/cosmo/issues/3527)) ([4dd5897](https://github.com/wundergraph/cosmo/commit/4dd589704b1095d85b05b5a39a91102c5001cfb3)) (@alepane21)
+* propagate trace context also to remote gRPC services ([#3534](https://github.com/wundergraph/cosmo/issues/3534)) ([f821a55](https://github.com/wundergraph/cosmo/commit/f821a5561415cb43edda45fc7689e81e7621a4fc)) (@alepane21)
+
+## [0.371.0](https://github.com/wundergraph/cosmo/compare/router@0.370.1...router@0.371.0) (2026-11-13)
+
+### Features
+
+* **controlplane:** add deliveryGuarantees to proto and controlplane ([#3434](https://github.com/wundergraph/cosmo/issues/3434)) ([5a5f8c3](https://github.com/wundergraph/cosmo/commit/5a5f8c3f157dd2cce655705908647045112cee92)) (@dkorittki)
+
+### Bug Fixes
+
+* **router:** prevent "send on closed channel" panic on hot reload ([#3507](https://github.com/wundergraph/cosmo/issues/3507)) ([421ac3b](https://github.com/wundergraph/cosmo/commit/421ac3b5ec04bd97b95529bbaff3bb2452fdf6b0)) (@fiam)
+
+## [0.370.1](https://github.com/wundergraph/cosmo/compare/router@0.370.0...router@0.370.1) (2026-11-12)
+
+### Bug Fixes
+
+* **router:** bump response cache key format version to 3 ([#3530](https://github.com/wundergraph/cosmo/issues/3530)) ([89fbcbf](https://github.com/wundergraph/cosmo/commit/89fbcbf3892ae7caa7d25eaa957e25f15d44d577)) (@SkArchon)
+
 ## [0.370.0](https://github.com/wundergraph/cosmo/compare/router@0.369.2...router@0.370.0) (2026-11-12)
 
 ### Features

@@ -62,6 +62,10 @@ type server struct {
 	drainedOnce sync.Once
 }
 
+// defaultServerReadTimeout is used when no read timeout is configured, e.g. when the router traffic
+// configuration is built programmatically without one.
+const defaultServerReadTimeout = 60 * time.Second
+
 type httpServerOptions struct {
 	addr               string
 	logger             *zap.Logger
@@ -69,6 +73,10 @@ type httpServerOptions struct {
 	healthcheck        health.Checker
 	baseURL            string
 	maxHeaderBytes     int
+	readTimeout        time.Duration
+	readHeaderTimeout  time.Duration
+	idleTimeout        time.Duration
+	writeTimeout       time.Duration
 	livenessCheckPath  string
 	readinessCheckPath string
 	healthCheckPath    string
@@ -83,12 +91,22 @@ func newServer(opts *httpServerOptions) (*server, error) {
 		return nil, fmt.Errorf("failed to bind to address %s: %w", opts.addr, err)
 	}
 
+	readTimeout := opts.readTimeout
+	if readTimeout <= 0 {
+		readTimeout = defaultServerReadTimeout
+	}
+
 	httpServer := &http.Server{
 		Addr:        opts.addr,
-		ReadTimeout: 60 * time.Second,
-		// Disable write timeout to keep the connection open until the client closes it
+		ReadTimeout: readTimeout,
+		// Zero values fall back to ReadTimeout in net/http.
+		// ReadHeaderTimeout is ignored by the HTTP/2 server, so it only limits slow header reads on HTTP/1.
+		// On HTTP/2, IdleTimeout closes connections with slow headers unless another stream is still open.
+		ReadHeaderTimeout: max(opts.readHeaderTimeout, 0),
+		IdleTimeout:       max(opts.idleTimeout, 0),
+		// The write timeout is disabled by default to keep the connection open until the client closes it.
 		// This is required for SSE (Server-Sent-Events) subscriptions to work correctly
-		WriteTimeout:   0,
+		WriteTimeout:   max(opts.writeTimeout, 0),
 		ErrorLog:       zap.NewStdLog(opts.logger),
 		TLSConfig:      opts.tlsServerConfig,
 		MaxHeaderBytes: opts.maxHeaderBytes,

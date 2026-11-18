@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestGRPCSubgraph(t *testing.T) {
@@ -952,6 +954,65 @@ func TestGRPCSubgraph(t *testing.T) {
 				require.Equal(t, []string{"rojo=00f067aa0ba902b7"}, captured.Get("tracestate"))
 				require.Equal(t, []string{"de-DE,de;q=0.9,en;q=0.8"}, captured.Get("accept-language"))
 			})
+		})
+	})
+
+	t.Run("Should propagate trace context to the remote gRPC subgraph", func(t *testing.T) {
+		// Without any header propagation rule, the router must inject its own
+		// trace context (W3C traceparent) into the outgoing gRPC metadata so the
+		// remote service can continue the trace.
+		t.Parallel()
+
+		const (
+			incomingTraceID = "0af7651916cd43dd8448eb211c80319c"
+			incomingSpanID  = "b7ad6b7169203332"
+		)
+
+		var captured metadata.MD
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			TraceExporter:            exporter,
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{
+					GRPCInterceptor: func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+						md, _ := metadata.FromIncomingContext(ctx)
+						captured = md.Copy()
+						return handler(ctx, req)
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { projects { id name } }`,
+				Header: http.Header{
+					"Traceparent": []string{"00-" + incomingTraceID + "-" + incomingSpanID + "-01"},
+				},
+			})
+
+			traceparent := captured.Get("traceparent")
+			require.Len(t, traceparent, 1)
+
+			// traceparent format: version-traceid-parentid-flags
+			parts := strings.Split(traceparent[0], "-")
+			require.Len(t, parts, 4)
+			require.Equal(t, incomingTraceID, parts[1], "subgraph should continue the incoming trace")
+			require.NotEqual(t, incomingSpanID, parts[2], "parent span should be created by the router, not forwarded from the client")
+			require.Equal(t, "01", parts[3])
+
+			// The parent span id received by the subgraph must belong to a span
+			// exported by the router.
+			var found bool
+			for _, s := range exporter.GetSpans().Snapshots() {
+				if s.SpanContext().SpanID().String() == parts[2] {
+					require.Equal(t, incomingTraceID, s.SpanContext().TraceID().String())
+					found = true
+					break
+				}
+			}
+			require.True(t, found, "parent span %s not found among router spans", parts[2])
 		})
 	})
 }
