@@ -73,6 +73,10 @@ export interface ProtoMessageField {
   description?: string;
   // The original name of the field in the GraphQL schema
   graphqlName?: string;
+  // Marks the field with the [deprecated = true] option
+  isDeprecated?: boolean;
+  // Printed as a comment above the field
+  deprecationReason?: string;
 
   /**
    * The composite type of the field. When building a proto message

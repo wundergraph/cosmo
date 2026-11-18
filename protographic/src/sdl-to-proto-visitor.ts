@@ -1571,28 +1571,14 @@ Example:
       this.trackRemovedFields(type.name, originalFieldNames, currentFieldNames);
     }
 
-    this.protoText.push('');
-
-    // Add type description as comment before message definition
-    if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
-    }
-
-    this.protoText.push(`message ${type.name} {`);
-    this.indent++;
-
-    // Add reserved field numbers if any exist
     const messageLock = lockData.messages[type.name];
-    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      this.protoText.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
-    }
-
     const fields = type.getFields();
 
     // Get field names and order them using the lock manager
     const fieldNames = Object.keys(fields).filter((fieldName) => validFields.some((field) => field.name === fieldName));
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
+    const messageFields: ProtoMessageField[] = [];
     for (const fieldName of orderedFieldNames) {
       if (!fields[fieldName]) {
         continue;
@@ -1608,30 +1594,16 @@ Example:
       const protoFieldName = graphqlFieldToProtoField(fieldName);
       const deprecationInfo = this.fieldIsDeprecated(field, [...type.getInterfaces()]);
 
-      // Get the appropriate field number, respecting the lock
-      const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
-
-      // Add field description as comment
-      if (field.description) {
-        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
-      }
-
-      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
-      }
-
-      const fieldOptions = [];
-      if (deprecationInfo.deprecated) {
-        fieldOptions.push(` [deprecated = true]`);
-      }
-
-      if (fieldType.isRepeated) {
-        this.protoText.push(
-          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
-        );
-      } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
-      }
+      messageFields.push({
+        fieldName: protoFieldName,
+        typeName: fieldType.typeName,
+        // Get the appropriate field number, respecting the lock
+        fieldNumber: this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name)),
+        isRepeated: fieldType.isRepeated,
+        description: field.description ?? undefined,
+        isDeprecated: deprecationInfo.deprecated,
+        deprecationReason: deprecationInfo.reason,
+      });
 
       // Queue complex field types for processing
       const namedType = getNamedType(field.type);
@@ -1640,8 +1612,14 @@ Example:
       }
     }
 
-    this.indent--;
-    this.protoText.push('}');
+    this.appendMessageToProtoText({
+      messageName: type.name,
+      description: type.description ?? undefined,
+      reservedNumbers: messageLock?.reservedNumbers?.length
+        ? this.formatReservedNumbers(messageLock.reservedNumbers)
+        : undefined,
+      fields: messageFields,
+    });
   }
 
   /**
@@ -1718,28 +1696,14 @@ Example:
       this.trackRemovedFields(type.name, originalFieldNames, currentFieldNames);
     }
 
-    this.protoText.push('');
-
-    // Add type description as comment before message definition
-    if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
-    }
-
-    this.protoText.push(`message ${type.name} {`);
-    this.indent++;
-
-    // Add reserved field numbers if any exist
     const messageLock = lockData.messages[type.name];
-    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      this.protoText.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
-    }
-
     const fields = type.getFields();
 
     // Get field names and order them using the lock manager
     const fieldNames = Object.keys(fields);
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
+    const messageFields: ProtoMessageField[] = [];
     for (const fieldName of orderedFieldNames) {
       if (!fields[fieldName]) {
         continue;
@@ -1750,30 +1714,16 @@ Example:
       const protoFieldName = graphqlFieldToProtoField(fieldName);
       const deprecationInfo = this.fieldIsDeprecated(field, []);
 
-      // Get the appropriate field number, respecting the lock
-      const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
-
-      // Add field description as comment
-      if (field.description) {
-        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
-      }
-
-      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
-      }
-
-      const fieldOptions = [];
-      if (deprecationInfo.deprecated) {
-        fieldOptions.push(` [deprecated = true]`);
-      }
-
-      if (fieldType.isRepeated) {
-        this.protoText.push(
-          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
-        );
-      } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
-      }
+      messageFields.push({
+        fieldName: protoFieldName,
+        typeName: fieldType.typeName,
+        // Get the appropriate field number, respecting the lock
+        fieldNumber: this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name)),
+        isRepeated: fieldType.isRepeated,
+        description: field.description ?? undefined,
+        isDeprecated: deprecationInfo.deprecated,
+        deprecationReason: deprecationInfo.reason,
+      });
 
       // Queue complex field types for processing
       const namedType = getNamedType(field.type);
@@ -1782,8 +1732,14 @@ Example:
       }
     }
 
-    this.indent--;
-    this.protoText.push('}');
+    this.appendMessageToProtoText({
+      messageName: type.name,
+      description: type.description ?? undefined,
+      reservedNumbers: messageLock?.reservedNumbers?.length
+        ? this.formatReservedNumbers(messageLock.reservedNumbers)
+        : undefined,
+      fields: messageFields,
+    });
   }
 
   /**
@@ -2110,5 +2066,14 @@ Example:
    */
   private buildMessage(message: ProtoMessage): string[] {
     return buildProtoMessage(this.includeComments, message);
+  }
+
+  /**
+   * Builds a message definition and appends it to the proto text
+   * @param message - The ProtoMessage object
+   */
+  private appendMessageToProtoText(message: ProtoMessage): void {
+    // buildMessage ends with an empty line, but messages in protoText are separated by a leading one
+    this.protoText.push('', ...this.trimEmptyLines(this.buildMessage(message)));
   }
 }

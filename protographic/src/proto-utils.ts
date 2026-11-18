@@ -82,10 +82,17 @@ function buildProtoMessageWithIndent(
       messageLines.push(...formatComment(includeComments, field.description, indent + 1));
     }
 
+    if (field.isDeprecated && field.deprecationReason) {
+      messageLines.push(
+        ...formatComment(includeComments, `Deprecation notice: ${field.deprecationReason}`, indent + 1),
+      );
+    }
+
     const repeated = field.isRepeated ? 'repeated ' : '';
+    const options = field.isDeprecated ? ' [deprecated = true]' : '';
 
     messageLines.push(
-      indentContent(indent + 1, `${repeated}${field.typeName} ${field.fieldName} = ${field.fieldNumber};`),
+      indentContent(indent + 1, `${repeated}${field.typeName} ${field.fieldName} = ${field.fieldNumber}${options};`),
     );
   }
   messageLines.push(indentContent(indent, '}'), '');
