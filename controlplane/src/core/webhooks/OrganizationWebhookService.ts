@@ -37,54 +37,77 @@ import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspecto
 import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
 
-const MAX_CHECK_EXTENSION_FINDINGS = 1000;
-const MAX_CHECK_EXTENSION_SUBGRAPHS = 1000;
+const lintIssueSchema = z.object({
+  lintRuleType: z.string().trim(),
+  severity: z.enum(LintSeverity),
+  message: z.string().trim(),
+  issueLocation: z.object({
+    line: z.number().int().positive(),
+    column: z.number().int().positive(),
+    endLine: z.number().int().positive().optional(),
+    endColumn: z.number().int().positive().optional(),
+  }),
+});
 
-// Count findings before parsing entries so nested arrays cannot multiply validation errors.
+/** Schema for check-extension error messages and lint issues. */
 const subgraphCheckExtensionSchema = z
   .object({
-    errors: z.array(z.unknown()).max(MAX_CHECK_EXTENSION_FINDINGS).optional(),
+    errors: z.array(z.unknown()).optional(),
     lintIssues: z.record(z.string(), z.unknown()).optional(),
   })
-  .superRefine((response, ctx) => {
-    const subgraphs = Object.values(response.lintIssues ?? {});
-    if (subgraphs.length > MAX_CHECK_EXTENSION_SUBGRAPHS) {
-      ctx.addIssue({ code: 'custom', message: 'Check extension returned more than 1000 subgraphs' });
-      return;
-    }
+  // Validate entries individually and stop at the first schema mismatch
+  // to avoid accumulating errors for the entire collection.
+  .transform((response, ctx) => {
+    const reject = (error: z.ZodError, path: (string | number)[]) => {
+      for (const issue of error.issues) {
+        ctx.addIssue({ ...issue, path: [...path, ...issue.path] });
+      }
+      return z.NEVER;
+    };
+    const result: {
+      errors?: string[];
+      lintIssues?: Record<string, LintIssueResponse[]>;
+    } = {};
 
-    let findings = response.errors?.length ?? 0;
-    for (const issues of subgraphs) {
-      findings += Array.isArray(issues) ? issues.length : 1;
-      if (findings > MAX_CHECK_EXTENSION_FINDINGS) {
-        ctx.addIssue({ code: 'custom', message: 'Check extension returned more than 1000 findings' });
-        return;
+    // Validate error messages.
+    if (response.errors !== undefined) {
+      const errorMessageSchema = z.string();
+      result.errors = [];
+      for (const [index, entry] of response.errors.entries()) {
+        const parsed = errorMessageSchema.safeParse(entry);
+        // Reject the entire response on a schema mismatch.
+        if (!parsed.success) {
+          return reject(parsed.error, ['errors', index]);
+        }
+        result.errors.push(parsed.data);
       }
     }
-  })
-  .pipe(
-    z.object({
-      errors: z.array(z.string()).optional(),
-      lintIssues: z
-        .record(
-          z.string(),
-          z.array(
-            z.object({
-              lintRuleType: z.string().trim(),
-              severity: z.enum(LintSeverity),
-              message: z.string().trim(),
-              issueLocation: z.object({
-                line: z.number().int().positive(),
-                column: z.number().int().positive(),
-                endLine: z.number().int().positive().optional(),
-                endColumn: z.number().int().positive().optional(),
-              }),
-            }),
-          ),
-        )
-        .optional(),
-    }),
-  );
+
+    // Validate lint issues for each subgraph.
+    if (response.lintIssues !== undefined) {
+      const collectionSchema = z.array(z.unknown());
+      const subgraphs: [string, LintIssueResponse[]][] = [];
+      for (const [name, entries] of Object.entries(response.lintIssues)) {
+        const array = collectionSchema.safeParse(entries);
+        // Reject the entire response on a schema mismatch.
+        if (!array.success) {
+          return reject(array.error, ['lintIssues', name]);
+        }
+        const findings: LintIssueResponse[] = [];
+        for (const [index, entry] of array.data.entries()) {
+          const parsed = lintIssueSchema.safeParse(entry);
+          // Reject the entire response on a schema mismatch.
+          if (!parsed.success) {
+            return reject(parsed.error, ['lintIssues', name, index]);
+          }
+          findings.push(parsed.data);
+        }
+        subgraphs.push([name, findings]);
+      }
+      result.lintIssues = Object.fromEntries(subgraphs);
+    }
+    return result;
+  });
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -144,6 +167,7 @@ export interface ProposalStateUpdated {
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
+type LintIssueResponse = z.infer<typeof lintIssueSchema>;
 export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
 
 type Config = {

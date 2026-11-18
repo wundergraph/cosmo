@@ -15,7 +15,7 @@ You can also return a collection of error messages to be displayed in the extens
 
 The response payload must be a JSON object no larger than **5 MB**.
 
-The response can contain at most **1,000 findings** in total, counting `errors` and lint issues across all subgraphs. The `lintIssues` map can contain at most **1,000 subgraph names**, including entries with empty arrays. If either limit is exceeded, the entire response is rejected as invalid and no lint issues from that response are added to the check.
+If an error message or lint issue does not match the schema, validation stops and the entire response is rejected. No lint issues from that response are added to the check. Diagnostics identify the invalid entry and its field errors.
 
 ## SubgraphCheckExtensionReply
 | Field        | Type                                                           | Description                                                                                                                                                                                                      |
