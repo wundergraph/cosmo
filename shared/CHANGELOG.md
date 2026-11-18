@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.50.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.50.1...@wundergraph/cosmo-shared@0.50.2) (2026-11-18)
+
+### Bug Fixes
+
+* **deps:** address wgc security advisories ([#3552](https://github.com/wundergraph/cosmo/issues/3552)) ([9c5cdcb](https://github.com/wundergraph/cosmo/commit/9c5cdcbb2a2c3cff282fff3db940306b5710563d)) (@comatory)
+
 ## [0.50.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.50.0...@wundergraph/cosmo-shared@0.50.1) (2026-11-16)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
