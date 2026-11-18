@@ -23,7 +23,7 @@ The test verifies:
 7. If composition omits the client schema, `ClientSchema()` falls back to `Schema()`. The test verifies that this matches the schema used by introspection.
 8. A config with an unreachable composed URL serves queries through the local routing override. The module receives the effective URL.
 
-The generator also asserts that removing `@composeDirective` removes the custom directive from the federated schema. The hook exposes existing composition output; it does not change directive-preservation rules or provide feature-graph SDLs.
+The generator also asserts that removing `@composeDirective` removes the custom directive from the federated schema. The hook exposes the directive usages preserved by composition.
 
 Before the hook implementation, the first request has no `X-Schema-Role` header and the test fails with `module did not receive the directive-bearing SDL`.
 

@@ -2,7 +2,7 @@ package routerconfig
 
 import "slices"
 
-// ExecutionConfig is a read-only snapshot of the base graph's execution config.
+// ExecutionConfig is a read-only snapshot of one graph's execution config.
 // Modules may retain it after a callback returns and read it concurrently.
 // Subsequent config changes do not modify an existing snapshot.
 type ExecutionConfig struct {
@@ -16,7 +16,7 @@ type ExecutionConfig struct {
 // or shared by different configs. Local wgc router compose uses a constant version.
 func (c ExecutionConfig) Version() string { return c.version }
 
-// Schema returns the exact composed router SDL from the base execution config,
+// Schema returns the exact composed router SDL from the execution config,
 // including directives propagated by composition and inaccessible elements.
 // It excludes introspection definitions added at runtime.
 func (c ExecutionConfig) Schema() string { return c.schema }
@@ -28,7 +28,7 @@ func (c ExecutionConfig) Schema() string { return c.schema }
 // returns Schema(), matching the router's fallback.
 func (c ExecutionConfig) ClientSchema() string { return c.clientSchema }
 
-// Subgraphs returns the base graph's subgraphs in configuration order.
+// Subgraphs returns this graph's subgraphs in configuration order.
 // Each call returns a detached slice that the caller may retain or modify.
 func (c ExecutionConfig) Subgraphs() []Subgraph { return slices.Clone(c.subgraphs) }
 
@@ -42,17 +42,14 @@ type Subgraph struct {
 	RoutingURL string
 }
 
-// ExecutionConfig takes a snapshot of the response using the base graph's
-// resolved subgraphs, in configuration order.
-func (r *Response) ExecutionConfig(resolvedSubgraphs []Subgraph) ExecutionConfig {
-	engineConfig := r.Config.GetEngineConfig()
-	schema := engineConfig.GetGraphqlSchema()
-	clientSchema := engineConfig.GetGraphqlClientSchema()
+// NewExecutionConfig creates a snapshot for one graph using its composed SDL
+// and its resolved subgraphs in configuration order.
+func NewExecutionConfig(version, schema, clientSchema string, resolvedSubgraphs []Subgraph) ExecutionConfig {
 	if clientSchema == "" {
 		clientSchema = schema
 	}
 	return ExecutionConfig{
-		version:      r.Config.GetVersion(),
+		version:      version,
 		schema:       schema,
 		clientSchema: clientSchema,
 		subgraphs:    slices.Clone(resolvedSubgraphs),

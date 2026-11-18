@@ -171,16 +171,29 @@ type Provisioner interface {
 type ModuleConfig interface {
 	// ExecutionConfig returns the base graph's execution config for this snapshot.
 	ExecutionConfig() routerconfig.ExecutionConfig
+	// FeatureFlagConfig returns the execution config for the exact name of an
+	// active feature flag. An empty or unknown name returns the zero value and false.
+	FeatureFlagConfig(name string) (routerconfig.ExecutionConfig, bool)
 
 	isModuleConfig()
 }
 
+// The empty key identifies the base graph, as it does in graphServer.graphMuxList.
 type moduleConfig struct {
-	executionConfig routerconfig.ExecutionConfig
+	graphs map[string]routerconfig.ExecutionConfig
 }
 
-func (c *moduleConfig) ExecutionConfig() routerconfig.ExecutionConfig { return c.executionConfig }
-func (*moduleConfig) isModuleConfig()                                 {}
+func (c *moduleConfig) ExecutionConfig() routerconfig.ExecutionConfig { return c.graphs[""] }
+
+func (c *moduleConfig) FeatureFlagConfig(name string) (routerconfig.ExecutionConfig, bool) {
+	if name == "" {
+		return routerconfig.ExecutionConfig{}, false
+	}
+	cfg, ok := c.graphs[name]
+	return cfg, ok
+}
+
+func (*moduleConfig) isModuleConfig() {}
 
 // ConfigHandler observes the initial configuration and every successful
 // execution config reload.

@@ -139,7 +139,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema)
 	})
 
-	t.Run("feature-only reload retains the base subgraph inventory", func(t *testing.T) {
+	t.Run("feature configs follow their mux across reloads", func(t *testing.T) {
 		module := &executionConfigTestModule{}
 		cfg := executionConfigWithDirective()
 		cfg.Subgraphs = []*nodev1.Subgraph{
@@ -157,21 +157,59 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		require.Equal(t, want, module.updates[0].ExecutionConfig().Subgraphs())
 		baseMux := r.httpServer.state.Load().graphServer.graphMuxList[""]
 
+		flag := func(name, greeting string) *nodev1.FeatureFlagRouterExecutionConfig {
+			engine := executionConfigWithDirective().EngineConfig
+			engine.GraphqlSchema = fmt.Sprintf(`directive @translate(to: String!) on FIELD_DEFINITION
+type Query { hello: String @translate(to: %q) }`, greeting)
+			return &nodev1.FeatureFlagRouterExecutionConfig{
+				Version: name + "-version", EngineConfig: engine,
+				Subgraphs: []*nodev1.Subgraph{{Id: name, Name: name + "-products"}},
+			}
+		}
+		german, french := flag("german", "Hallo"), flag("french", "Bonjour")
+		german.EngineConfig.GraphqlClientSchema = nil
 		updated := proto.Clone(cfg).(*nodev1.RouterConfig)
 		updated.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{
-			ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{
-				"preview": {
-					Version: "preview", EngineConfig: executionConfigWithDirective().EngineConfig,
-					Subgraphs: []*nodev1.Subgraph{{Id: "3", Name: "preview-products"}},
-				},
-			},
+			ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{"german": german, "french": french},
 		}
 		require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{
-			Config: updated, Changes: &routerconfig.Changes{AddedConfigs: map[string]struct{}{"preview": {}}},
+			Config: updated, Changes: &routerconfig.Changes{AddedConfigs: map[string]struct{}{"german": {}, "french": {}}},
 		}))
 		require.Same(t, baseMux, r.httpServer.state.Load().graphServer.graphMuxList[""])
 		require.Len(t, module.updates, 2)
-		require.Equal(t, want, module.updates[1].ExecutionConfig().Subgraphs())
+		both := module.updates[1]
+		require.Equal(t, want, both.ExecutionConfig().Subgraphs())
+		de, ok := both.FeatureFlagConfig("german")
+		require.True(t, ok)
+		require.Equal(t, german.Version, de.Version())
+		require.Equal(t, german.EngineConfig.GraphqlSchema, de.Schema())
+		require.Equal(t, de.Schema(), de.ClientSchema())
+		require.Equal(t, []routerconfig.Subgraph{{ID: "german", Name: "german-products"}}, de.Subgraphs())
+		fr, ok := both.FeatureFlagConfig("french")
+		require.True(t, ok)
+		require.Equal(t, french.EngineConfig.GraphqlSchema, fr.Schema())
+		require.Equal(t, french.EngineConfig.GetGraphqlClientSchema(), fr.ClientSchema())
+		for _, name := range []string{"", "unknown", "German"} {
+			missing, ok := both.FeatureFlagConfig(name)
+			require.False(t, ok)
+			require.Equal(t, routerconfig.ExecutionConfig{}, missing)
+		}
+
+		next := proto.Clone(updated).(*nodev1.RouterConfig)
+		delete(next.FeatureFlagConfigs.ConfigByFeatureFlagName, "german")
+		require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{
+			Config: next, Changes: &routerconfig.Changes{RemovedConfigs: map[string]struct{}{"german": {}}},
+		}))
+		require.Len(t, module.updates, 3)
+		missing, ok := module.updates[2].FeatureFlagConfig("german")
+		require.False(t, ok)
+		require.Equal(t, routerconfig.ExecutionConfig{}, missing)
+		reused, ok := module.updates[2].FeatureFlagConfig("french")
+		require.True(t, ok)
+		require.Equal(t, fr, reused)
+		retained, ok := both.FeatureFlagConfig("german")
+		require.True(t, ok)
+		require.Equal(t, de, retained)
 	})
 
 	t.Run("client schema defaults to router schema", func(t *testing.T) {

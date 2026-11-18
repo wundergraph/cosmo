@@ -94,14 +94,21 @@ The execution config provides the following accessors.
 
 | Accessor | Meaning |
 | --- | --- |
-| `Schema()` | The base graph's composed router schema as GraphQL SDL. It preserves the exact execution-config text, including composed custom directives and inaccessible elements. Runtime introspection definitions are not appended. |
+| `Schema()` | The selected graph's composed router schema as GraphQL SDL. It preserves the exact execution-config text, including composed custom directives and inaccessible elements. Runtime introspection definitions are not appended. |
 | `ClientSchema()` | The SDL used for validation, normalization, and introspection. A separately composed client schema excludes inaccessible elements and filters custom directives. If no non-empty client schema is supplied, this returns `Schema()`, matching runtime behavior. Runtime introspection definitions are not appended. |
 | `Version()` | The execution config's supplied version string. It may be empty in older configs and is not a unique content identifier. Local `wgc router compose` uses a constant version. Hash the schema text when identifying contents or caching metadata. |
 | `Subgraphs()` | A detached slice of `routerconfig.Subgraph` values in config order. Each value exposes `ID`, `Name`, and `RoutingURL`. The URL includes local routing overrides and may be empty for a virtual subgraph. Modules can sort or edit their copy. |
 
 Snapshots can be retained after the callback and read concurrently. Reloads do not modify previously supplied snapshots. The separate `context.Context` controls work performed during the callback and should not be retained with config metadata.
 
-Only the base graph's config is provided. A reload that changes feature flags can also invoke the hook with the base graph's snapshot.
+Use `config.FeatureFlagConfig(name)` to look up an active feature flag by its exact name. It returns that graph's execution config and `true`, or the zero value and `false` for an empty, unknown, or removed name. The router calls the hook once for the whole snapshot, including on a feature-only reload. Previously retained snapshots keep their original flags.
+
+```go
+if german, ok := config.FeatureFlagConfig("german"); ok {
+    // Read the directives composed specifically for the German graph.
+    m.Logger.Debug("Loaded German graph", zap.String("version", german.Version()))
+}
+```
 
 The hook is a notification and cannot reject a config. Handle metadata-building errors inside the module. It runs synchronously, so a slow hook delays startup or reload.
 
