@@ -47,6 +47,9 @@ type ProviderAdapter struct {
 	// connectivity (kgo connects lazily otherwise) so an unreachable broker surfaces a
 	// distinct "could not connect" error, consistent with the NATS and Redis adapters.
 	skipUnavailable bool
+	// partitionRefreshInterval is how often a resumed subscription checks its pinned topics for
+	// new partitions.
+	partitionRefreshInterval time.Duration
 }
 
 type PollerOpts struct {
@@ -205,7 +208,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 		// Messages are shared among all subscriptions, therefore old events are not redelivered
 		// This replicates a stateless publish-subscribe model
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(startedAt)),
-	}, pollerOpts)
+	}, pollerOpts, nil)
 }
 
 func (p *ProviderAdapter) buildPollerOpts(ctx context.Context, subConf *SubscriptionEventConfiguration, guarantee datasource.DeliveryGuarantee, startedAt int64) (PollerOpts, error) {
@@ -313,7 +316,7 @@ func (p *ProviderAdapter) SubscribeFrom(ctx context.Context, conf datasource.Sub
 		}
 	}
 
-	consumeOpts, err := p.buildResumeAssignment(ctx, subConf, cursor.GetIssuedAt(), position.Kafka)
+	consumeOpts, watch, err := p.buildResumeAssignment(ctx, subConf, cursor.GetIssuedAt(), position.Kafka)
 	if err != nil {
 		return err
 	}
@@ -322,14 +325,15 @@ func (p *ProviderAdapter) SubscribeFrom(ctx context.Context, conf datasource.Sub
 		providerId:     conf.ProviderID(),
 		trackPositions: true,
 		startFrom:      position.Kafka,
-	})
+	}, watch)
 }
 
 // subscribe creates the consumer client of a single subscription and runs its poller until the
 // subscription, the adapter or the application context ends. consumeOpts says what the client
 // consumes and where it starts, which is the only thing that differs between a fresh subscribe
-// and a resume.
-func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater, consumeOpts []kgo.Opt, pollerOpts PollerOpts) error {
+// and a resume. A non-nil watch makes the subscription add the partitions created on its pinned
+// topics while it runs.
+func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater, consumeOpts []kgo.Opt, pollerOpts PollerOpts, watch *partitionWatch) error {
 	log := p.logger.With(
 		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
@@ -368,6 +372,13 @@ func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEv
 		stop := context.AfterFunc(p.ctx, cancel)
 		defer stop()
 
+		if watch != nil {
+			// Stops with pollerCtx, which is cancelled before the client is closed.
+			p.closeWg.Go(func() {
+				p.watchPartitions(pollerCtx, client, watch, log)
+			})
+		}
+
 		err := p.topicPoller(pollerCtx, client, updater, pollerOpts)
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
@@ -388,12 +399,97 @@ func (p *ProviderAdapter) subscribe(ctx context.Context, subConf *SubscriptionEv
 	return nil
 }
 
+// defaultPartitionRefreshInterval is how often a resumed subscription checks its pinned topics
+// for partitions that were created since.
+const defaultPartitionRefreshInterval = 30 * time.Second
+
+// partitionWatch tracks the partitions a resumed subscription has pinned, so the ones created on
+// those topics afterwards can be added to the running client. franz-go only discovers new
+// partitions of topics it consumes as a whole, and pinning partitions with kgo.ConsumePartitions
+// to give each its own start offset opts out of that. A topic cannot be both: franz-go treats a
+// topic with pinned partitions as pinned only, even when it is also passed to kgo.ConsumeTopics.
+type partitionWatch struct {
+	// topics are the topics that existed when the subscription resumed. A topic that did not
+	// exist yet is consumed as a whole by franz-go and must not be pinned here.
+	topics []string
+	known  map[string]map[int32]struct{}
+	// startAt is where a partition created after the resume starts. Such a partition only holds
+	// records written after the resume began, so starting there skips nothing.
+	startAt kgo.Offset
+}
+
+// newPartitions returns the partitions of current the subscription has not pinned yet, at the
+// offset they start from, and records them as pinned.
+func (w *partitionWatch) newPartitions(current map[string][]int32) map[string]map[int32]kgo.Offset {
+	var added map[string]map[int32]kgo.Offset
+	for topic, partitions := range current {
+		known, ok := w.known[topic]
+		if !ok {
+			continue
+		}
+		for _, partition := range partitions {
+			if _, ok := known[partition]; ok {
+				continue
+			}
+			known[partition] = struct{}{}
+			if added == nil {
+				added = make(map[string]map[int32]kgo.Offset)
+			}
+			if added[topic] == nil {
+				added[topic] = make(map[int32]kgo.Offset)
+			}
+			added[topic][partition] = w.startAt
+		}
+	}
+	return added
+}
+
+// watchPartitions adds the partitions created on the pinned topics to client until ctx ends. A
+// failed metadata request is logged and retried on the next tick, since the subscription itself
+// is still healthy.
+func (p *ProviderAdapter) watchPartitions(ctx context.Context, client *kgo.Client, watch *partitionWatch, log *zap.Logger) {
+	ticker := time.NewTicker(p.partitionRefreshInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		current, _, err := p.fetchTopicPartitions(ctx, watch.topics)
+		if err != nil {
+			// Shutdown closes the write client before it cancels the adapter context.
+			if ctx.Err() == nil && !errors.Is(err, kgo.ErrClientClosed) {
+				log.Warn("failed to refresh topic partitions, will retry", zap.Error(err))
+			}
+			continue
+		}
+
+		added := watch.newPartitions(current)
+		if len(added) == 0 {
+			continue
+		}
+		for topic, partitions := range added {
+			for partition := range partitions {
+				log.Info("partition was created, consuming it", zap.String("topic", topic), zap.Int32("partition", partition))
+			}
+		}
+		client.AddConsumePartitions(added)
+	}
+}
+
 // buildResumeAssignment returns the consume options that start every partition of every
-// subscribed topic where the resuming client left off.
-func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *SubscriptionEventConfiguration, issuedAt int64, position *streamsv1.KafkaCursorPosition) ([]kgo.Opt, error) {
+// subscribed topic where the resuming client left off, and the watch that keeps the
+// assignment current as partitions are created.
+func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *SubscriptionEventConfiguration, issuedAt int64, position *streamsv1.KafkaCursorPosition) ([]kgo.Opt, *partitionWatch, error) {
+	// Taken before the partitions are listed, so a partition created after the listing only
+	// holds records written after this timestamp.
+	snapshotAt := time.Now().UnixMilli()
 	allPartitions, missingTopics, err := p.fetchTopicPartitions(ctx, subConf.Topics)
 	if err != nil {
-		return nil, datasource.NewError("failed to enumerate topic partitions to resume subscription", err)
+		return nil, nil, datasource.NewError("failed to enumerate topic partitions to resume subscription", err)
 	}
 	for _, topic := range missingTopics {
 		p.logger.Warn("topic does not exist yet, will resume consuming it once it is created",
@@ -402,11 +498,18 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *Su
 		)
 	}
 
+	watch := &partitionWatch{
+		topics:  make([]string, 0, len(allPartitions)),
+		known:   make(map[string]map[int32]struct{}, len(allPartitions)),
+		startAt: kgo.NewOffset().AfterMilli(snapshotAt),
+	}
 	assign := make(map[string]map[int32]kgo.Offset, len(allPartitions))
 	for topic, partitions := range allPartitions {
 		recorded := position.GetTopics()[topic].GetPartitions()
 		partAssign := make(map[int32]kgo.Offset, len(partitions))
+		known := make(map[int32]struct{}, len(partitions))
 		for _, partition := range partitions {
+			known[partition] = struct{}{}
 			if offset, ok := recorded[partition]; ok {
 				// The recorded offset is the last record delivered to the client, so the resume
 				// starts one past it. The epoch is what lets franz-go detect truncation; records
@@ -421,6 +524,8 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *Su
 			}
 		}
 		assign[topic] = partAssign
+		watch.topics = append(watch.topics, topic)
+		watch.known[topic] = known
 	}
 
 	opts := []kgo.Opt{kgo.ConsumePartitions(assign)}
@@ -431,7 +536,7 @@ func (p *ProviderAdapter) buildResumeAssignment(ctx context.Context, subConf *Su
 		)
 	}
 
-	return opts, nil
+	return opts, watch, nil
 }
 
 // listOffsetsLatest is the timestamp that makes a ListOffsets request return the end of a partition.
@@ -717,7 +822,15 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt,
 		cancel:            cancel,
 		streamMetricStore: store,
 		skipUnavailable:   providerOpts.SkipUnavailableProviders,
+
+		partitionRefreshInterval: defaultPartitionRefreshInterval,
 	}, nil
+}
+
+// SetPartitionRefreshInterval sets how often a resumed subscription checks its pinned topics for
+// partitions created since. It must be called before the first subscription starts.
+func (p *ProviderAdapter) SetPartitionRefreshInterval(interval time.Duration) {
+	p.partitionRefreshInterval = interval
 }
 
 func castToMutableEvent(event datasource.StreamEvent) (*MutableEvent, error) {
