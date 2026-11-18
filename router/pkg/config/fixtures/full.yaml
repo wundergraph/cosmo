@@ -36,6 +36,8 @@ router_registration: true
 graphql_path: /graphql
 dev_mode: false
 tls:
+  watch: true
+  watch_interval: 5s
   server:
     enabled: false
   client:
@@ -281,6 +283,7 @@ telemetry:
 cache_control_policy:
   enabled: true
   value: 'max-age=180, public'
+  missing_no_store: true
   subgraphs:
     - name: 'products'
       value: 'max-age=60, public'
@@ -305,6 +308,11 @@ traffic_shaping:
     max_header_bytes: 4MiB
     decompression_enabled: false
     response_compression_min_size: 4KiB
+    # Client-facing HTTP server timeouts
+    request_read_timeout: 30s
+    request_header_read_timeout: 5s
+    idle_timeout: 90s
+    write_timeout: 2m
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -681,13 +689,23 @@ split_config_poller:
 
 router_config_path: 'latest.json'
 
+graphql_over_http:
+  status_codes: September2026
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
+
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: false
 
 apollo_compatibility_flags:
   enable_all: false
   replace_undefined_op_field_errors:
     enabled: true
   use_graphql_validation_failed_status:
+    enabled: true
+
+apollo_router_compatibility_flags:
+  cache_control_any_public:
     enabled: true

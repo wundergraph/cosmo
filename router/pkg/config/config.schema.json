@@ -618,6 +618,19 @@
       "additionalProperties": false,
       "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router.",
       "properties": {
+        "watch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reload router server and HTTP/gRPC subgraph client certificate and key files from disk when they change. New connections use the new files. Open connections are not affected. CA bundles and NATS TLS files are not watched. A file that fails to load is reported and the previous one stays in use. The default value is false."
+        },
+        "watch_interval": {
+          "type": "string",
+          "description": "The interval at which the certificate files are checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s",
+          "duration": {
+            "minimum": "100ms"
+          }
+        },
         "server": {
           "type": "object",
           "description": "The configuration for the server TLS. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
@@ -2182,6 +2195,42 @@
               "bytes": {
                 "minimum": "1B"
               }
+            },
+            "request_read_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the entire client request, including headers and body. Slow clients that do not finish sending the request within this period have their connection closed. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "60s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "request_header_read_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for reading the client request headers. Setting this to 0 falls back to request_read_timeout. Applies to HTTP/1 only; for HTTP/2 over TLS, idle_timeout limits slow headers, except while another stream on the same connection is open. The period is specified as a string with a number and a unit, e.g. 5s, 10s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "idle_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration to wait for the next request on a keep-alive client connection. Setting this to 0 falls back to request_read_timeout. The period is specified as a string with a number and a unit, e.g. 30s, 1m, 2m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "write_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum duration for writing the response to the client, measured from the end of reading the request headers. Disabled by default (0). When set, it also terminates long-lived responses such as subscriptions over SSE or multipart once the duration elapses, so only set it if you don't use them. The period is specified as a string with a number and a unit, e.g. 30s, 1m. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "0s",
+              "duration": {
+                "minimum": "0s"
+              }
             }
           }
         },
@@ -2310,6 +2359,11 @@
           "type": "string",
           "description": "Global cache control value.",
           "examples": ["max-age=180, public"]
+        },
+        "missing_no_store": {
+          "type": "boolean",
+          "default": false,
+          "description": "Merges a subgraph response with no caching directives (no Cache-Control or Expires, or only directives that do not affect caching) as no-store, unless a value is configured for it. By default, a response with neither header is ignored, and one with only such directives withdraws public. gRPC subgraphs are skipped, as the router does not read their response metadata."
         },
         "subgraphs": {
           "type": "array",
@@ -4728,6 +4782,37 @@
         }
       }
     },
+    "graphql_over_http": {
+      "type": "object",
+      "description": "Configures how the router follows the GraphQL over HTTP spec.",
+      "additionalProperties": false,
+      "properties": {
+        "status_codes": {
+          "type": "string",
+          "enum": ["legacy", "September2026"],
+          "default": "legacy",
+          "description": "The status codes used for request errors. 'legacy' (default) returns 200 for most request errors. 'September2026' returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for example 403 for blocked operations and 422 for invalid variables. Some clients treat non-2xx responses as network errors, so check your clients before using 'September2026'."
+        }
+      }
+    },
+    "backwards_compatibility": {
+      "type": "object",
+      "description": "Options that restore behavior of older router versions. Each option gives up a guarantee of the current behavior, so enable one only while migrating away from what it supports.",
+      "additionalProperties": false,
+      "properties": {
+        "persisted_operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_mismatched_sha256_ids": {
+              "type": "boolean",
+              "default": false,
+              "description": "Serve published operations whose ID looks like a SHA256 hash (64 lowercase hexadecimal characters) but isn't the SHA256 hash of their body, as routers before 0.355.0 did. Such an ID is ambiguous: a request whose query hashes to it can execute a different operation than the published one, and with APQ enabled it can register that query under the ID. Republish the operations with matching IDs and disable this option."
+            }
+          }
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
@@ -4758,6 +4843,17 @@
         "skip_null_variables_error": {
           "type": "object",
           "description": "Skips the error when a null variable is supplied, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "cache_control_any_public": {
+          "type": "object",
+          "description": "Merges cache control as public when any fetch is public, unless one is private, similar to Apollo Router. By default, every fetch must be public.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

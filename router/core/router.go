@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"maps"
@@ -163,6 +162,16 @@ type (
 		// It's used for the routers http server.
 		// It's created once during bootstrap and reused during server swap.
 		compiledServerConfig *tls.Config
+
+		// certs holds every certificate loaded from the settings so they can be reloaded from disk.
+		certs certReloaders
+
+		// Watched client TLS configs are shared across graph servers.
+		// Without watching, each graph server reloads its own TLS files.
+		defaultClientTLS     *tls.Config
+		perSubgraphTLS       map[string]*tls.Config
+		defaultGRPCClientTLS *tls.Config
+		perSubgraphGRPCTLS   map[string]*tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -350,6 +359,13 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Covers headers and cache_control_policy rules alike.
+	if r.headerPropagation != nil {
+		if r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled {
+			r.headerPropagation.publicMode = publicRequiresAny
+		}
+		r.headerPropagation.missingNoStore = r.cacheControlPolicy.MissingNoStore
+	}
 
 	defaultCorsHeaders := []string{
 		// Common headers
@@ -398,6 +414,18 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
+	}
+
+	if r.tls.settings.Watch {
+		r.tls.defaultClientTLS, r.tls.perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.Client)
+		if err != nil {
+			return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+		}
+
+		r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.ClientGRPC)
+		if err != nil {
+			return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		}
 	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
@@ -597,6 +625,8 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 // It's meant to be used as the routers http server tls configuration.
 // If TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
+// The certificate is served through a callback so a reload applies to new
+// connections without restarting the listener. The client CA is loaded once.
 func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	serverTLS := r.tls.settings.Server
 
@@ -612,42 +642,40 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		return nil, errors.New("tls key file not provided")
 	}
 
-	var caCertPool *x509.CertPool
-	clientAuthMode := tls.NoClientCert
+	certs, err := r.tls.certs.add(serverTLS.CertFile, serverTLS.KeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &tls.Config{
+		GetCertificate: certs.getCertificate,
+	}
 
 	if serverTLS.ClientAuth.CertFile != "" {
-		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
+		cfg.ClientCAs, err = loadCertPool(serverTLS.ClientAuth.CertFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read cert file: %w", err)
+			return nil, fmt.Errorf("failed to load tls.server.client_auth.cert_file: %w", err)
 		}
-
-		// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
-		caPool := x509.NewCertPool()
-		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-			return nil, errors.New("failed to append cert to pool")
-		}
-		caCertPool = caPool
 
 		if serverTLS.ClientAuth.Required {
-			clientAuthMode = tls.RequireAndVerifyClientCert
+			cfg.ClientAuth = tls.RequireAndVerifyClientCert
 		} else {
-			clientAuthMode = tls.VerifyClientCertIfGiven
+			cfg.ClientAuth = tls.VerifyClientCertIfGiven
 		}
 
-		r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
+		r.logger.Debug("Client auth enabled", zap.String("mode", cfg.ClientAuth.String()))
 	}
 
-	// Load the server cert and private key
-	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
+	return cfg, nil
+}
+
+// watchTLSCertificates reloads certificates from disk when tls.watch is enabled.
+func (r *Router) watchTLSCertificates(ctx context.Context) error {
+	if !r.tls.settings.Watch {
+		return nil
 	}
 
-	return &tls.Config{
-		ClientCAs:    caCertPool,
-		Certificates: []tls.Certificate{cer},
-		ClientAuth:   clientAuthMode,
-	}, nil
+	return r.tls.certs.watch(ctx, r.logger, r.tls.settings.WatchInterval)
 }
 
 // newGraphServer creates a new server.
@@ -712,9 +740,11 @@ func (r *Router) initModules(ctx context.Context) error {
 		moduleInstance := moduleInfo.New()
 
 		mc := &ModuleContext{
-			Context: ctx,
-			Module:  moduleInstance,
-			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Context:                 ctx,
+			Module:                  moduleInstance,
+			Logger:                  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			PrometheusMeterProvider: r.promMeterProvider,
+			OTLPMeterProvider:       r.otlpMeterProvider,
 		}
 
 		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]
@@ -849,12 +879,20 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return nil, err
 	}
 
 	r.configureUsageTracking(ctx)
@@ -1585,12 +1623,18 @@ func (r *Router) buildClients(ctx context.Context) error {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
+		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
+			r.logger.Warn("allow_mismatched_sha256_ids is enabled: requests for persisted operations whose SHA256 ID doesn't match their body may run a different operation")
+		}
+
 		c, err := persistedoperation.NewClient(&persistedoperation.Options{
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			APQStore:       apqStore,
 			PQLStore:       pqlStore,
+
+			AllowMismatchedSHA256IDs: r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs,
 		})
 		if err != nil {
 			return err
@@ -1809,12 +1853,20 @@ func (r *Router) Start(ctx context.Context) error {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return err
 	}
 
 	if r.reloadPersistentState == nil {
@@ -2628,6 +2680,7 @@ func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes:        1000 * 1000 * 5, // 5 MB
 		ResponseCompressionMinSize: 1024 * 4,        // 4 KiB
+		RequestReadTimeout:         defaultServerReadTimeout,
 	}
 }
 
@@ -2873,6 +2926,18 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
+func WithGraphQLOverHTTP(cfg config.GraphQLOverHTTPConfiguration) Option {
+	return func(r *Router) {
+		r.graphqlOverHTTP = cfg
+	}
+}
+
+func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
+	return func(r *Router) {
+		r.backwardsCompatibility = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
@@ -3049,7 +3114,7 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	}
 
 	if clientTLS != nil {
-		transport.TLSClientConfig = clientTLS
+		transport.TLSClientConfig = clientTLS.Clone()
 	}
 
 	if traceDialer != nil {

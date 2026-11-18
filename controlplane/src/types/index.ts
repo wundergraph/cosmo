@@ -50,6 +50,7 @@ export type FeatureIds =
   | 'persisted-operations'
   // Boolean features
   | 'ai'
+  | 'audit-log-streaming'
   | 'cache-warmer'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'field-pruning-grace-period'

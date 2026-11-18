@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.164.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.163.0...@wundergraph/cosmo-connect@0.164.0) (2026-11-13)
+
+### Features
+
+* **controlplane:** add deliveryGuarantees to proto and controlplane ([#3434](https://github.com/wundergraph/cosmo/issues/3434)) ([5a5f8c3](https://github.com/wundergraph/cosmo/commit/5a5f8c3f157dd2cce655705908647045112cee92)) (@dkorittki)
+
 ## [0.163.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.162.0...@wundergraph/cosmo-connect@0.163.0) (2026-10-29)
 
 ### Features

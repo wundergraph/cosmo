@@ -36,11 +36,13 @@ func newManifestProcessor(t *testing.T, opts persistedoperation.Options) (*Opera
 	})
 	require.NoError(t, err)
 	t.Cleanup(cache.Close)
-	return NewOperationProcessor(OperationProcessorOptions{
+	caches := NewOperationCaches()
+	caches.PersistedOperation = cache
+	return newTestOperationProcessor(t, OperationProcessorOptions{
 		Executor:                       &Executor{ClientSchema: &schema},
 		PersistedOperationClient:       client,
 		EnablePersistedOperationsCache: true,
-		PersistedOpsNormalizationCache: cache,
+		Caches:                         caches,
 	}), store
 }
 

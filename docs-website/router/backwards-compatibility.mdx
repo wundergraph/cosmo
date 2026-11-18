@@ -1,0 +1,63 @@
+---
+title: "Backwards Compatibility"
+description: "Router options that restore behavior of older router versions while you migrate"
+noindex: true
+---
+
+<Warning>
+Backwards compatibility options are intended only for migrations. They aren't covered by the router's compatibility guarantees, and any of them might be removed in any router release, without a deprecation period. Migrate away from an option as soon as you can.
+</Warning>
+
+These options restore behavior of older router versions, so that you can upgrade the router before you finish migrating away from that behavior. Each option gives up a guarantee of the current behavior. Enable an option only while you migrate, and disable it afterwards. The router logs a warning at startup while an option is enabled.
+
+| Option | Restores | Migration guide |
+| ------ | -------- | --------------- |
+| `persisted_operations.allow_mismatched_sha256_ids` | Persisted operations whose SHA256-like ID isn't the SHA256 hash of their body, rejected since `0.355.0`. | [Mismatched SHA256 operation IDs](#mismatched-sha256-operation-ids) |
+
+## Configuration Reference
+
+| Environment Variable | YAML | Required | Description | Default Value |
+| -------------------- | ---- | -------- | ----------- | ------------- |
+| | backwards_compatibility | <Icon icon="square" /> | Options that restore behavior of older router versions. | |
+| | backwards_compatibility.persisted_operations | <Icon icon="square" /> | Options for persisted operations. | |
+| BACKWARDS_COMPATIBILITY_PERSISTED_OPERATIONS_ALLOW_MISMATCHED_SHA256_IDS | backwards_compatibility.persisted_operations.allow_mismatched_sha256_ids | <Icon icon="square" /> | Serve published operations whose ID looks like a SHA256 hash but isn't the SHA256 hash of their body, as routers before `0.355.0` did. Such an ID is ambiguous; see [Mismatched SHA256 operation IDs](#mismatched-sha256-operation-ids) for the tradeoffs. | false |
+
+## Example YAML Configuration
+
+```yaml
+version: "1"
+
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: false
+```
+
+## Mismatched SHA256 operation IDs
+
+Since `0.355.0`, a persisted operation ID that looks like a SHA256 hash (64 lowercase hexadecimal characters) must be the SHA256 hash of its operation body. See [Operation IDs](/router/persisted-queries/persisted-operations#operation-ids) for the full rules.
+
+Routers before `0.355.0` didn't check SHA256 IDs against their bodies. If you published operations whose ID is the SHA256 hash of a different text than the body, those operations stop working when you upgrade.
+
+Requests for such an operation fail with status `500` and `internal server error`. The request's trace records the error `persisted operation '<id>' is invalid: an ID that looks like a SHA256 hash must be the SHA256 of its body`. With the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) and [cache warmup](/router/persisted-queries/persisted-operations#cache-warmup) enabled, each warmup, at startup and after every manifest update, also logs `Skipping PQL manifest operation whose SHA256 ID doesn't match its body` with the ID of each affected operation.
+
+To keep serving these operations while you migrate, enable `allow_mismatched_sha256_ids`:
+
+```yaml config.yaml
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: true
+```
+
+The router then serves the published body for these IDs and includes them in cache warmup. It logs a warning at startup while the option is enabled. With cache warmup enabled, every warmup also logs `Serving PQL manifest operations whose SHA256 ID doesn't match their body`, with the number of affected operations and their IDs, so you can track what is left to migrate.
+
+<Warning>
+Only enable this option if the published operation and the query whose hash matches the ID do the same thing, for example if only the fragment order differs.
+Otherwise, the router can run the wrong operation, depending on APQ settings and what's cached.
+</Warning>
+
+To migrate away from the option, publish the affected operations again under new IDs, and keep the old ones until no client sends them:
+
+1. Change your tooling so that each operation's ID is the SHA256 hash of the exact body you publish. With APQ disabled, you can use an ID that doesn't look like a SHA256 hash instead. With APQ enabled, IDs must be SHA256 hashes. Both the body and the ID of an affected operation usually change as a result.
+2. Push the new operations with `wgc operations push`, and release clients that send the new IDs. Keep the old operations published, so that clients still sending the old IDs keep working. The new operations count toward your persisted operations limit alongside the old ones.
+3. Once clients no longer send the old IDs, [delete the old operations](/router/persisted-queries/persisted-operations#deleting-persisted-operations-in-studio). Studio warns you when an operation still receives traffic.
+4. Disable the option once no affected operations are left. With the PQL manifest, that is when cache warmup no longer logs any. Without it, check that every published ID that looks like a SHA256 hash is the SHA256 hash of its body.

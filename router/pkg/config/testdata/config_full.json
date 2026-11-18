@@ -253,11 +253,14 @@
           "Enabled": true
         }
       }
-    }
+    },
+    "Watch": true,
+    "WatchInterval": 5000000000
   },
   "CacheControl": {
     "Enabled": true,
     "Value": "max-age=180, public",
+    "MissingNoStore": true,
     "Subgraphs": [
       {
         "Name": "products",
@@ -561,7 +564,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
       "DecompressionEnabled": false,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 30000000000,
+      "RequestHeaderReadTimeout": 5000000000,
+      "IdleTimeout": 90000000000,
+      "WriteTimeout": 120000000000
     },
     "Subgraphs": {
       "products": {
@@ -1311,11 +1318,22 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": true
     }
+  },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "September2026"
   },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    }
   },
   "Plugins": {
     "Enabled": true,
