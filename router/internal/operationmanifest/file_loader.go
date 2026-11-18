@@ -9,10 +9,11 @@ import (
 
 // FileLoader loads a manifest from a file below a root directory. If the file name
 // ends with .gz or .zst, the content is decompressed.
-// It reads the file on every Fetch; the Poller compares revisions. It does not check
-// modification times because rsync -a, cp -p and mv keep old ones.
+// It skips unchanged mtimes; writes preserving timestamps may be missed.
+// The Poller remains responsible for comparing manifest revisions.
 type FileLoader struct {
-	path string
+	path     string
+	lastInfo os.FileInfo
 }
 
 func NewFileLoader(root, objectPath string) *FileLoader {
@@ -20,10 +21,20 @@ func NewFileLoader(root, objectPath string) *FileLoader {
 }
 
 func (l *FileLoader) Fetch(_ context.Context, _ string) (*Manifest, bool, error) {
+	info, err := os.Stat(l.path)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to read manifest file: %w", err)
+	}
+
+	if l.lastInfo != nil && info.ModTime().Equal(l.lastInfo.ModTime()) {
+		return nil, false, nil
+	}
+
 	f, err := os.Open(l.path)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to read manifest file: %w", err)
 	}
+
 	defer func() {
 		_ = f.Close()
 	}()
@@ -37,6 +48,8 @@ func (l *FileLoader) Fetch(_ context.Context, _ string) (*Manifest, bool, error)
 	if err != nil {
 		return nil, false, err
 	}
+
+	l.lastInfo = info
 
 	return manifest, true, nil
 }

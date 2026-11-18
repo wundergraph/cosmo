@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +38,7 @@ func TestFileLoader(t *testing.T) {
 		t.Parallel()
 
 		var buf bytes.Buffer
+
 		gw := gzip.NewWriter(&buf)
 		_, err := gw.Write([]byte(manifestJSON))
 		require.NoError(t, err)
@@ -51,17 +53,34 @@ func TestFileLoader(t *testing.T) {
 		require.Equal(t, "rev-1", manifest.Revision)
 	})
 
-	t.Run("returns a candidate for the poller when the revision matches", func(t *testing.T) {
+	t.Run("skips unchanged mtimes and reloads when mtime changes", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte(manifestJSON), 0o644))
+		path := filepath.Join(dir, "manifest.json")
+		require.NoError(t, os.WriteFile(path, []byte(manifestJSON), 0o644))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
 
-		manifest, changed, err := NewFileLoader(dir, "manifest.json").Fetch(t.Context(), "rev-1")
+		loader := NewFileLoader(dir, "manifest.json")
+		manifest, changed, err := loader.Fetch(t.Context(), "rev-1")
 		require.NoError(t, err)
 		require.True(t, changed)
 		require.NotNil(t, manifest)
 		require.Equal(t, "rev-1", manifest.Revision)
+
+		manifest, changed, err = loader.Fetch(t.Context(), "rev-1")
+		require.NoError(t, err)
+		require.False(t, changed)
+		require.Nil(t, manifest)
+
+		updated := bytes.ReplaceAll([]byte(manifestJSON), []byte("rev-1"), []byte("rev-2"))
+		require.NoError(t, os.WriteFile(path, updated, 0o644))
+		require.NoError(t, os.Chtimes(path, info.ModTime().Add(time.Second), info.ModTime().Add(time.Second)))
+		manifest, changed, err = loader.Fetch(t.Context(), "rev-1")
+		require.NoError(t, err)
+		require.True(t, changed)
+		require.Equal(t, "rev-2", manifest.Revision)
 	})
 
 	t.Run("returns an error when the manifest file is missing", func(t *testing.T) {
@@ -73,15 +92,18 @@ func TestFileLoader(t *testing.T) {
 		require.Nil(t, manifest)
 	})
 
-	t.Run("returns an error when the manifest is malformed", func(t *testing.T) {
+	t.Run("returns an error on each fetch when the manifest is malformed", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte("{bad"), 0o644))
 
-		manifest, changed, err := NewFileLoader(dir, "manifest.json").Fetch(t.Context(), "")
-		require.ErrorContains(t, err, "failed to parse manifest")
-		require.False(t, changed)
-		require.Nil(t, manifest)
+		loader := NewFileLoader(dir, "manifest.json")
+		for range 2 {
+			manifest, changed, err := loader.Fetch(t.Context(), "")
+			require.ErrorContains(t, err, "failed to parse manifest")
+			require.False(t, changed)
+			require.Nil(t, manifest)
+		}
 	})
 }
