@@ -116,7 +116,7 @@ The hook is a notification and cannot reject a config. Handle metadata-building 
   Hooks can overlap requests using the previous graph. Synchronize access to derived metadata, for example by publishing immutable snapshots through an atomic pointer. Requests already in flight can observe the updated metadata.
 </Warning>
 
-See the [executable integration fixture](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/execution-config-change) for a module that reads a directive argument and updates request metadata on reload.
+See the [executable integration fixture](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/execution-config-change) for a module that discovers `@translate` on field definitions and renders translated greetings for the selected graph.
 
 ### Access the GraphQL operation
 

@@ -8,7 +8,7 @@ execution_config:
     watch_interval: 100ms
 overrides:
   subgraphs:
-    local-policy:
+    local-greetings:
       routing_url: http://subgraph:4001/local
 telemetry:
   tracing:
@@ -21,4 +21,4 @@ telemetry:
 graphql_metrics:
   enabled: false
 modules:
-  schemaPolicy: {}
+  translator: {}

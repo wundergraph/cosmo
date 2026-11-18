@@ -7,25 +7,28 @@ import unittest
 import urllib.request
 
 DATA = Path("/data")
+HELLO = "hello world"
+QUERY = "{ greeting card { greeting caption } }"
 
 
-def query(operation="{ hello }"):
-    request = urllib.request.Request(
-        "http://router:3002/graphql",
-        json.dumps({"query": operation}).encode(),
-        {"Content-Type": "application/json"},
-    )
+def query(operation=QUERY, flag="", url="http://router:3002/graphql"):
+    headers = {"Content-Type": "application/json"}
+    if flag:
+        headers["X-Feature-Flag"] = flag
+    request = urllib.request.Request(url, json.dumps({"query": operation}).encode(), headers)
     with urllib.request.urlopen(request, timeout=5) as response:
-        return dict(response.headers), json.load(response)
+        return response.headers, json.load(response)
 
 
-def wait_for(check, description):
+def wait_for(check):
     deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        if check():
-            return
-        time.sleep(0.1)
-    raise AssertionError(f"Timed out: {description}")
+    while True:
+        try:
+            return check()
+        except AssertionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.1)
 
 
 def activate(name):
@@ -34,71 +37,67 @@ def activate(name):
     os.replace(temporary, DATA / "active.json")
 
 
+def digest(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 class ExecutionConfigHookTest(unittest.TestCase):
-    def assert_snapshot(self, name, role, routing_url=None):
+    def assert_graph(self, name, translated, updates, flag="", selected="", renamed=False, override=None):
         config = json.loads((DATA / f"{name}.json").read_text())
-        headers, body = query()
-        self.assertEqual(body, {"data": {"hello": "world"}})
-        self.assertEqual(headers.get("X-Schema-Role"), role, "module did not receive the directive-bearing SDL")
-        self.assertEqual(headers.get("X-Schema-Version"), config["version"])
-        expected_hash = hashlib.sha256(config["engineConfig"]["graphqlSchema"].encode()).hexdigest()
-        self.assertEqual(headers.get("X-Schema-Hash"), expected_hash, "module must receive the exact router SDL text")
-        client_schema = config["engineConfig"].get("graphqlClientSchema") or config["engineConfig"]["graphqlSchema"]
-        expected_client_hash = hashlib.sha256(client_schema.encode()).hexdigest()
-        self.assertEqual(headers.get("X-Client-Schema-Hash"), expected_client_hash, "module must receive the effective client SDL")
-        subgraph, = config["subgraphs"]
-        self.assertEqual(headers.get("X-Subgraph-Id"), subgraph["id"])
-        self.assertEqual(headers.get("X-Subgraph-Name"), subgraph["name"])
-        self.assertEqual(headers.get("X-Subgraph-Url"), routing_url or subgraph["routingUrl"])
-        return int(headers["X-Schema-Updates"])
+        if selected:
+            config = config["featureFlagConfigs"]["configByFeatureFlagName"][selected]
+        nested = "welcome" if renamed else "caption"
+        headers, body = query("{ greeting card { greeting " + nested + " } }", flag)
+        self.assertEqual(body, {"data": {
+            "greeting": HELLO if renamed else translated,
+            "card": {"greeting": HELLO, nested: translated},
+        }})
+        self.assertEqual(headers.get("X-Feature-Flag", ""), selected)
+        schema = config["engineConfig"]["graphqlSchema"]
+        client = config["engineConfig"].get("graphqlClientSchema") or schema
+        sg, = config["subgraphs"]
+        self.assertEqual(json.loads(headers["X-Execution-Config"] or "null"), {
+            "version": config["version"], "updates": updates,
+            "schema": digest(schema), "clientSchema": digest(client),
+            "subgraphs": [{"ID": sg["id"], "Name": sg["name"], "RoutingURL": override or sg["routingUrl"]}],
+        })
 
-    def test_startup_reload_rejection_and_recovery(self):
-        updates = self.assert_snapshot("initial", "reader")
-        self.assertEqual(updates, 1)
-        print("PASS: initial hook receives composed directive and exact SDL", flush=True)
-
-        _, introspection = query("{ __schema { directives { name } } }")
-        self.assertNotIn("modulePolicy", [item["name"] for item in introspection["data"]["__schema"]["directives"]])
-        print("PASS: filtered client schema is separate from module SDL", flush=True)
+    def test_translation_across_reloads(self):
+        _, raw = query(url="http://subgraph:4001/graphql")
+        self.assertEqual(raw["data"]["greeting"], HELLO)
+        self.assertEqual(raw["data"]["card"]["caption"], HELLO)
+        self.assert_graph("initial", "Hola mundo", 1)
+        introspection = "{ __schema { directives { name } } }"
+        _, schema = query(introspection)
+        self.assertNotIn("translate", [d["name"] for d in schema["data"]["__schema"]["directives"]])
 
         activate("changed")
-        wait_for(lambda: query()[0].get("X-Schema-Role") == "writer", "directive update with unchanged version")
-        changed_updates = self.assert_snapshot("changed", "writer")
-        self.assertGreater(changed_updates, updates)
-        print("PASS: changed SDL reloads even with the same version", flush=True)
-
+        wait_for(lambda: self.assert_graph("changed", "Ciao mondo", 2))
         activate("routing")
-        wait_for(lambda: int(query()[0].get("X-Schema-Updates", "0")) > changed_updates, "routing-only update")
-        routing_updates = self.assert_snapshot("routing", "writer")
-        print("PASS: routing-only reload delivers the new subgraph URL with identical SDL", flush=True)
+        wait_for(lambda: self.assert_graph("routing", "Ciao mondo", 3))
 
-        log_offset = (DATA / "router.log").stat().st_size
+        offset = (DATA / "router.log").stat().st_size
         activate("invalid")
-        wait_for(
-            lambda: b"Failed to update server with new config" in (DATA / "router.log").read_bytes()[log_offset:],
-            "router explicitly rejects invalid schema",
-        )
-        self.assertEqual(self.assert_snapshot("routing", "writer"), routing_updates)
-        print("PASS: rejected config preserves serving graph and module state", flush=True)
+        wait_for(lambda: self.assertIn(b"Failed to update server with new config", (DATA / "router.log").read_bytes()[offset:]))
+        self.assert_graph("routing", "Ciao mondo", 3)
 
-        activate("initial")
-        wait_for(lambda: query()[0].get("X-Schema-Role") == "reader", "recovery after rejected config")
-        self.assertGreater(self.assert_snapshot("initial", "reader"), routing_updates)
-        print("PASS: valid config recovers after rejection", flush=True)
+        activate("languages")
+        wait_for(lambda: self.assert_graph("languages", "Hallo Welt", 4, flag="german", selected="german"))
+        self.assert_graph("languages", "Bonjour le monde", 4, flag="french", selected="french")
+        self.assert_graph("languages", "Hola mundo", 4)
+        self.assert_graph("languages", "Hola mundo", 4, flag="unknown")
 
+        activate("renamed")
+        wait_for(lambda: self.assert_graph("renamed", "Hola mundo", 5, flag="german", renamed=True))
         activate("fallback")
-        fallback_config = json.loads((DATA / "fallback.json").read_text())
-        fallback_hash = hashlib.sha256(fallback_config["engineConfig"]["graphqlSchema"].encode()).hexdigest()
-        wait_for(lambda: query()[0].get("X-Schema-Hash") == fallback_hash, "client-schema fallback")
-        self.assert_snapshot("fallback", "reader")
-        _, introspection = query("{ __schema { directives { name } } }")
-        self.assertIn("modulePolicy", [item["name"] for item in introspection["data"]["__schema"]["directives"]])
-        print("PASS: absent client schema falls back to router SDL, matching introspection", flush=True)
+        wait_for(lambda: self.assert_graph("fallback", "Hola mundo", 6))
+        _, schema = query(introspection)
+        self.assertIn("translate", [d["name"] for d in schema["data"]["__schema"]["directives"]])
 
         activate("overridden")
-        wait_for(lambda: query()[0].get("X-Subgraph-Name") == "local-policy", "local routing override")
-        self.assert_snapshot("overridden", "reader", routing_url="http://subgraph:4001/local")
-        print("PASS: module receives the local override used to serve the query", flush=True)
+        wait_for(lambda: self.assert_graph("overridden", "Hola mundo", 7, override="http://subgraph:4001/local"))
+        activate("uncomposed")
+        wait_for(lambda: self.assert_graph("uncomposed", HELLO, 8))
 
 
 if __name__ == "__main__":

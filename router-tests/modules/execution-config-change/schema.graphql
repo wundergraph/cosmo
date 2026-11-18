@@ -1,11 +1,15 @@
-schema
-  @link(url: "https://example.com/module-policy/v1.0", import: ["@modulePolicy"])
-  @composeDirective(name: "@modulePolicy") {
+schema @link(url: "https://example.com/translate/v1.0", import: ["@translate"]) @composeDirective(name: "@translate") {
   query: Query
 }
 
-directive @modulePolicy(role: String!) on FIELD_DEFINITION
+directive @translate(from: String!, to: String!) on FIELD_DEFINITION
 
 type Query {
-  hello: String! @modulePolicy(role: "reader") @tag(name: "internal")
+  greeting: String! @translate(from: "hello world", to: "Hola mundo") @tag(name: "internal")
+  card: Card!
+}
+
+type Card {
+  greeting: String!
+  caption: String! @translate(from: "hello world", to: "Hola mundo")
 }

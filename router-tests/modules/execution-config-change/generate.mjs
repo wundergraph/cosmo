@@ -7,18 +7,41 @@ import { join } from 'node:path';
 const schema = readFileSync('/fixtures/schema.graphql', 'utf8');
 const composition = readFileSync('/fixtures/composition.yaml', 'utf8');
 const directory = mkdtempSync(join(tmpdir(), 'schema-hook-'));
+const translate = (greeting) => schema.replaceAll('Hola mundo', greeting);
+const changed = translate('Ciao mondo');
+const languages = { german: 'Hallo Welt', french: 'Bonjour le monde' };
+let flagged = composition + '\nfeature_flags:\n';
+for (const [name, greeting] of Object.entries(languages)) {
+  writeFileSync(join(directory, name + '.graphql'), translate(greeting));
+  flagged += `  - name: ${name}
+    feature_graphs:
+      - name: greetings-${name}
+        subgraph_name: greetings
+        routing_url: http://subgraph:4001/${name}
+        schema:
+          file: ${name}.graphql
+`;
+}
 const variants = [
   ['initial', schema, composition],
-  ['changed', schema.replace('role: "reader"', 'role: "writer"'), composition],
-  ['routing', schema.replace('role: "reader"', 'role: "writer"'), composition.replace('/graphql', '/alternate')],
+  ['changed', changed, composition],
+  ['routing', changed, composition.replace('/graphql', '/alternate')],
+  ['languages', schema, flagged],
+  [
+    'renamed',
+    schema
+      .replace('greeting: String! @translate(from: "hello world", to: "Hola mundo")', 'greeting: String!')
+      .replace('caption:', 'welcome:'),
+    composition,
+  ],
   [
     'overridden',
     schema,
     composition
-      .replace('name: policy', 'name: local-policy')
+      .replace('name: greetings', 'name: local-greetings')
       .replace('http://subgraph:4001/graphql', 'http://unreachable.invalid/graphql'),
   ],
-  ['uncomposed', schema.replace('@composeDirective(name: "@modulePolicy")', ''), composition],
+  ['uncomposed', schema.replace('@composeDirective(name: "@translate")', ''), composition],
   ['fallback', schema.replace(' @tag(name: "internal")', ''), composition],
 ];
 
@@ -43,23 +66,21 @@ for (const [name, sdl, input] of variants) {
 
 const load = (name) => JSON.parse(readFileSync(`/data/${name}.json`, 'utf8'));
 const initial = load('initial');
-const changed = load('changed');
-assert.equal(initial.version, changed.version, 'exercise the constant local composition version');
-assert.match(initial.engineConfig.graphqlSchema, /@modulePolicy\(role: "reader"\)/);
-assert.match(changed.engineConfig.graphqlSchema, /@modulePolicy\(role: "writer"\)/);
+const changedConfig = load('changed');
+assert.equal(initial.version, changedConfig.version, 'exercise the constant local composition version');
 assert.ok(initial.engineConfig.graphqlClientSchema, '@tag must produce a separate client schema');
-assert.ok(!initial.engineConfig.graphqlClientSchema.includes('modulePolicy'));
-assert.ok(!load('uncomposed').engineConfig.graphqlSchema.includes('modulePolicy'));
-assert.equal(load('routing').engineConfig.graphqlSchema, changed.engineConfig.graphqlSchema);
-assert.notEqual(load('routing').subgraphs[0].routingUrl, changed.subgraphs[0].routingUrl);
+assert.ok(!initial.engineConfig.graphqlClientSchema.includes('translate'));
+assert.ok(!load('uncomposed').engineConfig.graphqlSchema.includes('translate'));
+assert.equal(load('routing').engineConfig.graphqlSchema, changedConfig.engineConfig.graphqlSchema);
+assert.notEqual(load('routing').subgraphs[0].routingUrl, changedConfig.subgraphs[0].routingUrl);
 assert.equal(load('overridden').subgraphs[0].routingUrl, 'http://unreachable.invalid/graphql');
 assert.ok(!load('fallback').engineConfig.graphqlClientSchema, 'exercise the runtime client-schema fallback');
 writeFileSync(
   '/data/invalid.json',
   JSON.stringify({
-    ...changed,
+    ...changedConfig,
     version: 'rejected',
-    engineConfig: { ...changed.engineConfig, graphqlSchema: 'type Query {' },
+    engineConfig: { ...changedConfig.engineConfig, graphqlSchema: 'type Query {' },
   }),
 );
 writeFileSync('/data/active.json', JSON.stringify(initial));
