@@ -93,7 +93,8 @@ Subgraphs that follow the GraphQL specification reject `Int` values outside the 
 
 To migrate away from the option, add the new type next to the existing one instead of changing it in place. Changing an `Int` argument to another type breaks every existing operation that declares the variable as `Int`, and this option doesn't change that.
 
-1. For each field or argument that needs values outside the 32-bit range, add a new field or argument that uses a custom scalar, for example `Long` or `BigInt`, or `String` or `ID`. Keep the existing `Int` field or argument, and mark it with `@deprecated`.
+1. For each field with an `Int` argument that needs values outside the 32-bit range, add a new field whose argument uses a custom scalar, for example `Long` or `BigInt`, or `String` or `ID`, instead of `Int`. Keep the existing field, and mark it with `@deprecated`.
+   If you add a new argument to an existing field instead, make the new argument nullable or give it a default value, so that existing operations that don't send it stay valid. A required argument can't be deprecated, so if the existing `Int` argument is non-null without a default, make it nullable before you mark it with `@deprecated`, and change the resolver to accept either argument.
 2. Release clients that use the new fields or arguments.
 3. Once no client sends `Int` values outside the 32-bit range, disable the option.
 4. Once no client uses the deprecated fields or arguments, remove them.
