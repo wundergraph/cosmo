@@ -1355,6 +1355,9 @@ func GenerateVersionedJwtToken() (string, error) {
 func configureRouter(ctx context.Context, listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
+		SecurityConfiguration: config.SecurityConfiguration{
+			NormalizationLimits: config.NormalizationLimits{MaxSelections: 10000},
+		},
 		CDN: config.CDNConfiguration{
 			URL:       cdn.URL,
 			CacheSize: 1024 * 1024,

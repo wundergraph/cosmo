@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.266.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.1...controlplane@0.266.2) (2026-11-19)
+
+### Bug Fixes
+
+* **controlplane:** stop sending the whole schema to ClickHouse in graph pruning checks [COSMO-550] ([#3561](https://github.com/wundergraph/cosmo/issues/3561)) ([2743106](https://github.com/wundergraph/cosmo/commit/2743106bdd0f5080c8cdefcfa18e94f10e4f0abc)) (@gausie)
+
 ## [0.266.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.0...controlplane@0.266.1) (2026-11-19)
 
 ### Bug Fixes

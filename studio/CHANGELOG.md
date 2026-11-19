@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.187.0](https://github.com/wundergraph/cosmo/compare/studio@0.186.10...studio@0.187.0) (2026-11-19)
+
+### Features
+
+* **studio:** add an export audit logs dialog for Splunk streaming ([#3541](https://github.com/wundergraph/cosmo/issues/3541)) ([b0e0dee](https://github.com/wundergraph/cosmo/commit/b0e0dee38ce5445b1be050e27c979d27ec1e9471)) (@gausie)
+
 ## [0.186.10](https://github.com/wundergraph/cosmo/compare/studio@0.186.9...studio@0.186.10) (2026-11-19)
 
 ### Bug Fixes
