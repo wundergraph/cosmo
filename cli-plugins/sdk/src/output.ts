@@ -9,6 +9,8 @@ export interface Failure {
   message: string;
   input?: string;
   fix?: string;
+  /** Structured context for JSON callers, such as the evidence behind a failed check. */
+  details?: object;
 }
 
 /** One step of a long operation, e.g. `{ step: 'compile', subject: 'router', message: 'Compiling router' }`. */

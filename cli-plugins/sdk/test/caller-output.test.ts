@@ -65,6 +65,18 @@ describe('createOutput', () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test('JSON failures carry their details', () => {
+    const stdout = capture();
+    const output = createOutput({ json: true, stdout: stdout.stream, stderr: capture().stream });
+
+    output.fail({ message: 'tests failed', details: { dependencyChanges: [{ module: 'a', from: 'v1', to: 'v2' }] } });
+
+    expect(JSON.parse(stdout.text())).toEqual({
+      status: 'error',
+      error: { message: 'tests failed', details: { dependencyChanges: [{ module: 'a', from: 'v1', to: 'v2' }] } },
+    });
+  });
+
   test('JSON failures are structured and set the exit code', () => {
     const stdout = capture();
     const output = createOutput({ json: true, stdout: stdout.stream, stderr: capture().stream });
