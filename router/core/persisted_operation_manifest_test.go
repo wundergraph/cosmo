@@ -10,21 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
 )
 
-func newManifestProcessor(t *testing.T, opts persistedoperation.Options) (*OperationProcessor, *pqlmanifest.Store) {
+func newManifestProcessor(t *testing.T, opts persistedoperation.Options) (*OperationProcessor, *operationmanifest.Store) {
 	t.Helper()
 	schema, report := astparser.ParseGraphqlDocumentString(`type Query { old: String new: String }`)
 	require.False(t, report.HasErrors())
 	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&schema))
-	store := pqlmanifest.NewStore(zap.NewNop())
-	t.Cleanup(store.Close)
+	store := operationmanifest.NewStore(zap.NewNop())
 	opts.PQLStore = store
 	client, err := persistedoperation.NewClient(&opts)
 	require.NoError(t, err)
@@ -59,7 +58,7 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 			t.Parallel()
 			processor, store := newManifestProcessor(t, persistedoperation.Options{})
 			load := func(revision, body string) {
-				store.Load(&pqlmanifest.Manifest{
+				store.Load(&operationmanifest.Manifest{
 					Version:    1,
 					Revision:   revision,
 					Operations: map[string]string{"shared": body},
@@ -112,7 +111,7 @@ func TestPersistedOperationManifestSnapshot(t *testing.T) {
 			assert.Contains(t, cached.parsedOperation.NormalizedRepresentation, "new")
 			assert.Len(t, processor.operationCache.persistedOperationVariableNames, 1)
 
-			store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "three", Operations: map[string]string{}})
+			store.Load(&operationmanifest.Manifest{Version: 1, Revision: "three", Operations: map[string]string{}})
 			_, _, err := newKit().FetchPersistedOperation(t.Context(), &ClientInfo{Name: "web"})
 			var notFound *persistedoperation.PersistentOperationNotFoundError
 			assert.ErrorAs(t, err, &notFound)
@@ -124,7 +123,7 @@ func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	t.Parallel()
 
 	processor, store := newManifestProcessor(t, persistedoperation.Options{})
-	store.Load(&pqlmanifest.Manifest{
+	store.Load(&operationmanifest.Manifest{
 		Version:    1,
 		Revision:   "new",
 		Operations: map[string]string{"shared": `query Current { new }`},
@@ -153,7 +152,7 @@ func TestManifestWarmupUsesCurrentSnapshot(t *testing.T) {
 	assert.True(t, hit)
 	assert.Contains(t, kit.parsedOperation.NormalizedRepresentation, "new")
 
-	store.Load(&pqlmanifest.Manifest{Version: 1, Revision: "removed", Operations: map[string]string{}})
+	store.Load(&operationmanifest.Manifest{Version: 1, Revision: "removed", Operations: map[string]string{}})
 	_, err = warmup.ProcessOperation(t.Context(), item)
 	var notFound *persistedoperation.PersistentOperationNotFoundError
 	assert.ErrorAs(t, err, &notFound)
@@ -165,7 +164,7 @@ func TestManifestWarmupKeepsAPQOperationsOutsideManifest(t *testing.T) {
 	apqStore, err := apq.NewMemoryStore(1024, time.Minute)
 	require.NoError(t, err)
 	processor, store := newManifestProcessor(t, persistedoperation.Options{APQStore: apqStore})
-	store.Load(&pqlmanifest.Manifest{
+	store.Load(&operationmanifest.Manifest{
 		Version:    1,
 		Revision:   "rev-1",
 		Operations: map[string]string{"published": `query Published { old }`},

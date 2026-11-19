@@ -1403,6 +1403,7 @@ func (s *graphServer) buildGraphMux(
 		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		AllowInt64VariableValues:                               s.backwardsCompatibility.VariablesValidation.AllowInt64Values,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		AllowStringLiteralsForEnums:                            s.engineExecutionConfiguration.AllowStringLiteralsForEnums,
 		EnableDefer:                                            s.engineExecutionConfiguration.EnableDefer,
@@ -1565,29 +1566,31 @@ func (s *graphServer) buildGraphMux(
 				AfterOperation: manifestAfterOperation,
 			}
 
+			// Subscribe before the warmup so a manifest the poller loads during it
+			// is re-warmed, and a load from before this graph mux is not. Every mux
+			// subscribes, and the subscription ends with the mux.
+			manifestUpdates := pqlStore.Subscribe(graphMuxCtx)
+
 			err = WarmupCaches(graphMuxCtx, manifestWarmupConfig)
 			if err != nil {
 				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
 			}
 
-			// Re-warm when the manifest is updated by the poller.
-			// The store handles coalescing — if a re-warm is already running or pending,
-			// new signals are dropped. The worker always reads the latest manifest.
-			pqlStore.SetOnUpdate(func() {
-				rewarmConfig := &CacheWarmupConfig{
-					Log:            s.logger,
-					Processor:      manifestProcessor,
-					Workers:        manifestWarmup.Workers,
-					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
-					Timeout:        manifestWarmup.Timeout,
-					Source:         NewManifestWarmupSource(s.persistedOperationClient),
-					AfterOperation: manifestAfterOperation,
+			// Re-warm when the poller loads a new manifest. The store coalesces
+			// signals that arrive while a re-warm is running, and the source always
+			// reads the latest manifest. The loop ends with this graph mux.
+			go func() {
+				for {
+					select {
+					case <-graphMuxCtx.Done():
+						return
+					case <-manifestUpdates:
+						if rewarmErr := WarmupCaches(graphMuxCtx, manifestWarmupConfig); rewarmErr != nil {
+							s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
+						}
+					}
 				}
-
-				if rewarmErr := WarmupCaches(graphMuxCtx, rewarmConfig); rewarmErr != nil {
-					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
-				}
-			})
+			}()
 		}
 	}
 
@@ -1735,6 +1738,7 @@ func (s *graphServer) buildGraphMux(
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
 		WaitForCacheWrites:                     waitForCacheWrites,
+		GraphQLOverHTTPStatusCodes:             s.graphqlOverHTTP.StatusCodes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

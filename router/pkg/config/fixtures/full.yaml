@@ -122,6 +122,8 @@ mcp:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+    object_path: mcp/manifest.json
+    poll_interval: 30s
   output_schema:
     enabled: true
 
@@ -687,6 +689,8 @@ split_config_poller:
 
 router_config_path: 'latest.json'
 
+graphql_over_http:
+  status_codes: September2026
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
@@ -694,6 +698,8 @@ client_header:
 backwards_compatibility:
   persisted_operations:
     allow_mismatched_sha256_ids: false
+  variables_validation:
+    allow_int64_values: false
 
 apollo_compatibility_flags:
   enable_all: false

@@ -127,6 +127,37 @@ router_config_path: "config.json"
 	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
 }
 
+func TestGraphQLOverHTTPStatusCodesFromEnv(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+
+	t.Run("loads a valid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "September2026")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesSeptember2026, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("falls back to legacy for an empty value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesLegacy, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("fails for an invalid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "september2026")
+
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, `graphql_over_http.status_codes must be "legacy" or "September2026", got "september2026"`)
+	})
+}
+
 func TestRouterTrafficTimeouts(t *testing.T) {
 	t.Run("defaults keep the 60s read timeout", func(t *testing.T) {
 		t.Parallel()
@@ -1669,6 +1700,9 @@ func TestConfigMerging(t *testing.T) {
 			SubgraphErrorPropagation: SubgraphErrorPropagationConfiguration{
 				Mode: "wrapped",
 			},
+			GraphQLOverHTTP: GraphQLOverHTTPConfiguration{
+				StatusCodes: GraphQLOverHTTPStatusCodesLegacy,
+			},
 			ExecutionConfig: ExecutionConfig{
 				File: ExecutionConfigFile{
 					Path: "ee",
@@ -2797,6 +2831,29 @@ mcp:
 
 		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
 		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+	})
+
+	t.Run("rejects a manifest poll interval below one second", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  storage:
+    provider_id: mcp
+    object_path: manifest.json
+    poll_interval: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/mcp/storage/poll_interval': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
 

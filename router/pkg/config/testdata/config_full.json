@@ -281,7 +281,9 @@
       }
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "ObjectPath": "mcp/manifest.json",
+      "PollInterval": 30000000000
     },
     "Session": {
       "Stateless": true
@@ -1321,6 +1323,9 @@
       "Enabled": true
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "September2026"
+  },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
@@ -1328,6 +1333,9 @@
   "BackwardsCompatibility": {
     "PersistedOperations": {
       "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
     }
   },
   "Plugins": {

@@ -25,8 +25,8 @@ import (
 
 	fastjson "github.com/wundergraph/astjson"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -121,6 +121,7 @@ type OperationProcessorOptions struct {
 	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError       bool
+	AllowInt64VariableValues                               bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	AllowStringLiteralsForEnums                            bool
 	ComplexityLimits                                       *config.ComplexityLimits
@@ -214,7 +215,7 @@ type OperationKit struct {
 	// background, and custom IDs can keep their ID while their body changes, so
 	// every persisted operation lookup, cache key and variable metadata check in
 	// this request must read this snapshot instead of the live store.
-	persistedOperationManifest *pqlmanifest.Manifest
+	persistedOperationManifest *operationmanifest.Manifest
 }
 
 type GraphQLRequest struct {
@@ -501,6 +502,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
+			kind:       errorKindPersistedQueryNotConfigured,
 		}
 	}
 	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
@@ -702,6 +704,7 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration",
 				statusCode: http.StatusOK,
+				kind:       errorKindNoIntrospection,
 			}
 		}
 	}
@@ -747,6 +750,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -754,6 +758,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -764,11 +769,13 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "operation name is required when multiple operations are defined",
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		} else {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		}
 	}
@@ -1494,6 +1501,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 				extensionCode: invalidVarErr.ExtensionCode,
 				message:       invalidVarErr.Error(),
 				statusCode:    http.StatusOK,
+				kind:          errorKindInvalidVariables,
 			}
 			if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
 				graphqlErr.statusCode = http.StatusBadRequest
@@ -1503,6 +1511,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidVariables,
 		}
 	}
 	return nil
@@ -1677,6 +1686,7 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
+	allowInt64VariableValues                               bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
@@ -1706,6 +1716,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
+			AllowInt64Values:                options.allowInt64VariableValues,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
@@ -1784,6 +1795,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
+			allowInt64VariableValues:                               opts.AllowInt64VariableValues,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
