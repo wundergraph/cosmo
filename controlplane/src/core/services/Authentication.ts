@@ -11,6 +11,7 @@ import { OrganizationLoginMethodRepository } from '../repositories/OrganizationL
 import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
+import CiOidcAuthenticator from './CiOidcAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 
@@ -31,6 +32,7 @@ export class Authentication implements Authenticator {
     private webAuth: WebSessionAuthenticator,
     private keyAuth: ApiKeyAuthenticator,
     private accessTokenAuth: AccessTokenAuthenticator,
+    private ciOidcAuth: CiOidcAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
     private oidcRepo: OidcRepository,
@@ -59,6 +61,11 @@ export class Authentication implements Authenticator {
           return await this.keyAuth.authenticate(token);
         }
         const organizationSlug = headers.get('cosmo-org-slug');
+        // A CI job's OIDC token is a JWT from GitHub Actions or GitLab, which Keycloak cannot resolve to a user.
+        const ciIssuer = this.ciOidcAuth.issuerOf(token);
+        if (ciIssuer) {
+          return await this.ciOidcAuth.authenticate(token, ciIssuer, organizationSlug);
+        }
         return await this.accessTokenAuth.authenticate(token, organizationSlug);
       }
 

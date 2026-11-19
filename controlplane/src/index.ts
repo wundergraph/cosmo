@@ -41,6 +41,8 @@ const {
   GITHUB_APP_CLIENT_SECRET,
   GITHUB_APP_ID,
   GITHUB_APP_PRIVATE_KEY,
+  CI_OIDC_AUDIENCE,
+  CI_OIDC_GITLAB_ISSUERS,
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
   S3_STORAGE_URL,
@@ -139,6 +141,10 @@ const options: BuildConfig = {
     clientSecret: GITHUB_APP_CLIENT_SECRET,
     id: GITHUB_APP_ID,
     privateKey: GITHUB_APP_PRIVATE_KEY,
+  },
+  ciOidc: {
+    audience: CI_OIDC_AUDIENCE,
+    gitlabIssuers: CI_OIDC_GITLAB_ISSUERS,
   },
   debugSQL: DEBUG_SQL,
   slack: {

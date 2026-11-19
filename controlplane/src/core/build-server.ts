@@ -31,6 +31,13 @@ import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
+import CiOidcAuthenticator, {
+  ciIssuers,
+  CiOidcOptions,
+  defaultCiOidcAudience,
+  gitlabComIssuer,
+} from './services/CiOidcAuthenticator.js';
+import { CiTrustedRepositoryRepository } from './repositories/CiTrustedRepositoryRepository.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 import { S3BlobStorage, DualBlobStorage, type BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
@@ -121,6 +128,13 @@ export interface BuildConfig {
     clientSecret?: string;
     id?: string;
     privateKey?: string;
+  };
+  /** CI jobs authenticating with their provider's OIDC token instead of an API key. */
+  ciOidc?: {
+    audience?: string;
+    gitlabIssuers?: string[];
+    requireGithubAppInstallation?: boolean;
+    keysOf?: CiOidcOptions['keysOf'];
   };
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
@@ -315,10 +329,18 @@ export default async function build(opts: BuildConfig) {
     namespaceLoginMethodRepository,
     organizationLoginMethodRepository,
   );
+  const ciOidcAuth = new CiOidcAuthenticator(new CiTrustedRepositoryRepository(fastify.db), organizationRepository, {
+    audience: opts.ciOidc?.audience ?? defaultCiOidcAudience,
+    issuers: ciIssuers(opts.ciOidc?.gitlabIssuers ?? [gitlabComIssuer]),
+    // Installations are only recorded when the control plane runs a GitHub app.
+    requireGithubAppInstallation: opts.ciOidc?.requireGithubAppInstallation ?? !!opts.githubApp?.clientId,
+    keysOf: opts.ciOidc?.keysOf,
+  });
   const authenticator = new Authentication(
     webAuth,
     apiKeyAuth,
     accessTokenAuth,
+    ciOidcAuth,
     graphKeyAuth,
     organizationRepository,
     oidcRepository,

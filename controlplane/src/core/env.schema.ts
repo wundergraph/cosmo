@@ -134,6 +134,21 @@ export const envVariables = z
     GITHUB_APP_PRIVATE_KEY: z.string().optional(),
     GITHUB_APP_WEBHOOK_SECRET: z.string().optional(),
     /**
+     * CI OIDC: CI jobs authenticate with the OIDC token of their GitHub Actions or GitLab job
+     */
+    CI_OIDC_AUDIENCE: z.string().min(1).default('cosmo'),
+    // Comma separated GitLab issuers, e.g. https://gitlab.com,https://gitlab.example.com
+    CI_OIDC_GITLAB_ISSUERS: z
+      .string()
+      .default('https://gitlab.com')
+      .transform((val) =>
+        val
+          .split(',')
+          .map((issuer) => issuer.trim())
+          .filter((issuer) => issuer.length > 0),
+      )
+      .pipe(z.array(z.string().url())),
+    /**
      * Slack
      */
     SLACK_APP_CLIENT_ID: z.string().optional(),
