@@ -1,0 +1,48 @@
+{
+  "name": "@wundergraph/wgc-plugin-forge",
+  "version": "0.1.0",
+  "description": "wgc commands for custom Cosmo Router workspaces",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "gomodules"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "pnpm lint && vitest run test/",
+    "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src test",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w src test",
+    "test:go": "cd gomodules && go test ./..."
+  },
+  "dependencies": {
+    "@wundergraph/wgc-plugin-sdk": "workspace:*",
+    "commander": "11.1.0",
+    "execa": "9.5.2",
+    "js-yaml": "4.3.2",
+    "picocolors": "1.0.0",
+    "zod": "catalog:",
+    "semver": "7.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-unjs": "catalog:",
+    "eslint-plugin-require-extensions": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/js-yaml": "4.0.5",
+    "@types/semver": "7.7.0"
+  },
+  "keywords": [
+    "wgc-plugin"
+  ]
+}
