@@ -36,7 +36,6 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -1064,17 +1063,19 @@ func (s *graphServer) buildGraphMux(
 	// Currently, we only support custom attributes from the context for OTLP metrics
 	b := buildAttributesMap(s.metricConfig.Attributes)
 
-	// Bind requests to the execution config and subgraphs used by this mux.
 	resolved := make([]routerconfig.Subgraph, len(subgraphs))
 	for i, sg := range subgraphs {
 		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
 	}
 	executionConfig := routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
 		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
+
+	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(context.WithValue(r.Context(), rcontext.ExecutionConfigKey, executionConfig))
+			ctx := withSubgraphResolver(r.Context(), subgraphResolver)
+			r = r.WithContext(withExecutionConfig(ctx, executionConfig))
 
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
@@ -1082,7 +1083,6 @@ func (s *graphServer) buildGraphMux(
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
-				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
 				metricSetAttributes:           b,
@@ -1747,7 +1747,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsCtx := context.WithValue(graphMuxCtx, rcontext.ExecutionConfigKey, executionConfig)
+		wsCtx := withExecutionConfig(graphMuxCtx, executionConfig)
 		wsMiddleware := NewWebsocketMiddleware(wsCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,

@@ -63,15 +63,6 @@ func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader)
 	}
 }
 
-// ExecutionConfigFromContext returns the execution config of the graph selected
-// for this request, including feature-flag selection. Modules can pass
-// RequestContext.Request().Context(). The snapshot stays valid across reloads.
-// A context outside a graph request returns the zero value and false.
-func ExecutionConfigFromContext(ctx context.Context) (routerconfig.ExecutionConfig, bool) {
-	cfg, ok := ctx.Value(rcontext.ExecutionConfigKey).(routerconfig.ExecutionConfig)
-	return cfg, ok
-}
-
 type RequestContext interface {
 	// ResponseWriter is the original response writer received by the router.
 	ResponseWriter() http.ResponseWriter
@@ -957,8 +948,29 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
+func withExecutionConfig(ctx context.Context, cfg routerconfig.ExecutionConfig) context.Context {
+	return context.WithValue(ctx, rcontext.ExecutionConfigKey, cfg)
+}
+
+// ExecutionConfigFromContext returns the execution config of the graph selected
+// for this request, including feature-flag selection. Modules can pass
+// RequestContext.Request().Context(). The snapshot stays valid across reloads.
+// A context outside a graph request returns the zero value and false.
+func ExecutionConfigFromContext(ctx context.Context) (routerconfig.ExecutionConfig, bool) {
+	cfg, ok := ctx.Value(rcontext.ExecutionConfigKey).(routerconfig.ExecutionConfig)
+	return cfg, ok
+}
+
+func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
+	return context.WithValue(ctx, rcontext.SubgraphResolverContextKey, resolver)
+}
+
+func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
+	resolver, _ := ctx.Value(rcontext.SubgraphResolverContextKey).(*SubgraphResolver)
+	return resolver
+}
+
 type requestContextOptions struct {
-	subgraphResolver              *SubgraphResolver
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
 	metricSetAttributes           map[string]string
@@ -993,6 +1005,6 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  opts.subgraphResolver,
+		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
 	}
 }
