@@ -1,8 +1,11 @@
 import { Command } from 'commander';
+import { detectCaller } from '@wundergraph/wgc-plugin-sdk';
 import { CreateClient } from '../core/client/client.js';
 import { config } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import { capture } from '../core/telemetry.js';
+import { defaultPluginEnvironment } from '../core/plugins/environment.js';
+import { runNpm } from '../core/plugins/npm.js';
 import AuthCommands from './auth/index.js';
 import ClientsCommands from './clients/index.js';
 import DemoCommands from './demo/index.js';
@@ -18,6 +21,7 @@ import FeatureFlagCommands from './feature-flag/index.js';
 import ProposalCommands from './proposal/index.js';
 import MCPCommands from './mcp/index.js';
 import GRPCServiceCommands from './grpc-service/index.js';
+import PluginCommands from './plugins/index.js';
 
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 
@@ -122,6 +126,14 @@ program.addCommand(
 program.addCommand(
   GRPCServiceCommands({
     client,
+  }),
+);
+
+program.addCommand(
+  PluginCommands({
+    environment: defaultPluginEnvironment(),
+    npm: runNpm,
+    caller: detectCaller(process.env, Boolean(process.stdin.isTTY && process.stdout.isTTY)),
   }),
 );
 

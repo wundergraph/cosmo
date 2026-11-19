@@ -4,6 +4,8 @@ import * as dotenv from 'dotenv';
 import pc from 'picocolors';
 import boxen from 'boxen';
 import program from './commands/index.js';
+import { defaultPluginEnvironment } from './core/plugins/environment.js';
+import { attachPlugins, createCliPluginContext } from './core/plugins/startup.js';
 import { initTelemetry, shutdownTelemetry, captureCommandFailure } from './core/telemetry.js';
 
 dotenv.config({
@@ -13,6 +15,12 @@ dotenv.config({
 initTelemetry();
 
 try {
+  await attachPlugins({
+    program,
+    argv: process.argv,
+    environment: defaultPluginEnvironment(),
+    createContext: createCliPluginContext,
+  });
   await program.parseAsync(process.argv);
   await shutdownTelemetry();
 } catch (e) {

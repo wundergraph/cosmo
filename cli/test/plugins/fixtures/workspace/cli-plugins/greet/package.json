@@ -1,0 +1,9 @@
+{
+  "name": "@acme/greet",
+  "version": "0.4.0",
+  "type": "module",
+  "main": "./build/index.js",
+  "keywords": [
+    "wgc-plugin"
+  ]
+}

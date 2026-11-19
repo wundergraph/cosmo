@@ -1,0 +1,6 @@
+{
+  "name": "wgc-plugin-echo",
+  "version": "1.2.0",
+  "type": "module",
+  "main": "index.js"
+}
