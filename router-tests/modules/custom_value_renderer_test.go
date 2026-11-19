@@ -98,8 +98,10 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 		}
 
 		for _, tc := range cases {
+			conn := env.InitGraphQLWebSocketConnection(tc.header, nil, nil)
 			t.Run(tc.name, func(t *testing.T) {
-				conn := env.InitGraphQLWebSocketConnection(tc.header, nil, nil)
+				t.Parallel()
+
 				t.Cleanup(func() { _ = conn.Close() })
 				payload, err := json.Marshal(testenv.GraphQLRequest{Query: tc.operation})
 				require.NoError(t, err)
