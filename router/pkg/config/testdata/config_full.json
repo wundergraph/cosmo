@@ -281,7 +281,9 @@
       }
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "ObjectPath": "mcp/manifest.json",
+      "PollInterval": 30000000000
     },
     "Session": {
       "Stateless": true
@@ -1334,6 +1336,9 @@
   "BackwardsCompatibility": {
     "PersistedOperations": {
       "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
     }
   },
   "Plugins": {

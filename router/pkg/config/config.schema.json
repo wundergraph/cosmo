@@ -2871,7 +2871,20 @@
           "properties": {
             "provider_id": {
               "type": "string",
-              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+              "description": "The ID of the storage provider to use for loading GraphQL operations. The provider must be configured in the storage_providers section. Without object_path, only storage providers of type 'file_system' are supported, and the router loads the operation files in its directory. With object_path, storage providers of type 'file_system' and 's3' are supported."
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path of an operation manifest in the storage provider. When set, the router loads the MCP operations from the manifest and polls it for a new revision. The key of each operation in the manifest is its tool name."
+            },
+            "poll_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the router polls the operation manifest for a new revision. Only used with object_path. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 1h. Minimum is 1s.",
+              "default": "10s",
+              "duration": {
+                "minimum": "1s"
+              }
             }
           },
           "required": ["provider_id"]
@@ -4808,6 +4821,17 @@
               "type": "boolean",
               "default": false,
               "description": "Serve published operations whose ID looks like a SHA256 hash (64 lowercase hexadecimal characters) but isn't the SHA256 hash of their body, as routers before 0.355.0 did. Such an ID is ambiguous: a request whose query hashes to it can execute a different operation than the published one, and with APQ enabled it can register that query under the ID. Republish the operations with matching IDs and disable this option."
+            }
+          }
+        },
+        "variables_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_int64_values": {
+              "type": "boolean",
+              "default": false,
+              "description": "Accept values of variables of type Int in the signed 64-bit range instead of the signed 32-bit range required by the GraphQL specification, as routers before 0.365.0 did. Non-integer values are still rejected. Subgraphs that follow the specification reject such values. Move fields that need 64-bit values to a custom scalar and disable this option."
             }
           }
         }
