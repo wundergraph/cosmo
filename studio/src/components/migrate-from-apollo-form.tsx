@@ -143,7 +143,7 @@ export const MigrateFromApolloForm = () => {
           )}
         />
 
-        <Button className="ml-auto" isLoading={isPending} type="submit" disabled={!form.formState.isValid}>
+        <Button className="ml-auto" isLoading={isPending} type="submit" disabled={isPending || !form.formState.isValid}>
           Migrate Graph
         </Button>
       </form>
