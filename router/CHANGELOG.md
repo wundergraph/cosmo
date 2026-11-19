@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.374.0](https://github.com/wundergraph/cosmo/compare/router@0.373.1...router@0.374.0) (2026-11-19)
+
+### Features
+
+* **router:** mcp operation manifests ([#3320](https://github.com/wundergraph/cosmo/issues/3320)) ([8aa9501](https://github.com/wundergraph/cosmo/commit/8aa9501640bb04ca15ea31a14de4112ae30bce47)) (@endigma)
+
 ## [0.373.1](https://github.com/wundergraph/cosmo/compare/router@0.373.0...router@0.373.1) (2026-11-19)
 
 ### Bug Fixes
