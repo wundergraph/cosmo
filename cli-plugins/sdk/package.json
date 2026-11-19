@@ -1,0 +1,37 @@
+{
+  "name": "@wundergraph/wgc-plugin-sdk",
+  "version": "0.1.0",
+  "description": "Types and helpers for writing wgc plugins",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "pnpm lint && vitest run test/",
+    "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src test",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w src test"
+  },
+  "dependencies": {
+    "commander": "11.1.0",
+    "zod": "catalog:",
+    "picocolors": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-unjs": "catalog:",
+    "eslint-plugin-require-extensions": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

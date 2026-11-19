@@ -51,6 +51,7 @@
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "@wundergraph/protographic": "workspace:*",
+    "@wundergraph/wgc-plugin-sdk": "workspace:*",
     "@xhmikosr/decompress": "11.1.4",
     "ajv": "8.18.0",
     "axios": "catalog:",

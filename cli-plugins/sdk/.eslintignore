@@ -1,0 +1,4 @@
+dist
+.output
+node_modules
+gen

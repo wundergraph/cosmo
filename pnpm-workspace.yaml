@@ -1,6 +1,7 @@
 packages:
   - aws-lambda-router
   - cli
+  - cli-plugins/*
   - composition
   - docs-website
   - graphqlmetrics
