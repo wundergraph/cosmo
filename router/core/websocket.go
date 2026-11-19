@@ -792,8 +792,8 @@ type websocketResponseWriter struct {
 }
 
 var (
-	_ http.ResponseWriter          = (*websocketResponseWriter)(nil)
-	_ resettableSubscriptionWriter = (*websocketResponseWriter)(nil)
+	_ http.ResponseWriter                = (*websocketResponseWriter)(nil)
+	_ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
 )
 
 func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics, subscriptions *sync.Map) *websocketResponseWriter {
