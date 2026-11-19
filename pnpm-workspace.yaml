@@ -53,7 +53,7 @@ overrides:
   backslash: <0.2.1
   qs: 6.15.2
   mdast-util-to-hast: '>=13.2.1'
-  js-yaml: 4.3.1
+  js-yaml: 4.3.2
   fast-uri: 3.1.5
   tmp: 0.2.7
   fast-xml-parser: 5.8.0
@@ -120,7 +120,7 @@ catalog:
   # Runtime deps
   graphql: ^16.9.0
   zod: ^4.6.7
-  axios: 1.19.0
+  axios: 1.21.1
   dotenv: 16.6.0
   date-fns: ^3.6.0
   lodash: 4.18.1
@@ -145,4 +145,6 @@ catalog:
   '@connectrpc/protoc-gen-connect-query': ^2.0.0
 
   # GraphQL tooling
-  '@graphql-tools/utils': ^11.0.0
+  '@graphql-tools/merge': ^9.2.8
+  '@graphql-tools/schema': ^10.1.5
+  '@graphql-tools/utils': ^12.1.0

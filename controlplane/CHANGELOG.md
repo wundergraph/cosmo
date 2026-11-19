@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.266.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.265.1...controlplane@0.266.0) (2026-11-18)
+
+### Features
+
+* **controlplane:** stream audit logs to Splunk HEC ([#3539](https://github.com/wundergraph/cosmo/issues/3539)) ([51d4eed](https://github.com/wundergraph/cosmo/commit/51d4eedcf52ea67405eba9d617ceca61cfaa787b)) (@gausie)
+
+### Bug Fixes
+
+* **controlplane:** stop storing plaintext API keys ([#3453](https://github.com/wundergraph/cosmo/issues/3453)) ([fbc6878](https://github.com/wundergraph/cosmo/commit/fbc68784d8550c0d25167b0bac208c33b9b78f8f)) (@gausie)
+
+### Performance Improvements
+
+* **controlplane:** index audit logs by organization and creation time ([#3538](https://github.com/wundergraph/cosmo/issues/3538)) ([92d0a68](https://github.com/wundergraph/cosmo/commit/92d0a68bfec3acb18933e81fab2c66eda396d3ce)) (@gausie)
+
 ## [0.265.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.265.0...controlplane@0.265.1) (2026-11-16)
 
 **Note:** Version bump only for package controlplane
