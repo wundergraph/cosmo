@@ -105,7 +105,7 @@ type Query {
 }
 ```
 
-A module can parse `cfg.Schema()` and read `@owner(team: "inventory")` from the `Query.stock` field definition. Composition omits the schema-level `@owner(team: "platform")` annotation in this example.
+A module can parse `cfg.Schema()` and read `@owner(team: "inventory")` from the `Query.stock` field definition.
 
 Outside a graph request the accessor returns the zero value. If your module caches data derived from the schema, use the snapshot itself as the key. Requests served by the same graph share a snapshot, and a rebuilt graph gets a distinct key even when its version is unchanged. Bound the cache so retired schemas can be collected.
 
