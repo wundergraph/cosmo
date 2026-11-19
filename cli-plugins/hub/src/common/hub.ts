@@ -22,7 +22,7 @@ export const sandboxShape = z.object({
 
 export type Sandbox = z.infer<typeof sandboxShape>;
 
-export const createSandboxResult = z.object({ sandbox: sandboxShape });
+export const launchSandboxResult = z.object({ sandbox: sandboxShape });
 export const getSandboxResult = z.object({ sandbox: sandboxShape });
 export const listSandboxesResult = z.object({ sandboxes: z.array(sandboxShape) });
 
