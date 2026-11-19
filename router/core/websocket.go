@@ -792,8 +792,8 @@ type websocketResponseWriter struct {
 }
 
 var (
-	_ http.ResponseWriter                = (*websocketResponseWriter)(nil)
-	_ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
+	_ http.ResponseWriter          = (*websocketResponseWriter)(nil)
+	_ resettableSubscriptionWriter = (*websocketResponseWriter)(nil)
 )
 
 func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics, subscriptions *sync.Map) *websocketResponseWriter {
@@ -871,7 +871,8 @@ func (rw *websocketResponseWriter) RenderFieldValue(ctx *resolve.Context, value 
 	return rw.renderErr
 }
 
-func (rw *websocketResponseWriter) resetFrame() {
+// Reset clears the pending frame and its saved renderer error without sending a message.
+func (rw *websocketResponseWriter) Reset() {
 	rw.buf.Reset()
 	rw.renderErr = nil
 }
@@ -912,7 +913,7 @@ func (rw *websocketResponseWriter) Flush() error {
 		}
 
 		err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
-		rw.resetFrame()
+		rw.Reset()
 		if err != nil {
 			return err
 		}

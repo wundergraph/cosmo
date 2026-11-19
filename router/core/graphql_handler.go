@@ -537,6 +537,13 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType Oper
 	return WithRateLimiterStats(ctx)
 }
 
+type resettableSubscriptionWriter interface {
+	resolve.SubscriptionResponseWriter
+	// Reset discards the unflushed result and clears any error from rendering it.
+	// Subsequent writes start a new result for the same operation.
+	Reset()
+}
+
 // WriteError writes the error to the response writer. This function must be concurrency-safe.
 // @TODO This function should be refactored to be a helper function for websocket and http error writing
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
@@ -546,9 +553,9 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType Oper
 // per-update contract in the resolver. Terminal subscription failures should
 // call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
-	if ws, ok := w.(*websocketResponseWriter); ok {
-		// The resolver reuses the failed frame's writer for the error response.
-		ws.resetFrame()
+	if writer, ok := w.(resettableSubscriptionWriter); ok {
+		// The writer may hold partial, unflushed JSON. Clear it before writing the error response.
+		writer.Reset()
 	}
 	h.writeError(ctx, err, res, w, false)
 }
