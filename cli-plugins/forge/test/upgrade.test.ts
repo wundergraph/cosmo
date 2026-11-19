@@ -111,6 +111,14 @@ describe('wgc forge router upgrade --check', () => {
         message: 'The tests failed against router release 0.300.0 (exit code 2). Nothing was changed.',
         input: 'go test ./e2e/...',
         fix: `Fix the modules for the new router or stay on the current one. The candidate binary is at ${workspace}/.forge/candidate/router.`,
+        details: {
+          candidate: { source: 'release 0.300.0', version: versionB, commit: commitB },
+          current: { source: 'release 0.299.0', version: versionA, commit: 'a'.repeat(40) },
+          dependencyChanges: [{ module: routerModule, from: versionA, to: versionB }],
+          tests: { command: 'go test ./e2e/...', passed: false, exitCode: 2 },
+          adopted: false,
+          binary: `${workspace}/.forge/candidate/router`,
+        },
       },
     });
     expect(run.progress).toContainEqual({

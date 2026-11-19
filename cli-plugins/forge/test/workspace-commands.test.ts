@@ -102,17 +102,47 @@ describe('wgc forge init', () => {
 });
 
 describe('wgc forge create', () => {
-  test('--list-templates lists the two presets and the four hook templates', async () => {
+  test('--list-templates lists the presets and a template for every hook family, marking experimental ones', async () => {
     const run = await runForge(['create', '--list-templates'], { workspace: await createWorkspace() });
 
     const listed = JSON.parse(run.stdout);
     expect(listed.presets.map((entry: { id: string }) => entry.id)).toEqual(['request-id', 'client-name']);
-    expect(listed.templates.map((entry: { id: string }) => entry.id)).toEqual([
-      'router-request',
-      'operation-middleware',
-      'origin-request',
-      'origin-response',
+    expect(
+      listed.templates.map((entry: { id: string; experimental: boolean }) => [entry.id, entry.experimental]),
+    ).toEqual([
+      ['router-request', false],
+      ['operation-middleware', false],
+      ['origin-request', false],
+      ['origin-response', false],
+      ['tracing', false],
+      ['stream-receive', false],
+      ['subscription-start', true],
     ]);
+  });
+
+  test('an experimental template needs --experimental', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA });
+
+    const refused = await runForge(['create', '--template', 'subscription-start', 'guard'], { workspace });
+    const created = await runForge(['create', '--template', 'subscription-start', 'guard', '--experimental'], {
+      workspace,
+    });
+
+    expect(JSON.parse(refused.stdout)).toEqual({
+      status: 'error',
+      error: {
+        message: 'The subscription-start template uses an experimental router hook.',
+        input: '--template subscription-start',
+        fix: 'Pass --experimental to create it anyway.',
+      },
+    });
+    expect(JSON.parse(created.stdout)).toEqual({
+      status: 'success',
+      module: 'guard',
+      path: './modules/guard',
+      from: { kind: 'template', id: 'subscription-start' },
+    });
+    expect(await read(workspace, 'modules/guard/module.go')).toContain('const moduleID = "guard"');
   });
 
   test('--list-templates reads as a table for a person', async () => {

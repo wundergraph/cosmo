@@ -9,6 +9,7 @@ import type { CommonOptions, ForgeDependencies } from './shared.js';
 interface CreateOptions extends CommonOptions {
   template?: string;
   preset?: string;
+  experimental?: boolean;
   listTemplates?: boolean;
 }
 
@@ -26,13 +27,16 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       .argument('[name]', 'The module name, used for modules/<name>. Defaults to the preset ID.')
       .option('--template <id>', 'Start from an empty hook. See --list-templates.')
       .option('--preset <id>', 'Add a finished module. See --list-templates.')
-      .option('--list-templates', 'List the presets and templates.'),
+      .option('--list-templates', 'List the presets and templates.')
+      .option('--experimental', 'Allow templates built on experimental router hooks.'),
   ).action(async (name: string | undefined, options: CreateOptions) => {
     const output = dependencies.context.output({ json: options.json });
 
     if (options.listTemplates) {
       const describe = (kind: 'preset' | 'template') =>
-        catalog.filter((entry) => entry.kind === kind).map(({ id, description }) => ({ id, description }));
+        catalog
+          .filter((entry) => entry.kind === kind)
+          .map(({ id, description, experimental }) => ({ id, description, experimental: experimental === true }));
       return output.result({ presets: describe('preset'), templates: describe('template') }, (data) =>
         [
           'Presets (wgc forge create --preset <id>):',
@@ -59,6 +63,14 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
         message: `There is no ${kind} "${id}".`,
         input: `--${kind} ${id}`,
         fix: `Use one of: ${idsOf(kind)}.`,
+      });
+    }
+
+    if (entry.experimental && options.experimental !== true) {
+      return output.fail({
+        message: `The ${entry.id} ${kind} uses an experimental router hook.`,
+        input: `--${kind} ${entry.id}`,
+        fix: 'Pass --experimental to create it anyway.',
       });
     }
 

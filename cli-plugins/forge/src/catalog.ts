@@ -11,9 +11,14 @@ export interface CatalogEntry {
   id: string;
   kind: 'preset' | 'template';
   description: string;
+  /** Builds on a router hook that may still change; creating it needs `--experimental`. */
+  experimental?: true;
 }
 
-/** Presets are finished modules. Templates are one empty hook each, for the four places a module can act. */
+/**
+ * Presets are finished modules. Templates are one empty hook each, covering requests and middleware,
+ * origin requests and responses, tracing, and subscriptions and streams.
+ */
 export const catalog: CatalogEntry[] = [
   {
     id: 'request-id',
@@ -37,6 +42,18 @@ export const catalog: CatalogEntry[] = [
   },
   { id: 'origin-request', kind: 'template', description: 'Runs before each request to a subgraph.' },
   { id: 'origin-response', kind: 'template', description: 'Runs after each response from a subgraph.' },
+  { id: 'tracing', kind: 'template', description: 'Names the router spans or adds a tracing convention.' },
+  {
+    id: 'stream-receive',
+    kind: 'template',
+    description: 'Filters or changes broker events before they reach subscribers.',
+  },
+  {
+    id: 'subscription-start',
+    kind: 'template',
+    description: 'Checks a subscription when a client starts it. Experimental: needs --experimental.',
+    experimental: true,
+  },
 ];
 
 const catalogDirectory = fileURLToPath(new URL('../gomodules', import.meta.url));

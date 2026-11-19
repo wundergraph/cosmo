@@ -162,6 +162,12 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       output.progress({ step: 'compare-dependencies', subject: change.module, message: describeChange(change) });
     }
 
+    const report = {
+      candidate: routerSummary(candidateLock.data),
+      ...(current.data === undefined ? {} : { current: routerSummary(current.data) }),
+      dependencyChanges,
+    };
+
     output.progress({ step: 'test', subject: testCommand, message: 'Running the tests against the candidate' });
     const tests = await system.runTest({
       command: testCommand,
@@ -173,15 +179,16 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
         message: `The tests failed against router ${describeRouterSource(candidateSource.data)} (exit code ${tests.exitCode}). Nothing was changed.`,
         input: testCommand,
         fix: `Fix the modules for the new router or stay on the current one. The candidate binary is at ${paths.candidateBinary}.`,
+        details: {
+          ...report,
+          tests: { command: testCommand, passed: false, exitCode: tests.exitCode },
+          adopted: false,
+          binary: paths.candidateBinary,
+        },
       });
     }
 
-    const report = {
-      candidate: routerSummary(candidateLock.data),
-      ...(current.data === undefined ? {} : { current: routerSummary(current.data) }),
-      dependencyChanges,
-      tests: { command: testCommand, passed: true },
-    };
+    const passed = { ...report, tests: { command: testCommand, passed: true } };
     const renderReport = (headline: string): string =>
       [
         headline,
@@ -190,14 +197,14 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       ].join('\n');
 
     if (options.check) {
-      return output.result({ ...report, adopted: false, binary: paths.candidateBinary }, () =>
-        renderReport(`Router ${report.candidate.source} passes the tests. Nothing was changed (--check).`),
+      return output.result({ ...passed, adopted: false, binary: paths.candidateBinary }, () =>
+        renderReport(`Router ${passed.candidate.source} passes the tests. Nothing was changed (--check).`),
       );
     }
 
     if (!options.yes && !context.prompts.canPrompt) {
       return output.fail({
-        message: `Router ${report.candidate.source} passes the tests, but adopting it needs your confirmation.`,
+        message: `Router ${passed.candidate.source} passes the tests, but adopting it needs your confirmation.`,
         input: candidate,
         fix: 'Run the command again with --yes to adopt it.',
       });
@@ -205,12 +212,12 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     const accepted =
       options.yes === true ||
       (await context.prompts.confirm(
-        `${renderReport('Tests passed.')}\nAdopt router ${report.candidate.source}?`,
+        `${renderReport('Tests passed.')}\nAdopt router ${passed.candidate.source}?`,
         false,
       ));
     if (!accepted) {
-      return output.result({ ...report, adopted: false, binary: paths.candidateBinary }, () =>
-        renderReport(`Router ${report.candidate.source} passes the tests. Not adopted.`),
+      return output.result({ ...passed, adopted: false, binary: paths.candidateBinary }, () =>
+        renderReport(`Router ${passed.candidate.source} passes the tests. Not adopted.`),
       );
     }
 
@@ -220,8 +227,8 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     await writeLock(workspace, candidateLock.data);
     await writeManifest(workspace, candidateManifest);
 
-    output.result({ ...report, adopted: true, binary: paths.binary }, () =>
-      renderReport(`Upgraded to router ${report.candidate.source}. Binary: ${paths.binary}`),
+    output.result({ ...passed, adopted: true, binary: paths.binary }, () =>
+      renderReport(`Upgraded to router ${passed.candidate.source}. Binary: ${paths.binary}`),
     );
   });
 };
