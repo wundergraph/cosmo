@@ -260,6 +260,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.playgroundConfig.Path = "/"
 	}
 
+	if r.backwardsCompatibility.VariablesValidation.AllowInt64Values {
+		r.logger.Warn("allow_int64_values is enabled: variables of type Int accept values outside the signed 32-bit range required by the GraphQL specification")
+	}
+
 	// handle introspection config deprecation
 	// if either the old deprecated or the new config is set to false, introspection is disabled
 	if !r.introspection {

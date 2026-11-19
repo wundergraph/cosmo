@@ -1403,6 +1403,7 @@ func (s *graphServer) buildGraphMux(
 		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		AllowInt64VariableValues:                               s.backwardsCompatibility.VariablesValidation.AllowInt64Values,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		AllowStringLiteralsForEnums:                            s.engineExecutionConfiguration.AllowStringLiteralsForEnums,
 		EnableDefer:                                            s.engineExecutionConfiguration.EnableDefer,

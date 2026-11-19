@@ -1452,12 +1452,20 @@ type PersistedOperationsConfig struct {
 // while migrating away from what it supports.
 type BackwardsCompatibilityConfiguration struct {
 	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+	VariablesValidation VariablesValidationBackwardsCompatibility `yaml:"variables_validation" envPrefix:"VARIABLES_VALIDATION_"`
 }
 
 type PersistedOperationsBackwardsCompatibility struct {
 	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
 	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
 	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
+}
+
+type VariablesValidationBackwardsCompatibility struct {
+	// AllowInt64Values accepts Int variable values in the signed 64-bit range instead of
+	// the signed 32-bit range required by the GraphQL spec, as routers before 0.365.0 did.
+	// Non-integer values are still rejected.
+	AllowInt64Values bool `yaml:"allow_int64_values" env:"ALLOW_INT64_VALUES" envDefault:"false"`
 }
 
 type SafelistConfiguration struct {

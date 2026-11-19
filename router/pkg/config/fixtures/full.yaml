@@ -696,6 +696,8 @@ client_header:
 backwards_compatibility:
   persisted_operations:
     allow_mismatched_sha256_ids: false
+  variables_validation:
+    allow_int64_values: false
 
 apollo_compatibility_flags:
   enable_all: false
