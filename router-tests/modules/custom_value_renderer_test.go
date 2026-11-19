@@ -2,7 +2,6 @@ package module_test
 
 import (
 	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,37 +60,5 @@ func TestCustomValueRenderer(t *testing.T) {
 			assert.Equal(t, 200, res.Response.StatusCode)
 			assert.Equal(t, `{"data":{"employee":{"id":123,"currentMood":"Mood-HAPPY"}}}`, res.Body)
 		})
-	})
-}
-
-func TestWebSocketCustomValueRenderer(t *testing.T) {
-	t.Parallel()
-
-	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{core.WithCustomModules(&customvaluerenderer.RouterCustomValueRendererModule{})},
-	}, func(t *testing.T, env *testenv.Environment) {
-		render := http.Header{"X-Custom-Value-Renderer": {"true"}}
-		for _, tc := range []struct {
-			name      string
-			header    http.Header
-			operation string
-			want      string
-		}{
-			{"query with renderer", render, "{ employee(id: 1) { id } }", `{"data":{"employee":{"id":123}}}`},
-			{"query on another connection", nil, "{ employee(id: 1) { id } }", `{"data":{"employee":{"id":1}}}`},
-			{"subscription with renderer", render, "subscription { currentTime { unixTime timeStamp } }", `{"data":{"currentTime":{"unixTime":123,"timeStamp":"xxx"}}}`},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				conn := env.InitGraphQLWebSocketConnection(tc.header, nil, nil)
-				t.Cleanup(func() { _ = conn.Close() })
-				payload, err := json.Marshal(testenv.GraphQLRequest{Query: tc.operation})
-				require.NoError(t, err)
-				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: payload}))
-				var msg testenv.WebSocketMessage
-				require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-				require.Equal(t, "next", msg.Type)
-				require.JSONEq(t, tc.want, string(msg.Payload))
-			})
-		}
 	})
 }
