@@ -1298,6 +1298,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	}
 
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		resolveCtx.SetFieldValueRenderer(origCtx.customFieldValueRenderer)
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 		if h.graphqlHandler.headerPropagation != nil {
 			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
