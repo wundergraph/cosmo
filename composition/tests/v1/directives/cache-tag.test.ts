@@ -1085,7 +1085,8 @@ describe('@cacheTag tests', () => {
           createSubgraph(
             'a',
             `
-            type Query @context(name: "q") {
+            type Query @context(name: "q") @key(fields: "id") {
+              id: ID!
               products(id: ID!, ctx: String @fromContext(field: "$q { x }")): [Product!]!
                 @cacheTag(format: "products-{$args.ctx}")
               x: String
@@ -1339,7 +1340,8 @@ describe('@cacheTag tests', () => {
           createSubgraph(
             'a',
             `
-            type Query @context(name: "q") {
+            type Query @context(name: "q") @key(fields: "id") {
+              id: ID!
               products(id: ID!, ctx: String! @fromContext(field: "$q { x }")): [Product!]! ${cacheTag}
               x: String
             }

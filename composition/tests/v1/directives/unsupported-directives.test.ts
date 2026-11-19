@@ -6,119 +6,14 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
-  CONTEXT,
-  FROM_CONTEXT,
   overrideDirectiveLabelArgumentWarning,
   POLICY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   unsupportedDirectiveWarning,
 } from '../../../src';
-import {
-  CONTEXT_DIRECTIVE,
-  CONTEXT_FIELD_VALUE_SCALAR,
-  FROM_CONTEXT_DIRECTIVE,
-  OVERRIDE_DIRECTIVE,
-  POLICY_DIRECTIVE,
-  SCHEMA_QUERY_DEFINITION,
-} from '../utils/utils';
+import { OVERRIDE_DIRECTIVE, POLICY_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
 describe('Unsupported directives test', () => {
-  test('that defining @context produces a warning', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      type Query @context(name: "test") {
-        a: ID 
-      }
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${CONTEXT_DIRECTIVE}
-      
-      type Query @context(name: "test") {
-        a: ID 
-      }
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: CONTEXT,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
-  test('that defining @fromContext produces a warning', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      type Query {
-        a(a: ID @fromContext(field: "test")): ID
-      }
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${FROM_CONTEXT_DIRECTIVE}
-      
-      ${CONTEXT_FIELD_VALUE_SCALAR}
-      
-      type Query {
-        a(a: ID @fromContext(field: "test")): ID
-      }
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: FROM_CONTEXT,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
-  test('that manually defining scalar ContextFieldValue does not duplicate the definition', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      scalar ContextFieldValue
-      
-      type Query {
-        a(a: ID @fromContext(field: "test")): ID
-      }
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${FROM_CONTEXT_DIRECTIVE}
-      
-      ${CONTEXT_FIELD_VALUE_SCALAR}
-      
-      type Query {
-        a(a: ID @fromContext(field: "test")): ID
-      }
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: FROM_CONTEXT,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
   test('that defining @policy produces a warning', () => {
     const a = createSubgraph(
       'a',
