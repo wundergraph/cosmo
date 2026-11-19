@@ -72,6 +72,8 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 	}, func(t *testing.T, env *testenv.Environment) {
 		render := http.Header{"X-Custom-Value-Renderer": {"true"}}
 		failOnce := http.Header{"X-Custom-Value-Renderer": {"fail-once"}}
+		failWithPlan := failOnce.Clone()
+		failWithPlan.Set("X-WG-Include-Query-Plan", "true")
 		const query = "{ employee(id: 1) { id } }"
 		const subscription = "subscription { currentTime { unixTime timeStamp } }"
 
@@ -81,7 +83,7 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 		complete := frame{kind: "complete"}
 		renderError := frame{"next", `{"errors":[{"message":"Internal server error"}],"data":null}`}
 		timeUpdate := frame{"next", `{"data":{"currentTime":{"unixTime":123,"timeStamp":"xxx"}}}`}
-		for _, tc := range []struct {
+		cases := []struct {
 			name      string
 			header    http.Header
 			operation string
@@ -91,8 +93,11 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 			{"query on another connection", nil, query, []frame{defaultEmployee}},
 			{"subscription with renderer", render, subscription, []frame{timeUpdate}},
 			{"query reports renderer error before completion", failOnce, query, []frame{renderError, complete}},
+			{"query reports renderer error with query plan enabled", failWithPlan, query, []frame{renderError, complete}},
 			{"subscription recovers after renderer error", failOnce, subscription, []frame{renderError, timeUpdate}},
-		} {
+		}
+
+		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				conn := env.InitGraphQLWebSocketConnection(tc.header, nil, nil)
 				t.Cleanup(func() { _ = conn.Close() })
@@ -102,12 +107,12 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 				for _, want := range tc.want {
 					var msg testenv.WebSocketMessage
 					require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-					require.Equal(t, "1", msg.ID)
+					assert.Equal(t, "1", msg.ID)
 					require.Equal(t, want.kind, msg.Type)
 					if want.kind == "complete" {
-						require.Empty(t, msg.Payload)
+						assert.Empty(t, msg.Payload)
 					} else {
-						require.JSONEq(t, want.payload, string(msg.Payload))
+						assert.JSONEq(t, want.payload, string(msg.Payload))
 					}
 				}
 			})

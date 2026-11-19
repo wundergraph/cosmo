@@ -558,6 +558,10 @@ func (h *GraphQLHandler) WriteTerminalError(ctx *resolve.Context, err error, res
 }
 
 func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, terminal bool) {
+	// The resolver can deliver an error to the same writer that holds the unfinished result.
+	if pending, ok := w.(interface{ discardPartialResult() }); ok {
+		pending.discardPartialResult()
+	}
 	reqContext := getRequestContext(ctx.Context())
 
 	if reqContext == nil {
@@ -702,10 +706,6 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 		if encErr != nil {
 			requestLogger.Error("Unable to marshal error response", zap.Error(encErr))
 			return
-		}
-		if ws, ok := sub.(*websocketResponseWriter); ok {
-			// Rendering can fail partway through a frame. The error replaces that result.
-			ws.buf.Reset()
 		}
 		if terminal || isTerminalSubscriptionError(err) {
 			sub.Error(data)
