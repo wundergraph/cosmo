@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions, WhoAmICommandJsonOutput } from '../../../core/types/types.js';
 import { getBaseHeaders, config } from '../../../core/config.js';
+import { describeHubAudience, HubAudience, readHubAudience } from '../hub-audience.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('whoami');
@@ -19,18 +20,23 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
+        const hubAudience = config.apiKey ? readHubAudience(config.apiKey) : undefined;
         if (options.json) {
-          const successMessageJson: WhoAmICommandJsonOutput = {
+          const successMessageJson: WhoAmICommandJsonOutput & { hubAudience?: HubAudience } = {
             status: 'success',
             organizationName: resp.organizationName,
             organizationSlug: resp.organizationSlug,
             apiUrl: config.baseURL,
+            hubAudience,
           };
           console.log(JSON.stringify(successMessageJson));
         } else {
           console.log('Organization:', pc.bold(resp.organizationName));
           console.log('Organization Slug:', pc.bold(resp.organizationSlug));
           console.log('Api Url:', config.baseURL);
+          if (hubAudience) {
+            console.log('Hub Audience:', describeHubAudience(hubAudience));
+          }
         }
         break;
       }

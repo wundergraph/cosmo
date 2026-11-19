@@ -1,0 +1,33 @@
+# Shared sign-in for Cosmo and Hub. Create the realm ConfigMap and Google secret first:
+#   kubectl create configmap keycloak-realm-hub-poc --from-file=realm.json=docker/keycloak/realm.hub-poc.json
+#   kubectl create secret generic keycloak-google --from-literal=clientId=... --from-literal=clientSecret=...
+# then: helm install cosmo ./helm/cosmo -f helm/values-hub-poc.yaml
+# See docker/keycloak/README.hub-poc.md.
+keycloak:
+  extraVolumes: |
+    - name: realm-config-volume
+      configMap:
+        name: keycloak-realm-hub-poc
+  extraEnv: |
+    - name: KC_BOOTSTRAP_ADMIN_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "keycloak.fullname" . }}-bootstrap
+          key: adminUser
+    - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "keycloak.fullname" . }}-bootstrap
+          key: adminPassword
+    - name: KC_HOSTNAME_STRICT
+      value: 'false'
+    - name: GOOGLE_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-google
+          key: clientId
+    - name: GOOGLE_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-google
+          key: clientSecret

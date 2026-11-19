@@ -1,0 +1,12 @@
+# Shared sign-in for Cosmo and Hub. Layer on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.hub-poc.yml --profile dev up -d keycloak
+# See docker/keycloak/README.hub-poc.md.
+services:
+  keycloak:
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID to the Google OAuth client id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?set GOOGLE_CLIENT_SECRET to the Google OAuth client secret}
+      HUB_KEYCLOAK_CLIENT_SECRET: ${HUB_KEYCLOAK_CLIENT_SECRET:-changeme}
+      HUB_WEB_URL: ${HUB_WEB_URL:-http://localhost:5173}
+    volumes:
+      - ./docker/keycloak/realm.hub-poc.json:/opt/keycloak/data/import/realm.json:ro

@@ -8,7 +8,8 @@ import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
 import { updateConfigFile } from '../../../utils.js';
-import { getBaseHeaders } from '../../../core/config.js';
+import { config, getBaseHeaders } from '../../../core/config.js';
+import { describeHubAudience, readHubAudience } from '../hub-audience.js';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
@@ -103,6 +104,11 @@ export default (opts: BaseCommandOptions) => {
     updateConfigFile({ ...accessTokenResp.response, organizationSlug });
 
     console.log(pc.green('Logged in Successfully!'));
+
+    const hubAudience = readHubAudience(accessTokenResp.response.accessToken);
+    if (hubAudience) {
+      console.log(`Hub (${config.hubURL}): ${describeHubAudience(hubAudience)}`);
+    }
   });
 
   return loginCommand;
