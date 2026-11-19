@@ -1894,6 +1894,52 @@ export const gitInstallations = pgTable('git_installations', {
   oauthToken: text('oauth_token'),
 });
 
+export const ciProviderEnum = pgEnum('ci_provider', ['github', 'gitlab'] as const);
+
+/**
+ * Repositories whose CI jobs may call the platform API with the job's OIDC token instead of an API key.
+ * A job acts with the permissions of the row's group.
+ */
+export const ciTrustedRepositories = pgTable(
+  'ci_trusted_repositories', // citr
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    provider: ciProviderEnum('provider').notNull(),
+    // The token issuer, which tells a self-hosted GitLab apart from gitlab.com.
+    issuer: text('issuer').notNull(),
+    // Lowercased `owner/repo` (GitHub) or project path (GitLab).
+    repository: text('repository').notNull(),
+    // Git ref the job must run for, e.g. `refs/heads/main` or `refs/heads/release/*`. Any ref when null.
+    refFilter: text('ref_filter'),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, {
+        onDelete: 'cascade',
+      }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqueRepositoryPerOrganization: uniqueIndex('citr_organization_issuer_repository_idx').on(
+      t.organizationId,
+      t.issuer,
+      t.repository,
+    ),
+    issuerRepositoryIndex: index('citr_issuer_repository_idx').on(t.issuer, t.repository),
+    groupIdIndex: index('citr_group_id_idx').on(t.groupId),
+    createdByIdIndex: index('citr_created_by_id_idx').on(t.createdById),
+  }),
+);
+
 export const integrationTypeEnum = pgEnum('integration_type', ['slack'] as const);
 
 export const organizationIntegrations = pgTable(
@@ -2792,6 +2838,7 @@ export const proposals = pgTable(
     }),
     state: proposalStateEnum('state').notNull(),
     origin: proposalOriginEnum('origin').notNull().default('INTERNAL'),
+    externalLink: text('external_link'),
   },
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
