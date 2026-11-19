@@ -13,7 +13,9 @@ SELECT
     count() AS TotalRequests,
     countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,
     countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'))) AS TotalRequestsOk,
-    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
+    -- otel_traces.Duration is Int64 in tables created by otelcollector < 0.111 and UInt64 in newer ones.
+    -- The cast keeps the aggregate state type equal to the target column on both.
+    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(toInt64(Duration)) AS DurationQuantiles,
     toDateTime(MAX(Timestamp), 'UTC') as LastCalled
 FROM
     cosmo.otel_traces

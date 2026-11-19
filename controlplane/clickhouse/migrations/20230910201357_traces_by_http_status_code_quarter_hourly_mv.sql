@@ -11,7 +11,9 @@ SELECT
     toLowCardinality(SpanAttributes ['wg.organization.id']) as OrganizationID,
     toLowCardinality(SpanAttributes [ 'wg.federated_graph.id']) as FederatedGraphID,
     count() AS TotalRequests,
-    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
+    -- otel_traces.Duration is Int64 in tables created by otelcollector < 0.111 and UInt64 in newer ones.
+    -- The cast keeps the aggregate state type equal to the target column on both.
+    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(toInt64(Duration)) AS DurationQuantiles,
     toDateTime(MAX(Timestamp), 'UTC') as LastCalled
 FROM
     cosmo.otel_traces
