@@ -4,7 +4,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange, Field, GraphFieldUsage, TimeFilters } from '../../../types/index.js';
+import { DateRange, GraphFieldUsage, TimeFilters } from '../../../types/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { traced } from '../../tracing.js';
 import { parseTimeFilters } from './util.js';
@@ -285,11 +285,7 @@ export class UsageRepository {
     }));
   }
 
-  /**
-   * The schema's fields are diffed against this in the caller rather than sent along, because large schemas overflow
-   * ClickHouse's query size limit.
-   */
-  public async getUsedFields({
+  public async getUsedFieldPaths({
     organizationId,
     federatedGraphId,
     rangeInHours,
@@ -297,27 +293,28 @@ export class UsageRepository {
     organizationId: string;
     federatedGraphId: string;
     rangeInHours: number;
-  }): Promise<{ name: string; typeName: string }[]> {
+  }): Promise<string[]> {
     const {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, rangeInHours);
 
-    // ARRAY JOIN expands the TypeNames array into one row per type.
     const query = `
       WITH
         toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate
+        toDateTime({endDate:UInt32}) AS endDate,
+        distinct_field_usages AS (
+          SELECT DISTINCT FieldName, TypeNames
+          FROM gql_metrics_schema_usage_lite_1d_90d
+          WHERE
+              Timestamp >= startDate AND Timestamp <= endDate
+              AND OrganizationID = {organizationId:String}
+              AND FederatedGraphID = {federatedGraphId:String}
+              AND IsNull = false
+        )
       SELECT DISTINCT
-          FieldName AS name,
-          TypeName AS typeName
-      FROM
-          gql_metrics_schema_usage_lite_1d_90d
-          ARRAY JOIN TypeNames AS TypeName
-      WHERE
-          Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = {organizationId:String}
-          AND FederatedGraphID = {federatedGraphId:String}
-          AND IsNull = false
+          concat(TypeName, '.', FieldName) AS path
+      FROM distinct_field_usages
+      ARRAY JOIN TypeNames AS TypeName
     `;
 
     const params = {
@@ -330,10 +327,7 @@ export class UsageRepository {
     const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
-      return res.map((item) => ({
-        name: item.name,
-        typeName: item.typeName,
-      }));
+      return res.map((item) => item.path);
     }
 
     return [];

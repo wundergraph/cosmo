@@ -1,18 +1,19 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { create } from '@bufbuild/protobuf';
 import {
+  CheckSubgraphSchemaResponse,
   GraphPruningConfigSchema,
   GraphPruningIssueSchema,
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { pino } from 'pino';
-import { Mock, TestContext, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { NamespaceRepository } from '../src/core/repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../src/core/repositories/SubgraphRepository.js';
 import { TestUser, afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import { SetupTest, createFederatedGraph, createThenPublishSubgraph } from './test-util.js';
 
 let dbname = '';
 
@@ -317,20 +318,7 @@ describe('Graph Pruning Tests', (ctx) => {
           lastSeen: Date.now() / 1000,
         },
       ])
-      .mockResolvedValueOnce([
-        {
-          name: 'hello',
-          typeName: 'Query',
-        },
-        {
-          name: 'name',
-          typeName: 'Hello',
-        },
-        {
-          name: 'age',
-          typeName: 'Hello',
-        },
-      ]);
+      .mockResolvedValueOnce([{ path: 'Query.hello' }, { path: 'Hello.name' }, { path: 'Hello.age' }]);
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
@@ -538,96 +526,96 @@ describe('Graph Pruning Tests', (ctx) => {
   });
 
   describe('large schemas', () => {
+    const unusedField = 'field0';
+    const deprecatedField = 'field1';
     const fieldNames = Array.from({ length: 5000 }, (_, i) => `field${i}`);
     const largeSchema = `type Query {\n  big: Big!\n}\n\ntype Big {\n${fieldNames
-      .map((n) => (n === 'field1' ? `  ${n}: String @deprecated\n` : `  ${n}: String\n`))
+      .map((n) => (n === deprecatedField ? `  ${n}: String @deprecated\n` : `  ${n}: String\n`))
       .join('')}}\n`;
 
-    /** Every field is used except Big.field0; Big.field1 is deprecated. */
-    const checkLargeSchema = async (testContext: TestContext) => {
-      const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' }, chClient });
-      testContext.onTestFinished(() => server.close());
+    let checkResp: CheckSubgraphSchemaResponse;
+    let federatedGraphId: string | undefined;
+    let usageQueryParams: unknown[];
 
-      const federatedGraphName = genID('fedGraph');
-      const subgraphName = genID('subgraph1');
-      const label = genUniqueLabel();
-
-      await client.createFederatedGraph({
-        name: federatedGraphName,
-        namespace: 'default',
-        labelMatchers: [joinLabel(label)],
-        routingUrl: 'http://localhost:8081',
-      });
-      await client.createFederatedSubgraph({
-        name: subgraphName,
-        namespace: 'default',
-        labels: [label],
-        routingUrl: 'http://localhost:8080',
-      });
-      await client.publishFederatedSubgraph({ name: subgraphName, namespace: 'default', schema: largeSchema });
-      await client.enableGraphPruning({ enableGraphPruning: true, namespace: 'default' });
-      await client.configureNamespaceGraphPruningConfig({
-        namespace: 'default',
-        configs: [
-          create(GraphPruningConfigSchema, {
-            ruleName: 'UNUSED_FIELDS',
-            severityLevel: LintSeverity.warn,
-            gracePeriodInDays: 7,
-            schemaUsageCheckPeriodInDays: 7,
-          }),
-          create(GraphPruningConfigSchema, {
-            ruleName: 'DEPRECATED_FIELDS',
-            severityLevel: LintSeverity.warn,
-            gracePeriodInDays: 7,
-            schemaUsageCheckPeriodInDays: 7,
-          }),
-        ],
+    beforeAll(async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+        setupBilling: { plan: 'launch@1' },
+        chClient: new ClickHouseClient(),
       });
 
-      (chClient.queryPromise as Mock).mockImplementation((query: string) =>
-        Promise.resolve(
-          query.includes('gql_metrics_schema_usage')
-            ? [{ name: 'big', typeName: 'Query' }, ...fieldNames.slice(1).map((name) => ({ name, typeName: 'Big' }))]
-            : [],
-        ),
-      );
+      try {
+        const federatedGraphName = genID('fedGraph');
+        const subgraphName = genID('subgraph1');
+        const label = genUniqueLabel();
 
-      const checkResp = await client.checkSubgraphSchema({
-        subgraphName,
-        namespace: 'default',
-        schema: Buffer.from(largeSchema),
-      });
-      const graphResp = await client.getFederatedGraphByName({ name: federatedGraphName, namespace: 'default' });
+        await createFederatedGraph(client, federatedGraphName, 'default', [joinLabel(label)], 'http://localhost:8081');
+        await createThenPublishSubgraph(client, subgraphName, 'default', largeSchema, [label], 'http://localhost:8080');
+        await client.enableGraphPruning({ enableGraphPruning: true, namespace: 'default' });
+        await client.configureNamespaceGraphPruningConfig({
+          namespace: 'default',
+          configs: [
+            create(GraphPruningConfigSchema, {
+              ruleName: 'UNUSED_FIELDS',
+              severityLevel: LintSeverity.warn,
+              gracePeriodInDays: 7,
+              schemaUsageCheckPeriodInDays: 7,
+            }),
+            create(GraphPruningConfigSchema, {
+              ruleName: 'DEPRECATED_FIELDS',
+              severityLevel: LintSeverity.warn,
+              gracePeriodInDays: 7,
+              schemaUsageCheckPeriodInDays: 7,
+            }),
+          ],
+        });
 
-      return { checkResp, federatedGraphId: graphResp.graph?.id };
-    };
+        const queryPromise = ClickHouseClient.prototype.queryPromise as Mock;
+        queryPromise.mockClear();
+        queryPromise.mockImplementation((query: string) =>
+          Promise.resolve(
+            query.includes('gql_metrics_schema_usage')
+              ? ['Query.big', ...fieldNames.filter((name) => name !== unusedField).map((name) => `Big.${name}`)].map(
+                  (path) => ({ path }),
+                )
+              : [],
+          ),
+        );
 
-    test('Should report the fields missing from the used fields as unused', async (testContext) => {
-      const { checkResp } = await checkLargeSchema(testContext);
+        checkResp = await client.checkSubgraphSchema({
+          subgraphName,
+          namespace: 'default',
+          schema: Buffer.from(largeSchema),
+        });
+        usageQueryParams = queryPromise.mock.calls
+          .filter(([query]) => (query as string).includes('gql_metrics_schema_usage'))
+          .map(([, params]) => params);
+        queryPromise.mockReset();
 
-      expect(
-        checkResp.graphPruneWarnings.filter((w) => w.graphPruningRuleType === 'UNUSED_FIELDS').map((w) => w.fieldPath),
-      ).toEqual(['Big.field0']);
+        const graphResp = await client.getFederatedGraphByName({ name: federatedGraphName, namespace: 'default' });
+        federatedGraphId = graphResp.graph?.id;
+      } finally {
+        await server.close();
+      }
     });
 
-    test('Should report deprecated fields present in the used fields as still in use', async (testContext) => {
-      const { checkResp } = await checkLargeSchema(testContext);
+    test('Should report the fields missing from the used fields as unused', () => {
+      expect(
+        checkResp.graphPruneWarnings.filter((w) => w.graphPruningRuleType === 'UNUSED_FIELDS').map((w) => w.fieldPath),
+      ).toEqual([`Big.${unusedField}`]);
+    });
 
+    test('Should report deprecated fields present in the used fields as still in use', () => {
       expect(
         checkResp.graphPruneWarnings
           .filter((w) => w.graphPruningRuleType === 'DEPRECATED_FIELDS')
           .map((w) => w.message),
       ).toEqual([
-        'Field field1 of type Big was deprecated, but is still in use despite the expiration of the grace period.',
+        `Field ${deprecatedField} of type Big was deprecated, but is still in use despite the expiration of the grace period.`,
       ]);
     });
 
-    test('Should query the used fields once per federated graph for all rules', async (testContext) => {
-      const { federatedGraphId } = await checkLargeSchema(testContext);
-
-      const usageQueryParams = (chClient.queryPromise as Mock).mock.calls
-        .filter(([query]) => (query as string).includes('gql_metrics_schema_usage'))
-        .map(([, params]) => params);
+    test('Should query the used fields once per federated graph for all rules', () => {
       expect(usageQueryParams).toEqual([expect.objectContaining({ federatedGraphId })]);
     });
   });

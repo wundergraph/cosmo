@@ -28,27 +28,64 @@ export default class SchemaGraphPruner {
     private schema: GraphQLSchema,
   ) {}
 
-  /** Keyed by federated graph and range so the unused and deprecated rules share one query. */
-  private usedFieldPaths = new Map<string, Promise<Set<string>>>();
+  private usedFieldPathsByGraphAndRange = new Map<string, Promise<Set<string>>>();
 
-  private getUsedFieldPaths({
+  private getUsedFieldPathsByGraph({
     organizationId,
-    federatedGraphId,
+    federatedGraphs,
     rangeInDays,
   }: {
     organizationId: string;
-    federatedGraphId: string;
+    federatedGraphs: FederatedGraphDTO[];
     rangeInDays: number;
-  }): Promise<Set<string>> {
-    const key = `${federatedGraphId}:${rangeInDays}`;
-    let paths = this.usedFieldPaths.get(key);
-    if (!paths) {
-      paths = this.usageRepo
-        .getUsedFields({ organizationId, federatedGraphId, rangeInHours: rangeInDays * 24 })
-        .then((fields) => new Set(fields.map((f) => `${f.typeName}.${f.name}`)));
-      this.usedFieldPaths.set(key, paths);
-    }
-    return paths;
+  }): Promise<{ graph: FederatedGraphDTO; usedFieldPaths: Set<string> }[]> {
+    const limit = pLimit(5);
+    return Promise.all(
+      federatedGraphs.map(async (graph) => {
+        const key = `${graph.id}:${rangeInDays}`;
+        let usedFieldPaths = this.usedFieldPathsByGraphAndRange.get(key);
+        if (!usedFieldPaths) {
+          usedFieldPaths = limit(() =>
+            this.usageRepo.getUsedFieldPaths({
+              organizationId,
+              federatedGraphId: graph.id,
+              rangeInHours: rangeInDays * 24,
+            }),
+          ).then((paths) => new Set(paths));
+          this.usedFieldPathsByGraphAndRange.set(key, usedFieldPaths);
+        }
+        return { graph, usedFieldPaths: await usedFieldPaths };
+      }),
+    );
+  }
+
+  private createGraphPruningIssue({
+    field,
+    graph,
+    ruleType,
+    severityLevel,
+    message,
+  }: {
+    field: Field;
+    graph: FederatedGraphDTO;
+    ruleType: GraphPruningIssueResult['graphPruningRuleType'];
+    severityLevel: LintSeverityLevel;
+    message: string;
+  }): GraphPruningIssueResult {
+    return {
+      graphPruningRuleType: ruleType,
+      severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
+      fieldPath: field.path,
+      message,
+      issueLocation: {
+        line: field.location.line || 0,
+        column: field.location.column || 0,
+        endLine: field.location.endLine,
+        endColumn: field.location.endColumn,
+      },
+      federatedGraphId: graph.id,
+      federatedGraphName: graph.name,
+    };
   }
 
   getAllFields({ schema, onlyDeprecated }: { schema?: GraphQLSchema; onlyDeprecated?: boolean }): Field[] {
@@ -115,63 +152,30 @@ export default class SchemaGraphPruner {
     addedFields: SchemaDiff[];
     severityLevel: LintSeverityLevel;
   }): Promise<GraphPruningIssueResult[]> {
-    const limit = pLimit(5);
-    const allFields = this.getAllFields({});
-    // fetching all the fields of this subgraph that are in grace period
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
-    // filtering out the fields that are in grace period and the fields that were added in the proposed schema
-    const skippedPaths = new Set([...fieldsInGracePeriod, ...addedFields].map((f) => f.path));
-    const fieldsToBeChecked = allFields.filter((field) => !skippedPaths.has(field.path));
+    const recentlyAddedPaths = new Set([...fieldsInGracePeriod, ...addedFields].map((f) => f.path));
+    const fieldsToBeChecked = this.getAllFields({}).filter((field) => !recentlyAddedPaths.has(field.path));
 
     if (fieldsToBeChecked.length === 0) {
       return [];
     }
 
-    const graphPruningIssues: GraphPruningIssueResult[] = [];
-    const input = [];
+    const usage = await this.getUsedFieldPathsByGraph({ organizationId, federatedGraphs, rangeInDays });
 
-    for (const federatedGraph of federatedGraphs) {
-      input.push(
-        limit(async () => {
-          const usedFieldPaths = await this.getUsedFieldPaths({
-            organizationId,
-            federatedGraphId: federatedGraph.id,
-            rangeInDays,
-          });
-          return {
-            federatedGraphId: federatedGraph.id,
-            federatedGraphName: federatedGraph.name,
-            usedFieldPaths,
-          };
-        }),
-      );
-    }
-
-    const result = await Promise.all(input);
-
-    for (const r of result) {
-      const { federatedGraphId, federatedGraphName, usedFieldPaths } = r;
-      const unusedFields = fieldsToBeChecked.filter((field) => !usedFieldPaths.has(field.path));
-      for (const field of unusedFields) {
-        graphPruningIssues.push({
-          graphPruningRuleType: 'UNUSED_FIELDS',
-          severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
-          fieldPath: field.path,
-          message: `Field ${field.name} of type ${field.typeName} has not been used in the past ${rangeInDays} days`,
-          issueLocation: {
-            line: field.location.line || 0,
-            column: field.location.column || 0,
-            endLine: field.location.endLine,
-            endColumn: field.location.endColumn,
-          },
-          federatedGraphId,
-          federatedGraphName,
-        });
-      }
-    }
-
-    return graphPruningIssues;
+    return usage.flatMap(({ graph, usedFieldPaths }) =>
+      fieldsToBeChecked
+        .filter((field) => !usedFieldPaths.has(field.path))
+        .map((field) =>
+          this.createGraphPruningIssue({
+            field,
+            graph,
+            ruleType: 'UNUSED_FIELDS',
+            severityLevel,
+            message: `Field ${field.name} of type ${field.typeName} has not been used in the past ${rangeInDays} days`,
+          }),
+        ),
+    );
   }
 
   async fetchDeprecatedFields({
@@ -191,70 +195,38 @@ export default class SchemaGraphPruner {
     severityLevel: LintSeverityLevel;
     addedDeprecatedFields: SchemaDiff[];
   }): Promise<GraphPruningIssueResult[]> {
-    const limit = pLimit(5);
-    const allDeprecatedFields = this.getAllFields({ onlyDeprecated: true });
-    // fetching all the deprecated fields of this subgraph that are in grace period
     const deprecatedFieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({
       subgraphId,
       namespaceId,
       onlyDeprecated: true,
     });
 
-    // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
-    const skippedPaths = new Set([...deprecatedFieldsInGracePeriod, ...addedDeprecatedFields].map((f) => f.path));
-    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => !skippedPaths.has(field.path));
+    const recentlyDeprecatedPaths = new Set(
+      [...deprecatedFieldsInGracePeriod, ...addedDeprecatedFields].map((f) => f.path),
+    );
+    const deprecatedFieldsToBeChecked = this.getAllFields({ onlyDeprecated: true }).filter(
+      (field) => !recentlyDeprecatedPaths.has(field.path),
+    );
 
     if (deprecatedFieldsToBeChecked.length === 0) {
       return [];
     }
 
-    const graphPruningIssues: GraphPruningIssueResult[] = [];
-    const input = [];
+    const usage = await this.getUsedFieldPathsByGraph({ organizationId, federatedGraphs, rangeInDays });
 
-    for (const federatedGraph of federatedGraphs) {
-      input.push(
-        limit(async () => {
-          const usedFieldPaths = await this.getUsedFieldPaths({
-            organizationId,
-            federatedGraphId: federatedGraph.id,
-            rangeInDays,
-          });
-          return {
-            federatedGraphId: federatedGraph.id,
-            federatedGraphName: federatedGraph.name,
-            usedFieldPaths,
-          };
-        }),
-      );
-    }
-
-    const result = await Promise.all(input);
-
-    for (const r of result) {
-      const { federatedGraphId, federatedGraphName, usedFieldPaths } = r;
-
-      for (const field of deprecatedFieldsToBeChecked) {
-        const isUsed = usedFieldPaths.has(field.path);
-        graphPruningIssues.push({
-          graphPruningRuleType: 'DEPRECATED_FIELDS',
-          severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
-          fieldPath: field.path,
-          message: isUsed
+    return usage.flatMap(({ graph, usedFieldPaths }) =>
+      deprecatedFieldsToBeChecked.map((field) =>
+        this.createGraphPruningIssue({
+          field,
+          graph,
+          ruleType: 'DEPRECATED_FIELDS',
+          severityLevel,
+          message: usedFieldPaths.has(field.path)
             ? `Field ${field.name} of type ${field.typeName} was deprecated, but is still in use despite the expiration of the grace period.`
             : `Field ${field.name} of type ${field.typeName} was deprecated, is no longer in use, and is now safe for removal following the expiration of the grace period.`,
-          issueLocation: {
-            line: field.location.line || 0,
-            column: field.location.column || 0,
-            endLine: field.location.endLine,
-            endColumn: field.location.endColumn,
-          },
-          federatedGraphId,
-          federatedGraphName,
-        });
-      }
-    }
-
-    return graphPruningIssues;
+        }),
+      ),
+    );
   }
 
   fetchNonDeprecatedDeletedFields({
