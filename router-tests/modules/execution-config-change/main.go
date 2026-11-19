@@ -124,11 +124,10 @@ func (m *translator) snapshotFor(cfg routerconfig.ExecutionConfig) snapshot {
 }
 
 func (m *translator) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
-	if graph, ok := core.ExecutionConfigFromContext(ctx.Request().Context()); ok {
-		selected := m.snapshotFor(graph)
-		ctx.SetCustomFieldValueRenderer(selected.rules)
-		ctx.ResponseWriter().Header().Set("X-Execution-Config", selected.header)
-	}
+	graph := core.ExecutionConfigFromContext(ctx.Request().Context())
+	selected := m.snapshotFor(graph)
+	ctx.SetCustomFieldValueRenderer(selected.rules)
+	ctx.ResponseWriter().Header().Set("X-Execution-Config", selected.header)
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 

@@ -54,9 +54,7 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 
 	require.NotNil(m.t, req)
 	// Only the myff schema defines productCount. Read from the outgoing operation.
-	cfg, ok := core.ExecutionConfigFromContext(req.Context())
-	assert.True(m.t, ok)
-	assert.Contains(m.t, cfg.Schema(), "productCount: Int!")
+	assert.Contains(m.t, core.ExecutionConfigFromContext(req.Context()).Schema(), "productCount: Int!")
 	require.Equal(m.t, req.Header.Get("Connection"), "Upgrade")
 	require.Equal(m.t, req.Header.Get("Upgrade"), "websocket")
 	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Version"), "13")

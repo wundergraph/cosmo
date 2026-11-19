@@ -30,9 +30,8 @@ func (m *executionConfigTestModule) Middleware(ctx RequestContext, next http.Han
 	if m.beforeRead != nil && ctx.Request().Header.Get("X-Pause-Request") != "" {
 		m.beforeRead()
 	}
-	if cfg, ok := ExecutionConfigFromContext(ctx.Request().Context()); ok {
-		ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.Schema()))))
-	}
+	cfg := ExecutionConfigFromContext(ctx.Request().Context())
+	ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.Schema()))))
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
@@ -76,8 +75,9 @@ func assertExecutionConfigRequest(t *testing.T, r *Router, sdl string, flag stri
 }
 
 func TestExecutionConfigFromContext(t *testing.T) {
-	cfg, ok := ExecutionConfigFromContext(t.Context())
-	require.False(t, ok)
+	t.Parallel()
+
+	cfg := ExecutionConfigFromContext(t.Context())
 	require.Equal(t, routerconfig.ExecutionConfig{}, cfg)
 	require.Empty(t, cfg.Version())
 	require.Empty(t, cfg.Schema())

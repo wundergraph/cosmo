@@ -955,10 +955,10 @@ func withExecutionConfig(ctx context.Context, cfg routerconfig.ExecutionConfig) 
 // ExecutionConfigFromContext returns the execution config of the graph selected
 // for this request, including feature-flag selection. Modules can pass
 // RequestContext.Request().Context(). The snapshot stays valid across reloads.
-// A context outside a graph request returns the zero value and false.
-func ExecutionConfigFromContext(ctx context.Context) (routerconfig.ExecutionConfig, bool) {
-	cfg, ok := ctx.Value(rcontext.ExecutionConfigKey).(routerconfig.ExecutionConfig)
-	return cfg, ok
+// A context without a selected graph returns the zero value.
+func ExecutionConfigFromContext(ctx context.Context) routerconfig.ExecutionConfig {
+	cfg, _ := ctx.Value(rcontext.ExecutionConfigKey).(routerconfig.ExecutionConfig)
+	return cfg
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {

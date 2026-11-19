@@ -70,29 +70,26 @@ In this example, the module `myModule` has a priority of 1, meaning it will be l
 
 ### Access the execution config
 
-A module can read the schema and routing information for the graph handling a request. For example, a translation module can find fields marked with a custom directive in the selected graph’s schema. For a feature-flag request, the accessor returns that flag’s graph. An in-flight request keeps its original graph across a hot reload.
+Call `core.ExecutionConfigFromContext` in a request hook to read the schema, config version, and subgraph routing information for the graph serving that request. The router selects the base graph or a feature-flag graph before the hook runs. The request keeps that snapshot even if the router reloads its config before the request finishes.
 
 ```go
 func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
-    if cfg, ok := core.ExecutionConfigFromContext(ctx.Request().Context()); ok {
-        m.Logger.Debug("Serving graph", zap.String("version", cfg.Version()))
-    }
+    cfg := core.ExecutionConfigFromContext(ctx.Request().Context())
+    m.Logger.Debug("Serving graph", zap.String("version", cfg.Version()))
     next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 ```
 
-The execution config provides the following accessors.
-
-| Accessor | Meaning |
+| Accessor | Returns |
 | --- | --- |
-| `Schema()` | The selected graph's composed router schema as GraphQL SDL. It preserves the exact execution-config text, including composed custom directives and inaccessible elements. Runtime introspection definitions are not appended. |
-| `ClientSchema()` | The SDL used for validation, normalization, and introspection. A separately composed client schema excludes inaccessible elements and filters custom directives. If no non-empty client schema is supplied, this returns `Schema()`, matching runtime behavior. Runtime introspection definitions are not appended. |
-| `Version()` | The execution config's supplied version string. It may be empty in older configs and is not a unique content identifier. Local `wgc router compose` uses a constant version. Use the snapshot itself as a cache key for graph-specific metadata. |
-| `Subgraphs()` | A detached slice of `routerconfig.Subgraph` values in config order. Each value exposes `ID`, `Name`, and `RoutingURL`. The URL includes local routing overrides and may be empty for a virtual subgraph. Modules can sort or edit their copy. |
+| `Schema()` | The composed router SDL, including custom directives preserved by composition and inaccessible elements. |
+| `ClientSchema()` | The SDL used for validation and introspection. It falls back to `Schema()` when the config omits a separate client schema. Both accessors return SDL before the router adds runtime introspection definitions. |
+| `Version()` | The version supplied by the execution config. It can be empty or shared by multiple graphs. |
+| `Subgraphs()` | Subgraphs in config order, with each subgraph’s `ID`, `Name`, and effective `RoutingURL`, including local routing overrides. Modules can modify the returned slice. |
 
-Outside a graph request the accessor returns the zero value and `false`. Modules can read a snapshot concurrently and use it as a cache key. Copies of the same snapshot compare equal. A rebuilt graph has a distinct snapshot even if its version is unchanged. Bound the cache so retired schemas can be collected after eviction.
+To expose a custom field directive to modules, import it with `@link` and include it with `@composeDirective` in the subgraph schema. Read the field annotations from `Schema()`. Composition can omit a directive applied to the `schema` definition even when it preserves the same directive on fields.
 
-See the [executable integration fixture](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/execution-config-change) for a module that discovers `@translate` on field definitions and renders translated greetings for the selected graph.
+Outside a graph request the accessor returns the zero value. If your module caches data derived from the schema, use the snapshot itself as the key. Requests served by the same graph share a snapshot, and a rebuilt graph gets a distinct key even when its version is unchanged. Bound the cache so retired schemas can be collected.
 
 ### Access the GraphQL operation
 
