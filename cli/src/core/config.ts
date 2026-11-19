@@ -32,6 +32,7 @@ export const config = {
   kcRealm: process.env.KC_REALM || 'cosmo',
   cdnURL: process.env.CDN_URL || 'https://cosmo-cdn.wundergraph.com',
   disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
+  requestTimeoutMs: Number(process.env.COSMO_REQUEST_TIMEOUT_MS) || undefined,
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
