@@ -1,3 +1,4 @@
+import { collectContexts } from './context';
 import {
   BREAK,
   type ConstArgumentNode,
@@ -257,6 +258,7 @@ import {
 import {
   areDefaultValuesCompatible,
   childMapToValueArray,
+  doesArgumentDefineFromContext,
   getParentTypeName,
   isFieldData,
   isInputNodeKind,
@@ -331,6 +333,7 @@ import {
   FIELDS,
   FIRST_ORDINAL,
   FORMAT,
+  CONTEXT,
   FROM_CONTEXT,
   HYPHEN_JOIN,
   INACCESSIBLE,
@@ -2604,6 +2607,11 @@ export class NormalizationFactory {
         for (const [argumentName, interfaceArgument] of interfaceField.argumentDataByName) {
           handledArguments.add(argumentName);
           const containerArgument = fieldData.argumentDataByName.get(argumentName);
+          if (doesArgumentDefineFromContext(interfaceArgument)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.interfaceContextCoords.add(interfaceArgument.federatedCoords);
+          }
           // The type implementing the interface must include all arguments with no variation for that argument
           if (!containerArgument) {
             hasErrors = true;
@@ -2622,6 +2630,11 @@ export class NormalizationFactory {
         }
         // Additional arguments must be optional (nullable)
         for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+          if (doesArgumentDefineFromContext(argumentData)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.implementationContextCoords.add(argumentData.federatedCoords);
+          }
           if (handledArguments.has(argumentName)) {
             continue;
           }
@@ -5152,6 +5165,36 @@ export class NormalizationFactory {
     if (this.isSubgraphEventDrivenGraph) {
       this.validateEventDrivenSubgraph();
     }
+    const newAST: DocumentNode = {
+      kind: Kind.DOCUMENT,
+      definitions,
+    };
+    const buildSchema = () =>
+      buildASTSchema(newAST, { addInvalidExtensionOrphans: true, assumeValid: true, assumeValidSDL: true });
+    let schema;
+    if (
+      this.errors.length === 0 &&
+      (this.referencedDirectiveNames.has(CONTEXT) || this.referencedDirectiveNames.has(FROM_CONTEXT))
+    ) {
+      try {
+        schema = buildSchema();
+        const contexts = collectContexts(schema, (name) => this.getRenamedRootTypeName(name));
+        for (const provider of contexts.providers) {
+          const data = getValueOrDefault(this.configurationDataByTypeName, provider.typeName, () => ({
+            ...newConfigurationData(false, provider.typeName),
+            contextMetadataOnly: true,
+          }));
+          (data.contextProviders ??= []).push(provider);
+        }
+        for (const argument of contexts.argumentsFromContext) {
+          const data = this.configurationDataByTypeName.get(argument.typeName);
+          if (data) (data.contextArguments ??= []).push(argument);
+        }
+        for (const coordinate of contexts.referenced) this.unvalidatedExternalFieldCoords.delete(coordinate);
+      } catch (error) {
+        this.errors.push(error as Error);
+      }
+    }
     for (const fieldCoords of this.unvalidatedExternalFieldCoords) {
       if (this.isSubgraphVersionTwo) {
         this.errors.push(invalidExternalDirectiveError(fieldCoords));
@@ -5162,10 +5205,6 @@ export class NormalizationFactory {
     if (this.errors.length > 0) {
       return { success: false, errors: this.errors, warnings: this.warnings };
     }
-    const newAST: DocumentNode = {
-      kind: Kind.DOCUMENT,
-      definitions,
-    };
     return {
       authorizationDataByParentTypeName: this.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
@@ -5190,7 +5229,7 @@ export class NormalizationFactory {
       originalTypeNameByRenamedTypeName: this.originalTypeNameByRenamedTypeName,
       overriddenFieldNamesByParentTypeNameByTargetSubgraphName: this.overriddenFieldNamesByTypeNameByTargetSubgraphName,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
-      schema: buildASTSchema(newAST, { addInvalidExtensionOrphans: true, assumeValid: true, assumeValidSDL: true }),
+      schema: schema ?? buildSchema(),
       schemaNode: schemaNodeResult.node,
       subgraphAST: newAST,
       subgraphString: print(newAST),

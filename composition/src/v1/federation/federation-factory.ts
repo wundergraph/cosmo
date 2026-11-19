@@ -181,6 +181,7 @@ import {
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
 import { type Graph } from '../../resolvability-graph/graph';
+import { validateContextPaths } from '../../resolvability-graph/context-resolvability';
 import { type GraphNode } from '../../resolvability-graph/graph-nodes';
 import { type InternalSubgraph, type SubgraphConfig } from '../../subgraph/types';
 import { type Warning } from '../../warnings/types';
@@ -484,6 +485,12 @@ export class FederationFactory {
 
           if (handledArguments.has(argumentName)) {
             continue;
+          }
+
+          if (doesArgumentDefineFromContext(implArg)) {
+            hasErrors = true;
+            hasNestedErrors = true;
+            invalidFieldImplementation.implementationContextCoords.add(implArg.federatedCoords);
           }
 
           if (implArg.node.type.kind !== Kind.NON_NULL_TYPE) {
@@ -3361,10 +3368,6 @@ export class FederationFactory {
         return { errors: validationResult.errors, success: false, warnings: this.warnings };
       }
     }
-    const newRouterAST: DocumentNode = {
-      kind: Kind.DOCUMENT,
-      definitions: this.routerDefinitions,
-    };
     const newClientSchema: GraphQLSchema = buildASTSchema(
       {
         kind: Kind.DOCUMENT,
@@ -3372,6 +3375,19 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
+    if (!this.options.disableResolvabilityValidation) {
+      const errors = validateContextPaths(
+        this.internalGraph,
+        this.internalSubgraphBySubgraphName,
+        this.concreteTypeNamesByAbstractTypeName,
+        newClientSchema,
+      );
+      if (errors.length) return { errors, success: false, warnings: this.warnings };
+    }
+    const newRouterAST: DocumentNode = {
+      kind: Kind.DOCUMENT,
+      definitions: this.routerDefinitions,
+    };
     const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
     for (const {
       configurationDataByTypeName,

@@ -1,3 +1,4 @@
+import type { ContextArgument, ContextProvider } from '../v1/normalization/context';
 import { type OperationTypeNode } from 'graphql';
 import {
   type ArgumentName,
@@ -100,6 +101,9 @@ export type RequiredFieldConfiguration = {
 };
 
 export type ConfigurationData = {
+  contextProviders?: ContextProvider[];
+  contextArguments?: ContextArgument[];
+  contextMetadataOnly?: boolean;
   fieldNames: Set<FieldName>;
   isRootNode: boolean;
   typeName: TypeName;

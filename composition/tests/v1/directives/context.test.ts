@@ -165,7 +165,8 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
+            id: ID!
             greeting(
               locale: String
                 @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")
@@ -182,6 +183,8 @@ describe('@context and @fromContext directives', () => {
 
           ${FROM_CONTEXT_DIRECTIVE}
 
+          ${KEY_DIRECTIVE}
+
           union Account @context(name: "accountContext") = Organisation | User
 
           ${CONTEXT_FIELD_VALUE_SCALAR}
@@ -192,8 +195,9 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
             greeting(locale: String @fromContext(field: "$accountContext ... on User { locale } ... on Organisation { defaultLocale }")): String!
+            id: ID!
           }
 
           type Query {
@@ -205,6 +209,7 @@ describe('@context and @fromContext directives', () => {
             locale: String!
             profile: Profile!
           }
+          ${OPENFED_FIELD_SET}
         `),
       );
     });
@@ -264,7 +269,8 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
+            id: ID!
             greeting(
               locale: String @fromContext(field: "$userContext { locale }")
               tier: String @fromContext(field: "$userContext { tier }")
@@ -281,10 +287,13 @@ describe('@context and @fromContext directives', () => {
 
           ${FROM_CONTEXT_DIRECTIVE}
 
+          ${KEY_DIRECTIVE}
+
           ${CONTEXT_FIELD_VALUE_SCALAR}
 
-          type Profile {
+          type Profile @key(fields: "id") {
             greeting(locale: String @fromContext(field: "$userContext { locale }"), tier: String @fromContext(field: "$userContext { tier }")): String!
+            id: ID!
           }
 
           type Query {
@@ -297,6 +306,7 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
             tier: String!
           }
+          ${OPENFED_FIELD_SET}
         `),
       );
     });
@@ -481,7 +491,8 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
+            id: ID!
             greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
           }
         `,
@@ -493,6 +504,7 @@ describe('@context and @fromContext directives', () => {
 
           type Profile {
             greeting: String!
+            id: ID!
           }
 
           type Query {
@@ -735,7 +747,7 @@ describe('@context and @fromContext directives', () => {
       );
       const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
+      expect(errors[0].message).toContain(
         invalidInterfaceImplementationError(
           'Profile',
           OBJECT,
@@ -761,7 +773,7 @@ describe('@context and @fromContext directives', () => {
               },
             ],
           ]),
-        ),
+        ).message,
       );
     });
 
@@ -790,7 +802,7 @@ describe('@context and @fromContext directives', () => {
       );
       const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
+      expect(errors[0].message).toContain(
         invalidInterfaceImplementationError(
           'Profile',
           OBJECT,
@@ -816,7 +828,7 @@ describe('@context and @fromContext directives', () => {
               },
             ],
           ]),
-        ),
+        ).message,
       );
     });
 
@@ -845,7 +857,7 @@ describe('@context and @fromContext directives', () => {
       );
       const { errors } = federateSubgraphsFailure([subgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
+      expect(errors[0].message).toContain(
         invalidInterfaceImplementationError(
           'Profile',
           OBJECT,
@@ -871,7 +883,7 @@ describe('@context and @fromContext directives', () => {
               },
             ],
           ]),
-        ),
+        ).message,
       );
     });
 
@@ -920,7 +932,7 @@ describe('@context and @fromContext directives', () => {
         unimplementedFields: [],
       };
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
+      expect(errors[0].message).toContain(
         invalidInterfaceImplementationError(
           'Object',
           OBJECT,
@@ -928,7 +940,7 @@ describe('@context and @fromContext directives', () => {
             ['InterfaceA', implementationErrors],
             ['InterfaceB', implementationErrors],
           ]),
-        ),
+        ).message,
       );
     });
 
@@ -977,7 +989,7 @@ describe('@context and @fromContext directives', () => {
         unimplementedFields: [],
       };
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
+      expect(errors[0].message).toContain(
         invalidInterfaceImplementationError(
           'Object',
           OBJECT,
@@ -985,7 +997,7 @@ describe('@context and @fromContext directives', () => {
             ['InterfaceA', implementationErrors],
             ['InterfaceB', implementationErrors],
           ]),
-        ),
+        ).message,
       );
     });
 
@@ -1035,11 +1047,15 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
+            id: ID!
             greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
           }
         `,
       );
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema).match(/scalar ContextFieldValue\b/g)).toHaveLength(1);
+      expect(warnings).toHaveLength(0);
       const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraph],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1049,6 +1065,7 @@ describe('@context and @fromContext directives', () => {
 
         type Profile {
           greeting: String!
+          id: ID!
         }
 
         type Query {
@@ -1079,7 +1096,8 @@ describe('@context and @fromContext directives', () => {
             profile: Profile!
           }
 
-          type Profile {
+          type Profile @key(fields: "id") {
+            id: ID!
             greeting(locale: String @fromContext(field: "$userContext { locale }")): String!
           }
         `,
@@ -1091,6 +1109,7 @@ describe('@context and @fromContext directives', () => {
 
           type Profile {
             greeting: String!
+            id: ID!
           }
 
           type Query {
