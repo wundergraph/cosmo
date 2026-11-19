@@ -18,6 +18,7 @@ export interface Credentials {
 }
 export declare const createCredentials: ({ env, loginToken, fetchImpl, }: {
     env: NodeJS.ProcessEnv;
-    loginToken: () => string | undefined;
+    /** The current `wgc auth login` access token, refreshed when needed. */
+    loginToken: () => Promise<string | undefined>;
     fetchImpl?: typeof fetch;
 }) => Credentials;

@@ -12,7 +12,7 @@ describe('createCredentials', () => {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.example/req?api-version=2.0',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req-token',
       },
-      loginToken: () => 'login',
+      loginToken: () => Promise.resolve('login'),
       fetchImpl: (input, init) => {
         urls.push(`${String(input)} ${new Headers(init?.headers).get('authorization')}`);
         return Promise.resolve(Response.json({ value: 'gh-oidc' }));
@@ -29,7 +29,7 @@ describe('createCredentials', () => {
   test('GitLab CI: reads the configured id_tokens variable', async () => {
     const credentials = createCredentials({
       env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gl-oidc' },
-      loginToken: () => undefined,
+      loginToken: () => Promise.resolve(undefined),
     });
 
     expect(await credentials.resolveBearer(request)).toEqual({
@@ -39,7 +39,7 @@ describe('createCredentials', () => {
   });
 
   test('locally falls back to the wgc auth login token', async () => {
-    const credentials = createCredentials({ env: {}, loginToken: () => 'login' });
+    const credentials = createCredentials({ env: {}, loginToken: () => Promise.resolve('login') });
 
     expect(await credentials.resolveBearer(request)).toEqual({
       success: true,
@@ -48,7 +48,10 @@ describe('createCredentials', () => {
   });
 
   test('a GitHub job without id-token permission says how to grant it', async () => {
-    const credentials = createCredentials({ env: { GITHUB_ACTIONS: 'true' }, loginToken: () => undefined });
+    const credentials = createCredentials({
+      env: { GITHUB_ACTIONS: 'true' },
+      loginToken: () => Promise.resolve(undefined),
+    });
 
     const result = await credentials.resolveBearer(request);
 

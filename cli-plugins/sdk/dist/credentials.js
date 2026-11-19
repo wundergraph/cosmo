@@ -34,7 +34,7 @@ export const createCredentials = ({ env, loginToken, fetchImpl = fetch, }) => {
             if (ci.data) {
                 return ok({ token: ci.data, kind: 'ci-oidc' });
             }
-            const token = loginToken();
+            const token = await loginToken();
             if (token) {
                 return ok({ token, kind: 'login' });
             }

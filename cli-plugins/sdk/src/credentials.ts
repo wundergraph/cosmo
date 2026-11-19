@@ -30,7 +30,8 @@ export const createCredentials = ({
   fetchImpl = fetch,
 }: {
   env: NodeJS.ProcessEnv;
-  loginToken: () => string | undefined;
+  /** The current `wgc auth login` access token, refreshed when needed. */
+  loginToken: () => Promise<string | undefined>;
   fetchImpl?: typeof fetch;
 }): Credentials => {
   const ciOidcToken = async ({ audience, gitlabTokenVariable }: BearerRequest): Promise<Result<string | undefined>> => {
@@ -69,7 +70,7 @@ export const createCredentials = ({
         return ok({ token: ci.data, kind: 'ci-oidc' });
       }
 
-      const token = loginToken();
+      const token = await loginToken();
       if (token) {
         return ok({ token, kind: 'login' });
       }

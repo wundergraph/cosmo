@@ -5,6 +5,7 @@
     "module": "esnext",
     "moduleResolution": "Bundler",
     "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "rootDir": "./src",
     "types": ["node"]
   },

@@ -30,6 +30,8 @@ export const config = {
   webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
+  hubURL: process.env.HUB_URL || 'https://hub.wundergraph.com',
+  hubOidcAudience: process.env.HUB_OIDC_AUDIENCE || 'hub',
   cdnURL: process.env.CDN_URL || 'https://cosmo-cdn.wundergraph.com',
   disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
