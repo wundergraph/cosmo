@@ -28,6 +28,17 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import type { PlainMessage } from '../../../types/index.js';
 
+const maxExternalLinkLength = 2048;
+
+// Studio renders the link as an anchor, so only web URLs are stored.
+function isHttpUrl(value: string): boolean {
+  if (value.length > maxExternalLinkLength || !URL.canParse(value)) {
+    return false;
+  }
+  const { protocol } = new URL(value);
+  return protocol === 'http:' || protocol === 'https:';
+}
+
 export function createProposal(
   opts: RouterOptions,
   req: CreateProposalRequest,
@@ -113,6 +124,31 @@ export function createProposal(
         response: {
           code: EnumStatusCode.ERR,
           details: `Proposals are not enabled for namespace ${req.namespace}`,
+        },
+        proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+        proposalUrl: '',
+        proposalName: '',
+        composedSchemaBreakingChanges: [],
+      };
+    }
+
+    if (req.externalLink !== undefined && !isHttpUrl(req.externalLink)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The external link must be an absolute http or https URL of at most ${maxExternalLinkLength} characters.`,
         },
         proposalId: '',
         breakingChanges: [],
@@ -397,6 +433,7 @@ export function createProposal(
       userId: authContext.userId,
       proposalSubgraphs,
       origin: toProposalOriginEnum(req.origin),
+      externalLink: req.externalLink,
     });
 
     await auditLogRepo.addAuditLog({

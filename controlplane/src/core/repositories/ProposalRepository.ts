@@ -38,6 +38,7 @@ export class ProposalRepository {
     userId,
     proposalSubgraphs,
     origin,
+    externalLink,
   }: {
     federatedGraphId: string;
     name: string;
@@ -52,6 +53,7 @@ export class ProposalRepository {
       labels: Label[];
     }[];
     origin: ProposalOrigin;
+    externalLink?: string;
   }): Promise<ProposalDTO> {
     const proposal = await this.db
       .insert(schema.proposals)
@@ -61,6 +63,7 @@ export class ProposalRepository {
         createdById: userId,
         state: 'DRAFT',
         origin,
+        externalLink,
       })
       .returning();
 
@@ -85,6 +88,7 @@ export class ProposalRepository {
       state: proposal[0].state,
       federatedGraphId: proposal[0].federatedGraphId,
       origin: proposal[0].origin,
+      externalLink: proposal[0].externalLink ?? undefined,
     };
   }
 
@@ -101,6 +105,7 @@ export class ProposalRepository {
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
         origin: schema.proposals.origin,
+        externalLink: schema.proposals.externalLink,
       })
       .from(schema.proposals)
       .innerJoin(schema.federatedGraphs, eq(schema.proposals.federatedGraphId, schema.federatedGraphs.id))
@@ -135,6 +140,7 @@ export class ProposalRepository {
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
         origin: proposal[0].origin,
+        externalLink: proposal[0].externalLink ?? undefined,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -166,6 +172,7 @@ export class ProposalRepository {
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
         origin: schema.proposals.origin,
+        externalLink: schema.proposals.externalLink,
       })
       .from(schema.proposals)
       .innerJoin(schema.federatedGraphs, eq(schema.proposals.federatedGraphId, schema.federatedGraphs.id))
@@ -207,6 +214,7 @@ export class ProposalRepository {
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
         origin: proposal[0].origin,
+        externalLink: proposal[0].externalLink ?? undefined,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -260,6 +268,7 @@ export class ProposalRepository {
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
         origin: schema.proposals.origin,
+        externalLink: schema.proposals.externalLink,
       })
       .from(schema.proposals)
       .innerJoin(schema.federatedGraphs, eq(schema.proposals.federatedGraphId, schema.federatedGraphs.id))
@@ -314,6 +323,7 @@ export class ProposalRepository {
           state: proposal.state,
           federatedGraphId: proposal.federatedGraphId,
           origin: proposal.origin,
+          externalLink: proposal.externalLink ?? undefined,
         },
         proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
           id: subgraph.id,

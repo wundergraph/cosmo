@@ -96,6 +96,7 @@ export function getProposal(
         latestCheckSuccess: latestCheck?.isSuccessful || false,
         latestCheckId: latestCheck?.checkId || '',
         origin: fromProposalOriginEnum(proposal.proposal.origin),
+        externalLink: proposal.proposal.externalLink,
       }),
       currentSubgraphs,
     };

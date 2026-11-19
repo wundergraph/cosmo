@@ -155,6 +155,7 @@ export function getProposalsByFederatedGraph(
           latestCheckSuccess: proposal.latestCheckSuccess,
           latestCheckId: proposal.latestCheckId,
           origin: fromProposalOriginEnum(proposal.proposal.origin),
+          externalLink: proposal.proposal.externalLink,
         }),
       ),
       isProposalsEnabled: true,

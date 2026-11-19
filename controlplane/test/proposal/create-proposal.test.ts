@@ -1961,4 +1961,137 @@ describe('Create proposal tests with normal naming convention', () => {
     expect(proposal1Response.proposal?.federatedGraphName).toBe(fedGraph1Name);
     expect(proposal2Response.proposal?.federatedGraphName).toBe(fedGraph2Name);
   });
+
+  test('should store the external link and return it from the proposal getters', async () => {
+    const { client, server, users } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+    onTestFinished(() => server.close());
+
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+    const externalLink = 'https://hub.wundergraph.com/acme/graph/shop/proposals/42';
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String! }',
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const subgraphs = [
+      {
+        name: subgraphName,
+        schemaSDL: 'type Query { hello: String! newField: Int! }',
+        isDeleted: false,
+        isNew: false,
+        labels: [],
+      },
+    ];
+
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.EXTERNAL,
+      externalLink,
+      subgraphs,
+    });
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    // Studio serves the proposal at this path under its base URL.
+    expect(
+      createProposalResponse.proposalUrl.endsWith(
+        `/${users.adminAliceCompanyA.organizationSlug}/${DEFAULT_NAMESPACE}/graph/${fedGraphName}/proposals/${createProposalResponse.proposalId}`,
+      ),
+    ).toBe(true);
+
+    const proposalResponse = await client.getProposal({ proposalId: createProposalResponse.proposalId });
+    expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(proposalResponse.proposal?.externalLink).toBe(externalLink);
+
+    const withoutLinkResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: genID('proposal'),
+      namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.EXTERNAL,
+      subgraphs,
+    });
+    expect(withoutLinkResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const proposalsResponse = await client.getProposalsByFederatedGraph({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(proposalsResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(proposalsResponse.proposals.map((proposal) => [proposal.id, proposal.externalLink]).sort()).toEqual(
+      [
+        [createProposalResponse.proposalId, externalLink],
+        [withoutLinkResponse.proposalId, undefined],
+      ].sort(),
+    );
+  });
+
+  test.each(['javascript:alert(1)', 'hub.wundergraph.com/proposals/42', ''])(
+    'should reject the external link %j',
+    async (externalLink) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        chClient,
+        setupBilling: { plan: 'enterprise' },
+        enabledFeatures: ['proposals'],
+      });
+      onTestFinished(() => server.close());
+
+      const subgraphName = genID('subgraph1');
+      const fedGraphName = genID('fedGraph');
+      const label = genUniqueLabel('label');
+
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        'type Query { hello: String! }',
+        [label],
+        DEFAULT_SUBGRAPH_URL_ONE,
+      );
+      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+      const enableResponse = await enableProposalsForNamespace(client);
+      expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      const createProposalResponse = await client.createProposal({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        name: genID('proposal'),
+        namingConvention: ProposalNamingConvention.NORMAL,
+        origin: ProposalOrigin.EXTERNAL,
+        externalLink,
+        subgraphs: [
+          {
+            name: subgraphName,
+            schemaSDL: 'type Query { hello: String! newField: Int! }',
+            isDeleted: false,
+            isNew: false,
+            labels: [],
+          },
+        ],
+      });
+
+      expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(createProposalResponse.response?.details).toBe(
+        'The external link must be an absolute http or https URL of at most 2048 characters.',
+      );
+    },
+  );
 });

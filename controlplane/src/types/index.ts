@@ -876,6 +876,7 @@ export interface ProposalDTO {
   createdByEmail?: string;
   state: string;
   origin: ProposalOrigin;
+  externalLink?: string;
 }
 
 export interface ProposalSubgraphDTO {

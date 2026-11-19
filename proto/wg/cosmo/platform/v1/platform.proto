@@ -3318,6 +3318,8 @@ message Proposal {
   bool latestCheckSuccess = 9;
   string latestCheckId = 10;
   ProposalOrigin origin = 11;
+  // Link to the place the proposal was authored in, e.g. the Hub proposal it mirrors.
+  optional string external_link = 12;
 }
 
 message ProposalSubgraph {
@@ -3345,6 +3347,8 @@ message CreateProposalRequest {
   repeated ProposalSubgraph subgraphs = 4;
   ProposalNamingConvention namingConvention = 5;
   ProposalOrigin origin = 6;
+  // Absolute http(s) URL of the place the proposal was authored in, e.g. the Hub proposal it mirrors.
+  optional string external_link = 7;
 }
 
 message CreateProposalResponse {
