@@ -12,6 +12,19 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.getAuditLogStreamConfig({}, { headers: getBaseHeaders() });
 
     if (resp.response?.code !== EnumStatusCode.OK) {
+      if (options.json) {
+        console.log(
+          JSON.stringify({
+            status: 'error',
+            code: resp.response?.code ?? EnumStatusCode.ERR,
+            message: 'Could not fetch the audit log stream.',
+            details: resp.response?.details,
+          }),
+        );
+        process.exitCode = 1;
+        return;
+      }
+
       program.error(pc.red(`Could not fetch the audit log stream. ${resp.response?.details ?? ''}`));
     }
 

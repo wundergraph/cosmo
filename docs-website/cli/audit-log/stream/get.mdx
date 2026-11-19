@@ -16,7 +16,7 @@ The `npx wgc audit-log stream get` command prints the organization's audit log s
 
 ## Options
 
-- `--json` : Prints the configuration as JSON. Prints `null` if no stream is configured.
+- `--json` : Prints the configuration as JSON. Prints `null` if no stream is configured. If the request fails, prints `{ "status": "error", "code", "message", "details" }` and exits with code 1.
 
 ## Examples
 
