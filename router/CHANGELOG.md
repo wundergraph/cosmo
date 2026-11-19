@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.375.0](https://github.com/wundergraph/cosmo/compare/router@0.374.0...router@0.375.0) (2026-11-19)
+
+### Features
+
+* **router:** add configurable normalization selection limit ([#3505](https://github.com/wundergraph/cosmo/issues/3505)) ([f80e4a9](https://github.com/wundergraph/cosmo/commit/f80e4a92de5e2d00122ebfcf664bb86c4502b8c1)) (@fiam)
+
+### Bug Fixes
+
+* **router:** preserve response arena ownership during entity fetches ([#3562](https://github.com/wundergraph/cosmo/issues/3562)) ([bfb2841](https://github.com/wundergraph/cosmo/commit/bfb2841bd7dc64671b44a43cba3dbf231eb009dc)) (@fiam)
+
 ## [0.374.0](https://github.com/wundergraph/cosmo/compare/router@0.373.1...router@0.374.0) (2026-11-19)
 
 ### Features
