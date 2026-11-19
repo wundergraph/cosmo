@@ -4,9 +4,11 @@ description: "Migrate from Apollo GraphOS to WunderGraph Cosmo with a single cli
 icon: "swap-arrows"
 ---
 
-If you are a user of Apollo GraphOS with configured graphs, then you can migrate to WunderGraph Cosmo with a click of a button.
+If you have graphs in Apollo GraphOS, you can migrate them to WunderGraph Cosmo from Studio.
 
-<Frame caption="Migrate from Apollo button">
+On the graphs page, click "Create" and select the "Migrate from Apollo" tab. If the organization has no graphs yet, the graphs page also links to it.
+
+<Frame caption="Migrate from Apollo on the empty graphs page">
   <img 
     src="/images/studio/no-graphs-found-migrate-from-apollo.png" 
     alt="WunderGraph Docs showing no graphs found with option to migrate from Apollo" 
@@ -14,7 +16,7 @@ If you are a user of Apollo GraphOS with configured graphs, then you can migrate
   />
 </Frame>
 
-Once you have clicked on "Migrate from Apollo", a modal will appear. This modal will request your "Graph API Key" for the federated graph you wish to migrate.
+The form asks for the "Graph API Key" of the federated graph to migrate and the name of the variant.
 
 <Info>
   Your API key is never saved nor stored; it is only temporarily used to fetch the necessary data for migration.
@@ -71,17 +73,17 @@ Once you have clicked on "Migrate from Apollo", a modal will appear. This modal 
       />
     </Frame>
 <br/>
-    <Frame caption="Migrate from Apollo modal">
+    <Frame caption="Migrate from Apollo form">
       <img 
         src="/images/studio/apollo-migration-page-with-api-key-fields.png" 
-        alt="Cosmo Docs migration modal showing Graph API Key and Variant Name fields" 
+        alt="Cosmo Docs migration form showing Graph API Key and Variant Name fields" 
         title="Apollo migration page with API key fields" 
       />
     </Frame>
   </Step>
 </Steps>
 
-Once you have acquired the key, paste the key into the Graph API Key input, type the name of the variant to be migrated into the Graph Variant Name input and click on the "Migrate" button.
+Paste the key into the "Graph API Key" input. Enter the variant to migrate in the "Graph Variant Name" input. Click "Migrate Graph".
 
-That's it! After a few seconds, your graphs will have been successfully migrated to WunderGraph Cosmo.
+Cosmo creates the federated graph and its subgraphs, then shows a graph API token with the command to run the router. The token is shown once, so store it safely. You can generate new router tokens later from the graph's overview page.
 
