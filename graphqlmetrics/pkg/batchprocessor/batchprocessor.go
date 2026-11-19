@@ -67,6 +67,14 @@ func New[T any](opts Options[T]) *BatchProcessor[T] {
 
 // Push adds an item to the queue. Returns an error if the processor is stopped.
 func (bp *BatchProcessor[T]) Push(item T) error {
+	// The manager exits on doneChan and no longer reads the queue, so reject
+	// new items before touching it.
+	select {
+	case <-bp.doneChan:
+		return errors.New("batch processor stopped")
+	default:
+	}
+
 	select {
 	case bp.queue <- item:
 		return nil
@@ -106,8 +114,10 @@ func (bp *BatchProcessor[T]) runBatchManager() {
 	ticker := time.NewTicker(bp.interval)
 	defer ticker.Stop()
 
-	defer close(bp.queue)        // Stop the queue
-	defer close(bp.dispatchChan) // Stop the workers after draining / close the queue
+	// The queue is intentionally left open: Push must never send on a closed
+	// channel when the processor is stopping. doneChan is what stops both
+	// producers and the manager.
+	defer close(bp.dispatchChan) // Stop the workers after draining
 
 	for {
 		select {
