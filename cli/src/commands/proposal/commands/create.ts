@@ -12,7 +12,10 @@ import { createProposalFromHubSandbox } from '../hub-sandbox-proposal.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description('Creates a proposal for a federated graph.');
-  command.argument('[name]', 'The name of the proposal to create. Required unless --hub-sandbox is used.');
+  command.argument(
+    '[name]',
+    'The name of the proposal to create. Omit it with --hub-sandbox; Hub names that proposal.',
+  );
   command.option(
     '-f, --federation-graph <federatedGraphName>',
     'The name of the federated graph this proposal is for. Required unless --hub-sandbox is used.',
@@ -21,7 +24,6 @@ export default (opts: BaseCommandOptions) => {
     '--hub-sandbox <schema/sandbox>',
     'Create the proposal in Hub from this sandbox. Hub opens the Cosmo proposal, runs its checks and links both.',
   );
-  command.option('--description <text>', 'The proposal description (with --hub-sandbox).');
   command.option('-j, --json', 'Output the result in JSON format (with --hub-sandbox).');
   command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option(
@@ -54,10 +56,11 @@ export default (opts: BaseCommandOptions) => {
 
   command.action(async (name: string | undefined, options) => {
     if (options.hubSandbox) {
+      if (name) {
+        return command.error('error: Hub names proposals created with --hub-sandbox. Drop the name argument.');
+      }
       await createProposalFromHubSandbox({
         hubSandbox: options.hubSandbox,
-        name,
-        description: options.description,
         json: options.json === true,
         hubClient: createCliHubClient(),
       });

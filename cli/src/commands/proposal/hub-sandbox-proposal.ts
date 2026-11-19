@@ -1,14 +1,10 @@
 import { createOutput, errorMessage } from '@wundergraph/wgc-plugin-sdk';
-import type { HubClient, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
+import type { HubClient } from '@wundergraph/wgc-plugin-sdk';
 import { z } from 'zod';
 
 const sandboxReference = z
   .string()
-  .regex(/^[^\s/]+\/[^\s/]+$/, 'Expected <schema>/<sandbox>, e.g. products/add-reviews.')
-  .transform((value) => {
-    const [schema, sandbox] = value.split('/');
-    return { schema, sandbox };
-  });
+  .regex(/^[^\s/]+\/[^\s/]+$/, 'Expected <schema>/<sandbox>, e.g. products/add-reviews.');
 
 const hubProposalTarget = z.object({
   kind: z.enum(['hub', 'cosmo', 'git']),
@@ -39,14 +35,10 @@ const renderProposal = (proposal: HubProposalResult): string => {
 /** Creates a Hub proposal from a sandbox; Hub's Cosmo target opens the Cosmo proposal and links both. */
 export const createProposalFromHubSandbox = async ({
   hubSandbox,
-  name,
-  description,
   json,
   hubClient,
 }: {
   hubSandbox: string;
-  name: string | undefined;
-  description: string | undefined;
   json: boolean;
   hubClient: HubClient;
 }): Promise<void> => {
@@ -62,16 +54,12 @@ export const createProposalFromHubSandbox = async ({
     return;
   }
 
-  const args: Record<string, ToolArgument> = { ...reference.data, targets: ['cosmo'] };
-  if (name) {
-    args.name = name;
-  }
-  if (description) {
-    args.description = description;
-  }
-
   output.progress({ step: 'propose', subject: hubSandbox, message: 'Creating the Hub and Cosmo proposals' });
-  const proposed = await hubClient.callTool('propose', args, hubProposalResult);
+  const proposed = await hubClient.callTool(
+    'propose',
+    { sandbox: reference.data, targets: ['cosmo'] },
+    hubProposalResult,
+  );
   if (!proposed.success) {
     output.fail({ message: errorMessage(proposed), input: hubSandbox });
     return;

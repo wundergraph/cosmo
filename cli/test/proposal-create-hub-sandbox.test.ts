@@ -120,18 +120,12 @@ describe('proposal create --hub-sandbox', () => {
   test('calls Hub propose with the sandbox and prints the Hub URL and Cosmo reference', async () => {
     const hub = await useFakeHub(proposalResult(openCosmoTarget));
 
-    await runCreate(['add-reviews', '--hub-sandbox', 'products/feature-x', '--description', 'Adds reviews']);
+    await runCreate(['--hub-sandbox', 'products/feature-x']);
 
     expect(hub.calls).toEqual([
       {
         name: 'propose',
-        arguments: {
-          schema: 'products',
-          sandbox: 'feature-x',
-          name: 'add-reviews',
-          description: 'Adds reviews',
-          targets: ['cosmo'],
-        },
+        arguments: { sandbox: 'products/feature-x', targets: ['cosmo'] },
         authorization: 'Bearer hub-ci-token',
       },
     ]);
@@ -180,6 +174,15 @@ describe('proposal create --hub-sandbox', () => {
       },
     });
     expect(process.exitCode).toBe(1);
+  });
+
+  test('rejects a proposal name, since Hub names the proposal', async () => {
+    const hub = await useFakeHub(proposalResult(openCosmoTarget));
+
+    await expect(runCreate(['add-reviews', '--hub-sandbox', 'products/feature-x'])).rejects.toThrow(
+      'error: Hub names proposals created with --hub-sandbox. Drop the name argument.',
+    );
+    expect(hub.calls).toEqual([]);
   });
 
   test('rejects a sandbox reference without a schema', async () => {
