@@ -14,7 +14,11 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(UpdateProposalStatusCommand(opts));
   command.addCommand(StatusProposalCommand(opts));
 
-  command.hook('preAction', async (thisCmd) => {
+  command.hook('preAction', async (thisCmd, actionCmd) => {
+    // Hub resolves its own Bearer (CI OIDC or the `wgc auth login` token).
+    if (actionCmd.opts().hubSandbox) {
+      return;
+    }
     await checkAuth();
   });
 
