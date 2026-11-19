@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { pino } from 'pino';
-import { Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { Mock, TestContext, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { NamespaceRepository } from '../src/core/repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../src/core/repositories/SubgraphRepository.js';
@@ -319,12 +319,6 @@ describe('Graph Pruning Tests', (ctx) => {
       ])
       .mockResolvedValueOnce([
         {
-          name: 'a',
-          typeName: 'Hello',
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
           name: 'hello',
           typeName: 'Query',
         },
@@ -541,5 +535,100 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(graceFields).toHaveLength(1);
     expect(graceFields[0].path).toBe('Hello.b');
     expect(graceFields[0].isDeprecated).toBe(true);
+  });
+
+  describe('large schemas', () => {
+    const fieldNames = Array.from({ length: 5000 }, (_, i) => `field${i}`);
+    const largeSchema = `type Query {\n  big: Big!\n}\n\ntype Big {\n${fieldNames
+      .map((n) => (n === 'field1' ? `  ${n}: String @deprecated\n` : `  ${n}: String\n`))
+      .join('')}}\n`;
+
+    /** Every field is used except Big.field0; Big.field1 is deprecated. */
+    const checkLargeSchema = async (testContext: TestContext) => {
+      const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' }, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const federatedGraphName = genID('fedGraph');
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: 'default',
+        labelMatchers: [joinLabel(label)],
+        routingUrl: 'http://localhost:8081',
+      });
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+      await client.publishFederatedSubgraph({ name: subgraphName, namespace: 'default', schema: largeSchema });
+      await client.enableGraphPruning({ enableGraphPruning: true, namespace: 'default' });
+      await client.configureNamespaceGraphPruningConfig({
+        namespace: 'default',
+        configs: [
+          create(GraphPruningConfigSchema, {
+            ruleName: 'UNUSED_FIELDS',
+            severityLevel: LintSeverity.warn,
+            gracePeriodInDays: 7,
+            schemaUsageCheckPeriodInDays: 7,
+          }),
+          create(GraphPruningConfigSchema, {
+            ruleName: 'DEPRECATED_FIELDS',
+            severityLevel: LintSeverity.warn,
+            gracePeriodInDays: 7,
+            schemaUsageCheckPeriodInDays: 7,
+          }),
+        ],
+      });
+
+      (chClient.queryPromise as Mock).mockImplementation((query: string) =>
+        Promise.resolve(
+          query.includes('gql_metrics_schema_usage')
+            ? [{ name: 'big', typeName: 'Query' }, ...fieldNames.slice(1).map((name) => ({ name, typeName: 'Big' }))]
+            : [],
+        ),
+      );
+
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Buffer.from(largeSchema),
+      });
+      const graphResp = await client.getFederatedGraphByName({ name: federatedGraphName, namespace: 'default' });
+
+      return { checkResp, federatedGraphId: graphResp.graph?.id };
+    };
+
+    test('Should report the fields missing from the used fields as unused', async (testContext) => {
+      const { checkResp } = await checkLargeSchema(testContext);
+
+      expect(
+        checkResp.graphPruneWarnings.filter((w) => w.graphPruningRuleType === 'UNUSED_FIELDS').map((w) => w.fieldPath),
+      ).toEqual(['Big.field0']);
+    });
+
+    test('Should report deprecated fields present in the used fields as still in use', async (testContext) => {
+      const { checkResp } = await checkLargeSchema(testContext);
+
+      expect(
+        checkResp.graphPruneWarnings
+          .filter((w) => w.graphPruningRuleType === 'DEPRECATED_FIELDS')
+          .map((w) => w.message),
+      ).toEqual([
+        'Field field1 of type Big was deprecated, but is still in use despite the expiration of the grace period.',
+      ]);
+    });
+
+    test('Should query the used fields once per federated graph for all rules', async (testContext) => {
+      const { federatedGraphId } = await checkLargeSchema(testContext);
+
+      const usageQueryParams = (chClient.queryPromise as Mock).mock.calls
+        .filter(([query]) => (query as string).includes('gql_metrics_schema_usage'))
+        .map(([, params]) => params);
+      expect(usageQueryParams).toEqual([expect.objectContaining({ federatedGraphId })]);
+    });
   });
 });

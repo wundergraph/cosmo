@@ -28,6 +28,29 @@ export default class SchemaGraphPruner {
     private schema: GraphQLSchema,
   ) {}
 
+  /** Keyed by federated graph and range so the unused and deprecated rules share one query. */
+  private usedFieldPaths = new Map<string, Promise<Set<string>>>();
+
+  private getUsedFieldPaths({
+    organizationId,
+    federatedGraphId,
+    rangeInDays,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    rangeInDays: number;
+  }): Promise<Set<string>> {
+    const key = `${federatedGraphId}:${rangeInDays}`;
+    let paths = this.usedFieldPaths.get(key);
+    if (!paths) {
+      paths = this.usageRepo
+        .getUsedFields({ organizationId, federatedGraphId, rangeInHours: rangeInDays * 24 })
+        .then((fields) => new Set(fields.map((f) => `${f.typeName}.${f.name}`)));
+      this.usedFieldPaths.set(key, paths);
+    }
+    return paths;
+  }
+
   getAllFields({ schema, onlyDeprecated }: { schema?: GraphQLSchema; onlyDeprecated?: boolean }): Field[] {
     const fields: Field[] = [];
     const schemaToBeUsed = schema || this.schema;
@@ -102,22 +125,25 @@ export default class SchemaGraphPruner {
       return !fieldsInGracePeriod.some((f) => f.path === field.path) && !addedFields.some((f) => f.path === field.path);
     });
 
+    if (fieldsToBeChecked.length === 0) {
+      return [];
+    }
+
     const graphPruningIssues: GraphPruningIssueResult[] = [];
     const input = [];
 
     for (const federatedGraph of federatedGraphs) {
       input.push(
         limit(async () => {
-          const unusedFieldsWithTypeNames = await this.usageRepo.getUnusedFields({
-            fields: fieldsToBeChecked,
+          const usedFieldPaths = await this.getUsedFieldPaths({
             organizationId,
             federatedGraphId: federatedGraph.id,
-            rangeInHours: rangeInDays * 24,
+            rangeInDays,
           });
           return {
             federatedGraphId: federatedGraph.id,
             federatedGraphName: federatedGraph.name,
-            unusedFieldsWithTypeNames,
+            usedFieldPaths,
           };
         }),
       );
@@ -126,10 +152,8 @@ export default class SchemaGraphPruner {
     const result = await Promise.all(input);
 
     for (const r of result) {
-      const { federatedGraphId, federatedGraphName, unusedFieldsWithTypeNames } = r;
-      const unusedFields = allFields.filter((field) =>
-        unusedFieldsWithTypeNames.some((f) => f.name === field.name && f.typeName === field.typeName),
-      );
+      const { federatedGraphId, federatedGraphName, usedFieldPaths } = r;
+      const unusedFields = fieldsToBeChecked.filter((field) => !usedFieldPaths.has(field.path));
       for (const field of unusedFields) {
         graphPruningIssues.push({
           graphPruningRuleType: 'UNUSED_FIELDS',
@@ -195,16 +219,15 @@ export default class SchemaGraphPruner {
     for (const federatedGraph of federatedGraphs) {
       input.push(
         limit(async () => {
-          const usedDeprecatedFieldsWithTypeNames = await this.usageRepo.getUsedFields({
-            fields: deprecatedFieldsToBeChecked,
+          const usedFieldPaths = await this.getUsedFieldPaths({
             organizationId,
             federatedGraphId: federatedGraph.id,
-            range: rangeInDays * 24,
+            rangeInDays,
           });
           return {
             federatedGraphId: federatedGraph.id,
             federatedGraphName: federatedGraph.name,
-            usedDeprecatedFieldsWithTypeNames,
+            usedFieldPaths,
           };
         }),
       );
@@ -213,12 +236,10 @@ export default class SchemaGraphPruner {
     const result = await Promise.all(input);
 
     for (const r of result) {
-      const { federatedGraphId, federatedGraphName, usedDeprecatedFieldsWithTypeNames } = r;
+      const { federatedGraphId, federatedGraphName, usedFieldPaths } = r;
 
       for (const field of deprecatedFieldsToBeChecked) {
-        const isUsed = usedDeprecatedFieldsWithTypeNames.some(
-          (f) => f.name === field.name && f.typeName === field.typeName,
-        );
+        const isUsed = usedFieldPaths.has(field.path);
         graphPruningIssues.push({
           graphPruningRuleType: 'DEPRECATED_FIELDS',
           severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
