@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.266.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.0...controlplane@0.266.1) (2026-11-19)
+
+### Bug Fixes
+
+* stop check-extension validation at the first schema mismatch ([#3520](https://github.com/wundergraph/cosmo/issues/3520)) ([7b9fbfe](https://github.com/wundergraph/cosmo/commit/7b9fbfe5adc4a00d4cb86315b071ca6a1c80ad7d)) (@comatory)
+
 ## [0.266.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.265.1...controlplane@0.266.0) (2026-11-18)
 
 ### Features

@@ -790,6 +790,9 @@
   "BackwardsCompatibility": {
     "PersistedOperations": {
       "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
     }
   },
   "Plugins": {

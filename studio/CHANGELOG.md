@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.186.10](https://github.com/wundergraph/cosmo/compare/studio@0.186.9...studio@0.186.10) (2026-11-19)
+
+### Bug Fixes
+
+* **studio:** upgrade Next.js to 15.5.29 for security advisories ([#3555](https://github.com/wundergraph/cosmo/issues/3555)) ([71859d5](https://github.com/wundergraph/cosmo/commit/71859d533e4da4d01edd31cb901bcc3c9037d991)) (@thisisnithin)
+
 ## [0.186.9](https://github.com/wundergraph/cosmo/compare/studio@0.186.8...studio@0.186.9) (2026-11-18)
 
 **Note:** Version bump only for package studio

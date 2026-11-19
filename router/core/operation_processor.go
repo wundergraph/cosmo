@@ -121,6 +121,7 @@ type OperationProcessorOptions struct {
 	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError       bool
+	AllowInt64VariableValues                               bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	AllowStringLiteralsForEnums                            bool
 	ComplexityLimits                                       *config.ComplexityLimits
@@ -1685,6 +1686,7 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
+	allowInt64VariableValues                               bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
@@ -1714,6 +1716,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
+			AllowInt64Values:                options.allowInt64VariableValues,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
@@ -1792,6 +1795,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
+			allowInt64VariableValues:                               opts.AllowInt64VariableValues,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
