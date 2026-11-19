@@ -54,6 +54,7 @@ import { ProtoFieldType, ProtoMessage, ProtoMessageField } from './types.js';
 import {
   buildProtoMessage,
   createNestedListWrapper,
+  fieldLabel,
   formatComment,
   getProtoTypeFromGraphQL,
   listNameByNestingLevel,
@@ -79,6 +80,8 @@ export interface GraphQLToProtoTextVisitorOptions extends ProtoOptions {
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  /** Use wrapper types instead of proto3 optional for nullable scalars. The default is false. */
+  useWrapperTypes?: boolean;
   /** Custom options printed as proto options */
   protoOptions?: ProtoOption[];
 }
@@ -157,6 +160,9 @@ export class GraphQLToProtoTextVisitor {
   /** Track whether wrapper types are used (for conditional import) */
   private usesWrapperTypes = false;
 
+  /** Use wrapper types instead of proto3 optional for nullable scalars */
+  private readonly useWrapperTypes: boolean;
+
   /**
    * Map of message names to their field numbers for tracking deleted fields
    * This maintains field numbers even when fields are removed from the schema
@@ -175,6 +181,7 @@ export class GraphQLToProtoTextVisitor {
       packageName = 'service.v1',
       lockData,
       includeComments = true,
+      useWrapperTypes = false,
       protoOptions,
       ...languageOptions
     } = options;
@@ -184,6 +191,7 @@ export class GraphQLToProtoTextVisitor {
     this.packageName = packageName;
     this.lockManager = new ProtoLockManager(lockData);
     this.includeComments = includeComments;
+    this.useWrapperTypes = useWrapperTypes;
 
     // If we have lock data, initialize the field numbers map
     if (lockData) {
@@ -985,12 +993,7 @@ Example:
           messageLines.push(...this.formatComment(arg.description, 1));
         }
 
-        // Check if the argument is a list type and add the repeated keyword if needed
-        if (argType.isRepeated) {
-          messageLines.push(`  repeated ${argType.typeName} ${argProtoName} = ${fieldNumber};`);
-        } else {
-          messageLines.push(`  ${argType.typeName} ${argProtoName} = ${fieldNumber};`);
-        }
+        messageLines.push(`  ${fieldLabel(argType)}${argType.typeName} ${argProtoName} = ${fieldNumber};`);
 
         // Add complex input types to the queue for processing
         const namedType = getNamedType(arg.type);
@@ -1052,11 +1055,7 @@ Example:
       messageLines.push(...this.formatComment(field.description, 1));
     }
 
-    if (returnType.isRepeated) {
-      messageLines.push(`  repeated ${returnType.typeName} ${protoFieldName} = ${fieldNumber};`);
-    } else {
-      messageLines.push(`  ${returnType.typeName} ${protoFieldName} = ${fieldNumber};`);
-    }
+    messageLines.push(`  ${fieldLabel(returnType)}${returnType.typeName} ${protoFieldName} = ${fieldNumber};`);
 
     messageLines.push('}');
 
@@ -1169,7 +1168,9 @@ Example:
 
       for (const requiredField of requiredFields) {
         const fieldSet = this.getRequiredFieldSet(requiredField);
-        const visitor = new RequiredFieldsVisitor(this.schema, entity, requiredField, fieldSet);
+        const visitor = new RequiredFieldsVisitor(this.schema, entity, requiredField, fieldSet, {
+          useWrapperTypes: this.useWrapperTypes,
+        });
         visitor.visit();
 
         const rpcMethods = visitor.getRPCMethods();
@@ -1319,6 +1320,7 @@ Example:
               fieldName: graphqlFieldToProtoField(arg.name),
               typeName: protoType.typeName,
               isRepeated: protoType.isRepeated,
+              isOptional: protoType.isOptional,
               fieldNumber: ++fieldNumber,
             };
           }),
@@ -1424,6 +1426,7 @@ Example:
             fieldName: graphqlFieldToProtoField(field.name),
             typeName: protoType.typeName,
             isRepeated: protoType.isRepeated,
+            isOptional: protoType.isOptional,
             fieldNumber: 1,
           },
         ],
@@ -1600,6 +1603,7 @@ Example:
         // Get the appropriate field number, respecting the lock
         fieldNumber: this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name)),
         isRepeated: fieldType.isRepeated,
+        isOptional: fieldType.isOptional,
         description: field.description ?? undefined,
         isDeprecated: deprecationInfo.deprecated,
         deprecationReason: deprecationInfo.reason,
@@ -1720,6 +1724,7 @@ Example:
         // Get the appropriate field number, respecting the lock
         fieldNumber: this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name)),
         isRepeated: fieldType.isRepeated,
+        isOptional: fieldType.isOptional,
         description: field.description ?? undefined,
         isDeprecated: deprecationInfo.deprecated,
         deprecationReason: deprecationInfo.reason,
@@ -1959,17 +1964,18 @@ Example:
   /**
    * Map GraphQL type to Protocol Buffer type
    *
-   * Determines the appropriate Protocol Buffer type for a given GraphQL type,
-   * including the use of wrapper types for nullable scalar fields to distinguish
-   * between unset fields and zero values.
+   * Determines the appropriate Protocol Buffer type for a given GraphQL type.
+   * Nullable scalar fields use proto3 optional, or wrapper types when useWrapperTypes is set,
+   * to distinguish between unset fields and zero values.
    *
    * @param graphqlType - The GraphQL type to convert
-   * @param ignoreWrapperTypes - If true, do not use wrapper types for nullable scalar fields
    * @returns The corresponding Protocol Buffer type name
    */
-  private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes = false): ProtoFieldType {
-    const protoFieldType = getProtoTypeFromGraphQL(this.includeComments, graphqlType, ignoreWrapperTypes);
-    if (!ignoreWrapperTypes && protoFieldType.isWrapper) {
+  private getProtoTypeFromGraphQL(graphqlType: GraphQLType): ProtoFieldType {
+    const protoFieldType = getProtoTypeFromGraphQL(this.includeComments, graphqlType, {
+      useWrapperTypes: this.useWrapperTypes,
+    });
+    if (protoFieldType.isWrapper) {
       this.usesWrapperTypes = true;
     }
 

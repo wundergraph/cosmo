@@ -14,6 +14,8 @@ import {
   isUnionMessageDefinition,
   ProtoFieldType,
   ProtoMessage,
+  ProtoMessageField,
+  ProtoTypeOptions,
   RPCMethod,
   SCALAR_TYPE_MAP,
   SCALAR_WRAPPER_TYPE_MAP,
@@ -88,15 +90,28 @@ function buildProtoMessageWithIndent(
       );
     }
 
-    const repeated = field.isRepeated ? 'repeated ' : '';
+    const label = fieldLabel(field);
     const options = field.isDeprecated ? ' [deprecated = true]' : '';
 
     messageLines.push(
-      indentContent(indent + 1, `${repeated}${field.typeName} ${field.fieldName} = ${field.fieldNumber}${options};`),
+      indentContent(indent + 1, `${label}${field.typeName} ${field.fieldName} = ${field.fieldNumber}${options};`),
     );
   }
   messageLines.push(indentContent(indent, '}'), '');
   return messageLines;
+}
+
+/**
+ * Returns the label printed before a field's type, e.g. "repeated " or "optional "
+ * @param field - The field to get the label for
+ * @returns The label including a trailing space, or an empty string
+ */
+export function fieldLabel(field: Pick<ProtoMessageField, 'isRepeated' | 'isOptional'>): string {
+  if (field.isRepeated) {
+    return 'repeated ';
+  }
+
+  return field.isOptional ? 'optional ' : '';
 }
 
 /**
@@ -219,33 +234,39 @@ export function renderRPCMethod(includeComments: boolean, rpcMethod: RPCMethod):
 /**
  * Map GraphQL type to Protocol Buffer type
  *
- * Determines the appropriate Protocol Buffer type for a given GraphQL type,
- * including the use of wrapper types for nullable scalar fields to distinguish
- * between unset fields and zero values.
+ * Determines the appropriate Protocol Buffer type for a given GraphQL type.
+ * Nullable scalar fields use proto3 optional, or wrapper types when useWrapperTypes is set,
+ * to distinguish between unset fields and zero values.
  *
  * @param graphqlType - The GraphQL type to convert
- * @param ignoreWrapperTypes - If true, do not use wrapper types for nullable scalar fields
+ * @param options - Options that control how nullable scalars are mapped
  * @returns The corresponding Protocol Buffer type name
  */
 export function getProtoTypeFromGraphQL(
   includeComments: boolean,
   graphqlType: GraphQLType,
-  ignoreWrapperTypes = false,
+  options: ProtoTypeOptions = {},
 ): ProtoFieldType {
   // Nullable lists need to be handled first, otherwise they will be treated as scalar types
   if (isListType(graphqlType) || (isNonNullType(graphqlType) && isListType(graphqlType.ofType))) {
     return handleListType(includeComments, graphqlType);
   }
-  // For nullable scalar types, use wrapper types
+  // Nullable scalar types use proto3 optional or wrapper types
   if (isScalarType(graphqlType)) {
-    if (ignoreWrapperTypes) {
-      return { typeName: SCALAR_TYPE_MAP[graphqlType.name] || 'string', isRepeated: false, isWrapper: false };
+    const typeName = SCALAR_TYPE_MAP[graphqlType.name] || 'string';
+    if (options.ignoreNullability) {
+      return { typeName, isRepeated: false, isWrapper: false };
     }
-    return {
-      typeName: SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue',
-      isRepeated: false,
-      isWrapper: true,
-    };
+
+    if (options.useWrapperTypes) {
+      return {
+        typeName: SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue',
+        isRepeated: false,
+        isWrapper: true,
+      };
+    }
+
+    return { typeName, isRepeated: false, isWrapper: false, isOptional: true };
   }
 
   if (isEnumType(graphqlType)) {
@@ -258,7 +279,7 @@ export function getProtoTypeFromGraphQL(
       return { typeName: SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string', isRepeated: false, isWrapper: false };
     }
 
-    return getProtoTypeFromGraphQL(includeComments, graphqlType.ofType);
+    return getProtoTypeFromGraphQL(includeComments, graphqlType.ofType, options);
   }
   // Named types (object, interface, union, input)
   const namedType = graphqlType as GraphQLNamedType;
@@ -295,7 +316,10 @@ export function handleListType(
 
   // Simple non-nullable lists can use repeated fields directly
   if (!isNullableList && !isNested) {
-    return { ...getProtoTypeFromGraphQL(includeComments, getNamedType(listType), true), isRepeated: true };
+    return {
+      ...getProtoTypeFromGraphQL(includeComments, getNamedType(listType), { ignoreNullability: true }),
+      isRepeated: true,
+    };
   }
 
   // Nullable or nested lists need wrapper messages
@@ -374,7 +398,7 @@ function buildWrapperMessage(
   innerWrapperName =
     level > 1
       ? `${'ListOf'.repeat(level - 1)}${baseType.name}`
-      : getProtoTypeFromGraphQL(includeComments, baseType, true).typeName;
+      : getProtoTypeFromGraphQL(includeComments, baseType, { ignoreNullability: true }).typeName;
 
   lines.push(
     indentContent(1, `message List {`),
