@@ -137,7 +137,8 @@ type RequestContext interface {
 	SetAuthenticationScopes(scopes []string)
 
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
-	// This can be used, e.g. to obfuscate sensitive data in the response
+	// This can be used, e.g. to obfuscate sensitive data in the response.
+	// A renderer set on a WebSocket upgrade is shared by concurrent operations on that connection.
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
 
 	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
