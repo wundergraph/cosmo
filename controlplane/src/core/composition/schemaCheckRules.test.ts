@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import {
   enumValuesAreExhaustive,
   inaccessibleEnumValueChangesAreInvisible,
+  internalFederationTypeRemovalsAreInvisible,
   schemaCheckRules,
   typeSystemDirectiveRemovalsAreInvisible,
 } from './schemaCheckRules.js';
@@ -151,6 +152,30 @@ describe('Rule: type system directive removals are invisible', () => {
         newSDL: '',
         rules: [typeSystemDirectiveRemovalsAreInvisible],
         path: '@sensitive',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+});
+
+describe('Rule: internal federation type removals are invisible', () => {
+  test('Should mark a removed internal federation type as non breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'scalar openfed__FieldSet',
+        newSDL: '',
+        rules: [internalFederationTypeRemovalsAreInvisible],
+        path: 'openfed__FieldSet',
+      }),
+    ).toBe(CriticalityLevel.NonBreaking);
+  });
+
+  test('Should keep a removed type breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'type User { name: String }',
+        newSDL: '',
+        rules: [internalFederationTypeRemovalsAreInvisible],
+        path: 'User',
       }),
     ).toBe(CriticalityLevel.Breaking);
   });
