@@ -2,7 +2,7 @@
 
 Run `./run.sh` from this directory with Docker Compose available. The script builds wgc and a router containing the `translator` module, starts a stub subgraph, sends GraphQL requests, and removes the containers and config volume on exit.
 
-The subgraph returns `hello world` for greetings and `goodbye` for a farewell. On each config notification, the module scans the base, German, and French composed schemas for `@translate(language:)` on field definitions. It indexes rules by parent type and field name. The router echoes the selected feature flag in the response header. The module uses that header to select the field rules for the request. Its translator accepts `hello world` and a supported language code. Other strings and unknown languages produce an error.
+The subgraph returns `hello world` for greetings and `goodbye` for a farewell. On each config notification, the module scans the base, German, and French composed schemas for `@translate(language:)` on field definitions. It indexes rules by parent type and field name. The module looks up rules using the execution config bound to the request. If a reload has replaced the cache, the module reads the directives from that request’s own snapshot. Its translator accepts `hello world` and a supported language code. Other strings and unknown languages produce an error.
 
 The test checks the response body as well as the schema hashes, version, effective subgraph URL, and callback count. It exercises:
 

@@ -17,6 +17,14 @@ func TestExecutionConfig(t *testing.T) {
 	require.Equal(t, schema, cfg.Schema())
 	require.Equal(t, client, cfg.ClientSchema())
 
+	another := routerconfig.NewExecutionConfig("version", schema, client, subgraphs)
+	require.False(t, cfg == another, "separate graphs with identical contents need distinct cache keys")
+	var empty routerconfig.ExecutionConfig
+	require.Empty(t, empty.Version())
+	require.Empty(t, empty.Schema())
+	require.Empty(t, empty.ClientSchema())
+	require.Nil(t, empty.Subgraphs())
+
 	subgraphs[0].Name = "changed by producer"
 	cfg.Subgraphs()[0].Name = "changed by consumer"
 	require.Equal(t, []routerconfig.Subgraph{sg}, cfg.Subgraphs())

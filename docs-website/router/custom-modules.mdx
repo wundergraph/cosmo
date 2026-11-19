@@ -78,7 +78,6 @@ func (m *MyModule) OnConfigChange(ctx context.Context, config core.ModuleConfig)
     cfg := config.ExecutionConfig()
     schema := cfg.Schema()
     clientSchema := cfg.ClientSchema()
-    // Build metadata and publish it for request handlers.
     m.Logger.Info("Execution config updated",
         zap.String("version", cfg.Version()),
         zap.Int("subgraphs", len(cfg.Subgraphs())),
@@ -96,7 +95,7 @@ The execution config provides the following accessors.
 | --- | --- |
 | `Schema()` | The selected graph's composed router schema as GraphQL SDL. It preserves the exact execution-config text, including composed custom directives and inaccessible elements. Runtime introspection definitions are not appended. |
 | `ClientSchema()` | The SDL used for validation, normalization, and introspection. A separately composed client schema excludes inaccessible elements and filters custom directives. If no non-empty client schema is supplied, this returns `Schema()`, matching runtime behavior. Runtime introspection definitions are not appended. |
-| `Version()` | The execution config's supplied version string. It may be empty in older configs and is not a unique content identifier. Local `wgc router compose` uses a constant version. Hash the schema text when identifying contents or caching metadata. |
+| `Version()` | The execution config's supplied version string. It may be empty in older configs and is not a unique content identifier. Local `wgc router compose` uses a constant version. Use the snapshot itself as a cache key for graph-specific metadata. |
 | `Subgraphs()` | A detached slice of `routerconfig.Subgraph` values in config order. Each value exposes `ID`, `Name`, and `RoutingURL`. The URL includes local routing overrides and may be empty for a virtual subgraph. Modules can sort or edit their copy. |
 
 Snapshots can be retained after the callback and read concurrently. Reloads do not modify previously supplied snapshots. The separate `context.Context` controls work performed during the callback and should not be retained with config metadata.
@@ -112,9 +111,9 @@ if german, ok := config.FeatureFlagConfig("german"); ok {
 
 The hook is a notification and cannot reject a config. Handle metadata-building errors inside the module. It runs synchronously, so a slow hook delays startup or reload.
 
-<Warning>
-  Hooks can overlap requests using the previous graph. Synchronize access to derived metadata, for example by publishing immutable snapshots through an atomic pointer. Requests already in flight can observe the updated metadata.
-</Warning>
+In a request hook, `core.ExecutionConfigFromContext(ctx.Request().Context())` returns the snapshot for the graph serving that request, including its selected feature flag. The snapshot stays the same throughout the request, even if a config callback runs or the flag is removed. The accessor returns the zero value and `false` outside a graph request.
+
+Use the snapshot as the key when caching compiled directives. Two copies of the same snapshot compare equal. A rebuilt graph gets a distinct snapshot even if its version is unchanged. If a reload evicts an old cache entry while its graph is still serving requests, rebuild the missing entry from the request’s snapshot.
 
 See the [executable integration fixture](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/execution-config-change) for a module that discovers `@translate` on field definitions and renders translated greetings for the selected graph.
 

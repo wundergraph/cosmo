@@ -97,7 +97,7 @@ func readSnapshot(cfg routerconfig.ExecutionConfig, updates uint64) snapshot {
 }
 
 type translator struct {
-	current atomic.Pointer[map[string]snapshot]
+	current atomic.Pointer[map[routerconfig.ExecutionConfig]snapshot]
 	updates atomic.Uint64
 }
 
@@ -107,23 +107,25 @@ func (*translator) Module() core.ModuleInfo {
 
 func (m *translator) OnConfigChange(_ context.Context, cfg core.ModuleConfig) {
 	updates := m.updates.Add(1)
-	graphs := map[string]snapshot{"": readSnapshot(cfg.ExecutionConfig(), updates)}
+	base := cfg.ExecutionConfig()
+	graphs := map[routerconfig.ExecutionConfig]snapshot{base: readSnapshot(base, updates)}
 	for _, flag := range []string{"german", "french"} {
 		if graph, ok := cfg.FeatureFlagConfig(flag); ok {
-			graphs[flag] = readSnapshot(graph, updates)
+			graphs[graph] = readSnapshot(graph, updates)
 		}
 	}
 	m.current.Store(&graphs)
 }
 
 func (m *translator) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
-	if graphs := m.current.Load(); graphs != nil {
-		// The router echoes the selected flag in the response header.
-		headers := ctx.ResponseWriter().Header()
-		if selected, ok := (*graphs)[headers.Get("X-Feature-Flag")]; ok {
-			ctx.SetCustomFieldValueRenderer(selected.rules)
-			headers.Set("X-Execution-Config", selected.header)
+	if graph, ok := core.ExecutionConfigFromContext(ctx.Request().Context()); ok {
+		selected, cached := (*m.current.Load())[graph]
+		if !cached {
+			// A reload can replace the cache while this graph still serves requests.
+			selected = readSnapshot(graph, m.updates.Load())
 		}
+		ctx.SetCustomFieldValueRenderer(selected.rules)
+		ctx.ResponseWriter().Header().Set("X-Execution-Config", selected.header)
 	}
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }

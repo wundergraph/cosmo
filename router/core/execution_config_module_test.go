@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -21,8 +22,8 @@ type executionConfigTestModule struct {
 	provisioned bool
 	updates     []ModuleConfig
 	contexts    []context.Context
-	current     atomic.Value
 	beforeSwap  func()
+	beforeRead  func()
 }
 
 func (m *executionConfigTestModule) Module() ModuleInfo {
@@ -37,15 +38,17 @@ func (m *executionConfigTestModule) Provision(*ModuleContext) error {
 func (m *executionConfigTestModule) OnConfigChange(ctx context.Context, cfg ModuleConfig) {
 	m.updates = append(m.updates, cfg)
 	m.contexts = append(m.contexts, ctx)
-	m.current.Store(cfg)
 	if m.beforeSwap != nil {
 		m.beforeSwap()
 	}
 }
 
 func (m *executionConfigTestModule) Middleware(ctx RequestContext, next http.Handler) {
-	if snapshot := m.current.Load(); snapshot != nil {
-		ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(snapshot.(ModuleConfig).ExecutionConfig().Schema()))))
+	if m.beforeRead != nil && ctx.Request().Header.Get("X-Pause-Request") != "" {
+		m.beforeRead()
+	}
+	if cfg, ok := ExecutionConfigFromContext(ctx.Request().Context()); ok {
+		ctx.ResponseWriter().Header().Set("X-Supergraph-Hash", fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.Schema()))))
 	}
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
@@ -83,11 +86,12 @@ func newExecutionConfigTestRouter(t *testing.T, cfg *nodev1.RouterConfig, module
 	return r
 }
 
-func assertExecutionConfigRequest(t *testing.T, r *Router, sdl string) {
+func assertExecutionConfigRequest(t *testing.T, r *Router, sdl string, flag string) {
 	t.Helper()
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ hello }"}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(featureFlagHeader, flag)
 	r.httpServer.HttpServer().Handler.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 	require.NotContains(t, w.Body.String(), `"errors"`)
@@ -96,6 +100,10 @@ func assertExecutionConfigRequest(t *testing.T, r *Router, sdl string) {
 }
 
 func TestModuleExecutionConfigChange(t *testing.T) {
+	cfg, ok := ExecutionConfigFromContext(t.Context())
+	require.False(t, ok)
+	require.Equal(t, routerconfig.ExecutionConfig{}, cfg)
+
 	t.Run("initial load and reload expose router SDL before activation", func(t *testing.T) {
 		module := &executionConfigTestModule{}
 		cfg := executionConfigWithDirective()
@@ -105,7 +113,9 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 			if len(module.updates) == 1 {
 				require.Nil(t, r.httpServer.state.Load().graphServer)
 			} else {
-				require.Equal(t, cfg.Version, r.httpServer.state.Load().graphServer.baseRouterConfigVersion)
+				// The candidate notification has already run, but the old graph
+				// still accepts requests until this callback returns.
+				assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 			}
 		}
 		_, err := r.NewServer(t.Context())
@@ -115,7 +125,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		require.Equal(t, cfg.Version, module.updates[0].ExecutionConfig().Version())
 		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ExecutionConfig().ClientSchema())
 		require.Same(t, t.Context(), module.contexts[0])
-		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 
 		// Local composition can produce different SDL with the same version.
 		updated := proto.Clone(cfg).(*nodev1.RouterConfig)
@@ -126,7 +136,7 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[1].ExecutionConfig().Schema())
 		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ExecutionConfig().Schema())
 		require.Equal(t, updated.EngineConfig.GetGraphqlClientSchema(), module.updates[1].ExecutionConfig().ClientSchema())
-		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema, "")
 
 		// Config updates with identical SDL must still notify the module.
 		module.beforeSwap = nil
@@ -136,7 +146,55 @@ func TestModuleExecutionConfigChange(t *testing.T) {
 		require.Len(t, module.updates, 3)
 		require.Equal(t, configOnly.Version, module.updates[2].ExecutionConfig().Version())
 		require.Equal(t, updated.EngineConfig.GraphqlSchema, module.updates[2].ExecutionConfig().Schema())
-		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema, "")
+	})
+
+	t.Run("an old request first reads its snapshot after the replacement serves traffic", func(t *testing.T) {
+		cfg := executionConfigWithDirective()
+		entered, resume := make(chan struct{}), make(chan struct{})
+		release := sync.OnceFunc(func() { close(resume) })
+		defer release()
+		module := &executionConfigTestModule{beforeRead: func() {
+			close(entered)
+			<-resume
+		}}
+		r := newExecutionConfigTestRouter(t, cfg, module)
+		_, err := r.NewServer(t.Context())
+		require.NoError(t, err)
+		oldServer := r.httpServer.state.Load().graphServer
+
+		response := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ hello }"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Pause-Request", "true")
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			r.httpServer.HttpServer().Handler.ServeHTTP(response, req)
+		}()
+		select {
+		case <-entered:
+		case <-time.After(5 * time.Second):
+			t.Fatal("old request did not enter middleware")
+		}
+
+		updated := proto.Clone(cfg).(*nodev1.RouterConfig)
+		updated.EngineConfig.GraphqlSchema = strings.ReplaceAll(cfg.EngineConfig.GraphqlSchema, "reader", "writer")
+		reloaded := make(chan error, 1)
+		go func() { reloaded <- r.newServer(t.Context(), &routerconfig.Response{Config: updated}) }()
+		require.Eventually(t, func() bool { return r.httpServer.state.Load().graphServer != oldServer }, 5*time.Second, time.Millisecond)
+		assertExecutionConfigRequest(t, r, updated.EngineConfig.GraphqlSchema, "")
+		release()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("old request did not finish")
+		}
+		require.NoError(t, <-reloaded)
+		require.Equal(t, http.StatusOK, response.Code)
+		require.NotContains(t, response.Body.String(), `"errors"`)
+		require.Contains(t, response.Body.String(), `"hello"`)
+		require.Equal(t, fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.EngineConfig.GraphqlSchema))), response.Header().Get("X-Supergraph-Hash"))
 	})
 
 	t.Run("feature configs follow their mux across reloads", func(t *testing.T) {
@@ -195,6 +253,11 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 			require.Equal(t, routerconfig.ExecutionConfig{}, missing)
 		}
 
+		assertExecutionConfigRequest(t, r, de.Schema(), "german")
+		module.beforeSwap = func() {
+			// The new config has removed German. The old mux can still serve it.
+			assertExecutionConfigRequest(t, r, de.Schema(), "german")
+		}
 		next := proto.Clone(updated).(*nodev1.RouterConfig)
 		delete(next.FeatureFlagConfigs.ConfigByFeatureFlagName, "german")
 		require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{
@@ -206,7 +269,8 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 		require.Equal(t, routerconfig.ExecutionConfig{}, missing)
 		reused, ok := module.updates[2].FeatureFlagConfig("french")
 		require.True(t, ok)
-		require.Equal(t, fr, reused)
+		require.True(t, fr == reused, "reused graphs keep their snapshot identity")
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "german")
 		retained, ok := both.FeatureFlagConfig("german")
 		require.True(t, ok)
 		require.Equal(t, de, retained)
@@ -221,7 +285,7 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 		require.NoError(t, err)
 		require.Len(t, module.updates, 1)
 		require.Equal(t, cfg.EngineConfig.GraphqlSchema, module.updates[0].ExecutionConfig().ClientSchema())
-		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 	})
 
 	t.Run("failed startup does not notify", func(t *testing.T) {
@@ -246,7 +310,7 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 		invalid.EngineConfig.GraphqlSchema = "type Query {"
 		require.Error(t, r.newServer(t.Context(), &routerconfig.Response{Config: invalid}))
 		require.Len(t, module.updates, 1)
-		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 
 		invalid = proto.Clone(cfg).(*nodev1.RouterConfig)
 		invalidClientSchema := "type Query {"
@@ -254,7 +318,7 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 		require.Error(t, r.newServer(t.Context(), &routerconfig.Response{Config: invalid}))
 		require.Len(t, module.updates, 1)
 		require.Equal(t, cfg.EngineConfig.GetGraphqlClientSchema(), module.updates[0].ExecutionConfig().ClientSchema())
-		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 
 		// A failure after a valid base graph has been built must not notify either.
 		invalid = proto.Clone(cfg).(*nodev1.RouterConfig)
@@ -265,6 +329,6 @@ type Query { hello: String @translate(to: %q) }`, greeting)
 		}
 		require.Error(t, r.newServer(t.Context(), &routerconfig.Response{Config: invalid}))
 		require.Len(t, module.updates, 1)
-		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema)
+		assertExecutionConfigRequest(t, r, cfg.EngineConfig.GraphqlSchema, "")
 	})
 }

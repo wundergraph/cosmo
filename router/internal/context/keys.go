@@ -10,7 +10,7 @@ type ContextKey int
 
 const (
 	RequestContextKey ContextKey = iota
-	SubgraphResolverContextKey
+	RequestGraphKey
 	EngineLoaderHooksContextKey
 	FetchTimingKey
 )

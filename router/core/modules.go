@@ -202,8 +202,8 @@ func (*moduleConfig) isModuleConfig() {}
 // do not invoke it. The notification cannot reject a config.
 //
 // The hook can overlap requests using the previous graph. Modules must synchronize
-// access to derived metadata, for example by publishing immutable snapshots with
-// an atomic pointer. Requests already in flight can observe the updated metadata.
+// access to derived metadata and use ExecutionConfigFromContext to select the
+// snapshot for the request, even while a newer config is being activated.
 // A slow hook delays startup or reload. The config is an immutable snapshot that
 // can be retained independently of ctx. The context controls work performed by
 // the hook and should not be stored alongside the snapshot.

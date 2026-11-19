@@ -36,6 +36,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -1073,11 +1074,11 @@ func (s *graphServer) buildGraphMux(
 	// Currently, we only support custom attributes from the context for OTLP metrics
 	b := buildAttributesMap(s.metricConfig.Attributes)
 
-	// Enrich the request context with the subgraph information which is required for custom modules and tracing
-	subgraphResolver := NewSubgraphResolver(subgraphs)
+	// Bind requests to the execution config and subgraphs used by this mux.
+	graph := &requestGraph{config: gm.executionConfig, subgraphs: NewSubgraphResolver(subgraphs)}
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+			r = r.WithContext(context.WithValue(r.Context(), rcontext.RequestGraphKey, graph))
 
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
@@ -1749,7 +1750,8 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
+		wsCtx := context.WithValue(graphMuxCtx, rcontext.RequestGraphKey, graph)
+		wsMiddleware := NewWebsocketMiddleware(wsCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,

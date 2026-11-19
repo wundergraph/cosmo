@@ -27,6 +27,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	pubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -60,6 +61,18 @@ func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader)
 		Version:        clientVersion,
 		WGRequestToken: requestToken,
 	}
+}
+
+// ExecutionConfigFromContext returns the execution config of the graph selected
+// for this request, including feature-flag selection. Modules can pass
+// RequestContext.Request().Context(). The snapshot stays valid across reloads.
+// A context outside a graph request returns the zero value and false.
+func ExecutionConfigFromContext(ctx context.Context) (routerconfig.ExecutionConfig, bool) {
+	graph, ok := ctx.Value(rcontext.RequestGraphKey).(*requestGraph)
+	if !ok {
+		return routerconfig.ExecutionConfig{}, false
+	}
+	return graph.config, true
 }
 
 type RequestContext interface {
@@ -947,13 +960,10 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
-func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
-	return context.WithValue(ctx, rcontext.SubgraphResolverContextKey, resolver)
-}
-
-func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
-	resolver, _ := ctx.Value(rcontext.SubgraphResolverContextKey).(*SubgraphResolver)
-	return resolver
+// requestGraph is shared by requests routed to the same graph mux.
+type requestGraph struct {
+	config    routerconfig.ExecutionConfig
+	subgraphs *SubgraphResolver
 }
 
 type requestContextOptions struct {
@@ -975,6 +985,10 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		Request: expr.LoadRequest(opts.r),
 	}
 
+	var resolver *SubgraphResolver
+	if graph, ok := opts.r.Context().Value(rcontext.RequestGraphKey).(*requestGraph); ok {
+		resolver = graph.subgraphs
+	}
 	return &requestContext{
 		logger:         opts.requestLogger,
 		keys:           map[string]any{},
@@ -991,6 +1005,6 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
+		subgraphResolver:  resolver,
 	}
 }
