@@ -121,9 +121,8 @@ export default class SchemaGraphPruner {
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
     // filtering out the fields that are in grace period and the fields that were added in the proposed schema
-    const fieldsToBeChecked = allFields.filter((field) => {
-      return !fieldsInGracePeriod.some((f) => f.path === field.path) && !addedFields.some((f) => f.path === field.path);
-    });
+    const skippedPaths = new Set([...fieldsInGracePeriod, ...addedFields].map((f) => f.path));
+    const fieldsToBeChecked = allFields.filter((field) => !skippedPaths.has(field.path));
 
     if (fieldsToBeChecked.length === 0) {
       return [];
@@ -202,12 +201,8 @@ export default class SchemaGraphPruner {
     });
 
     // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
-    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => {
-      return (
-        !deprecatedFieldsInGracePeriod.some((f) => f.path === field.path) &&
-        !addedDeprecatedFields.some((f) => f.path === field.path)
-      );
-    });
+    const skippedPaths = new Set([...deprecatedFieldsInGracePeriod, ...addedDeprecatedFields].map((f) => f.path));
+    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => !skippedPaths.has(field.path));
 
     if (deprecatedFieldsToBeChecked.length === 0) {
       return [];
@@ -297,16 +292,11 @@ export default class SchemaGraphPruner {
       oldGraphQLSchema = undefined;
     }
 
-    const allDeprecatedFields = this.getAllFields({ schema: oldGraphQLSchema, onlyDeprecated: true });
-    const nonDeprecatedDeletedFields: SchemaDiff[] = [];
+    const deprecatedPaths = new Set(
+      this.getAllFields({ schema: oldGraphQLSchema, onlyDeprecated: true }).map((f) => f.path),
+    );
+    const nonDeprecatedDeletedFields = removedFields.filter((field) => !deprecatedPaths.has(field.path));
     const graphPruningIssues: GraphPruningIssueResult[] = [];
-
-    for (const removedField of removedFields) {
-      // getting all the fields that were removed without being deprecated first
-      if (!allDeprecatedFields.some((field) => field.path === removedField.path)) {
-        nonDeprecatedDeletedFields.push(removedField);
-      }
-    }
 
     for (const federatedGraph of federatedGraphs) {
       for (const field of nonDeprecatedDeletedFields) {
