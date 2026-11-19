@@ -5,6 +5,7 @@ import {
   enumValuesAreExhaustive,
   inaccessibleEnumValueChangesAreInvisible,
   schemaCheckRules,
+  typeSystemDirectiveRemovalsAreInvisible,
 } from './schemaCheckRules.js';
 
 const INACCESSIBLE_DEFINITION = 'directive @inaccessible on ENUM | ENUM_VALUE';
@@ -115,6 +116,41 @@ describe('Rule: @inaccessible enum value changes are invisible', () => {
         newSDL: 'enum Alphabet { A B }',
         rules: [inaccessibleEnumValueChangesAreInvisible],
         path: 'Alphabet.C',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+});
+
+describe('Rule: type system directive removals are invisible', () => {
+  test('Should mark a removed type system directive as non breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'directive @internal on FIELD_DEFINITION',
+        newSDL: '',
+        rules: [typeSystemDirectiveRemovalsAreInvisible],
+        path: '@internal',
+      }),
+    ).toBe(CriticalityLevel.NonBreaking);
+  });
+
+  test('Should keep a removed executable directive breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'directive @cached on FIELD',
+        newSDL: '',
+        rules: [typeSystemDirectiveRemovalsAreInvisible],
+        path: '@cached',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+
+  test('Should keep a removed variable definition directive breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'directive @sensitive on VARIABLE_DEFINITION',
+        newSDL: '',
+        rules: [typeSystemDirectiveRemovalsAreInvisible],
+        path: '@sensitive',
       }),
     ).toBe(CriticalityLevel.Breaking);
   });

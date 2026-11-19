@@ -1545,8 +1545,8 @@ type Category {
       test('Should not report a breaking change when removing an @inaccessible enum value', async () => {
         const checkResp = await checkAgainstLastPublishedSubgraph(
           client,
-          ['type Query { letter: Letter } enum Letter { A B @inaccessible C @inaccessible }'],
-          'type Query { letter: Letter } enum Letter { A B @inaccessible }',
+          ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B }',
         );
 
         expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
@@ -1557,9 +1557,9 @@ type Category {
           client,
           [
             'type Query { letter: Letter } enum Letter { A B C }',
-            'type Query { otherLetter: Letter } enum Letter { A B @inaccessible C @inaccessible }',
+            'type Query { otherLetter: Letter } enum Letter { A B C @inaccessible }',
           ],
-          'type Query { otherLetter: Letter } enum Letter { A B @inaccessible }',
+          'type Query { otherLetter: Letter } enum Letter { A B }',
         );
 
         expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
