@@ -68,11 +68,8 @@ func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader)
 // RequestContext.Request().Context(). The snapshot stays valid across reloads.
 // A context outside a graph request returns the zero value and false.
 func ExecutionConfigFromContext(ctx context.Context) (routerconfig.ExecutionConfig, bool) {
-	graph, ok := ctx.Value(rcontext.RequestGraphKey).(*requestGraph)
-	if !ok {
-		return routerconfig.ExecutionConfig{}, false
-	}
-	return graph.config, true
+	cfg, ok := ctx.Value(rcontext.ExecutionConfigKey).(routerconfig.ExecutionConfig)
+	return cfg, ok
 }
 
 type RequestContext interface {
@@ -960,13 +957,8 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
-// requestGraph is shared by requests routed to the same graph mux.
-type requestGraph struct {
-	config    routerconfig.ExecutionConfig
-	subgraphs *SubgraphResolver
-}
-
 type requestContextOptions struct {
+	subgraphResolver              *SubgraphResolver
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
 	metricSetAttributes           map[string]string
@@ -985,10 +977,6 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		Request: expr.LoadRequest(opts.r),
 	}
 
-	var resolver *SubgraphResolver
-	if graph, ok := opts.r.Context().Value(rcontext.RequestGraphKey).(*requestGraph); ok {
-		resolver = graph.subgraphs
-	}
 	return &requestContext{
 		logger:         opts.requestLogger,
 		keys:           map[string]any{},
@@ -1005,6 +993,6 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  resolver,
+		subgraphResolver:  opts.subgraphResolver,
 	}
 }

@@ -1069,14 +1069,12 @@ func (s *graphServer) buildGraphMux(
 	for i, sg := range subgraphs {
 		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
 	}
-	graph := &requestGraph{
-		config: routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
-			opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved),
-		subgraphs: NewSubgraphResolver(subgraphs),
-	}
+	executionConfig := routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
+		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
+	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(context.WithValue(r.Context(), rcontext.RequestGraphKey, graph))
+			r = r.WithContext(context.WithValue(r.Context(), rcontext.ExecutionConfigKey, executionConfig))
 
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
@@ -1084,6 +1082,7 @@ func (s *graphServer) buildGraphMux(
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
+				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
 				metricSetAttributes:           b,
@@ -1748,7 +1747,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsCtx := context.WithValue(graphMuxCtx, rcontext.RequestGraphKey, graph)
+		wsCtx := context.WithValue(graphMuxCtx, rcontext.ExecutionConfigKey, executionConfig)
 		wsMiddleware := NewWebsocketMiddleware(wsCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
