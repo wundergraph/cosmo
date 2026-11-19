@@ -1,5 +1,6 @@
 import { RocketIcon } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/button';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { hubLaunchUrl } from '@/lib/hub';
 
 export interface SandboxGraph {
@@ -8,17 +9,23 @@ export interface SandboxGraph {
   supportsFederation: boolean;
 }
 
-const launchUrlOf = (graph: SandboxGraph | undefined): string | undefined => {
+const useLaunchUrl = (graph: SandboxGraph | undefined): string | undefined => {
+  const organization = useCurrentOrganization();
   if (!graph || !graph.supportsFederation) {
     return undefined;
   }
 
-  return hubLaunchUrl({ hubUrl: process.env.NEXT_PUBLIC_HUB_URL, graph: graph.name, namespace: graph.namespace });
+  return hubLaunchUrl({
+    hubUrl: process.env.NEXT_PUBLIC_HUB_URL,
+    graph: graph.name,
+    namespace: graph.namespace,
+    organization: organization?.slug,
+  });
 };
 
 /** Opens Hub with a sandbox of the federated graph. Hidden when Studio has no Hub URL. */
 export const LaunchSandboxButton = ({ graph }: { graph: SandboxGraph | undefined }) => {
-  const launchUrl = launchUrlOf(graph);
+  const launchUrl = useLaunchUrl(graph);
   if (!launchUrl) {
     return null;
   }
@@ -35,7 +42,7 @@ export const LaunchSandboxButton = ({ graph }: { graph: SandboxGraph | undefined
 
 /** A pointer from the graph visualization to trying changes in a Hub sandbox. */
 export const LaunchSandboxNudge = ({ graph }: { graph: SandboxGraph | undefined }) => {
-  const launchUrl = launchUrlOf(graph);
+  const launchUrl = useLaunchUrl(graph);
   if (!launchUrl) {
     return null;
   }

@@ -23,6 +23,17 @@ describe('hubLaunchUrl', () => {
     );
   });
 
+  test('names the Cosmo organization so Hub can set it up', () => {
+    expect(
+      hubLaunchUrl({
+        hubUrl: 'https://hub.example.com',
+        graph: 'products',
+        namespace: 'prod',
+        organization: 'acme & co',
+      }),
+    ).toBe('https://hub.example.com/launch?graph=products&namespace=prod&organization=acme+%26+co');
+  });
+
   test('is undefined without a Hub URL or with the unreplaced Docker placeholder', () => {
     expect(hubLaunchUrl({ hubUrl: undefined, graph: 'products', namespace: 'prod' })).toBeUndefined();
     expect(hubLaunchUrl({ hubUrl: 'APP_NEXT_HUB_URL', graph: 'products', namespace: 'prod' })).toBeUndefined();
