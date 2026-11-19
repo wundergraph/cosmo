@@ -301,20 +301,16 @@ export class UsageRepository {
     const query = `
       WITH
         toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate,
-        distinct_field_usages AS (
-          SELECT DISTINCT FieldName, TypeNames
-          FROM gql_metrics_schema_usage_lite_1d_90d
-          WHERE
-              Timestamp >= startDate AND Timestamp <= endDate
-              AND OrganizationID = {organizationId:String}
-              AND FederatedGraphID = {federatedGraphId:String}
-              AND IsNull = false
-        )
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT DISTINCT
           concat(TypeName, '.', FieldName) AS path
-      FROM distinct_field_usages
+      FROM gql_metrics_schema_usage_lite_1d_90d
       ARRAY JOIN TypeNames AS TypeName
+      WHERE
+          Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
+          AND IsNull = false
     `;
 
     const params = {
