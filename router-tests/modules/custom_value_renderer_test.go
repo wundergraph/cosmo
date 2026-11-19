@@ -76,6 +76,9 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 		const subscription = "subscription { currentTime { unixTime timeStamp } }"
 
 		type frame struct{ kind, payload string }
+		renderedEmployee := frame{"next", `{"data":{"employee":{"id":123}}}`}
+		defaultEmployee := frame{"next", `{"data":{"employee":{"id":1}}}`}
+		complete := frame{kind: "complete"}
 		renderError := frame{"next", `{"errors":[{"message":"Internal server error"}],"data":null}`}
 		timeUpdate := frame{"next", `{"data":{"currentTime":{"unixTime":123,"timeStamp":"xxx"}}}`}
 		for _, tc := range []struct {
@@ -84,10 +87,10 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 			operation string
 			want      []frame
 		}{
-			{"query with renderer", render, query, []frame{{"next", `{"data":{"employee":{"id":123}}}`}}},
-			{"query on another connection", nil, query, []frame{{"next", `{"data":{"employee":{"id":1}}}`}}},
+			{"query with renderer", render, query, []frame{renderedEmployee}},
+			{"query on another connection", nil, query, []frame{defaultEmployee}},
 			{"subscription with renderer", render, subscription, []frame{timeUpdate}},
-			{"query reports renderer error before completion", failOnce, query, []frame{renderError, {"complete", ""}}},
+			{"query reports renderer error before completion", failOnce, query, []frame{renderError, complete}},
 			{"subscription recovers after renderer error", failOnce, subscription, []frame{renderError, timeUpdate}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -101,7 +104,9 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 					require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
 					require.Equal(t, "1", msg.ID)
 					require.Equal(t, want.kind, msg.Type)
-					if want.payload != "" {
+					if want.kind == "complete" {
+						require.Empty(t, msg.Payload)
+					} else {
 						require.JSONEq(t, want.payload, string(msg.Payload))
 					}
 				}
