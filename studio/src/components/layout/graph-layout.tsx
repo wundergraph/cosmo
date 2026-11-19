@@ -19,7 +19,7 @@ import {
   GetFederatedGraphByNameResponse,
   GetFederatedGraphsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { Fragment, createContext, useMemo } from 'react';
+import { Fragment, createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiBracketsCurlyBold, PiCubeFocus, PiDevices, PiGitBranch, PiToggleRight } from 'react-icons/pi';
@@ -35,6 +35,7 @@ import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { buildUrl } from '@/lib/build-url';
+import { LaunchSandboxButton } from '@/components/launch-sandbox';
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse['graph'];
@@ -288,6 +289,7 @@ export const GraphPageLayout = ({
   scrollRef,
   className,
 }: TitleLayoutProps) => {
+  const graphContext = useContext(GraphContext);
   const breadcrumb = (
     <>
       <span className="text-muted-foreground">/</span>
@@ -311,7 +313,10 @@ export const GraphPageLayout = ({
           )}
         >
           <WorkspaceSelector truncateNamespace={false}>{breadcrumb}</WorkspaceSelector>
-          <div className="justify-end">{items}</div>
+          <div className="flex items-center justify-end gap-2">
+            {items}
+            <LaunchSandboxButton graph={graphContext?.graph} />
+          </div>
         </div>
         {toolbar}
       </div>

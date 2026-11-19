@@ -6,6 +6,7 @@ import { CompositionErrorsDialog } from '@/components/composition-errors-dialog'
 import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
 import { RunRouterCommand } from '@/components/federatedgraphs-cards';
 import GraphVisualization from '@/components/graph-visualization';
+import { LaunchSandboxNudge } from '@/components/launch-sandbox';
 import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
 import { MostRequested, RequestChart } from '@/components/operations-overview';
 import { OverviewToolbar } from '@/components/overview/OverviewToolbar';
@@ -358,6 +359,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 supportsFederation={graphContext?.graph?.supportsFederation ?? true}
               />
             </ReactFlowProvider>
+            <LaunchSandboxNudge graph={graphContext?.graph} />
           </Card>
         </div>
         <div className="lg:col-span-1">
