@@ -89,6 +89,7 @@ export interface BuildConfig {
   };
   prometheus?: MetricsOptions;
   openaiAPIKey?: string;
+  apolloAPIURL?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
   production?: boolean;
@@ -665,6 +666,7 @@ export default async function build(opts: BuildConfig) {
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
       openaiApiKey: opts.openaiAPIKey,
+      apolloApiUrl: opts.apolloAPIURL,
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
