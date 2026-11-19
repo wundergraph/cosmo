@@ -1670,7 +1670,7 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
-	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
+	executor.Resolver.SetAsyncErrorWriter(subscriptionErrorWriter{formatter: graphqlHandler})
 
 	operationBlocker, err := NewOperationBlocker(&OperationBlockerOptions{
 		BlockMutations: BlockMutationOptions{

@@ -777,6 +777,19 @@ func (h *WebsocketHandler) closeAllConnections() {
 	}
 }
 
+// The resolver uses one error callback for HTTP and WebSocket subscriptions.
+type subscriptionErrorWriter struct {
+	formatter resolve.AsyncErrorWriter
+}
+
+func (w subscriptionErrorWriter) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, out io.Writer) {
+	if ws, ok := out.(*websocketResponseWriter); ok {
+		ws.writeError(ctx, err, res, w.formatter)
+		return
+	}
+	w.formatter.WriteError(ctx, err, res, out)
+}
+
 type websocketResponseWriter struct {
 	id              string
 	protocol        wsproto.Proto
@@ -871,9 +884,11 @@ func (rw *websocketResponseWriter) RenderFieldValue(ctx *resolve.Context, value 
 	return rw.renderErr
 }
 
-func (rw *websocketResponseWriter) discardPartialResult() {
+func (rw *websocketResponseWriter) writeError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, formatter resolve.AsyncErrorWriter) {
+	// Start a fresh frame even if formatting the replacement response fails.
 	rw.buf.Reset()
 	rw.renderErr = nil
+	formatter.WriteError(ctx, err, res, rw)
 }
 
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
@@ -1349,7 +1364,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		info, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
+			rw.writeError(resolveCtx, err, p.Response, h.graphqlHandler)
 		}
 		if info != nil {
 			reqContext.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime

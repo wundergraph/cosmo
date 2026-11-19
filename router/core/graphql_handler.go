@@ -558,10 +558,6 @@ func (h *GraphQLHandler) WriteTerminalError(ctx *resolve.Context, err error, res
 }
 
 func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, terminal bool) {
-	// The resolver can deliver an error to the same writer that holds the unfinished result.
-	if pending, ok := w.(interface{ discardPartialResult() }); ok {
-		pending.discardPartialResult()
-	}
 	reqContext := getRequestContext(ctx.Context())
 
 	if reqContext == nil {
