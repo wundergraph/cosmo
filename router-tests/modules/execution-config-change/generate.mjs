@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 const schema = readFileSync('/fixtures/schema.graphql', 'utf8');
 const composition = readFileSync('/fixtures/composition.yaml', 'utf8');
-const directory = mkdtempSync(join(tmpdir(), 'schema-hook-'));
+const directory = mkdtempSync(join(tmpdir(), 'execution-config-'));
 const schemaForLanguage = (language) =>
   schema.replaceAll('@translate(language: "es")', `@translate(language: "${language}")`);
 const changed = schemaForLanguage('it');

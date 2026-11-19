@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/pkg/errors"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"go.uber.org/zap"
@@ -163,52 +162,6 @@ type SpanNameFormatterProvider interface {
 type Provisioner interface {
 	// Provision is called before the server starts
 	Provision(*ModuleContext) error
-}
-
-// ModuleConfig is the read-only configuration snapshot passed to a ConfigHandler.
-// Modules may retain it after the callback and read it concurrently. The router
-// supplies the implementation so future releases can add config accessors.
-type ModuleConfig interface {
-	// ExecutionConfig returns the base graph's execution config for this snapshot.
-	ExecutionConfig() routerconfig.ExecutionConfig
-	// FeatureFlagConfig returns the execution config for the exact name of an
-	// active feature flag. An empty or unknown name returns the zero value and false.
-	FeatureFlagConfig(name string) (routerconfig.ExecutionConfig, bool)
-
-	isModuleConfig()
-}
-
-// The empty key identifies the base graph, as it does in graphServer.graphMuxList.
-type moduleConfig struct {
-	graphs map[string]routerconfig.ExecutionConfig
-}
-
-func (c *moduleConfig) ExecutionConfig() routerconfig.ExecutionConfig { return c.graphs[""] }
-
-func (c *moduleConfig) FeatureFlagConfig(name string) (routerconfig.ExecutionConfig, bool) {
-	if name == "" {
-		return routerconfig.ExecutionConfig{}, false
-	}
-	cfg, ok := c.graphs[name]
-	return cfg, ok
-}
-
-func (*moduleConfig) isModuleConfig() {}
-
-// ConfigHandler observes the initial configuration and every successful
-// execution config reload.
-// The hook runs synchronously, in module priority order, after the new graph
-// server has been built and before it starts serving requests. Invalid configs
-// do not invoke it. The notification cannot reject a config.
-//
-// The hook can overlap requests using the previous graph. Modules must synchronize
-// access to derived metadata and use ExecutionConfigFromContext to select the
-// snapshot for the request, even while a newer config is being activated.
-// A slow hook delays startup or reload. The config is an immutable snapshot that
-// can be retained independently of ctx. The context controls work performed by
-// the hook and should not be stored alongside the snapshot.
-type ConfigHandler interface {
-	OnConfigChange(ctx stdContext.Context, cfg ModuleConfig)
 }
 
 type Cleaner interface {

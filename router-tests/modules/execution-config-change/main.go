@@ -2,13 +2,14 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"sync/atomic"
+	"sync"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 
 	routercmd "github.com/wundergraph/cosmo/router/cmd"
 	"github.com/wundergraph/cosmo/router/core"
@@ -65,7 +66,7 @@ type snapshot struct {
 	header string
 }
 
-func readSnapshot(cfg routerconfig.ExecutionConfig, updates uint64) snapshot {
+func readSnapshot(cfg routerconfig.ExecutionConfig) snapshot {
 	doc, report := astparser.ParseGraphqlDocumentString(cfg.Schema())
 	if report.HasErrors() {
 		panic(report.Error())
@@ -86,7 +87,7 @@ func readSnapshot(cfg routerconfig.ExecutionConfig, updates uint64) snapshot {
 		}
 	}
 	data, err := json.Marshal(map[string]any{
-		"version": cfg.Version(), "updates": updates, "subgraphs": cfg.Subgraphs(),
+		"version": cfg.Version(), "subgraphs": cfg.Subgraphs(),
 		"schema":       fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.Schema()))),
 		"clientSchema": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.ClientSchema()))),
 	})
@@ -97,33 +98,34 @@ func readSnapshot(cfg routerconfig.ExecutionConfig, updates uint64) snapshot {
 }
 
 type translator struct {
-	current atomic.Pointer[map[routerconfig.ExecutionConfig]snapshot]
-	updates atomic.Uint64
+	cache *lru.Cache[routerconfig.ExecutionConfig, func() snapshot]
 }
 
 func (*translator) Module() core.ModuleInfo {
 	return core.ModuleInfo{ID: "translator", New: func() core.Module { return &translator{} }}
 }
 
-func (m *translator) OnConfigChange(_ context.Context, cfg core.ModuleConfig) {
-	updates := m.updates.Add(1)
-	base := cfg.ExecutionConfig()
-	graphs := map[routerconfig.ExecutionConfig]snapshot{base: readSnapshot(base, updates)}
-	for _, flag := range []string{"german", "french"} {
-		if graph, ok := cfg.FeatureFlagConfig(flag); ok {
-			graphs[graph] = readSnapshot(graph, updates)
-		}
+func (m *translator) Provision(*core.ModuleContext) error {
+	cache, err := lru.New[routerconfig.ExecutionConfig, func() snapshot](8)
+	m.cache = cache
+	return err
+}
+
+func (m *translator) snapshotFor(cfg routerconfig.ExecutionConfig) snapshot {
+	if load, ok := m.cache.Get(cfg); ok {
+		return load()
 	}
-	m.current.Store(&graphs)
+	// Concurrent first requests share one compilation for this cache entry.
+	load := sync.OnceValue(func() snapshot { return readSnapshot(cfg) })
+	if existing, ok, _ := m.cache.PeekOrAdd(cfg, load); ok {
+		return existing()
+	}
+	return load()
 }
 
 func (m *translator) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
 	if graph, ok := core.ExecutionConfigFromContext(ctx.Request().Context()); ok {
-		selected, cached := (*m.current.Load())[graph]
-		if !cached {
-			// A reload can replace the cache while this graph still serves requests.
-			selected = readSnapshot(graph, m.updates.Load())
-		}
+		selected := m.snapshotFor(graph)
 		ctx.SetCustomFieldValueRenderer(selected.rules)
 		ctx.ResponseWriter().Header().Set("X-Execution-Config", selected.header)
 	}
@@ -131,7 +133,7 @@ func (m *translator) RouterOnRequest(ctx core.RequestContext, next http.Handler)
 }
 
 var (
-	_ core.ConfigHandler          = (*translator)(nil)
+	_ core.Provisioner            = (*translator)(nil)
 	_ core.RouterOnRequestHandler = (*translator)(nil)
 )
 

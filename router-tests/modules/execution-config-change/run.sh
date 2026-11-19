@@ -2,7 +2,7 @@
 set -euo pipefail
 
 fixture_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-project="cosmo-schema-hook-${RANDOM}"
+project="cosmo-execution-config-${RANDOM}"
 compose=(docker compose -p "$project" -f "$fixture_dir/compose.yaml")
 cleanup() {
   result=$?

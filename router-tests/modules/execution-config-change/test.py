@@ -42,8 +42,8 @@ def digest(text):
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-class ExecutionConfigHookTest(unittest.TestCase):
-    def assert_graph(self, name, translated, updates, flag="", selected="", renamed=False, override=None):
+class ExecutionConfigTest(unittest.TestCase):
+    def assert_graph(self, name, translated, flag="", selected="", renamed=False, override=None):
         config = json.loads((DATA / f"{name}.json").read_text())
         if selected:
             config = config["featureFlagConfigs"]["configByFeatureFlagName"][selected]
@@ -58,7 +58,7 @@ class ExecutionConfigHookTest(unittest.TestCase):
         client = config["engineConfig"].get("graphqlClientSchema") or schema
         sg, = config["subgraphs"]
         self.assertEqual(json.loads(headers["X-Execution-Config"] or "null"), {
-            "version": config["version"], "updates": updates,
+            "version": config["version"],
             "schema": digest(schema), "clientSchema": digest(client),
             "subgraphs": [{"ID": sg["id"], "Name": sg["name"], "RoutingURL": override or sg["routingUrl"]}],
         })
@@ -67,26 +67,26 @@ class ExecutionConfigHookTest(unittest.TestCase):
         _, raw = query(url="http://subgraph:4001/graphql")
         self.assertEqual(raw["data"]["greeting"], HELLO)
         self.assertEqual(raw["data"]["card"]["caption"], HELLO)
-        self.assert_graph("initial", "Hola mundo", 1)
+        self.assert_graph("initial", "Hola mundo")
         introspection = "{ __schema { directives { name } } }"
         _, schema = query(introspection)
         self.assertNotIn("translate", [d["name"] for d in schema["data"]["__schema"]["directives"]])
 
         activate("changed")
-        wait_for(lambda: self.assert_graph("changed", "Ciao mondo", 2))
+        wait_for(lambda: self.assert_graph("changed", "Ciao mondo"))
         activate("routing")
-        wait_for(lambda: self.assert_graph("routing", "Ciao mondo", 3))
+        wait_for(lambda: self.assert_graph("routing", "Ciao mondo"))
 
         offset = (DATA / "router.log").stat().st_size
         activate("invalid")
         wait_for(lambda: self.assertIn(b"Failed to update server with new config", (DATA / "router.log").read_bytes()[offset:]))
-        self.assert_graph("routing", "Ciao mondo", 3)
+        self.assert_graph("routing", "Ciao mondo")
 
         activate("languages")
-        wait_for(lambda: self.assert_graph("languages", "Hallo Welt", 4, flag="german", selected="german"))
-        self.assert_graph("languages", "Bonjour le monde", 4, flag="french", selected="french")
-        self.assert_graph("languages", "Hola mundo", 4)
-        self.assert_graph("languages", "Hola mundo", 4, flag="unknown")
+        wait_for(lambda: self.assert_graph("languages", "Hallo Welt", flag="german", selected="german"))
+        self.assert_graph("languages", "Bonjour le monde", flag="french", selected="french")
+        self.assert_graph("languages", "Hola mundo")
+        self.assert_graph("languages", "Hola mundo", flag="unknown")
 
         for field, source in [("farewell", "goodbye"), ("unsupportedLanguage", HELLO)]:
             with self.subTest(field=field):
@@ -100,16 +100,16 @@ class ExecutionConfigHookTest(unittest.TestCase):
                     self.assertEqual(json.load(response)["errors"], [{"message": "Internal server error"}])
 
         activate("renamed")
-        wait_for(lambda: self.assert_graph("renamed", "Hola mundo", 5, flag="german", renamed=True))
+        wait_for(lambda: self.assert_graph("renamed", "Hola mundo", flag="german", renamed=True))
         activate("fallback")
-        wait_for(lambda: self.assert_graph("fallback", "Hola mundo", 6))
+        wait_for(lambda: self.assert_graph("fallback", "Hola mundo"))
         _, schema = query(introspection)
         self.assertIn("translate", [d["name"] for d in schema["data"]["__schema"]["directives"]])
 
         activate("overridden")
-        wait_for(lambda: self.assert_graph("overridden", "Hola mundo", 7, override="http://subgraph:4001/local"))
+        wait_for(lambda: self.assert_graph("overridden", "Hola mundo", override="http://subgraph:4001/local"))
         activate("uncomposed")
-        wait_for(lambda: self.assert_graph("uncomposed", HELLO, 8))
+        wait_for(lambda: self.assert_graph("uncomposed", HELLO))
 
 
 if __name__ == "__main__":

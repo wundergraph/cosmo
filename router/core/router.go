@@ -686,16 +686,6 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 		return err
 	}
 
-	cfg := &moduleConfig{graphs: make(map[string]routerconfig.ExecutionConfig, len(server.graphMuxList))}
-	for name, mux := range server.graphMuxList {
-		cfg.graphs[name] = mux.executionConfig
-	}
-	for _, module := range r.modules {
-		if handler, ok := module.(ConfigHandler); ok {
-			handler.OnConfigChange(ctx, cfg)
-		}
-	}
-
 	r.httpServer.SwapGraphServer(ctx, server)
 
 	// Cleanup any unused feature flags in case a feature flag was removed

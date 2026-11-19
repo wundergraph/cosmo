@@ -3,7 +3,7 @@ package routerconfig
 import "slices"
 
 // ExecutionConfig is a read-only snapshot of one graph's execution config.
-// Modules may retain it after a callback returns and read it concurrently.
+// Modules may retain it after a request completes and read it concurrently.
 // Copies compare equal when they refer to the same snapshot, including when a
 // graph is reused on reload. A newly built graph has its own snapshot even if
 // its version or schema matches. The zero value has empty accessors.

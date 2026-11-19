@@ -680,9 +680,6 @@ type graphMux struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	// Captured after routing overrides and retained when this mux is reused.
-	executionConfig routerconfig.ExecutionConfig
-
 	mux       *chi.Mux
 	reused    atomic.Bool
 	finalized atomic.Bool
@@ -1016,13 +1013,6 @@ func (s *graphServer) buildGraphMux(
 		return nil, err
 	}
 
-	resolved := make([]routerconfig.Subgraph, len(subgraphs))
-	for i, sg := range subgraphs {
-		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
-	}
-	gm.executionConfig = routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
-		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
-
 	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
 		return nil, err
 	}
@@ -1075,7 +1065,15 @@ func (s *graphServer) buildGraphMux(
 	b := buildAttributesMap(s.metricConfig.Attributes)
 
 	// Bind requests to the execution config and subgraphs used by this mux.
-	graph := &requestGraph{config: gm.executionConfig, subgraphs: NewSubgraphResolver(subgraphs)}
+	resolved := make([]routerconfig.Subgraph, len(subgraphs))
+	for i, sg := range subgraphs {
+		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
+	}
+	graph := &requestGraph{
+		config: routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
+			opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved),
+		subgraphs: NewSubgraphResolver(subgraphs),
+	}
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(context.WithValue(r.Context(), rcontext.RequestGraphKey, graph))
