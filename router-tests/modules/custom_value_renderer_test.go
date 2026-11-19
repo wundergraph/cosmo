@@ -71,15 +71,24 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 		RouterOptions: []core.Option{core.WithCustomModules(&customvaluerenderer.RouterCustomValueRendererModule{})},
 	}, func(t *testing.T, env *testenv.Environment) {
 		render := http.Header{"X-Custom-Value-Renderer": {"true"}}
+		failOnce := http.Header{"X-Custom-Value-Renderer": {"fail-once"}}
+		const query = "{ employee(id: 1) { id } }"
+		const subscription = "subscription { currentTime { unixTime timeStamp } }"
+
+		type frame struct{ kind, payload string }
+		renderError := frame{"next", `{"errors":[{"message":"Internal server error"}],"data":null}`}
+		timeUpdate := frame{"next", `{"data":{"currentTime":{"unixTime":123,"timeStamp":"xxx"}}}`}
 		for _, tc := range []struct {
 			name      string
 			header    http.Header
 			operation string
-			want      string
+			want      []frame
 		}{
-			{"query with renderer", render, "{ employee(id: 1) { id } }", `{"data":{"employee":{"id":123}}}`},
-			{"query on another connection", nil, "{ employee(id: 1) { id } }", `{"data":{"employee":{"id":1}}}`},
-			{"subscription with renderer", render, "subscription { currentTime { unixTime timeStamp } }", `{"data":{"currentTime":{"unixTime":123,"timeStamp":"xxx"}}}`},
+			{"query with renderer", render, query, []frame{{"next", `{"data":{"employee":{"id":123}}}`}}},
+			{"query on another connection", nil, query, []frame{{"next", `{"data":{"employee":{"id":1}}}`}}},
+			{"subscription with renderer", render, subscription, []frame{timeUpdate}},
+			{"query reports renderer error before completion", failOnce, query, []frame{renderError, {"complete", ""}}},
+			{"subscription recovers after renderer error", failOnce, subscription, []frame{renderError, timeUpdate}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				conn := env.InitGraphQLWebSocketConnection(tc.header, nil, nil)
@@ -87,10 +96,15 @@ func TestWebSocketCustomValueRenderer(t *testing.T) {
 				payload, err := json.Marshal(testenv.GraphQLRequest{Query: tc.operation})
 				require.NoError(t, err)
 				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "subscribe", Payload: payload}))
-				var msg testenv.WebSocketMessage
-				require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-				require.Equal(t, "next", msg.Type)
-				require.JSONEq(t, tc.want, string(msg.Payload))
+				for _, want := range tc.want {
+					var msg testenv.WebSocketMessage
+					require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, want.kind, msg.Type)
+					if want.payload != "" {
+						require.JSONEq(t, want.payload, string(msg.Payload))
+					}
+				}
 			})
 		}
 	})
