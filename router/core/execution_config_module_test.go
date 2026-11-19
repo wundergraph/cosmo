@@ -79,6 +79,10 @@ func TestExecutionConfigFromContext(t *testing.T) {
 	cfg, ok := ExecutionConfigFromContext(t.Context())
 	require.False(t, ok)
 	require.Equal(t, routerconfig.ExecutionConfig{}, cfg)
+	require.Empty(t, cfg.Version())
+	require.Empty(t, cfg.Schema())
+	require.Empty(t, cfg.ClientSchema())
+	require.Nil(t, cfg.Subgraphs())
 
 	t.Run("an old request first reads its snapshot after the replacement serves traffic", func(t *testing.T) {
 		cfg := executionConfigWithDirective()
