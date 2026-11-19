@@ -546,6 +546,10 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType Oper
 // per-update contract in the resolver. Terminal subscription failures should
 // call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	if ws, ok := w.(*websocketResponseWriter); ok {
+		// The resolver reuses the failed frame's writer for the error response.
+		ws.resetFrame()
+	}
 	h.writeError(ctx, err, res, w, false)
 }
 
