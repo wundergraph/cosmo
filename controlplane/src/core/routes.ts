@@ -47,6 +47,7 @@ export interface RouterOptions {
   mailerClient?: Mailer;
   billingDefaultPlanId?: string;
   openaiApiKey?: string;
+  apolloApiUrl?: string;
   queues: {
     readmeQueue: AIGraphReadmeQueue;
     deleteOrganizationQueue: DeleteOrganizationQueue;
