@@ -703,6 +703,10 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 			requestLogger.Error("Unable to marshal error response", zap.Error(encErr))
 			return
 		}
+		if ws, ok := sub.(*websocketResponseWriter); ok {
+			// Rendering can fail partway through a frame. The error replaces that result.
+			ws.buf.Reset()
+		}
 		if terminal || isTerminalSubscriptionError(err) {
 			sub.Error(data)
 			return
