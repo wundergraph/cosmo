@@ -87,7 +87,25 @@ func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
 | `Version()` | The version supplied by the execution config. It can be empty or shared by multiple graphs. |
 | `Subgraphs()` | Subgraphs in config order, with each subgraph’s `ID`, `Name`, and effective `RoutingURL`, including local routing overrides. Modules can modify the returned slice. |
 
-To expose a custom field directive to modules, import it with `@link` and include it with `@composeDirective` in the subgraph schema. Read the field annotations from `Schema()`. Composition can omit a directive applied to the `schema` definition even when it preserves the same directive on fields.
+To expose a custom field directive to modules, import it with `@link` and include it with `@composeDirective` in the subgraph schema. This subgraph records which team owns its schema and its `Query.stock` field.
+
+```graphql
+schema
+  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@composeDirective"])
+  @link(url: "https://example.com/ownership/v1.0", import: ["@owner"])
+  @composeDirective(name: "@owner")
+  @owner(team: "platform") {
+  query: Query
+}
+
+directive @owner(team: String!) on SCHEMA | FIELD_DEFINITION
+
+type Query {
+  stock: Int! @owner(team: "inventory")
+}
+```
+
+A module can parse `cfg.Schema()` and read `@owner(team: "inventory")` from the `Query.stock` field definition. Composition omits the schema-level `@owner(team: "platform")` annotation in this example.
 
 Outside a graph request the accessor returns the zero value. If your module caches data derived from the schema, use the snapshot itself as the key. Requests served by the same graph share a snapshot, and a rebuilt graph gets a distinct key even when its version is unchanged. Bound the cache so retired schemas can be collected.
 
