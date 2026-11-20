@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
@@ -28,10 +29,10 @@ func TestExecutionConfigFromContext(t *testing.T) {
 	t.Parallel()
 
 	missing := ExecutionConfigFromContext(t.Context())
-	require.Nil(t, missing)
-	require.Empty(t, missing.Schema())
-	require.Empty(t, missing.ClientSchema())
-	require.Nil(t, missing.Subgraphs())
+	assert.Nil(t, missing)
+	assert.Empty(t, missing.Schema())
+	assert.Empty(t, missing.ClientSchema())
+	assert.Nil(t, missing.Subgraphs())
 
 	base := routerconfig.GetDefaultConfig()
 	flagged := routerconfig.GetDefaultConfig()
@@ -52,7 +53,7 @@ func TestExecutionConfigFromContext(t *testing.T) {
 		WithCustomModules(module),
 	)
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, r.Shutdown(context.Background())) })
+	t.Cleanup(func() { assert.NoError(t, r.Shutdown(context.Background())) })
 	_, err = r.NewServer(t.Context())
 	require.NoError(t, err)
 
@@ -67,7 +68,7 @@ func TestExecutionConfigFromContext(t *testing.T) {
 	}
 
 	baseConfig := ExecutionConfigFromContext(request(""))
-	require.NotNil(t, baseConfig)
+	assert.NotNil(t, baseConfig)
 	oldRequest := request("preview")
 	otherPreviewRequest := request("preview")
 	require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{
@@ -78,15 +79,15 @@ func TestExecutionConfigFromContext(t *testing.T) {
 	// Once the flag is removed, new requests fall back to base. The old
 	// request still identifies its graph when first read after the reload.
 	fallback := ExecutionConfigFromContext(request("preview"))
-	require.Equal(t, base.EngineConfig.GraphqlSchema, fallback.Schema())
-	require.Same(t, baseConfig, fallback, "the base graph was reused")
+	assert.Equal(t, base.EngineConfig.GraphqlSchema, fallback.Schema())
+	assert.Same(t, baseConfig, fallback, "the base graph was reused")
 	oldConfig := ExecutionConfigFromContext(oldRequest)
-	require.Equal(t, flagged.EngineConfig.GraphqlSchema, oldConfig.Schema())
-	require.NotSame(t, baseConfig, oldConfig, "the flag and base graph share a version")
-	require.Same(t, oldConfig, ExecutionConfigFromContext(otherPreviewRequest))
+	assert.Equal(t, flagged.EngineConfig.GraphqlSchema, oldConfig.Schema())
+	assert.NotSame(t, baseConfig, oldConfig, "the flag and base graph share a version")
+	assert.Same(t, oldConfig, ExecutionConfigFromContext(otherPreviewRequest))
 
 	require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{Config: base}))
 	rebuilt := ExecutionConfigFromContext(request(""))
-	require.NotNil(t, rebuilt)
-	require.NotSame(t, baseConfig, rebuilt, "rebuilding the identical config creates a new snapshot")
+	assert.NotNil(t, rebuilt)
+	assert.NotSame(t, baseConfig, rebuilt, "rebuilding the identical config creates a new snapshot")
 }
