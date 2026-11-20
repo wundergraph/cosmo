@@ -1,6 +1,10 @@
 import type { ValidationResult } from '@wundergraph/protographic';
+import logSymbols from 'log-symbols';
 import Spinner from 'ora';
 import pc from 'picocolors';
+
+// Shown until users are used to proto3 optional replacing the wrapper types of earlier versions
+export const OPTIONAL_SCALARS_INFO = `Nullable scalars are now generated as proto3 optional fields instead of google.protobuf wrapper types. Pass ${pc.bold('--legacy-wrapper-types')} to keep generating wrapper types.`;
 
 /**
  * Renders a tree-formatted result display
@@ -9,6 +13,7 @@ import pc from 'picocolors';
  * @param success Whether the operation was successful
  * @param name The name of the item (e.g. plugin name)
  * @param details Key-value pairs of details to display
+ * @param options.infos Notes rendered below the tree
  */
 export function renderResultTree(
   spinner: ReturnType<typeof Spinner>,
@@ -16,6 +21,7 @@ export function renderResultTree(
   success: boolean,
   name: string,
   details: Record<string, string>,
+  options: { infos?: string[] } = {},
 ) {
   const state = success ? pc.green('success') : pc.red('failed');
   const symbol = success ? pc.green('[●]') : pc.red('[●]');
@@ -25,42 +31,21 @@ export function renderResultTree(
     text: pc.bold(title),
   });
 
-  // Build the tree with consistent formatting
+  const rows = Object.entries({ name, state, ...details });
+  // Pad the keys so all values start in the same column
+  const keyWidth = Math.max(...rows.map(([key]) => key.length));
+
   let output = ` ${pc.dim('│')}`;
+  for (const [index, [key, value]] of rows.entries()) {
+    const connector = index === rows.length - 1 ? '└─' : '├─';
+    output += `\n ${pc.dim(`${connector} ${`${key}:`.padEnd(keyWidth + 1)}`)} ${value}`;
+  }
 
-  // Add the name and state first (these are always present)
-  output += `\n ${pc.dim('├────────── name')}: ${name}`;
-  output += `\n ${pc.dim('├───────── state')}: ${state}`;
-
-  // Dynamically generate key formatters based on actual keys
-  const keys = Object.keys(details);
-  const keyFormatters: Record<string, string> = {};
-
-  // Generate dynamic formatters for each key
-  for (const key of [...keys, 'name', 'state']) {
-    // Calculate the number of dashes needed to align all values
-    let dashCount = 14 - key.length;
-    if (dashCount < 0) {
-      dashCount = 0;
+  if (options.infos?.length) {
+    output += '\n';
+    for (const info of options.infos) {
+      output += `\n ${logSymbols.info} ${info}`;
     }
-    keyFormatters[key] = '─'.repeat(dashCount) + ' ' + key;
-  }
-
-  // Apply fixed formatters for the standard keys
-  keyFormatters.name = '────────── name';
-  keyFormatters.state = '───────── state';
-
-  // Add all the other details except the last one
-  for (const key of keys.slice(0, -1)) {
-    const formattedKey = keyFormatters[key];
-    output += `\n ${pc.dim('├' + formattedKey)}: ${details[key]}`;
-  }
-
-  // Add the last detail with the corner character
-  if (keys.length > 0) {
-    const lastKey = keys.at(-1);
-    const formattedKey = keyFormatters[lastKey as string];
-    output += `\n ${pc.dim('└' + formattedKey)}: ${details[lastKey as string]}`;
   }
 
   console.log(output);
