@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -228,7 +229,7 @@ func TestResponseCacheZeroFallbackTTL(t *testing.T) {
 				for range 2 {
 					env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 				}
-				require.EqualValues(t, tc.wantRequests, env.SubgraphRequestCount.Mood.Load())
+				assert.EqualValues(t, tc.wantRequests, env.SubgraphRequestCount.Mood.Load())
 			})
 		})
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -66,10 +67,10 @@ func TestResponseCacheSettings(t *testing.T) {
 		})
 		first := s.options(headerCtx, failing(t)).Subgraphs
 		second := s.options(headerCtx, failing(t)).Subgraphs
-		require.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(second).Pointer(), "the same map every request")
-		require.Equal(t, new(time.Hour), first["mood"].DefaultTTL)
-		require.False(t, first["mood"].Disabled)
-		require.True(t, first["employees"].Disabled)
+		assert.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(second).Pointer(), "the same map every request")
+		assert.Equal(t, new(time.Hour), first["mood"].DefaultTTL)
+		assert.False(t, first["mood"].Disabled)
+		assert.True(t, first["employees"].Disabled)
 	})
 
 	t.Run("an entry's private_id is resolved per request and replaces all's", func(t *testing.T) {

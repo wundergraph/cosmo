@@ -3193,9 +3193,9 @@ response_cache:
 `)
 			cfg, err := LoadConfig([]string{f})
 			require.NoError(t, err)
-			require.Equal(t, new(time.Duration), cfg.Config.ResponseCache.All.FallbackTTL)
-			require.Equal(t, new(time.Duration), cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTL)
-			require.Nil(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTL)
+			assert.Equal(t, new(time.Duration), cfg.Config.ResponseCache.All.FallbackTTL)
+			assert.Equal(t, new(time.Duration), cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTL)
+			assert.Nil(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTL)
 		}
 	})
 
@@ -3219,21 +3219,21 @@ response_cache:
 		require.NoError(t, err)
 
 		rc := cfg.Config.ResponseCache
-		require.True(t, rc.All.Enabled)
-		require.Equal(t, new(2*time.Minute), rc.All.FallbackTTL)
+		assert.True(t, rc.All.Enabled)
+		assert.Equal(t, new(2*time.Minute), rc.All.FallbackTTL)
 
 		products := rc.Subgraphs["products"]
-		require.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
-		require.Equal(t, new(5*time.Minute), products.FallbackTTL)
-		require.Empty(t, products.PrivateID, "nothing is inherited from all")
+		assert.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
+		assert.Equal(t, new(5*time.Minute), products.FallbackTTL)
+		assert.Empty(t, products.PrivateID, "nothing is inherited from all")
 
 		inventory := rc.Subgraphs["inventory"]
-		require.False(t, inventory.Enabled)
-		require.Nil(t, inventory.FallbackTTL, "no default, and not all's 2m")
+		assert.False(t, inventory.Enabled)
+		assert.Nil(t, inventory.FallbackTTL, "no default, and not all's 2m")
 
 		reviews := rc.Subgraphs["reviews"]
-		require.True(t, reviews.Enabled)
-		require.Equal(t, new(10*time.Second), reviews.FallbackTTL)
+		assert.True(t, reviews.Enabled)
+		assert.Equal(t, new(10*time.Second), reviews.FallbackTTL)
 
 	})
 
@@ -3247,8 +3247,8 @@ response_cache:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, new(5*time.Minute), cfg.Config.ResponseCache.All.FallbackTTL)
-		require.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
+		assert.Equal(t, new(5*time.Minute), cfg.Config.ResponseCache.All.FallbackTTL)
+		assert.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
 	})
 
 	t.Run("all is reachable from env", func(t *testing.T) {
@@ -3286,8 +3286,8 @@ response_cache:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, new(500*time.Millisecond), cfg.Config.ResponseCache.All.FallbackTTL)
-		require.Equal(t, new(time.Nanosecond), cfg.Config.ResponseCache.Subgraphs["products"].FallbackTTL)
+		assert.Equal(t, new(500*time.Millisecond), cfg.Config.ResponseCache.All.FallbackTTL)
+		assert.Equal(t, new(time.Nanosecond), cfg.Config.ResponseCache.Subgraphs["products"].FallbackTTL)
 	})
 
 	t.Run("negative fallback TTLs are rejected", func(t *testing.T) {
@@ -3301,7 +3301,7 @@ response_cache:
 response_cache:
   `+tc.settings)
 			_, err := LoadConfig([]string{f})
-			require.ErrorContains(t, err, tc.path)
+			assert.ErrorContains(t, err, tc.path)
 		}
 	})
 

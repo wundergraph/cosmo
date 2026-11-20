@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -66,8 +67,8 @@ func TestSetupResponseCache(t *testing.T) {
 			}, config.StorageProviders{})
 
 			err := r.setupResponseCache(t.Context())
-			require.ErrorContains(t, err, "fallback_ttl")
-			require.Nil(t, r.responseCache)
+			assert.ErrorContains(t, err, "fallback_ttl")
+			assert.Nil(t, r.responseCache)
 		}
 	})
 
@@ -248,7 +249,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		require.NoError(t, r.setupResponseCache(t.Context()))
 		require.NotNil(t, r.responseCache)
-		require.NoError(t, r.responseCache.Close())
+		assert.NoError(t, r.responseCache.Close())
 	})
 
 	t.Run("an invalidation endpoint bind failure aborts startup", func(t *testing.T) {
