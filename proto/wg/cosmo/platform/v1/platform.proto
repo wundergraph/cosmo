@@ -4114,6 +4114,8 @@ service PlatformService {
   rpc GetHubAiSettings(GetHubAiSettingsRequest) returns (GetHubAiSettingsResponse) {}
   // UpdateHubAiSettings sets the Hub AI settings Cosmo manages, or hands them back to Hub
   rpc UpdateHubAiSettings(UpdateHubAiSettingsRequest) returns (UpdateHubAiSettingsResponse) {}
+  // GetHubAiModels returns the models Hub offers for its AI settings
+  rpc GetHubAiModels(GetHubAiModelsRequest) returns (GetHubAiModelsResponse) {}
   // GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
   rpc GetGraphResourceOwners(GetGraphResourceOwnersRequest) returns (GetGraphResourceOwnersResponse) {}
   // SetGraphResourceOwners replaces the owners of one resource of a federated graph
@@ -4430,4 +4432,24 @@ message UpdateHubAiSettingsRequest {
 
 message UpdateHubAiSettingsResponse {
   Response response = 1;
+}
+
+message HubAiModel {
+  // "google", "anthropic" or "openai".
+  string provider = 1;
+  // "light", "medium" or "heavy".
+  string tier = 2;
+  // The id HubAiSettings uses for the model, as the AI gateway names it.
+  string gateway_model_id = 3;
+  // The name the AI gateway gives the model.
+  string name = 4;
+}
+
+message GetHubAiModelsRequest {}
+
+message GetHubAiModelsResponse {
+  Response response = 1;
+  repeated HubAiModel models = 2;
+  // The model Hub runs agents with when the settings name no default model.
+  string deployment_model = 3;
 }

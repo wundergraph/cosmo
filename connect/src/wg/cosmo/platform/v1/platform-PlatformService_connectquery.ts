@@ -678,6 +678,13 @@ export const getHubAiSettings = PlatformService.method.getHubAiSettings;
 export const updateHubAiSettings = PlatformService.method.updateHubAiSettings;
 
 /**
+ * GetHubAiModels returns the models Hub offers for its AI settings
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetHubAiModels
+ */
+export const getHubAiModels = PlatformService.method.getHubAiModels;
+
+/**
  * GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners
