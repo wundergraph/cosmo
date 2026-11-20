@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { FakeHub, linkedRepo, runWgc, sandboxDetails, startFakeHub, tempRepo } from './harness.js';
+import { FakeHub, hubSandbox, linkedRepo, runWgc, startFakeHub, tempRepo } from './harness.js';
 
 let hub: FakeHub | undefined;
 afterEach(async () => {
@@ -10,34 +10,32 @@ afterEach(async () => {
   hub = undefined;
 });
 
-const describeTool = () => ({ describe_sandbox: () => ({ structuredContent: { sandbox: sandboxDetails() } }) });
+const getSandboxTool = () => ({ get_sandbox: () => ({ structuredContent: hubSandbox() }) });
 
 describe('wgc hub link', () => {
   test('writes .wgc/link.json next to sandbox.yaml and gitignores it; linking again changes nothing', async () => {
-    hub = await startFakeHub({ tools: describeTool() });
+    hub = await startFakeHub({ tools: getSandboxTool() });
     const dir = await tempRepo({ 'sandbox.yaml': 'schema: shop\n', 'api/.keep': '' });
     const cwd = path.join(dir, 'api');
 
-    const first = await runWgc(['hub', 'link', 'sb_3fd1'], { hubUrl: hub.url, cwd, output: 'text' });
-    const second = await runWgc(['hub', 'link', 'sb_3fd1', '--json'], { hubUrl: hub.url, cwd });
+    const first = await runWgc(['hub', 'link', 'shop/shop-nithin'], { hubUrl: hub.url, cwd, output: 'text' });
+    const second = await runWgc(['hub', 'link', 'shop/shop-nithin', '--json'], { hubUrl: hub.url, cwd });
 
     expect(first.exitCode).toBe(0);
-    expect(first.stdout).toBe('Linked this directory to sb_3fd1 (.wgc/link.json, added to .gitignore)\n');
+    expect(first.stdout).toBe('Linked this directory to shop/shop-nithin (.wgc/link.json, added to .gitignore)\n');
     expect(JSON.parse(await readFile(path.join(dir, '.wgc', 'link.json'), 'utf8'))).toEqual({
-      orgSlug: 'acme',
-      graphSlug: 'shop',
-      sandboxId: 'sb_3fd1',
+      sandbox: 'shop/shop-nithin',
     });
     expect(second.json()).toEqual({
       ok: true,
       changed: false,
       data: {
-        sandbox: { sandboxId: 'sb_3fd1', name: 'shop-nithin' },
+        sandbox: 'shop/shop-nithin',
         link: { path: '.wgc/link.json', changed: false, gitignoreUpdated: false },
       },
-      url: 'https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1',
     });
     expect(await readFile(path.join(dir, '.gitignore'), 'utf8')).toBe('.wgc/\n');
+    expect(hub.toolCalls()[0]).toEqual({ name: 'get_sandbox', arguments: { sandbox: 'shop/shop-nithin' } });
   });
 
   test('without a sandbox exits 2 and names the command to pass', async () => {
@@ -55,6 +53,17 @@ describe('wgc hub link', () => {
     });
   });
 
+  test('a link file from before sandbox addresses asks to link again', async () => {
+    const dir = await tempRepo({
+      '.wgc/link.json': JSON.stringify({ orgSlug: 'acme', graphSlug: 'shop', sandboxId: 'sb_3fd1' }),
+    });
+
+    const run = await runWgc(['hub', 'status', '--json'], { cwd: dir });
+
+    expect(run.exitCode).toBe(2);
+    expect(run.json()).toMatchObject({ error: { remediation: 'Run `wgc hub link <sandbox>` to rewrite it.' } });
+  });
+
   test('unlink removes the link, and reports no change when there is none', async () => {
     const dir = await linkedRepo();
 
@@ -67,42 +76,49 @@ describe('wgc hub link', () => {
 });
 
 describe('wgc hub status', () => {
-  test('renders the linked sandbox like the dashboard header', async () => {
-    hub = await startFakeHub({ tools: describeTool() });
+  test('renders the linked sandbox and never prints its endpoint token', async () => {
+    hub = await startFakeHub({ tools: getSandboxTool() });
+    const dir = await linkedRepo();
 
-    const run = await runWgc(['hub', 'status'], { hubUrl: hub.url, cwd: await linkedRepo(), output: 'text' });
+    const text = await runWgc(['hub', 'status'], { hubUrl: hub.url, cwd: dir, output: 'text' });
+    const json = await runWgc(['hub', 'status', '--json'], { hubUrl: hub.url, cwd: dir });
 
-    expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(
+    expect(text.exitCode).toBe(0);
+    expect(text.stdout).toBe(
       [
-        'Sandbox     shop-nithin (sb_3fd1)   running',
-        'Graph       acme/shop',
-        'Router      0.214.0   (latest 0.216.1, run `wgc forge router upgrade`)',
-        'Sources     accounts ✓  catalog ✓  orders ✓',
-        'Last op     forge.check  succeeded 4m ago   op_6Pd0',
-        'URL         https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1',
+        'Sandbox     shop/shop-nithin',
+        'Router      live',
+        'Endpoint    https://sb-3fd1.sandbox.wundergraph.dev/graphql',
         '',
       ].join('\n'),
     );
-    expect(hub.toolCalls()).toEqual([{ name: 'describe_sandbox', arguments: { sandbox_id: 'sb_3fd1' } }]);
+    expect(json.json()).toEqual({
+      ok: true,
+      data: {
+        address: 'shop/shop-nithin',
+        endpointUrl: 'https://sb-3fd1.sandbox.wundergraph.dev/graphql',
+        routerStatus: 'live',
+      },
+    });
+    expect(hub.toolCalls()[0]).toEqual({ name: 'get_sandbox', arguments: { sandbox: 'shop/shop-nithin' } });
   });
 
   test('--sandbox wins over WGC_SANDBOX, which wins over the link', async () => {
-    hub = await startFakeHub({ tools: describeTool() });
+    hub = await startFakeHub({ tools: getSandboxTool() });
     const dir = await linkedRepo();
 
-    await runWgc(['hub', 'status', '--sandbox', 'sb_flag'], {
+    await runWgc(['hub', 'status', '--sandbox', 'shop/flag'], {
       hubUrl: hub.url,
       cwd: dir,
-      env: { WGC_SANDBOX: 'sb_env' },
+      env: { WGC_SANDBOX: 'shop/env' },
     });
-    await runWgc(['hub', 'status'], { hubUrl: hub.url, cwd: dir, env: { WGC_SANDBOX: 'sb_env' } });
+    await runWgc(['hub', 'status'], { hubUrl: hub.url, cwd: dir, env: { WGC_SANDBOX: 'shop/env' } });
     await runWgc(['hub', 'status'], { hubUrl: hub.url, cwd: dir });
 
     expect(hub.toolCalls().map((call) => call.arguments)).toEqual([
-      { sandbox_id: 'sb_flag' },
-      { sandbox_id: 'sb_env' },
-      { sandbox_id: 'sb_3fd1' },
+      { sandbox: 'shop/flag' },
+      { sandbox: 'shop/env' },
+      { sandbox: 'shop/shop-nithin' },
     ]);
   });
 
@@ -114,49 +130,56 @@ describe('wgc hub status', () => {
     expect(run.exitCode).toBe(2);
     expect(run.stderr).toBe(
       `error: No sandbox is linked to ${dir}.\n` +
-        'Pass --sandbox <id>, set WGC_SANDBOX, or link this directory with `wgc hub link <sandbox>`.\n',
+        'Pass --sandbox <schema>/<sandbox>, set WGC_SANDBOX, or link this directory with `wgc hub link <sandbox>`.\n',
     );
   });
 });
 
+const accessTool = () => ({
+  describe_current_access: () => ({
+    structuredContent: {
+      organizationSlug: 'acme',
+      role: 'editor',
+      canMakeChanges: true,
+      token: null,
+      activeSandbox: null,
+    },
+  }),
+});
+
 describe('wgc hub open', () => {
-  test('prints the page URL from the link without calling Hub when the caller is not a person', async () => {
+  test('prints the page URL in the organization Hub reports when the caller is not a person', async () => {
+    hub = await startFakeHub({ tools: accessTool() });
     const dir = await linkedRepo();
 
-    const sandbox = await runWgc(['hub', 'open'], { cwd: dir, output: 'text', hubUrl: 'https://hub.wundergraph.com' });
-    const operation = await runWgc(['hub', 'open', 'operation', 'op_7Kq2', '--json'], {
-      cwd: dir,
-      hubUrl: 'https://hub.wundergraph.com',
-    });
-    const proposal = await runWgc(['hub', 'open', 'proposal', '42', '--print'], {
+    const sandbox = await runWgc(['hub', 'open'], { cwd: dir, output: 'text', hubUrl: hub.url });
+    const operation = await runWgc(['hub', 'open', 'operation', 'op_7Kq2', '--json'], { cwd: dir, hubUrl: hub.url });
+    const proposal = await runWgc(['hub', 'open', 'proposal', '--print'], {
       cwd: dir,
       output: 'text',
-      hubUrl: 'https://hub.wundergraph.com',
+      hubUrl: hub.url,
     });
 
-    expect(sandbox.stdout).toBe('https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1\n');
+    expect(sandbox.stdout).toBe(`${hub.url}/acme/graph/shop?view=shop-nithin\n`);
     expect(operation.json()).toEqual({
       ok: true,
-      data: {
-        url: 'https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1/operations/op_7Kq2',
-        opened: false,
-      },
-      url: 'https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1/operations/op_7Kq2',
+      data: { url: `${hub.url}/acme/operations/op_7Kq2`, opened: false },
+      url: `${hub.url}/acme/operations/op_7Kq2`,
     });
-    expect(proposal.stdout).toBe('https://hub.wundergraph.com/acme/graph/shop/proposals/42\n');
+    expect(proposal.stdout).toBe(`${hub.url}/acme/graph/shop?tab=proposal&view=shop-nithin\n`);
+    expect(hub.toolCalls()[0]).toEqual({ name: 'describe_current_access', arguments: {} });
   });
 
-  test('asks Hub for the org and graph of a sandbox picked with --sandbox', async () => {
-    hub = await startFakeHub({ tools: describeTool() });
+  test('opens a sandbox picked with --sandbox', async () => {
+    hub = await startFakeHub({ tools: accessTool() });
 
-    const run = await runWgc(['hub', 'open', 'history', '--sandbox', 'shop-nithin'], {
+    const run = await runWgc(['hub', 'open', '--sandbox', 'shop/checkout'], {
       hubUrl: hub.url,
       cwd: await tempRepo({}),
       output: 'text',
     });
 
-    expect(run.stdout).toBe(`${hub.url}/acme/graph/shop/sandboxes/sb_3fd1/history\n`);
-    expect(hub.toolCalls()).toEqual([{ name: 'describe_sandbox', arguments: { sandbox_id: 'shop-nithin' } }]);
+    expect(run.stdout).toBe(`${hub.url}/acme/graph/shop?view=checkout\n`);
   });
 
   test('an operation without its id is a usage error', async () => {

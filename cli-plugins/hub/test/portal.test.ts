@@ -139,8 +139,8 @@ describe('wgc hub portal open', () => {
     });
 
     expect(hub.toolCalls()).toEqual([
-      { name: 'open_portal', arguments: { sandbox: 'shop/sb_3fd1', subgraph: 'reviews' } },
-      { name: 'close_portal', arguments: { sandbox: 'shop/sb_3fd1', subgraph: 'reviews' } },
+      { name: 'open_portal', arguments: { sandbox: 'shop/shop-nithin', subgraph: 'reviews' } },
+      { name: 'close_portal', arguments: { sandbox: 'shop/shop-nithin', subgraph: 'reviews' } },
     ]);
     expect(tunnel.connections.map((connection) => connection.url)).toEqual([
       `${hub.url.replace('http', 'ws')}/portals/portal-1/tunnel`,
@@ -157,12 +157,12 @@ describe('wgc hub portal open', () => {
     expect(run.stderr.split('\n').slice(0, 5)).toEqual([
       `  ${dashboardUrl}`,
       '',
-      `Portal reviews in shop/sb_3fd1 -> http://localhost:${port}/graphql. Ctrl-C closes it.`,
+      `Portal reviews in shop/shop-nithin -> http://localhost:${port}/graphql. Ctrl-C closes it.`,
       `Connected. reviews requests now reach http://localhost:${port}/graphql`,
       '  POST /graphql  200  0ms',
     ]);
     expect(run.exitCode).toBe(130);
-    expect(run.stderr).toContain('Closed the portal. shop/sb_3fd1 serves reviews as before.');
+    expect(run.stderr).toContain('Closed the portal. shop/shop-nithin serves reviews as before.');
   });
 
   test('answers with a GraphQL error naming the local URL when nothing runs there', async () => {
@@ -249,7 +249,7 @@ describe('wgc hub portal list and close', () => {
 
     const run = await runWgc(['hub', 'portal', 'list'], { hubUrl: hub.url, cwd: await linkedRepo(), output: 'text' });
 
-    expect(hub.toolCalls()).toEqual([{ name: 'list_portals', arguments: { sandbox: 'shop/sb_3fd1' } }]);
+    expect(hub.toolCalls()).toEqual([{ name: 'list_portals', arguments: { sandbox: 'shop/shop-nithin' } }]);
     expect(run.stdout).toBe(
       ['SUBGRAPH  STATUS     LAST REQUEST', 'reviews   connected  2m ago', 'reviews   closed     -', ''].join('\n'),
     );

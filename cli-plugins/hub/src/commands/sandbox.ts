@@ -3,14 +3,14 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command } from 'commander';
 import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
-import type { HubClient, NextStep, Output, Result, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
+import type { Output, Result, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
 import { announceOperation, asGroup, openSandboxSession, withExamples, withSandboxOptions } from '../common/command.js';
 import type { SandboxOptions } from '../common/command.js';
-import { hubResults, hubTools, longPollSeconds } from '../common/contract.js';
-import type { LogLine, SandboxDetails } from '../common/contract.js';
+import { hubResults, hubTools, logSources, logWaitSeconds } from '../common/contract.js';
+import type { LogLine, LogSource } from '../common/contract.js';
 import { connectHub } from '../common/hub.js';
 import { describeLinkWrite, linkFilePath, locateSandboxConfig, writeLink } from '../common/link.js';
-import { followOperation, operationFailure, renderStarted, reportUnfinished } from '../common/operation.js';
+import { fetchOperation, followOperation, operationFailure, reportUnfinished } from '../common/operation.js';
 import type { HubDependencies } from '../common/runtime.js';
 import { defaultAudience, loadSandboxConfig, sandboxFileName } from '../common/sandbox-config.js';
 import type { LoadedSandboxConfig } from '../common/sandbox-config.js';
@@ -54,7 +54,7 @@ const prepareConfig = async (
   }
 
   const hub = connectHub(dependencies.context, await resolveAudience(cwd, options));
-  const exported = await hub.callTool(hubTools.exportSandboxConfig, { graph }, hubResults.exportSandboxConfig);
+  const exported = await hub.callTool(hubTools.exportSandboxConfig, { sandbox: graph }, hubResults.exportSandboxConfig);
   if (!exported.success) {
     return exported;
   }
@@ -69,18 +69,13 @@ const prepareConfig = async (
   return loadSandboxConfig(target);
 };
 
-const launchNextSteps = (sandbox: SandboxDetails): NextStep[] => {
-  const [collection] = sandbox.collections;
-  const steps: NextStep[] = [];
-  if (collection !== undefined) {
-    steps.push({ command: `wgc hub collection run ${collection}`, description: 'run your saved operations' });
+/** What the launch copies: the schema of sandbox.yaml, or the sandbox `--from` names within it or as `<schema>/<sandbox>`. */
+const launchSource = (schema: string, from: string | undefined): string => {
+  if (from === undefined) {
+    return schema;
   }
-  steps.push({ command: 'wgc hub open', description: 'open the sandbox in Hub' });
-  return steps;
+  return from.includes('/') ? from : `${schema}/${from}`;
 };
-
-const describeSandbox = (hub: HubClient, sandboxId: string) =>
-  hub.callTool(hubTools.describeSandbox, { sandbox_id: sandboxId }, hubResults.describeSandbox);
 
 const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies): Promise<void> => {
   const { context, runtime } = dependencies;
@@ -92,46 +87,52 @@ const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies):
     return;
   }
 
-  const { config, raw, dir } = prepared.data;
+  const { config, dir } = prepared.data;
   const name = options.name ?? `${config.schema}-${runtime.env.USER ?? 'sandbox'}`;
   output.message(`Launching sandbox "${name}"`);
 
   const hub = connectHub(context, options.audience ?? config.audience ?? defaultAudience);
-  const args: Record<string, ToolArgument> = {
-    graph: config.schema,
-    name,
-    sandbox_yaml: raw,
-    idempotency_key: options.idempotencyKey ?? runtime.newIdempotencyKey(),
-  };
-  if (options.from) {
-    args.from_sandbox_id = options.from;
-  }
-
-  const launched = await hub.callTool(hubTools.launchSandbox, args, hubResults.launchSandbox);
+  const launched = await hub.callTool(
+    hubTools.launchSandbox,
+    {
+      from: launchSource(config.schema, options.from),
+      name,
+      idempotency_key: options.idempotencyKey ?? runtime.newIdempotencyKey(),
+    },
+    hubResults.launchSandbox,
+  );
   if (!launched.success) {
     output.fail(toFailure(launched));
     return;
   }
 
   const { sandbox, operation } = launched.data;
-  const link = await writeLink(dir, {
-    orgSlug: sandbox.orgSlug,
-    graphSlug: sandbox.graphSlug,
-    sandboxId: sandbox.sandboxId,
-  });
+  const link = await writeLink(dir, { sandbox: sandbox.address });
   const linked = { path: linkFilePath, ...link };
   announceOperation(output, operation);
 
   if (options.detach) {
     output.result(
       { sandbox, link: linked, operation: { id: operation.id, status: operation.status } },
-      () => renderStarted(operation, [describeLinkWrite(sandbox.sandboxId, link)]),
+      () =>
+        [
+          `Started sandbox launch ${operation.id}`,
+          `  ${operation.url}`,
+          `Watch   wgc hub operation watch ${operation.id}`,
+          describeLinkWrite(sandbox.address, link),
+        ].join('\n'),
       { operation: { id: operation.id, status: operation.status }, url: operation.url },
     );
     return;
   }
 
-  const followed = await followOperation({ hub, output, runtime, operation });
+  const started = await fetchOperation(hub, operation.id);
+  if (!started.success) {
+    output.fail(toFailure(started));
+    return;
+  }
+
+  const followed = await followOperation({ hub, output, runtime, operation: started.data });
   if (!followed.success) {
     output.fail(toFailure(followed));
     return;
@@ -147,23 +148,13 @@ const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies):
     return;
   }
 
-  const described = await describeSandbox(hub, sandbox.sandboxId);
-  if (!described.success) {
-    output.fail(toFailure(described));
-    return;
-  }
-
-  const ready = described.data.sandbox;
   output.result(
-    { sandbox: ready, link: linked },
-    (data) =>
-      [`Sandbox ready  ${data.sandbox.graphqlUrl ?? data.sandbox.url}`, describeLinkWrite(ready.sandboxId, link)].join(
-        '\n',
-      ),
+    { sandbox, link: linked },
+    (data) => [`Sandbox ready  ${data.sandbox.endpointUrl}`, describeLinkWrite(sandbox.address, link)].join('\n'),
     {
       operation: { id: finished.id, status: finished.status },
       url: finished.url,
-      next: launchNextSteps(ready),
+      next: [{ command: 'wgc hub open', description: 'open the sandbox in Hub' }],
     },
   );
 };
@@ -184,7 +175,7 @@ const runList = async (options: ListOptions, dependencies: HubDependencies): Pro
   }
 
   const hub = connectHub(dependencies.context, target.data.audience);
-  const listed = await hub.callTool(hubTools.listSandboxes, { graph: target.data.schema }, hubResults.listSandboxes);
+  const listed = await hub.callTool(hubTools.listSandboxes, { schema: target.data.schema }, hubResults.listSandboxes);
   if (!listed.success) {
     output.fail(toFailure(listed));
     return;
@@ -195,25 +186,41 @@ const runList = async (options: ListOptions, dependencies: HubDependencies): Pro
       return `No sandboxes in ${target.data.schema}. Launch one with \`wgc hub sandbox launch\`.`;
     }
     return data.sandboxes
-      .map((sandbox) => `${sandbox.name} (${sandbox.sandboxId})   ${sandbox.status}   ${sandbox.graphqlUrl ?? ''}`)
-      .map((line) => line.trimEnd())
+      .map((sandbox) => `${sandbox.address}   ${sandbox.routerStatus}   ${sandbox.endpointUrl}`)
       .join('\n');
   });
 };
 
 interface LogsOptions extends SandboxOptions {
   follow?: boolean;
-  since?: string;
-  router?: boolean;
-  forge?: boolean;
+  source?: string[];
 }
 
-const renderLogLine = (line: LogLine): string => `${line.at}  ${line.component.padEnd(6)}  ${line.message}`;
+const isLogSource = (value: string): value is LogSource => (logSources as readonly string[]).includes(value);
 
-const logEvent = (line: LogLine) => ({ event: 'log', at: line.at, component: line.component, message: line.message });
+const renderLogLine = (line: LogLine): string => `${line.at}  ${line.source.padEnd(7)}  ${line.message}`;
+
+const logEvent = (line: LogLine) => ({
+  event: 'log',
+  at: line.at,
+  level: line.level,
+  source: line.source,
+  message: line.message,
+});
 
 const runLogs = async (options: LogsOptions, dependencies: HubDependencies): Promise<void> => {
   const output = dependencies.context.output({ json: options.json });
+  const unknownSource = options.source?.find((source) => !isLogSource(source));
+  if (unknownSource !== undefined) {
+    output.fail({
+      kind: 'usage',
+      message: `--source ${unknownSource} is not a log source.`,
+      remediation: `Pass one or more of: ${logSources.join(', ')}.`,
+      input: '--source',
+    });
+    return;
+  }
+
   const session = await openSandboxSession(dependencies, options);
   if (!session.success) {
     output.fail(toFailure(session));
@@ -221,35 +228,31 @@ const runLogs = async (options: LogsOptions, dependencies: HubDependencies): Pro
   }
 
   const { hub, selection } = session.data;
-  const args: Record<string, ToolArgument> = { sandbox_id: selection.sandboxId };
-  if (options.since) {
-    args.since = options.since;
-  }
-  if (options.router || options.forge) {
-    args.component = options.router ? 'router' : 'forge';
+  const args: Record<string, ToolArgument> = { sandbox_id: selection.sandbox };
+  if (options.source !== undefined) {
+    args.sources = options.source;
   }
 
   if (!options.follow) {
-    const fetched = await hub.callTool(hubTools.getSandboxLogs, args, hubResults.getSandboxLogs);
+    const fetched = await hub.callTool(hubTools.streamLogs, args, hubResults.streamLogs);
     if (!fetched.success) {
       output.fail(toFailure(fetched));
       return;
     }
-    output.result({ lines: fetched.data.lines }, (data) => data.lines.map((line) => renderLogLine(line)).join('\n'));
+    const { notice, lines } = fetched.data;
+    output.result({ notice, lines }, (data) => data.lines.map((line) => renderLogLine(line)).join('\n'));
     return;
   }
 
   const abort = new AbortController();
   const stopListening = dependencies.runtime.onInterrupt(() => abort.abort());
   try {
-    let cursor: string | null = null;
+    let cursor: string | undefined;
     while (!abort.signal.aborted) {
-      const request: Record<string, ToolArgument> = { ...args, wait_seconds: longPollSeconds };
-      if (cursor !== null) {
-        request.cursor = cursor;
-      }
+      const request: Record<string, ToolArgument> =
+        cursor === undefined ? args : { ...args, cursor, wait_seconds: logWaitSeconds };
 
-      const fetched = await hub.callTool(hubTools.getSandboxLogs, request, hubResults.getSandboxLogs, {
+      const fetched = await hub.callTool(hubTools.streamLogs, request, hubResults.streamLogs, {
         signal: abort.signal,
       });
       if (abort.signal.aborted) {
@@ -263,7 +266,7 @@ const runLogs = async (options: LogsOptions, dependencies: HubDependencies): Pro
       for (const line of fetched.data.lines) {
         output.record(renderLogLine(line), logEvent(line));
       }
-      cursor = fetched.data.nextCursor ?? cursor;
+      cursor = fetched.data.cursor;
     }
   } finally {
     stopListening();
@@ -281,7 +284,7 @@ const runHistory = async (options: SandboxOptions, dependencies: HubDependencies
   const { hub, selection } = session.data;
   const listed = await hub.callTool(
     hubTools.listSandboxHistory,
-    { sandbox_id: selection.sandboxId },
+    { sandbox: selection.sandbox },
     hubResults.listSandboxHistory,
   );
   if (!listed.success) {
@@ -292,14 +295,14 @@ const runHistory = async (options: SandboxOptions, dependencies: HubDependencies
   const now = dependencies.runtime.now();
   output.result(listed.data, (data) => {
     if (data.entries.length === 0) {
-      return `No changes to ${selection.sandboxId} yet.`;
+      return `No changes to ${selection.sandbox} yet.`;
     }
     const rows = data.entries.map((entry) => [
-      entry.version,
-      formatAge(entry.at, now),
-      entry.surface,
-      entry.actor,
-      entry.summary,
+      `#${entry.seq}`,
+      formatAge(entry.createdAt, now),
+      entry.agentName ?? entry.author.userId ?? entry.author.kind,
+      entry.kind,
+      entry.verdict === 'refused' ? `refused: ${entry.refusalReason ?? 'no reason given'}` : 'applied',
     ]);
     const widths = [0, 1, 2, 3].map((column) => Math.max(...rows.map((row) => row[column].length)));
     return rows
@@ -320,15 +323,18 @@ export const sandboxCommand = (dependencies: HubDependencies): Command =>
       withExamples(
         withConfigOptions(
           new Command('launch')
-            .description('Launch a sandbox from sandbox.yaml and link this directory to it')
-            .option('--name <name>', 'Sandbox name (default: <graph>-<user>)')
-            .option('--from <sandbox>', 'Copy the data and settings of this sandbox')
+            .description('Launch a sandbox from the schema in sandbox.yaml and link this directory to it')
+            .option('--name <name>', 'Sandbox name (default: <schema>-<user>)')
+            .option(
+              '--from <sandbox>',
+              'Copy this sandbox instead of the schema: a name in the schema or <schema>/<sandbox>',
+            )
             .option('--init-from-graph <graph>', 'Create sandbox.yaml from this Hub graph when there is none')
             .option('--detach', 'Return once Hub accepted the launch; watch it with `wgc hub operation watch`')
             .option('--idempotency-key <key>', 'Repeat a launch safely: Hub returns the first launch for the same key')
             .option('--no-input', 'Never prompt'),
         ),
-        ['wgc hub sandbox launch', 'wgc hub sandbox launch --name shop-agent --from sb_3fd1 --detach --json'],
+        ['wgc hub sandbox launch', 'wgc hub sandbox launch --name shop-agent --from shop-nithin --detach --json'],
         'sandbox/launch',
       ).action((options: LaunchOptions) => runLaunch(options, dependencies)),
     )
@@ -336,8 +342,8 @@ export const sandboxCommand = (dependencies: HubDependencies): Command =>
       withExamples(
         withConfigOptions(
           new Command('list')
-            .description('List the sandboxes of the graph')
-            .option('--schema <slug>', 'Hub graph slug (default: sandbox.yaml `schema`)'),
+            .description('List the sandboxes of the schema')
+            .option('--schema <slug>', 'Hub schema slug (default: sandbox.yaml `schema`)'),
         ),
         ['wgc hub sandbox list', 'wgc hub sandbox list --schema shop --json'],
         'sandbox/list',
@@ -347,20 +353,18 @@ export const sandboxCommand = (dependencies: HubDependencies): Command =>
       withExamples(
         withSandboxOptions(
           new Command('logs')
-            .description('Print the router and Forge logs of the sandbox')
+            .description('Print the latest log lines of the sandbox')
             .option('--follow', 'Keep printing new lines until Ctrl-C')
-            .option('--since <duration>', 'Only lines newer than this, e.g. 10m')
-            .option('--router', 'Only router lines')
-            .option('--forge', 'Only Forge lines'),
+            .option('--source <source...>', `Only lines of these sources: ${logSources.join(', ')}`),
         ),
-        ['wgc hub sandbox logs --follow', 'wgc hub sandbox logs --since 10m --router --json'],
+        ['wgc hub sandbox logs --follow', 'wgc hub sandbox logs --source router build --json'],
         'sandbox/logs',
       ).action((options: LogsOptions) => runLogs(options, dependencies)),
     )
     .addCommand(
       withExamples(
-        withSandboxOptions(new Command('history').description('List every change to the sandbox, newest first')),
-        ['wgc hub sandbox history', 'wgc hub sandbox history --sandbox sb_3fd1 --json'],
+        withSandboxOptions(new Command('history').description('List every change to the sandbox, oldest first')),
+        ['wgc hub sandbox history', 'wgc hub sandbox history --sandbox shop/shop-nithin --json'],
         'sandbox/history',
       ).action((options: SandboxOptions) => runHistory(options, dependencies)),
     );

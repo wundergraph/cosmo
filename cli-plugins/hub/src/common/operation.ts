@@ -1,28 +1,28 @@
 import { hubFailureKind, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Failure, HubClient, Output, Result } from '@wundergraph/wgc-plugin-sdk';
-import { hubResults, hubTools, longPollSeconds } from './contract.js';
+import { hubResults, hubTools } from './contract.js';
 import type { Operation, OperationStatus, OperationStep, StepStatus } from './contract.js';
 import type { HubRuntime } from './runtime.js';
 
 const finishedStatuses = new Set<OperationStatus>(['succeeded', 'failed', 'cancelled']);
 
-const settledStepStatuses = new Set<StepStatus>(['succeeded', 'failed', 'skipped', 'cancelled']);
+const waitingStatuses = new Set<OperationStatus>(['needs_approval', 'needs_input']);
+
+const settledStepStatuses = new Set<StepStatus>(['succeeded', 'failed', 'skipped']);
 
 const stepMarks: Record<StepStatus, string> = {
-  pending: ' ',
   running: ' ',
   succeeded: '✓',
   failed: '✗',
   skipped: '·',
-  cancelled: '·',
 };
 
-/** How long to wait before asking again when Hub answered a long poll without news. */
-const quietPollDelayMs = 1000;
+/** How long to wait between two `get_operation` calls while following an operation. */
+const pollDelayMs = 1000;
 
-export const isFinished = (operation: Operation): boolean => finishedStatuses.has(operation.status);
+export const isFinished = (operation: { status: OperationStatus }): boolean => finishedStatuses.has(operation.status);
 
-/** `38ms` under a tenth of a second, `0.2s` and `10.0s` above, so short collection steps keep their precision. */
+/** `38ms` under a tenth of a second, `0.2s` and `10.0s` above, so short collection operations keep their precision. */
 export const formatDuration = (milliseconds: number): string => {
   if (milliseconds < 100) {
     return `${milliseconds}ms`;
@@ -34,93 +34,42 @@ const stepOutcome = (step: OperationStep): string => {
   if (step.status === 'skipped') {
     return step.detail ? `skipped (${step.detail})` : 'skipped';
   }
-  if (step.status === 'cancelled') {
-    return 'cancelled';
-  }
-  if (step.status === 'failed' && step.detail) {
+  if (step.status === 'failed') {
     return step.detail;
   }
-  if (step.durationMs === null) {
-    return '';
-  }
-  return formatDuration(step.durationMs);
+  return '';
 };
 
-/** The name column fits every step of the operation, so durations line up while steps stream in. */
-const stepColumnWidth = (steps: OperationStep[]): number => Math.max(20, ...steps.map((step) => step.name.length + 1));
+/** The name column fits every row, so outcomes line up while rows stream in. */
+export const nameColumnWidth = (names: string[]): number => Math.max(20, ...names.map((name) => name.length + 1));
 
-export const renderStep = (step: OperationStep, width: number): string =>
-  `  ${stepMarks[step.status]} ${step.name.padEnd(width)}${stepOutcome(step)}`.trimEnd();
+/** `  ✓ AddToCart           38ms`: one step of an operation or one operation of a collection. */
+export const renderRow = (mark: string, name: string, width: number, outcome: string): string =>
+  `  ${mark} ${name.padEnd(width)}${outcome}`.trimEnd();
 
-/** `2 passed, 1 failed, 1 skipped` for a collection run; zero failed and skipped counts are left out. */
-const collectionTally = (operation: Operation): string => {
-  const count = (status: StepStatus) => operation.steps.filter((step) => step.status === status).length;
-  const parts = [`${count('succeeded')} passed`];
-  if (count('failed') > 0) {
-    parts.push(`${count('failed')} failed`);
-  }
-  if (count('skipped') > 0) {
-    parts.push(`${count('skipped')} skipped`);
-  }
-  return parts.join(', ');
-};
+const summarizeOperation = (operation: Operation): string => `${operation.kind} ${operation.status}  ${operation.id}`;
 
-/** Operation kinds whose outcome reads better as their own summary than as an error block. */
-const summaries: Record<string, (operation: Operation) => string> = {
-  'collection.run': collectionTally,
-};
+/** `launch_sandbox` reads as `launch sandbox` in sentences. */
+const describeKind = (kind: string): string => kind.replaceAll('_', ' ');
 
-export const summarizeOperation = (operation: Operation): string => {
-  const summary = summaries[operation.kind];
-  if (summary) {
-    return summary(operation);
-  }
-  return `${operation.kind} ${operation.status}  ${operation.id}`;
-};
-
-/** `sandbox.launch` reads as `sandbox launch` in sentences. */
-export const describeKind = (kind: string): string => kind.replaceAll('.', ' ');
-
-/** What a detached command prints: the operation, its Hub page and how to follow it. */
-export const renderStarted = (operation: Operation, extraLines: string[] = []): string =>
-  [
-    `Started ${describeKind(operation.kind)} ${operation.id}`,
-    `  ${operation.url}`,
-    `Watch   wgc hub operation watch ${operation.id}`,
-    ...extraLines,
-  ].join('\n');
-
-/** Prints each step once it settles and each event once, in text or as JSON lines on stderr. */
+/** Prints each step once it settles, in text or as JSON lines on stderr. */
 const createStepPrinter = (output: Output) => {
   const printedSteps = new Set<number>();
-  let printedEvents = 0;
 
   return {
     show(operation: Operation): void {
-      for (const event of operation.events.slice(printedEvents)) {
-        output.message(`    ${event.message}`, {
-          event: 'operation_event',
-          operation: operation.id,
-          at: event.at,
-          step: event.step,
-          message: event.message,
-        });
-      }
-      printedEvents = operation.events.length;
-
-      const width = stepColumnWidth(operation.steps);
+      const width = nameColumnWidth(operation.steps.map((step) => step.name));
       for (const [index, step] of operation.steps.entries()) {
         if (printedSteps.has(index) || !settledStepStatuses.has(step.status)) {
           continue;
         }
 
         printedSteps.add(index);
-        output.message(renderStep(step, width), {
+        output.message(renderRow(stepMarks[step.status], step.name, width, stepOutcome(step)), {
           event: 'step',
           operation: operation.id,
           name: step.name,
           status: step.status,
-          duration_ms: step.durationMs,
           detail: step.detail,
         });
       }
@@ -137,17 +86,16 @@ const createStepPrinter = (output: Output) => {
 
 export type FollowOutcome =
   | { kind: 'finished'; operation: Operation }
-  | { kind: 'input-required'; operation: Operation }
+  | { kind: 'waiting'; operation: Operation }
   | { kind: 'detached'; operation: Operation }
   | { kind: 'timed-out'; operation: Operation };
 
-const sameProgress = (before: Operation, after: Operation): boolean =>
-  before.status === after.status &&
-  before.events.length === after.events.length &&
-  JSON.stringify(before.steps) === JSON.stringify(after.steps);
+/** Reads an operation once, e.g. to start following it. */
+export const fetchOperation = (hub: HubClient, operationId: string, signal?: AbortSignal) =>
+  hub.callTool(hubTools.getOperation, { operationId }, hubResults.getOperation, { signal });
 
 /**
- * Follows an operation until it finishes, needs approval, passes `deadline`, or the user presses
+ * Follows an operation until it finishes, waits on a person, passes `deadline`, or the user presses
  * Ctrl-C. Ctrl-C only detaches: the operation keeps running in Hub.
  */
 export const followOperation = async ({
@@ -184,20 +132,16 @@ export const followOperation = async ({
         printer.finish();
         return ok({ kind: 'finished', operation: current });
       }
-      if (current.status === 'input_required') {
+      if (waitingStatuses.has(current.status)) {
         printer.finish();
-        return ok({ kind: 'input-required', operation: current });
+        return ok({ kind: 'waiting', operation: current });
       }
       if (deadline && runtime.now() >= deadline) {
         return ok({ kind: 'timed-out', operation: current });
       }
 
-      const polled = await hub.callTool(
-        hubTools.getOperation,
-        { operation_id: current.id, wait_seconds: longPollSeconds },
-        hubResults.getOperation,
-        { signal: abort.signal },
-      );
+      await runtime.sleep(pollDelayMs);
+      const polled = await fetchOperation(hub, current.id, abort.signal);
       if (abort.signal.aborted) {
         printer.finish();
         return ok({ kind: 'detached', operation: current });
@@ -206,12 +150,7 @@ export const followOperation = async ({
         return polled;
       }
 
-      const next = polled.data.operation;
-      if (sameProgress(current, next)) {
-        await runtime.sleep(quietPollDelayMs);
-      }
-
-      current = next;
+      current = polled.data;
       show(current);
     }
   } finally {
@@ -233,9 +172,7 @@ export const operationFailure = (operation: Operation): Failure => {
     kind: hubFailureKind(operation.error.code),
     code: operation.error.code,
     message: operation.error.message,
-    remediation: operation.error.remediation,
-    next: operation.error.fix ? [operation.error.fix] : undefined,
-    docs: operation.error.docs,
+    remediation: operation.error.remediation ?? undefined,
     url: operation.url,
   };
 };
@@ -249,7 +186,7 @@ const renderDetached = (data: { operation: { id: string } }): string =>
     `Cancel  wgc hub operation cancel ${data.operation.id}`,
   ].join('\n');
 
-/** Reports an operation that did not finish while followed: detached, waiting for approval, or past the wait. */
+/** Reports an operation that did not finish while followed: detached, waiting on a person, or past the wait. */
 export const reportUnfinished = (
   output: Output,
   outcome: Exclude<FollowOutcome, { kind: 'finished' }>,
@@ -272,12 +209,13 @@ export const reportUnfinished = (
     return;
   }
 
-  if (kind === 'input-required') {
+  if (kind === 'waiting') {
+    const approval = operation.status === 'needs_approval';
     output.fail({
       kind: 'confirmation',
-      code: operation.error?.code ?? 'CONFIRMATION_REQUIRED',
-      message: operation.error?.message ?? `${operation.id} is waiting for approval.`,
-      remediation: `${operation.error?.remediation ?? 'Approve it in Hub:'}\n${operation.url}`,
+      code: 'CONFIRMATION_REQUIRED',
+      message: operation.approvalReason ?? `${operation.id} is waiting for ${approval ? 'approval' : 'its requester'}.`,
+      remediation: `${approval ? 'Approve' : 'Answer'} it in Hub:\n${operation.url}`,
       next: [watchCommand(operation)],
       url: operation.url,
     });
@@ -292,18 +230,15 @@ export const reportUnfinished = (
   });
 };
 
-/** Reports a finished operation: its summary on success, its error (or its own summary) on failure. */
+/** Reports a finished operation: its summary on success, its error on failure. */
 export const reportFinished = (output: Output, operation: Operation): void => {
-  const options = { operation: { id: operation.id, status: operation.status }, url: operation.url };
-
   if (operation.status === 'succeeded') {
-    output.result({ operation }, (data) => summarizeOperation(data.operation), options);
+    output.result({ operation }, (data) => summarizeOperation(data.operation), {
+      operation: { id: operation.id, status: operation.status },
+      url: operation.url,
+    });
     return;
   }
 
-  const ownSummary = summaries[operation.kind];
-  output.fail(
-    { ...operationFailure(operation), data: { operation } },
-    ownSummary ? (data) => ownSummary(data.operation) : undefined,
-  );
+  output.fail({ ...operationFailure(operation), data: { operation } });
 };

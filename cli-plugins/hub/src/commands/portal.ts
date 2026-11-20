@@ -5,8 +5,6 @@ import { asGroup, openSandboxSession, withExamples, withSandboxOptions } from '.
 import type { SandboxOptions } from '../common/command.js';
 import { hubResults, hubTools } from '../common/contract.js';
 import type { Portal } from '../common/contract.js';
-import { locateSandbox } from '../common/hub.js';
-import type { SandboxSelection } from '../common/link.js';
 import { runTunnel } from '../common/portal-tunnel.js';
 import type { HubDependencies } from '../common/runtime.js';
 import { formatAge } from '../common/time.js';
@@ -15,19 +13,6 @@ interface OpenOptions extends SandboxOptions {
   port?: string;
   url?: string;
 }
-
-/** `<schema>/<sandbox>`, as Hub's tools name a sandbox: `--sandbox` may already be one. */
-const sandboxAddress = async (hub: HubClient, selection: SandboxSelection): Promise<Result<string>> => {
-  if (selection.sandboxId.includes('/')) {
-    return ok(selection.sandboxId);
-  }
-
-  const located = await locateSandbox(hub, selection);
-  if (!located.success) {
-    return located;
-  }
-  return ok(`${located.data.graphSlug}/${located.data.sandboxId}`);
-};
 
 /** Where the local subgraph answers: `--url`, or `/graphql` on `--port` of localhost. */
 const localUrlOf = (options: OpenOptions): Result<string> => {
@@ -112,13 +97,8 @@ const runOpen = async (subgraph: string, options: OpenOptions, dependencies: Hub
   }
 
   const { hub, selection } = session.data;
-  const address = await sandboxAddress(hub, selection);
-  if (!address.success) {
-    output.fail(toFailure(address));
-    return;
-  }
-
-  const opened = await hub.callTool(hubTools.openPortal, { sandbox: address.data, subgraph }, hubResults.openPortal);
+  const address = selection.sandbox;
+  const opened = await hub.callTool(hubTools.openPortal, { sandbox: address, subgraph }, hubResults.openPortal);
   if (!opened.success) {
     output.fail(toFailure(opened));
     return;
@@ -126,7 +106,7 @@ const runOpen = async (subgraph: string, options: OpenOptions, dependencies: Hub
 
   const { portal, credential, tunnelPath, dashboardUrl } = opened.data;
   output.message(`  ${dashboardUrl}\n`, { event: 'portal', id: portal.portalId, url: dashboardUrl });
-  output.message(`Portal ${subgraph} in ${address.data} -> ${localUrl.data}. Ctrl-C closes it.`, {
+  output.message(`Portal ${subgraph} in ${address} -> ${localUrl.data}. Ctrl-C closes it.`, {
     event: 'portal_status',
     status: portal.status,
   });
@@ -141,7 +121,7 @@ const runOpen = async (subgraph: string, options: OpenOptions, dependencies: Hub
   });
 
   if (ended.kind === 'interrupted') {
-    await closeOnInterrupt(hub, output, { address: address.data, subgraph, dashboardUrl });
+    await closeOnInterrupt(hub, output, { address, subgraph, dashboardUrl });
     return;
   }
 
@@ -157,7 +137,7 @@ const runOpen = async (subgraph: string, options: OpenOptions, dependencies: Hub
 
   output.result(
     { portal: { ...describePortal(portal), status: 'closed' }, reason: ended.reason },
-    (data) => `The portal was closed in Hub (${data.reason}). ${address.data} serves ${subgraph} as before.`,
+    (data) => `The portal was closed in Hub (${data.reason}). ${address} serves ${subgraph} as before.`,
     { url: dashboardUrl },
   );
 };
@@ -170,15 +150,10 @@ const runClose = async (subgraph: string, options: SandboxOptions, dependencies:
     return;
   }
 
-  const address = await sandboxAddress(session.data.hub, session.data.selection);
-  if (!address.success) {
-    output.fail(toFailure(address));
-    return;
-  }
-
+  const address = session.data.selection.sandbox;
   const closed = await session.data.hub.callTool(
     hubTools.closePortal,
-    { sandbox: address.data, subgraph },
+    { sandbox: address, subgraph },
     hubResults.closePortal,
   );
   if (!closed.success) {
@@ -188,7 +163,7 @@ const runClose = async (subgraph: string, options: SandboxOptions, dependencies:
 
   output.result(
     { portal: describePortal(closed.data.portal) },
-    () => `Closed the portal. ${address.data} serves ${subgraph} as before.`,
+    () => `Closed the portal. ${address} serves ${subgraph} as before.`,
     { changed: true },
   );
 };
@@ -223,17 +198,8 @@ const runList = async (options: SandboxOptions, dependencies: HubDependencies): 
     return;
   }
 
-  const address = await sandboxAddress(session.data.hub, session.data.selection);
-  if (!address.success) {
-    output.fail(toFailure(address));
-    return;
-  }
-
-  const listed = await session.data.hub.callTool(
-    hubTools.listPortals,
-    { sandbox: address.data },
-    hubResults.listPortals,
-  );
+  const address = session.data.selection.sandbox;
+  const listed = await session.data.hub.callTool(hubTools.listPortals, { sandbox: address }, hubResults.listPortals);
   if (!listed.success) {
     output.fail(toFailure(listed));
     return;

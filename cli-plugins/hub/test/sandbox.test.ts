@@ -1,6 +1,5 @@
-import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { createInterrupt, FakeHub, linkedRepo, runWgc, sandboxDetails, startFakeHub, tempRepo } from './harness.js';
+import { createInterrupt, FakeHub, linkedRepo, runWgc, startFakeHub, tempRepo } from './harness.js';
 
 let hub: FakeHub | undefined;
 afterEach(async () => {
@@ -8,20 +7,21 @@ afterEach(async () => {
   hub = undefined;
 });
 
+const sandboxRow = (name: string, routerStatus: string) => ({
+  address: `shop/${name}`,
+  schema: 'shop',
+  name,
+  createdFrom: null,
+  routerStatus,
+  endpointUrl: `https://${name}.sandbox.wundergraph.dev/graphql`,
+});
+
 describe('wgc hub sandbox list', () => {
-  test('lists the sandboxes of the graph in sandbox.yaml', async () => {
+  test('lists the sandboxes of the schema in sandbox.yaml', async () => {
     hub = await startFakeHub({
       tools: {
         list_sandboxes: () => ({
-          structuredContent: {
-            sandboxes: [
-              sandboxDetails(),
-              {
-                ...sandboxDetails({ sandbox_id: 'sb_8e20', name: 'shop-agent', status: 'starting' }),
-                graphql_url: null,
-              },
-            ],
-          },
+          structuredContent: { sandboxes: [sandboxRow('shop-nithin', 'live'), sandboxRow('shop-agent', 'starting')] },
         }),
       },
     });
@@ -29,11 +29,11 @@ describe('wgc hub sandbox list', () => {
 
     const run = await runWgc(['hub', 'sandbox', 'list'], { hubUrl: hub.url, cwd: dir, output: 'text' });
 
-    expect(hub.toolCalls()).toEqual([{ name: 'list_sandboxes', arguments: { graph: 'shop' } }]);
+    expect(hub.toolCalls()).toEqual([{ name: 'list_sandboxes', arguments: { schema: 'shop' } }]);
     expect(run.stdout).toBe(
       [
-        'shop-nithin (sb_3fd1)   running   https://sb-3fd1.sandbox.wundergraph.dev/graphql',
-        'shop-agent (sb_8e20)   starting',
+        'shop/shop-nithin   live   https://shop-nithin.sandbox.wundergraph.dev/graphql',
+        'shop/shop-agent   starting   https://shop-agent.sandbox.wundergraph.dev/graphql',
         '',
       ].join('\n'),
     );
@@ -51,27 +51,39 @@ describe('wgc hub sandbox list', () => {
 });
 
 describe('wgc hub sandbox history', () => {
-  test('lists every change with its age, surface and author', async () => {
+  test('lists every change with its age, author, kind and verdict', async () => {
     hub = await startFakeHub({
       tools: {
         list_sandbox_history: () => ({
           structuredContent: {
+            viewSeq: 14,
             entries: [
               {
-                version: 'v14',
-                summary: '+ source payments',
-                surface: 'cli',
-                actor: 'nithin',
-                at: '2026-11-20T11:58:00Z',
+                seq: 13,
+                operationId: 'op_6Pd0',
+                author: { kind: 'agent', userId: 'user-1' },
+                agentName: 'claude',
+                createdAt: '2026-11-20T09:00:00Z',
+                kind: 'remove_type',
+                verdict: 'refused',
+                refusalReason: 'Order is still referenced',
+                changedTypes: [],
+                isMine: false,
               },
               {
-                version: 'v13',
-                summary: 'router 0.214.0',
-                surface: 'mcp',
-                actor: 'claude',
-                at: '2026-11-20T09:00:00Z',
+                seq: 14,
+                operationId: 'op_7Kq2',
+                author: { kind: 'user', userId: 'nithin' },
+                agentName: null,
+                createdAt: '2026-11-20T11:58:00Z',
+                kind: 'add_field',
+                verdict: 'applied',
+                refusalReason: null,
+                changedTypes: ['Query'],
+                isMine: true,
               },
             ],
+            nextAfterSeq: null,
           },
         }),
       },
@@ -84,29 +96,71 @@ describe('wgc hub sandbox history', () => {
     });
 
     expect(run.stdout).toBe(
-      ['v14  2m ago  cli  nithin  + source payments', 'v13  3h ago  mcp  claude  router 0.214.0', ''].join('\n'),
+      [
+        '#13  3h ago  claude  remove_type  refused: Order is still referenced',
+        '#14  2m ago  nithin  add_field    applied',
+        '',
+      ].join('\n'),
     );
+    expect(hub.toolCalls()).toEqual([{ name: 'list_sandbox_history', arguments: { sandbox: 'shop/shop-nithin' } }]);
   });
 });
 
-const line = (message: string) => ({ at: '2026-11-20T11:59:00Z', component: 'router', message });
+const notice = 'untrustedData is what the sandbox’s router wrote.';
+
+const logs = (message: string, cursor: string) => ({
+  structuredContent: {
+    notice,
+    untrustedData: {
+      sandbox: 'shop/shop-nithin',
+      lines: [
+        { at: '2026-11-20T11:59:00Z', level: 'info', source: 'router', container: 'router', message, redacted: [] },
+      ],
+      cursor,
+    },
+  },
+});
 
 describe('wgc hub sandbox logs', () => {
-  test('prints the lines of one component since a duration', async () => {
-    hub = await startFakeHub({
-      tools: { get_sandbox_logs: () => ({ structuredContent: { lines: [line('started')], next_cursor: 'c1' } }) },
-    });
+  test('prints the latest lines of the sources asked for', async () => {
+    hub = await startFakeHub({ tools: { stream_logs: () => logs('started', 'c1') } });
 
-    const run = await runWgc(['hub', 'sandbox', 'logs', '--since', '10m', '--router'], {
+    const run = await runWgc(['hub', 'sandbox', 'logs', '--source', 'router', 'build'], {
       hubUrl: hub.url,
       cwd: await linkedRepo(),
       output: 'text',
     });
 
     expect(hub.toolCalls()).toEqual([
-      { name: 'get_sandbox_logs', arguments: { sandbox_id: 'sb_3fd1', since: '10m', component: 'router' } },
+      { name: 'stream_logs', arguments: { sandbox_id: 'shop/shop-nithin', sources: ['router', 'build'] } },
     ]);
-    expect(run.stdout).toBe('2026-11-20T11:59:00Z  router  started\n');
+    expect(run.stdout).toBe('2026-11-20T11:59:00Z  router   started\n');
+  });
+
+  test('JSON callers get Hub’s notice with the lines', async () => {
+    hub = await startFakeHub({ tools: { stream_logs: () => logs('started', 'c1') } });
+
+    const run = await runWgc(['hub', 'sandbox', 'logs', '--json'], { hubUrl: hub.url, cwd: await linkedRepo() });
+
+    expect(run.json()).toEqual({
+      ok: true,
+      data: {
+        notice,
+        lines: [{ at: '2026-11-20T11:59:00Z', level: 'info', source: 'router', message: 'started' }],
+      },
+    });
+  });
+
+  test('an unknown --source is a usage error', async () => {
+    const run = await runWgc(['hub', 'sandbox', 'logs', '--source', 'forge', '--json'], { cwd: await linkedRepo() });
+
+    expect(run.exitCode).toBe(2);
+    expect(run.json()).toMatchObject({
+      error: {
+        message: '--source forge is not a log source.',
+        remediation: 'Pass one or more of: router, agent, boot, build, command.',
+      },
+    });
   });
 
   test('--follow streams JSON lines with the cursor until Ctrl-C', async () => {
@@ -114,12 +168,12 @@ describe('wgc hub sandbox logs', () => {
     let calls = 0;
     hub = await startFakeHub({
       tools: {
-        get_sandbox_logs: () => {
+        stream_logs: () => {
           calls++;
           if (calls === 3) {
             interrupt.press();
           }
-          return { structuredContent: { lines: [line(`line ${calls}`)], next_cursor: `c${calls}` } };
+          return logs(`line ${calls}`, `c${calls}`);
         },
       },
     });
@@ -138,66 +192,48 @@ describe('wgc hub sandbox logs', () => {
         .map((text) => JSON.parse(text).message),
     ).toEqual(['line 1', 'line 2']);
     expect(hub.toolCalls().map((call) => call.arguments)).toEqual([
-      { sandbox_id: 'sb_3fd1', wait_seconds: 30 },
-      { sandbox_id: 'sb_3fd1', wait_seconds: 30, cursor: 'c1' },
-      { sandbox_id: 'sb_3fd1', wait_seconds: 30, cursor: 'c2' },
+      { sandbox_id: 'shop/shop-nithin' },
+      { sandbox_id: 'shop/shop-nithin', cursor: 'c1', wait_seconds: 30 },
+      { sandbox_id: 'shop/shop-nithin', cursor: 'c2', wait_seconds: 30 },
     ]);
   });
-});
-
-const proposalTool = (created: boolean) => ({
-  create_proposal: () => ({
-    structuredContent: {
-      proposal: { number: 42, url: 'https://hub.wundergraph.com/acme/graph/shop/proposals/42' },
-      created,
-      changes: { total: 2, breaking: 0 },
-    },
-  }),
 });
 
 describe('wgc hub propose', () => {
-  test('creates a proposal from the linked sandbox', async () => {
-    hub = await startFakeHub({ tools: proposalTool(true) });
-    const dir = await linkedRepo({ 'proposal.md': 'Adds payments.' });
+  test('opens a Hub proposal from the linked sandbox', async () => {
+    hub = await startFakeHub({ tools: { create_proposal: () => ({ structuredContent: { ok: true } }) } });
 
-    const run = await runWgc(['hub', 'propose', '--title', 'Add payments subgraph', '--body-file', 'proposal.md'], {
-      hubUrl: hub.url,
-      cwd: dir,
-      output: 'text',
-    });
+    const run = await runWgc(['hub', 'propose'], { hubUrl: hub.url, cwd: await linkedRepo(), output: 'text' });
 
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toBe(
-      'Created proposal #42 from sandbox sb_3fd1 (2 schema changes, 0 breaking)\n' +
-        'https://hub.wundergraph.com/acme/graph/shop/proposals/42\n',
+      [
+        'Created a proposal from sandbox shop/shop-nithin',
+        '',
+        'Next',
+        '  wgc hub open proposal      review it in Hub',
+        '',
+      ].join('\n'),
     );
-    expect(hub.toolCalls()).toEqual([
-      {
-        name: 'create_proposal',
-        arguments: {
-          sandbox_id: 'sb_3fd1',
-          idempotency_key: 'generated-key',
-          title: 'Add payments subgraph',
-          body: 'Adds payments.',
-        },
-      },
-    ]);
+    expect(hub.toolCalls()).toEqual([{ name: 'create_proposal', arguments: { sandbox: 'shop/shop-nithin' } }]);
   });
 
-  test('an already open proposal is reported as no change', async () => {
-    hub = await startFakeHub({ tools: proposalTool(false) });
+  test('a sandbox that already has a proposal fails with Hub’s reason', async () => {
+    hub = await startFakeHub({
+      tools: {
+        create_proposal: () => ({
+          isError: true,
+          structuredContent: { code: 'PROPOSAL_CONFLICT', message: 'That sandbox already has a proposal open.' },
+        }),
+      },
+    });
 
     const run = await runWgc(['hub', 'propose', '--json'], { hubUrl: hub.url, cwd: await linkedRepo() });
 
-    expect(run.json()).toMatchObject({ ok: true, changed: false, data: { proposal: { number: 42 } } });
-  });
-
-  test('a missing body file is a usage error', async () => {
-    const dir = await linkedRepo();
-
-    const run = await runWgc(['hub', 'propose', '--body-file', 'nope.md', '--json'], { cwd: dir });
-
-    expect(run.exitCode).toBe(2);
-    expect(run.json()).toMatchObject({ error: { message: `No file at ${path.join(dir, 'nope.md')}.` } });
+    expect(run.exitCode).toBe(1);
+    expect(run.json()).toMatchObject({
+      ok: false,
+      error: { code: 'PROPOSAL_CONFLICT', message: 'That sandbox already has a proposal open.' },
+    });
   });
 });

@@ -18,7 +18,7 @@ export interface SandboxOptions {
 
 export const withSandboxOptions = (command: Command): Command =>
   command
-    .option('--sandbox <id>', 'Target sandbox (default: WGC_SANDBOX, then .wgc/link.json)')
+    .option('--sandbox <schema/sandbox>', 'Target sandbox (default: WGC_SANDBOX, then .wgc/link.json)')
     .option('--config <path>', 'Path to sandbox.yaml (default: the nearest one in this or a parent directory)')
     .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: sandbox.yaml `audience` or hub)')
     .option('--json', 'Machine-readable output');

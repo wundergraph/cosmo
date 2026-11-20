@@ -240,40 +240,53 @@ export const tempRepo = async (files: Record<string, string>): Promise<string> =
   return dir;
 };
 
-type StepJson = { name: string; status: string; duration_ms: number | null; detail: string | null };
+type StepJson = { label: string; status: string; detail: string };
 
-export const step = (name: string, status: string, durationMs: number | null = null, detail: string | null = null) =>
-  ({ name, status, duration_ms: durationMs, detail }) satisfies StepJson;
+export const step = (label: string, status: string, detail = '') => ({ label, status, detail }) satisfies StepJson;
 
-export const hubBase = 'https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1';
+export const sandboxAddress = 'shop/shop-nithin';
+
+export const operationUrl = (id: string) => `https://hub.wundergraph.com/acme/operations/${id}`;
+
+/** An operation as Hub's `list_operations` and `cancel_operation` return it. */
+export const operationSummary = ({
+  id = 'op_7Kq2',
+  kind = 'launch_sandbox',
+  status = 'running',
+  origin = 'cli',
+}: {
+  id?: string;
+  kind?: string;
+  status?: string;
+  origin?: string;
+}) => ({
+  operationId: id,
+  kind,
+  status,
+  title: `${kind} ${sandboxAddress}`,
+  origin,
+  sandbox: sandboxAddress,
+  requestedBy: 'user-1',
+  agentName: null,
+  createdAt: '2026-11-20T11:56:00Z',
+  finishedAt: status === 'succeeded' || status === 'failed' ? '2026-11-20T11:56:30Z' : null,
+  dashboardUrl: operationUrl(id),
+});
 
 /** An operation as Hub's `get_operation` returns it. */
 export const hubOperation = ({
-  id = 'op_7Kq2',
-  kind = 'sandbox.launch',
-  status = 'running',
   steps = [],
-  events = [],
   error = null,
+  approval = null,
+  ...summary
 }: {
   id?: string;
   kind?: string;
   status?: string;
   steps?: StepJson[];
-  events?: Array<{ at: string; message: string; step: string | null }>;
-  error?: { [key: string]: Json } | null;
-}) => ({
-  operation_id: id,
-  kind,
-  status,
-  steps,
-  events,
-  url: `${hubBase}/operations/${id}`,
-  origin: { surface: 'cli', client: 'wgc' },
-  error,
-  started_at: '2026-11-20T11:56:00Z',
-  finished_at: status === 'succeeded' || status === 'failed' ? '2026-11-20T11:56:30Z' : null,
-});
+  error?: { code: string; message: string; remediation: string | null } | null;
+  approval?: { reason: string; approvalPermission: string | null; decidedBy: null; decidedAt: null } | null;
+}) => ({ ...operationSummary(summary), steps, result: null, error, approval });
 
 /** Answers each call with the next item, repeating the last one. */
 export const sequence = <T>(items: T[]) => {
@@ -285,33 +298,14 @@ export const sequence = <T>(items: T[]) => {
   };
 };
 
-export const sandboxDetails = (overrides: { [key: string]: Json } = {}) => ({
-  sandbox_id: 'sb_3fd1',
-  name: 'shop-nithin',
-  status: 'running',
-  org_slug: 'acme',
-  graph_slug: 'shop',
-  url: hubBase,
-  graphql_url: 'https://sb-3fd1.sandbox.wundergraph.dev/graphql',
-  router_version: '0.214.0',
-  latest_router_version: '0.216.1',
-  sources: [
-    { name: 'accounts', status: 'ok' },
-    { name: 'catalog', status: 'ok' },
-    { name: 'orders', status: 'ok' },
-  ],
-  collections: ['smoke'],
-  last_operation: {
-    operation_id: 'op_6Pd0',
-    kind: 'forge.check',
-    status: 'succeeded',
-    finished_at: '2026-11-20T11:56:00Z',
-  },
-  ...overrides,
+/** A sandbox as Hub's `get_sandbox` returns it to a token that grants "run". */
+export const hubSandbox = (address = sandboxAddress) => ({
+  address,
+  endpointUrl: 'https://sb-3fd1.sandbox.wundergraph.dev/graphql',
+  endpointToken: 'endpoint-secret',
+  routerStatus: 'live',
+  viewSeq: 14,
 });
 
 export const linkedRepo = (files: Record<string, string> = {}) =>
-  tempRepo({
-    '.wgc/link.json': JSON.stringify({ orgSlug: 'acme', graphSlug: 'shop', sandboxId: 'sb_3fd1' }),
-    ...files,
-  });
+  tempRepo({ '.wgc/link.json': JSON.stringify({ sandbox: sandboxAddress }), ...files });

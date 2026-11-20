@@ -29,23 +29,19 @@ const runLink = async (sandbox: string | undefined, options: LinkOptions, depend
 
   const cwd = runtime.cwd();
   const hub = connectHub(context, await resolveAudience(cwd, options));
-  const described = await hub.callTool(hubTools.describeSandbox, { sandbox_id: sandbox }, hubResults.describeSandbox);
-  if (!described.success) {
-    output.fail(toFailure(described));
+  const found = await hub.callTool(hubTools.getSandbox, { sandbox }, hubResults.getSandbox);
+  if (!found.success) {
+    output.fail(toFailure(found));
     return;
   }
 
-  const found = described.data.sandbox;
-  const write = await writeLink(projectDirectory(cwd, options.config), {
-    orgSlug: found.orgSlug,
-    graphSlug: found.graphSlug,
-    sandboxId: found.sandboxId,
-  });
+  const { address } = found.data;
+  const write = await writeLink(projectDirectory(cwd, options.config), { sandbox: address });
 
   output.result(
-    { sandbox: { sandboxId: found.sandboxId, name: found.name }, link: { path: linkFilePath, ...write } },
-    (data) => describeLinkWrite(data.sandbox.sandboxId, data.link),
-    { changed: write.changed, url: found.url },
+    { sandbox: address, link: { path: linkFilePath, ...write } },
+    (data) => describeLinkWrite(data.sandbox, data.link),
+    { changed: write.changed },
   );
 };
 
@@ -65,12 +61,12 @@ export const linkCommands = (dependencies: HubDependencies): Command[] => [
   withExamples(
     new Command('link')
       .description('Link this directory to a sandbox (.wgc/link.json, gitignored)')
-      .argument('[sandbox]', 'Sandbox id or name')
+      .argument('[sandbox]', 'Sandbox as <schema>/<sandbox>')
       .option('--config <path>', 'Path to sandbox.yaml; the link goes next to it')
       .option('--audience <audience>', 'OIDC audience Hub expects from CI')
       .option('--no-input', 'Never prompt')
       .option('--json', 'Machine-readable output'),
-    ['wgc hub link sb_3fd1', 'wgc hub link shop-nithin --json'],
+    ['wgc hub link shop/shop-nithin', 'wgc hub link shop/shop-nithin --json'],
     'link',
   ).action((sandbox: string | undefined, options: LinkOptions) => runLink(sandbox, options, dependencies)),
   new Command('unlink')

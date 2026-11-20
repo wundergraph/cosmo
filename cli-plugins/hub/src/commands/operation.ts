@@ -4,7 +4,7 @@ import { asGroup, openSandboxSession, withExamples, withSandboxOptions } from '.
 import type { SandboxOptions } from '../common/command.js';
 import { hubResults, hubTools } from '../common/contract.js';
 import { connectHub } from '../common/hub.js';
-import { followOperation, isFinished, reportFinished, reportUnfinished } from '../common/operation.js';
+import { fetchOperation, followOperation, isFinished, reportFinished, reportUnfinished } from '../common/operation.js';
 import type { HubDependencies } from '../common/runtime.js';
 import { resolveAudience } from '../common/target.js';
 import { formatAge, parseDuration } from '../common/time.js';
@@ -44,7 +44,7 @@ const runFollow = async (
   }
 
   const hub = await connect(options, dependencies);
-  const fetched = await hub.callTool(hubTools.getOperation, { operation_id: operationId }, hubResults.getOperation);
+  const fetched = await fetchOperation(hub, operationId);
   if (!fetched.success) {
     output.fail(toFailure(fetched));
     return;
@@ -54,7 +54,7 @@ const runFollow = async (
     hub,
     output,
     runtime,
-    operation: fetched.data.operation,
+    operation: fetched.data,
     showSteps,
     deadline,
   });
@@ -73,13 +73,13 @@ const runCancel = async (operationId: string, options: OperationOptions, depende
   const output = dependencies.context.output({ json: options.json });
   const hub = await connect(options, dependencies);
 
-  const fetched = await hub.callTool(hubTools.getOperation, { operation_id: operationId }, hubResults.getOperation);
+  const fetched = await fetchOperation(hub, operationId);
   if (!fetched.success) {
     output.fail(toFailure(fetched));
     return;
   }
 
-  const before = fetched.data.operation;
+  const before = fetched.data;
   if (isFinished(before)) {
     output.result(
       { operation: before },
@@ -89,17 +89,13 @@ const runCancel = async (operationId: string, options: OperationOptions, depende
     return;
   }
 
-  const cancelled = await hub.callTool(
-    hubTools.cancelOperation,
-    { operation_id: operationId },
-    hubResults.cancelOperation,
-  );
+  const cancelled = await hub.callTool(hubTools.cancelOperation, { operationId }, hubResults.cancelOperation);
   if (!cancelled.success) {
     output.fail(toFailure(cancelled));
     return;
   }
 
-  const after = cancelled.data.operation;
+  const after = cancelled.data;
   output.result({ operation: after }, (data) => `Cancelled ${data.operation.id} (${data.operation.kind})`, {
     changed: true,
     operation: { id: after.id, status: after.status },
@@ -116,11 +112,7 @@ const runList = async (options: SandboxOptions, dependencies: HubDependencies) =
   }
 
   const { hub, selection } = session.data;
-  const listed = await hub.callTool(
-    hubTools.listOperations,
-    { sandbox_id: selection.sandboxId },
-    hubResults.listOperations,
-  );
+  const listed = await hub.callTool(hubTools.listOperations, { sandbox: selection.sandbox }, hubResults.listOperations);
   if (!listed.success) {
     output.fail(toFailure(listed));
     return;
@@ -129,14 +121,14 @@ const runList = async (options: SandboxOptions, dependencies: HubDependencies) =
   const now = dependencies.runtime.now();
   output.result(listed.data, (data) => {
     if (data.operations.length === 0) {
-      return `No operations in ${selection.sandboxId} yet.`;
+      return `No operations in ${selection.sandbox} yet.`;
     }
     const rows = data.operations.map((operation) => [
       operation.id,
       operation.kind,
       operation.status,
-      operation.origin.client ? `${operation.origin.surface} (${operation.origin.client})` : operation.origin.surface,
-      formatAge(operation.startedAt, now),
+      operation.origin,
+      formatAge(operation.createdAt, now),
     ]);
     const widths = [0, 1, 2, 3].map((column) => Math.max(...rows.map((row) => row[column].length)));
     return rows
@@ -193,7 +185,7 @@ export const operationCommand = (dependencies: HubDependencies): Command =>
     .addCommand(
       withExamples(
         withSandboxOptions(new Command('list').description('List the operations of the sandbox, newest first')),
-        ['wgc hub operation list', 'wgc hub operation list --sandbox sb_3fd1 --json'],
+        ['wgc hub operation list', 'wgc hub operation list --sandbox shop/shop-nithin --json'],
         'operation/list',
       ).action((options: SandboxOptions) => runList(options, dependencies)),
     );

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { z } from 'zod';
 import { failWith, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import type { SandboxLocation } from './contract.js';
 import { sandboxFileName } from './sandbox-config.js';
 
 export const linkFilePath = path.join('.wgc', 'link.json');
@@ -12,7 +11,7 @@ export const linkFilePath = path.join('.wgc', 'link.json');
 const gitignoreEntry = '.wgc/';
 
 /** Which remote sandbox a checkout talks to. Local to the checkout, so it is gitignored. */
-const linkShape = z.object({ orgSlug: z.string(), graphSlug: z.string(), sandboxId: z.string() });
+const linkShape = z.object({ sandbox: z.string() });
 
 export type SandboxLink = z.infer<typeof linkShape>;
 
@@ -93,12 +92,7 @@ export interface LinkWrite {
 
 export const writeLink = async (directory: string, link: SandboxLink): Promise<LinkWrite> => {
   const existing = await readLink(directory);
-  const unchanged =
-    existing.success &&
-    existing.data !== undefined &&
-    existing.data.sandboxId === link.sandboxId &&
-    existing.data.orgSlug === link.orgSlug &&
-    existing.data.graphSlug === link.graphSlug;
+  const unchanged = existing.success && existing.data !== undefined && existing.data.sandbox === link.sandbox;
 
   if (!unchanged) {
     await mkdir(path.join(directory, '.wgc'), { recursive: true });
@@ -118,16 +112,19 @@ export const removeLink = async (directory: string): Promise<boolean> => {
   return true;
 };
 
-export const describeLinkWrite = (sandboxId: string, write: LinkWrite): string => {
+export const describeLinkWrite = (sandbox: string, write: LinkWrite): string => {
   if (!write.changed) {
-    return `This directory is linked to ${sandboxId} (${linkFilePath})`;
+    return `This directory is linked to ${sandbox} (${linkFilePath})`;
   }
   const gitignore = write.gitignoreUpdated ? ', added to .gitignore' : '';
-  return `Linked this directory to ${sandboxId} (${linkFilePath}${gitignore})`;
+  return `Linked this directory to ${sandbox} (${linkFilePath}${gitignore})`;
 };
 
-/** A sandbox to act on. The link knows its org and graph; `--sandbox` and WGC_SANDBOX name only the sandbox. */
-export type SandboxSelection = { source: 'flag' | 'env'; sandboxId: string } | ({ source: 'link' } & SandboxLocation);
+/** A sandbox to act on, `<schema>/<sandbox>`, and where it was named. */
+export interface SandboxSelection {
+  source: 'flag' | 'env' | 'link';
+  sandbox: string;
+}
 
 /** `--sandbox` > WGC_SANDBOX > `.wgc/link.json`; with none of them, the caller must pass one. */
 export const selectSandbox = async ({
@@ -140,10 +137,10 @@ export const selectSandbox = async ({
   directory: string;
 }): Promise<Result<SandboxSelection>> => {
   if (flag) {
-    return ok({ source: 'flag', sandboxId: flag });
+    return ok({ source: 'flag', sandbox: flag });
   }
   if (env.WGC_SANDBOX) {
-    return ok({ source: 'env', sandboxId: env.WGC_SANDBOX });
+    return ok({ source: 'env', sandbox: env.WGC_SANDBOX });
   }
 
   const link = await readLink(directory);
@@ -151,13 +148,14 @@ export const selectSandbox = async ({
     return link;
   }
   if (link.data) {
-    return ok({ source: 'link', ...link.data });
+    return ok({ source: 'link', sandbox: link.data.sandbox });
   }
 
   return failWith({
     kind: 'usage',
     message: `No sandbox is linked to ${directory}.`,
-    remediation: 'Pass --sandbox <id>, set WGC_SANDBOX, or link this directory with `wgc hub link <sandbox>`.',
+    remediation:
+      'Pass --sandbox <schema>/<sandbox>, set WGC_SANDBOX, or link this directory with `wgc hub link <sandbox>`.',
     next: ['wgc hub link <sandbox>'],
   });
 };

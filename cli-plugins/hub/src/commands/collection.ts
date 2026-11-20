@@ -1,19 +1,21 @@
 import { Command } from 'commander';
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
-import { announceOperation, asGroup, openSandboxSession, withExamples, withSandboxOptions } from '../common/command.js';
+import { asGroup, openSandboxSession, withExamples, withSandboxOptions } from '../common/command.js';
 import type { SandboxOptions } from '../common/command.js';
 import { hubResults, hubTools } from '../common/contract.js';
-import { followOperation, renderStarted, reportFinished, reportUnfinished } from '../common/operation.js';
+import type { CollectionResult } from '../common/contract.js';
+import { formatDuration, nameColumnWidth, renderRow } from '../common/operation.js';
 import type { HubDependencies } from '../common/runtime.js';
 
-interface RunOptions extends SandboxOptions {
-  detach?: boolean;
-  idempotencyKey?: string;
-}
+const resultOutcome = (result: CollectionResult): string =>
+  result.passed ? formatDuration(result.durationMs) : (result.error ?? `status ${result.status}`);
 
-const runCollection = async (collection: string, options: RunOptions, dependencies: HubDependencies) => {
-  const { context, runtime } = dependencies;
-  const output = context.output({ json: options.json });
+/** `2 passed, 1 failed`; a zero failed count is left out. */
+const tally = (data: { passed: number; failed: number }): string =>
+  data.failed > 0 ? `${data.passed} passed, ${data.failed} failed` : `${data.passed} passed`;
+
+const runCollection = async (collection: string, options: SandboxOptions, dependencies: HubDependencies) => {
+  const output = dependencies.context.output({ json: options.json });
   const session = await openSandboxSession(dependencies, options);
   if (!session.success) {
     output.fail(toFailure(session));
@@ -21,44 +23,48 @@ const runCollection = async (collection: string, options: RunOptions, dependenci
   }
 
   const { hub, selection } = session.data;
-  if (!options.detach) {
-    output.message(`Running collection ${collection} in ${selection.sandboxId}`);
-  }
+  output.message(`Running collection ${collection} in ${selection.sandbox}`);
 
-  const started = await hub.callTool(
+  const ran = await hub.callTool(
     hubTools.runCollection,
-    {
-      sandbox_id: selection.sandboxId,
-      collection,
-      idempotency_key: options.idempotencyKey ?? runtime.newIdempotencyKey(),
-    },
+    { sandbox: selection.sandbox, collection },
     hubResults.runCollection,
   );
-  if (!started.success) {
-    output.fail(toFailure(started));
+  if (!ran.success) {
+    output.fail(toFailure(ran));
     return;
   }
 
-  const { operation } = started.data;
-  if (options.detach) {
-    output.result({ operation: { id: operation.id, status: operation.status } }, () => renderStarted(operation), {
-      operation: { id: operation.id, status: operation.status },
-      url: operation.url,
+  const { results, failed } = ran.data;
+  const width = nameColumnWidth(results.map((result) => result.operation));
+  for (const result of results) {
+    output.message(renderRow(result.passed ? '✓' : '✗', result.operation, width, resultOutcome(result)), {
+      event: 'collection_result',
+      collection: result.collection,
+      operation: result.operation,
+      passed: result.passed,
+      status: result.status,
+      duration_ms: result.durationMs,
+      error: result.error,
     });
-    return;
+  }
+  if (results.length > 0) {
+    output.message('');
   }
 
-  announceOperation(output, operation);
-  const followed = await followOperation({ hub, output, runtime, operation });
-  if (!followed.success) {
-    output.fail(toFailure(followed));
+  if (failed > 0) {
+    output.fail(
+      {
+        kind: 'findings',
+        code: 'COLLECTION_ASSERTIONS_FAILED',
+        message: `${failed} of ${results.length} operations failed.`,
+        data: ran.data,
+      },
+      tally,
+    );
     return;
   }
-  if (followed.data.kind !== 'finished') {
-    reportUnfinished(output, followed.data);
-    return;
-  }
-  reportFinished(output, followed.data.operation);
+  output.result(ran.data, tally);
 };
 
 export const collectionCommand = (dependencies: HubDependencies): Command =>
@@ -66,12 +72,10 @@ export const collectionCommand = (dependencies: HubDependencies): Command =>
     withExamples(
       withSandboxOptions(
         new Command('run')
-          .description('Run a collection against the sandbox. Exits 3 when an assertion fails.')
-          .argument('<name>', 'Collection name')
-          .option('--detach', 'Return once Hub accepted the run; watch it with `wgc hub operation watch`')
-          .option('--idempotency-key <key>', 'Repeat a run safely: Hub returns the first run for the same key'),
+          .description('Run every operation of a collection against the sandbox. Exits 3 when one fails.')
+          .argument('<name>', 'Collection name'),
       ),
-      ['wgc hub collection run smoke', 'wgc hub collection run checkout --detach --json'],
+      ['wgc hub collection run smoke', 'wgc hub collection run checkout --json'],
       'collection/run',
-    ).action((collection: string, options: RunOptions) => runCollection(collection, options, dependencies)),
+    ).action((collection: string, options: SandboxOptions) => runCollection(collection, options, dependencies)),
   );
