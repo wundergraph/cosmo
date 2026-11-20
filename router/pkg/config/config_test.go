@@ -3177,10 +3177,12 @@ version: "1"
 // all leaks into it.
 func TestResponseCacheSubgraphConfig(t *testing.T) {
 	t.Run("explicit zero survives loading from YAML and env", func(t *testing.T) {
-		for _, tc := range []struct{ env, all string }{
+		cases := []struct{ env, all string }{
 			{"0s", "{}"},
 			{"30s", "{fallback_ttl: 0s}"},
-		} {
+		}
+
+		for _, tc := range cases {
 			t.Setenv("RESPONSE_CACHE_ALL_FALLBACK_TTL", tc.env)
 			f := createTempFileFromFixture(t, `version: "1"
 response_cache:
@@ -3271,16 +3273,36 @@ response_cache:
 		require.ErrorContains(t, err, "at '/response_cache'")
 	})
 
-	t.Run("a too short subgraph fallback_ttl is refused", func(t *testing.T) {
+	t.Run("sub-second fallback TTLs are accepted", func(t *testing.T) {
 		f := createTempFileFromFixture(t, `
 version: "1"
 response_cache:
+  all:
+    fallback_ttl: 0.5s
   subgraphs:
     products:
-      fallback_ttl: 500ms
+      enabled: true
+      fallback_ttl: 1ns
 `)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products/fallback_ttl'")
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, new(500*time.Millisecond), cfg.Config.ResponseCache.All.FallbackTTL)
+		require.Equal(t, new(time.Nanosecond), cfg.Config.ResponseCache.Subgraphs["products"].FallbackTTL)
+	})
+
+	t.Run("negative fallback TTLs are rejected", func(t *testing.T) {
+		cases := []struct{ settings, path string }{
+			{"all: {fallback_ttl: -1ns}", "/response_cache/all/fallback_ttl"},
+			{"subgraphs: {products: {fallback_ttl: -1ns}}", "/response_cache/subgraphs/products/fallback_ttl"},
+		}
+
+		for _, tc := range cases {
+			f := createTempFileFromFixture(t, `version: "1"
+response_cache:
+  `+tc.settings)
+			_, err := LoadConfig([]string{f})
+			require.ErrorContains(t, err, tc.path)
+		}
 	})
 
 	t.Run("an unknown key in a subgraph entry is refused", func(t *testing.T) {

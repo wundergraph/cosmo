@@ -29,7 +29,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 	allOff := config.ResponseCacheSubgraphConfiguration{Enabled: false}
 
 	zero := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Duration)}
-	for _, tc := range []struct {
+	cases := []struct {
 		name          string
 		all           config.ResponseCacheSubgraphConfiguration
 		override      string
@@ -44,7 +44,9 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		{"max-age with zero fallback", allOn, "mood", zero, "Cache-Control", "max-age=60", 1},
 		{"s-maxage with zero fallback", allOn, "mood", zero, "Cache-Control", "s-maxage=60", 1},
 		{"expires with zero fallback", allOn, "mood", zero, "Expires", time.Now().Add(time.Hour).UTC().Format(http.TimeFormat), 1},
-	} {
+	}
+
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := &config.ResponseCacheConfiguration{
