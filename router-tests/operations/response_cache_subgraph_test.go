@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -24,7 +25,7 @@ func subgraphCacheOptions(t *testing.T, all config.ResponseCacheSubgraphConfigur
 func TestResponseCacheSubgraphs(t *testing.T) {
 	t.Parallel()
 
-	allOn := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute}
+	allOn := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)}
 	allOff := config.ResponseCacheSubgraphConfiguration{Enabled: false}
 
 	t.Run("a disabled subgraph is asked every time and stores nothing", func(t *testing.T) {
@@ -73,7 +74,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		t.Run("with an entry", func(t *testing.T) {
 			t.Parallel()
 			_, opts := subgraphCacheOptions(t, allOff, map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute)},
 			})
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: opts,
@@ -109,7 +110,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		t.Parallel()
 
 		_, opts := subgraphCacheOptions(t, allOn, map[string]config.ResponseCacheSubgraphConfiguration{
-			"mood": {Enabled: true, FallbackTTL: 5 * time.Minute},
+			"mood": {Enabled: true, FallbackTTL: new(5 * time.Minute)},
 		})
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: opts,
@@ -137,7 +138,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		cfg, opts := privateMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
 			cfg.All.PrivateID = ""
 			cfg.Subgraphs = map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute, PrivateID: privateUserExpression},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: privateUserExpression},
 			}
 		})
 		testenv.Run(t, &testenv.Config{
@@ -162,7 +163,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 
 		cfg, opts := privateMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
 			cfg.Subgraphs = map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute)},
 			}
 		})
 		testenv.Run(t, &testenv.Config{
@@ -197,4 +198,39 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 		})
 	})
+}
+
+func TestResponseCacheZeroFallbackTTL(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		cacheControl string
+		wantRequests int
+	}{
+		{"public", 2},
+		{"max-age=60", 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.cacheControl, func(t *testing.T) {
+			t.Parallel()
+			cfg := &config.ResponseCacheConfiguration{
+				Enabled: true,
+				All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)},
+				Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
+					"mood": {Enabled: true, FallbackTTL: new(time.Duration)},
+				},
+				Storage: config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128},
+			}
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{core.WithResponseCache(cfg)},
+				Subgraphs:     testenv.SubgraphsConfig{Mood: testenv.SubgraphConfig{Middleware: cacheControlMiddleware(tc.cacheControl)}},
+			}, func(t *testing.T, env *testenv.Environment) {
+				for range 2 {
+					env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+				}
+				assert.EqualValues(t, tc.wantRequests, env.SubgraphRequestCount.Mood.Load())
+			})
+		})
+	}
 }

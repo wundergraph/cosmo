@@ -21,8 +21,8 @@ import (
 func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log *zap.Logger) error {
 	mgr := expr.CreateNewExprManager()
 	if cfg.All.Enabled {
-		if cfg.All.FallbackTTL <= 0 {
-			return fmt.Errorf("response cache is enabled but all.fallback_ttl is %s, which must be greater than zero", cfg.All.FallbackTTL)
+		if cfg.All.FallbackTTL == nil || *cfg.All.FallbackTTL < 0 {
+			return fmt.Errorf("response cache is enabled but all.fallback_ttl must be set to a nonnegative duration")
 		}
 		if _, err := newResponseCachePrivateID(cfg.All.PrivateID, mgr); err != nil {
 			return err
@@ -35,8 +35,8 @@ func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log 
 			continue
 		}
 		enabled = true
-		if o.FallbackTTL <= 0 {
-			return fmt.Errorf("response_cache.subgraphs.%s.fallback_ttl is %s, which must be greater than zero", name, o.FallbackTTL)
+		if o.FallbackTTL == nil || *o.FallbackTTL < 0 {
+			return fmt.Errorf("response_cache.subgraphs.%s.fallback_ttl must be set to a nonnegative duration", name)
 		}
 		if _, err := newResponseCachePrivateID(o.PrivateID, mgr); err != nil {
 			return fmt.Errorf("response_cache.subgraphs.%s: %w", name, err)
@@ -63,7 +63,7 @@ type ResponseCacheSettings struct {
 
 type responseCacheSubgraphEntry struct {
 	disabled  bool
-	ttl       time.Duration
+	ttl       *time.Duration
 	privateID *responseCachePrivateID
 }
 
@@ -73,7 +73,9 @@ type responseCacheSubgraphEntry struct {
 func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.Manager, known []*nodev1.Subgraph, log *zap.Logger) (*ResponseCacheSettings, error) {
 	s := &ResponseCacheSettings{
 		defaultDisabled: !cfg.All.Enabled,
-		fallbackTTL:     cfg.All.FallbackTTL,
+	}
+	if cfg.All.FallbackTTL != nil {
+		s.fallbackTTL = *cfg.All.FallbackTTL
 	}
 	programs := make(map[string]*responseCachePrivateID)
 	compile := func(expression string) (*responseCachePrivateID, error) {
