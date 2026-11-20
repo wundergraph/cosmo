@@ -161,7 +161,15 @@ export function updateProposal(
 
     const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
     const expectedOrigin: ProposalOrigin = clientHdr.includes(hubUserAgent) ? 'EXTERNAL' : 'INTERNAL';
-    if (proposal.proposal.origin !== expectedOrigin) {
+
+    // Studio and the CLI may approve or close a Hub proposal; its subgraphs stay Hub-only.
+    const isReviewOfHubProposal =
+      expectedOrigin === 'INTERNAL' &&
+      proposal.proposal.origin === 'EXTERNAL' &&
+      req.updateAction.case === 'state' &&
+      (req.updateAction.value === 'APPROVED' || req.updateAction.value === 'CLOSED');
+
+    if (proposal.proposal.origin !== expectedOrigin && !isReviewOfHubProposal) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,

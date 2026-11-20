@@ -2339,6 +2339,67 @@ describe('Update proposal tests', () => {
     expect(updateProposalResponse.response?.details).toMatch(new RegExp(`Proposal .*${proposalName} not found`));
   });
 
+  test('approves a proposal created from hub outside of hub', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+    testContext.onTestFinished(() => server.close());
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL: `
+        type Query {
+          hello: String!
+          world: String!
+        }
+      `,
+      origin: ProposalOrigin.EXTERNAL,
+    });
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const approveResponse = await client.updateProposal({
+      proposalName: createProposalResponse.proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: { case: 'state', value: 'APPROVED' },
+    });
+    expect(approveResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const getProposalResponse = await client.getProposal({ proposalId: createProposalResponse.proposalId });
+    expect(getProposalResponse.proposal?.state).toBe('APPROVED');
+    expect(getProposalResponse.proposal?.origin).toBe(ProposalOrigin.EXTERNAL);
+  });
+
   test('should update a proposal that includes an existing subgraph which has never been published', async () => {
     const { client, server } = await SetupTest({
       dbname,
