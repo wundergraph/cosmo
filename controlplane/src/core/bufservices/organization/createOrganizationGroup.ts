@@ -11,6 +11,7 @@ import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function createOrganizationGroup(
   opts: RouterOptions,
@@ -126,6 +127,13 @@ export function createOrganizationGroup(
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 
+    sendGovernanceUpdated(opts, {
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      actorId: authContext.userId,
+      reason: 'group',
+    });
+
     return {
       response: {
         code: EnumStatusCode.OK,
@@ -137,6 +145,7 @@ export function createOrganizationGroup(
         builtin: createdGroup.builtin,
         membersCount: 0,
         apiKeysCount: 0,
+        hubPermissions: [],
         rules: [],
         hasOidcMappers: false,
       },

@@ -12,6 +12,7 @@ import { OrganizationRole } from '../../../db/models.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function updateOrganizationGroup(
   opts: RouterOptions,
@@ -131,6 +132,13 @@ export function updateOrganizationGroup(
       groupId: orgGroup.groupId,
       description: req.description,
       rules: resourcesByRole,
+    });
+
+    sendGovernanceUpdated(opts, {
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      actorId: authContext.userId,
+      reason: 'group',
     });
 
     return {

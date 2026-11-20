@@ -3050,3 +3050,69 @@ export const batchPublishJobDetails = pgTable('batch_publish_job_details', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
+
+export const hubPermissionEnum = pgEnum('hub_permission', [
+  'create_sandbox',
+  'share_sandbox',
+  'edit_sandbox',
+  'propose',
+  'approve',
+  'run_agents',
+  'open_portals',
+  'approve_egress',
+  'manage_egress_credentials',
+  'manage_integrations',
+  'view_audit_log',
+] as const);
+
+export const organizationGroupHubPermissions = pgTable(
+  'organization_group_hub_permissions', // oghp
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: 'cascade' }),
+    permission: hubPermissionEnum('permission').notNull(),
+    namespaceIds: uuid('namespace_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    targetIds: uuid('target_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+  },
+  (t) => {
+    return {
+      uniquePermissionPerGroup: uniqueIndex('oghp_group_permission_idx').on(t.groupId, t.permission),
+    };
+  },
+);
+
+export const graphResourceKindEnum = pgEnum('graph_resource_kind', ['subgraph', 'type', 'override'] as const);
+
+export const graphResourceOwners = pgTable(
+  'graph_resource_owners', // gro
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    resourceKind: graphResourceKindEnum('resource_kind').notNull(),
+    resource: text('resource').notNull(),
+    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'cascade' }),
+    organizationMemberId: uuid('organization_member_id').references(() => organizationsMembers.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      federatedGraphIdIndex: index('gro_federated_graph_id_idx').on(t.federatedGraphId),
+      groupOrMemberCheck: check(
+        'gro_group_xor_member_check',
+        sql`(${t.groupId} IS NOT NULL) <> (${t.organizationMemberId} IS NOT NULL)`,
+      ),
+    };
+  },
+);

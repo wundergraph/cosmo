@@ -1653,7 +1653,7 @@ export class OrganizationRepository {
   public async getOrganizationMemberGroups(input: {
     userID: string;
     organizationID: string;
-  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[]> {
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount' | 'hubPermissions'>[]> {
     const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,
@@ -1697,7 +1697,7 @@ export class OrganizationRepository {
   public async getOrganizationGroup(input: {
     organizationId: string;
     groupId: string;
-  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'> | null> {
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount' | 'hubPermissions'> | null> {
     const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,

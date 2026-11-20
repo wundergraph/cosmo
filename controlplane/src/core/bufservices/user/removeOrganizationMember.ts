@@ -11,6 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function removeOrganizationMember(
   opts: RouterOptions,
@@ -138,6 +139,13 @@ export function removeOrganizationMember(
       actorDisplayName: authContext.userDisplayName,
       apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+    });
+
+    sendGovernanceUpdated(opts, {
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      actorId: authContext.userId,
+      reason: 'member',
     });
 
     return {

@@ -166,7 +166,25 @@ export interface ProposalStateUpdated {
   };
 }
 
-type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
+export type GovernanceUpdateReason = 'member' | 'group' | 'hub_permissions' | 'ownership';
+
+export interface OrganizationGovernanceUpdated {
+  eventName: OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED;
+  payload: {
+    organization: {
+      id: string;
+      slug: string;
+    };
+    actor_id: string;
+    reason: GovernanceUpdateReason;
+  };
+}
+
+type OrganizationEventData =
+  | FederatedGraphSchemaUpdate
+  | MonographSchemaUpdate
+  | ProposalStateUpdated
+  | OrganizationGovernanceUpdated;
 
 type LintIssueResponse = z.infer<typeof lintIssueSchema>;
 export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
@@ -284,6 +302,11 @@ export class OrganizationWebhookService {
               graphIds: config.webhookProposalStateUpdate.map((wu) => wu.federatedGraphId),
             }),
           };
+          break;
+        }
+        case OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED: {
+          // Organization-wide event without a graph filter.
+          meta = { case: undefined };
           break;
         }
         default: {

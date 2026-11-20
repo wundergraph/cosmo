@@ -12,6 +12,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,
@@ -28,7 +29,7 @@ export function updateOrgMemberGroup(
       throw new UnauthorizedError();
     }
 
-    return opts.db.transaction(async (tx) => {
+    const result = await opts.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
       const orgGroupRepo = new OrganizationGroupRepository(tx);
       const oidcRepo = new OidcRepository(tx);
@@ -234,5 +235,17 @@ export function updateOrgMemberGroup(
         },
       };
     });
+
+    // Sent after the transaction commits so receivers read the new state.
+    if (result.response?.code === EnumStatusCode.OK) {
+      sendGovernanceUpdated(opts, {
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        actorId: authContext.userId,
+        reason: 'member',
+      });
+    }
+
+    return result;
   });
 }

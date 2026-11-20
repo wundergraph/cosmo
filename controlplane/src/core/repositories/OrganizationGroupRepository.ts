@@ -1,8 +1,9 @@
 import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { OrganizationGroupDTO } from '../../types/index.js';
-import { OrganizationRole } from '../../db/models.js';
+import { HubPermissionGrantDTO, OrganizationGroupDTO } from '../../types/index.js';
+import { HubPermission, OrganizationRole } from '../../db/models.js';
+import { defaultHubPermissionsByGroupName } from '../hubPermissions.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { defaultGroupDescription } from '../test-util.js';
 import { traced } from '../tracing.js';
@@ -40,6 +41,7 @@ export class OrganizationGroupRepository {
         membersCount: 0,
         apiKeysCount: 0,
         rules: [],
+        hubPermissions: [],
       };
     });
   }
@@ -148,6 +150,7 @@ export class OrganizationGroupRepository {
             groupId: id!,
             ...rest,
             rules: await this.getGroupRules({ groupId: id, organizationId }),
+            hubPermissions: await this.getHubPermissions(id),
           }) satisfies OrganizationGroupDTO,
       ),
     );
@@ -176,7 +179,60 @@ export class OrganizationGroupRepository {
           rules: [{ role: roleName, namespaces: [], resources: [] }],
         });
       }
+
+      await this.seedDefaultHubPermissions({ groupId: createdGroup.groupId, groupName: group.name });
     }
+  }
+
+  public async seedDefaultHubPermissions(input: { groupId: string; groupName: string }) {
+    const permissions = defaultHubPermissionsByGroupName[input.groupName] ?? [];
+
+    await this.setHubPermissions({
+      groupId: input.groupId,
+      grants: permissions.map((permission) => ({ permission, namespaces: [], resources: [] })),
+    });
+  }
+
+  public async getHubPermissions(groupId: string): Promise<HubPermissionGrantDTO[]> {
+    const rows = await this.db
+      .select({
+        permission: schema.organizationGroupHubPermissions.permission,
+        namespaceIds: schema.organizationGroupHubPermissions.namespaceIds,
+        targetIds: schema.organizationGroupHubPermissions.targetIds,
+      })
+      .from(schema.organizationGroupHubPermissions)
+      .where(eq(schema.organizationGroupHubPermissions.groupId, groupId))
+      .orderBy(schema.organizationGroupHubPermissions.permission);
+
+    return rows.map((row) => ({
+      permission: row.permission,
+      namespaces: row.namespaceIds,
+      resources: row.targetIds,
+    }));
+  }
+
+  public setHubPermissions(input: {
+    groupId: string;
+    grants: { permission: HubPermission; namespaces: string[]; resources: string[] }[];
+  }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(schema.organizationGroupHubPermissions)
+        .where(eq(schema.organizationGroupHubPermissions.groupId, input.groupId));
+
+      if (input.grants.length === 0) {
+        return;
+      }
+
+      await tx.insert(schema.organizationGroupHubPermissions).values(
+        input.grants.map((grant) => ({
+          groupId: input.groupId,
+          permission: grant.permission,
+          namespaceIds: grant.namespaces,
+          targetIds: grant.resources,
+        })),
+      );
+    });
   }
 
   public getGroupMembers(groupId: string) {

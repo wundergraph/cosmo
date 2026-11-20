@@ -122,6 +122,10 @@ import { createOrganizationGroup } from './organization/createOrganizationGroup.
 import { getOrganizationGroups } from './organization/getOrganizationGroups.js';
 import { getOrganizationGroupMembers } from './organization/getOrganizationGroupMembers.js';
 import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
+import { updateOrganizationGroupHubPermissions } from './organization/updateOrganizationGroupHubPermissions.js';
+import { getHubGovernance } from './organization/getHubGovernance.js';
+import { getGraphResourceOwners } from './federated-graph/getGraphResourceOwners.js';
+import { setGraphResourceOwners } from './federated-graph/setGraphResourceOwners.js';
 import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
@@ -662,6 +666,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deleteOrganizationGroup: (req, ctx) => {
       return deleteOrganizationGroup(opts, req, ctx);
+    },
+
+    updateOrganizationGroupHubPermissions: (req, ctx) => {
+      return updateOrganizationGroupHubPermissions(opts, req, ctx);
+    },
+
+    getHubGovernance: (req, ctx) => {
+      return getHubGovernance(opts, req, ctx);
+    },
+
+    getGraphResourceOwners: (req, ctx) => {
+      return getGraphResourceOwners(opts, req, ctx);
+    },
+
+    setGraphResourceOwners: (req, ctx) => {
+      return setGraphResourceOwners(opts, req, ctx);
     },
 
     getAPIKeys: (req, ctx) => {

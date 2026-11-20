@@ -114,6 +114,8 @@ export async function seedTest(
           ],
         });
       }
+
+      await orgGroupRepo.seedDefaultHubPermissions({ groupId: createdGroup.groupId, groupName });
     }
   }
 
@@ -197,6 +199,7 @@ export function createTestGroup(
       namespaces: r.namespaces ?? [],
       resources: r.resources ?? [],
     })),
+    hubPermissions: [],
   } satisfies OrganizationGroupDTO;
 }
 

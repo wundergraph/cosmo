@@ -46,7 +46,7 @@ export class RBACEvaluator {
   readonly canCreateNamespace: boolean;
 
   constructor(
-    readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[],
+    readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount' | 'hubPermissions'>[],
     private readonly userId?: string,
     isApiKey?: boolean,
     readonly idpNamespaceAccess: NamespaceAccess = { kind: 'all' },

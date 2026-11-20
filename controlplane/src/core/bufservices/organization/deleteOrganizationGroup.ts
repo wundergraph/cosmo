@@ -13,6 +13,7 @@ import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import OidcProvider from '../../services/OidcProvider.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function deleteOrganizationGroup(
   opts: RouterOptions,
@@ -25,7 +26,7 @@ export function deleteOrganizationGroup(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    return opts.db.transaction(async (tx) => {
+    const result = await opts.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(logger, tx);
       const orgGroupRepo = new OrganizationGroupRepository(tx);
       const auditLogRepo = new AuditLogRepository(tx);
@@ -215,5 +216,17 @@ export function deleteOrganizationGroup(
         },
       };
     });
+
+    // Sent after the transaction commits so receivers read the new state.
+    if (result.response?.code === EnumStatusCode.OK) {
+      sendGovernanceUpdated(opts, {
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        actorId: authContext.userId,
+        reason: 'group',
+      });
+    }
+
+    return result;
   });
 }

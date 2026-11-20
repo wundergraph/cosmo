@@ -7,6 +7,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { UserInviteService } from '../../services/UserInviteService.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 const MAXIMUM_BATCH_SIZE = 5;
 
@@ -79,6 +80,13 @@ export function inviteUsers(
         return null;
       })
       .filter((error): error is NonNullable<typeof error> => error !== null);
+
+    sendGovernanceUpdated(opts, {
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      actorId: authContext.userId,
+      reason: 'member',
+    });
 
     return {
       response: {

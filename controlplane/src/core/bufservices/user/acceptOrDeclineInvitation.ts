@@ -11,6 +11,7 @@ import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 
 export function acceptOrDeclineInvitation(
   opts: RouterOptions,
@@ -112,6 +113,13 @@ export function acceptOrDeclineInvitation(
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
     }
+
+    sendGovernanceUpdated(opts, {
+      organizationId: req.organizationId,
+      organizationSlug: organization.slug,
+      actorId: authContext.userId,
+      reason: 'member',
+    });
 
     return {
       response: {

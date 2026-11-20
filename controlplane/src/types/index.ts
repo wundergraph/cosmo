@@ -6,7 +6,15 @@ import {
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
+import {
+  DBSubgraphType,
+  GraphPruningRuleEnum,
+  GraphResourceKind,
+  HubPermission,
+  OrganizationRole,
+  ProposalMatch,
+  ProposalOrigin,
+} from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 import { ComposeGraphsTaskResultItem } from '../core/composition/composeGraphs.types.js';
 
@@ -350,6 +358,21 @@ export interface OrganizationGroupDTO {
     namespaces: string[];
     resources: string[];
   }[];
+  hubPermissions: HubPermissionGrantDTO[];
+}
+
+export interface HubPermissionGrantDTO {
+  permission: HubPermission;
+  namespaces: string[];
+  resources: string[];
+}
+
+export interface GraphResourceOwnerDTO {
+  federatedGraphId: string;
+  resourceKind: GraphResourceKind;
+  resource: string;
+  groupId?: string;
+  orgMemberId?: string;
 }
 
 export interface OrganizationAcceptedFeatureTermDTO {

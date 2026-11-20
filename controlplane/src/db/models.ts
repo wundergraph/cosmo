@@ -20,6 +20,8 @@ import {
   subgraphTypeEnum,
   batchPublishJobStatusEnum,
   batchPublishJobDetails,
+  hubPermissionEnum,
+  graphResourceKindEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -32,6 +34,8 @@ export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type OrganizationRole = (typeof organizationRoleEnum.enumValues)[number];
+export type HubPermission = (typeof hubPermissionEnum.enumValues)[number];
+export type GraphResourceKind = (typeof graphResourceKindEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
@@ -123,6 +127,7 @@ export type AuditLogFullAction =
   | 'group.created'
   | 'group.deleted'
   | 'group.members_moved'
+  | 'group.hub_permissions_updated'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'
@@ -135,6 +140,7 @@ export type AuditLogFullAction =
   | 'federated_graph.moved'
   | 'federated_graph.recomposed'
   | 'federated_graph.updated'
+  | 'federated_graph.owners_updated'
   | 'subgraph.created'
   | 'subgraph.deleted'
   | 'subgraph.updated'
