@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	goccyjson "github.com/goccy/go-json"
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -27,6 +28,11 @@ func (e *Event) GetData() []byte {
 
 func (e *Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
+}
+
+func (e *Event) Cursor() *streamsv1.Cursor {
+	// this provider doesn't support cursors.
+	return nil
 }
 
 type MutableEvent struct {
@@ -55,6 +61,11 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEvent{
 		Data: slices.Clone(e.Data),
 	}
+}
+
+func (e *MutableEvent) Cursor() *streamsv1.Cursor {
+	// this provider doesn't support cursors.
+	return nil
 }
 
 // SubscriptionEventConfiguration contains configuration for subscription events

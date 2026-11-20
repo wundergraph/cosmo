@@ -32,6 +32,13 @@ type subscriptionEventUpdater struct {
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
 	semaphore                      *semaphore.Weighted
+
+	// cursors is set when the subscriptions of the trigger negotiated the cursor guarantee.
+	cursors Cursors
+	// cursorBindings caches the binding of every subscriber, as identity and request
+	// are fixed for the lifetime of a subscription.
+	cursorBindings   map[resolve.SubscriptionIdentifier]cursorBinding
+	cursorBindingsMu sync.Mutex
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -40,17 +47,21 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		return
 	}
 
-	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
+	// If no OnReceiveEvents handlers are registered and no cursors are enabled the message
+	// we want to send to subscription clients is identical for everyone on the trigger.
+	// In this case we use the engines broadcast ability.
+	if len(s.hooks.OnReceiveEvents.Handlers) == 0 && !s.cursors.Enabled() {
 		for _, event := range events {
 			if event == nil {
 				continue
 			}
-			s.eventUpdater.Update(event.GetData(), nil)
+			s.eventUpdater.Update(event.GetData(), nil) // broadcast to all
 		}
 		return
 	}
 
 	subscriptions := s.eventUpdater.Subscriptions()
+	s.pruneCursorBindings(subscriptions)
 	wg := sync.WaitGroup{}
 	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.onReiveEventsTimeout))
 	defer cancel()
@@ -187,12 +198,84 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 		if event == nil {
 			continue
 		}
-		s.eventUpdater.UpdateSubscription(subID, event.GetData(), nil)
+		md, cursorErr := s.cursorMetadata(subscriptionCtx, subID, event)
+		if cursorErr != nil {
+			// Sending the event without a cursor would silently downgrade the guarantee.
+			s.logger.Error("Issuing cursor failed, closing subscription",
+				zap.Int64("subscription_id", subID.SubscriptionID),
+				zap.Error(cursorErr),
+			)
+			err = cursorErr
+			break
+		}
+		s.eventUpdater.UpdateSubscription(subID, event.GetData(), md)
 	}
 
 	// In case there was an error we close the affected subscription.
 	if err != nil {
 		s.eventUpdater.CloseSubscription(subID)
+	}
+}
+
+// cursorMetadata issues the cursor of an event for a single subscriber.
+// It returns nil metadata if cursors are disabled or the event has no position, e.g. events created by hooks;
+// such events are sent without a cursor.
+func (s *subscriptionEventUpdater) cursorMetadata(subscriptionCtx context.Context, subID resolve.SubscriptionIdentifier, event StreamEvent) (*resolve.SubscriptionUpdateMetadata, error) {
+	if !s.cursors.Enabled() {
+		return nil, nil
+	}
+	position := event.Cursor()
+	if position == nil {
+		return nil, nil
+	}
+
+	binding, err := s.cursorBinding(subscriptionCtx, subID)
+	if err != nil {
+		return nil, err
+	}
+	cursor, err := s.cursors.Codec.Issue(position, binding.requestData, binding.identity)
+	if err != nil {
+		return nil, err
+	}
+	return &resolve.SubscriptionUpdateMetadata{Cursor: cursor}, nil
+}
+
+func (s *subscriptionEventUpdater) cursorBinding(subscriptionCtx context.Context, subID resolve.SubscriptionIdentifier) (cursorBinding, error) {
+	s.cursorBindingsMu.Lock()
+	binding, ok := s.cursorBindings[subID]
+	s.cursorBindingsMu.Unlock()
+	if ok {
+		return binding, nil
+	}
+
+	binding, err := newCursorBinding(subscriptionCtx, s.cursors.SubscriberBinding, s.subscriptionEventConfiguration)
+	if err != nil {
+		return cursorBinding{}, err
+	}
+
+	s.cursorBindingsMu.Lock()
+	s.cursorBindings[subID] = binding
+	s.cursorBindingsMu.Unlock()
+	return binding, nil
+}
+
+// pruneCursorBindings drops the cached bindings of subscribers that left the trigger.
+func (s *subscriptionEventUpdater) pruneCursorBindings(subscriptions map[context.Context]resolve.SubscriptionIdentifier) {
+	if !s.cursors.Enabled() {
+		return
+	}
+
+	active := make(map[resolve.SubscriptionIdentifier]struct{}, len(subscriptions))
+	for _, subID := range subscriptions {
+		active[subID] = struct{}{}
+	}
+
+	s.cursorBindingsMu.Lock()
+	defer s.cursorBindingsMu.Unlock()
+	for subID := range s.cursorBindings {
+		if _, ok := active[subID]; !ok {
+			delete(s.cursorBindings, subID)
+		}
 	}
 }
 
@@ -215,6 +298,16 @@ func NewSubscriptionEventUpdater(
 	logger *zap.Logger,
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
+	return newSubscriptionEventUpdater(cfg, hooks, eventUpdater, logger, eventBuilder)
+}
+
+func newSubscriptionEventUpdater(
+	cfg SubscriptionEventConfiguration,
+	hooks Hooks,
+	eventUpdater resolve.SubscriptionUpdater,
+	logger *zap.Logger,
+	eventBuilder EventBuilderFn,
+) *subscriptionEventUpdater {
 	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
 	onReceiveEventsTimeout := hooks.OnReceiveEvents.Timeout
 	if onReceiveEventsTimeout == 0 {
@@ -235,4 +328,10 @@ func NewSubscriptionEventUpdater(
 		onReiveEventsTimeout:           onReceiveEventsTimeout,
 		beforeEventsDispatchTimeout:    beforeEventsDispatchTimeout,
 	}
+}
+
+// enableCursors makes the updater issue a cursor per subscriber for every event that has a position.
+func (s *subscriptionEventUpdater) enableCursors(cursors Cursors) {
+	s.cursors = cursors
+	s.cursorBindings = make(map[resolve.SubscriptionIdentifier]cursorBinding)
 }
