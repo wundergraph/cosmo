@@ -146,8 +146,8 @@ describe('BreakingChanges', () => {
 
     beforeAll(async () => {
       schemaChanges = await getDiffBetweenGraphs(
-        'type Query { hello: String! } enum Alphabet { A B @inaccessible C @inaccessible }',
-        'type Query { hello: String! } enum Alphabet { A B @inaccessible }',
+        'type Query { hello: String! } enum Alphabet { A B C @inaccessible }',
+        'type Query { hello: String! } enum Alphabet { A B }',
         LATEST_ROUTER_COMPATIBILITY_VERSION,
       );
     });
@@ -210,6 +210,53 @@ describe('BreakingChanges', () => {
     }
   });
 
+  test('Should not cause breaking changes on removing the last use of a federation directive', async () => {
+    const schemaA = 'type Query { hello: String! @shareable }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing the last @key', async () => {
+    const schemaA = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
+    const schemaB = 'type Query { hello: String! } type User { name: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing the last @requiresScopes', async () => {
+    const schemaA = 'type Query { hello: String! @requiresScopes(scopes: [["read"]]) }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing a type system directive definition', async () => {
+    const schemaA = 'directive @internal on FIELD_DEFINITION type Query { hello: String! }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should cause breaking changes on removing an executable directive definition', async () => {
+    const schemaA = 'directive @cached on FIELD type Query { hello: String! }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges.map((c) => c.path)).toStrictEqual([
+      '@cached',
+    ]);
+  });
+
   test('Should cause non breaking changes on adding directives to objects', async () => {
     const schemaA = 'type Query { hello: String! } type User { name: String! }';
     const schemaB = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
@@ -262,10 +309,10 @@ describe('BreakingChanges', () => {
     expect(schemaChanges.kind).toBe('success');
 
     if (schemaChanges.kind === 'success') {
-      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
-      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'key' was removed from object 'User'");
-      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.key');
-      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
+      expect(schemaChanges.nonBreakingChanges.length).toBe(3);
+      expect(schemaChanges.nonBreakingChanges[1].message).toBe("Directive 'key' was removed from object 'User'");
+      expect(schemaChanges.nonBreakingChanges[1].path).toBe('User.key');
+      expect(schemaChanges.nonBreakingChanges[1].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
     }
   });
 });

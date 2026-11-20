@@ -1,5 +1,5 @@
 import { Change, ChangeType, CriticalityLevel, Rule } from '@graphql-inspector/core';
-import { INACCESSIBLE } from '@wundergraph/composition';
+import { IGNORED_FEDERATED_TYPE_NAMES, INACCESSIBLE, TYPE_SYSTEM_DIRECTIVE_LOCATIONS } from '@wundergraph/composition';
 import { GraphQLSchema, isEnumType } from 'graphql';
 
 type ChangePredicate = (change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema) => boolean;
@@ -25,9 +25,30 @@ export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
 );
 
 /**
+ * Operations can only use executable directives, so clients never see a type system directive.
+ */
+export const typeSystemDirectiveRemovalsAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isTypeSystemDirectiveRemoval,
+);
+
+/**
+ * Clients reach these types only through fields that use them, and removing such a field is reported on its own.
+ */
+export const internalFederationTypeRemovalsAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isInternalFederationTypeRemoval,
+);
+
+/**
  * Rules are applied in order, and a later rule overrides the criticality an earlier one set for the same change.
  */
-export const schemaCheckRules = [enumValuesAreExhaustive, inaccessibleEnumValueChangesAreInvisible];
+export const schemaCheckRules = [
+  enumValuesAreExhaustive,
+  inaccessibleEnumValueChangesAreInvisible,
+  typeSystemDirectiveRemovalsAreInvisible,
+  internalFederationTypeRemovalsAreInvisible,
+];
 
 function isEnumValueChange(change: Change): boolean {
   return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
@@ -54,4 +75,19 @@ function isInaccessibleEnumValue(schema: GraphQLSchema, enumName: string, valueN
   }
   const nodes = [enumType.astNode, enumType.getValue(valueName)?.astNode];
   return nodes.some((node) => node?.directives?.some((directive) => directive.name.value === INACCESSIBLE));
+}
+
+function isTypeSystemDirectiveRemoval(change: Change, oldSchema: GraphQLSchema): boolean {
+  return (
+    change.type === ChangeType.DirectiveRemoved && isTypeSystemDirective(oldSchema, change.meta.removedDirectiveName)
+  );
+}
+
+function isTypeSystemDirective(schema: GraphQLSchema, directiveName: string): boolean {
+  const directive = schema.getDirective(directiveName);
+  return !!directive && directive.locations.every((location) => TYPE_SYSTEM_DIRECTIVE_LOCATIONS.has(location));
+}
+
+function isInternalFederationTypeRemoval(change: Change): boolean {
+  return change.type === ChangeType.TypeRemoved && IGNORED_FEDERATED_TYPE_NAMES.has(change.meta.removedTypeName);
 }
