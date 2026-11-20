@@ -55,6 +55,7 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 		providerId:              providerId,
 		withStreamConfiguration: data.GetStreamConfiguration() != nil,
 		logger:                  p.logger,
+		deliveryGuaranteeMode:   datasource.NewDeliveryGuaranteeMode(data.GetEngineEventConfiguration()),
 	}
 
 	if data.GetStreamConfiguration() != nil {
