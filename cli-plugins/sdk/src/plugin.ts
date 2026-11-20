@@ -18,6 +18,10 @@ export interface Endpoints {
 /** What wgc hands a plugin when it registers its commands. */
 export interface PluginContext {
   cliVersion: string;
+  /** What people type to run this wgc: `wgc`, or `wgcm` for a Hub deployment's build. */
+  command: string;
+  /** Where this wgc keeps plugins and their settings: `~/.wgc`, or `~/.config/wgcm` for a Hub deployment's build. */
+  homeDir: string;
   caller: CallerKind;
   endpoints: Endpoints;
   credentials: Credentials;

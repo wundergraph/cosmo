@@ -40,6 +40,7 @@ describe('wgc packed for a Hub deployment', () => {
       'DISABLE_UPDATE_CHECK',
       'DO_NOT_TRACK',
       'COSMO_TELEMETRY_ENABLED',
+      'XDG_CONFIG_HOME',
     ]) {
       vi.stubEnv(name, '');
     }
@@ -97,6 +98,38 @@ describe('wgc packed for a Hub deployment', () => {
     expect(defaultPluginEnvironment({ WGC_PLUGIN_REGISTRY_URL: 'http://127.0.0.1:8099' }).registryUrl).toBe(
       'http://127.0.0.1:8099',
     );
+  });
+
+  test('is the command wgcm and keeps its login, plugins and caches under ~/.config/wgcm', async () => {
+    vi.stubEnv('HOME', '/home/tester');
+    const config = await import('../src/core/config.js');
+    const { defaultPluginEnvironment } = await import('../src/core/plugins/environment.js');
+
+    expect({
+      commandName: config.commandName,
+      configFile: config.configFile,
+      dataDir: config.dataDir,
+      cacheDir: config.cacheDir,
+      homeDir: config.homeDir,
+      pluginsDir: defaultPluginEnvironment({}).managedDir,
+    }).toEqual({
+      commandName: 'wgcm',
+      configFile: '/home/tester/.config/wgcm/config.yaml',
+      dataDir: '/home/tester/.config/wgcm/data',
+      cacheDir: '/home/tester/.config/wgcm/cache',
+      homeDir: '/home/tester/.config/wgcm',
+      pluginsDir: '/home/tester/.config/wgcm/plugins',
+    });
+  });
+
+  test('XDG_CONFIG_HOME moves the wgcm directory and WGC_PLUGINS_DIR the plugins', async () => {
+    vi.stubEnv('XDG_CONFIG_HOME', '/etc/xdg-tester');
+    const config = await import('../src/core/config.js');
+    const { defaultPluginEnvironment } = await import('../src/core/plugins/environment.js');
+
+    expect(config.configFile).toBe('/etc/xdg-tester/wgcm/config.yaml');
+    expect(defaultPluginEnvironment({}).managedDir).toBe('/etc/xdg-tester/wgcm/plugins');
+    expect(defaultPluginEnvironment({ WGC_PLUGINS_DIR: '/opt/plugins' }).managedDir).toBe('/opt/plugins');
   });
 
   test('sends no telemetry unless COSMO_TELEMETRY_ENABLED turns it on', async () => {

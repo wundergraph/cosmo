@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
+import { homeDir } from '../config.js';
 import { deployment } from '../deployment.js';
 
 /** Where wgc looks for plugins. */
@@ -31,7 +31,7 @@ const findWorkspaceRoot = (start: string): string | undefined => {
 };
 
 export const defaultPluginEnvironment = (env: NodeJS.ProcessEnv = process.env): PluginEnvironment => ({
-  managedDir: env.WGC_PLUGINS_DIR || join(homedir(), '.wgc', 'plugins'),
+  managedDir: env.WGC_PLUGINS_DIR || join(homeDir, 'plugins'),
   workspaceRoot: findWorkspaceRoot(dirname(fileURLToPath(import.meta.url))),
   runsFromSource: import.meta.url.endsWith('.ts'),
   registryUrl: env.WGC_PLUGIN_REGISTRY_URL || (deployment.kind === 'hub' ? deployment.cliPackagesUrl : undefined),

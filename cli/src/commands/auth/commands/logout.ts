@@ -1,7 +1,7 @@
 import { rmSync } from 'node:fs';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { configDir } from '../../../core/config.js';
+import { configFile } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -10,7 +10,7 @@ export default (opts: BaseCommandOptions) => {
 
   logoutCommand.action(() => {
     try {
-      rmSync(configDir, { recursive: true });
+      rmSync(configFile, { force: true });
     } catch {}
     console.log(pc.green('Logged out Successfully!'));
   });

@@ -72,7 +72,7 @@ const subgraphsFromFiles = (files: string[], root: string): SubgraphDraft[] => {
   });
 };
 
-const githubWorkflow = (audience: string, wgcInstallArgs: string): string => `name: Hub sandbox
+const githubWorkflow = (audience: string, wgcInstallArgs: string, command: string): string => `name: Hub sandbox
 
 on:
   pull_request:
@@ -90,11 +90,15 @@ jobs:
         with:
           node-version: 22
       - run: npm install --global ${wgcInstallArgs}
-      - run: wgc plugins install hub
-      - run: wgc hub schema push --json --sha \${{ github.event.pull_request.head.sha }}${audience === defaultAudience ? '' : ` --audience ${audience}`}
+      - run: ${command} plugins install hub
+      - run: ${command} hub schema push --json --sha \${{ github.event.pull_request.head.sha }}${audience === defaultAudience ? '' : ` --audience ${audience}`}
 `;
 
-const gitlabSnippet = (audience: string, wgcInstallArgs: string): string => `# Include from .gitlab-ci.yml:
+const gitlabSnippet = (
+  audience: string,
+  wgcInstallArgs: string,
+  command: string,
+): string => `# Include from .gitlab-ci.yml:
 #   include:
 #     - local: ${gitlabSnippetPath}
 hub-sandbox:
@@ -106,8 +110,8 @@ hub-sandbox:
       aud: ${audience}
   script:
     - npm install --global ${wgcInstallArgs}
-    - wgc plugins install hub
-    - wgc hub schema push --json${audience === defaultAudience ? '' : ` --audience ${audience}`}
+    - ${command} plugins install hub
+    - ${command} hub schema push --json${audience === defaultAudience ? '' : ` --audience ${audience}`}
 `;
 
 const writeIfAbsent = async (
@@ -230,12 +234,12 @@ const runInit = async (options: InitOptions, context: PluginContext): Promise<vo
   if (ci === 'github') {
     planned.push({
       path: githubWorkflowPath,
-      content: githubWorkflow(options.audience, context.endpoints.wgcInstallArgs),
+      content: githubWorkflow(options.audience, context.endpoints.wgcInstallArgs, context.command),
     });
   } else if (ci === 'gitlab') {
     planned.push({
       path: gitlabSnippetPath,
-      content: gitlabSnippet(options.audience, context.endpoints.wgcInstallArgs),
+      content: gitlabSnippet(options.audience, context.endpoints.wgcInstallArgs, context.command),
     });
   }
 

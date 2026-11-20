@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { detectCaller } from '@wundergraph/wgc-plugin-sdk';
 import { CreateClient } from '../core/client/client.js';
-import { config } from '../core/config.js';
+import { commandName, config } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import { capture } from '../core/telemetry.js';
 import { defaultPluginEnvironment } from '../core/plugins/environment.js';
@@ -43,7 +43,7 @@ const client = CreateClient({
 });
 
 const program = new Command();
-program.name('wgc').version(config.version)
+program.name(commandName).version(config.version)
   .description(`This is the command-line interface to manage the WunderGraph Cosmo Platform.
 WunderGraph Cosmo is the Full Lifecycle GraphQL API Management Solution to manage Federated Graphs at scale.
 Composition checks, routing, analytics, and distributed tracing all in one platform.

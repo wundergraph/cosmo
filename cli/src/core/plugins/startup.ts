@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { createPluginContext, detectCaller, errorMessage, readOutputOverride } from '@wundergraph/wgc-plugin-sdk';
 import type { Failure, Output, PluginContext } from '@wundergraph/wgc-plugin-sdk';
-import { config } from '../config.js';
+import { commandName, config, homeDir } from '../config.js';
 import { createCliCredentials } from '../hub.js';
 import { PluginEnvironment } from './environment.js';
 import { knownPlugins, loadPlugin } from './plugin-package.js';
@@ -10,6 +10,8 @@ import { listInstalledPlugins, listWorkspacePlugins, resolvePlugin } from './reg
 export const createCliPluginContext = (): PluginContext =>
   createPluginContext({
     cliVersion: config.version,
+    command: commandName,
+    homeDir,
     caller: detectCaller(process.env, Boolean(process.stdin.isTTY && process.stdout.isTTY)),
     endpoints: {
       cosmoApiUrl: config.baseURL,
@@ -47,7 +49,7 @@ const pluginsHelp = (environment: PluginEnvironment): string => {
     ...new Set([...listWorkspacePlugins(environment), ...listInstalledPlugins(environment)].map((p) => p.name)),
   ];
   const installed = names.length > 0 ? names.join(', ') : 'none';
-  return `\nPlugins: ${installed}\nRun "wgc plugins list" to see available plugins and "wgc plugins install <name>" to add one.`;
+  return `\nPlugins: ${installed}\nRun "${commandName} plugins list" to see available plugins and "${commandName} plugins install <name>" to add one.`;
 };
 
 /**
@@ -83,8 +85,8 @@ export const attachPlugins = async ({
         {
           kind: 'usage',
           message: `The ${name} command comes from the ${name} plugin, which is not installed.`,
-          remediation: `Install it with: wgc plugins install ${name}`,
-          next: [`wgc plugins install ${name}`],
+          remediation: `Install it with: ${commandName} plugins install ${name}`,
+          next: [`${commandName} plugins install ${name}`],
         },
         output,
       );

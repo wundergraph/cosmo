@@ -26,6 +26,8 @@ export const createTestContext = (
 ): PluginContext =>
   createPluginContext({
     cliVersion: '0.0.0-test',
+    command: 'wgc',
+    homeDir: '/nonexistent/.wgc',
     caller,
     endpoints: {
       cosmoApiUrl: 'http://cosmo.test',

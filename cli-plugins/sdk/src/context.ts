@@ -16,6 +16,8 @@ const wantsJson = (flag: boolean | undefined, override: OutputOverride | undefin
 
 export const createPluginContext = ({
   cliVersion,
+  command,
+  homeDir,
   caller,
   endpoints,
   credentials,
@@ -25,6 +27,8 @@ export const createPluginContext = ({
   stderr,
 }: {
   cliVersion: string;
+  command: string;
+  homeDir: string;
   caller: CallerKind;
   endpoints: Endpoints;
   credentials: Credentials;
@@ -34,6 +38,8 @@ export const createPluginContext = ({
   stderr?: Writable;
 }): PluginContext => ({
   cliVersion,
+  command,
+  homeDir,
   caller,
   endpoints,
   credentials,

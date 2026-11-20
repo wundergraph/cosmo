@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'pathe';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
@@ -6,10 +7,31 @@ import envPaths from 'env-paths';
 import info from '../../package.json' with { type: 'json' };
 import { deployment } from './deployment.js';
 
-const paths = envPaths('cosmo', { suffix: '' });
+const cosmoPaths = envPaths('cosmo', { suffix: '' });
+const wgcmDir = join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'wgcm');
+
+/**
+ * A Hub deployment's build is the command wgcm and keeps its login, plugins and caches under
+ * $XDG_CONFIG_HOME/wgcm (default ~/.config/wgcm), so it never reads or writes a global wgc's files.
+ */
+const paths =
+  deployment.kind === 'hub'
+    ? { command: 'wgcm', config: wgcmDir, data: join(wgcmDir, 'data'), cache: join(wgcmDir, 'cache'), home: wgcmDir }
+    : {
+        command: 'wgc',
+        config: cosmoPaths.config,
+        data: cosmoPaths.data,
+        cache: cosmoPaths.cache,
+        home: join(homedir(), '.wgc'),
+      };
+
+/** What people type to run this build. */
+export const commandName = paths.command;
 export const configDir = paths.config;
 export const dataDir = paths.data;
 export const cacheDir = paths.cache;
+/** Where plugins and their settings live. */
+export const homeDir = paths.home;
 export const configFile = join(configDir, 'config.yaml');
 
 export const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {

@@ -3,9 +3,12 @@
 # deployment, which serves them under https://<hub>/cli:
 #
 #   npm i -g --allow-remote=all https://<hub>/cli/wgc.tgz
-#   wgc plugins install hub
+#   wgcm plugins install hub
 #
-# The packed wgc has the deployment's hosts baked in and installs plugins from the same URL, so it
+# wgc.tgz is the npm package @wundergraph/wgcm with the single command wgcm, so it installs next to
+# a global wgc without replacing it. wgcm keeps its login, plugins and caches under
+# $XDG_CONFIG_HOME/wgcm (default ~/.config/wgcm) and WGC_PLUGINS_DIR still moves the plugins.
+# The packed wgcm has the deployment's hosts baked in and installs plugins from the same URL, so it
 # needs no environment variables; they still override the baked hosts. BASE_DOMAIN names the
 # deployment: cosmo.<base> is the control plane, studio.<base> Studio, hub.<base> Hub's API, web app
 # and Keycloak, cdn.<base> the CDN. BASE_DOMAIN=localhost is the local install on its fixed ports,
@@ -91,6 +94,8 @@ bundle_sdk_into_wgc() {
     const fs = require("node:fs");
     const path = process.argv[1];
     const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+    manifest.name = "@wundergraph/wgcm";
+    manifest.bin = { wgcm: "dist/src/index.js" };
     manifest.bundleDependencies = ["@wundergraph/wgc-plugin-sdk"];
     fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
   ' "$unpacked/package/package.json"
@@ -98,7 +103,7 @@ bundle_sdk_into_wgc() {
   mkdir -p "$work_dir/wgc-bundled"
   (cd "$unpacked/package" && npm pack --pack-destination "$work_dir/wgc-bundled" >&2)
   mv "$work_dir/wgc-bundled"/*.tgz "$output_dir/wgc.tgz"
-  echo "Bundled the plugin SDK into $output_dir/wgc.tgz" >&2
+  echo "Packed $output_dir/wgc.tgz as @wundergraph/wgcm with the plugin SDK bundled" >&2
 }
 
 build_package @wundergraph/wgc-plugin-sdk

@@ -8,8 +8,10 @@ interface JsonOption {
   json?: boolean;
 }
 
-const installCommand = (channel: Channel): string =>
-  channel === 'stable' ? 'wgc plugins install forge' : 'wgc plugins install @wundergraph/wgc-plugin-forge@nightly';
+const installCommand = (command: string, channel: Channel): string =>
+  channel === 'stable'
+    ? `${command} plugins install forge`
+    : `${command} plugins install @wundergraph/wgc-plugin-forge@nightly`;
 
 export const registerCliUpgrade = (command: Command, dependencies: ForgeDependencies): void => {
   const { context, settingsFile } = dependencies;
@@ -23,7 +25,7 @@ export const registerCliUpgrade = (command: Command, dependencies: ForgeDependen
     .action(async (options: JsonOption) => {
       const output = context.output({ json: options.json });
       const channel = await readChannel(settingsFile);
-      const update = installCommand(channel);
+      const update = installCommand(context.command, channel);
 
       output.result(
         { installation: 'wgc-plugin', channel, version: forgeVersion(), command: update, upgraded: false },
@@ -65,7 +67,12 @@ export const registerCliUpgrade = (command: Command, dependencies: ForgeDependen
 
       await writeChannel(settingsFile, answer);
       output.result(
-        { channel: answer, previous: current, version: forgeVersion(), command: installCommand(answer) },
+        {
+          channel: answer,
+          previous: current,
+          version: forgeVersion(),
+          command: installCommand(context.command, answer),
+        },
         (data) => `Channel set to ${data.channel}. Run \`wgc forge upgrade\` to install its release.`,
       );
     });

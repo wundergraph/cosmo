@@ -203,6 +203,8 @@ export const runForge = async (
   let stderr = '';
   const context = createPluginContext({
     cliVersion: 'test',
+    command: 'wgc',
+    homeDir: '/nonexistent/.wgc',
     caller,
     endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '', hubAppUrl: '', wgcInstallArgs: 'wgc@latest' },
     credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
