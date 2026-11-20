@@ -65,7 +65,7 @@ describe('createAnalyticsToolContext', () => {
   test('retries capabilities that failed instead of keeping the failure', async () => {
     const { ctx, calls } = contextWith([EnumStatusCode.ERR]);
 
-    await expect(ctx.getCapabilities()).rejects.toThrow();
+    await expect(ctx.getCapabilities()).rejects.toThrow(new Error('Analytics context failed: unknown error'));
     await ctx.getCapabilities();
 
     expect(calls.capabilities).toBe(2);

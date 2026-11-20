@@ -22,13 +22,13 @@ import { toPublicError } from './proto.js';
 
 /** What an analytics read resolves before it queries: which graphs, how far back the plan reaches, and the window. */
 
-export const GRAPH_NOT_FOUND = 'Graph not found or you have no access.';
+const GRAPH_NOT_FOUND = 'Graph not found or you have no access.';
 
 /**
  * Resolves the graphs of an analytics request inside the organization. An unknown graph and a graph the caller may not
  * read get the same answer, so the response never reveals that a graph exists.
  */
-export async function resolveAnalyticsGraphs(input: {
+async function resolveAnalyticsGraphs(input: {
   opts: RouterOptions;
   logger: FastifyBaseLogger;
   authContext: AuthContext;
@@ -97,7 +97,7 @@ export function applyGraphFilter(graphs: EngineGraph[], filters: CompiledFilter[
 }
 
 /** Days the plan lets the organization read for `feature`, capped by how long the data is stored. */
-export async function retentionDays(input: {
+async function retentionDays(input: {
   opts: RouterOptions;
   logger: FastifyBaseLogger;
   organizationId: string;
@@ -109,7 +109,7 @@ export async function retentionDays(input: {
   return Math.min(feature?.limit ?? 7, input.storageTtlDays);
 }
 
-export function resolveAnalyticsWindow(input: {
+function resolveAnalyticsWindow(input: {
   window: AnalyticsTimeWindow | undefined;
   descriptor: AnalyticsDatasetDescriptor;
   retentionDays: number;
