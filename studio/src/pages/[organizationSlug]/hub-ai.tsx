@@ -4,11 +4,13 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type { HubAiSettings } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
+  getHubAiModels,
   getHubAiSettings,
   updateHubAiSettings,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { EmptyState } from '@/components/empty-state';
+import { HubAiModelPicker } from '@/components/hub-ai-model-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -74,6 +76,7 @@ const HubAiPage: NextPageWithLayout = () => {
   const isAdmin = useIsAdmin();
   const { toast } = useToast();
   const { data, isLoading, refetch } = useQuery(getHubAiSettings, {});
+  const { data: offered } = useQuery(getHubAiModels, {});
   const { mutate, isPending } = useMutation(updateHubAiSettings);
   const [form, setForm] = useState<Form>(toForm(undefined));
 
@@ -96,6 +99,10 @@ const HubAiPage: NextPageWithLayout = () => {
   if (isLoading) {
     return <Loader fullscreen />;
   }
+
+  const models = offered?.models ?? [];
+  const deploymentModel = models.find((model) => model.gatewayModelId === offered?.deploymentModel);
+  const defaultLabel = `Default (${deploymentModel?.name ?? offered?.deploymentModel ?? 'Hub deployment model'})`;
 
   const update = (patch: Partial<Form>) => {
     setForm((current) => ({ ...current, ...patch }));
@@ -165,25 +172,27 @@ const HubAiPage: NextPageWithLayout = () => {
           <CardHeader>
             <CardTitle>Models</CardTitle>
             <CardDescription>
-              Empty fields use the default model; an empty default uses the Hub deployment&apos;s model.
+              The models Hub offers. Ask AI and each agent job use the default model unless they pick their own.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-x-4 gap-y-3">
             <Label htmlFor="default-model">Default model</Label>
-            <Input
+            <HubAiModelPicker
               id="default-model"
-              placeholder="google/gemini-3.1-flash-lite"
+              models={models}
               value={form.defaultModel}
-              onChange={(event) => update({ defaultModel: event.target.value })}
+              unsetLabel={defaultLabel}
+              onChange={(defaultModel) => update({ defaultModel })}
             />
             {MODEL_TARGETS.map(({ target, label }) => (
               <div key={target} className="contents">
                 <Label htmlFor={`model-${target}`}>{label}</Label>
-                <Input
+                <HubAiModelPicker
                   id={`model-${target}`}
-                  placeholder="Default model"
+                  models={models}
                   value={form.models[target] ?? ''}
-                  onChange={(event) => update({ models: { ...form.models, [target]: event.target.value } })}
+                  unsetLabel="Uses default"
+                  onChange={(model) => update({ models: { ...form.models, [target]: model } })}
                 />
               </div>
             ))}
