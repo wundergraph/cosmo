@@ -14,6 +14,7 @@ import {
   updateOrganizationGroup,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { GroupRuleBuilder } from '@/components/member-groups/group-rule-builder';
+import { GroupHubPermissions } from '@/components/member-groups/group-hub-permissions';
 import { useState } from 'react';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '@/components/ui/use-toast';
@@ -53,6 +54,7 @@ export function GroupSheet({
               await onGroupUpdated();
               onOpenChange(false);
             }}
+            onHubPermissionsSaved={onGroupUpdated}
             onCancel={() => onOpenChange(false)}
           />
         )}
@@ -64,10 +66,12 @@ export function GroupSheet({
 function MemberGroupSheetContent({
   group,
   onGroupUpdated,
+  onHubPermissionsSaved,
   onCancel,
 }: {
   group: OrganizationGroup;
   onGroupUpdated(): Promise<unknown>;
+  onHubPermissionsSaved(): Promise<unknown>;
   onCancel(): void;
 }) {
   const { data } = useQuery(getUserAccessibleResources);
@@ -185,7 +189,7 @@ function MemberGroupSheetContent({
           </div>
         )}
       </div>
-      <SheetFooter className="gap-y-2">
+      <SheetFooter className="mb-6 gap-y-2">
         {rbac?.enabled && !group.builtin && (
           <>
             <Button variant="secondary" onClick={onCancel} disabled={isDisabled}>
@@ -198,6 +202,7 @@ function MemberGroupSheetContent({
           </>
         )}
       </SheetFooter>
+      <GroupHubPermissions group={group} accessibleResources={data} onSaved={onHubPermissionsSaved} />
     </>
   );
 }

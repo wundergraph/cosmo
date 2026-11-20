@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon,
   NoSymbolIcon,
   ServerStackIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircledIcon, Component2Icon, FileTextIcon, HomeIcon, PlayIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -150,6 +151,12 @@ const GraphLayoutSidebarNavigation = ({ organizationSlug, namespace, slug }: Gra
         href: basePath + '/cache-operations',
         matchExact: false,
         icon: <PiBracketsCurlyBold className="h-4 w-4" />,
+      },
+      {
+        title: 'Ownership',
+        href: basePath + '/ownership',
+        matchExact: true,
+        icon: <UserGroupIcon className="h-4 w-4" />,
       },
     ];
 

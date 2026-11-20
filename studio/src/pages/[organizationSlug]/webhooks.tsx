@@ -1,6 +1,11 @@
 import { EmptyState } from '@/components/empty-state';
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
-import { EventsMeta, Meta, NotificationToolbar, notificationEvents } from '@/components/notifications/components';
+import {
+  EventsMeta,
+  Meta,
+  NotificationToolbar,
+  webhookNotificationEvents,
+} from '@/components/notifications/components';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -334,7 +339,7 @@ const Webhook = ({
                       <FormLabel className="text-base">Events</FormLabel>
                       <FormDescription>Select the events for which you want webhooks to fire</FormDescription>
                     </div>
-                    {notificationEvents.map((event) => (
+                    {webhookNotificationEvents.map((event) => (
                       <FormField
                         key={event.id}
                         control={form.control}

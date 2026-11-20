@@ -45,6 +45,16 @@ export const notificationEvents = [
   },
 ] as const;
 
+export const webhookNotificationEvents = [
+  ...notificationEvents,
+  {
+    id: OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED,
+    name: OrganizationEventName[OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED],
+    label: 'Governance Update',
+    description: 'A change to Hub permissions or graph resource owners',
+  },
+] as const;
+
 export const SelectGraphs = ({
   meta,
   setMeta,
