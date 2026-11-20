@@ -49,12 +49,28 @@ const moduleSourceSchema = z.union([localModuleSourceSchema, goModuleSourceSchem
     'must be one of { path: <directory> }, { go: <package>, version?: <version> } or { git: <url>, ref?: <ref>, package?: <directory> }',
 });
 
+/** The team's API design policy for `wgc forge check`: where the graph is, which rules block, and approved exceptions. */
+export const checkPolicySchema = z.strictObject({
+  graph: z.string().min(1).optional(),
+  rules: z.record(z.string(), z.enum(['error', 'warn', 'off'])).optional(),
+  exceptions: z
+    .array(
+      z.strictObject({
+        rule: z.string().min(1),
+        coordinate: z.string().min(1),
+        reason: z.string().min(1),
+      }),
+    )
+    .optional(),
+});
+
 export const manifestSchema = z.strictObject({
   version: z.literal(1),
   router: routerSourceSchema,
   binary: z.string().min(1).default(defaultBinaryPath),
   test: z.string().min(1).optional(),
   modules: z.array(moduleSourceSchema).default([]),
+  check: checkPolicySchema.optional(),
 });
 
 export type RouterSource = z.infer<typeof routerSourceSchema>;
@@ -64,6 +80,7 @@ export type GitModuleSource = z.infer<typeof gitModuleSourceSchema>;
 export type RemoteModuleSource = z.infer<typeof remoteModuleSourceSchema>;
 export type ModuleSource = z.infer<typeof moduleSourceSchema>;
 export type Manifest = z.infer<typeof manifestSchema>;
+export type CheckPolicy = z.infer<typeof checkPolicySchema>;
 
 export const isLocalModule = (source: ModuleSource): source is LocalModuleSource => 'path' in source;
 
@@ -153,8 +170,18 @@ export const readManifest = async (workspace: string): Promise<Result<Manifest>>
 };
 
 export const renderManifest = (manifest: Manifest): string => {
-  const { version, router, binary, test, modules } = manifest;
-  return yaml.dump({ version, router, binary, ...(test === undefined ? {} : { test }), modules }, { lineWidth: -1 });
+  const { version, router, binary, test, modules, check } = manifest;
+  return yaml.dump(
+    {
+      version,
+      router,
+      binary,
+      ...(test === undefined ? {} : { test }),
+      modules,
+      ...(check === undefined ? {} : { check }),
+    },
+    { lineWidth: -1 },
+  );
 };
 
 export const writeManifest = async (workspace: string, manifest: Manifest): Promise<void> => {

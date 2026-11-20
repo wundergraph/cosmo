@@ -526,6 +526,12 @@ importers:
 
   cli-plugins/forge:
     dependencies:
+      '@wundergraph/composition':
+        specifier: workspace:*
+        version: link:../../composition
+      '@wundergraph/protographic':
+        specifier: workspace:*
+        version: link:../../protographic
       '@wundergraph/wgc-plugin-sdk':
         specifier: workspace:*
         version: link:../sdk
@@ -535,6 +541,9 @@ importers:
       execa:
         specifier: 9.5.2
         version: 9.5.2
+      graphql:
+        specifier: 16.9.0
+        version: 16.9.0(patch_hash=5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f)
       js-yaml:
         specifier: 4.3.2
         version: 4.3.2
@@ -30254,7 +30263,7 @@ snapshots:
   yargs@17.7.2:
     dependencies:
       cliui: 8.0.1
-      escalade: 3.1.1
+      escalade: 3.2.0
       get-caller-file: 2.0.5
       require-directory: 2.1.1
       string-width: 4.2.3

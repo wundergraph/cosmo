@@ -1,6 +1,7 @@
 import type { ForgeEngine } from '../engine.js';
 import { registerAdd } from './commands/add.js';
 import { registerBuild } from './commands/build.js';
+import { registerCheck } from './commands/check.js';
 import { registerCreate } from './commands/create.js';
 import { registerInit } from './commands/init.js';
 import { registerLock } from './commands/lock.js';
@@ -30,5 +31,6 @@ export const createBuiltinEngine = ({
     registerBuild(command, dependencies);
     registerRouterUpgrade(command, dependencies);
     registerCliUpgrade(command, dependencies);
+    registerCheck(command, dependencies);
   },
 });

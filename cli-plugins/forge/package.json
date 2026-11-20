@@ -23,9 +23,12 @@
     "test:go": "cd gomodules && go test ./..."
   },
   "dependencies": {
+    "@wundergraph/composition": "workspace:*",
+    "@wundergraph/protographic": "workspace:*",
     "@wundergraph/wgc-plugin-sdk": "workspace:*",
     "commander": "11.1.0",
     "execa": "9.5.2",
+    "graphql": "catalog:",
     "js-yaml": "4.3.2",
     "picocolors": "1.0.0",
     "zod": "catalog:",
