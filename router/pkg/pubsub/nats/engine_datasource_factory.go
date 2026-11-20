@@ -29,8 +29,7 @@ type EngineDataSourceFactory struct {
 	providerId string
 	logger     *zap.Logger
 
-	deliveryGuaranteeMode datasource.DeliveryGuaranteeMode
-
+	deliveryGuaranteeMode     datasource.DeliveryGuaranteeMode
 	withStreamConfiguration   bool
 	consumerName              string
 	streamName                string

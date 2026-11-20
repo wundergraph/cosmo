@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
@@ -77,20 +78,29 @@ func SupportedDeliveryGuarantees(mode DeliveryGuaranteeMode) []DeliveryGuarantee
 func NegotiateDeliveryGuarantee(mode DeliveryGuaranteeMode, input []byte) (DeliveryGuarantee, error) {
 	supportedGuarantees := SupportedDeliveryGuarantees(mode)
 
-	requestedGuarantee, dataType, _, err := jsonparser.Get(input, "body", "extensions", deliveryGuaranteeExtensionKey)
-	if err != nil || dataType == jsonparser.Null {
-		// Missing key (or missing body/extensions) and null both mean at-most-once.
-		return DeliveryGuaranteeAtMostOnce, nil
-	}
-
 	invalid := &DeliveryGuaranteeError{
 		Code:      DeliveryGuaranteeErrorCodeInvalid,
 		Supported: supportedGuarantees,
 		Message:   "The requested delivery guarantee is invalid: " + deliveryGuaranteeExtensionKey + " must be a non-empty string",
 	}
+
+	requestedGuarantee, dataType, _, err := jsonparser.Get(input, "body", "extensions", deliveryGuaranteeExtensionKey)
+	if err != nil {
+		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+			// Missing key (or missing body/extensions) means at-most-once.
+			return DeliveryGuaranteeAtMostOnce, nil
+		}
+		// The key is present but its value can't be read. Don't silently
+		// downgrade a client that asked for a guarantee.
+		return "", invalid
+	}
+	if dataType == jsonparser.Null {
+		return DeliveryGuaranteeAtMostOnce, nil
+	}
 	if dataType != jsonparser.String {
 		return "", invalid
 	}
+
 	parsedRequestedGuarantee, err := jsonparser.ParseString(requestedGuarantee)
 	if err != nil || strings.TrimSpace(parsedRequestedGuarantee) == "" {
 		return "", invalid
