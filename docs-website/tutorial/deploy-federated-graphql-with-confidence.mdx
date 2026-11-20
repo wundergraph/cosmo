@@ -472,29 +472,28 @@ Here's a production-ready canary setup:
       replicas: 5
       strategy:
         canary:
-                steps:
-      - pause: {duration: 30s}  # Wait for router to poll new config (default: 10s)
-      - setWeight: 10    # Increase to 10%
-      - pause: {duration: 30s}  
-      - setWeight: 25    # Increase to 25%
-      - pause: {duration: 1m}
-      - setWeight: 50    # Increase to 50%
-      - pause: {duration: 1m}
-      - setWeight: 100   # Full rollout
-          
-          # This hook runs AFTER the rollout is fully promoted to 100%.
-          postPromotionAnalysis:
-            templates:
-              # Reference the AnalysisTemplate defined above.
-              - templateName: publish-subgraph-schema
-            args:
-              # Pass the information to the AnalysisTemplate.
-              - name: image
-                value: "{{.spec.template.spec.containers[0].image}}"
-              - name: namespace
-                value: production
-              - name: subgraph-name
-                value: my-products-subgraph
+          steps:
+            - pause: {duration: 30s}  # Wait for router to poll new config (default: 10s)
+            - setWeight: 10    # Increase to 10%
+            - pause: {duration: 30s}  
+            - setWeight: 25    # Increase to 25%
+            - pause: {duration: 1m}
+            - setWeight: 50    # Increase to 50%
+            - pause: {duration: 1m}
+            - setWeight: 100   # Full rollout
+            # Run the schema publishing analysis step once fully rolled out to 100%.
+            - analysis:
+                templates:
+                  # Reference the AnalysisTemplate defined above.
+                  - templateName: publish-subgraph-schema
+                args:
+                  # Pass the information to the AnalysisTemplate.
+                  - name: image
+                    value: "{{.spec.template.spec.containers[0].image}}"
+                  - name: namespace
+                    value: production
+                  - name: subgraph-name
+                    value: my-products-subgraph
       template:
         metadata:
           # REQUIRED: Pod labels must match the selector.
@@ -512,7 +511,7 @@ Here's a production-ready canary setup:
 
 ### Automated Rollback
 
-If the `postPromotionAnalysis` step fails (for example, the health check or publish step fails), Argo Rollouts will automatically roll back the deployment to the previous stable version. This ensures that:
+If the `analysis` step fails (for example, the health check or publish step fails), Argo Rollouts will automatically roll back the deployment to the previous stable version. This ensures that:
 
 - Your subgraph code reverts to the last known good version
 - The supergraph schema remains consistent and valid
@@ -521,7 +520,7 @@ If the `postPromotionAnalysis` step fails (for example, the health check or publ
 This automatic rollback mechanism protects your federation from broken deployments while maintaining the integrity of your overall graph.
 
 <Tip>
-**Manual Validation Control**: You can configure the rollout to pause at any step and perform complex health checks before proceeding. Use `kubectl argo rollouts promote my-products-subgraph` to continue with the post-promotion analysis. This gives you full control over when traffic shifts to the new version.
+**Manual Validation Control**: You can configure the rollout to pause at any step and perform complex health checks before proceeding. Use `kubectl argo rollouts promote my-products-subgraph` to continue past paused steps. This gives you full control over when traffic shifts to the new version.
 </Tip>
 
 <Info>
