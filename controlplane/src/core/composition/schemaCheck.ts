@@ -3,6 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { INACCESSIBLE } from '@wundergraph/composition';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
+import { enumValueChangesBreakExhaustiveSwitches } from './schemaCheckRules.js';
 
 export interface SchemaDiff {
   message: string;
@@ -31,20 +32,14 @@ export interface GetDiffBetweenGraphsFailure {
 export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBetweenGraphsFailure;
 
 export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: GraphQLSchema): Promise<SchemaDiff[]> {
-  const changes = await diff(oldSchemaSDL, newSchemaSDL);
+  const changes = await diff(oldSchemaSDL, newSchemaSDL, [enumValueChangesBreakExhaustiveSwitches]);
   return changes.map((change) => {
     return {
       message: change.message,
       changeType: change.type,
       path: change.path ?? '',
       meta: change.meta,
-      isBreaking:
-        change.criticality.level === CriticalityLevel.Breaking ||
-        // We consider enum value changes as breaking changes because it is common to use enums in switch statements
-        // and if a value is removed or added, the switch statement will not be exhaustive anymore and might
-        // lead to unexpected behavior.
-        change.type === ChangeType.EnumValueRemoved ||
-        change.type === ChangeType.EnumValueAdded,
+      isBreaking: change.criticality.level === CriticalityLevel.Breaking,
     };
   });
 }
