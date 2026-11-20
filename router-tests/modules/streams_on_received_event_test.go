@@ -958,3 +958,92 @@ func TestFlakyReceiveHookConcurrentHandlers(t *testing.T) {
 		})
 	}
 }
+
+func TestReceiveHookErrorIsSentToTheClient(t *testing.T) {
+	t.Parallel()
+
+	// Two clients share one trigger. The hook fails only for the client that sends X-Reject, so only
+	// that client receives the error, and the other keeps receiving events.
+
+	const timeout = time.Second * 10
+	rejectHeader := http.CanonicalHeaderKey("X-Reject")
+
+	type subscriptionArgs struct {
+		dataValue []byte
+		errValue  error
+	}
+
+	customModule := stream_receive.StreamReceiveModule{
+		Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+			if ctx.Request().Header.Get(rejectHeader) != "" {
+				return datasource.NewStreamEvents(nil), errors.New("Unauthorized")
+			}
+			return events, nil
+		},
+	}
+
+	testenv.Run(t, &testenv.Config{
+		RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+		EnableRedis:              true,
+		RouterOptions: []core.Option{
+			core.WithModulesConfig(map[string]any{"streamReceiveModule": customModule}),
+			core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		topic := "employeeUpdatedMyRedis"
+
+		var subscription struct {
+			employeeUpdates struct {
+				ID float64 `graphql:"id"`
+			} `graphql:"employeeUpdates"`
+		}
+
+		subscribe := func(header http.Header) <-chan subscriptionArgs {
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLWebSocketSubscriptionURL())
+			client.WithWebSocketOptions(graphql.WebsocketOptions{HTTPHeader: header})
+			t.Cleanup(func() { _ = client.Close() })
+
+			args := make(chan subscriptionArgs, 10)
+			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				args <- subscriptionArgs{dataValue, errValue}
+				return nil
+			})
+			require.NoError(t, err)
+			go func() { _ = client.Run() }()
+			return args
+		}
+
+		accepted := subscribe(nil)
+		xEnv.WaitForSubscriptionCount(1, timeout)
+		xEnv.WaitForTriggerCount(1, timeout)
+
+		// Warm-up: confirm delivery works before the rejected client joins the trigger.
+		xEnv.RedisPublishUntilReceived(topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, timeout)
+		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
+			require.NoError(t, args.errValue)
+			require.JSONEq(t, `{"employeeUpdates":{"id":1}}`, string(args.dataValue))
+		})
+
+		rejected := subscribe(http.Header{rejectHeader: []string{"true"}})
+		xEnv.WaitForSubscriptionCount(2, timeout)
+
+		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 2,"update":{"name":"bar"}}`)
+
+		testenv.AwaitChannelWithT(t, timeout, rejected, func(t *testing.T, args subscriptionArgs) {
+			require.ErrorContains(t, args.errValue, "Unauthorized")
+		})
+		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
+			require.NoError(t, args.errValue)
+			require.JSONEq(t, `{"employeeUpdates":{"id":2}}`, string(args.dataValue))
+		})
+
+		// The rejected subscription is closed; the other one still receives events.
+		xEnv.WaitForSubscriptionCount(1, timeout)
+		events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 3,"update":{"name":"baz"}}`)
+		testenv.AwaitChannelWithT(t, timeout, accepted, func(t *testing.T, args subscriptionArgs) {
+			require.NoError(t, args.errValue)
+			require.JSONEq(t, `{"employeeUpdates":{"id":3}}`, string(args.dataValue))
+		})
+		require.Empty(t, rejected, "the rejected client should receive nothing after the error")
+	})
+}
