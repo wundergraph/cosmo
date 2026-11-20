@@ -19,7 +19,7 @@ import {
 } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
-import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
+import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -1490,6 +1490,36 @@ type Category {
   });
 
   describe('Federated graph schema breaking changes', () => {
+    describe('@inaccessible enum values', () => {
+      let client: Awaited<ReturnType<typeof SetupTest>>['client'];
+
+      beforeEach(async () => {
+        const setup = await SetupTest({ dbname, chClient });
+        client = setup.client;
+        return () => setup.server.close();
+      });
+
+      test('Should report a composed breaking change when removing @inaccessible from an enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B C }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+
+      test('Should report a composed breaking change when adding @inaccessible to an exposed enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B C }'],
+          'type Query { letter: Letter } enum Letter { A B C @inaccessible }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+    });
+
     test('Should detect breaking change when subgraph B makes federated field nullable that was required from subgraph A', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
@@ -3662,3 +3692,33 @@ type Category {
     });
   });
 });
+
+async function checkAgainstLastPublishedSubgraph(
+  client: Awaited<ReturnType<typeof SetupTest>>['client'],
+  publishedSchemas: string[],
+  checkedSchema: string,
+) {
+  const label = genUniqueLabel();
+  await createFederatedGraph(client, genID('fedGraph'), DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8081');
+
+  let checkedSubgraphName = '';
+  for (const [i, schema] of publishedSchemas.entries()) {
+    checkedSubgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      checkedSubgraphName,
+      DEFAULT_NAMESPACE,
+      schema,
+      [label],
+      `http://localhost:${8082 + i}`,
+    );
+  }
+
+  const checkResp = await client.checkSubgraphSchema({
+    subgraphName: checkedSubgraphName,
+    namespace: DEFAULT_NAMESPACE,
+    schema: Buffer.from(checkedSchema),
+  });
+  expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+  return checkResp;
+}

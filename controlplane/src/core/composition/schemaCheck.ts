@@ -1,5 +1,6 @@
 import { ChangeType, CriticalityLevel, diff, TypeOfChangeType, SerializableChange } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { INACCESSIBLE } from '@wundergraph/composition';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
 
@@ -46,6 +47,44 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
         change.type === ChangeType.EnumValueAdded,
     };
   });
+}
+
+export function changesNeedClientSchemaDiff({
+  breakingChanges,
+  nonBreakingChanges,
+}: Pick<GetDiffBetweenGraphsSuccess, 'breakingChanges' | 'nonBreakingChanges'>): boolean {
+  return [...breakingChanges, ...nonBreakingChanges].some((change) => changeNeedsClientSchemaDiff(change));
+}
+
+function changeNeedsClientSchemaDiff(change: SchemaDiff): boolean {
+  switch (change.changeType) {
+    case ChangeType.FieldAdded:
+    case ChangeType.FieldRemoved:
+    case ChangeType.FieldTypeChanged:
+    case ChangeType.TypeAdded:
+    case ChangeType.TypeRemoved: {
+      return true;
+    }
+    case ChangeType.DirectiveUsageEnumAdded:
+    case ChangeType.DirectiveUsageEnumRemoved:
+    case ChangeType.DirectiveUsageEnumValueAdded:
+    case ChangeType.DirectiveUsageEnumValueRemoved: {
+      return changedDirectiveName(change.meta) === INACCESSIBLE;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+function changedDirectiveName(meta: SchemaDiff['meta']): string | undefined {
+  if ('addedDirectiveName' in meta) {
+    return meta.addedDirectiveName;
+  }
+  if ('removedDirectiveName' in meta) {
+    return meta.removedDirectiveName;
+  }
+  return undefined;
 }
 
 export async function getDiffBetweenGraphs(
