@@ -2,7 +2,7 @@ import { CriticalityLevel, diff, Rule } from '@graphql-inspector/core';
 import { buildSchema } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
-  enumValueChangesAreBreaking,
+  enumValuesAreExhaustive,
   inaccessibleEnumValueChangesAreInvisible,
   schemaCheckRules,
 } from './schemaCheckRules.js';
@@ -28,13 +28,13 @@ async function getCriticalityLevel({
   return changes.find((change) => change.path === path)?.criticality.level;
 }
 
-describe('Rule: enum value changes are breaking', () => {
+describe('Rule: enum values are exhaustive', () => {
   test('Should mark an added enum value as breaking', async () => {
     expect(
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet { A B }',
         newSDL: 'enum Alphabet { A B C }',
-        rules: [enumValueChangesAreBreaking],
+        rules: [enumValuesAreExhaustive],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.Breaking);
@@ -45,7 +45,7 @@ describe('Rule: enum value changes are breaking', () => {
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet { A B C }',
         newSDL: 'enum Alphabet { A B }',
-        rules: [enumValueChangesAreBreaking],
+        rules: [enumValuesAreExhaustive],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.Breaking);
@@ -56,7 +56,7 @@ describe('Rule: enum value changes are breaking', () => {
       await getCriticalityLevel({
         oldSDL: 'type User { name: String! }',
         newSDL: 'type User { name: String! age: Int }',
-        rules: [enumValueChangesAreBreaking],
+        rules: [enumValuesAreExhaustive],
         path: 'User.age',
       }),
     ).toBe(CriticalityLevel.NonBreaking);

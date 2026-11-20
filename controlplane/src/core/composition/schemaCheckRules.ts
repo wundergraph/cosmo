@@ -14,7 +14,7 @@ function setCriticalityLevelWhen(level: CriticalityLevel, predicate: ChangePredi
 /**
  * Clients commonly switch over enums, so adding or removing a value can leave those switches unhandled.
  */
-export const enumValueChangesAreBreaking = setCriticalityLevelWhen(CriticalityLevel.Breaking, isEnumValueChange);
+export const enumValuesAreExhaustive = setCriticalityLevelWhen(CriticalityLevel.Breaking, isEnumValueChange);
 
 /**
  * If @inaccessible in this subgraph hides or exposes a value another subgraph defines, the client schema diff reports it.
@@ -27,7 +27,7 @@ export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
 /**
  * Rules are applied in order, and a later rule overrides the criticality an earlier one set for the same change.
  */
-export const schemaCheckRules = [enumValueChangesAreBreaking, inaccessibleEnumValueChangesAreInvisible];
+export const schemaCheckRules = [enumValuesAreExhaustive, inaccessibleEnumValueChangesAreInvisible];
 
 function isEnumValueChange(change: Change): boolean {
   return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
