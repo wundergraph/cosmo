@@ -3,13 +3,14 @@ import { buildSchema } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   enumValuesAreExhaustive,
-  inaccessibleEnumValueChangesAreInvisible,
+  inaccessibleChangesAreInvisible,
   internalFederationTypeRemovalsAreInvisible,
   schemaCheckRules,
   typeSystemDirectiveRemovalsAreInvisible,
 } from './schemaCheckRules.js';
 
-const INACCESSIBLE_DEFINITION = 'directive @inaccessible on ENUM | ENUM_VALUE';
+const INACCESSIBLE_DEFINITION =
+  'directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION';
 
 async function getCriticalityLevel({
   oldSDL,
@@ -65,13 +66,90 @@ describe('Rule: enum values are exhaustive', () => {
   });
 });
 
-describe('Rule: @inaccessible enum value changes are invisible', () => {
+describe('Rule: changes to @inaccessible elements are invisible', () => {
+  test.each([
+    {
+      change: 'a removed @inaccessible type',
+      oldSDL: 'type User @inaccessible { name: String }',
+      newSDL: '',
+      path: 'User',
+    },
+    {
+      change: 'a removed @inaccessible interface',
+      oldSDL: 'interface Node @inaccessible { id: ID }',
+      newSDL: '',
+      path: 'Node',
+    },
+    {
+      change: 'a removed @inaccessible field',
+      oldSDL: 'type User { name: String age: Int @inaccessible }',
+      newSDL: 'type User { name: String }',
+      path: 'User.age',
+    },
+    {
+      change: 'a field removed from an @inaccessible type',
+      oldSDL: 'type User @inaccessible { name: String age: Int }',
+      newSDL: 'type User @inaccessible { name: String }',
+      path: 'User.age',
+    },
+    {
+      change: 'a changed type of an @inaccessible field',
+      oldSDL: 'type User { name: String age: Int @inaccessible }',
+      newSDL: 'type User { name: String age: String @inaccessible }',
+      path: 'User.age',
+    },
+    {
+      change: 'a removed @inaccessible argument',
+      oldSDL: 'type User { name(format: String @inaccessible): String }',
+      newSDL: 'type User { name: String }',
+      path: 'User.name.format',
+    },
+    {
+      change: 'a required argument added to an @inaccessible field',
+      oldSDL: 'type User { name: String @inaccessible }',
+      newSDL: 'type User { name(format: String!): String @inaccessible }',
+      path: 'User.name.format',
+    },
+    {
+      change: 'a removed @inaccessible input field',
+      oldSDL: 'input Filter { name: String age: Int @inaccessible }',
+      newSDL: 'input Filter { name: String }',
+      path: 'Filter.age',
+    },
+  ])('Should mark $change as non breaking', async ({ oldSDL, newSDL, path }) => {
+    expect(await getCriticalityLevel({ oldSDL, newSDL, rules: [inaccessibleChangesAreInvisible], path })).toBe(
+      CriticalityLevel.NonBreaking,
+    );
+  });
+
+  test('Should keep adding @oneOf breaking when an @inaccessible input field shares its name', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'input Filter { oneOf: Int @inaccessible x: Int y: Int }',
+        newSDL: 'input Filter @oneOf { oneOf: Int @inaccessible x: Int y: Int }',
+        rules: [inaccessibleChangesAreInvisible],
+        path: 'Filter.oneOf',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+
+  test('Should keep a removed accessible field breaking', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'type User { name: String age: Int }',
+        newSDL: 'type User { name: String }',
+        rules: [inaccessibleChangesAreInvisible],
+        path: 'User.age',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+
   test('Should mark an added @inaccessible enum value as non breaking', async () => {
     expect(
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet { A B }',
         newSDL: 'enum Alphabet { A B C @inaccessible }',
-        rules: [inaccessibleEnumValueChangesAreInvisible],
+        rules: [inaccessibleChangesAreInvisible],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.NonBreaking);
@@ -82,7 +160,7 @@ describe('Rule: @inaccessible enum value changes are invisible', () => {
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet { A B C @inaccessible }',
         newSDL: 'enum Alphabet { A B }',
-        rules: [inaccessibleEnumValueChangesAreInvisible],
+        rules: [inaccessibleChangesAreInvisible],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.NonBreaking);
@@ -93,7 +171,7 @@ describe('Rule: @inaccessible enum value changes are invisible', () => {
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet @inaccessible { A B }',
         newSDL: 'enum Alphabet @inaccessible { A B C }',
-        rules: [inaccessibleEnumValueChangesAreInvisible],
+        rules: [inaccessibleChangesAreInvisible],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.NonBreaking);
@@ -104,7 +182,7 @@ describe('Rule: @inaccessible enum value changes are invisible', () => {
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet @inaccessible { A B C }',
         newSDL: 'enum Alphabet @inaccessible { A B }',
-        rules: [inaccessibleEnumValueChangesAreInvisible],
+        rules: [inaccessibleChangesAreInvisible],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.NonBreaking);
@@ -115,7 +193,7 @@ describe('Rule: @inaccessible enum value changes are invisible', () => {
       await getCriticalityLevel({
         oldSDL: 'enum Alphabet { A B C }',
         newSDL: 'enum Alphabet { A B }',
-        rules: [inaccessibleEnumValueChangesAreInvisible],
+        rules: [inaccessibleChangesAreInvisible],
         path: 'Alphabet.C',
       }),
     ).toBe(CriticalityLevel.Breaking);
