@@ -4,8 +4,15 @@ import {
   UpsertAuditLogStreamConfigRequest,
   UpsertAuditLogStreamConfigResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { destinationDisplayName } from '../../audit-log-stream/deliver.js';
+import type { AuditLogStreamDestination } from '../../audit-log-stream/destination.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { DEFAULT_SOURCE, DEFAULT_SOURCETYPE, normalizeHecEndpoint } from '../../audit-log-stream/splunk-hec.js';
+import {
+  DEFAULT_SOURCE,
+  DEFAULT_SOURCETYPE,
+  isValidHecToken,
+  normalizeHecEndpoint,
+} from '../../audit-log-stream/splunk-hec.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../../repositories/AuditLogStreamRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -48,9 +55,28 @@ export function upsertAuditLogStreamConfig(
       };
     }
 
+    const token = req.token?.trim() || undefined;
+    if (token && !isValidHecToken(token)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'The HEC token contains invalid characters',
+        },
+      };
+    }
+
+    const destination: AuditLogStreamDestination = {
+      kind: 'splunk_hec',
+      settings: {
+        endpoint,
+        index: req.index?.trim() || null,
+        source: req.source?.trim() || DEFAULT_SOURCE,
+        sourcetype: req.sourcetype?.trim() || DEFAULT_SOURCETYPE,
+      },
+    };
+
     const repo = new AuditLogStreamRepository(opts.db);
     const existing = await repo.get(authContext.organizationId);
-    const token = req.token?.trim() || undefined;
 
     if (!existing && !token) {
       return {
@@ -64,11 +90,8 @@ export function upsertAuditLogStreamConfig(
     const saved = await opts.db.transaction(async (tx) => {
       const saved = await new AuditLogStreamRepository(tx).upsert({
         organizationId: authContext.organizationId,
-        endpoint,
-        token,
-        index: req.index?.trim() || null,
-        source: req.source?.trim() || DEFAULT_SOURCE,
-        sourcetype: req.sourcetype?.trim() || DEFAULT_SOURCETYPE,
+        ...destination,
+        secret: token,
         enabled: req.enabled,
       });
       if (!saved) {
@@ -82,7 +105,7 @@ export function upsertAuditLogStreamConfig(
         action: existing ? 'updated' : 'created',
         actorId: authContext.userId,
         auditableType: 'audit_log_stream_config',
-        auditableDisplayName: endpoint,
+        auditableDisplayName: destinationDisplayName(destination),
         actorDisplayName: authContext.userDisplayName,
         apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',

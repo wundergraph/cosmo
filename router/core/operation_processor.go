@@ -25,8 +25,8 @@ import (
 
 	fastjson "github.com/wundergraph/astjson"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -121,11 +121,13 @@ type OperationProcessorOptions struct {
 	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError       bool
+	AllowInt64VariableValues                               bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	AllowStringLiteralsForEnums                            bool
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	NormalizationLimits                                    astnormalization.Limits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
@@ -214,7 +216,7 @@ type OperationKit struct {
 	// background, and custom IDs can keep their ID while their body changes, so
 	// every persisted operation lookup, cache key and variable metadata check in
 	// this request must read this snapshot instead of the live store.
-	persistedOperationManifest *pqlmanifest.Manifest
+	persistedOperationManifest *operationmanifest.Manifest
 }
 
 type GraphQLRequest struct {
@@ -1685,14 +1687,16 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
+	allowInt64VariableValues                               bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
+	normalizationLimits                                    astnormalization.Limits
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
-	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
+	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments, options.normalizationLimits)
 
 	return &parseKit{
 		i:                   i,
@@ -1714,14 +1718,16 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
+			AllowInt64Values:                options.allowInt64VariableValues,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
 	}
 }
 
-func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
+func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments, limits astnormalization.Limits) []astnormalization.Option {
 	opts := []astnormalization.Option{
+		astnormalization.WithLimits(limits),
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveFragmentDefinitions(),
@@ -1792,9 +1798,11 @@ func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor,
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
+			allowInt64VariableValues:                               opts.AllowInt64VariableValues,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
+			normalizationLimits:                                    opts.NormalizationLimits,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

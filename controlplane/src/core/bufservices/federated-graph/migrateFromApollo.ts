@@ -84,6 +84,7 @@ export function migrateFromApollo(
     const user = await userRepo.byId(authContext.userId || '');
     const apolloMigrator = new ApolloMigrator({
       apiKey: req.apiKey,
+      apiUrl: opts.apolloApiUrl,
       organizationSlug: org.slug,
       variantName: req.variantName,
       logger,

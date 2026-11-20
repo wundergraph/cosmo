@@ -1,4 +1,5 @@
 import * as schema from '../../db/schema.js';
+import type { SplunkHecSettings } from './destination.js';
 
 export const DEFAULT_SOURCETYPE = 'wundergraph:cosmo:audit';
 export const DEFAULT_SOURCE = 'cosmo';
@@ -14,15 +15,10 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export type AuditLogRow = typeof schema.auditLogs.$inferSelect;
 
-export interface HecTarget {
-  organizationId: string;
-  /** Must already be normalized with normalizeHecEndpoint. */
-  endpoint: string;
-  token: string;
-  index: string | null;
-  source: string;
-  sourcetype: string;
-}
+/**
+ * The endpoint must already be normalized with normalizeHecEndpoint.
+ */
+export type HecTarget = SplunkHecSettings & { organizationId: string; token: string };
 
 class HecError extends Error {}
 
@@ -56,6 +52,10 @@ export function normalizeHecEndpoint(input: string): string | undefined {
   url.hash = '';
 
   return url.toString();
+}
+
+export function isValidHecToken(token: string) {
+  return /^[\u0021-\u007E]+$/.test(token);
 }
 
 export function toHecEvent(log: AuditLogRow, target: Pick<HecTarget, 'index' | 'source' | 'sourcetype'>) {
@@ -112,6 +112,10 @@ export async function sendToHec(target: HecTarget, events: object[]): Promise<st
 }
 
 async function post(target: HecTarget, events: object[]) {
+  if (!isValidHecToken(target.token)) {
+    throw new HecError('The HEC token contains invalid characters');
+  }
+
   let res: Response;
   try {
     res = await fetch(target.endpoint, {
@@ -119,8 +123,8 @@ async function post(target: HecTarget, events: object[]) {
       headers: {
         Authorization: `Splunk ${target.token}`,
         'Content-Type': 'application/json',
-        // Required when the token has indexer acknowledgement enabled, ignored otherwise. Splunk tracks pending
-        // acknowledgements per channel, so it must be a stable GUID; the organization ID is one.
+        // Splunk rejects requests without a channel to tokens with indexer acknowledgement enabled. The channel must be
+        // a stable GUID, such as the organization ID.
         'X-Splunk-Request-Channel': target.organizationId,
       },
       body: events.map((e) => JSON.stringify(e)).join('\n'),

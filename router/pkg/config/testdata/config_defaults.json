@@ -207,7 +207,9 @@
       }
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "ObjectPath": "",
+      "PollInterval": 10000000000
     },
     "Session": {
       "Stateless": true
@@ -526,6 +528,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 10000
+    },
     "OperationNameLengthLimit": 512
   },
   "EngineExecutionConfiguration": {
@@ -788,6 +793,9 @@
   "BackwardsCompatibility": {
     "PersistedOperations": {
       "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
     }
   },
   "Plugins": {

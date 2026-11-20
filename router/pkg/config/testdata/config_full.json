@@ -281,7 +281,9 @@
       }
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "ObjectPath": "mcp/manifest.json",
+      "PollInterval": 30000000000
     },
     "Session": {
       "Stateless": true
@@ -1038,6 +1040,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 20000
+    },
     "OperationNameLengthLimit": 2000
   },
   "EngineExecutionConfiguration": {
@@ -1331,6 +1336,9 @@
   "BackwardsCompatibility": {
     "PersistedOperations": {
       "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
     }
   },
   "Plugins": {

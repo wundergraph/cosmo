@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.375.0](https://github.com/wundergraph/cosmo/compare/router@0.374.0...router@0.375.0) (2026-11-19)
+
+### Features
+
+* **router:** add configurable normalization selection limit ([#3505](https://github.com/wundergraph/cosmo/issues/3505)) ([f80e4a9](https://github.com/wundergraph/cosmo/commit/f80e4a92de5e2d00122ebfcf664bb86c4502b8c1)) (@fiam)
+
+### Bug Fixes
+
+* **router:** preserve response arena ownership during entity fetches ([#3562](https://github.com/wundergraph/cosmo/issues/3562)) ([bfb2841](https://github.com/wundergraph/cosmo/commit/bfb2841bd7dc64671b44a43cba3dbf231eb009dc)) (@fiam)
+
+## [0.374.0](https://github.com/wundergraph/cosmo/compare/router@0.373.1...router@0.374.0) (2026-11-19)
+
+### Features
+
+* **router:** mcp operation manifests ([#3320](https://github.com/wundergraph/cosmo/issues/3320)) ([8aa9501](https://github.com/wundergraph/cosmo/commit/8aa9501640bb04ca15ea31a14de4112ae30bce47)) (@endigma)
+
+## [0.373.1](https://github.com/wundergraph/cosmo/compare/router@0.373.0...router@0.373.1) (2026-11-19)
+
+### Bug Fixes
+
+* **router:** add int64 vars backwards compatibility option ([#3551](https://github.com/wundergraph/cosmo/issues/3551)) ([dc7c61e](https://github.com/wundergraph/cosmo/commit/dc7c61ee41b7ff71b93fdcfe4d586556f22e2a5e)) (@vdatcu)
+
 ## [0.373.0](https://github.com/wundergraph/cosmo/compare/router@0.372.0...router@0.373.0) (2026-11-18)
 
 ### Features
