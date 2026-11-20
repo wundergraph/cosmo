@@ -26,22 +26,24 @@ export function getAuditLogStreamConfig(
     }
 
     const config = await new AuditLogStreamRepository(opts.db).get(authContext.organizationId);
+    if (!config) {
+      return { response: { code: EnumStatusCode.OK } };
+    }
 
+    const splunkHecSettings = config.settings;
     return {
       response: { code: EnumStatusCode.OK },
-      config: config
-        ? {
-            endpoint: config.endpoint,
-            tokenSuffix: config.token.slice(-4),
-            index: config.index ?? undefined,
-            source: config.source ?? undefined,
-            sourcetype: config.sourcetype,
-            enabled: config.enabled,
-            lastSuccessAt: config.lastSuccessAt?.toISOString(),
-            lastError: config.lastError ?? undefined,
-            lastErrorAt: config.lastErrorAt?.toISOString(),
-          }
-        : undefined,
+      config: {
+        endpoint: splunkHecSettings.endpoint,
+        tokenSuffix: config.secret.slice(-4),
+        index: splunkHecSettings.index ?? undefined,
+        source: splunkHecSettings.source,
+        sourcetype: splunkHecSettings.sourcetype,
+        enabled: config.enabled,
+        lastSuccessAt: config.lastSuccessAt?.toISOString(),
+        lastError: config.lastError ?? undefined,
+        lastErrorAt: config.lastErrorAt?.toISOString(),
+      },
     };
   });
 }
