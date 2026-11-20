@@ -4,6 +4,10 @@ on:
     paths:
       - "demo/**/*"
       - ".github/workflows/demo-ci.yaml"
+      - "mise.toml"
+      - "mise.lock"
+      - ".github/actions/mise/**"
+      - ".github/actions/go/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

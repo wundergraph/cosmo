@@ -5,6 +5,10 @@ on:
       - 'pnpm-lock.yaml'
       - 'protographic/**/*'
       - '.github/workflows/protographic.yaml'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/mise/**'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -21,10 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - name: Install dependencies
         run: pnpm install --filter ./connect --filter ./composition --filter ./protographic

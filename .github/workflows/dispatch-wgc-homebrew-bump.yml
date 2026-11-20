@@ -14,6 +14,13 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/mise
+        with:
+          tools: node
+
       - name: Authenticate to homebrew-cosmo
         id: app-token
         uses: actions/create-github-app-token@v3

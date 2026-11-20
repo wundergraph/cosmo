@@ -11,9 +11,13 @@ on:
       - 'composition/**/*'
       - 'Makefile'
       - '.golangci.yml'
-      - '.golangci-lint-version'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/go/**'
+      - '.github/actions/mise/**'
       - '.github/actions/go-linter/**'
       - '.github/workflows/router-ci.yaml'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -50,24 +54,13 @@ jobs:
         with:
           working-directory: ./router
 
-      - name: Install tools
-        run: make setup-build-tools
-
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-
-      - name: Install Bun For Plugin Building
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.15
 
       - name: Generate Go code
         run: make generate-go
@@ -149,24 +142,13 @@ jobs:
         with:
           working-directory: ./router
 
-      - name: Install tools
-        run: make setup-build-tools
-
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-
-      - name: Install Bun For Plugin Building
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.15
 
       - name: Generate Go code
         run: make generate-go
@@ -367,24 +349,13 @@ jobs:
           cache-dependency-path: |
             router-tests/go.sum
 
-      - name: Install tools
-        run: make setup-build-tools
-
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-
-      - name: Install Bun For Plugin Building
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.15
 
       - name: Install dependencies
         working-directory: ./router-tests
