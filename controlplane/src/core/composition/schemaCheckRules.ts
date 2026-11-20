@@ -24,6 +24,11 @@ export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
   isInaccessibleEnumValueChange,
 );
 
+/**
+ * Rules are applied in order, and a later rule overrides the criticality an earlier one set for the same change.
+ */
+export const schemaCheckRules = [enumValueChangesAreBreaking, inaccessibleEnumValueChangesAreInvisible];
+
 function isEnumValueChange(change: Change): boolean {
   return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
 }
