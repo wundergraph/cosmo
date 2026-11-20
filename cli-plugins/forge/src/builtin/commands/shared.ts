@@ -17,6 +17,26 @@ export interface CommonOptions {
   dir?: string;
 }
 
+export type Acceptance = 'accepted' | 'declined' | 'needs-yes';
+
+/** `--yes` accepts a reviewed change; otherwise only a person at a terminal without `--json` is asked. */
+export const askToAccept = async (
+  context: PluginContext,
+  options: { yes?: boolean; json?: boolean },
+  question: string,
+): Promise<Acceptance> => {
+  if (options.yes === true) {
+    return 'accepted';
+  }
+
+  if (!context.prompts.canPrompt || options.json === true) {
+    return 'needs-yes';
+  }
+
+  const accepted = await context.prompts.confirm(question, false);
+  return accepted ? 'accepted' : 'declined';
+};
+
 export const withCommonOptions = (command: Command): Command =>
   command
     .option('--dir <path>', 'The Forge workspace directory. Defaults to the current directory.')

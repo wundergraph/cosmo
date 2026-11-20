@@ -313,26 +313,85 @@ describe('wgc forge add', () => {
     });
   });
 
-  test('adding the same module twice is refused', async () => {
-    const workspace = await createWorkspace({
-      'forge.yaml': manifest.replace('modules: []', 'modules:\n  - go: github.com/acme/mod\n    version: v1.2.0'),
+  const lockedAt = lockForReleaseA.replace(
+    'modules: []',
+    `modules:
+  - source:
+      go: github.com/acme/mod
+    module: github.com/acme/mod
+    package: github.com/acme/mod
+    version: v1.2.0
+    commit: ${commitA}`,
+  );
+  const lockedAtNewer = lockedAt.replace(
+    `version: v1.2.0\n    commit: ${commitA}`,
+    `version: v1.3.0\n    commit: ${commitB}`,
+  );
+  const registered = manifest.replace('modules: []', 'modules:\n  - go: github.com/acme/mod');
+  const newerRelease = createFakeSystem({
+    modules: { 'github.com/acme/mod@latest': { Path: 'github.com/acme/mod', Version: 'v1.3.0', Hash: commitB } },
+  });
+
+  test('re-adding a registered package previews the newer selection and changes nothing without --yes', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': registered, 'forge.lock': lockedAt });
+
+    const run = await runForge(['add', 'github.com/acme/mod'], { workspace, system: newerRelease });
+
+    expect(run.exitCode).toBe(1);
+    expect(JSON.parse(run.stdout).error).toMatchObject({
+      input: 'github.com/acme/mod',
+      fix: 'Review the change, then run the command again with --yes to accept it.',
+      details: {
+        changes: [
+          {
+            module: 'github.com/acme/mod',
+            from: `v1.2.0 (${commitA.slice(0, 12)})`,
+            to: `v1.3.0 (${commitB.slice(0, 12)})`,
+          },
+        ],
+        written: false,
+      },
+    });
+    expect(await read(workspace, 'forge.yaml')).toBe(registered);
+    expect(await read(workspace, 'forge.lock')).toBe(lockedAt);
+  });
+
+  test('--yes accepts the newer selection and keeps a single registration', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': registered, 'forge.lock': lockedAt });
+
+    const run = await runForge(['add', '--yes', 'github.com/acme/mod'], { workspace, system: newerRelease });
+
+    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', written: true });
+    expect(await read(workspace, 'forge.yaml')).toBe(registered);
+    expect(await read(workspace, 'forge.lock')).toBe(lockedAtNewer);
+  });
+
+  test('re-adding with an explicit version replaces the registration in place', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': registered, 'forge.lock': lockedAt });
+
+    await runForge(['add', '--yes', 'github.com/acme/mod@v1.2.0'], {
+      workspace,
+      system: createFakeSystem(acmeModules),
     });
 
-    const run = await runForge(['add', 'github.com/acme/mod@v1.2.0'], { workspace });
+    expect(await read(workspace, 'forge.yaml')).toBe(
+      manifest.replace('modules: []', 'modules:\n  - go: github.com/acme/mod\n    version: v1.2.0'),
+    );
+  });
 
-    expect(JSON.parse(run.stdout).error.message).toBe('github.com/acme/mod is already a module of this workspace.');
+  test('re-adding a package that resolves to its current pin reports it as registered', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': registered, 'forge.lock': lockedAtNewer });
+
+    const run = await runForge(['add', 'github.com/acme/mod'], { workspace, system: newerRelease });
+
+    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', changes: [], written: false });
   });
 });
 
 describe('wgc forge lock', () => {
-  test('resolves every pin again, moving a branch forward', async () => {
-    const withBranch = manifest.replace(
-      'modules: []',
-      'modules:\n  - git: https://github.com/acme/router-modules.git\n    ref: main',
-    );
-    const staleLock = lockForReleaseA.replace(
-      'modules: []',
-      `modules:
+  const lockedBranch = lockForReleaseA.replace(
+    'modules: []',
+    `modules:
   - source:
       git: https://github.com/acme/router-modules.git
       ref: main
@@ -340,32 +399,82 @@ describe('wgc forge lock', () => {
     package: github.com/acme/router-modules
     version: v0.0.0-20260101000000-cccccccccccc
     commit: ${'c'.repeat(40)}`,
+  );
+  const withBranch = manifest.replace(
+    'modules: []',
+    'modules:\n  - git: https://github.com/acme/router-modules.git\n    ref: main',
+  );
+  const remotesAndModules = {
+    remotes: { 'https://github.com/acme/router-modules.git': `${commitB}\trefs/heads/main` },
+    modules: {
+      'github.com/acme/mod@v1.2.0': { Path: 'github.com/acme/mod', Version: 'v1.2.0', Hash: commitB },
+    },
+  };
+
+  test('keeps the pins of unchanged entries even when their branch moved', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': withBranch, 'forge.lock': lockedBranch });
+
+    const run = await runForge(['lock'], { workspace, system: createFakeSystem(remotesAndModules) });
+
+    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', changes: [], written: false });
+    expect(await read(workspace, 'forge.lock')).toBe(lockedBranch);
+  });
+
+  test('previews an added module and writes it only with --yes', async () => {
+    const edited = withBranch.replace('ref: main', 'ref: main\n  - go: github.com/acme/mod\n    version: v1.2.0');
+    const workspace = await createWorkspace({ 'forge.yaml': edited, 'forge.lock': lockedBranch });
+
+    const preview = await runForge(['lock'], { workspace, system: createFakeSystem(remotesAndModules) });
+
+    expect(preview.exitCode).toBe(1);
+    expect(JSON.parse(preview.stdout).error.details.changes).toEqual([
+      { module: 'github.com/acme/mod', to: `v1.2.0 (${commitB.slice(0, 12)})` },
+    ]);
+    expect(await read(workspace, 'forge.lock')).toBe(lockedBranch);
+
+    const applied = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
+
+    expect(JSON.parse(applied.stdout)).toMatchObject({ status: 'success', written: true });
+    expect(await read(workspace, 'forge.lock')).toBe(
+      `${lockedBranch.trimEnd()}
+  - source:
+      go: github.com/acme/mod
+      version: v1.2.0
+    module: github.com/acme/mod
+    package: github.com/acme/mod
+    version: v1.2.0
+    commit: ${commitB}
+`,
     );
-    const workspace = await createWorkspace({ 'forge.yaml': withBranch, 'forge.lock': staleLock });
-    const system = createFakeSystem({
-      remotes: { 'https://github.com/acme/router-modules.git': `${commitB}\trefs/heads/main` },
-      modules: {
-        [`github.com/acme/router-modules@${commitB}`]: {
-          Path: 'github.com/acme/router-modules',
-          Version: 'v0.0.0-20260202000000-bbbbbbbbbbbb',
-        },
+  });
+
+  test('previews a removed module', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockedBranch });
+
+    const run = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
+
+    expect(JSON.parse(run.stdout).changes).toEqual([
+      {
+        module: 'https://github.com/acme/router-modules.git',
+        from: `v0.0.0-20260101000000-cccccccccccc (${'c'.repeat(12)})`,
       },
+    ]);
+    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
+  });
+
+  test('a router edited in forge.yaml is sent to router upgrade', async () => {
+    const workspace = await createWorkspace({
+      'forge.yaml': manifest.replace('0.299.0', '0.300.0'),
+      'forge.lock': lockForReleaseA,
     });
 
-    const run = await runForge(['lock'], { workspace, system });
+    const run = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
 
-    expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      router: { source: 'release 0.299.0', version: versionA, commit: commitA },
-      modules: [
-        {
-          package: 'github.com/acme/router-modules',
-          module: 'github.com/acme/router-modules',
-          version: 'v0.0.0-20260202000000-bbbbbbbbbbbb',
-          commit: commitB,
-        },
-      ],
+    expect(JSON.parse(run.stdout).error).toEqual({
+      message: 'forge.yaml selects router release 0.300.0, but forge.lock pins router release 0.299.0.',
+      input: 'forge.yaml: router',
+      fix: 'Restore router release 0.299.0 in forge.yaml, then run `wgc forge router upgrade --config <router.yaml> <candidate>` to change the router.',
     });
-    expect(await read(workspace, 'forge.lock')).toContain(`commit: ${commitB}`);
+    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
   });
 });

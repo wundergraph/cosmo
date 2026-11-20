@@ -23,7 +23,7 @@ const localModule = { 'modules/request-id/go.mod': 'module forge.local/request-i
 
 describe('wgc forge build', () => {
   test('generates the build module, compiles, and reports the binary path', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
     const system = createFakeSystem();
 
     const run = await runForge(['build'], { workspace, system });
@@ -65,18 +65,11 @@ func main() {
   });
 
   test('reports one progress event per real step, in order', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
 
     const run = await runForge(['build'], { workspace });
 
     expect(run.progress).toEqual([
-      { step: 'resolve-router', subject: 'router release 0.299.0', message: 'Resolving the commit and Go version' },
-      { step: 'resolve-router', subject: 'router release 0.299.0', message: `Resolved to ${versionA}` },
-      {
-        step: 'resolve-module',
-        subject: './modules/request-id',
-        message: 'Local module, built from disk and not pinned',
-      },
       { step: 'write-build-module', subject: `${workspace}/.forge/build`, message: 'Writing go.mod and main.go' },
       { step: 'tidy', message: 'Resolving Go dependencies (go mod tidy)' },
       { step: 'compile', message: 'Compiling the router (go build)' },
@@ -84,25 +77,39 @@ func main() {
     ]);
   });
 
-  test('writes forge.lock on the first successful build and reuses it afterwards', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
-    await runForge(['build'], { workspace });
-    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
-
+  test('builds from the pins in forge.lock without resolving anything', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
     const system = createFakeSystem();
-    const second = await runForge(['build'], { workspace, system });
 
-    expect(second.progress[0]).toEqual({
-      step: 'resolve-router',
-      subject: 'router release 0.299.0',
-      message: `Pinned at ${versionA}`,
-    });
+    await runForge(['build'], { workspace, system });
+
     expect(system.commands.filter((command) => command.startsWith('git ls-remote'))).toEqual([]);
+    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
+  });
+
+  test('a missing or out of date forge.lock is refused, because a build never changes pins', async () => {
+    const withRemote = manifest.replace('modules:\n', 'modules:\n  - go: github.com/acme/mod\n    version: v1.2.0\n');
+    const missing = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
+    const stale = await createWorkspace({ 'forge.yaml': withRemote, 'forge.lock': lockForReleaseA, ...localModule });
+
+    const expected = {
+      status: 'error',
+      error: {
+        message: 'forge.lock does not pin what forge.yaml asks for, and a build never changes pins.',
+        input: 'forge.lock',
+        fix: 'Run `wgc forge lock` to review and pin the changes, then build again.',
+      },
+    };
+    expect(JSON.parse((await runForge(['build'], { workspace: missing })).stdout)).toEqual(expected);
+    expect(JSON.parse((await runForge(['build'], { workspace: stale })).stdout)).toEqual(expected);
+    await expect(read(missing, 'forge.lock')).rejects.toThrow('ENOENT');
+    expect(await read(stale, 'forge.lock')).toBe(lockForReleaseA);
   });
 
   test('a failed compile keeps the working binary and does not write pins', async () => {
     const workspace = await createWorkspace({
       'forge.yaml': manifest,
+      'forge.lock': lockForReleaseA,
       ...localModule,
       'bin/router': 'the working router',
     });
@@ -120,13 +127,14 @@ func main() {
       },
     });
     expect(await read(workspace, 'bin/router')).toBe('the working router');
-    await expect(read(workspace, 'forge.lock')).rejects.toThrow('ENOENT');
+    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
     expect(run.progress.map((event) => event.step)).not.toContain('place-binary');
   });
 
   test('a module that needs a newer router than the pinned one is a conflict naming it and both versions', async () => {
     const workspace = await createWorkspace({
       'forge.yaml': manifest,
+      'forge.lock': lockForReleaseA,
       ...localModule,
       'bin/router': 'the working router',
     });
@@ -165,6 +173,22 @@ modules:
   - go: github.com/acme/mod/auth
     version: v1.3.0
 `,
+      'forge.lock': lockForReleaseA.replace(
+        'modules: []',
+        `modules:
+  - source:
+      go: github.com/acme/mod/headers
+      version: v1.2.0
+    module: github.com/acme/mod
+    package: github.com/acme/mod/headers
+    version: v1.2.0
+  - source:
+      go: github.com/acme/mod/auth
+      version: v1.3.0
+    module: github.com/acme/mod
+    package: github.com/acme/mod/auth
+    version: v1.3.0`,
+      ),
     });
     const system = createFakeSystem({
       modules: {
@@ -184,7 +208,7 @@ modules:
   });
 
   test('a local module directory without go.mod names the manifest entry', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest });
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA });
 
     const run = await runForge(['build'], { workspace });
 
@@ -210,7 +234,7 @@ modules:
 
 describe('output for the caller', () => {
   test('a person at a terminal reads text: progress lines on stderr and a summary on stdout', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
 
     const run = await runForge(['build'], { workspace, caller: 'human' });
 
@@ -220,13 +244,13 @@ describe('output for the caller', () => {
   });
 
   test('--json gives a person the same JSON an agent gets', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
 
     const run = await runForge(['build', '--json'], { workspace, caller: 'human' });
 
     expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', binary: `${workspace}/bin/router` });
     expect(run.stderr.split('\n')[0]).toBe(
-      '{"event":"progress","step":"resolve-router","subject":"router release 0.299.0","message":"Resolving the commit and Go version"}',
+      `{"event":"progress","step":"write-build-module","subject":"${workspace}/.forge/build","message":"Writing go.mod and main.go"}`,
     );
   });
 

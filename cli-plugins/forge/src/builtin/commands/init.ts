@@ -5,7 +5,7 @@ import type { Command } from 'commander';
 import { fail, toFailure } from '../failure.js';
 import type { FileAction } from '../guidance.js';
 import { ignoreGeneratedFiles, writeGuidance } from '../guidance.js';
-import { lockFileName, readLock, renderLock, writeLock } from '../lock.js';
+import { lockFileName, readLock, writeLock } from '../lock.js';
 import { defaultBinaryPath, manifestFileName, readManifest, routerSourceSchema, writeManifest } from '../manifest.js';
 import type { Manifest, RouterSource } from '../manifest.js';
 import { resolvePins } from '../pins.js';
@@ -106,18 +106,18 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
     if (!previous.success) {
       return output.fail(toFailure(previous));
     }
-    const lock = await resolvePins({ manifest, previous: previous.data, refresh: false, system, output });
-    if (!lock.success) {
-      return output.fail(toFailure(lock));
-    }
-    if (previous.data === undefined) {
-      await writeLock(workspace, lock.data);
+
+    let lock = previous.data;
+    if (lock === undefined) {
+      const resolved = await resolvePins({ manifest, previous: undefined, system, output });
+      if (!resolved.success) {
+        return output.fail(toFailure(resolved));
+      }
+      lock = resolved.data;
+      await writeLock(workspace, lock);
       files.push({ path: lockFileName, action: 'created' });
-    } else if (renderLock(previous.data) === renderLock(lock.data)) {
-      files.push({ path: lockFileName, action: 'kept' });
     } else {
-      await writeLock(workspace, lock.data);
-      files.push({ path: lockFileName, action: 'updated' });
+      files.push({ path: lockFileName, action: 'kept' });
     }
 
     files.push(
@@ -126,7 +126,7 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
       { path: '.gitignore', action: await ignoreGeneratedFiles(workspace) },
     );
 
-    output.result({ workspace, router: routerSummary(lock.data), files }, (data) =>
+    output.result({ workspace, router: routerSummary(lock), files }, (data) =>
       [
         `Forge workspace ready in ${data.workspace}`,
         `  router ${data.router.source} (${data.router.version})`,

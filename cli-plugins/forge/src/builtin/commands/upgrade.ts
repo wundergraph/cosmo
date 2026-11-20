@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { buildRouter } from '../build.js';
 import { toFailure } from '../failure.js';
-import { readLock, writeLock } from '../lock.js';
+import { lockFileName, readLock, writeLock } from '../lock.js';
 import {
   describeRouterSource,
   manifestFileName,
@@ -11,10 +11,10 @@ import {
   readManifest,
   writeManifest,
 } from '../manifest.js';
-import { resolvePins } from '../pins.js';
+import { lockMatches, resolvePins } from '../pins.js';
 import type { System } from '../system.js';
 import { workspacePaths } from '../workspace.js';
-import { routerSummary, withCommonOptions, workspaceOf } from './shared.js';
+import { askToAccept, routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
 interface UpgradeOptions extends CommonOptions {
@@ -128,11 +128,17 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     if (!current.success) {
       return output.fail(toFailure(current));
     }
+    if (!lockMatches(manifest.data, current.data)) {
+      return output.fail({
+        message: `${lockFileName} does not pin what ${manifestFileName} asks for.`,
+        input: lockFileName,
+        fix: 'Run `wgc forge lock` to review and pin the module changes before evaluating a router.',
+      });
+    }
     const candidateManifest = { ...manifest.data, router: candidateSource.data };
     const candidateLock = await resolvePins({
       manifest: candidateManifest,
       previous: current.data,
-      refresh: false,
       system,
       output,
     });
@@ -202,20 +208,19 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       );
     }
 
-    if (!options.yes && !context.prompts.canPrompt) {
+    const acceptance = await askToAccept(
+      context,
+      options,
+      `${renderReport('Tests passed.')}\nAdopt router ${passed.candidate.source}?`,
+    );
+    if (acceptance === 'needs-yes') {
       return output.fail({
         message: `Router ${passed.candidate.source} passes the tests, but adopting it needs your confirmation.`,
         input: candidate,
         fix: 'Run the command again with --yes to adopt it.',
       });
     }
-    const accepted =
-      options.yes === true ||
-      (await context.prompts.confirm(
-        `${renderReport('Tests passed.')}\nAdopt router ${passed.candidate.source}?`,
-        false,
-      ));
-    if (!accepted) {
+    if (acceptance === 'declined') {
       return output.result({ ...passed, adopted: false, binary: paths.candidateBinary }, () =>
         renderReport(`Router ${passed.candidate.source} passes the tests. Not adopted.`),
       );

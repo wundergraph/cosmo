@@ -1,9 +1,9 @@
 import type { Command } from 'commander';
 import { buildRouter } from '../build.js';
 import { toFailure } from '../failure.js';
-import { readLock, renderLock, writeLock } from '../lock.js';
-import { readManifest } from '../manifest.js';
-import { resolvePins } from '../pins.js';
+import { lockFileName, readLock } from '../lock.js';
+import { manifestFileName, readManifest } from '../manifest.js';
+import { lockMatches } from '../pins.js';
 import { workspacePaths } from '../workspace.js';
 import { moduleSummaries, routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
@@ -30,19 +30,16 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
     if (!manifest.success) {
       return output.fail(toFailure(manifest));
     }
-    const previous = await readLock(workspace);
-    if (!previous.success) {
-      return output.fail(toFailure(previous));
-    }
-    const lock = await resolvePins({
-      manifest: manifest.data,
-      previous: previous.data,
-      refresh: false,
-      system,
-      output,
-    });
+    const lock = await readLock(workspace);
     if (!lock.success) {
       return output.fail(toFailure(lock));
+    }
+    if (!lockMatches(manifest.data, lock.data)) {
+      return output.fail({
+        message: `${lockFileName} does not pin what ${manifestFileName} asks for, and a build never changes pins.`,
+        input: lockFileName,
+        fix: 'Run `wgc forge lock` to review and pin the changes, then build again.',
+      });
     }
 
     const paths = workspacePaths(workspace, manifest.data);
@@ -58,11 +55,6 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
     });
     if (!built.success) {
       return output.fail(toFailure(built));
-    }
-
-    // Pins are written only now, so a build that fails never changes forge.lock.
-    if (previous.data === undefined || renderLock(previous.data) !== renderLock(lock.data)) {
-      await writeLock(workspace, lock.data);
     }
 
     const localModules = manifest.data.modules.length - lock.data.modules.length;
