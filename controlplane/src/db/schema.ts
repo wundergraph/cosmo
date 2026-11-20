@@ -3063,6 +3063,7 @@ export const hubPermissionEnum = pgEnum('hub_permission', [
   'manage_egress_credentials',
   'manage_integrations',
   'view_audit_log',
+  'view_hidden_schema',
 ] as const);
 
 export const organizationGroupHubPermissions = pgTable(
@@ -3081,6 +3082,10 @@ export const organizationGroupHubPermissions = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::uuid[]`),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
   },
   (t) => {
     return {

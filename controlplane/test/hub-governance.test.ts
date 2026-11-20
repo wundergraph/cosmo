@@ -170,6 +170,30 @@ describe('Hub governance', () => {
     expect(developerResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
   });
 
+  test('view_hidden_schema grants keep normalized tags and other grants drop them', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
+
+    const group = await createOrganizationGroup(client, genID('team'));
+
+    const updateResponse = await client.updateOrganizationGroupHubPermissions({
+      groupId: group.groupId,
+      hubPermissions: [
+        { permission: 'view_hidden_schema', namespaces: [], resources: [], tags: [' PII', 'internal', 'pii'] },
+        { permission: 'run_agents', namespaces: [], resources: [], tags: ['pii'] },
+      ],
+    });
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const governance = await client.getHubGovernance({});
+    const grants = governance.groups.find((g) => g.groupId === group.groupId)?.hubPermissions;
+
+    expect(grants?.map((grant) => ({ permission: grant.permission, tags: grant.tags }))).toEqual([
+      { permission: 'run_agents', tags: [] },
+      { permission: 'view_hidden_schema', tags: ['internal', 'pii'] },
+    ]);
+  });
+
   test('SetGraphResourceOwners replaces the owners of one resource', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
     testContext.onTestFinished(() => server.close());

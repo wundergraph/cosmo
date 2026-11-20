@@ -365,6 +365,7 @@ export interface HubPermissionGrantDTO {
   permission: HubPermission;
   namespaces: string[];
   resources: string[];
+  tags: string[];
 }
 
 export interface GraphResourceOwnerDTO {

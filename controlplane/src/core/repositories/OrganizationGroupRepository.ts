@@ -2,7 +2,7 @@ import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { HubPermissionGrantDTO, OrganizationGroupDTO } from '../../types/index.js';
-import { HubPermission, OrganizationRole } from '../../db/models.js';
+import { OrganizationRole } from '../../db/models.js';
 import { defaultHubPermissionsByGroupName } from '../hubPermissions.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { defaultGroupDescription } from '../test-util.js';
@@ -189,7 +189,7 @@ export class OrganizationGroupRepository {
 
     await this.setHubPermissions({
       groupId: input.groupId,
-      grants: permissions.map((permission) => ({ permission, namespaces: [], resources: [] })),
+      grants: permissions.map((permission) => ({ permission, namespaces: [], resources: [], tags: [] })),
     });
   }
 
@@ -199,6 +199,7 @@ export class OrganizationGroupRepository {
         permission: schema.organizationGroupHubPermissions.permission,
         namespaceIds: schema.organizationGroupHubPermissions.namespaceIds,
         targetIds: schema.organizationGroupHubPermissions.targetIds,
+        tags: schema.organizationGroupHubPermissions.tags,
       })
       .from(schema.organizationGroupHubPermissions)
       .where(eq(schema.organizationGroupHubPermissions.groupId, groupId))
@@ -208,13 +209,11 @@ export class OrganizationGroupRepository {
       permission: row.permission,
       namespaces: row.namespaceIds,
       resources: row.targetIds,
+      tags: row.tags,
     }));
   }
 
-  public setHubPermissions(input: {
-    groupId: string;
-    grants: { permission: HubPermission; namespaces: string[]; resources: string[] }[];
-  }) {
+  public setHubPermissions(input: { groupId: string; grants: HubPermissionGrantDTO[] }) {
     return this.db.transaction(async (tx) => {
       await tx
         .delete(schema.organizationGroupHubPermissions)
@@ -230,6 +229,7 @@ export class OrganizationGroupRepository {
           permission: grant.permission,
           namespaceIds: grant.namespaces,
           targetIds: grant.resources,
+          tags: grant.tags,
         })),
       );
     });

@@ -14,8 +14,9 @@ const editorHubPermissions: HubPermission[] = [
 ];
 
 // Seeded for the groups every organization starts with, keyed by group name.
+// Hidden schema is only ever granted explicitly, so no group starts with it.
 export const defaultHubPermissionsByGroupName: Record<string, readonly HubPermission[]> = {
-  admin: allHubPermissions,
+  admin: allHubPermissions.filter((permission) => permission !== 'view_hidden_schema'),
   developer: editorHubPermissions,
   viewer: [],
 };
