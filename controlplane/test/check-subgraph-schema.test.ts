@@ -1541,6 +1541,29 @@ type Category {
 
         expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
       });
+
+      test('Should not report a breaking change when removing an @inaccessible enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B @inaccessible C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B @inaccessible }',
+        );
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
+      test('Should report a composed breaking change when removing an @inaccessible enum value exposes one another subgraph defines', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          [
+            'type Query { letter: Letter } enum Letter { A B C }',
+            'type Query { otherLetter: Letter } enum Letter { A B @inaccessible C @inaccessible }',
+          ],
+          'type Query { otherLetter: Letter } enum Letter { A B @inaccessible }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
     });
 
     test('Should detect breaking change when subgraph B makes federated field nullable that was required from subgraph A', async (testContext) => {

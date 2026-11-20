@@ -66,7 +66,8 @@ function changeNeedsClientSchemaDiff(change: SchemaDiff): boolean {
     case ChangeType.TypeRemoved: {
       return true;
     }
-    case ChangeType.EnumValueAdded: {
+    case ChangeType.EnumValueAdded:
+    case ChangeType.EnumValueRemoved: {
       const alreadyReportedAsBreaking = change.isBreaking;
       return !alreadyReportedAsBreaking;
     }

@@ -64,6 +64,17 @@ describe('inaccessibleEnumValueChangesAreInvisible', () => {
     ).toBe(CriticalityLevel.NonBreaking);
   });
 
+  test('Should mark a removed @inaccessible enum value as non breaking', async () => {
+    expect(
+      await getCriticalityLevel(
+        'enum Alphabet { A B C @inaccessible }',
+        'enum Alphabet { A B }',
+        inaccessibleEnumValueChangesAreInvisible,
+        'Alphabet.C',
+      ),
+    ).toBe(CriticalityLevel.NonBreaking);
+  });
+
   test('Should mark a value added to an @inaccessible enum as non breaking', async () => {
     expect(
       await getCriticalityLevel(
@@ -73,5 +84,27 @@ describe('inaccessibleEnumValueChangesAreInvisible', () => {
         'Alphabet.C',
       ),
     ).toBe(CriticalityLevel.NonBreaking);
+  });
+
+  test('Should mark a value removed from an @inaccessible enum as non breaking', async () => {
+    expect(
+      await getCriticalityLevel(
+        'enum Alphabet @inaccessible { A B C }',
+        'enum Alphabet @inaccessible { A B }',
+        inaccessibleEnumValueChangesAreInvisible,
+        'Alphabet.C',
+      ),
+    ).toBe(CriticalityLevel.NonBreaking);
+  });
+
+  test('Should keep a removed accessible enum value breaking', async () => {
+    expect(
+      await getCriticalityLevel(
+        'enum Alphabet { A B C }',
+        'enum Alphabet { A B }',
+        inaccessibleEnumValueChangesAreInvisible,
+        'Alphabet.C',
+      ),
+    ).toBe(CriticalityLevel.Breaking);
   });
 });

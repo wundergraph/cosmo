@@ -33,6 +33,9 @@ function isInaccessibleEnumValueChange(change: Change, oldSchema: GraphQLSchema,
     case ChangeType.EnumValueAdded: {
       return isInaccessibleEnumValue(newSchema, change.meta.enumName, change.meta.addedEnumValueName);
     }
+    case ChangeType.EnumValueRemoved: {
+      return isInaccessibleEnumValue(oldSchema, change.meta.enumName, change.meta.removedEnumValueName);
+    }
     default: {
       return false;
     }

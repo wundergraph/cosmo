@@ -141,6 +141,37 @@ describe('BreakingChanges', () => {
     expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
   });
 
+  describe('Removing an @inaccessible enum value', () => {
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    beforeAll(async () => {
+      schemaChanges = await getDiffBetweenGraphs(
+        'type Query { hello: String! } enum Alphabet { A B @inaccessible C @inaccessible }',
+        'type Query { hello: String! } enum Alphabet { A B @inaccessible }',
+        LATEST_ROUTER_COMPATIBILITY_VERSION,
+      );
+    });
+
+    test('Should not cause breaking changes', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+    });
+
+    test('Should report the enum value as a non breaking change', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.nonBreakingChanges.map((c) => c.changeType)).toContain(
+        SchemaChangeType.ENUM_VALUE_REMOVED,
+      );
+    });
+  });
+
+  test('Should not cause breaking changes on removing a value from an @inaccessible enum', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet @inaccessible { A B C }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet @inaccessible { A B }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
   test('Should cause non breaking changes on adding directives to fields', async () => {
     const schemaA = 'type Query { hello: String! @shareable } type User { name: String! }';
     const schemaB = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
