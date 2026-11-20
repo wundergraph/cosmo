@@ -58,6 +58,10 @@ export function normalizeHecEndpoint(input: string): string | undefined {
   return url.toString();
 }
 
+export function isValidHecToken(token: string) {
+  return /^[\u0021-\u007E]+$/.test(token);
+}
+
 export function toHecEvent(log: AuditLogRow, target: Pick<HecTarget, 'index' | 'source' | 'sourcetype'>) {
   return {
     time: log.createdAt.getTime() / 1000,
@@ -112,6 +116,10 @@ export async function sendToHec(target: HecTarget, events: object[]): Promise<st
 }
 
 async function post(target: HecTarget, events: object[]) {
+  if (!isValidHecToken(target.token)) {
+    throw new HecError('The HEC token contains invalid characters');
+  }
+
   let res: Response;
   try {
     res = await fetch(target.endpoint, {
@@ -119,8 +127,8 @@ async function post(target: HecTarget, events: object[]) {
       headers: {
         Authorization: `Splunk ${target.token}`,
         'Content-Type': 'application/json',
-        // Required when the token has indexer acknowledgement enabled, ignored otherwise. Splunk tracks pending
-        // acknowledgements per channel, so it must be a stable GUID; the organization ID is one.
+        // Splunk rejects requests without a channel to tokens with indexer acknowledgement enabled. The channel must be
+        // a stable GUID, such as the organization ID.
         'X-Splunk-Request-Channel': target.organizationId,
       },
       body: events.map((e) => JSON.stringify(e)).join('\n'),

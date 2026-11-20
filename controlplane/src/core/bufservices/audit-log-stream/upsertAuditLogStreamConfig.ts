@@ -5,7 +5,12 @@ import {
   UpsertAuditLogStreamConfigResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { DEFAULT_SOURCE, DEFAULT_SOURCETYPE, normalizeHecEndpoint } from '../../audit-log-stream/splunk-hec.js';
+import {
+  DEFAULT_SOURCE,
+  DEFAULT_SOURCETYPE,
+  isValidHecToken,
+  normalizeHecEndpoint,
+} from '../../audit-log-stream/splunk-hec.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../../repositories/AuditLogStreamRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -48,9 +53,18 @@ export function upsertAuditLogStreamConfig(
       };
     }
 
+    const token = req.token?.trim() || undefined;
+    if (token && !isValidHecToken(token)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'The HEC token contains invalid characters',
+        },
+      };
+    }
+
     const repo = new AuditLogStreamRepository(opts.db);
     const existing = await repo.get(authContext.organizationId);
-    const token = req.token?.trim() || undefined;
 
     if (!existing && !token) {
       return {

@@ -132,6 +132,20 @@ describe('sendToHec', () => {
       'Could not reach collector: self-signed certificate (DEPTH_ZERO_SELF_SIGNED_CERT)',
     );
   });
+
+  test('rejects a stored token that cannot be sent without echoing it', async () => {
+    const target = {
+      organizationId: genID('org'),
+      endpoint: 'https://splunk.example.com:8088/services/collector/event',
+      token: 'secret\ntoken',
+      index: null,
+      source: 'cosmo',
+      sourcetype: 'wundergraph:cosmo:audit',
+    };
+    const error = await sendToHec(target, [{}]);
+    expect(error).toBeDefined();
+    expect(error).not.toContain('secret');
+  });
 });
 
 describe('Audit log streaming', () => {
@@ -161,6 +175,14 @@ describe('Audit log streaming', () => {
       enabled: true,
     });
     expect(insecure.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+
+    const invalidToken = await client.upsertAuditLogStreamConfig({
+      endpoint: 'https://splunk.example.com',
+      token: 'secret\ntoken',
+      enabled: true,
+    });
+    expect(invalidToken.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+    expect(invalidToken.response?.details).toBe('The HEC token contains invalid characters');
 
     const created = await client.upsertAuditLogStreamConfig({
       endpoint: 'https://splunk.example.com:8088',
