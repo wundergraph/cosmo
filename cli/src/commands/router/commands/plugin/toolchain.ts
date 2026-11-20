@@ -524,8 +524,14 @@ async function installTools(language: string, shouldCleanup: boolean) {
 
 /**
  * Generate proto and mapping files from schema
+ * @param useWrapperTypes - Use wrapper types instead of proto3 optional for nullable scalars
  */
-export async function generateProtoAndMapping(pluginDir: string, protoOptions: ProtoOption[], spinner: any) {
+export async function generateProtoAndMapping(
+  pluginDir: string,
+  protoOptions: ProtoOption[],
+  spinner: any,
+  useWrapperTypes = false,
+) {
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
 
@@ -568,6 +574,7 @@ export async function generateProtoAndMapping(pluginDir: string, protoOptions: P
       packageName: 'service',
       protoOptions,
       lockData,
+      useWrapperTypes,
     });
 
     await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
