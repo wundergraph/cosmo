@@ -1,9 +1,9 @@
 import path from 'node:path';
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import { checkGraph, ruleIds } from '../check/check.js';
 import type { CheckReport } from '../check/check.js';
 import type { ExceptedFinding, Finding } from '../check/findings.js';
-import { toFailure } from '../failure.js';
 import { defaultGraphFile, loadGraph } from '../graph.js';
 import { manifestFileName, readManifest } from '../manifest.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
@@ -54,7 +54,7 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
     command
       .command('check')
       .description(
-        'Check the graph against the API design rules. Exits non-zero on a blocking finding or when the graph does not compose.',
+        'Check the graph against the API design rules. Exits 3 on a blocking finding or when the graph does not compose.',
       )
       .option(
         '--graph <file>',
@@ -87,7 +87,7 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
       return output.fail({
         message: `${manifestFileName} sets a rule that does not exist: ${unknownRule}.`,
         input: `${manifestFileName}: check.rules.${unknownRule}`,
-        fix: 'Run `wgc forge check --help` to list the rules.',
+        remediation: 'Run `wgc forge check --help` to list the rules.',
       });
     }
 
@@ -103,23 +103,29 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
     const report = checkGraph(subgraphs.data, policy);
 
     if (!report.complete) {
-      return output.fail({
-        message: output.json
-          ? 'The check is incomplete: the graph does not compose.'
-          : `${renderReport(report)}\nThe check is incomplete: the graph does not compose.`,
-        input: graphPath,
-        fix: 'Fix the composition errors, then run the check again.',
-        details: report,
-      });
+      return output.fail(
+        {
+          kind: 'findings',
+          message: 'The check is incomplete: the graph does not compose.',
+          input: graphPath,
+          remediation: 'Fix the composition errors, then run the check again.',
+          data: report,
+        },
+        (data) => `${renderReport(data)}\nThe check is incomplete: the graph does not compose.`,
+      );
     }
 
     if (report.summary.errors > 0) {
-      return output.fail({
-        message: output.json ? `The check found ${report.summary.errors} blocking finding(s).` : renderReport(report),
-        input: graphPath,
-        fix: `Repair each finding, or record an approved exception under \`check.exceptions\` in ${manifestFileName}.`,
-        details: report,
-      });
+      return output.fail(
+        {
+          kind: 'findings',
+          message: `The check found ${report.summary.errors} blocking finding(s).`,
+          input: graphPath,
+          remediation: `Repair each finding, or record an approved exception under \`check.exceptions\` in ${manifestFileName}.`,
+          data: report,
+        },
+        renderReport,
+      );
     }
 
     output.result(report, renderReport);

@@ -98,12 +98,14 @@ describe('wgc plugins install from WGC_PLUGIN_REGISTRY_URL', () => {
       }
 
       expect(JSON.parse(stdout.text())).toEqual({
-        status: 'success',
-        plugin: {
-          name: 'relay',
-          packageName: '@acme/wgc-plugin-relay',
-          version: '2.0.0',
-          directory: join(managedDir, 'node_modules', '@acme/wgc-plugin-relay'),
+        ok: true,
+        data: {
+          plugin: {
+            name: 'relay',
+            packageName: '@acme/wgc-plugin-relay',
+            version: '2.0.0',
+            directory: join(managedDir, 'node_modules', '@acme/wgc-plugin-relay'),
+          },
         },
       });
       expect([...new Set(server.requested)].sort()).toEqual(['/cli/wgc-plugin-relay.tgz', '/cli/wgc-plugin-sdk.tgz']);

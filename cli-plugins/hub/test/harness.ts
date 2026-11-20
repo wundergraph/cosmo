@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Command } from 'commander';
 import { createCredentials, createPluginContext } from '@wundergraph/wgc-plugin-sdk';
-import type { CallerKind, Prompts } from '@wundergraph/wgc-plugin-sdk';
-import hubPlugin from '../src/index.js';
+import type { CallerKind, OutputOverride, Prompts } from '@wundergraph/wgc-plugin-sdk';
+import { createHubPlugin } from '../src/index.js';
+import type { HubRuntime } from '../src/common/runtime.js';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
@@ -98,7 +99,11 @@ export const startFakeHub = async ({
           const params = request.body.params as { name: string; arguments: Json };
           return { name: params.name, arguments: params.arguments };
         }),
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      }),
   };
 };
 
@@ -128,6 +133,27 @@ export interface Run {
   progress(): string[];
 }
 
+/** The clock every hub test runs at. */
+export const testNow = new Date('2026-11-20T12:00:00Z');
+
+/** Ctrl-C for a test: `press()` interrupts whatever the command is following. */
+export const createInterrupt = () => {
+  const listeners = new Set<() => void>();
+  return {
+    press: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    onInterrupt: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+};
+
 export const runWgc = async (
   args: string[],
   {
@@ -136,12 +162,18 @@ export const runWgc = async (
     env = {},
     loginToken = 'login-token',
     prompts,
+    cwd = process.cwd(),
+    output,
+    interrupt = createInterrupt(),
   }: {
     hubUrl?: string;
     caller?: CallerKind;
     env?: NodeJS.ProcessEnv;
     loginToken?: string;
     prompts?: Prompts;
+    cwd?: string;
+    output?: OutputOverride;
+    interrupt?: ReturnType<typeof createInterrupt>;
   } = {},
 ): Promise<Run> => {
   let stdout = '';
@@ -151,11 +183,21 @@ export const runWgc = async (
     caller,
     endpoints: { cosmoApiUrl: 'http://cosmo.invalid', cosmoWebUrl: 'http://cosmo.invalid', hubUrl },
     credentials: createCredentials({ env, loginToken: () => Promise.resolve(loginToken) }),
+    outputOverride: output,
     prompts,
     stdout: { write: (chunk: string) => (stdout += chunk) },
     stderr: { write: (chunk: string) => (stderr += chunk) },
   });
 
+  const runtime: HubRuntime = {
+    cwd: () => cwd,
+    env,
+    now: () => testNow,
+    sleep: () => Promise.resolve(),
+    onInterrupt: interrupt.onInterrupt,
+    newIdempotencyKey: () => 'generated-key',
+  };
+  const hubPlugin = createHubPlugin(runtime);
   const program = new Command('wgc').exitOverride();
   const hub = program.command(hubPlugin.name).description(hubPlugin.description);
   hubPlugin.register(hub, context);
@@ -190,3 +232,79 @@ export const tempRepo = async (files: Record<string, string>): Promise<string> =
   }
   return dir;
 };
+
+type StepJson = { name: string; status: string; duration_ms: number | null; detail: string | null };
+
+export const step = (name: string, status: string, durationMs: number | null = null, detail: string | null = null) =>
+  ({ name, status, duration_ms: durationMs, detail }) satisfies StepJson;
+
+export const hubBase = 'https://hub.wundergraph.com/acme/graph/shop/sandboxes/sb_3fd1';
+
+/** An operation as Hub's `get_operation` returns it. */
+export const hubOperation = ({
+  id = 'op_7Kq2',
+  kind = 'sandbox.launch',
+  status = 'running',
+  steps = [],
+  events = [],
+  error = null,
+}: {
+  id?: string;
+  kind?: string;
+  status?: string;
+  steps?: StepJson[];
+  events?: Array<{ at: string; message: string; step: string | null }>;
+  error?: { [key: string]: Json } | null;
+}) => ({
+  operation_id: id,
+  kind,
+  status,
+  steps,
+  events,
+  url: `${hubBase}/operations/${id}`,
+  origin: { surface: 'cli', client: 'wgc' },
+  error,
+  started_at: '2026-11-20T11:56:00Z',
+  finished_at: status === 'succeeded' || status === 'failed' ? '2026-11-20T11:56:30Z' : null,
+});
+
+/** Answers each call with the next item, repeating the last one. */
+export const sequence = <T>(items: T[]) => {
+  let index = 0;
+  return () => {
+    const item = items[Math.min(index, items.length - 1)];
+    index++;
+    return item;
+  };
+};
+
+export const sandboxDetails = (overrides: { [key: string]: Json } = {}) => ({
+  sandbox_id: 'sb_3fd1',
+  name: 'shop-nithin',
+  status: 'running',
+  org_slug: 'acme',
+  graph_slug: 'shop',
+  url: hubBase,
+  graphql_url: 'https://sb-3fd1.sandbox.wundergraph.dev/graphql',
+  router_version: '0.214.0',
+  latest_router_version: '0.216.1',
+  sources: [
+    { name: 'accounts', status: 'ok' },
+    { name: 'catalog', status: 'ok' },
+    { name: 'orders', status: 'ok' },
+  ],
+  collections: ['smoke'],
+  last_operation: {
+    operation_id: 'op_6Pd0',
+    kind: 'forge.check',
+    status: 'succeeded',
+    finished_at: '2026-11-20T11:56:00Z',
+  },
+  ...overrides,
+});
+
+export const linkedRepo = (files: Record<string, string> = {}) =>
+  tempRepo({
+    '.wgc/link.json': JSON.stringify({ orgSlug: 'acme', graphSlug: 'shop', sandboxId: 'sb_3fd1' }),
+    ...files,
+  });

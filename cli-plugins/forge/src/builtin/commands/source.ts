@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import { localModuleName } from '../catalog.js';
-import { fail, toFailure } from '../failure.js';
 import { defaultGraphFile, readGraphFile, writeGraphFile } from '../graph.js';
 import { lockFileName, readLock } from '../lock.js';
 import { manifestFileName, readManifest, sameSource, writeManifest } from '../manifest.js';
@@ -27,20 +27,20 @@ const isUrl = (source: string): boolean => /^https?:\/\//.test(source);
 /** The kinds of source Forge cannot turn into a subgraph, each with what is missing. */
 const unsupportedSource = (source: string): Result<string> | undefined => {
   if (/^postgres(ql)?:\/\//.test(source)) {
-    return fail({
+    return failWith({
       message:
         'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API, not from SQL.',
       input: 'postgres source',
-      fix: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
+      remediation: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
     });
   }
 
   if (source.endsWith('.proto')) {
-    return fail({
+    return failWith({
       message:
         'A proto file cannot become a subgraph yet. Cosmo compiles a GraphQL schema to a proto contract, and nothing derives a graph schema and its field mapping from a proto service.',
       input: source,
-      fix: 'Add the OpenAPI 3 description of the same API instead.',
+      remediation: 'Add the OpenAPI 3 description of the same API instead.',
     });
   }
 
@@ -56,13 +56,14 @@ const readSource = async (system: System, invokedFrom: string, source: string): 
   if (isUrl(source)) {
     const response = await system.fetchText(source);
     if (response.status !== 200) {
-      return fail({
+      return failWith({
         message:
           response.status === 0
             ? `${source} could not be downloaded: ${response.body}`
             : `${source} answered with status ${response.status}.`,
         input: source,
-        fix: 'Check the URL and that it can be read without signing in, or download the description and pass the file.',
+        remediation:
+          'Check the URL and that it can be read without signing in, or download the description and pass the file.',
       });
     }
     return { success: true, data: response.body };
@@ -71,10 +72,10 @@ const readSource = async (system: System, invokedFrom: string, source: string): 
   try {
     return { success: true, data: await readFile(path.resolve(invokedFrom, source), 'utf8') };
   } catch {
-    return fail({
+    return failWith({
       message: `${source} is not a file or an http(s) URL.`,
       input: source,
-      fix: 'Pass the URL or path of an OpenAPI 3 description.',
+      remediation: 'Pass the URL or path of an OpenAPI 3 description.',
     });
   }
 };
@@ -124,7 +125,7 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: `The workspace has no ${lockFileName}, so the router version the module builds against is unknown.`,
         input: lockFileName,
-        fix: 'Run `wgc forge lock` first.',
+        remediation: 'Run `wgc forge lock` first.',
       });
     }
 
@@ -143,7 +144,8 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: `"${name}" is not a valid module name.`,
         input: options.name === undefined ? 'the title of the API' : `--name ${name}`,
-        fix: 'Pass --name with lowercase letters, digits and dashes, starting with a letter, for example --name catalog.',
+        remediation:
+          'Pass --name with lowercase letters, digits and dashes, starting with a letter, for example --name catalog.',
       });
     }
 
@@ -160,14 +162,14 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: `${graphFile} already has a subgraph named ${name}.`,
         input: `--name ${name}`,
-        fix: 'Pass another --name.',
+        remediation: 'Pass another --name.',
       });
     }
     if (subgraphs.some((subgraph) => subgraph.routing_url === routingUrl)) {
       return output.fail({
         message: `Another subgraph in ${graphFile} is already served on ${options.listen}.`,
         input: `--listen ${options.listen}`,
-        fix: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
+        remediation: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
       });
     }
 

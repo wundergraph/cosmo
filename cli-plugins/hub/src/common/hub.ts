@@ -1,6 +1,8 @@
-import { z } from 'zod';
-import { createHubClient } from '@wundergraph/wgc-plugin-sdk';
-import type { HubClient, PluginContext } from '@wundergraph/wgc-plugin-sdk';
+import { createHubClient, ok } from '@wundergraph/wgc-plugin-sdk';
+import type { HubClient, PluginContext, Result } from '@wundergraph/wgc-plugin-sdk';
+import { hubResults, hubTools } from './contract.js';
+import type { SandboxLocation } from './contract.js';
+import type { SandboxSelection } from './link.js';
 
 export const hubGitlabTokenVariable = 'HUB_ID_TOKEN';
 
@@ -11,35 +13,21 @@ export const connectHub = (context: PluginContext, audience: string): HubClient 
     bearer: () => context.credentials.resolveBearer({ audience, gitlabTokenVariable: hubGitlabTokenVariable }),
   });
 
-/** A sandbox as Hub's MCP tools describe it. `url` is its Hub page; `routerUrl` its GraphQL endpoint once running. */
-export const sandboxShape = z.object({
-  name: z.string(),
-  schema: z.string(),
-  status: z.string(),
-  url: z.string(),
-  routerUrl: z.string().nullable(),
-});
+/** The org and graph of a selected sandbox: from the link when there is one, else from Hub. */
+export const locateSandbox = async (hub: HubClient, selection: SandboxSelection): Promise<Result<SandboxLocation>> => {
+  if (selection.source === 'link') {
+    return ok({ orgSlug: selection.orgSlug, graphSlug: selection.graphSlug, sandboxId: selection.sandboxId });
+  }
 
-export type Sandbox = z.infer<typeof sandboxShape>;
+  const described = await hub.callTool(
+    hubTools.describeSandbox,
+    { sandbox_id: selection.sandboxId },
+    hubResults.describeSandbox,
+  );
+  if (!described.success) {
+    return described;
+  }
 
-export const launchSandboxResult = z.object({ sandbox: sandboxShape });
-export const getSandboxResult = z.object({ sandbox: sandboxShape });
-export const listSandboxesResult = z.object({ sandboxes: z.array(sandboxShape) });
-
-export const operationResultShape = z.object({
-  collection: z.string(),
-  operation: z.string(),
-  passed: z.boolean(),
-  durationMs: z.number(),
-  error: z.string().nullable(),
-});
-
-export const runCollectionResult = z.object({
-  sandbox: z.string(),
-  results: z.array(operationResultShape),
-});
-
-export const schemaPushResult = z.object({
-  sandbox: z.object({ name: z.string(), url: z.string() }),
-  composition: z.object({ errors: z.array(z.string()), warnings: z.array(z.string()) }),
-});
+  const { sandbox } = described.data;
+  return ok({ orgSlug: sandbox.orgSlug, graphSlug: sandbox.graphSlug, sandboxId: sandbox.sandboxId });
+};

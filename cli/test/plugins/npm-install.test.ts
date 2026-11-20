@@ -34,7 +34,7 @@ describe('wgc plugins install with real npm', () => {
 
     await installer.parseAsync(['node', 'wgc', 'plugins', 'install', join(fixturesDir, 'wgc-plugin-echo')]);
 
-    expect(JSON.parse(installOutput.text()).plugin).toEqual({
+    expect(JSON.parse(installOutput.text()).data.plugin).toEqual({
       name: 'echo',
       packageName: 'wgc-plugin-echo',
       version: '1.2.0',
@@ -53,6 +53,6 @@ describe('wgc plugins install with real npm', () => {
     });
     await program.parseAsync(argv);
 
-    expect(JSON.parse(stdout.text())).toEqual({ status: 'success', echoed: 'installed' });
+    expect(JSON.parse(stdout.text())).toEqual({ ok: true, data: { echoed: 'installed' } });
   });
 });

@@ -50,10 +50,12 @@ describe('wgc forge with a forge binary on PATH', () => {
     const result = await runWgc(['forge', 'build', '--json'], { WGC_FORGE_BINARY: '/nonexistent/forge' }, '');
 
     expect(JSON.parse(result.stdout)).toMatchObject({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         input: '/nonexistent/forge',
-        fix: 'Point WGC_FORGE_BINARY at a working forge binary, or set WGC_FORGE_BINARY=builtin to use the commands built into wgc.',
+        remediation:
+          'Point WGC_FORGE_BINARY at a working forge binary, or set WGC_FORGE_BINARY=builtin to use the commands built into wgc.',
       },
     });
     expect(result.exitCode).toBe(1);

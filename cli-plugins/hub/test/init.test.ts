@@ -37,12 +37,14 @@ describe('wgc hub init', () => {
       '      - run: wgc hub schema push --json --sha ${{ github.event.pull_request.head.sha }}\n',
     );
     expect(run.json()).toMatchObject({
-      status: 'success',
-      ci: 'github',
-      files: [
-        { path: 'sandbox.yaml', action: 'created' },
-        { path: '.github/workflows/hub-sandbox.yml', action: 'created' },
-      ],
+      ok: true,
+      data: {
+        ci: 'github',
+        files: [
+          { path: 'sandbox.yaml', action: 'created' },
+          { path: '.github/workflows/hub-sandbox.yml', action: 'created' },
+        ],
+      },
     });
   });
 
@@ -88,13 +90,15 @@ describe('wgc hub init', () => {
 
     const run = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--json']);
 
-    expect(run.exitCode).toBe(1);
+    expect(run.exitCode).toBe(2);
     expect(run.json()).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'USAGE_ERROR',
         message: `No .graphql or .graphqls files under ${dir}.`,
         input: dir,
-        fix: 'Pass `--generate "<command that prints the SDL>"`, e.g. `--generate "npm run --silent print-schema"`.',
+        remediation:
+          'Pass `--generate "<command that prints the SDL>"`, e.g. `--generate "npm run --silent print-schema"`.',
       },
     });
     expect(existsSync(path.join(dir, 'sandbox.yaml'))).toBe(false);
@@ -105,12 +109,13 @@ describe('wgc hub init', () => {
 
     const run = await runWgc(['hub', 'init', '--dir', dir, '--json']);
 
-    expect(run.exitCode).toBe(1);
+    expect(run.exitCode).toBe(2);
     expect(run.json()).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'USAGE_ERROR',
         message: 'No Hub schema slug given.',
-        fix: 'Pass `--schema <slug>`, the slug in the schema URL in Hub.',
+        remediation: 'Pass `--schema <slug>`, the slug in the schema URL in Hub.',
       },
     });
   });
@@ -123,20 +128,24 @@ describe('wgc hub init', () => {
     const rerun = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--json']);
 
     expect(rerun.json()).toMatchObject({
-      files: [
-        { path: 'sandbox.yaml', action: 'kept' },
-        { path: '.github/workflows/hub-sandbox.yml', action: 'kept' },
-      ],
+      data: {
+        files: [
+          { path: 'sandbox.yaml', action: 'kept' },
+          { path: '.github/workflows/hub-sandbox.yml', action: 'kept' },
+        ],
+      },
     });
     expect(await readFile(path.join(dir, 'sandbox.yaml'), 'utf8')).toBe('schema: edited\n');
 
     const forced = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--force', '--json']);
 
     expect(forced.json()).toMatchObject({
-      files: [
-        { path: 'sandbox.yaml', action: 'overwritten' },
-        { path: '.github/workflows/hub-sandbox.yml', action: 'overwritten' },
-      ],
+      data: {
+        files: [
+          { path: 'sandbox.yaml', action: 'overwritten' },
+          { path: '.github/workflows/hub-sandbox.yml', action: 'overwritten' },
+        ],
+      },
     });
     expect(await readFile(path.join(dir, 'sandbox.yaml'), 'utf8')).toBe(
       'schema: shop\nsubgraphs:\n  - name: a\n    schema: a.graphql\n',
@@ -149,8 +158,7 @@ describe('wgc hub init', () => {
     const run = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--ci', 'gitlab', '--json']);
 
     expect(run.json()).toMatchObject({
-      ci: 'gitlab',
-      files: [{ path: 'sandbox.yaml' }, { path: 'hub-sandbox.gitlab-ci.yml' }],
+      data: { ci: 'gitlab', files: [{ path: 'sandbox.yaml' }, { path: 'hub-sandbox.gitlab-ci.yml' }] },
     });
     const snippet = await readFile(path.join(dir, 'hub-sandbox.gitlab-ci.yml'), 'utf8');
     expect(snippet).toContain('  id_tokens:\n    HUB_ID_TOKEN:\n      aud: hub\n');

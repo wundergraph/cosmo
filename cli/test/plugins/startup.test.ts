@@ -40,7 +40,7 @@ describe('attachPlugins', () => {
 
     const { stdout } = await run(program, ['greet', 'hello', 'Ada', '--json'], environment);
 
-    expect(JSON.parse(stdout.text())).toEqual({ status: 'success', greeting: 'Hello Ada from source' });
+    expect(JSON.parse(stdout.text())).toEqual({ ok: true, data: { greeting: 'Hello Ada from source' } });
     expect(program.commands.find((command) => command.name() === 'greet')?.description()).toBe('Greets people');
   });
 
@@ -71,7 +71,7 @@ describe('attachPlugins', () => {
     expect(stdout.text()).toBe('echo: hi\n');
   });
 
-  test('wgc hub without the hub plugin prints the install command as JSON and exits 1', async () => {
+  test('wgc hub without the hub plugin prints the install command as JSON and exits 2', async () => {
     const environment = {
       managedDir: createTempDir(),
       workspaceRoot: undefined,
@@ -82,13 +82,15 @@ describe('attachPlugins', () => {
     const { stdout } = await run(testProgram(), ['hub', 'sandbox', 'create', '--json'], environment);
 
     expect(JSON.parse(stdout.text())).toEqual({
-      status: 'error',
+      ok: false,
       error: {
-        message: 'The hub command comes from the hub plugin. Install it with: wgc plugins install hub',
-        fix: 'wgc plugins install hub',
+        code: 'USAGE_ERROR',
+        message: 'The hub command comes from the hub plugin, which is not installed.',
+        remediation: 'Install it with: wgc plugins install hub',
+        next: ['wgc plugins install hub'],
       },
     });
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
   test('an agent caller gets the not-installed hint as JSON without --json', async () => {
@@ -102,9 +104,9 @@ describe('attachPlugins', () => {
     const { stdout } = await run(testProgram(), ['forge', 'deploy'], environment, 'agent');
 
     expect(JSON.parse(stdout.text()).error.message).toBe(
-      'The forge command comes from the forge plugin. Install it with: wgc plugins install forge',
+      'The forge command comes from the forge plugin, which is not installed.',
     );
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
   test('a person sees the not-installed hint on stderr, even for --help', async () => {
@@ -118,10 +120,10 @@ describe('attachPlugins', () => {
     const { stdout, stderr } = await run(testProgram(), ['hub', '--help'], environment);
 
     expect(stdout.text()).toBe('');
-    expect(stderr.text()).toContain(
-      'The hub command comes from the hub plugin. Install it with: wgc plugins install hub',
+    expect(stderr.text()).toBe(
+      'error: The hub command comes from the hub plugin, which is not installed.\nInstall it with: wgc plugins install hub\n',
     );
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
   test('a plugin that fails validation reports why instead of running', async () => {
@@ -137,8 +139,9 @@ describe('attachPlugins', () => {
 
     const entry = join(managedDir, 'node_modules', 'wgc-plugin-broken', 'index.js');
     expect(JSON.parse(stdout.text())).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: `${entry} is not a wgc plugin. Its default export must be a WgcPlugin: ✖ register must be a function\n  → at default.register`,
         input: entry,
       },

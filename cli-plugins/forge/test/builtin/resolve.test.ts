@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest';
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
+import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import { gitRepositoryPath, latestRouterRelease, resolveModule, resolveRouter } from '../../src/builtin/resolve.js';
 import { commitA, commitB, createFakeSystem, versionA } from './harness.js';
 
-const failureOf = (result: { success: boolean; errors?: Error[] }) => {
-  const [error] = result.errors ?? [];
-  return { ...error, message: error?.message };
-};
+const failureOf = (result: Result<object>) => (result.success ? undefined : toFailure(result));
 
 describe('router', () => {
   test('a release is resolved through its router@<version> tag to the commit and Go version', async () => {
@@ -46,7 +45,8 @@ describe('router', () => {
     expect(failureOf(router)).toMatchObject({
       message: 'Router release 9.9.9 does not exist: https://github.com/wundergraph/cosmo has no tag router@9.9.9.',
       input: 'router@9.9.9',
-      fix: "List the router versions with `git ls-remote --tags https://github.com/wundergraph/cosmo 'refs/tags/router@*'` and pick one of them.",
+      remediation:
+        "List the router versions with `git ls-remote --tags https://github.com/wundergraph/cosmo 'refs/tags/router@*'` and pick one of them.",
     });
   });
 
@@ -127,7 +127,8 @@ describe('modules', () => {
     expect(failureOf(module)).toMatchObject({
       message: 'https://github.com/acme/router-modules.git has no branch, tag or commit named "nope".',
       input: 'https://github.com/acme/router-modules.git ref nope',
-      fix: 'List the refs with `git ls-remote https://github.com/acme/router-modules.git` and pass one with --ref.',
+      remediation:
+        'List the refs with `git ls-remote https://github.com/acme/router-modules.git` and pass one with --ref.',
     });
   });
 
@@ -136,7 +137,7 @@ describe('modules', () => {
 
     expect(failureOf(module)).toMatchObject({
       input: 'github.com/acme/missing',
-      fix: 'Check the package path and version, and that `go` can download it (GOPRIVATE for private modules).',
+      remediation: 'Check the package path and version, and that `go` can download it (GOPRIVATE for private modules).',
     });
   });
 

@@ -1,7 +1,7 @@
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import yaml from 'js-yaml';
 import { z } from 'zod';
-import { fail } from '../failure.js';
 import { camelName, pascalName } from './model.js';
 import type {
   ScalarName,
@@ -349,19 +349,19 @@ export const readOpenApi = (text: string, location: string): Result<SourceModel>
   try {
     raw = yaml.load(text);
   } catch (error) {
-    return fail({
+    return failWith({
       message: `${location} is not valid JSON or YAML: ${error instanceof Error ? error.message : String(error)}`,
       input: location,
-      fix: 'Pass the URL or path of an OpenAPI 3 description.',
+      remediation: 'Pass the URL or path of an OpenAPI 3 description.',
     });
   }
 
   const parsed = openApiDocument.safeParse(raw);
   if (!parsed.success || !parsed.data.openapi.startsWith('3.')) {
-    return fail({
+    return failWith({
       message: `${location} is not an OpenAPI 3 description.`,
       input: location,
-      fix: 'Pass an OpenAPI 3.0 or 3.1 document. Convert a Swagger 2.0 document first.',
+      remediation: 'Pass an OpenAPI 3.0 or 3.1 document. Convert a Swagger 2.0 document first.',
     });
   }
 
@@ -394,12 +394,12 @@ export const readOpenApi = (text: string, location: string): Result<SourceModel>
   }
 
   if (operations.length === 0) {
-    return fail({
+    return failWith({
       message: `${location} has no operation that can become a query field.\n${translator.skipped
         .map((skipped) => `  ${skipped.subject}: ${skipped.reason}`)
         .join('\n')}`,
       input: location,
-      fix: 'The description needs at least one GET operation with an application/json response for status 200.',
+      remediation: 'The description needs at least one GET operation with an application/json response for status 200.',
     });
   }
 

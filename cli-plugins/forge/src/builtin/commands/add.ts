@@ -1,9 +1,9 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import { readLocalModuleName } from '../build.js';
-import { fail, toFailure } from '../failure.js';
 import { readLock, writeLock } from '../lock.js';
 import type { LockedModule } from '../lock.js';
 import { describeModuleSource, isLocalModule, readManifest, sameSource, writeManifest } from '../manifest.js';
@@ -48,10 +48,10 @@ const classifySource = async (
   }
 
   if (options.ref !== undefined || options.package !== undefined) {
-    return fail({
+    return failWith({
       message: '--ref and --package only apply to a Git URL.',
       input: source,
-      fix: 'For a Go package, put the version after an @, for example github.com/acme/mod/headers@v1.2.0.',
+      remediation: 'For a Go package, put the version after an @, for example github.com/acme/mod/headers@v1.2.0.',
     });
   }
 
@@ -155,10 +155,11 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
 
     if (acceptance === 'needs-yes') {
       return output.fail({
+        kind: 'confirmation',
         message: `${describeModuleSource(module.data)} is already registered. Re-adding it changes its selection. Nothing was written.\n${preview}`,
         input: source,
-        fix: `Review the change, then run the command again with --yes to accept it.`,
-        details: { ...result, changes, written: false },
+        remediation: `Review the change, then run the command again with --yes to accept it.`,
+        data: { ...result, changes, written: false },
       });
     }
 

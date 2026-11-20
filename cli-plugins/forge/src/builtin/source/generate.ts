@@ -1,12 +1,12 @@
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import { toJsonString } from '@bufbuild/protobuf';
 import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import { compileGraphQLToMapping, compileGraphQLToProto, validateGraphQLSDL } from '@wundergraph/protographic';
 import { localModuleName } from '../catalog.js';
-import { fail } from '../failure.js';
 import type { LockedRouter } from '../lock.js';
 import { routerModule } from '../resolve.js';
 import { modulesDirectory } from '../workspace.js';
@@ -48,7 +48,7 @@ export const generateSource = ({
 
   const validation = validateGraphQLSDL(sdl);
   if (validation.errors.length > 0) {
-    return fail({
+    return failWith({
       message: `The schema generated for ${name} cannot be served over Cosmo Connect:\n${validation.errors.join('\n')}`,
       input: name,
     });
@@ -127,10 +127,10 @@ export const writeSourceModule = async ({
   const relativePath = `./${modulesDirectory}/${name}`;
   const target = path.join(workspace, modulesDirectory, name);
   if (await exists(target)) {
-    return fail({
+    return failWith({
       message: `${relativePath} already exists.`,
       input: relativePath,
-      fix: 'Pass another --name, or delete the directory to generate the source again.',
+      remediation: 'Pass another --name, or delete the directory to generate the source again.',
     });
   }
 

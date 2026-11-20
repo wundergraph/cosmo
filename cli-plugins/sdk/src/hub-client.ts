@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { Bearer } from './credentials.js';
-import { errorMessage, failure, ok, Result } from './result.js';
+import type { FailureKind } from './exit.js';
+import type { Failure } from './output.js';
+import { errorMessage, failure, failWith, ok, Result } from './result.js';
 
 const protocolVersion = '2025-06-18';
 
@@ -12,9 +14,19 @@ export interface SchemaPushRequest {
   sha: string;
 }
 
+export interface CallOptions {
+  /** Aborts the request, e.g. when the user detaches from a long poll with Ctrl-C. */
+  signal?: AbortSignal;
+}
+
 export interface HubClient {
   /** Calls one tool on Hub's MCP endpoint and validates its structured result. */
-  callTool<T>(name: string, args: Record<string, ToolArgument>, schema: z.ZodType<T>): Promise<Result<T>>;
+  callTool<T>(
+    name: string,
+    args: Record<string, ToolArgument>,
+    schema: z.ZodType<T>,
+    options?: CallOptions,
+  ): Promise<Result<T>>;
   /** Posts a schema push from CI to `POST /ci/schema-push`. */
   pushSchema<T>(request: SchemaPushRequest, schema: z.ZodType<T>): Promise<Result<T>>;
 }
@@ -31,6 +43,41 @@ const toolResult = z.object({
   structuredContent: z.json().optional(),
   isError: z.boolean().optional(),
 });
+
+/** The structured content of a failed Hub tool call, e.g. `{ code: 'FORGE_SOURCE_UNREACHABLE', message, … }`. */
+const hubToolError = z.object({
+  code: z.string(),
+  message: z.string(),
+  remediation: z.string().optional(),
+  operation_url: z.string().optional(),
+  approval_url: z.string().optional(),
+  cli: z.string().optional(),
+  docs_url: z.string().optional(),
+});
+
+/** Hub error codes that need their own exit code; every other code exits 1. */
+const hubErrorKinds: Record<string, FailureKind> = {
+  CONFIRMATION_REQUIRED: 'confirmation',
+  NOT_LOGGED_IN: 'unauthenticated',
+  UNAUTHENTICATED: 'unauthenticated',
+  CHECK_FAILED: 'findings',
+  COLLECTION_ASSERTIONS_FAILED: 'findings',
+};
+
+export const hubFailureKind = (code: string): FailureKind => hubErrorKinds[code] ?? 'failed';
+
+const toHubFailure = (error: z.infer<typeof hubToolError>): Failure => {
+  const remediation = [error.remediation, error.approval_url].filter(Boolean).join('\n');
+  return {
+    kind: hubFailureKind(error.code),
+    code: error.code,
+    message: error.message,
+    remediation: remediation === '' ? undefined : remediation,
+    next: error.cli ? [error.cli] : undefined,
+    docs: error.docs_url,
+    url: error.operation_url ?? error.approval_url,
+  };
+};
 
 /** Streamable HTTP may answer with an SSE stream; the JSON-RPC response is the last `data:` event. */
 const readJsonRpcBody = async (response: Response): Promise<string> => {
@@ -72,6 +119,7 @@ export const createHubClient = ({
     path: string,
     body: object,
     sessionId: string | undefined,
+    signal?: AbortSignal,
   ): Promise<Result<{ response: Response; text: string }>> => {
     const credentials = await bearer();
     if (!credentials.success) {
@@ -90,16 +138,24 @@ export const createHubClient = ({
 
     let response: Response;
     try {
-      response = await fetchImpl(endpoint(path), { method: 'POST', headers, body: JSON.stringify(body) });
+      response = await fetchImpl(endpoint(path), { method: 'POST', headers, body: JSON.stringify(body), signal });
     } catch (error) {
       return failure(`Could not reach Hub at ${baseUrl}.`, error as Error);
     }
     if (response.status === 401 || response.status === 403) {
-      return failure(
-        credentials.data.kind === 'ci-oidc'
-          ? 'Hub rejected the CI OIDC token. Check that this repository is trusted in Hub and the audience matches.'
-          : 'Hub rejected the sign-in token. Run `wgc auth login` again.',
-      );
+      if (credentials.data.kind === 'ci-oidc') {
+        return failWith({
+          kind: 'unauthenticated',
+          message: 'Hub rejected the CI OIDC token.',
+          remediation: 'Check that this repository is trusted in Hub and the audience matches.',
+        });
+      }
+      return failWith({
+        kind: 'unauthenticated',
+        message: 'Hub rejected the sign-in token.',
+        remediation: 'Run `wgc auth login` again.',
+        next: ['wgc auth login'],
+      });
     }
     const text = await readJsonRpcBody(response);
     if (!response.ok && response.status !== 202) {
@@ -112,8 +168,9 @@ export const createHubClient = ({
     method: string,
     params: Record<string, ToolArgument>,
     sessionId: string | undefined,
+    signal?: AbortSignal,
   ): Promise<Result<{ result: Record<string, z.core.util.JSONType>; sessionId: string | undefined }>> => {
-    const sent = await post('mcp', { jsonrpc: '2.0', id: nextId++, method, params }, sessionId);
+    const sent = await post('mcp', { jsonrpc: '2.0', id: nextId++, method, params }, sessionId, signal);
     if (!sent.success) {
       return sent;
     }
@@ -159,12 +216,12 @@ export const createHubClient = ({
   };
 
   return {
-    async callTool(name, args, schema) {
+    async callTool(name, args, schema, options = {}) {
       const sessionId = await ensureSession();
       if (!sessionId.success) {
         return sessionId;
       }
-      const called = await rpc('tools/call', { name, arguments: args }, sessionId.data);
+      const called = await rpc('tools/call', { name, arguments: args }, sessionId.data, options.signal);
       if (!called.success) {
         return called;
       }
@@ -177,6 +234,10 @@ export const createHubClient = ({
         .join('\n')
         .trim();
       if (result.data.isError) {
+        const coded = hubToolError.safeParse(result.data.structuredContent);
+        if (coded.success) {
+          return failWith(toHubFailure(coded.data));
+        }
         return failure(text || `Hub tool ${name} failed.`);
       }
 

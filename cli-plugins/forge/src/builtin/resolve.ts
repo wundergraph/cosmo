@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import semver from 'semver';
 import { z } from 'zod';
-import { fail, lastLines } from './failure.js';
+import { lastLines } from './failure.js';
 import type { LockedModule, LockedRouter } from './lock.js';
 import { describeRouterSource, isGitModule } from './manifest.js';
 import type { GitModuleSource, GoModuleSource, RemoteModuleSource, RouterSource } from './manifest.js';
@@ -28,10 +29,10 @@ const fullCommitPattern = /^[\da-f]{40}$/;
 const commandNotFound = 127;
 
 const missingTool = <T>(tool: 'go' | 'git'): Result<T> =>
-  fail({
+  failWith({
     message: `Forge needs \`${tool}\` to resolve and build the router, but it is not installed.`,
     input: tool,
-    fix:
+    remediation:
       tool === 'go'
         ? 'Install Go from https://go.dev/dl and run the command again.'
         : 'Install git and run the command again.',
@@ -49,7 +50,7 @@ const goListModule = async (system: System, query: string): Promise<Result<GoMod
     return missingTool('go');
   }
   if (outcome.exitCode !== 0) {
-    return fail({ message: `Go could not resolve ${query}:\n${lastLines(outcome.stderr, 5)}`, input: query });
+    return failWith({ message: `Go could not resolve ${query}:\n${lastLines(outcome.stderr, 5)}`, input: query });
   }
 
   let document: unknown;
@@ -60,7 +61,7 @@ const goListModule = async (system: System, query: string): Promise<Result<GoMod
   }
   const parsed = goModuleInfoSchema.safeParse(document);
   if (!parsed.success) {
-    return fail({ message: `Go returned an unexpected answer for ${query}.`, input: query });
+    return failWith({ message: `Go returned an unexpected answer for ${query}.`, input: query });
   }
   return { success: true, data: parsed.data };
 };
@@ -76,10 +77,10 @@ const listRemoteRefs = async (
     return missingTool('git');
   }
   if (outcome.exitCode !== 0) {
-    return fail({
+    return failWith({
       message: `git could not read ${url}:\n${lastLines(outcome.stderr, 5)}`,
       input: url,
-      fix: 'Check the URL, your network connection and that you can read the repository.',
+      remediation: 'Check the URL, your network connection and that you can read the repository.',
     });
   }
 
@@ -105,10 +106,10 @@ export const latestRouterRelease = async (system: System): Promise<Result<string
     .filter((version) => semver.valid(version) !== null && semver.prerelease(version) === null);
   const [latest] = semver.rsort(releases);
   if (latest === undefined) {
-    return fail({
+    return failWith({
       message: `No router release tags were found in ${routerRepository}.`,
       input: routerRepository,
-      fix: 'Pass the release yourself, for example `wgc forge init --release 0.299.0`.',
+      remediation: 'Pass the release yourself, for example `wgc forge init --release 0.299.0`.',
     });
   }
   return { success: true, data: latest };
@@ -129,10 +130,10 @@ const resolveRouterCommit = async (system: System, source: RouterSource): Promis
 
   const commit = refs.data.get(`${tag}^{}`) ?? refs.data.get(tag);
   if (commit === undefined) {
-    return fail({
+    return failWith({
       message: `Router ${describeRouterSource(source)} does not exist: ${routerRepository} has no tag router@${version}.`,
       input: `router@${version}`,
-      fix: `List the router versions with \`git ls-remote --tags ${routerRepository} 'refs/tags/router@*'\` and pick one of them.`,
+      remediation: `List the router versions with \`git ls-remote --tags ${routerRepository} 'refs/tags/router@*'\` and pick one of them.`,
     });
   }
   return { success: true, data: commit };
@@ -158,20 +159,20 @@ export const resolveRouter = async (system: System, source: RouterSource): Promi
 
   const info = await goListModule(system, `${routerModule}@${commit.data}`);
   if (!info.success) {
-    return fail({
+    return failWith({
       message: `Go could not resolve the router at ${describeRouterSource(source)} (commit ${commit.data}).\n${info.errors[0].message}`,
       input: `${routerModule}@${commit.data}`,
-      fix: 'Check that the commit exists in the Cosmo repository and that the Go module proxy is reachable.',
+      remediation: 'Check that the commit exists in the Cosmo repository and that the Go module proxy is reachable.',
     });
   }
 
   const fullCommit = info.data.Origin?.Hash ?? commit.data;
   const goVersion = await readGoVersion(info.data.GoMod);
   if (!fullCommitPattern.test(fullCommit) || goVersion === undefined) {
-    return fail({
+    return failWith({
       message: `Go did not report the full commit and Go version of ${routerModule}@${commit.data}.`,
       input: `${routerModule}@${commit.data}`,
-      fix: 'Pass the full 40 character commit SHA.',
+      remediation: 'Pass the full 40 character commit SHA.',
     });
   }
 
@@ -182,10 +183,10 @@ export const resolveRouter = async (system: System, source: RouterSource): Promi
 export const gitRepositoryPath = (url: string): Result<string> => {
   const match = /^(?:[+a-z]+:\/\/(?:[^/@]+@)?|[^/@]+@)([^/:]+)[/:](.+?)(?:\.git)?\/?$/.exec(url);
   if (!match) {
-    return fail({
+    return failWith({
       message: `"${url}" is not a Git URL Forge can read.`,
       input: url,
-      fix: 'Use an HTTPS or SSH URL such as https://github.com/acme/router-modules.git.',
+      remediation: 'Use an HTTPS or SSH URL such as https://github.com/acme/router-modules.git.',
     });
   }
   return { success: true, data: `${match[1]}/${match[2]}` };
@@ -218,17 +219,17 @@ const findContainingModule = async (
     candidate = candidate.slice(0, candidate.lastIndexOf('/'));
   }
 
-  return lastFailure ?? fail({ message: `No Go module contains ${packagePath}.`, input: packagePath });
+  return lastFailure ?? failWith({ message: `No Go module contains ${packagePath}.`, input: packagePath });
 };
 
 const resolveGoModule = async (system: System, source: GoModuleSource): Promise<Result<LockedModule>> => {
   const [host, owner] = source.go.split('/');
   const info = await findContainingModule(system, source.go, source.version ?? 'latest', `${host}/${owner ?? ''}`);
   if (!info.success) {
-    return fail({
+    return failWith({
       message: `Go package ${source.go} could not be resolved${source.version ? ` at ${source.version}` : ''}.\n${info.errors[0].message}`,
       input: source.version ? `${source.go}@${source.version}` : source.go,
-      fix: 'Check the package path and version, and that `go` can download it (GOPRIVATE for private modules).',
+      remediation: 'Check the package path and version, and that `go` can download it (GOPRIVATE for private modules).',
     });
   }
 
@@ -260,10 +261,10 @@ const resolveGitModule = async (system: System, source: GitModuleSource): Promis
     }
     const resolved = refs.data.get(`refs/tags/${ref}^{}`) ?? [...refs.data.values()][0];
     if (resolved === undefined) {
-      return fail({
+      return failWith({
         message: `${source.git} has no branch, tag or commit named "${ref}".`,
         input: `${source.git} ref ${ref}`,
-        fix: `List the refs with \`git ls-remote ${source.git}\` and pass one with --ref.`,
+        remediation: `List the refs with \`git ls-remote ${source.git}\` and pass one with --ref.`,
       });
     }
     commit = resolved;
@@ -272,10 +273,10 @@ const resolveGitModule = async (system: System, source: GitModuleSource): Promis
   const packagePath = source.package ? `${repository.data}/${source.package}` : repository.data;
   const info = await findContainingModule(system, packagePath, commit, repository.data);
   if (!info.success) {
-    return fail({
+    return failWith({
       message: `No Go module was found for ${packagePath} at commit ${commit}.\n${info.errors[0].message}`,
       input: source.package ? `${source.git} package ${source.package}` : source.git,
-      fix: 'Check that the repository has a go.mod at its root or in the --package directory.',
+      remediation: 'Check that the repository has a go.mod at its root or in the --package directory.',
     });
   }
 

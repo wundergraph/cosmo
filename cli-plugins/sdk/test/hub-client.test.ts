@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
-import { createHubClient, ok } from '../src/index.js';
+import { createHubClient, ok, toFailure } from '../src/index.js';
 
 type Call = { url: string; method: string; body: string; auth: string | null; session: string | null };
 
@@ -82,6 +82,30 @@ describe('createHubClient', () => {
     expect(result.success ? '' : result.errors[0].message).toBe('sandbox not found');
   });
 
+  test('a coded tool error becomes a failure with its kind, fix and Hub page', async () => {
+    const hub = fakeHub({
+      content: [{ type: 'text', text: 'CONFIRMATION_REQUIRED: wildcard host' }],
+      structuredContent: {
+        code: 'CONFIRMATION_REQUIRED',
+        message: 'Allowing a wildcard host lets sandbox code reach any matching host.',
+        remediation: "Re-run with --confirm '*.amazonaws.com', or approve it in Hub:",
+        approval_url: 'https://hub.example/acme/graph/shop/sandboxes/sb_3fd1/approvals/apr_51',
+      },
+      isError: true,
+    });
+
+    const result = await client(hub.fetchImpl).callTool('update_egress_allowlist', {}, sandboxes);
+
+    expect(result.success ? undefined : toFailure(result)).toEqual({
+      kind: 'confirmation',
+      code: 'CONFIRMATION_REQUIRED',
+      message: 'Allowing a wildcard host lets sandbox code reach any matching host.',
+      remediation:
+        "Re-run with --confirm '*.amazonaws.com', or approve it in Hub:\nhttps://hub.example/acme/graph/shop/sandboxes/sb_3fd1/approvals/apr_51",
+      url: 'https://hub.example/acme/graph/shop/sandboxes/sb_3fd1/approvals/apr_51',
+    });
+  });
+
   test('rejects a result that does not match the expected shape', async () => {
     const hub = fakeHub({ content: [], structuredContent: { sandboxes: 'nope' } });
 
@@ -95,9 +119,12 @@ describe('createHubClient', () => {
       Promise.resolve(new Response('{"error":"unauthorized"}', { status: 401 })),
     ).callTool('list_sandboxes', {}, sandboxes);
 
-    expect(result.success ? '' : result.errors[0].message).toBe(
-      'Hub rejected the sign-in token. Run `wgc auth login` again.',
-    );
+    expect(result.success ? undefined : toFailure(result)).toEqual({
+      kind: 'unauthenticated',
+      message: 'Hub rejected the sign-in token.',
+      remediation: 'Run `wgc auth login` again.',
+      next: ['wgc auth login'],
+    });
   });
 
   test('pushSchema posts to /ci/schema-push', async () => {

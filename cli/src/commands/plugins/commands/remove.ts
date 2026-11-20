@@ -25,7 +25,7 @@ export default (opts: PluginCommandOptions) => {
       output.fail({
         message: errorMessage(removed),
         input: name,
-        fix: 'Run "wgc plugins list" to see installed plugins.',
+        remediation: 'Run "wgc plugins list" to see installed plugins.',
       });
       return;
     }

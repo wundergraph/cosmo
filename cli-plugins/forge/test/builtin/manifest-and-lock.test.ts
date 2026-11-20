@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'vitest';
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
+import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import { parseLock, renderLock } from '../../src/builtin/lock.js';
 import { parseManifest, parseRouterCandidate, renderManifest } from '../../src/builtin/manifest.js';
 import { commitA, lockForReleaseA, versionA } from './harness.js';
 
-const failureOf = (result: { success: boolean; errors?: Error[] }) => {
-  const [error] = result.errors ?? [];
-  return { ...error, message: error?.message };
-};
+const failureOf = (result: Result<object>) => (result.success ? undefined : toFailure(result));
 
 describe('forge.yaml', () => {
   test('reads a router release and the three kinds of module', () => {
@@ -56,7 +55,7 @@ modules:
       message:
         'forge.yaml is not valid: router must be exactly one of { release: <version> }, { rc: <version> } or { commit: <sha> }.',
       input: 'forge.yaml: router',
-      fix: 'Correct the field in forge.yaml. Run `wgc forge init` in an empty directory to see a valid file.',
+      remediation: 'Correct the field in forge.yaml. Run `wgc forge init` in an empty directory to see a valid file.',
     });
   });
 
@@ -73,7 +72,7 @@ modules:
   test('broken YAML is reported as a YAML problem in forge.yaml', () => {
     expect(failureOf(parseManifest('version: [1'))).toMatchObject({
       input: 'forge.yaml',
-      fix: 'Correct the YAML syntax in forge.yaml.',
+      remediation: 'Correct the YAML syntax in forge.yaml.',
     });
   });
 
@@ -102,7 +101,7 @@ describe('router candidates', () => {
     expect(failureOf(parseRouterCandidate('latest'))).toMatchObject({
       message: '"latest" is not a router release, release candidate or commit.',
       input: 'latest',
-      fix: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
+      remediation: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
     });
   });
 });
@@ -157,7 +156,7 @@ modules:
     expect(failureOf(lock)).toMatchObject({
       message: 'forge.lock is not valid: router.commit must be a full 40 character commit SHA.',
       input: 'forge.lock: router.commit',
-      fix: 'Delete forge.lock and run `wgc forge lock` to write it again.',
+      remediation: 'Delete forge.lock and run `wgc forge lock` to write it again.',
     });
   });
 

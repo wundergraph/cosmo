@@ -1,6 +1,6 @@
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import { buildRouter } from '../build.js';
-import { toFailure } from '../failure.js';
 import { lockFileName, readLock } from '../lock.js';
 import { manifestFileName, readManifest } from '../manifest.js';
 import { lockMatches } from '../pins.js';
@@ -38,7 +38,7 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
       return output.fail({
         message: `${lockFileName} does not pin what ${manifestFileName} asks for, and a build never changes pins.`,
         input: lockFileName,
-        fix: 'Run `wgc forge lock` to review and pin the changes, then build again.',
+        remediation: 'Run `wgc forge lock` to review and pin the changes, then build again.',
       });
     }
 

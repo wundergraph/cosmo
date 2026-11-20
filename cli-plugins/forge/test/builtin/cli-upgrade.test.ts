@@ -17,12 +17,14 @@ describe('wgc forge upgrade', () => {
     const run = await runForge(['upgrade'], { workspace });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      installation: 'wgc-plugin',
-      channel: 'stable',
-      version,
-      command: 'wgc plugins install forge',
-      upgraded: false,
+      ok: true,
+      data: {
+        installation: 'wgc-plugin',
+        channel: 'stable',
+        version,
+        command: 'wgc plugins install forge',
+        upgraded: false,
+      },
     });
   });
 
@@ -32,7 +34,7 @@ describe('wgc forge upgrade', () => {
 
     const run = await runForge(['upgrade'], { workspace });
 
-    expect(JSON.parse(run.stdout).command).toBe('wgc plugins install @wundergraph/wgc-plugin-forge@nightly');
+    expect(JSON.parse(run.stdout).data.command).toBe('wgc plugins install @wundergraph/wgc-plugin-forge@nightly');
   });
 });
 
@@ -43,11 +45,13 @@ describe('wgc forge upgrade channel', () => {
     const run = await runForge(['upgrade', 'channel', 'nightly'], { workspace });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      channel: 'nightly',
-      previous: 'stable',
-      version,
-      command: 'wgc plugins install @wundergraph/wgc-plugin-forge@nightly',
+      ok: true,
+      data: {
+        channel: 'nightly',
+        previous: 'stable',
+        version,
+        command: 'wgc plugins install @wundergraph/wgc-plugin-forge@nightly',
+      },
     });
     expect(JSON.parse(await read(workspace, '.forge-settings.json'))).toEqual({ channel: 'nightly' });
   });
@@ -57,7 +61,7 @@ describe('wgc forge upgrade channel', () => {
 
     const run = await runForge(['upgrade', 'channel'], { workspace, caller: 'ci' });
 
-    expect(JSON.parse(run.stdout)).toEqual({ status: 'success', channel: 'stable', version });
+    expect(JSON.parse(run.stdout)).toEqual({ ok: true, data: { channel: 'stable', version } });
   });
 
   test('without an argument a person picks the channel', async () => {
@@ -75,9 +79,10 @@ describe('wgc forge upgrade channel', () => {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: '"beta" is not a release channel.',
       input: 'beta',
-      fix: 'Use one of: stable, nightly.',
+      remediation: 'Use one of: stable, nightly.',
     });
   });
 });

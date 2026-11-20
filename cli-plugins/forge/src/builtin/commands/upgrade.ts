@@ -1,10 +1,10 @@
 import { access, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import { runModuleTests, workspaceTestsDirectory } from '../behaviour-tests.js';
 import type { ModuleOutcome } from '../behaviour-tests.js';
 import { buildRouter } from '../build.js';
-import { toFailure } from '../failure.js';
 import { lockFileName, readLock, writeLock } from '../lock.js';
 import {
   describeRouterSource,
@@ -152,7 +152,7 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       return output.fail({
         message: `Router config ${configPath} does not exist.`,
         input: `--config ${options.config}`,
-        fix: 'Pass the path of the router config file the tests should start the router with.',
+        remediation: 'Pass the path of the router config file the tests should start the router with.',
       });
     }
 
@@ -164,7 +164,7 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       return output.fail({
         message: `${lockFileName} does not pin what ${manifestFileName} asks for.`,
         input: lockFileName,
-        fix: 'Run `wgc forge lock` to review and pin the module changes before evaluating a router.',
+        remediation: 'Run `wgc forge lock` to review and pin the module changes before evaluating a router.',
       });
     }
     const candidateManifest = { ...manifest.data, router: candidateSource.data };
@@ -249,8 +249,8 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       return output.fail({
         message: `Router ${describeRouterSource(candidateSource.data)} cannot be adopted: ${problems.join('; ')}. Nothing was changed.`,
         input: candidate,
-        fix: `${describeFix(modules.data)} The candidate binary is at ${paths.candidateBinary}.`,
-        details: { ...report, adopted: false, binary: paths.candidateBinary },
+        remediation: `${describeFix(modules.data)} The candidate binary is at ${paths.candidateBinary}.`,
+        data: { ...report, adopted: false, binary: paths.candidateBinary },
       });
     }
 
@@ -267,9 +267,10 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     );
     if (acceptance === 'needs-yes') {
       return output.fail({
+        kind: 'confirmation',
         message: `Router ${report.candidate.source} passes the tests, but adopting it needs your confirmation.`,
         input: candidate,
-        fix: 'Run the command again with --yes to adopt it.',
+        remediation: 'Run the command again with --yes to adopt it.',
       });
     }
     if (acceptance === 'declined') {

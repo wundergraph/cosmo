@@ -30,11 +30,13 @@ describe('wgc forge build', () => {
 
     expect(run.exitCode).toBe(0);
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      binary: `${workspace}/bin/router`,
-      router: { source: 'release 0.299.0', version: versionA, commit: commitA },
-      modules: [],
-      localModules: 1,
+      ok: true,
+      data: {
+        binary: `${workspace}/bin/router`,
+        router: { source: 'release 0.299.0', version: versionA, commit: commitA },
+        modules: [],
+        localModules: 1,
+      },
     });
     expect(await read(workspace, 'bin/router')).toBe(`router ${versionA}`);
     expect(await read(workspace, '.forge/build/go.mod')).toBe(`module forge.local/build
@@ -93,11 +95,12 @@ func main() {
     const stale = await createWorkspace({ 'forge.yaml': withRemote, 'forge.lock': lockForReleaseA, ...localModule });
 
     const expected = {
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: 'forge.lock does not pin what forge.yaml asks for, and a build never changes pins.',
         input: 'forge.lock',
-        fix: 'Run `wgc forge lock` to review and pin the changes, then build again.',
+        remediation: 'Run `wgc forge lock` to review and pin the changes, then build again.',
       },
     };
     expect(JSON.parse((await runForge(['build'], { workspace: missing })).stdout)).toEqual(expected);
@@ -119,11 +122,12 @@ func main() {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: 'The router did not compile:\nmodules/request-id/module.go:12:2: undefined: nope',
         input: `${workspace}/.forge/build`,
-        fix: 'Fix the compile errors in the modules above. The existing binary was left in place.',
+        remediation: 'Fix the compile errors in the modules above. The existing binary was left in place.',
       },
     });
     expect(await read(workspace, 'bin/router')).toBe('the working router');
@@ -151,11 +155,12 @@ func main() {
     const run = await runForge(['build'], { workspace, system });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: `Module dependency conflict: forge.local/request-id requires ${routerModule} ${newer}, but the workspace pins ${routerModule} ${versionA}.`,
         input: `forge.local/request-id requires ${routerModule} ${newer}`,
-        fix: `Upgrade the router to a version that includes ${newer} with \`wgc forge router upgrade\`, or use a version of forge.local/request-id built for the pinned router.`,
+        remediation: `Upgrade the router to a version that includes ${newer} with \`wgc forge router upgrade\`, or use a version of forge.local/request-id built for the pinned router.`,
       },
     });
     expect(await read(workspace, 'bin/router')).toBe('the working router');
@@ -200,10 +205,12 @@ modules:
     const run = await runForge(['build'], { workspace, system });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message:
         'Module github.com/acme/mod is pinned at two versions, v1.2.0 and v1.3.0. A router is built with one version of each module.',
       input: 'forge.yaml: modules github.com/acme/mod',
-      fix: 'Use the same version or ref for every entry of github.com/acme/mod in forge.yaml, then run `wgc forge lock`.',
+      remediation:
+        'Use the same version or ref for every entry of github.com/acme/mod in forge.yaml, then run `wgc forge lock`.',
     });
   });
 
@@ -213,9 +220,10 @@ modules:
     const run = await runForge(['build'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'Local module ./modules/request-id has no go.mod.',
       input: 'forge.yaml: modules path ./modules/request-id',
-      fix: 'Create the module with `wgc forge create`, or run `go mod init` in ./modules/request-id.',
+      remediation: 'Create the module with `wgc forge create`, or run `go mod init` in ./modules/request-id.',
     });
   });
 
@@ -225,9 +233,10 @@ modules:
     const run = await runForge(['build'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: `No forge.yaml in ${workspace}.`,
       input: `${workspace}/forge.yaml`,
-      fix: 'Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+      remediation: 'Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
     });
   });
 });
@@ -248,7 +257,7 @@ describe('output for the caller', () => {
 
     const run = await runForge(['build', '--json'], { workspace, caller: 'human' });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', binary: `${workspace}/bin/router` });
+    expect(JSON.parse(run.stdout)).toMatchObject({ ok: true, data: { binary: `${workspace}/bin/router` } });
     expect(run.stderr.split('\n')[0]).toBe(
       `{"event":"progress","step":"write-build-module","subject":"${workspace}/.forge/build","message":"Writing go.mod and main.go"}`,
     );
@@ -261,10 +270,31 @@ describe('output for the caller', () => {
 
     expect(run.exitCode).toBe(1);
     expect(run.stdout).toBe('');
-    expect(run.stderr).toContain(`No forge.yaml in ${workspace}.`);
-    expect(run.stderr).toContain(`  input: ${workspace}/forge.yaml`);
-    expect(run.stderr).toContain(
-      '  fix: Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+    expect(run.stderr).toBe(
+      [
+        'error COMMAND_FAILED',
+        `  No forge.yaml in ${workspace}.`,
+        '  Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+        '',
+        `  Input ${workspace}/forge.yaml`,
+        '',
+      ].join('\n'),
+    );
+  });
+});
+
+describe('command tree', () => {
+  test('a bare group prints its help with exit 0; an unknown subcommand is a usage error with exit 2', async () => {
+    const workspace = await createWorkspace();
+
+    const bare = await runForge(['router'], { workspace, caller: 'human' });
+    const unknown = await runForge(['router', 'downgrade'], { workspace, caller: 'human' });
+
+    expect(bare.exitCode).toBe(0);
+    expect(bare.stdout).toContain('upgrade [options] <candidate>');
+    expect(unknown.exitCode).toBe(2);
+    expect(unknown.stderr).toBe(
+      'error: Unknown command: wgc forge router downgrade.\nRun `wgc forge router --help` to list its commands.\n',
     );
   });
 });

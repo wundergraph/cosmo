@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { createPluginContext, detectCaller, errorMessage } from '@wundergraph/wgc-plugin-sdk';
+import { createPluginContext, detectCaller, errorMessage, readOutputOverride } from '@wundergraph/wgc-plugin-sdk';
 import type { Failure, Output, PluginContext } from '@wundergraph/wgc-plugin-sdk';
 import { config } from '../config.js';
 import { createCliCredentials } from '../hub.js';
@@ -13,6 +13,7 @@ export const createCliPluginContext = (): PluginContext =>
     caller: detectCaller(process.env, Boolean(process.stdin.isTTY && process.stdout.isTTY)),
     endpoints: { cosmoApiUrl: config.baseURL, cosmoWebUrl: config.webURL, hubUrl: config.hubURL },
     credentials: createCliCredentials(),
+    outputOverride: readOutputOverride(process.env),
   });
 
 /** Claims the plugin's command name so `wgc <name> …` reports `failure` instead of commander's unknown-command error. */
@@ -74,8 +75,10 @@ export const attachPlugins = async ({
         name,
         `Provided by the ${name} plugin, which is not installed.`,
         {
-          message: `The ${name} command comes from the ${name} plugin. Install it with: wgc plugins install ${name}`,
-          fix: `wgc plugins install ${name}`,
+          kind: 'usage',
+          message: `The ${name} command comes from the ${name} plugin, which is not installed.`,
+          remediation: `Install it with: wgc plugins install ${name}`,
+          next: [`wgc plugins install ${name}`],
         },
         output,
       );

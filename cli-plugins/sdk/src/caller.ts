@@ -32,3 +32,14 @@ export const detectCaller = (env: NodeJS.ProcessEnv, interactive: boolean): Call
 };
 
 export const prefersJson = (caller: CallerKind): boolean => caller !== 'human';
+
+export type OutputOverride = 'json' | 'text';
+
+/** `WGC_OUTPUT=json|text` overrides caller detection; `--json` still wins over it. */
+export const readOutputOverride = (env: NodeJS.ProcessEnv): OutputOverride | undefined => {
+  const value = env.WGC_OUTPUT;
+  if (value === 'json' || value === 'text') {
+    return value;
+  }
+  return undefined;
+};

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { failure, ok, Result } from './result.js';
+import { failure, failWith, ok, Result } from './result.js';
 
 export type BearerKind = 'ci-oidc' | 'login';
 
@@ -81,7 +81,12 @@ export const createCredentials = ({
       if (env.GITLAB_CI) {
         return failure(`No OIDC token is available. Add an \`id_tokens\` entry named ${request.gitlabTokenVariable}.`);
       }
-      return failure('Not signed in. Run `wgc auth login` first.');
+      return failWith({
+        kind: 'unauthenticated',
+        message: 'Not signed in.',
+        remediation: 'Run `wgc auth login` first.',
+        next: ['wgc auth login'],
+      });
     },
   };
 };

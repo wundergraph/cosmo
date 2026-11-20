@@ -4,9 +4,8 @@ import path from 'node:path';
 import { Command, Option } from 'commander';
 import yaml from 'js-yaml';
 import pc from 'picocolors';
-import { ok } from '@wundergraph/wgc-plugin-sdk';
+import { failWith, ok, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { PluginContext, Result } from '@wundergraph/wgc-plugin-sdk';
-import { actionable, reportFailure } from '../common/failure.js';
 import { hubGitlabTokenVariable } from '../common/hub.js';
 import { defaultAudience, sandboxFileName } from '../common/sandbox-config.js';
 
@@ -127,7 +126,10 @@ const writeIfAbsent = async (
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, content);
   } catch (error) {
-    return actionable(`Could not write ${filePath}: ${(error as Error).message}`, 'Check the directory permissions.');
+    return failWith({
+      message: `Could not write ${filePath}: ${(error as Error).message}`,
+      remediation: 'Check the directory permissions.',
+    });
   }
   return ok({ path: displayPath, action: exists ? 'overwritten' : 'created' });
 };
@@ -155,7 +157,11 @@ const resolveSchemaSlug = async (options: InitOptions, context: PluginContext): 
       return ok(answer);
     }
   }
-  return actionable('No Hub schema slug given.', 'Pass `--schema <slug>`, the slug in the schema URL in Hub.');
+  return failWith({
+    kind: 'usage',
+    message: 'No Hub schema slug given.',
+    remediation: 'Pass `--schema <slug>`, the slug in the schema URL in Hub.',
+  });
 };
 
 const resolveSubgraphs = async (
@@ -179,11 +185,13 @@ const resolveSubgraphs = async (
       return ok([{ name: fallbackName, generate: command }]);
     }
   }
-  return actionable(
-    `No .graphql or .graphqls files under ${dir}.`,
-    'Pass `--generate "<command that prints the SDL>"`, e.g. `--generate "npm run --silent print-schema"`.',
-    dir,
-  );
+  return failWith({
+    kind: 'usage',
+    message: `No .graphql or .graphqls files under ${dir}.`,
+    remediation:
+      'Pass `--generate "<command that prints the SDL>"`, e.g. `--generate "npm run --silent print-schema"`.',
+    input: dir,
+  });
 };
 
 const runInit = async (options: InitOptions, context: PluginContext): Promise<void> => {
@@ -193,19 +201,19 @@ const runInit = async (options: InitOptions, context: PluginContext): Promise<vo
     output.fail({
       message: `No directory at ${dir}.`,
       input: options.dir,
-      fix: 'Pass `--dir <path>` to an existing directory.',
+      remediation: 'Pass `--dir <path>` to an existing directory.',
     });
     return;
   }
 
   const schema = await resolveSchemaSlug(options, context);
   if (!schema.success) {
-    reportFailure(output, schema.errors);
+    output.fail(toFailure(schema));
     return;
   }
   const subgraphs = await resolveSubgraphs(options, context, dir);
   if (!subgraphs.success) {
-    reportFailure(output, subgraphs.errors);
+    output.fail(toFailure(subgraphs));
     return;
   }
 
@@ -229,7 +237,7 @@ const runInit = async (options: InitOptions, context: PluginContext): Promise<vo
   for (const file of planned) {
     const written = await writeIfAbsent(dir, file.path, file.content, options.force === true);
     if (!written.success) {
-      reportFailure(output, written.errors);
+      output.fail(toFailure(written));
       return;
     }
     files.push(written.data);

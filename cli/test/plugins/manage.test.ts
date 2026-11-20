@@ -38,12 +38,14 @@ describe('wgc plugins', () => {
 
     const install = await wgc(managedDir, npm, ['install', 'wgc-plugin-echo']);
     expect(JSON.parse(install.stdout.text())).toEqual({
-      status: 'success',
-      plugin: {
-        name: 'echo',
-        packageName: 'wgc-plugin-echo',
-        version: '1.2.0',
-        directory: join(managedDir, 'node_modules', 'wgc-plugin-echo'),
+      ok: true,
+      data: {
+        plugin: {
+          name: 'echo',
+          packageName: 'wgc-plugin-echo',
+          version: '1.2.0',
+          directory: join(managedDir, 'node_modules', 'wgc-plugin-echo'),
+        },
       },
     });
     expect(install.stderr.lines().map((line) => JSON.parse(line).step)).toEqual(['prepare', 'npm-install', 'verify']);
@@ -51,7 +53,7 @@ describe('wgc plugins', () => {
     expect(readManifest(managedDir)).toEqual({ plugins: { echo: 'wgc-plugin-echo' } });
 
     const list = await wgc(managedDir, npm, ['list']);
-    expect(JSON.parse(list.stdout.text()).plugins).toEqual([
+    expect(JSON.parse(list.stdout.text()).data.plugins).toEqual([
       { name: 'echo', packageName: 'wgc-plugin-echo', version: '1.2.0', source: 'installed', active: true },
       { name: 'hub', packageName: '@wundergraph/wgc-plugin-hub', source: 'available', active: false },
       { name: 'forge', packageName: '@wundergraph/wgc-plugin-forge', source: 'available', active: false },
@@ -59,8 +61,10 @@ describe('wgc plugins', () => {
 
     const remove = await wgc(managedDir, npm, ['remove', 'echo']);
     expect(JSON.parse(remove.stdout.text())).toEqual({
-      status: 'success',
-      plugin: { name: 'echo', packageName: 'wgc-plugin-echo' },
+      ok: true,
+      data: {
+        plugin: { name: 'echo', packageName: 'wgc-plugin-echo' },
+      },
     });
     expect(readManifest(managedDir)).toEqual({ plugins: {} });
     expect(existsSync(join(managedDir, 'node_modules', 'wgc-plugin-echo'))).toBe(false);
@@ -81,8 +85,8 @@ describe('wgc plugins', () => {
 
     expect(calls).toEqual([['install', '--save', '--no-audit', '--no-fund', '@wundergraph/wgc-plugin-hub']]);
     expect(JSON.parse(stdout.text())).toEqual({
-      status: 'error',
-      error: { message: 'npm ERR! 404 Not Found', input: 'hub' },
+      ok: false,
+      error: { code: 'COMMAND_FAILED', message: 'npm ERR! 404 Not Found', input: 'hub' },
     });
     expect(process.exitCode).toBe(1);
   });
@@ -163,11 +167,12 @@ describe('wgc plugins', () => {
     const { stdout } = await wgc(managedDir, createFakeNpm().npm, ['remove', 'hub']);
 
     expect(JSON.parse(stdout.text())).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: `No plugin named hub is installed in ${managedDir}.`,
         input: 'hub',
-        fix: 'Run "wgc plugins list" to see installed plugins.',
+        remediation: 'Run "wgc plugins list" to see installed plugins.',
       },
     });
     expect(process.exitCode).toBe(1);

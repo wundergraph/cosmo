@@ -3,14 +3,16 @@ import path from 'node:path';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { ok } from '@wundergraph/wgc-plugin-sdk';
-import type { Output, PluginContext, Result } from '@wundergraph/wgc-plugin-sdk';
-import { actionable, reportFailure } from '../common/failure.js';
-import { connectHub, schemaPushResult } from '../common/hub.js';
-import { defaultAudience, loadSandboxConfig, sandboxFileName, SandboxSubgraph } from '../common/sandbox-config.js';
+import { failWith, ok, toFailure } from '@wundergraph/wgc-plugin-sdk';
+import type { Output, Result } from '@wundergraph/wgc-plugin-sdk';
+import { schemaPushResult } from '../common/contract.js';
+import { connectHub } from '../common/hub.js';
+import type { HubDependencies } from '../common/runtime.js';
+import { defaultAudience, sandboxFileName, SandboxSubgraph } from '../common/sandbox-config.js';
+import { loadProjectConfig } from '../common/target.js';
 
 interface PushOptions {
-  config: string;
+  config?: string;
   sha?: string;
   audience?: string;
   json?: boolean;
@@ -25,11 +27,11 @@ const readSubgraphSdl = async (subgraph: SandboxSubgraph, dir: string, output: O
     try {
       return ok(await readFile(schemaPath, 'utf8'));
     } catch {
-      return actionable(
-        `Subgraph ${subgraph.name}: no schema file at ${schemaPath}.`,
-        'Fix the `schema` path in sandbox.yaml; it is relative to sandbox.yaml.',
-        subgraph.source.path,
-      );
+      return failWith({
+        message: `Subgraph ${subgraph.name}: no schema file at ${schemaPath}.`,
+        remediation: 'Fix the `schema` path in sandbox.yaml; it is relative to sandbox.yaml.',
+        input: subgraph.source.path,
+      });
     }
   }
 
@@ -37,18 +39,18 @@ const readSubgraphSdl = async (subgraph: SandboxSubgraph, dir: string, output: O
   output.progress({ step: 'generate', subject: subgraph.name, message: `Running ${command}` });
   const generated = await execa(command, { shell: true, cwd: dir, reject: false });
   if (generated.exitCode !== 0) {
-    return actionable(
-      `Subgraph ${subgraph.name}: \`${command}\` exited with ${generated.exitCode ?? 'a signal'}.\n${lastLines(generated.stderr || generated.stdout)}`,
-      'Fix the `generate` command in sandbox.yaml so it prints the SDL and exits 0.',
-      command,
-    );
+    return failWith({
+      message: `Subgraph ${subgraph.name}: \`${command}\` exited with ${generated.exitCode ?? 'a signal'}.\n${lastLines(generated.stderr || generated.stdout)}`,
+      remediation: 'Fix the `generate` command in sandbox.yaml so it prints the SDL and exits 0.',
+      input: command,
+    });
   }
   if (generated.stdout.trim() === '') {
-    return actionable(
-      `Subgraph ${subgraph.name}: \`${command}\` printed nothing.`,
-      'The `generate` command must print the subgraph SDL to stdout.',
-      command,
-    );
+    return failWith({
+      message: `Subgraph ${subgraph.name}: \`${command}\` printed nothing.`,
+      remediation: 'The `generate` command must print the subgraph SDL to stdout.',
+      input: command,
+    });
   }
   return ok(generated.stdout);
 };
@@ -60,20 +62,20 @@ const resolveSha = async (flag: string | undefined, dir: string): Promise<Result
   }
   const revParse = await execa('git', ['rev-parse', 'HEAD'], { cwd: dir, reject: false });
   if (revParse.exitCode !== 0 || revParse.stdout.trim() === '') {
-    return actionable(
-      'Could not tell which commit this schema belongs to.',
-      'Pass `--sha <commit>` or run inside a git checkout.',
-    );
+    return failWith({
+      message: 'Could not tell which commit this schema belongs to.',
+      remediation: 'Pass `--sha <commit>` or run inside a git checkout.',
+    });
   }
   return ok(revParse.stdout.trim());
 };
 
-const runPush = async (options: PushOptions, context: PluginContext): Promise<void> => {
+const runPush = async (options: PushOptions, { context, runtime }: HubDependencies): Promise<void> => {
   const output = context.output({ json: options.json });
 
-  const loaded = await loadSandboxConfig(options.config);
+  const loaded = await loadProjectConfig(runtime.cwd(), options.config);
   if (!loaded.success) {
-    reportFailure(output, loaded.errors);
+    output.fail(toFailure(loaded));
     return;
   }
   const { config, raw, dir } = loaded.data;
@@ -82,7 +84,7 @@ const runPush = async (options: PushOptions, context: PluginContext): Promise<vo
   for (const subgraph of config.subgraphs) {
     const sdl = await readSubgraphSdl(subgraph, dir, output);
     if (!sdl.success) {
-      reportFailure(output, sdl.errors);
+      output.fail(toFailure(sdl));
       return;
     }
     subgraphs.push({ name: subgraph.name, sdl: sdl.data });
@@ -90,7 +92,7 @@ const runPush = async (options: PushOptions, context: PluginContext): Promise<vo
 
   const sha = await resolveSha(options.sha, dir);
   if (!sha.success) {
-    reportFailure(output, sha.errors);
+    output.fail(toFailure(sha));
     return;
   }
 
@@ -102,7 +104,7 @@ const runPush = async (options: PushOptions, context: PluginContext): Promise<vo
   const hub = connectHub(context, options.audience ?? config.audience ?? defaultAudience);
   const pushed = await hub.pushSchema({ sandboxYaml: raw, subgraphs, sha: sha.data }, schemaPushResult);
   if (!pushed.success) {
-    reportFailure(output, pushed.errors);
+    output.fail(toFailure(pushed));
     return;
   }
 
@@ -115,9 +117,11 @@ const runPush = async (options: PushOptions, context: PluginContext): Promise<vo
 
   if (composition.errors.length > 0) {
     output.fail({
+      code: 'COMPOSITION_FAILED',
       message: `Composition failed for sandbox ${sandbox.name}:\n${composition.errors.map((error) => `  - ${error}`).join('\n')}`,
       input: sandboxFileName,
-      fix: `Fix the subgraph schemas and push again. Details: ${sandbox.url}`,
+      remediation: 'Fix the subgraph schemas and push again.',
+      url: sandbox.url,
     });
     return;
   }
@@ -131,15 +135,15 @@ const runPush = async (options: PushOptions, context: PluginContext): Promise<vo
   );
 };
 
-export const schemaCommand = (context: PluginContext): Command =>
+export const schemaCommand = (dependencies: HubDependencies): Command =>
   new Command('schema').description('Push subgraph schemas to Hub').addCommand(
     new Command('push')
       .description(
         'Generate or read every subgraph schema in sandbox.yaml and push them to the sandbox for this commit',
       )
-      .option('--config <path>', 'Path to sandbox.yaml', sandboxFileName)
+      .option('--config <path>', 'Path to sandbox.yaml (default: the nearest one in this or a parent directory)')
       .option('--sha <commit>', 'Commit the schemas belong to (default: GITHUB_SHA, CI_COMMIT_SHA or git HEAD)')
       .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: sandbox.yaml `audience` or hub)')
       .option('--json', 'Print the result as JSON')
-      .action((options: PushOptions) => runPush(options, context)),
+      .action((options: PushOptions) => runPush(options, dependencies)),
   );

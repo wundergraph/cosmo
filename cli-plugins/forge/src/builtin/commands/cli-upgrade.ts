@@ -59,7 +59,7 @@ export const registerCliUpgrade = (command: Command, dependencies: ForgeDependen
         return output.fail({
           message: `"${answer}" is not a release channel.`,
           input: answer,
-          fix: `Use one of: ${channels.join(', ')}.`,
+          remediation: `Use one of: ${channels.join(', ')}.`,
         });
       }
 

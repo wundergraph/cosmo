@@ -1,5 +1,5 @@
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
-import { toFailure } from '../failure.js';
 import { lockFileName, readLock, renderLock, writeLock } from '../lock.js';
 import { describeRouterSource, manifestFileName, readManifest, sameSource } from '../manifest.js';
 import { describePinChange, diffPins, resolvePins } from '../pins.js';
@@ -37,7 +37,7 @@ export const registerLock = (command: Command, dependencies: ForgeDependencies):
       return output.fail({
         message: `${manifestFileName} selects router ${describeRouterSource(manifest.data.router)}, but ${lockFileName} pins router ${pinned}.`,
         input: `${manifestFileName}: router`,
-        fix: `Restore router ${pinned} in ${manifestFileName}, then run \`wgc forge router upgrade --config <router.yaml> <candidate>\` to change the router.`,
+        remediation: `Restore router ${pinned} in ${manifestFileName}, then run \`wgc forge router upgrade --config <router.yaml> <candidate>\` to change the router.`,
       });
     }
 
@@ -60,10 +60,12 @@ export const registerLock = (command: Command, dependencies: ForgeDependencies):
 
     if (acceptance === 'needs-yes') {
       return output.fail({
+        kind: 'confirmation',
         message: `${lockFileName} needs changes to match ${manifestFileName}. Nothing was written.\n${preview}`,
         input: manifestFileName,
-        fix: 'Review the changes, then run `wgc forge lock --yes` to apply them.',
-        details: { ...summary, written: false },
+        remediation: 'Review the changes, then run `wgc forge lock --yes` to apply them.',
+        next: ['wgc forge lock --yes'],
+        data: { ...summary, written: false },
       });
     }
 

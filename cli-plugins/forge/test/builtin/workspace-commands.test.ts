@@ -29,16 +29,18 @@ describe('wgc forge init', () => {
     });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      workspace,
-      router: { source: 'release 0.299.0', version: versionA, commit: commitA },
-      files: [
-        { path: 'forge.yaml', action: 'created' },
-        { path: 'forge.lock', action: 'created' },
-        { path: 'AGENTS.md', action: 'created' },
-        { path: 'CLAUDE.md', action: 'created' },
-        { path: '.gitignore', action: 'created' },
-      ],
+      ok: true,
+      data: {
+        workspace,
+        router: { source: 'release 0.299.0', version: versionA, commit: commitA },
+        files: [
+          { path: 'forge.yaml', action: 'created' },
+          { path: 'forge.lock', action: 'created' },
+          { path: 'AGENTS.md', action: 'created' },
+          { path: 'CLAUDE.md', action: 'created' },
+          { path: '.gitignore', action: 'created' },
+        ],
+      },
     });
     expect(await read(workspace, 'forge.yaml')).toBe(manifest);
     expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
@@ -69,7 +71,7 @@ describe('wgc forge init', () => {
 
     const run = await runForge(['init', '--release', '0.400.0'], { workspace, system });
 
-    expect(JSON.parse(run.stdout).files).toEqual([
+    expect(JSON.parse(run.stdout).data.files).toEqual([
       { path: 'forge.yaml', action: 'kept' },
       { path: 'forge.lock', action: 'kept' },
       { path: 'AGENTS.md', action: 'updated' },
@@ -83,7 +85,7 @@ describe('wgc forge init', () => {
     expect(guidance.startsWith('# Our team rules\n\nAlways run the linter.\n\n<!-- wgc-forge:start -->')).toBe(true);
 
     const third = await runForge(['init'], { workspace, system });
-    expect(JSON.parse(third.stdout).files.map((file: { action: string }) => file.action)).toEqual([
+    expect(JSON.parse(third.stdout).data.files.map((file: { action: string }) => file.action)).toEqual([
       'kept',
       'kept',
       'kept',
@@ -109,7 +111,7 @@ describe('wgc forge init', () => {
       system: createFakeSystem({ routerTags: { '0.299.0': commitA } }),
     });
 
-    expect(JSON.parse(run.stdout).workspace).toBe(`${parent}/routers/edge`);
+    expect(JSON.parse(run.stdout).data.workspace).toBe(`${parent}/routers/edge`);
     expect(await read(parent, 'routers/edge/forge.yaml')).toBe(manifest);
   });
 
@@ -141,7 +143,7 @@ describe('wgc forge create', () => {
   test('--list-templates lists the presets and a template for every hook family, marking experimental ones', async () => {
     const run = await runForge(['create', '--list-templates'], { workspace: await createWorkspace() });
 
-    const listed = JSON.parse(run.stdout);
+    const listed = JSON.parse(run.stdout).data;
     expect(listed.presets.map((entry: { id: string }) => entry.id)).toEqual(['request-id', 'client-name']);
     expect(
       listed.templates.map((entry: { id: string; experimental: boolean }) => [entry.id, entry.experimental]),
@@ -165,18 +167,21 @@ describe('wgc forge create', () => {
     });
 
     expect(JSON.parse(refused.stdout)).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: 'The subscription-start template uses an experimental router hook.',
         input: '--template subscription-start',
-        fix: 'Pass --experimental to create it anyway.',
+        remediation: 'Pass --experimental to create it anyway.',
       },
     });
     expect(JSON.parse(created.stdout)).toEqual({
-      status: 'success',
-      module: 'guard',
-      path: './modules/guard',
-      from: { kind: 'template', id: 'subscription-start' },
+      ok: true,
+      data: {
+        module: 'guard',
+        path: './modules/guard',
+        from: { kind: 'template', id: 'subscription-start' },
+      },
     });
     expect(await read(workspace, 'modules/guard/module.go')).toContain('const moduleID = "guard"');
   });
@@ -196,10 +201,12 @@ describe('wgc forge create', () => {
     const run = await runForge(['create', '--preset', 'request-id'], { workspace });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      module: 'request-id',
-      path: './modules/request-id',
-      from: { kind: 'preset', id: 'request-id' },
+      ok: true,
+      data: {
+        module: 'request-id',
+        path: './modules/request-id',
+        from: { kind: 'preset', id: 'request-id' },
+      },
     });
     expect(await read(workspace, 'modules/request-id/go.mod')).toBe(
       `module forge.local/request-id\n\ngo 1.26.0\n\nrequire ${routerModule} ${versionA}\n`,
@@ -240,9 +247,10 @@ describe('wgc forge create', () => {
     const run = await runForge(['create'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'Pass one of --template <id> and --preset <id>.',
       input: '--template, --preset',
-      fix: 'Run `wgc forge create --list-templates` to see the IDs.',
+      remediation: 'Run `wgc forge create --list-templates` to see the IDs.',
     });
   });
 
@@ -262,9 +270,10 @@ describe('wgc forge create', () => {
     const run = await runForge(['create', '--preset', 'rate-limit'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'There is no preset "rate-limit".',
       input: '--preset rate-limit',
-      fix: 'Use one of: request-id, client-name.',
+      remediation: 'Use one of: request-id, client-name.',
     });
   });
 
@@ -303,13 +312,15 @@ describe('wgc forge add', () => {
     );
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      added: { git: 'https://github.com/acme/router-modules.git', ref: 'v2.0.0', package: 'auth' },
-      pinned: {
-        module: 'github.com/acme/router-modules/auth',
-        package: 'github.com/acme/router-modules/auth',
-        version: 'v2.0.0',
-        commit: commitB,
+      ok: true,
+      data: {
+        added: { git: 'https://github.com/acme/router-modules.git', ref: 'v2.0.0', package: 'auth' },
+        pinned: {
+          module: 'github.com/acme/router-modules/auth',
+          package: 'github.com/acme/router-modules/auth',
+          version: 'v2.0.0',
+          commit: commitB,
+        },
       },
     });
     expect(await read(workspace, 'forge.yaml')).toBe(
@@ -342,7 +353,7 @@ describe('wgc forge add', () => {
       system: createFakeSystem(acmeModules),
     });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({
+    expect(JSON.parse(run.stdout).data).toMatchObject({
       added: { go: 'github.com/acme/mod/headers', version: 'v1.2.0' },
       pinned: { module: 'github.com/acme/mod', package: 'github.com/acme/mod/headers', version: 'v1.2.0' },
     });
@@ -357,7 +368,7 @@ describe('wgc forge add', () => {
 
     const run = await runForge(['add', 'modules/mine'], { workspace });
 
-    expect(JSON.parse(run.stdout)).toEqual({ status: 'success', added: { path: './modules/mine' } });
+    expect(JSON.parse(run.stdout)).toEqual({ ok: true, data: { added: { path: './modules/mine' } } });
     expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
   });
 
@@ -378,9 +389,10 @@ describe('wgc forge add', () => {
     const run = await runForge(['add', '--ref', 'main', 'github.com/acme/mod'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: '--ref and --package only apply to a Git URL.',
       input: 'github.com/acme/mod',
-      fix: 'For a Go package, put the version after an @, for example github.com/acme/mod/headers@v1.2.0.',
+      remediation: 'For a Go package, put the version after an @, for example github.com/acme/mod/headers@v1.2.0.',
     });
   });
 
@@ -408,11 +420,14 @@ describe('wgc forge add', () => {
 
     const run = await runForge(['add', 'github.com/acme/mod'], { workspace, system: newerRelease });
 
-    expect(run.exitCode).toBe(1);
-    expect(JSON.parse(run.stdout).error).toMatchObject({
-      input: 'github.com/acme/mod',
-      fix: 'Review the change, then run the command again with --yes to accept it.',
-      details: {
+    expect(run.exitCode).toBe(5);
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      error: {
+        code: 'CONFIRMATION_REQUIRED',
+        input: 'github.com/acme/mod',
+        remediation: 'Review the change, then run the command again with --yes to accept it.',
+      },
+      data: {
         changes: [
           {
             module: 'github.com/acme/mod',
@@ -432,7 +447,7 @@ describe('wgc forge add', () => {
 
     const run = await runForge(['add', '--yes', 'github.com/acme/mod'], { workspace, system: newerRelease });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', written: true });
+    expect(JSON.parse(run.stdout)).toMatchObject({ ok: true, data: { written: true } });
     expect(await read(workspace, 'forge.yaml')).toBe(registered);
     expect(await read(workspace, 'forge.lock')).toBe(lockedAtNewer);
   });
@@ -455,7 +470,7 @@ describe('wgc forge add', () => {
 
     const run = await runForge(['add', 'github.com/acme/mod'], { workspace, system: newerRelease });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', changes: [], written: false });
+    expect(JSON.parse(run.stdout)).toMatchObject({ ok: true, data: { changes: [], written: false } });
   });
 });
 
@@ -487,7 +502,7 @@ describe('wgc forge lock', () => {
 
     const run = await runForge(['lock'], { workspace, system: createFakeSystem(remotesAndModules) });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({ status: 'success', changes: [], written: false });
+    expect(JSON.parse(run.stdout)).toMatchObject({ ok: true, data: { changes: [], written: false } });
     expect(await read(workspace, 'forge.lock')).toBe(lockedBranch);
   });
 
@@ -497,15 +512,16 @@ describe('wgc forge lock', () => {
 
     const preview = await runForge(['lock'], { workspace, system: createFakeSystem(remotesAndModules) });
 
-    expect(preview.exitCode).toBe(1);
-    expect(JSON.parse(preview.stdout).error.details.changes).toEqual([
+    expect(preview.exitCode).toBe(5);
+    expect(JSON.parse(preview.stdout).error.next).toEqual(['wgc forge lock --yes']);
+    expect(JSON.parse(preview.stdout).data.changes).toEqual([
       { module: 'github.com/acme/mod', to: `v1.2.0 (${commitB.slice(0, 12)})` },
     ]);
     expect(await read(workspace, 'forge.lock')).toBe(lockedBranch);
 
     const applied = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
 
-    expect(JSON.parse(applied.stdout)).toMatchObject({ status: 'success', written: true });
+    expect(JSON.parse(applied.stdout)).toMatchObject({ ok: true, data: { written: true } });
     expect(await read(workspace, 'forge.lock')).toBe(
       `${lockedBranch.trimEnd()}
   - source:
@@ -524,7 +540,7 @@ describe('wgc forge lock', () => {
 
     const run = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
 
-    expect(JSON.parse(run.stdout).changes).toEqual([
+    expect(JSON.parse(run.stdout).data.changes).toEqual([
       {
         module: 'https://github.com/acme/router-modules.git',
         from: `v0.0.0-20260101000000-cccccccccccc (${'c'.repeat(12)})`,
@@ -542,9 +558,11 @@ describe('wgc forge lock', () => {
     const run = await runForge(['lock', '--yes'], { workspace, system: createFakeSystem(remotesAndModules) });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'forge.yaml selects router release 0.300.0, but forge.lock pins router release 0.299.0.',
       input: 'forge.yaml: router',
-      fix: 'Restore router release 0.299.0 in forge.yaml, then run `wgc forge router upgrade --config <router.yaml> <candidate>` to change the router.',
+      remediation:
+        'Restore router release 0.299.0 in forge.yaml, then run `wgc forge router upgrade --config <router.yaml> <candidate>` to change the router.',
     });
     expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
   });

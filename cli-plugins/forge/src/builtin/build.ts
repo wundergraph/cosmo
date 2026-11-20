@@ -1,9 +1,10 @@
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Output, Result } from '@wundergraph/wgc-plugin-sdk';
 import { buildModuleName, renderGoMod, renderMainGo } from './build-module.js';
 import type { BuildModule } from './build-module.js';
-import { fail, lastLines } from './failure.js';
+import { lastLines } from './failure.js';
 import type { Lock } from './lock.js';
 import { isLocalModule, manifestFileName } from './manifest.js';
 import type { Manifest } from './manifest.js';
@@ -29,19 +30,19 @@ export const readLocalModuleName = async (workspace: string, modulePath: string)
   try {
     goMod = await readFile(goModPath, 'utf8');
   } catch {
-    return fail({
+    return failWith({
       message: `Local module ${modulePath} has no go.mod.`,
       input: `${manifestFileName}: modules path ${modulePath}`,
-      fix: `Create the module with \`wgc forge create\`, or run \`go mod init\` in ${modulePath}.`,
+      remediation: `Create the module with \`wgc forge create\`, or run \`go mod init\` in ${modulePath}.`,
     });
   }
 
   const name = /^module\s+(\S+)/m.exec(goMod)?.[1];
   if (name === undefined) {
-    return fail({
+    return failWith({
       message: `${goModPath} does not declare a module.`,
       input: goModPath,
-      fix: 'Add a `module <name>` line to the go.mod.',
+      remediation: 'Add a `module <name>` line to the go.mod.',
     });
   }
   return { success: true, data: name };
@@ -58,10 +59,10 @@ const describeBuildModule = async ({
   for (const module of lock.modules) {
     const other = versions.get(module.module);
     if (other !== undefined && other !== module.version) {
-      return fail({
+      return failWith({
         message: `Module ${module.module} is pinned at two versions, ${other} and ${module.version}. A router is built with one version of each module.`,
         input: `${manifestFileName}: modules ${module.module}`,
-        fix: `Use the same version or ref for every entry of ${module.module} in ${manifestFileName}, then run \`wgc forge lock\`.`,
+        remediation: `Use the same version or ref for every entry of ${module.module} in ${manifestFileName}, then run \`wgc forge lock\`.`,
       });
     }
     versions.set(module.module, module.version);
@@ -115,7 +116,7 @@ const checkPinsHold = async (request: BuildRequest, build: BuildModule): Promise
     cwd: buildDirectory,
   });
   if (listed.exitCode !== 0) {
-    return fail({
+    return failWith({
       message: `Go could not list the build's modules:\n${lastLines(listed.stderr)}`,
       input: buildDirectory,
     });
@@ -138,10 +139,10 @@ const checkPinsHold = async (request: BuildRequest, build: BuildModule): Promise
 
     const graph = await system.run({ file: 'go', args: ['mod', 'graph'], cwd: buildDirectory });
     const requirer = findRequirer(graph.stdout, `${pin.module}@${selectedVersion}`) ?? 'another module';
-    return fail({
+    return failWith({
       message: `Module dependency conflict: ${requirer} requires ${pin.module} ${selectedVersion}, but the workspace pins ${pin.module} ${pin.version}.`,
       input: `${requirer} requires ${pin.module} ${selectedVersion}`,
-      fix:
+      remediation:
         pin.module === routerModule
           ? `Upgrade the router to a version that includes ${selectedVersion} with \`wgc forge router upgrade\`, or use a version of ${requirer} built for the pinned router.`
           : `Pin ${pin.module} to ${selectedVersion} in ${manifestFileName}, or use a version of ${requirer} that works with ${pin.version}.`,
@@ -170,10 +171,10 @@ export const buildRouter = async (request: BuildRequest): Promise<Result<{ binar
   output.progress({ step: 'tidy', message: 'Resolving Go dependencies (go mod tidy)' });
   const tidy = await system.run({ file: 'go', args: ['mod', 'tidy'], cwd: buildDirectory, env: { GOWORK: 'off' } });
   if (tidy.exitCode !== 0) {
-    return fail({
+    return failWith({
       message: `Go could not resolve the build's dependencies:\n${lastLines(tidy.stderr)}`,
       input: path.join(buildDirectory, 'go.mod'),
-      fix: 'Check that every module in forge.yaml builds against the pinned router version.',
+      remediation: 'Check that every module in forge.yaml builds against the pinned router version.',
     });
   }
 
@@ -194,10 +195,10 @@ export const buildRouter = async (request: BuildRequest): Promise<Result<{ binar
   });
   if (compile.exitCode !== 0) {
     await rm(temporaryBinary, { force: true });
-    return fail({
+    return failWith({
       message: `The router did not compile:\n${lastLines(compile.stderr)}`,
       input: buildDirectory,
-      fix: 'Fix the compile errors in the modules above. The existing binary was left in place.',
+      remediation: 'Fix the compile errors in the modules above. The existing binary was left in place.',
     });
   }
 

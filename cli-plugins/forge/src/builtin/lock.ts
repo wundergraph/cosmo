@@ -1,9 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import yaml from 'js-yaml';
 import { z } from 'zod';
-import { fail } from './failure.js';
 import { describeSchemaIssue, remoteModuleSourceSchema, routerSourceSchema } from './manifest.js';
 
 export const lockFileName = 'forge.lock';
@@ -45,18 +45,18 @@ export const parseLock = (text: string): Result<Lock> => {
   try {
     document = yaml.load(text);
   } catch (error) {
-    return fail({
+    return failWith({
       message: `${lockFileName} is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
       input: lockFileName,
-      fix: `Delete ${lockFileName} and run \`wgc forge lock\` to write it again.`,
+      remediation: `Delete ${lockFileName} and run \`wgc forge lock\` to write it again.`,
     });
   }
 
   const parsed = lockSchema.safeParse(document);
   if (!parsed.success) {
-    return fail({
+    return failWith({
       ...describeSchemaIssue(lockFileName, parsed.error),
-      fix: `Delete ${lockFileName} and run \`wgc forge lock\` to write it again.`,
+      remediation: `Delete ${lockFileName} and run \`wgc forge lock\` to write it again.`,
     });
   }
   return { success: true, data: parsed.data };

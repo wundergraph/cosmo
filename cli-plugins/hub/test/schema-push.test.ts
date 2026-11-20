@@ -62,7 +62,7 @@ describe('wgc hub schema push', () => {
       'upload shop: Uploading 2 subgraphs at abc123def456',
       'compose pr-42: Composed with 0 error(s) and 1 warning(s)',
     ]);
-    expect(run.json()).toEqual({ status: 'success', sha: 'abc123def4567890', ...pushed });
+    expect(run.json()).toEqual({ ok: true, data: { sha: 'abc123def4567890', ...pushed } });
   });
 
   test('authenticates with the GitHub Actions OIDC token for the configured audience', async () => {
@@ -136,12 +136,14 @@ describe('wgc hub schema push', () => {
 
     expect(run.exitCode).toBe(1);
     expect(run.json()).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMPOSITION_FAILED',
         message: 'Composition failed for sandbox pr-42:\n  - Field "Query.a" is defined in two subgraphs',
         input: 'sandbox.yaml',
-        fix: 'Fix the subgraph schemas and push again. Details: https://hub.example/shop/sandboxes/pr-42',
+        remediation: 'Fix the subgraph schemas and push again.',
       },
+      url: 'https://hub.example/shop/sandboxes/pr-42',
     });
   });
 
@@ -160,11 +162,12 @@ describe('wgc hub schema push', () => {
 
     expect(run.exitCode).toBe(1);
     expect(run.json()).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: 'Subgraph a: `echo broken >&2; exit 3` exited with 3.\nbroken',
         input: 'echo broken >&2; exit 3',
-        fix: 'Fix the `generate` command in sandbox.yaml so it prints the SDL and exits 0.',
+        remediation: 'Fix the `generate` command in sandbox.yaml so it prints the SDL and exits 0.',
       },
     });
     expect(hub.requests).toEqual([]);
@@ -187,10 +190,11 @@ describe('wgc hub schema push', () => {
 
     const run = await runWgc(['hub', 'schema', 'push', '--config', configPath, '--sha', 's', '--json']);
 
-    expect(run.exitCode).toBe(1);
+    expect(run.exitCode).toBe(2);
     expect(run.json()).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'USAGE_ERROR',
         message: [
           `${configPath} is invalid:`,
           '  schema: set `schema` to the Hub schema slug, e.g. `schema: shop`',
@@ -199,7 +203,7 @@ describe('wgc hub schema push', () => {
           '  router.source: set exactly one of `release: <version>`, `rc: <tag>` or `commit: <sha>`',
         ].join('\n'),
         input: configPath,
-        fix: `Edit ${configPath} at the paths above and rerun.`,
+        remediation: `Edit ${configPath} at the paths above and rerun.`,
       },
     });
   });

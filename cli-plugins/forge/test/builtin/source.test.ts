@@ -60,24 +60,26 @@ describe('wgc forge source add <openapi>', () => {
 
     expect(run.exitCode).toBe(0);
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      source: { kind: 'openapi', location: url },
-      module: { id: 'catalog', path: './modules/catalog', package: 'forge.local/catalog' },
-      subgraph: {
-        name: 'catalog',
-        routingUrl: 'dns:///127.0.0.1:4011',
-        schema: './modules/catalog/schema.graphql',
-        proto: './modules/catalog/generated/service.proto',
-        mapping: './modules/catalog/generated/mapping.json',
-        sdl,
+      ok: true,
+      data: {
+        source: { kind: 'openapi', location: url },
+        module: { id: 'catalog', path: './modules/catalog', package: 'forge.local/catalog' },
+        subgraph: {
+          name: 'catalog',
+          routingUrl: 'dns:///127.0.0.1:4011',
+          schema: './modules/catalog/schema.graphql',
+          proto: './modules/catalog/generated/service.proto',
+          mapping: './modules/catalog/generated/mapping.json',
+          sdl,
+        },
+        graph: 'graph.yaml',
+        operations: [
+          { field: 'catalogItem', request: 'GET /v1/items/{id}' },
+          { field: 'items', request: 'GET /v1/items' },
+        ],
+        skipped,
+        execution: { process: 'router', transport: 'grpc over loopback tcp', listenAddr: '127.0.0.1:4011' },
       },
-      graph: 'graph.yaml',
-      operations: [
-        { field: 'catalogItem', request: 'GET /v1/items/{id}' },
-        { field: 'items', request: 'GET /v1/items' },
-      ],
-      skipped,
-      execution: { process: 'router', transport: 'grpc over loopback tcp', listenAddr: '127.0.0.1:4011' },
     });
   });
 
@@ -170,9 +172,11 @@ subgraphs:
     const run = await runForge(['build'], { workspace, system });
 
     expect(JSON.parse(run.stdout)).toMatchObject({
-      status: 'success',
-      binary: `${workspace}/bin/router`,
-      localModules: 1,
+      ok: true,
+      data: {
+        binary: `${workspace}/bin/router`,
+        localModules: 1,
+      },
     });
     expect(await read(workspace, '.forge/build/main.go')).toBe(
       [
@@ -201,12 +205,14 @@ subgraphs:
     const run = await runForge(['check'], { workspace });
 
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      complete: true,
-      compositionErrors: [],
-      findings: [],
-      exceptions: [],
-      summary: { errors: 0, warnings: 0, exceptions: 0, subgraphs: 1 },
+      ok: true,
+      data: {
+        complete: true,
+        compositionErrors: [],
+        findings: [],
+        exceptions: [],
+        summary: { errors: 0, warnings: 0, exceptions: 0, subgraphs: 1 },
+      },
     });
   });
 
@@ -243,16 +249,18 @@ subgraphs:
     });
 
     expect(JSON.parse(sameName.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'graph.yaml already has a subgraph named catalog.',
       input: '--name catalog',
-      fix: 'Pass another --name.',
+      remediation: 'Pass another --name.',
     });
     expect(JSON.parse(sameAddress.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'Another subgraph in graph.yaml is already served on 127.0.0.1:4011.',
       input: '--listen 127.0.0.1:4011',
-      fix: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
+      remediation: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
     });
-    expect(JSON.parse(distinct.stdout).subgraph.routingUrl).toBe('dns:///127.0.0.1:4012');
+    expect(JSON.parse(distinct.stdout).data.subgraph.routingUrl).toBe('dns:///127.0.0.1:4012');
     expect(await read(workspace, 'modules/catalog-two/generated/service.proto')).toContain('package catalog_two.v1;');
   });
 
@@ -309,7 +317,7 @@ subgraphs:
 
     const run = await runForge(['source', 'add', 'openapi.json'], { workspace });
 
-    const result = JSON.parse(run.stdout);
+    const result = JSON.parse(run.stdout).data;
     expect(result.module.id).toBe('orders-api');
     expect(result.subgraph.sdl).toBe(`type Query {
   getOrdersByOrderIdLines(orderId: Int!): GetOrdersByOrderIdLinesResponse
@@ -351,10 +359,11 @@ describe('wgc forge source add rejects what it cannot generate', () => {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message:
         'A proto file cannot become a subgraph yet. Cosmo compiles a GraphQL schema to a proto contract, and nothing derives a graph schema and its field mapping from a proto service.',
       input: 'service.proto',
-      fix: 'Add the OpenAPI 3 description of the same API instead.',
+      remediation: 'Add the OpenAPI 3 description of the same API instead.',
     });
     expect(await read(workspace, 'forge.yaml')).toBe(manifest);
   });
@@ -366,10 +375,11 @@ describe('wgc forge source add rejects what it cannot generate', () => {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message:
         'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API, not from SQL.',
       input: 'postgres source',
-      fix: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
+      remediation: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
     });
   });
 
@@ -379,9 +389,10 @@ describe('wgc forge source add rejects what it cannot generate', () => {
     const run = await runForge(['source', 'add', 'swagger.json'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'swagger.json is not an OpenAPI 3 description.',
       input: 'swagger.json',
-      fix: 'Pass an OpenAPI 3.0 or 3.1 document. Convert a Swagger 2.0 document first.',
+      remediation: 'Pass an OpenAPI 3.0 or 3.1 document. Convert a Swagger 2.0 document first.',
     });
   });
 
@@ -407,10 +418,11 @@ paths:
     const run = await runForge(['source', 'add', 'openapi.yaml'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message:
         'openapi.yaml has no operation that can become a query field.\n  POST /items: only GET operations are generated\n  GET /report: it has no application/json response for status 200',
       input: 'openapi.yaml',
-      fix: 'The description needs at least one GET operation with an application/json response for status 200.',
+      remediation: 'The description needs at least one GET operation with an application/json response for status 200.',
     });
     expect(await read(workspace, 'forge.yaml')).toBe(manifest);
   });
@@ -421,9 +433,11 @@ paths:
     const run = await runForge(['source', 'add', 'https://catalog.example.com/missing.yaml'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'https://catalog.example.com/missing.yaml answered with status 404.',
       input: 'https://catalog.example.com/missing.yaml',
-      fix: 'Check the URL and that it can be read without signing in, or download the description and pass the file.',
+      remediation:
+        'Check the URL and that it can be read without signing in, or download the description and pass the file.',
     });
   });
 });

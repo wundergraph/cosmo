@@ -36,7 +36,7 @@ export const createBinaryEngine = ({ binary, argv }: { binary: string; argv: () 
         context.output({ json: args.includes('--json') }).fail({
           message: `Could not run the Forge CLI at ${binary}: ${outcome.shortMessage}`,
           input: binary,
-          fix: `Point ${binaryVariable} at a working forge binary, or set ${binaryVariable}=builtin to use the commands built into wgc.`,
+          remediation: `Point ${binaryVariable} at a working forge binary, or set ${binaryVariable}=builtin to use the commands built into wgc.`,
         });
       });
   },

@@ -1,8 +1,8 @@
 import { access, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
-import { fail, toFailure } from '../failure.js';
 import type { FileAction } from '../guidance.js';
 import { ignoreGeneratedFiles, writeGuidance } from '../guidance.js';
 import { lockFileName, readLock, writeLock } from '../lock.js';
@@ -37,20 +37,20 @@ const requestedRouter = (options: InitOptions): Result<RouterSource | undefined>
     return { success: true, data: undefined };
   }
   if (requested.length > 1) {
-    return fail({
+    return failWith({
       message: 'Pass only one of --release, --rc and --commit.',
       input: '--release, --rc, --commit',
-      fix: 'A workspace builds one router version. Keep the flag for the version you want.',
+      remediation: 'A workspace builds one router version. Keep the flag for the version you want.',
     });
   }
 
   const parsed = routerSourceSchema.safeParse(requested[0]);
   if (!parsed.success) {
     const [flag, value] = Object.entries(requested[0])[0];
-    return fail({
+    return failWith({
       message: `--${flag} ${value} ${parsed.error.issues[0].message}.`,
       input: `--${flag} ${value}`,
-      fix: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
+      remediation: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
     });
   }
   return { success: true, data: parsed.data };

@@ -1,8 +1,8 @@
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
 import { catalog, createModule } from '../catalog.js';
 import type { CatalogEntry } from '../catalog.js';
-import { toFailure } from '../failure.js';
 import { lockFileName, readLock } from '../lock.js';
 import { readManifest, sameSource, writeManifest } from '../manifest.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
@@ -66,7 +66,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: 'Pass only one of --template <id> and --preset <id>.',
         input: '--template, --preset',
-        fix: 'Run `wgc forge create --list-templates` to see the IDs.',
+        remediation: 'Run `wgc forge create --list-templates` to see the IDs.',
       });
     }
 
@@ -75,7 +75,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: 'Pass one of --template <id> and --preset <id>.',
         input: '--template, --preset',
-        fix: 'Run `wgc forge create --list-templates` to see the IDs.',
+        remediation: 'Run `wgc forge create --list-templates` to see the IDs.',
       });
     }
 
@@ -86,7 +86,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
         return output.fail({
           message: 'That is not one of the listed starters.',
           input: 'starter',
-          fix: 'Run `wgc forge create` again and type the number of a starter.',
+          remediation: 'Run `wgc forge create` again and type the number of a starter.',
         });
       }
     } else {
@@ -97,7 +97,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
         return output.fail({
           message: `There is no ${kind} "${id}".`,
           input: `--${kind} ${id}`,
-          fix: `Use one of: ${idsOf(kind)}.`,
+          remediation: `Use one of: ${idsOf(kind)}.`,
         });
       }
     }
@@ -107,7 +107,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: `The ${entry.id} ${kind} uses an experimental router hook.`,
         input: `--${kind} ${entry.id}`,
-        fix: 'Pass --experimental to create it anyway.',
+        remediation: 'Pass --experimental to create it anyway.',
       });
     }
 
@@ -118,7 +118,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: 'A module created from a template needs a name.',
         input: `--template ${entry.id}`,
-        fix: `Pass the name after the flags, for example \`wgc forge create --template ${entry.id} my-module\`.`,
+        remediation: `Pass the name after the flags, for example \`wgc forge create --template ${entry.id} my-module\`.`,
       });
     }
 
@@ -135,7 +135,7 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       return output.fail({
         message: `The workspace has no ${lockFileName}, so the router version the module builds against is unknown.`,
         input: lockFileName,
-        fix: 'Run `wgc forge lock` first.',
+        remediation: 'Run `wgc forge lock` first.',
       });
     }
 

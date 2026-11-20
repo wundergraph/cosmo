@@ -1,10 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import yaml from 'js-yaml';
 import semver from 'semver';
 import { z } from 'zod';
-import { fail } from './failure.js';
 
 export const manifestFileName = 'forge.yaml';
 export const defaultBinaryPath = '.forge/bin/router';
@@ -117,10 +117,10 @@ export const parseRouterCandidate = (candidate: string): Result<RouterSource> =>
   const source = version ? releaseOrCandidate : { commit: candidate };
   const parsed = routerSourceSchema.safeParse(source);
   if (!parsed.success) {
-    return fail({
+    return failWith({
       message: `"${candidate}" is not a router release, release candidate or commit.`,
       input: candidate,
-      fix: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
+      remediation: 'Pass a release such as 0.299.0, a release candidate such as 0.300.0-rc.1, or a commit SHA.',
     });
   }
   return { success: true, data: parsed.data };
@@ -138,18 +138,18 @@ export const parseManifest = (text: string): Result<Manifest> => {
   try {
     document = yaml.load(text);
   } catch (error) {
-    return fail({
+    return failWith({
       message: `${manifestFileName} is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
       input: manifestFileName,
-      fix: `Correct the YAML syntax in ${manifestFileName}.`,
+      remediation: `Correct the YAML syntax in ${manifestFileName}.`,
     });
   }
 
   const parsed = manifestSchema.safeParse(document);
   if (!parsed.success) {
-    return fail({
+    return failWith({
       ...describeSchemaIssue(manifestFileName, parsed.error),
-      fix: `Correct the field in ${manifestFileName}. Run \`wgc forge init\` in an empty directory to see a valid file.`,
+      remediation: `Correct the field in ${manifestFileName}. Run \`wgc forge init\` in an empty directory to see a valid file.`,
     });
   }
   return { success: true, data: parsed.data };
@@ -160,10 +160,10 @@ export const readManifest = async (workspace: string): Promise<Result<Manifest>>
   try {
     text = await readFile(path.join(workspace, manifestFileName), 'utf8');
   } catch {
-    return fail({
+    return failWith({
       message: `No ${manifestFileName} in ${workspace}.`,
       input: path.join(workspace, manifestFileName),
-      fix: 'Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+      remediation: 'Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
     });
   }
   return parseManifest(text);

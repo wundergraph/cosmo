@@ -119,20 +119,21 @@ describe('wgc forge check', () => {
 
     const run = await runForge(['check'], { workspace });
 
-    expect(run.exitCode).toBe(1);
+    expect(run.exitCode).toBe(3);
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'CHECK_FAILED',
         message: 'The check found 1 blocking finding(s).',
         input: `${workspace}/graph.yaml`,
-        fix: 'Repair each finding, or record an approved exception under `check.exceptions` in forge.yaml.',
-        details: {
-          complete: true,
-          compositionErrors: [],
-          findings: [camelCaseFinding, paginationFinding],
-          exceptions: [],
-          summary: { errors: 1, warnings: 1, exceptions: 0, subgraphs: 2 },
-        },
+        remediation: 'Repair each finding, or record an approved exception under `check.exceptions` in forge.yaml.',
+      },
+      data: {
+        complete: true,
+        compositionErrors: [],
+        findings: [camelCaseFinding, paginationFinding],
+        exceptions: [],
+        summary: { errors: 1, warnings: 1, exceptions: 0, subgraphs: 2 },
       },
     });
   });
@@ -142,9 +143,9 @@ describe('wgc forge check', () => {
 
     const run = await runForge(['check'], { workspace, caller: 'human' });
 
-    expect(run.exitCode).toBe(1);
-    expect(run.stdout).toBe('');
-    expect(run.stderr).toBe(
+    expect(run.exitCode).toBe(3);
+    expect(run.stderr).toBe('');
+    expect(run.stdout).toBe(
       [
         'WARN  FIELD_NAMES_SHOULD_BE_CAMEL_CASE  Return.refund_reason',
         '      services/returns/schema.graphql:8:3',
@@ -156,8 +157,6 @@ describe('wgc forge check', () => {
         '      Example   Query.orders in services/orders/schema.graphql',
         '      Expose edges and PageInfo. Keep upstream paging inside the adapter.',
         '1 error(s), 1 warning(s), 0 exception(s) in 2 subgraph(s).',
-        `  input: ${workspace}/graph.yaml`,
-        '  fix: Repair each finding, or record an approved exception under `check.exceptions` in forge.yaml.',
         '',
       ].join('\n'),
     );
@@ -170,12 +169,14 @@ describe('wgc forge check', () => {
 
     expect(run.exitCode).toBe(0);
     expect(JSON.parse(run.stdout)).toEqual({
-      status: 'success',
-      complete: true,
-      compositionErrors: [],
-      findings: [],
-      exceptions: [],
-      summary: { errors: 0, warnings: 0, exceptions: 0, subgraphs: 2 },
+      ok: true,
+      data: {
+        complete: true,
+        compositionErrors: [],
+        findings: [],
+        exceptions: [],
+        summary: { errors: 0, warnings: 0, exceptions: 0, subgraphs: 2 },
+      },
     });
   });
 
@@ -208,8 +209,8 @@ describe('wgc forge check', () => {
 
     const run = await runForge(['check'], { workspace });
 
-    expect(run.exitCode).toBe(1);
-    expect(JSON.parse(run.stdout).error.details.findings).toEqual([{ ...camelCaseFinding, severity: 'error' }]);
+    expect(run.exitCode).toBe(3);
+    expect(JSON.parse(run.stdout).data.findings).toEqual([{ ...camelCaseFinding, severity: 'error' }]);
   });
 
   test('an approved exception is reported apart, and a new field does not inherit it', async () => {
@@ -228,8 +229,8 @@ describe('wgc forge check', () => {
 
     const run = await runForge(['check'], { workspace });
 
-    expect(run.exitCode).toBe(1);
-    const { details } = JSON.parse(run.stdout).error;
+    expect(run.exitCode).toBe(3);
+    const details = JSON.parse(run.stdout).data;
     expect(details.findings).toEqual([paginationFinding]);
     expect(details.exceptions).toEqual([
       {
@@ -252,12 +253,12 @@ describe('wgc forge check', () => {
 
     const run = await runForge(['check'], { workspace });
 
-    expect(run.exitCode).toBe(1);
-    const { error } = JSON.parse(run.stdout);
+    expect(run.exitCode).toBe(3);
+    const { error, data } = JSON.parse(run.stdout);
     expect(error.message).toBe('The check is incomplete: the graph does not compose.');
-    expect(error.fix).toBe('Fix the composition errors, then run the check again.');
-    expect(error.details.complete).toBe(false);
-    expect(error.details.compositionErrors.join('\n')).toContain('Missing');
+    expect(error.remediation).toBe('Fix the composition errors, then run the check again.');
+    expect(data.complete).toBe(false);
+    expect(data.compositionErrors.join('\n')).toContain('Missing');
   });
 
   test('without a graph file there is nothing to check, which is a failure', async () => {
@@ -267,9 +268,11 @@ describe('wgc forge check', () => {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: `There is no graph to check: ${workspace}/graph.yaml does not exist.`,
       input: `${workspace}/graph.yaml`,
-      fix: 'List the subgraphs and their schema files in the graph file, in the input format of `wgc router compose`, or pass --graph <file>.',
+      remediation:
+        'List the subgraphs and their schema files in the graph file, in the input format of `wgc router compose`, or pass --graph <file>.',
     });
   });
 
@@ -279,9 +282,10 @@ describe('wgc forge check', () => {
     const run = await runForge(['check'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
       message: 'forge.yaml sets a rule that does not exist: pagination.offset.',
       input: 'forge.yaml: check.rules.pagination.offset',
-      fix: 'Run `wgc forge check --help` to list the rules.',
+      remediation: 'Run `wgc forge check --help` to list the rules.',
     });
   });
 
@@ -349,7 +353,7 @@ interface NodeInterface {
 
     const run = await runForge(['check'], { workspace });
 
-    const findings: { rule: string; coordinate: string }[] = JSON.parse(run.stdout).error.details.findings;
+    const findings: { rule: string; coordinate: string }[] = JSON.parse(run.stdout).data.findings;
     expect(findings.map((finding) => `${finding.rule} ${finding.coordinate}`)).toEqual([
       'FIELD_NAMES_SHOULD_BE_CAMEL_CASE AccountType.Bad_Name',
       'TYPE_NAMES_SHOULD_BE_PASCAL_CASE typeUser',

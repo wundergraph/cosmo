@@ -49,7 +49,7 @@ export const createProposalFromHubSandbox = async ({
     output.fail({
       message: 'The --hub-sandbox value is not a sandbox reference.',
       input: hubSandbox,
-      fix: reference.error.issues[0].message,
+      remediation: reference.error.issues[0].message,
     });
     return;
   }
@@ -77,7 +77,7 @@ export const createProposalFromHubSandbox = async ({
     output.fail({
       message: `Hub created ${proposed.data.proposalUrl} but the Cosmo proposal failed: ${cosmoTarget.detail ?? 'no detail'}`,
       input: hubSandbox,
-      fix: 'Fix the reported problem in the sandbox, then propose again.',
+      remediation: 'Fix the reported problem in the sandbox, then propose again.',
     });
     return;
   }

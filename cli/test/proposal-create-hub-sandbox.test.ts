@@ -146,8 +146,10 @@ describe('proposal create --hub-sandbox', () => {
     await runCreate(['--hub-sandbox', 'products/feature-x', '--json']);
 
     expect(JSON.parse(String(stdout.mock.calls[0][0]))).toEqual({
-      status: 'success',
-      ...proposalResult(openCosmoTarget),
+      ok: true,
+      data: {
+        ...proposalResult(openCosmoTarget),
+      },
     });
     expect(JSON.parse(String(stderr.mock.calls[0][0]))).toEqual({
       event: 'progress',
@@ -165,12 +167,13 @@ describe('proposal create --hub-sandbox', () => {
     await runCreate(['--hub-sandbox', 'products/feature-x', '--json']);
 
     expect(JSON.parse(String(stdout.mock.calls[0][0]))).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message:
           'Hub created https://hub.example.com/acme/proposals/hp-7 but the Cosmo proposal failed: composition failed',
         input: 'products/feature-x',
-        fix: 'Fix the reported problem in the sandbox, then propose again.',
+        remediation: 'Fix the reported problem in the sandbox, then propose again.',
       },
     });
     expect(process.exitCode).toBe(1);
@@ -191,11 +194,12 @@ describe('proposal create --hub-sandbox', () => {
     await runCreate(['--hub-sandbox', 'feature-x', '--json']);
 
     expect(JSON.parse(String(stdout.mock.calls[0][0]))).toEqual({
-      status: 'error',
+      ok: false,
       error: {
+        code: 'COMMAND_FAILED',
         message: 'The --hub-sandbox value is not a sandbox reference.',
         input: 'feature-x',
-        fix: 'Expected <schema>/<sandbox>, e.g. products/add-reviews.',
+        remediation: 'Expected <schema>/<sandbox>, e.g. products/add-reviews.',
       },
     });
     expect(hub.calls).toEqual([]);
@@ -208,7 +212,7 @@ describe('proposal create --hub-sandbox', () => {
     await runCreate(['--hub-sandbox', 'products/feature-x', '--json']);
 
     const printed = JSON.parse(String(stdout.mock.calls[0][0]));
-    expect(printed.status).toBe('error');
+    expect(printed.ok).toBe(false);
     expect(printed.error.message.startsWith('Hub tool propose returned an unexpected shape:')).toBe(true);
     expect(process.exitCode).toBe(1);
   });

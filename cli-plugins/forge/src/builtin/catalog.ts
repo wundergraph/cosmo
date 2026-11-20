@@ -1,8 +1,8 @@
 import { cp, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import { fail } from './failure.js';
 import type { LockedRouter } from './lock.js';
 import { routerModule } from './resolve.js';
 import { modulesDirectory } from './workspace.js';
@@ -87,20 +87,20 @@ export const createModule = async ({
   router: LockedRouter;
 }): Promise<Result<string>> => {
   if (!moduleNamePattern.test(name)) {
-    return fail({
+    return failWith({
       message: `"${name}" is not a valid module name.`,
       input: name,
-      fix: 'Use lowercase letters, digits and dashes, starting with a letter, for example rate-limit.',
+      remediation: 'Use lowercase letters, digits and dashes, starting with a letter, for example rate-limit.',
     });
   }
 
   const relativePath = `./${modulesDirectory}/${name}`;
   const target = path.join(workspace, modulesDirectory, name);
   if (await exists(target)) {
-    return fail({
+    return failWith({
       message: `${relativePath} already exists.`,
       input: relativePath,
-      fix: 'Pick another name, or delete the directory to create the module again.',
+      remediation: 'Pick another name, or delete the directory to create the module again.',
     });
   }
 

@@ -2,9 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { z } from 'zod';
-import { ok } from '@wundergraph/wgc-plugin-sdk';
+import { failWith, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import { actionable } from './failure.js';
 
 export const sandboxFileName = 'sandbox.yaml';
 
@@ -99,11 +98,12 @@ export const parseSandboxConfig = (raw: string, filePath: string): Result<Sandbo
   try {
     document = z.json().parse(yaml.load(raw, { schema: yaml.JSON_SCHEMA }));
   } catch (error) {
-    return actionable(
-      `${filePath} is not valid YAML: ${(error as Error).message.split('\n')[0]}`,
-      `Fix the YAML syntax in ${filePath}.`,
-      filePath,
-    );
+    return failWith({
+      kind: 'usage',
+      message: `${filePath} is not valid YAML: ${(error as Error).message.split('\n')[0]}`,
+      remediation: `Fix the YAML syntax in ${filePath}.`,
+      input: filePath,
+    });
   }
 
   const parsed = sandboxConfigSchema.safeParse(document);
@@ -111,11 +111,12 @@ export const parseSandboxConfig = (raw: string, filePath: string): Result<Sandbo
     const problems = parsed.error.issues.map(
       (issue) => `  ${formatPath(issue.path) || '(top level)'}: ${issue.message}`,
     );
-    return actionable(
-      `${filePath} is invalid:\n${problems.join('\n')}`,
-      `Edit ${filePath} at the paths above and rerun.`,
-      filePath,
-    );
+    return failWith({
+      kind: 'usage',
+      message: `${filePath} is invalid:\n${problems.join('\n')}`,
+      remediation: `Edit ${filePath} at the paths above and rerun.`,
+      input: filePath,
+    });
   }
   return ok(parsed.data);
 };
@@ -126,11 +127,12 @@ export const loadSandboxConfig = async (configPath: string): Promise<Result<Load
   try {
     raw = await readFile(absolutePath, 'utf8');
   } catch {
-    return actionable(
-      `No ${path.basename(configPath)} at ${absolutePath}.`,
-      'Run `wgc hub init` to create one, or pass `--config <path>`.',
-      configPath,
-    );
+    return failWith({
+      kind: 'usage',
+      message: `No ${path.basename(configPath)} at ${absolutePath}.`,
+      remediation: 'Run `wgc hub init` to create one, or pass `--config <path>`.',
+      input: configPath,
+    });
   }
 
   const parsed = parseSandboxConfig(raw, configPath);
