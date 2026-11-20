@@ -638,6 +638,12 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 
+	for _, provider := range in.ContextProviders {
+		out.ContextProviders = append(out.ContextProviders, plan.ContextProvider{ContextName: provider.ContextName, TypeName: provider.TypeName, ConcreteTypeNames: provider.ConcreteTypeNames})
+	}
+	for _, binding := range in.ContextArguments {
+		out.ContextArguments = append(out.ContextArguments, plan.ContextArgument{ContextName: binding.ContextName, TypeName: binding.TypeName, FieldName: binding.FieldName, ArgumentName: binding.ArgumentName, ArgumentType: binding.ArgumentType, SelectionSet: binding.SelectionSet})
+	}
 	for _, keyConfiguration := range in.Keys {
 		var conditions []plan.KeyCondition
 

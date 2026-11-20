@@ -93,6 +93,23 @@ message DataSourceConfiguration {
   CostConfiguration cost_configuration = 16;
   // Entity caching configuration (e.g. request-scoped fields from @openfed__requestScoped).
   EntityCachingConfiguration entity_caching_configuration = 17;
+  repeated ContextProvider context_providers = 18;
+  repeated ContextArgument context_arguments = 19;
+}
+
+message ContextProvider {
+  string context_name = 1;
+  string type_name = 2;
+  repeated string concrete_type_names = 3;
+}
+
+message ContextArgument {
+  string context_name = 1;
+  string type_name = 2;
+  string field_name = 3;
+  string argument_name = 4;
+  string argument_type = 5;
+  string selection_set = 6;
 }
 
 // Entity caching configuration for a subgraph data source.
