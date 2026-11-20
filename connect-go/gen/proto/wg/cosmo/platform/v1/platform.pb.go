@@ -9543,7 +9543,9 @@ type HubPermissionGrant struct {
 	// Namespace ids. Empty together with resources means organization-wide.
 	Namespaces []string `protobuf:"bytes,2,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
 	// Target ids of federated graphs or subgraphs, like OrganizationGroupRule.resources.
-	Resources     []string `protobuf:"bytes,3,rep,name=resources,proto3" json:"resources,omitempty"`
+	Resources []string `protobuf:"bytes,3,rep,name=resources,proto3" json:"resources,omitempty"`
+	// Contract tags the grant lets members and their agents see. Only used by view_hidden_schema; empty means every hidden tag.
+	Tags          []string `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9595,6 +9597,13 @@ func (x *HubPermissionGrant) GetNamespaces() []string {
 func (x *HubPermissionGrant) GetResources() []string {
 	if x != nil {
 		return x.Resources
+	}
+	return nil
+}
+
+func (x *HubPermissionGrant) GetTags() []string {
+	if x != nil {
+		return x.Tags
 	}
 	return nil
 }
@@ -38355,7 +38364,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x05rules\x18\x06 \x03(\v2+.wg.cosmo.platform.v1.OrganizationGroupRuleR\x05rules\x12&\n" +
 	"\x0ehasOidcMappers\x18\a \x01(\bR\x0ehasOidcMappers\x12\"\n" +
 	"\fapiKeysCount\x18\b \x01(\x05R\fapiKeysCount\x12Q\n" +
-	"\x0fhub_permissions\x18\t \x03(\v2(.wg.cosmo.platform.v1.HubPermissionGrantR\x0ehubPermissions\"r\n" +
+	"\x0fhub_permissions\x18\t \x03(\v2(.wg.cosmo.platform.v1.HubPermissionGrantR\x0ehubPermissions\"\x86\x01\n" +
 	"\x12HubPermissionGrant\x12\x1e\n" +
 	"\n" +
 	"permission\x18\x01 \x01(\tR\n" +
@@ -38363,7 +38372,8 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\x02 \x03(\tR\n" +
 	"namespaces\x12\x1c\n" +
-	"\tresources\x18\x03 \x03(\tR\tresources\"\xeb\x01\n" +
+	"\tresources\x18\x03 \x03(\tR\tresources\x12\x12\n" +
+	"\x04tags\x18\x04 \x03(\tR\x04tags\"\xeb\x01\n" +
 	"\x12GraphResourceOwner\x12,\n" +
 	"\x12federated_graph_id\x18\x01 \x01(\tR\x10federatedGraphId\x12#\n" +
 	"\rresource_kind\x18\x02 \x01(\tR\fresourceKind\x12\x1a\n" +

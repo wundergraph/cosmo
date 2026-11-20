@@ -1100,6 +1100,8 @@ message HubPermissionGrant {
   repeated string namespaces = 2;
   // Target ids of federated graphs or subgraphs, like OrganizationGroupRule.resources.
   repeated string resources = 3;
+  // Contract tags the grant lets members and their agents see. Only used by view_hidden_schema; empty means every hidden tag.
+  repeated string tags = 4;
 }
 
 message GraphResourceOwner {
