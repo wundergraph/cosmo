@@ -343,8 +343,9 @@ export function padMissingDatesForCurrentWeek(data: PlainMessage<RequestSeriesIt
 }
 
 export function timestampToNanoseconds(timestamp: string): bigint {
-  const [dateAndTime, fractionalSeconds] = timestamp.split('.');
-  const date = new Date(dateAndTime);
+  const [dateAndTime, fractionalSeconds = '0'] = timestamp.split('.');
+  // ClickHouse returns UTC without a zone; read it as UTC, not in the server's local time zone.
+  const date = new Date(`${dateAndTime.replace(' ', 'T')}Z`);
   const nanoseconds = BigInt(date.getTime()) * BigInt(1e6);
   return nanoseconds + BigInt(fractionalSeconds);
 }

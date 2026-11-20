@@ -177,6 +177,101 @@ Look into the cosmo documentation
 and explain to me the steps to publish a Subgraph.
 ```
 
+## Analytics
+
+The analytics tools let your AI assistant answer questions about your graphs' traffic: slow operations and traces, where time goes inside a request, errors, clients, field and schema usage, releases, routers, schema checks and request usage. They are **read-only**: they never change anything in Cosmo.
+
+### Authentication
+
+Analytics tools act either as you or as an API key:
+
+- **Your login (recommended).** Run `wgc auth login` once, then start the server with `--auth user`. The server refreshes your session as needed. You see exactly the graphs you can see in Studio, including namespace login-method restrictions.
+- **An API key.** Set `COSMO_API_KEY` (the default when it is set, or `--auth api-key`). The key's group permissions apply. API keys bypass namespace login-method restrictions, so give the key a group with `graph-viewer` on only the namespaces it needs.
+
+```json
+{
+  "mcpServers": {
+    "cosmo": {
+      "command": "npx",
+      "args": ["wgc", "mcp", "--auth", "user"]
+    }
+  }
+}
+```
+
+Use `--toolsets analytics` to register only the analytics tools, or `--toolsets schema` for only the schema tools. Both are registered by default.
+
+### What the data means
+
+- **Metrics are complete; traces are sampled.** Counts, rates and percentiles come from metrics, which record every request. Traces are a sample at your plan's sampling rate, so use them as examples, not totals.
+- **Latency percentiles stop at 10 seconds.** Exact durations of slower requests come from traces.
+- **Retention follows your plan.** Windows older than your plan allows are clamped or return no data. `get_analytics_context` shows your limits.
+- **Some data exists only if your router sends it**, for example GraphQL variables (`telemetry.tracing.export_graphql_variables`) or custom span attributes.
+- **Batched requests count once per operation.** Each operation of a batched request is matched, counted and sampled on its own.
+
+### Example prompts
+
+```
+Supergraph: mygraph
+Namespace: default
+
+Show me traces of the GetOrder operation that took longer than 40 seconds in the last 7 days.
+```
+
+```
+Supergraph: mygraph
+Namespace: default
+
+Which operations had the highest error rate today, and which clients send them?
+```
+
+```
+Supergraph: mygraph
+Namespace: default
+
+Which deprecated fields are still used, and by which clients?
+```
+
+```
+Supergraph: mygraph
+Namespace: default
+
+Find traces from the last day where the fetch to the products subgraph took longer than 2 seconds, and tell me where the time went.
+```
+
+```
+Supergraph: mygraph
+Namespace: default
+
+Compare this week with last week: which operations got slower, and did the last composition change anything?
+```
+
+### Analytics tools
+
+- **`get_analytics_context`**: Your organization, how you're authenticated, retention per kind of data, the trace sampling ceiling and the request limit.
+- **`get_graph_overview`**: Request rate, p95 latency and error rate of a graph, with the previous period, top operations and per-subgraph metrics.
+- **`get_subgraph_overview`**: The same for one subgraph.
+- **`list_operations`**: Operations ranked by requests, latency or errors, with whether they use deprecated fields.
+- **`get_operation`**: One operation's document, clients, deprecated fields and metrics.
+- **`get_field_usage`**: Who uses a field, argument, input field or type.
+- **`search_traces`**: Individual requests (sampled) by operation, client, status, duration or any span attribute, and by what happened inside them, for example a fetch to one subgraph that took longer than a threshold.
+- **`get_trace`**: One trace summarized: time per router phase and per subgraph, the critical path and every error, including subgraph error codes. Ask for the full trace to get every span with its attributes and events.
+- **`query_analytics`**: Any question one dataset can answer: group by dimensions, compute measures, filter, sort and bucket by time, for one graph, several, or every graph you can read.
+- **`list_dimension_values`**: The values of a dimension with how often each occurs, such as client names, span names or custom attribute keys.
+- **`compare_periods`**: This week against last week, or after a release against before, with the change of every number.
+- **`analyze_spans`**: Where the time goes: router phases, subgraph fetches and your own spans.
+- **`get_error_breakdown`**: What fails and why, with an example trace for each kind of error.
+- **`list_clients`**: Every client and version with traffic, and registered clients without traffic.
+- **`search_operation_documents`**: Operations whose document uses a field, argument or directive.
+- **`get_change_timeline`**: Compositions and their schema changes, newest first.
+- **`list_routers`**: Router instances, versions, compositions, uptime, CPU and memory.
+- **`get_usage_and_quota`**: Monthly request usage per graph, a forecast and the plan limit (organization admins).
+- **`get_check_impact`**: Schema checks and the operations their breaking changes affect.
+
+### Prompts and resources
+
+The server offers prompts for common investigations, which your assistant can run step by step: `investigate-slow-operation`, `incident-triage`, `deprecation-cleanup-report`, `unused-schema-report`, `client-adoption-report`, `release-impact` and `weekly-graph-health`. It also serves a guide to what each number means (`cosmo://analytics/guide`) and the list of datasets with their dimensions and measures (`cosmo://analytics/datasets`).
+
 ## All Available Tools (Reference)
 
 The MCP server exposes several tools that an AI model can utilize:

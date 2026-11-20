@@ -66,6 +66,21 @@ export const envVariables = z
     /**
      * Redis
      */
+    /**
+     * Requests per organization and minute that MCP clients may send to analytics RPCs.
+     */
+    ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE: z
+      .string()
+      .default('120')
+      .transform((val) => Number.parseInt(val)),
+    /**
+     * Rows a query on sampled analytics data (requests, spans, trace search) may plan to read, by EXPLAIN ESTIMATE,
+     * before it is refused with a suggestion to narrow it.
+     */
+    ANALYTICS_QUERY_ROW_BUDGET: z
+      .string()
+      .default('200000000')
+      .transform((val) => Number.parseInt(val)),
     REDIS_HOST: z.string().default('localhost'),
     REDIS_PORT: z
       .string()

@@ -10,6 +10,7 @@ import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
+import type { Redis } from 'ioredis';
 import routes from './routes.js';
 import { withRequestSpans } from './tracing.js';
 import fastifyHealth from './plugins/health.js';
@@ -17,6 +18,8 @@ import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
+import { clickHouseQueryContext } from './clickhouse/queryContext.js';
+import { AnalyticsRateLimiter } from './services/AnalyticsRateLimiter.js';
 import AuthController from './controllers/auth.js';
 import ScimController from './controllers/scim.js';
 import GitHubWebhookController from './controllers/github.js';
@@ -75,6 +78,8 @@ import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composit
 
 export interface BuildConfig {
   logger: LoggerOptions;
+  analyticsMcpRateLimitPerMinute?: number;
+  analyticsQueryRowBudget?: number;
   composition?: {
     minThreads: number;
     maxThreads: number;
@@ -682,6 +687,12 @@ export default async function build(opts: BuildConfig) {
       cdnBaseUrl: opts.cdnBaseUrl,
       lockAdapter: fastify.lockAdapter,
       promptToQueryClient,
+      analyticsRateLimiter: new AnalyticsRateLimiter(
+        fastify.redisForQueue as Redis,
+        opts.analyticsMcpRateLimitPerMinute ?? 120,
+        logger,
+      ),
+      analyticsQueryRowBudget: opts.analyticsQueryRowBudget,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(
@@ -705,6 +716,12 @@ export default async function build(opts: BuildConfig) {
     writeMaxBytes: 32 * 1024 * 1024,
     acceptCompression: [compressionBrotli, compressionGzip],
     interceptors: [
+      // Tags every ClickHouse query of this request and cancels it when the client goes away.
+      (next) => (req) =>
+        clickHouseQueryContext.run(
+          { rpc: req.method.name, client: req.header.get('x-cosmo-client') ?? undefined, signal: req.signal },
+          () => next(req),
+        ),
       (next) => (req) => {
         const parentSpan = req.contextValues?.get({
           id: sentrySpanId,

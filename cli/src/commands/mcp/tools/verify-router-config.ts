@@ -77,7 +77,8 @@ export async function validateRouterConfig(config: string): Promise<ValidationRe
   const valid = validate(parsedConfig);
 
   if (!valid) {
-    console.log(validate.errors);
+    // stderr: stdout carries the MCP protocol.
+    console.error(validate.errors);
     return {
       isValid: false,
       errors: validate.errors,

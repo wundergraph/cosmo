@@ -14,6 +14,7 @@ import { pino } from 'pino';
 import postgres from 'postgres';
 import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest';
 import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
+import type { Redis } from 'ioredis';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import ScimController from '../src/core/controllers/scim.js';
@@ -27,6 +28,7 @@ import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
 import routes from '../src/core/routes.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
+import { AnalyticsRateLimiter } from '../src/core/services/AnalyticsRateLimiter.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
@@ -87,6 +89,7 @@ export const SetupTest = async function ({
   setupBilling,
   organizationId,
   enableSplitConfigLoadingByDefault = true,
+  analyticsRateLimitPerMinute,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -98,6 +101,7 @@ export const SetupTest = async function ({
   };
   organizationId?: UUID;
   enableSplitConfigLoadingByDefault?: boolean;
+  analyticsRateLimitPerMinute?: number;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -190,6 +194,10 @@ export const SetupTest = async function ({
         deleteBatchPublishJobDetailsQueue,
       },
       lockAdapter: server.lockAdapter,
+      analyticsRateLimiter:
+        analyticsRateLimitPerMinute === undefined
+          ? undefined
+          : new AnalyticsRateLimiter(server.redisForQueue as Redis, analyticsRateLimitPerMinute, log),
     }),
   });
 

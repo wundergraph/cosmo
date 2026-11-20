@@ -10,9 +10,10 @@ import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { UnauthorizedError, OutOfRetentionError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getDashboardAnalyticsView(
   opts: RouterOptions,
@@ -32,8 +33,11 @@ export function getDashboardAnalyticsView(
         subgraphMetrics: [],
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -62,7 +66,7 @@ export function getDashboardAnalyticsView(
       featureId: 'analytics-retention',
     });
 
-    const { range, dateRange } = validateDateRanges({
+    const { range, dateRange, outOfRetention } = validateDateRanges({
       limit: analyticsRetention?.limit ?? 7,
       range: req.range,
       dateRange:
@@ -73,6 +77,9 @@ export function getDashboardAnalyticsView(
             }
           : undefined,
     });
+    if (outOfRetention) {
+      throw new OutOfRetentionError();
+    }
 
     const timeFilters = parseTimeFilters(dateRange, range);
 

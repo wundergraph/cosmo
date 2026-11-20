@@ -1038,6 +1038,34 @@ export const getGraphFieldUsage = PlatformService.method.getGraphFieldUsage;
 export const getOrganizationRequestsCount = PlatformService.method.getOrganizationRequestsCount;
 
 /**
+ * GetAnalyticsCapabilities returns what the caller can query: retention per data family, sampling and limits.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsCapabilities
+ */
+export const getAnalyticsCapabilities = PlatformService.method.getAnalyticsCapabilities;
+
+/**
+ * SearchTraces finds sampled traces by request filters and conditions on their spans.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.SearchTraces
+ */
+export const searchTraces = PlatformService.method.searchTraces;
+
+/**
+ * QueryAnalytics answers a question over one analytics dataset (see the catalog in @wundergraph/cosmo-shared).
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.QueryAnalytics
+ */
+export const queryAnalytics = PlatformService.method.queryAnalytics;
+
+/**
+ * GetAnalyticsDimensionValues lists the values of a dimension with counts, including span attribute keys.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsDimensionValues
+ */
+export const getAnalyticsDimensionValues = PlatformService.method.getAnalyticsDimensionValues;
+
+/**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganization
  */
 export const createOrganization = PlatformService.method.createOrganization;

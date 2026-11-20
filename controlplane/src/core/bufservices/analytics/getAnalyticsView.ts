@@ -13,6 +13,7 @@ import type { RouterOptions } from '../../routes.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getAnalyticsView(
   opts: RouterOptions,
@@ -29,8 +30,11 @@ export function getAnalyticsView(
         },
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -55,15 +59,26 @@ export function getAnalyticsView(
       featureId: 'tracing-retention',
     });
 
-    const { range, dateRange } = validateDateRanges({
+    const { range, dateRange, outOfRetention } = validateDateRanges({
       limit: tracingRetention?.limit ?? 7,
       range: req.config?.range,
       dateRange: req.config?.dateRange,
     });
 
+    if (outOfRetention) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        view: { columns: [], rows: [], filters: [], pages: 0 },
+      };
+    }
+
     if (req.config) {
       if (range) {
         req.config.range = range;
+      } else if (!dateRange) {
+        req.config.range = 24;
       }
       if (dateRange) {
         req.config.dateRange = create(DateRangeProtoSchema, {

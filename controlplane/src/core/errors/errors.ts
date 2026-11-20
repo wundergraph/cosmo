@@ -42,6 +42,26 @@ export class LoginMethodNotAllowedError extends AuthenticationError {
   }
 }
 
+/**
+ * Thrown when an organization exceeds the analytics request budget for MCP clients. A public error, so the caller
+ * gets `ERR_RATE_LIMITED` with a retry hint instead of a failed request.
+ */
+export class RateLimitedError extends PublicError {
+  constructor(public readonly retryAfterSeconds: number) {
+    super(EnumStatusCode.ERR_RATE_LIMITED, `Rate limited, retry in ${retryAfterSeconds}s`);
+  }
+}
+
+/**
+ * A requested analytics window that lies entirely outside the plan's retention, or whose start is after its end.
+ * Rejected so the caller never gets data for a different window than the one it asked for.
+ */
+export class OutOfRetentionError extends PublicError {
+  constructor() {
+    super(EnumStatusCode.ERR_BAD_REQUEST, "The requested window is outside your plan's retention.");
+  }
+}
+
 export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }

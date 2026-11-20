@@ -10,7 +10,7 @@ import {
 import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
-import { formatISO, subHours } from 'date-fns';
+import { subHours } from 'date-fns';
 import { inArray, SQL } from 'drizzle-orm';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { FastifyBaseLogger } from 'fastify';
@@ -40,6 +40,7 @@ import {
   SocialLoginProvider,
   SubgraphDTO,
 } from '../types/index.js';
+import { setQueryContextActor } from './clickhouse/queryContext.js';
 import { paginationDefaults } from './constants.js';
 import {
   isAuthenticationError,
@@ -157,6 +158,10 @@ export const enrichLogger = (
   });
 
   ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+
+  if (authContext.organizationId) {
+    setQueryContextActor(authContext.organizationId, authContext.userId);
+  }
 
   Sentry.setUser({
     id: authContext.userId,
@@ -432,39 +437,44 @@ export const validatePlaygroundHeaders = (
   return errors.length === 0 ? { success: true } : { success: false, errors };
 };
 
+const toUtcIso = (date: Date) => date.toISOString().replace('.000Z', 'Z');
+
+/**
+ * Clamps a requested window to the plan's retention `limit` (days). `range` is in hours.
+ * A window that lies entirely outside retention, or whose start is after its end, is reported as
+ * `outOfRetention` so callers return no data instead of falling back to an unclamped window.
+ */
 export const validateDateRanges = ({
   limit,
   range,
   dateRange,
+  now = new Date(),
 }: {
   limit: number;
   range?: number;
   dateRange?: DateRange;
-}): { range: number | undefined; dateRange: DateRange | undefined } => {
-  let validatedRange: number | undefined = range;
-  const validatedDateRange: DateRange | undefined = dateRange;
+  now?: Date;
+}): { range: number | undefined; dateRange: DateRange | undefined; outOfRetention: boolean } => {
+  const validatedRange = range && range > limit * 24 ? limit * 24 : range;
 
-  if (validatedRange && validatedRange > limit * 24) {
-    validatedRange = limit * 24;
+  if (!dateRange) {
+    return { range: validatedRange, dateRange: undefined, outOfRetention: false };
   }
 
-  if (validatedDateRange) {
-    const startDate = new Date(validatedDateRange.start);
-    const endDate = new Date(validatedDateRange.end);
-    if (startDate > endDate || endDate < subHours(new Date(), limit * 24)) {
-      return {
-        range: validatedRange,
-        dateRange: undefined,
-      };
-    }
-    if (startDate < subHours(new Date(), limit * 24)) {
-      validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
-    }
+  const windowStart = subHours(now, limit * 24);
+  const startDate = new Date(dateRange.start);
+  const endDate = new Date(dateRange.end);
+  if (startDate > endDate || endDate < windowStart) {
+    return { range: validatedRange, dateRange: undefined, outOfRetention: true };
   }
 
   return {
     range: validatedRange,
-    dateRange: validatedDateRange,
+    dateRange: {
+      start: startDate < windowStart ? toUtcIso(windowStart) : dateRange.start,
+      end: endDate > now ? toUtcIso(now) : dateRange.end,
+    },
+    outOfRetention: false,
   };
 };
 

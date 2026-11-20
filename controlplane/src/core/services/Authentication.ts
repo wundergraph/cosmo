@@ -10,7 +10,7 @@ import { NamespaceLoginMethodRepository } from '../repositories/NamespaceLoginMe
 import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
-import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
+import ApiKeyAuthenticator, { type AuthenticateOptions } from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 
@@ -18,7 +18,7 @@ import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 
 export interface Authenticator {
-  authenticate(headers: Headers): Promise<AuthContext>;
+  authenticate(headers: Headers, options?: AuthenticateOptions): Promise<AuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
   getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
@@ -46,7 +46,7 @@ export class Authentication implements Authenticator {
    * the `cosmo-org-id` header to be set and will validate that the user is a member of the organization.
    * If none of these are found, an error is thrown.
    */
-  public async authenticate(headers: Headers): Promise<AuthContext> {
+  public async authenticate(headers: Headers, options?: AuthenticateOptions): Promise<AuthContext> {
     try {
       /**
        * API keys are authenticated first.
@@ -56,7 +56,7 @@ export class Authentication implements Authenticator {
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
         if (token.toLowerCase().startsWith('cosmo')) {
-          return await this.keyAuth.authenticate(token);
+          return await this.keyAuth.authenticate(token, options);
         }
         const organizationSlug = headers.get('cosmo-org-slug');
         return await this.accessTokenAuth.authenticate(token, organizationSlug);

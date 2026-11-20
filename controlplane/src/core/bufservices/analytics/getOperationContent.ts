@@ -8,7 +8,9 @@ import type { RouterOptions } from '../../routes.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 // Get operation content by hash
 // TODO: Specify daterange to improve clickhouse performance
@@ -20,8 +22,11 @@ export function getOperationContent(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationContentResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     if (!opts.chClient) {
       return {
@@ -46,6 +51,42 @@ export function getOperationContent(
 
     if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
       throw new UnauthorizedError();
+    }
+
+    // Documents are kept for 90 days and written at most once per 30 days, so their own timestamp can't bound
+    // retention. Only return a document whose operation had traffic inside the plan's analytics retention.
+    // The traffic is read from GraphQL metrics, the pipeline that also stores the documents, so routers that
+    // don't export OTEL metrics still find them. Its rows are daily, so the boundary rounds down to the day.
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const analyticsRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'analytics-retention',
+    });
+    const traffic = await opts.chClient.queryPromise(
+      `
+      SELECT 1 AS hasTraffic
+      FROM ${opts.chClient.database}.gql_metrics_schema_usage_lite_1d_90d
+      WHERE OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OperationHash = {operationHash:String}
+      AND Timestamp >= toStartOfDay(now() - toIntervalDay({retentionDays:UInt32}))
+      LIMIT 1
+    `,
+      {
+        organizationId: authContext.organizationId,
+        federatedGraphId: graph.id,
+        operationHash: req.hash,
+        retentionDays: analyticsRetention?.limit ?? 7,
+      },
+    );
+    if (!Array.isArray(traffic) || traffic.length === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: "Operation not found within your plan's retention.",
+        },
+        operationContent: '',
+      };
     }
 
     const query = `

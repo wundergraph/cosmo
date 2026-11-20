@@ -1326,17 +1326,83 @@ message Span {
   string statusCode = 10;
   string statusMessage = 11;
   map<string, string> attributes = 12;
+  // Every attribute stored on the span, keyed by its OpenTelemetry name.
+  map<string, string> raw_attributes = 13;
+  // Span events, e.g. exceptions and downstream subgraph errors. Empty for spans stored before events were kept.
+  repeated SpanEvent events = 14;
+  // Resource attributes of the process that emitted the span (host, version, instance, pid).
+  map<string, string> resource_attributes = 15;
+}
+
+message SpanEvent {
+  // Nanoseconds since the epoch.
+  int64 timestamp = 1;
+  string name = 2;
+  map<string, string> attributes = 3;
 }
 
 message GetTraceRequest {
   string id = 1;
+  // Return this span and its descendants. Empty: the whole trace.
   string span_id = 2;
   string federated_graph_id = 3;
+  // Default 100 with span_id, 1000 for the whole trace; at most 2000.
+  optional int32 max_spans = 4;
+  bool include_summary = 5;
+}
+
+message TracePhase {
+  string name = 1;
+  int32 count = 2;
+  int64 total_duration_ns = 3;
+}
+
+message TraceSubgraphTime {
+  string subgraph_name = 1;
+  int32 fetches = 2;
+  int64 total_duration_ns = 3;
+  int64 max_duration_ns = 4;
+  // Time of this subgraph's fetches that lies on the critical path.
+  int64 critical_path_ns = 5;
+  int32 errors = 6;
+}
+
+message TraceError {
+  string span_id = 1;
+  string span_name = 2;
+  string subgraph_name = 3;
+  // "status" | "exception" | "downstream"
+  string kind = 4;
+  string message = 5;
+  string code = 6;
+}
+
+message TraceCriticalPathSegment {
+  string span_id = 1;
+  string span_name = 2;
+  string subgraph_name = 3;
+  // Time on the critical path spent in this span itself, not in its children.
+  int64 self_duration_ns = 4;
+}
+
+message TraceSummary {
+  int64 duration_ns = 1;
+  int32 span_count = 2;
+  repeated TracePhase phases = 3;
+  repeated TraceSubgraphTime subgraphs = 4;
+  repeated TraceError errors = 5;
+  repeated TraceCriticalPathSegment critical_path = 6;
+  // False when the spans were stored before events and resource attributes were kept.
+  bool events_available = 7;
 }
 
 message GetTraceResponse {
   Response response = 1;
   repeated Span spans = 2;
+  TraceSummary summary = 3;
+  // More spans exist than max_spans.
+  bool truncated = 4;
+  int32 total_spans = 5;
 }
 
 message WhoAmIRequest {}
@@ -2034,11 +2100,272 @@ message UpdateIDPMappersResponse {
   Response response = 1;
 }
 
-message GetOrganizationRequestsCountRequest {}
+message GetAnalyticsCapabilitiesRequest {}
+
+message AnalyticsRetention {
+  // "tracing" | "analytics" | "schema_usage" | "request_volume"
+  string family = 1;
+  // Days the organization's plan allows.
+  int32 plan_days = 2;
+  // Days the data is stored.
+  int32 storage_ttl_days = 3;
+  // Days that can actually be queried: the smaller of the two.
+  int32 effective_days = 4;
+}
+
+message GetAnalyticsCapabilitiesResponse {
+  Response response = 1;
+  // Server time (ISO 8601), so clients resolve relative windows like "last 24h" against the server's clock.
+  string now = 2;
+  // "user" | "api_key"
+  string principal_type = 3;
+  bool is_organization_admin = 4;
+  // False for API keys, which bypass namespace login-method restrictions.
+  bool namespace_login_restrictions_apply = 5;
+  repeated AnalyticsRetention retention = 6;
+  // The plan's ceiling for trace sampling. Routers may sample less.
+  double trace_sampling_rate_limit = 7;
+  bool analytics_enabled = 8;
+  // Requests per month the plan includes. Only returned to organization admins.
+  optional int64 monthly_request_limit = 9;
+  repeated string warnings = 10;
+  // Datasets QueryAnalytics can read for this organization (the catalog is in @wundergraph/cosmo-shared).
+  repeated string datasets = 11;
+}
+
+// A federated graph by name, for the analytics RPCs that take one or several graphs.
+message AnalyticsGraphRef {
+  string name = 1;
+  string namespace = 2;
+}
+
+// A window: either the last `range_hours` hours, or an ISO 8601 `start` and `end`.
+message AnalyticsTimeWindow {
+  optional int32 range_hours = 1;
+  optional string start = 2;
+  optional string end = 3;
+}
+
+enum AnalyticsOperator {
+  ANALYTICS_OPERATOR_UNSPECIFIED = 0;
+  ANALYTICS_OPERATOR_EQ = 1;
+  ANALYTICS_OPERATOR_NEQ = 2;
+  ANALYTICS_OPERATOR_IN = 3;
+  ANALYTICS_OPERATOR_NOT_IN = 4;
+  ANALYTICS_OPERATOR_GT = 5;
+  ANALYTICS_OPERATOR_GTE = 6;
+  ANALYTICS_OPERATOR_LT = 7;
+  ANALYTICS_OPERATOR_LTE = 8;
+  ANALYTICS_OPERATOR_CONTAINS = 9;
+  ANALYTICS_OPERATOR_STARTS_WITH = 10;
+  // Attribute dimensions only: the attribute is present.
+  ANALYTICS_OPERATOR_EXISTS = 11;
+}
+
+// A row filter on a dataset dimension. `field` is a dimension name or `attr:<key>`; `values` are strings typed by
+// the dimension (`in`/`not_in` take several, `exists` none).
+message AnalyticsPredicate {
+  string field = 1;
+  AnalyticsOperator operator = 2;
+  repeated string values = 3;
+}
+
+// A filter on an aggregated measure (SQL HAVING).
+message AnalyticsMeasurePredicate {
+  string measure = 1;
+  AnalyticsOperator operator = 2;
+  double value = 3;
+}
+
+message AnalyticsSort {
+  // A dimension or measure in the query.
+  string field = 1;
+  bool desc = 2;
+}
+
+// Compare the window with a baseline: the previous period of the same length, or a custom window.
+message AnalyticsCompare {
+  bool previous_period = 1;
+  optional string baseline_start = 2;
+  optional string baseline_end = 3;
+  // Drop rows whose first requested measure is below this in both windows.
+  optional double min_volume = 4;
+}
+
+// Provenance and caveats of an analytics result.
+message AnalyticsQueryMeta {
+  string dataset = 1;
+  // "complete" | "sampled"
+  string completeness = 2;
+  DateRange requested_window = 3;
+  DateRange effective_window = 4;
+  string granularity = 5;
+  string now = 6;
+  // Sampled datasets: sampled operation executions ÷ metric requests for the graphs and window.
+  optional double observed_sampling_ratio = 7;
+  optional double sampling_rate_limit = 8;
+  bool approximate = 9;
+  // More rows exist than were returned.
+  bool truncated = 10;
+  optional string next_cursor = 11;
+  repeated string warnings = 12;
+  repeated AnalyticsGraphRef graphs = 13;
+  // Tables read, for `explain`.
+  repeated string tables = 14;
+  // Filters applied, in words, for `explain`.
+  repeated string applied_filters = 15;
+  optional DateRange baseline_window = 16;
+}
+
+message QueryAnalyticsRequest {
+  repeated AnalyticsGraphRef graphs = 1;
+  // Every graph the caller can read.
+  bool all_readable_graphs = 2;
+  string dataset = 3;
+  repeated string dimensions = 4;
+  repeated string measures = 5;
+  repeated AnalyticsPredicate filters = 6;
+  repeated AnalyticsMeasurePredicate having = 7;
+  // e.g. "5m", "1h", "1d"; must be one of the dataset's buckets.
+  optional string time_bucket = 8;
+  AnalyticsTimeWindow window = 9;
+  optional AnalyticsCompare compare = 10;
+  repeated AnalyticsSort order_by = 11;
+  // At most 1000; default 20.
+  int32 limit = 12;
+  optional string cursor = 13;
+  // Return the provenance in `meta` along with the rows.
+  bool explain = 14;
+  // Add zero rows for inventory-backed dimensions (graph, subgraph, feature flag) with no traffic.
+  bool include_inactive = 15;
+}
+
+message QueryAnalyticsResponse {
+  Response response = 1;
+  repeated AnalyticsViewRow rows = 2;
+  // Column order of the rows.
+  repeated string columns = 3;
+  AnalyticsQueryMeta meta = 4;
+}
+
+message GetAnalyticsDimensionValuesRequest {
+  repeated AnalyticsGraphRef graphs = 1;
+  bool all_readable_graphs = 2;
+  string dataset = 3;
+  // A groupable dimension, or "attributeKeys" for the span attribute keys of the requests and spans datasets.
+  string dimension = 4;
+  optional string prefix = 5;
+  repeated AnalyticsPredicate filters = 6;
+  AnalyticsTimeWindow window = 7;
+  // At most 1000; default 50.
+  int32 limit = 8;
+}
+
+message AnalyticsDimensionValue {
+  string value = 1;
+  // Rows (or, for metric datasets, the dataset's count measure) with this value.
+  int64 count = 2;
+}
+
+message GetAnalyticsDimensionValuesResponse {
+  Response response = 1;
+  repeated AnalyticsDimensionValue values = 2;
+  AnalyticsQueryMeta meta = 3;
+}
+
+// A condition on the spans of a trace. A trace matches when at least one of its spans matches every field set here.
+message SpanCondition {
+  optional string span_name = 1;
+  // Match span names that start with `span_name`.
+  bool span_name_prefix = 2;
+  optional string subgraph_name = 3;
+  optional int64 min_duration_ns = 4;
+  optional int64 max_duration_ns = 5;
+  optional bool has_error = 6;
+  // Further conditions on the span: fields of the spans dataset, including `attr:<key>`.
+  repeated AnalyticsPredicate attributes = 7;
+}
+
+message SearchTracesRequest {
+  AnalyticsGraphRef graph = 1;
+  AnalyticsTimeWindow window = 2;
+  // Conditions on the request: fields of the requests dataset, including `attr:<key>` on the root span.
+  // operationName and operationHash also match operations inside batched requests.
+  repeated AnalyticsPredicate request_filters = 3;
+  // ANDed: each must match at least one span of the trace.
+  repeated SpanCondition span_conditions = 4;
+  optional int64 min_duration_ns = 5;
+  optional int64 max_duration_ns = 6;
+  optional bool has_error = 7;
+  // "timestamp" (newest first, default) or "duration" (slowest first; with span conditions, the slowest matching span).
+  string sort = 8;
+  // At most 100; default 20.
+  int32 limit = 9;
+  optional string cursor = 10;
+}
+
+message MatchedSpan {
+  string span_id = 1;
+  string span_name = 2;
+  string subgraph_name = 3;
+  int64 duration_ns = 4;
+  // Index of the span condition it matched; -1 for an operation inside a batched request.
+  int32 condition = 5;
+  string operation_name = 6;
+}
+
+message TraceSearchResult {
+  string trace_id = 1;
+  // The router root span.
+  string span_id = 2;
+  string timestamp = 3;
+  int64 duration_ns = 4;
+  string operation_name = 5;
+  string operation_type = 6;
+  string operation_hash = 7;
+  string operation_persisted_id = 8;
+  string client_name = 9;
+  string client_version = 10;
+  string http_status_code = 11;
+  string status_message = 12;
+  bool has_error = 13;
+  repeated MatchedSpan matched_spans = 14;
+  // The sort value: the request duration, or the slowest matching span with span conditions.
+  int64 sort_duration_ns = 15;
+}
+
+message SearchTracesResponse {
+  Response response = 1;
+  repeated TraceSearchResult traces = 2;
+  AnalyticsQueryMeta meta = 3;
+}
+
+message GetOrganizationRequestsCountRequest {
+  // Return a per-month, per-graph history covering this many calendar months, including the current one (1-3).
+  optional int32 months = 1;
+}
+
+message GraphRequestCount {
+  string federated_graph_id = 1;
+  string name = 2;
+  string namespace = 3;
+  int64 count = 4;
+  // True for the remainder: requests of graphs that have since been deleted.
+  bool deleted = 5;
+}
+
+message MonthlyRequestCount {
+  // "YYYY-MM"
+  string month = 1;
+  int64 count = 2;
+  repeated GraphRequestCount graphs = 3;
+}
 
 message GetOrganizationRequestsCountResponse {
   Response response = 1;
+  // Requests in the current calendar month.
   int64 count = 2;
+  repeated MonthlyRequestCount history = 3;
 }
 
 message OrganizationInvite{
@@ -4155,6 +4482,14 @@ service PlatformService {
   }
 
   rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
+  // GetAnalyticsCapabilities returns what the caller can query: retention per data family, sampling and limits.
+  rpc GetAnalyticsCapabilities(GetAnalyticsCapabilitiesRequest) returns (GetAnalyticsCapabilitiesResponse) {}
+  // SearchTraces finds sampled traces by request filters and conditions on their spans.
+  rpc SearchTraces(SearchTracesRequest) returns (SearchTracesResponse) {}
+  // QueryAnalytics answers a question over one analytics dataset (see the catalog in @wundergraph/cosmo-shared).
+  rpc QueryAnalytics(QueryAnalyticsRequest) returns (QueryAnalyticsResponse) {}
+  // GetAnalyticsDimensionValues lists the values of a dimension with counts, including span attribute keys.
+  rpc GetAnalyticsDimensionValues(GetAnalyticsDimensionValuesRequest) returns (GetAnalyticsDimensionValuesResponse) {}
 
   rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
 

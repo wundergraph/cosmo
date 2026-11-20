@@ -14,6 +14,7 @@ import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
 import { ClickHouseClient } from './clickhouse/index.js';
 import { Authenticator } from './services/Authentication.js';
+import type { AnalyticsRateLimiter } from './services/AnalyticsRateLimiter.js';
 import Keycloak from './services/Keycloak.js';
 import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import { BlobStorage } from './blobstorage/index.js';
@@ -60,6 +61,9 @@ export interface RouterOptions {
   stripeSecretKey?: string;
   cdnBaseUrl: string;
   lockAdapter: Redlock;
+  analyticsRateLimiter?: AnalyticsRateLimiter;
+  /** Rows a query on sampled analytics data may plan to read before it is refused. */
+  analyticsQueryRowBudget?: number;
   promptToQueryClient?: Client<typeof PromptToQueryService>;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {

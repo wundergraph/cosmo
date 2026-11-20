@@ -1,4 +1,5 @@
 import { IncomingMessage } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import axios, { AxiosError, AxiosRequestConfig, isAxiosError } from 'axios';
 import Pick from 'stream-json/filters/Pick.js';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
@@ -10,6 +11,8 @@ import { Observable, Subscriber } from 'rxjs';
 import { traced } from '../../tracing.js';
 import { ClickHouseUnavailableError } from '../../errors/errors.js';
 import { pollWithBackoff } from '../../util/timers.js';
+import { serializeClickHouseParam, type ClickHouseParamValue } from '../params.js';
+import { clickHouseQueryContext } from '../queryContext.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
 import { ClickHouseClientOptions } from './interfaces/index.js';
@@ -155,7 +158,7 @@ export class ClickHouseClient {
    */
   private _getRequestOptions(
     query: string,
-    queryParams: Record<string, string | number | boolean> = {},
+    queryParams: Record<string, ClickHouseParamValue> = {},
     withoutFormat = false,
   ): AxiosRequestConfig<any> {
     if (!withoutFormat) {
@@ -163,11 +166,24 @@ export class ClickHouseClient {
     }
 
     const rawParams: Record<string, string> = {
-      ...Object.fromEntries(Object.entries(queryParams).map(([key, value]) => [`param_${key}`, value.toString()])),
+      ...Object.fromEntries(
+        Object.entries(queryParams).map(([key, value]) => [`param_${key}`, serializeClickHouseParam(value)]),
+      ),
     };
 
     if (this.options?.httpConfig?.compression !== ClickHouseCompressionMethod.NONE) {
       rawParams.enable_http_compression = '1';
+    }
+
+    const queryContext = clickHouseQueryContext.getStore();
+    if (queryContext) {
+      rawParams.log_comment = JSON.stringify({
+        rpc: queryContext.rpc,
+        organizationId: queryContext.organizationId,
+        actorId: queryContext.actorId,
+        client: queryContext.client,
+      });
+      rawParams.query_id = `${queryContext.rpc}-${randomUUID()}`;
     }
 
     const params = new URLSearchParams(rawParams);
@@ -214,12 +230,13 @@ export class ClickHouseClient {
    * Promise based query
    * @private
    */
-  private _queryPromise<T = string>(query: string, params?: Record<string, string | number | boolean>) {
+  private _queryPromise<T = string>(query: string, params?: Record<string, ClickHouseParamValue>) {
     return new Promise<T extends string ? string | T[] : T[]>((resolve, reject) => {
       axios
         .request({
           ...this._getRequestOptions(query, params),
           responseType: 'text',
+          signal: clickHouseQueryContext.getStore()?.signal,
         })
         .then((response) => response.data)
         .then((data) => {
@@ -249,7 +266,7 @@ export class ClickHouseClient {
    * Observable based query
    * @private
    */
-  private _queryObservable<T = any>(query: string, params?: Record<string, string | number>) {
+  private _queryObservable<T = any>(query: string, params?: Record<string, ClickHouseParamValue>) {
     return new Observable<T | string>((subscriber) => {
       axios
         .request(this._getRequestOptions(query, params))
@@ -302,7 +319,7 @@ export class ClickHouseClient {
   /**
    * Observable based query
    */
-  public query<T = any>(query: string, params?: Record<string, string | number>) {
+  public query<T = any>(query: string, params?: Record<string, ClickHouseParamValue>) {
     this._validateQuery<T>(query);
 
     return this._queryObservable<T>(query, params);
@@ -311,7 +328,7 @@ export class ClickHouseClient {
   /**
    * Promise based query
    */
-  public queryPromise<T = any>(query: string, params?: Record<string, string | number | boolean>) {
+  public queryPromise<T = any>(query: string, params?: Record<string, ClickHouseParamValue>) {
     this._validateQuery<T>(query);
 
     return this._queryPromise<T>(query, params);
@@ -325,7 +342,7 @@ export class ClickHouseClient {
   public async queryPromiseWithDefault<T = any>(
     query: string,
     options: {
-      params?: Record<string, string | number | boolean>;
+      params?: Record<string, ClickHouseParamValue>;
       defaultValue?: T extends string ? string | T[] : T[];
     },
   ) {
@@ -352,6 +369,15 @@ export class ClickHouseClient {
 
       throw err;
     }
+  }
+
+  /**
+   * Rows ClickHouse expects to read for a query, from `EXPLAIN ESTIMATE` (granule-level, after primary-key and
+   * partition pruning). Used to refuse queries that would scan more than a budget.
+   */
+  public async estimateRows(query: string, params?: Record<string, ClickHouseParamValue>): Promise<number> {
+    const rows = await this.queryPromise<{ rows: string | number }>(`EXPLAIN ESTIMATE ${query}`, params);
+    return Array.isArray(rows) ? rows.reduce((sum, row) => sum + Number(row.rows), 0) : 0;
   }
 
   /**
