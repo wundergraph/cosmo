@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { createCredentials } from '../src/index.js';
+import { createCredentials, failure } from '../src/index.js';
 
 const request = { audience: 'hub', gitlabTokenVariable: 'HUB_ID_TOKEN' };
+const target = new URL('https://hub.example/mcp');
 
 describe('createCredentials', () => {
   test('GitHub Actions: requests an OIDC token for the audience', async () => {
@@ -19,7 +20,7 @@ describe('createCredentials', () => {
       },
     });
 
-    expect(await credentials.resolveBearer(request)).toEqual({
+    expect(await credentials.resolveBearer(request, target)).toEqual({
       success: true,
       data: { token: 'gh-oidc', kind: 'ci-oidc' },
     });
@@ -32,7 +33,7 @@ describe('createCredentials', () => {
       loginToken: () => Promise.resolve(undefined),
     });
 
-    expect(await credentials.resolveBearer(request)).toEqual({
+    expect(await credentials.resolveBearer(request, target)).toEqual({
       success: true,
       data: { token: 'gl-oidc', kind: 'ci-oidc' },
     });
@@ -41,7 +42,7 @@ describe('createCredentials', () => {
   test('locally falls back to the wgc auth login token', async () => {
     const credentials = createCredentials({ env: {}, loginToken: () => Promise.resolve('login') });
 
-    expect(await credentials.resolveBearer(request)).toEqual({
+    expect(await credentials.resolveBearer(request, target)).toEqual({
       success: true,
       data: { token: 'login', kind: 'login' },
     });
@@ -53,11 +54,29 @@ describe('createCredentials', () => {
       loginToken: () => Promise.resolve(undefined),
     });
 
-    const result = await credentials.resolveBearer(request);
+    const result = await credentials.resolveBearer(request, target);
 
     expect(result.success).toBe(false);
     expect(result.success ? '' : result.errors[0].message).toBe(
       'No OIDC token is available. Grant the job `permissions: id-token: write`.',
     );
+  });
+
+  test('withholds the token when authorizeTarget refuses the target', async () => {
+    const asked: string[] = [];
+    const credentials = createCredentials({
+      env: {},
+      loginToken: () => Promise.resolve('wg_orbstack_pat_s3cret'),
+      authorizeTarget: (token, to) => {
+        asked.push(`${token} ${to.href}`);
+        return Promise.resolve(failure('not this instance'));
+      },
+    });
+
+    expect(await credentials.resolveBearer(request, target)).toEqual({
+      success: false,
+      errors: [new Error('not this instance')],
+    });
+    expect(asked).toEqual(['wg_orbstack_pat_s3cret https://hub.example/mcp']);
   });
 });

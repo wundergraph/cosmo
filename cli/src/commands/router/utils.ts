@@ -4,7 +4,9 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
 import { dirname, join } from 'pathe';
+import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import { config, getBaseHeaders } from '../../core/config.js';
+import { instanceRegistry } from '../../core/instances.js';
 import { GraphToken } from '../auth/utils.js';
 import { makeSignature, safeCompare } from '../../core/signature.js';
 import type { FetchRouterConfigResult } from './types/types.js';
@@ -136,6 +138,12 @@ export async function writeFeatureFlagConfigToFile(
 }
 
 async function fetchFileContentFromCdn(url: URL, token: string, graphSignKey?: string): Promise<string> {
+  const allowed = await instanceRegistry.authorize(token, url);
+  if (!allowed.success) {
+    const { message, remediation } = toFailure(allowed);
+    throw new Error(pc.red([message, remediation].filter(Boolean).join('\n')));
+  }
+
   const headers = new Headers();
   headers.append('Content-Type', 'application/json; charset=UTF-8');
   headers.append('Authorization', 'Bearer ' + token);

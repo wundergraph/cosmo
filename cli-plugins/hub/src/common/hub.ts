@@ -7,5 +7,6 @@ export const connectHub = (context: PluginContext, audience: string): HubClient 
   createHubClient({
     baseUrl: context.endpoints.hubUrl,
     clientVersion: context.cliVersion,
-    bearer: () => context.credentials.resolveBearer({ audience, gitlabTokenVariable: hubGitlabTokenVariable }),
+    bearer: (target) =>
+      context.credentials.resolveBearer({ audience, gitlabTokenVariable: hubGitlabTokenVariable }, target),
   });

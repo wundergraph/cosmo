@@ -16,8 +16,11 @@ export interface BearerRequest {
 }
 
 export interface Credentials {
-  /** The CI job's OIDC token when running in GitHub Actions or GitLab CI, else the `wgc auth login` token. */
-  resolveBearer(request: BearerRequest): Promise<Result<Bearer>>;
+  /**
+   * The CI job's OIDC token when running in GitHub Actions or GitLab CI, else the `wgc auth login` token,
+   * once it may be sent to `target`.
+   */
+  resolveBearer(request: BearerRequest, target: URL): Promise<Result<Bearer>>;
   /** The CI job's OIDC token, or undefined outside a CI job that offers one. */
   ciOidcToken(request: BearerRequest): Promise<Result<string | undefined>>;
 }
@@ -27,11 +30,14 @@ const githubTokenResponse = z.object({ value: z.string().min(1) });
 export const createCredentials = ({
   env,
   loginToken,
+  authorizeTarget = () => Promise.resolve(ok(undefined)),
   fetchImpl = fetch,
 }: {
   env: NodeJS.ProcessEnv;
   /** The current `wgc auth login` access token, refreshed when needed. */
   loginToken: () => Promise<string | undefined>;
+  /** Fails when `token` must not be sent to `target`. */
+  authorizeTarget?: (token: string, target: URL) => Promise<Result<void>>;
   fetchImpl?: typeof fetch;
 }): Credentials => {
   const ciOidcToken = async ({ audience, gitlabTokenVariable }: BearerRequest): Promise<Result<string | undefined>> => {
@@ -59,34 +65,46 @@ export const createCredentials = ({
     return ok(undefined);
   };
 
+  const findBearer = async (request: BearerRequest): Promise<Result<Bearer>> => {
+    const ci = await ciOidcToken(request);
+    if (!ci.success) {
+      return ci;
+    }
+    if (ci.data) {
+      return ok({ token: ci.data, kind: 'ci-oidc' });
+    }
+
+    const token = await loginToken();
+    if (token) {
+      return ok({ token, kind: 'login' });
+    }
+
+    if (env.GITHUB_ACTIONS) {
+      return failure('No OIDC token is available. Grant the job `permissions: id-token: write`.');
+    }
+    if (env.GITLAB_CI) {
+      return failure(`No OIDC token is available. Add an \`id_tokens\` entry named ${request.gitlabTokenVariable}.`);
+    }
+    return failWith({
+      kind: 'unauthenticated',
+      message: 'Not signed in.',
+      remediation: 'Run `wgc auth login` first.',
+      next: ['wgc auth login'],
+    });
+  };
+
   return {
     ciOidcToken,
-    async resolveBearer(request) {
-      const ci = await ciOidcToken(request);
-      if (!ci.success) {
-        return ci;
+    async resolveBearer(request, target) {
+      const bearer = await findBearer(request);
+      if (!bearer.success) {
+        return bearer;
       }
-      if (ci.data) {
-        return ok({ token: ci.data, kind: 'ci-oidc' });
+      const allowed = await authorizeTarget(bearer.data.token, target);
+      if (!allowed.success) {
+        return allowed;
       }
-
-      const token = await loginToken();
-      if (token) {
-        return ok({ token, kind: 'login' });
-      }
-
-      if (env.GITHUB_ACTIONS) {
-        return failure('No OIDC token is available. Grant the job `permissions: id-token: write`.');
-      }
-      if (env.GITLAB_CI) {
-        return failure(`No OIDC token is available. Add an \`id_tokens\` entry named ${request.gitlabTokenVariable}.`);
-      }
-      return failWith({
-        kind: 'unauthenticated',
-        message: 'Not signed in.',
-        remediation: 'Run `wgc auth login` first.',
-        next: ['wgc auth login'],
-      });
+      return bearer;
     },
   };
 };

@@ -107,7 +107,7 @@ export const createHubClient = ({
   fetchImpl = fetch,
 }: {
   baseUrl: string;
-  bearer: () => Promise<Result<Bearer>>;
+  bearer: (target: URL) => Promise<Result<Bearer>>;
   clientVersion: string;
   fetchImpl?: typeof fetch;
 }): HubClient => {
@@ -121,7 +121,8 @@ export const createHubClient = ({
     sessionId: string | undefined,
     signal?: AbortSignal,
   ): Promise<Result<{ response: Response; text: string }>> => {
-    const credentials = await bearer();
+    const url = endpoint(path);
+    const credentials = await bearer(url);
     if (!credentials.success) {
       return credentials;
     }
@@ -138,7 +139,7 @@ export const createHubClient = ({
 
     let response: Response;
     try {
-      response = await fetchImpl(endpoint(path), { method: 'POST', headers, body: JSON.stringify(body), signal });
+      response = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(body), signal });
     } catch (error) {
       return failure(`Could not reach Hub at ${baseUrl}.`, error as Error);
     }
