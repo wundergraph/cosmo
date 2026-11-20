@@ -32,12 +32,24 @@ processors:
 
 exporters:
   clickhouse:
-    endpoint: ${CLICKHOUSE_ENDPOINT}
+    endpoint: ${env:CLICKHOUSE_ENDPOINT}
     timeout: 10s
     database: cosmo
+    # The exporter creates these tables. The ClickHouse migrations in controlplane/clickhouse
+    # read from them, so keep the names in sync.
     traces_table_name: otel_traces
-    metrics_table_name: otel_metrics
-    ttl_days: 30
+    metrics_tables:
+      gauge:
+        name: otel_metrics_gauge
+      sum:
+        name: otel_metrics_sum
+      summary:
+        name: otel_metrics_summary
+      histogram:
+        name: otel_metrics_histogram
+      exponential_histogram:
+        name: otel_metrics_exponential_histogram
+    ttl: 720h
     retry_on_failure:
       enabled: true
       initial_interval: 5s
@@ -49,7 +61,7 @@ extensions:
     path: /health
     endpoint: 0.0.0.0:13133
   jwtauthextension:
-    secret: ${OTEL_INGEST_JWT_SECRET}
+    secret: ${env:OTEL_INGEST_JWT_SECRET}
 
 service:
   extensions: [health_check, jwtauthextension]
@@ -66,8 +78,13 @@ service:
       exporters: [clickhouse]
   telemetry:
     metrics:
-      level: ${PROMETHEUS_LEVEL}
-      address: ${PROMETHEUS_LISTEN_ADDR}
+      level: ${env:PROMETHEUS_LEVEL:-none}
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: ${env:PROMETHEUS_HOST:-127.0.0.1}
+                port: ${env:PROMETHEUS_PORT:-8088}
     logs:
       level: INFO
       encoding: json

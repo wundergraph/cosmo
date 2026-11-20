@@ -14,6 +14,50 @@ env:
 
 jobs:
 
+  test_extensions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: otelcollector/extension/jwtauthextension/go.sum
+
+      - uses: ./.github/actions/go-mod-tidy
+        with:
+          working-directory: ./otelcollector/extension/jwtauthextension
+
+      - name: Test jwtauthextension
+        working-directory: ./otelcollector/extension/jwtauthextension
+        run: go test -race ./...
+
+  image_scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        id: docker_build
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: otelcollector
+          dockerfile: otelcollector/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: otelcollector
+          image_description: "Cosmo OTEL Collector"
+          image_platforms: 'linux/amd64'
+          load_Image: 'true'
+          push: 'false'
+
+      - uses: ./.github/actions/image-scan
+        with:
+          name: 'OTEL Collector'
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          image_ref: ${{ steps.docker_build.outputs.image_ref }}
+
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors
@@ -35,7 +79,7 @@ jobs:
 
   build_test:
     runs-on: ubuntu-latest
-    needs: [build_push_image]
+    needs: [test_extensions, image_scan, build_push_image]
     if: always()
     steps:
       - name: 'All tests passed'

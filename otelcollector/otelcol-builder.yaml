@@ -1,30 +1,33 @@
-# available options: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/cmd/otelcontribcol/builder-config.yaml
+# Builder manifest for the OpenTelemetry Collector Builder (ocb).
+# Reference: https://opentelemetry.io/docs/collector/custom-collector/
+#
+# When upgrading, keep every component on the same release and check the
+# clickhouseexporter changelog for schema changes. The exporter creates the
+# otel_* tables that the ClickHouse migrations in controlplane/clickhouse read.
 
 dist:
-  module: github.com/open-telemetry/opentelemetry-collector-contrib/cmd/otelcontribcol
   name: otelcol
-  description: Local OpenTelemetry Collector binary
+  description: Cosmo OpenTelemetry Collector
   output_path: ./otelcol-dev
-  version: 0.103.0-dev
-  otelcol_version: 0.103.0
+  version: 0.165.1
 
 extensions:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.103.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.103.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.103.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.165.1
+  - gomod: github.com/wundergraph/cosmo/otelcollector/extension/jwtauthextension v0.0.0
+    path: ./extension/jwtauthextension
 
 exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.103.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.103.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.103.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.103.0
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.165.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.165.1
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.103.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.165.0
 
 processors:
-  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.103.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.103.0
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.165.1
 
-replaces:
-  - github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension => github.com/wundergraph/opentelemetry-collector-contrib/extension/jwtauthextension ae9abed6a8ffd6b6848df7bba89f89c04c17d40b
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.71.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.71.0
