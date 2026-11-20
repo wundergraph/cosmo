@@ -878,8 +878,9 @@ func (rw *websocketResponseWriter) Reset() {
 }
 
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
-	// Finishing response extensions can overwrite the resolver's field error.
-	// Keep returning it until the resolver starts the replacement error response.
+	// The resolver propagates an extension's own error directly. If the extension
+	// returns nil after a field failed, the resolver tries to close the incomplete
+	// frame. Return the field error on that write.
 	if rw.renderErr != nil {
 		return 0, rw.renderErr
 	}
