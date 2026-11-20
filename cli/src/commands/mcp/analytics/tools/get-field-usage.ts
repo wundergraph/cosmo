@@ -2,8 +2,7 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { parseWindow, windowInput } from '../window.js';
-import { metricsWindow } from './metrics-request.js';
+import { metricsWindow, retainedWindow, windowInput } from '../window.js';
 
 export function registerGetFieldUsageTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -26,7 +25,7 @@ export function registerGetFieldUsageTool(ctx: AnalyticsToolContext) {
       },
     },
     async (input, headers) => {
-      const window = parseWindow(input);
+      const { window, warnings } = await retainedWindow(ctx, input, 'schema_usage');
       const resp = await ctx.client.getFieldUsage(
         {
           graphName: input.graph,
@@ -51,7 +50,7 @@ export function registerGetFieldUsageTool(ctx: AnalyticsToolContext) {
           completeness: 'complete',
           window,
           now: ctx.now().toISOString(),
-          warnings: [],
+          warnings,
         },
       );
     },

@@ -1,12 +1,14 @@
 import type { ClickHouseClient } from '../../../clickhouse/index.js';
 import type { ClickHouseParamValue } from '../../../clickhouse/params.js';
+import { traced } from '../../../tracing.js';
+import { SamplingRatioRepository } from '../SamplingRatioRepository.js';
 import {
   compileQuery,
+  excludesIntrospection,
   tenantPredicate,
   TIME_BUCKET_DIMENSION,
   windowPredicates,
   type CompiledColumn,
-  type CompiledFilter,
   type CompiledQuery,
   type CompileInput,
   type VirtualValues,
@@ -14,7 +16,9 @@ import {
 import type { AnalyticsInventory, CompositionInfo } from './inventory.js';
 import type { PhysicalDataset } from './registry.js';
 import type { ValidatedQuery } from './validate.js';
-import { GRAIN_SECONDS, QueryValidationError, toIso, type Window } from './window.js';
+import { formatRows, rowsOverBudget } from './budget.js';
+import { QueryBudgetError, QueryValidationError } from './errors.js';
+import { grainSecondsOf, parseInstant, toIso, type Window } from './window.js';
 
 export interface EngineGraph {
   id: string;
@@ -44,8 +48,6 @@ export interface EngineResult {
   baselineWindow?: Window;
 }
 
-export class QueryBudgetError extends Error {}
-
 /** Groups fetched at most for queries that sort or merge in memory (compare, includeInactive). */
 const IN_MEMORY_CAP = 5000;
 
@@ -59,6 +61,7 @@ const EXTRA_COLUMNS: Record<string, string[]> = {
   composition: ['compositionCreatedAt', 'compositionFeatureFlag'],
 };
 
+@traced
 export class AnalyticsQueryEngine {
   constructor(
     private client: ClickHouseClient,
@@ -131,7 +134,10 @@ export class AnalyticsQueryEngine {
 
     const sampling =
       query.descriptor.completeness === 'sampled'
-        ? await observedSamplingRatio(this.client, scope, this.options.rowBudget)
+        ? await new SamplingRatioRepository(this.client).observe(
+            { organizationId: scope.organizationId, graphIds: scope.graphs.map((g) => g.id), window: scope.window },
+            this.options.rowBudget,
+          )
         : {};
     if (sampling.warning) {
       warnings.push(sampling.warning);
@@ -238,10 +244,10 @@ export class AnalyticsQueryEngine {
     if (!physical.rowBudget) {
       return;
     }
-    const rows = await this.client.estimateRows(compiled.sql, compiled.params);
-    if (rows > this.options.rowBudget) {
+    const rows = await rowsOverBudget(this.client, compiled, this.options.rowBudget);
+    if (rows !== undefined) {
       throw new QueryBudgetError(
-        `${what === 'query' ? 'This query' : 'The comparison baseline'} would read about ${rows.toLocaleString('en-US')} sampled rows (limit ${this.options.rowBudget.toLocaleString('en-US')}). Narrow the window (e.g. 6h) or add a filter such as operationName or spanName.`,
+        `${what === 'query' ? 'This query' : 'The comparison baseline'} would read about ${formatRows(rows)} sampled rows (limit ${formatRows(this.options.rowBudget)}). Narrow the window (e.g. 6h) or add a filter such as operationName or spanName.`,
       );
     }
   }
@@ -251,7 +257,7 @@ export class AnalyticsQueryEngine {
    * dataset's grain, ending one second before the window starts), or the given baseline. Cut to the plan's retention.
    */
   private baselineWindow(query: ValidatedQuery, scope: EngineScope, warnings: string[]): Window {
-    const grain = GRAIN_SECONDS[query.descriptor.grain] ?? 1;
+    const grain = grainSecondsOf(query.descriptor.grain);
     const snap = (seconds: number) => Math.floor(seconds / grain) * grain;
     const compare = query.compare!;
     let window: Window;
@@ -259,12 +265,12 @@ export class AnalyticsQueryEngine {
       const { start, end } = scope.window;
       window = { start: snap(start - (end - start) - 1), end: start - 1 };
     } else {
-      const start = Date.parse(compare.baselineStart!);
-      const end = Date.parse(compare.baselineEnd!);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) {
-        throw new QueryValidationError('baselineStart and baselineEnd must be ISO 8601 times, start before end.');
+      const start = parseInstant(compare.baselineStart!, 'baselineStart');
+      const end = parseInstant(compare.baselineEnd!, 'baselineEnd');
+      if (start > end) {
+        throw new QueryValidationError('baselineStart is after baselineEnd.');
       }
-      window = { start: Math.floor(start / 1000), end: Math.floor(end / 1000) };
+      window = { start, end };
     }
     if (window.end < scope.retentionStart) {
       throw new QueryValidationError(
@@ -379,39 +385,6 @@ export class AnalyticsQueryEngine {
     }
     return names;
   }
-}
-
-/** Graph filters narrow the graphs a query reads: the tenant predicate then holds only those graphs. */
-export function applyGraphFilter(graphs: EngineGraph[], filters: CompiledFilter[]): EngineGraph[] {
-  let result = graphs;
-  for (const filter of filters) {
-    if (filter.field !== 'graph') {
-      continue;
-    }
-    const [first = ''] = filter.values;
-    result = result.filter((graph) => {
-      switch (filter.operator) {
-        case 'eq':
-        case 'in': {
-          return filter.values.includes(graph.name);
-        }
-        case 'neq':
-        case 'not_in': {
-          return !filter.values.includes(graph.name);
-        }
-        case 'contains': {
-          return graph.name.toLowerCase().includes(first.toLowerCase());
-        }
-        case 'starts_with': {
-          return graph.name.startsWith(first);
-        }
-        default: {
-          return true;
-        }
-      }
-    });
-  }
-  return result;
 }
 
 /** The requested order, or by default the first measure, largest first (a time series is ordered by time). */
@@ -531,49 +504,9 @@ function describeFilters(query: ValidatedQuery, scope: EngineScope): string[] {
   const described = query.filters.map(
     (filter) => `${filter.field} ${filter.operator}${filter.values.length > 0 ? ` ${filter.values.join(', ')}` : ''}`,
   );
-  if (query.physical.dimensions.isIntrospection && !query.filters.some((f) => f.field === 'isIntrospection')) {
+  if (excludesIntrospection(query.physical, query.filters)) {
     described.push('introspection excluded');
   }
   described.push(`graphs: ${scope.graphs.map((g) => `${g.namespace}/${g.name}`).join(', ')}`);
   return described;
-}
-
-/**
- * The observed sampling ratio for the graphs and window (spec §3 S1): sampled operation executions ÷ operations the
- * complete metrics counted. Read from root spans alone: a batched request's operations share its trace, so they are
- * sampled together and its root counts each of them. Subscriptions are left out on both sides. Left out, with a
- * warning, when the root-span read would exceed the row budget; undefined without metric traffic.
- */
-export async function observedSamplingRatio(
-  client: ClickHouseClient,
-  scope: EngineScope,
-  rowBudget: number,
-): Promise<{ ratio?: number; warning?: string }> {
-  const database = client.database;
-  const params: Record<string, ClickHouseParamValue> = {
-    organizationId: scope.organizationId,
-    graphIds: scope.graphs.map((g) => g.id),
-    start: scope.window.start,
-    end: scope.window.end,
-  };
-  const sampledSql = `SELECT sum(greatest(toUInt64OrZero(SpanAttributes['wg.operation.batching.operations_count']), 1)) FROM ${database}.span_search WHERE ${[
-    tenantPredicate(),
-    ...windowPredicates('Timestamp', 'TimeBucket'),
-    'IsRoot',
-    "OperationType != 'subscription'",
-  ].join(' AND ')}`;
-  const rows = await client.estimateRows(sampledSql, params);
-  if (rows > rowBudget) {
-    return {
-      warning: `observedSamplingRatio is left out: computing it would read about ${rows.toLocaleString('en-US')} sampled spans (limit ${rowBudget.toLocaleString('en-US')}). Narrow the window to get it.`,
-    };
-  }
-  const sql = `SELECT (${sampledSql}) AS sampled, (SELECT sum(TotalRequests) FROM ${database}.operation_request_metrics_5_30 WHERE ${tenantPredicate()} AND Timestamp >= toDateTime({start:UInt32}) AND Timestamp <= toDateTime({end:UInt32}) AND OperationType != 'subscription') AS total`;
-  const result = await client.queryPromise<{ sampled: string | number; total: string | number }>(sql, params);
-  const row = Array.isArray(result) ? result[0] : undefined;
-  const total = Number(row?.total ?? 0);
-  if (!row || total === 0) {
-    return {};
-  }
-  return { ratio: Math.min(1, Math.round((Number(row.sampled) / total) * 10_000) / 10_000) };
 }

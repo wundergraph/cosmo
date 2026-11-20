@@ -25,6 +25,10 @@ describe('Authentication', (ctx) => {
       logger: {
         level: 'silent',
       },
+      analytics: {
+        mcpRateLimitPerMinute: 120,
+        queryRowBudget: 200_000_000,
+      },
       allowedOrigins: [],
       auth: {
         secret: 'secret',

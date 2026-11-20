@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import {
-  clampCursorWindow,
-  decodeTraceCursor,
-  encodeTraceCursor,
-  QueryValidationError,
-} from '../../src/core/repositories/analytics/query/window.js';
+import { clampCursorWindow, decodeTraceCursor, encodeCursor } from '../../src/core/util/analytics/cursor.js';
+import { QueryValidationError } from '../../src/core/repositories/analytics/query/errors.js';
 
 // Retention starts at 1_000_000 - 7 days = 395_200.
 const limits = { retentionDays: 7, nowSeconds: 1_000_000, grainSeconds: 300 };
@@ -36,7 +32,7 @@ describe('Trace search cursors', () => {
   const state = { value: '1795158281000000000', traceId: 't1', start: 400_000, end: 500_000, fingerprint: 'fp' };
 
   test('round-trip', () => {
-    expect(decodeTraceCursor(encodeTraceCursor(state), 'fp')).toEqual(state);
+    expect(decodeTraceCursor(encodeCursor(state), 'fp')).toEqual(state);
   });
 
   test('carry integer window bounds and a numeric sort value', () => {
@@ -49,7 +45,7 @@ describe('Trace search cursors', () => {
   });
 
   test('only fit the search they came from', () => {
-    expect(() => decodeTraceCursor(encodeTraceCursor(state), 'other')).toThrow(
+    expect(() => decodeTraceCursor(encodeCursor(state), 'other')).toThrow(
       new QueryValidationError('The cursor belongs to a different search; repeat the search without it.'),
     );
   });

@@ -9,7 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
 
 // Schema usage is kept for 90 days, but is shown within the plan's analytics retention, like Studio's date pickers.
 const FIELD_USAGE_RETENTION_FEATURE = 'analytics-retention';
@@ -22,11 +22,8 @@ export function getFieldUsage(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFieldUsageResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);

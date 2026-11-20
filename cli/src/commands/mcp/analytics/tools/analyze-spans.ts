@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { filterInput, OPERATORS, rowsToObjects, serverMeta, toPredicate, toTimeWindow } from '../query.js';
-import { windowInput } from '../window.js';
+import { filterInput, OPERATORS, rowsToObjects, serverMeta, toPredicate } from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 /** An equality filter on `field`, or none when the tool input left it out. */
 const eq = (field: string, value: string | undefined) =>
@@ -46,7 +46,7 @@ export function registerAnalyzeSpansTool(ctx: AnalyticsToolContext) {
             ...eq('spanName', input.spanName),
             ...input.filters.map((filter) => toPredicate(filter)),
           ],
-          window: toTimeWindow(input),
+          window: queryWindow(input),
           orderBy: input.measures.includes('durationSum') ? [{ field: 'durationSum', desc: true }] : [],
           limit: input.limit,
         },

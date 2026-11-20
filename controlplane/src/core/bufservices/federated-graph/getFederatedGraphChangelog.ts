@@ -10,7 +10,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
@@ -22,11 +22,8 @@ export function getFederatedGraphChangelog(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const fedgraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);

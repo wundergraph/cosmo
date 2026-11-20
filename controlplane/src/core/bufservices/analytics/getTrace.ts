@@ -9,7 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
 
 const MAX_SPANS = 2000;
 
@@ -31,11 +31,8 @@ export function getTrace(
         totalSpans: 0,
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const graph = await fedGraphRepo.byId(req.federatedGraphId);

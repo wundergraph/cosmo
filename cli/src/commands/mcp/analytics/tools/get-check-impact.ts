@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { parseWindow, windowInput } from '../window.js';
+import { absoluteWindow, windowInput } from '../window.js';
 
 export function registerGetCheckImpactTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -11,7 +11,7 @@ export function registerGetCheckImpactTool(ctx: AnalyticsToolContext) {
     {
       title: 'Get check impact',
       description:
-        "Schema checks already run against a graph, and the client traffic they found. With checkId: the check's summary (changes, breaking changes, traffic window) and the operations each breaking change affects, with first/last seen. Without it: recent checks, with whether each was breaking and had client traffic. Reads existing check results; never runs a check.",
+        "Schema checks already run against a graph, and the client traffic they found. With checkId: the check's summary (changes, breaking changes, traffic window) and the operations each breaking change affects, with first/last seen. Without it: recent checks (the last 7 days unless a window is given), with whether each was breaking and had client traffic. Reads existing check results; never runs a check.",
       inputSchema: {
         ...graphInput,
         ...windowInput,
@@ -43,11 +43,7 @@ export function registerGetCheckImpactTool(ctx: AnalyticsToolContext) {
         );
       }
 
-      // Recent checks default to the last 7 days, unless an explicit window is given.
-      const window = parseWindow(input.from || input.to ? input : { range: input.range ?? '7d' });
-      const end = window.dateRange?.end ?? ctx.now().toISOString();
-      const start =
-        window.dateRange?.start ?? new Date(ctx.now().getTime() - (window.range ?? 168) * 3_600_000).toISOString();
+      const { start, end } = absoluteWindow(input, '7d', ctx.now());
       const resp = await ctx.client.getChecksByFederatedGraphName(
         {
           name: input.graph,

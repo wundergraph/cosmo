@@ -1,5 +1,6 @@
 import {
   ANALYTICS_ATTRIBUTE_KEY_PATTERN,
+  ANALYTICS_DATASETS,
   ANALYTICS_ATTRIBUTE_PREFIX,
   findAnalyticsDataset,
   type AnalyticsDatasetDescriptor,
@@ -7,7 +8,8 @@ import {
 } from '@wundergraph/cosmo-shared';
 import { TIME_BUCKET_DIMENSION, type CompiledFilter } from './compiler.js';
 import { findPhysicalDataset, HIDDEN_DIMENSIONS, REQUESTS_ROOT_SPANS, type PhysicalDataset } from './registry.js';
-import { QueryValidationError, TIME_BUCKET_SECONDS } from './window.js';
+import { QueryValidationError } from './errors.js';
+import { TIME_BUCKET_SECONDS } from './window.js';
 
 export interface AnalyticsQueryRequest {
   dataset: string;
@@ -35,10 +37,12 @@ export interface ValidatedQuery {
   limit: number;
   includeInactive: boolean;
   compare?: AnalyticsQueryRequest['compare'];
+  /** The `requests` dataset is read from its root spans in span_search, because a field needs them. */
+  readsRootSpans: boolean;
 }
 
-export const MAX_LIMIT = 1000;
-export const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 1000;
+const DEFAULT_LIMIT = 20;
 const MAX_MEASURES = 20;
 const MAX_DIMENSIONS = 6;
 const COMPARISONS: AnalyticsOperatorName[] = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte'];
@@ -66,7 +70,7 @@ export function validateQuery(request: AnalyticsQueryRequest): ValidatedQuery {
   const basePhysical = findPhysicalDataset(request.dataset);
   if (!descriptor || !basePhysical) {
     throw new QueryValidationError(
-      `Unknown dataset "${request.dataset}". Available: operation_metrics, subgraph_metrics, planning_metrics, request_volume, requests, spans, field_usage, schema_presence, router_runtime, operation_documents.`,
+      `Unknown dataset "${request.dataset}". Available: ${ANALYTICS_DATASETS.map((d) => d.name).join(', ')}.`,
     );
   }
   const dimensionsByName = new Map(descriptor.dimensions.map((d) => [d.name, d]));
@@ -238,21 +242,36 @@ export function validateQuery(request: AnalyticsQueryRequest): ValidatedQuery {
     limit,
     includeInactive: request.includeInactive,
     compare: request.compare,
+    readsRootSpans: physical === REQUESTS_ROOT_SPANS,
   };
 }
 
-/** For GetAnalyticsDimensionValues: the attribute keys of the span datasets are a hidden, groupable dimension. */
-export function validateDimensionValuesTarget(dataset: string, dimension: string) {
-  const descriptor = findAnalyticsDataset(dataset);
-  const physical = findPhysicalDataset(dataset);
-  if (!descriptor || !physical) {
-    throw new QueryValidationError(`Unknown dataset "${dataset}".`);
+/**
+ * Validates a GetAnalyticsDimensionValues request. A public dimension validates as a QueryAnalytics dimension would; the
+ * span attribute keys are a hidden dimension of the span datasets, read from root spans for `requests`.
+ */
+export function validateDimensionValuesQuery(input: {
+  dataset: string;
+  dimension: string;
+  filters: AnalyticsQueryRequest['filters'];
+}): ValidatedQuery {
+  const hidden = HIDDEN_DIMENSIONS.has(input.dimension);
+  const query = validateQuery({
+    dataset: input.dataset,
+    dimensions: hidden ? [] : [input.dimension],
+    measures: [],
+    filters: input.filters,
+    having: [],
+    orderBy: [],
+    includeInactive: false,
+  });
+  if (!hidden) {
+    return query;
   }
-  if (HIDDEN_DIMENSIONS.has(dimension)) {
-    if (!descriptor.attributeDimensions) {
-      throw new QueryValidationError(`The ${dataset} dataset has no span attributes.`);
-    }
-    return { descriptor, physical: dataset === 'requests' ? REQUESTS_ROOT_SPANS : physical };
+  if (!query.descriptor.attributeDimensions) {
+    throw new QueryValidationError(`The ${input.dataset} dataset has no span attributes.`);
   }
-  return { descriptor, physical };
+  return query.descriptor.name === 'requests'
+    ? { ...query, physical: REQUESTS_ROOT_SPANS, readsRootSpans: true }
+    : query;
 }

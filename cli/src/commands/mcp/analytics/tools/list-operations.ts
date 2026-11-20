@@ -4,8 +4,7 @@ import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
 import { studioUrl } from '../links.js';
-import { parseWindow, windowInput } from '../window.js';
-import { metricsWindow } from './metrics-request.js';
+import { metricsWindow, retainedWindow, windowInput } from '../window.js';
 
 const SORT_BY = {
   requests: OperationsFetchBasedOn.REQUESTS,
@@ -34,7 +33,7 @@ export function registerListOperationsTool(ctx: AnalyticsToolContext) {
       },
     },
     async (input, headers) => {
-      const window = parseWindow(input);
+      const { window, warnings: windowWarnings } = await retainedWindow(ctx, input, 'analytics');
       const resp = await ctx.client.getOperations(
         {
           federatedGraphName: input.graph,
@@ -64,7 +63,10 @@ export function registerListOperationsTool(ctx: AnalyticsToolContext) {
           window,
           now: ctx.now().toISOString(),
           truncated: resp.totalCount !== undefined && input.offset + resp.operations.length < resp.totalCount,
-          warnings: ['p95 latency at or above 10s is reported as 10000ms (the histogram ends there).'],
+          warnings: [
+            ...windowWarnings,
+            'p95 latency at or above 10s is reported as 10000ms (the histogram ends there).',
+          ],
           studioUrl: studioUrl(ctx.webURL, await ctx.getOrgSlug(), input.namespace, input.graph, 'operations'),
         },
       );

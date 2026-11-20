@@ -10,7 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
 
 // Get operation content by hash
 // TODO: Specify daterange to improve clickhouse performance
@@ -22,11 +22,8 @@ export function getOperationContent(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationContentResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     if (!opts.chClient) {
       return {

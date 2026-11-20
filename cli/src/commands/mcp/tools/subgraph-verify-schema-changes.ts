@@ -1,9 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
-import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
-export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolContext) => {
+export const registerSubgraphVerifySchemaChangesTool = ({ server, opts, auth }: ToolContext) => {
   server.registerTool(
     'verify_subgraph_schema_changes',
     {
@@ -28,7 +27,7 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
           skipTrafficCheck: params.skipTrafficCheck,
         },
         {
-          headers: getBaseHeaders(),
+          headers: await auth.getHeaders(),
         },
       );
 

@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
+import { nsToMs, truncateValue } from '../format.js';
 import { studioUrl } from '../links.js';
-import { nsToMs, truncateValue } from '../query.js';
 
 const SUBGRAPH = 'wg.subgraph.name';
 

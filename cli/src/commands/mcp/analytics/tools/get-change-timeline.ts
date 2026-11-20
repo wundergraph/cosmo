@@ -1,7 +1,7 @@
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { parseWindow, windowInput } from '../window.js';
+import { absoluteWindow, windowInput } from '../window.js';
 
 const PAGE = 100;
 
@@ -16,10 +16,7 @@ export function registerGetChangeTimelineTool(ctx: AnalyticsToolContext) {
       inputSchema: { ...graphInput, ...windowInput },
     },
     async (input, headers) => {
-      const window = parseWindow({ ...input, range: input.range ?? (input.from ? undefined : '7d') });
-      const end = window.dateRange?.end ?? ctx.now().toISOString();
-      const start =
-        window.dateRange?.start ?? new Date(ctx.now().getTime() - (window.range ?? 168) * 3_600_000).toISOString();
+      const { start, end } = absoluteWindow(input, '7d', ctx.now());
 
       const [compositions, changelog] = await Promise.all([
         ctx.client.getCompositions(

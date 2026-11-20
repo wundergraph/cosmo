@@ -1,6 +1,8 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../routes.js';
+import { getAnalyticsCapabilities } from './analytics/getAnalyticsCapabilities.js';
+import { getAnalyticsDimensionValues } from './analytics/getAnalyticsDimensionValues.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
 import { getFieldUsage } from './analytics/getFieldUsage.js';
@@ -9,13 +11,11 @@ import { getGraphMetrics } from './analytics/getGraphMetrics.js';
 import { getMetricsErrorRate } from './analytics/getMetricsErrorRate.js';
 import { getOperationContent } from './analytics/getOperationContent.js';
 import { getOrganizationRequestsCount } from './analytics/getOrganizationRequestsCount.js';
-import { getAnalyticsCapabilities } from './analytics/getAnalyticsCapabilities.js';
-import { getAnalyticsDimensionValues } from './analytics/getAnalyticsDimensionValues.js';
-import { queryAnalytics } from './analytics/queryAnalytics.js';
-import { searchTraces } from './analytics/searchTraces.js';
 import { getSubgraphMetrics } from './analytics/getSubgraphMetrics.js';
 import { getSubgraphMetricsErrorRate } from './analytics/getSubgraphMetricsErrorRate.js';
 import { getTrace } from './analytics/getTrace.js';
+import { queryAnalytics } from './analytics/queryAnalytics.js';
+import { searchTraces } from './analytics/searchTraces.js';
 import { createAPIKey } from './api-key/createAPIKey.js';
 import { updateAPIKey } from './api-key/updateAPIKey.js';
 import { deleteAPIKey } from './api-key/deleteAPIKey.js';
@@ -748,12 +748,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     getAnalyticsCapabilities: (req, ctx) => {
       return getAnalyticsCapabilities(opts, req, ctx);
     },
+
     searchTraces: (req, ctx) => {
       return searchTraces(opts, req, ctx);
     },
+
     queryAnalytics: (req, ctx) => {
       return queryAnalytics(opts, req, ctx);
     },
+
     getAnalyticsDimensionValues: (req, ctx) => {
       return getAnalyticsDimensionValues(opts, req, ctx);
     },

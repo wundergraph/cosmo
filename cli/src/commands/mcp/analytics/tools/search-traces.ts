@@ -2,9 +2,10 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
+import { msToNs, nsToMs } from '../format.js';
 import { studioUrl } from '../links.js';
-import { filterInput, msToNs, nsToMs, OPERATORS, serverMeta, toPredicate, toTimeWindow } from '../query.js';
-import { windowInput } from '../window.js';
+import { filterInput, OPERATORS, serverMeta, toPredicate } from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 const MAX_PAGE = 100;
 const REQUEST_FIELDS = [
@@ -81,7 +82,7 @@ export function registerSearchTracesTool(ctx: AnalyticsToolContext) {
       const resp = await ctx.client.searchTraces(
         {
           graph: { name: input.graph, namespace: input.namespace },
-          window: toTimeWindow(input),
+          window: queryWindow(input),
           requestFilters,
           spanConditions: input.spanConditions.map((condition) => ({
             spanName: condition.spanName,

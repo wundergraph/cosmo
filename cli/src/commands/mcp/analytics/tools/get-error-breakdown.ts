@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { OPERATORS, rowsToObjects, serverMeta, toTimeWindow } from '../query.js';
-import { windowInput } from '../window.js';
+import { OPERATORS, rowsToObjects, serverMeta } from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 const BY = {
   message: { dataset: 'requests', dimensions: ['statusMessage'] },
@@ -32,7 +32,7 @@ export function registerGetErrorBreakdownTool(ctx: AnalyticsToolContext) {
     },
     async (input, headers) => {
       const graphs = [{ name: input.graph, namespace: input.namespace }];
-      const window = toTimeWindow(input);
+      const window = queryWindow(input);
       const narrow = [
         ...(input.operationName
           ? [{ field: 'operationName', operator: OPERATORS.eq, values: [input.operationName] }]

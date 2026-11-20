@@ -5,4 +5,6 @@ export type FetchRouterConfigParams = {
   name: string;
   namespace?: string;
   graphSignKey?: string;
+  /** Request headers; the CLI's own credentials by default. */
+  headers?: HeadersInit;
 };

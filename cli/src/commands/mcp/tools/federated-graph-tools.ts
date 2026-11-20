@@ -1,11 +1,10 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
-import { getBaseHeaders } from '../../../core/config.js';
 import { getFederatedGraphSchemas, getSubgraphsOfFedGraph } from '../../graph/federated-graph/utils.js';
 import { fetchRouterConfig } from '../../router/utils.js';
 import { ToolContext } from './types.js';
 
-export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
+export const registerFederatedGraphTools = ({ server, opts, auth }: ToolContext) => {
   // List federated graphs tool
   server.registerTool(
     'list_supergraphs',
@@ -27,7 +26,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
             supportsFederation: true,
           },
           {
-            headers: getBaseHeaders(),
+            headers: await auth.getHeaders(),
           },
         );
 
@@ -76,6 +75,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
       try {
         const fedGraphSchemas = await getFederatedGraphSchemas({
           client: opts.client,
+          headers: await auth.getHeaders(),
           name,
           namespace,
         });
@@ -120,6 +120,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
       try {
         const result = await fetchRouterConfig({
           client: opts.client,
+          headers: await auth.getHeaders(),
           name,
           namespace,
         });
@@ -148,6 +149,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
       try {
         const subgraphs = await getSubgraphsOfFedGraph({
           client: opts.client,
+          headers: await auth.getHeaders(),
           name,
           namespace,
         });

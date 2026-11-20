@@ -22,6 +22,9 @@ export type AnalyticsCompleteness = 'complete' | 'sampled';
 
 export type AnalyticsRetentionFeature = 'analytics-retention' | 'tracing-retention';
 
+/** A kind of stored analytics data with its own retention: what `GetAnalyticsCapabilities` reports per family. */
+export type AnalyticsRetentionFamily = 'analytics' | 'request_volume' | 'tracing' | 'schema_usage';
+
 export interface AnalyticsDimensionDescriptor {
   name: string;
   description: string;
@@ -45,6 +48,7 @@ export interface AnalyticsDatasetDescriptor {
   grain: string;
   completeness: AnalyticsCompleteness;
   retentionFeature: AnalyticsRetentionFeature;
+  retentionFamily: AnalyticsRetentionFamily;
   storageTtlDays: number;
   dimensions: AnalyticsDimensionDescriptor[];
   measures: AnalyticsMeasureDescriptor[];
@@ -172,6 +176,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '5m',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'analytics',
     storageTtlDays: 30,
     dimensions: [
       ...OPERATION_DIMS,
@@ -205,7 +210,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     caveats: [
       'No WebSocket subscriptions.',
       'Latency percentiles at or above 10s read as 10000ms; use the requests dataset for exact tail latency.',
-      'Persisted operation IDs are not reliable here until the M8 cut-over; use the requests dataset.',
+      'Persisted operation IDs are not offered here: merged metric rows keep an arbitrary one. Use the requests dataset to find a persisted operation.',
     ],
   },
   {
@@ -215,6 +220,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '5m',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'analytics',
     storageTtlDays: 30,
     dimensions: [
       dim('subgraph', 'The subgraph (name).', 'string', { operators: EXACT_OPS, virtual: true }),
@@ -247,6 +253,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '5m',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'analytics',
     storageTtlDays: 30,
     dimensions: [
       ...OPERATION_DIMS,
@@ -274,6 +281,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '1d',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'request_volume',
     storageTtlDays: 90,
     dimensions: [GRAPH],
     measures: [measure('requests', 'Number of requests.', 'count'), ...SEEN_MEASURES],
@@ -291,6 +299,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: 'request',
     completeness: 'sampled',
     retentionFeature: 'tracing-retention',
+    retentionFamily: 'tracing',
     storageTtlDays: 30,
     dimensions: [
       ...OPERATION_DIMS,
@@ -335,6 +344,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: 'span',
     completeness: 'sampled',
     retentionFeature: 'tracing-retention',
+    retentionFamily: 'tracing',
     storageTtlDays: 30,
     dimensions: [
       dim(
@@ -383,6 +393,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '5m',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'schema_usage',
     storageTtlDays: 90,
     dimensions: FIELD_USAGE_DIMS,
     measures: [
@@ -410,6 +421,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: '1d',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'schema_usage',
     storageTtlDays: 90,
     dimensions: FIELD_USAGE_DIMS,
     measures: [
@@ -432,6 +444,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: 'raw',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'analytics',
     storageTtlDays: 30,
     dimensions: [
       dim(
@@ -471,6 +484,7 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
     grain: 'operation',
     completeness: 'complete',
     retentionFeature: 'analytics-retention',
+    retentionFamily: 'schema_usage',
     storageTtlDays: 90,
     dimensions: [
       dim('operationHash', 'Operation hash.', 'string', { operators: EXACT_OPS }),
@@ -482,7 +496,10 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
       }),
       GRAPH,
     ],
-    measures: [measure('document', 'The normalized document.', 'text')],
+    measures: [
+      measure('document', 'The normalized document.', 'text'),
+      measure('operations', 'Distinct operations (document hashes).', 'count'),
+    ],
     defaultMeasures: ['document'],
     timeBuckets: [],
     attributeDimensions: false,
@@ -494,6 +511,25 @@ export const ANALYTICS_DATASETS: AnalyticsDatasetDescriptor[] = [
 
 export const findAnalyticsDataset = (name: string): AnalyticsDatasetDescriptor | undefined =>
   ANALYTICS_DATASETS.find((dataset) => dataset.name === name);
+
+/** Each retention family once, in catalog order, with the plan feature that limits it and how long it is stored. */
+export function analyticsRetentionFamilies(): {
+  family: AnalyticsRetentionFamily;
+  retentionFeature: AnalyticsRetentionFeature;
+  storageTtlDays: number;
+}[] {
+  const families = new Map<AnalyticsRetentionFamily, AnalyticsDatasetDescriptor>();
+  for (const dataset of ANALYTICS_DATASETS) {
+    if (!families.has(dataset.retentionFamily)) {
+      families.set(dataset.retentionFamily, dataset);
+    }
+  }
+  return [...families.values()].map(({ retentionFamily, retentionFeature, storageTtlDays }) => ({
+    family: retentionFamily,
+    retentionFeature,
+    storageTtlDays,
+  }));
+}
 
 /** `attr:<key>` attribute dimensions: the key is passed as a query parameter but must still look like an attribute key. */
 export const ANALYTICS_ATTRIBUTE_KEY_PATTERN = /^[\w.-]{1,128}$/;

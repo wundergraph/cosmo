@@ -1,23 +1,14 @@
 import { z } from 'zod';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { buildSchema, parse, validate, GraphQLError } from 'graphql';
-import type { BaseCommandOptions } from '../../../core/types/types.js';
-import { getFederatedGraphSchemas } from '../../graph/federated-graph/utils.js'; // Adjusted path
+import { getFederatedGraphSchemas } from '../../graph/federated-graph/utils.js';
+import type { ToolContext } from './types.js';
 
 /**
  * Registers the verify-query-against-remote-schema tool with the MCP server.
  *
- * @param params - The parameters for registration.
- * @param params.server - The MCP server instance.
- * @param params.opts - Base command options.
+ * @param params - The server, the command options and the auth provider.
  */
-export const registerVerifyQueryAgainstRemoteSchemaTool = ({
-  server,
-  opts,
-}: {
-  server: McpServer;
-  opts: BaseCommandOptions;
-}) => {
+export const registerVerifyQueryAgainstRemoteSchemaTool = ({ server, opts, auth }: ToolContext) => {
   server.registerTool(
     'verify_query_against_remote_schema',
     {
@@ -29,6 +20,7 @@ export const registerVerifyQueryAgainstRemoteSchemaTool = ({
       try {
         const fedGraphSchemas = await getFederatedGraphSchemas({
           client: opts.client,
+          headers: await auth.getHeaders(),
           name: supergraph,
           namespace,
         });

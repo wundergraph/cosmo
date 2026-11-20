@@ -45,6 +45,7 @@ export const fetchRouterConfig = async ({
   name,
   namespace,
   graphSignKey,
+  headers = getBaseHeaders(),
 }: FetchRouterConfigParams): Promise<FetchRouterConfigResult> => {
   const resp = await client.platform.generateRouterToken(
     {
@@ -52,7 +53,7 @@ export const fetchRouterConfig = async ({
       namespace,
     },
     {
-      headers: getBaseHeaders(),
+      headers,
     },
   );
 

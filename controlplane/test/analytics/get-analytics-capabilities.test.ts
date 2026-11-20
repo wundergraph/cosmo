@@ -41,10 +41,10 @@ describe('GetAnalyticsCapabilities', () => {
         effectiveDays,
       })),
     ).toEqual([
-      { family: 'tracing', planDays: 14, storageTtlDays: 30, effectiveDays: 14 },
       { family: 'analytics', planDays: 14, storageTtlDays: 30, effectiveDays: 14 },
-      { family: 'schema_usage', planDays: 14, storageTtlDays: 90, effectiveDays: 14 },
       { family: 'request_volume', planDays: 14, storageTtlDays: 90, effectiveDays: 14 },
+      { family: 'tracing', planDays: 14, storageTtlDays: 30, effectiveDays: 14 },
+      { family: 'schema_usage', planDays: 14, storageTtlDays: 90, effectiveDays: 14 },
     ]);
     expect(response.traceSamplingRateLimit).toBe(0.3);
     expect(response.monthlyRequestLimit).toBe(BigInt(1_000_000_000));

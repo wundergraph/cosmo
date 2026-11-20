@@ -1,3 +1,4 @@
+import { MCP_CLIENT_HEADER, mcpClientHeaderValue } from '@wundergraph/cosmo-shared';
 import type { ConfigData } from '../../utils.js';
 import type { KeycloakTokenResponse } from '../auth/utils.js';
 
@@ -31,7 +32,7 @@ export function createAuthProvider(deps: {
   const now = deps.now ?? (() => new Date());
   const baseHeaders = {
     'user-agent': `cosmo-cli/${deps.version}`,
-    'x-cosmo-client': `wgc-mcp/${deps.version}`,
+    [MCP_CLIENT_HEADER]: mcpClientHeaderValue(deps.version),
   };
   let inFlightRefresh: Promise<ConfigData> | undefined;
 

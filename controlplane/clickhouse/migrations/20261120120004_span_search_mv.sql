@@ -1,7 +1,6 @@
 -- migrate:up
 
--- Fills span_search from new spans. Older spans are copied from otel_spans_by_trace by
--- clickhouse/scripts/backfill_span_search.sh.
+-- Fills span_search from new spans only; trace search covers spans stored after this migration.
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.span_search_mv TO cosmo.span_search AS
 SELECT
     toLowCardinality(SpanAttributes ['wg.federated_graph.id']) as FederatedGraphID,

@@ -63,7 +63,7 @@ export interface RouterOptions {
   lockAdapter: Redlock;
   analyticsRateLimiter?: AnalyticsRateLimiter;
   /** Rows a query on sampled analytics data may plan to read before it is refused. */
-  analyticsQueryRowBudget?: number;
+  analyticsQueryRowBudget: number;
   promptToQueryClient?: Client<typeof PromptToQueryService>;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {

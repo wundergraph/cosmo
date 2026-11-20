@@ -3,7 +3,6 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { program } from 'commander';
 import { endOfDay, formatISO, startOfDay, subDays } from 'date-fns';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
 export const SupergraphChangelogInputSchema = z.object({
@@ -16,7 +15,11 @@ export const SupergraphChangelogInputSchema = z.object({
 
 export type SupergraphChangelogInput = z.infer<typeof SupergraphChangelogInputSchema>;
 
-export default async function main(opts: BaseCommandOptions, input: SupergraphChangelogInput) {
+export default async function main(
+  opts: BaseCommandOptions,
+  input: SupergraphChangelogInput,
+  headers: Record<string, string>,
+) {
   const resp = await opts.client.platform.getFederatedGraphChangelog(
     {
       name: input.name,
@@ -31,7 +34,7 @@ export default async function main(opts: BaseCommandOptions, input: SupergraphCh
       },
     },
     {
-      headers: getBaseHeaders(),
+      headers,
     },
   );
 
@@ -42,7 +45,7 @@ export default async function main(opts: BaseCommandOptions, input: SupergraphCh
   return resp.federatedGraphChangelogOutput;
 }
 
-export function registerSupergraphChangelogTool({ server, opts }: ToolContext) {
+export function registerSupergraphChangelogTool({ server, opts, auth }: ToolContext) {
   server.registerTool(
     'supergraph_changelog',
     {
@@ -51,7 +54,7 @@ export function registerSupergraphChangelogTool({ server, opts }: ToolContext) {
       inputSchema: SupergraphChangelogInputSchema.shape,
     },
     async (toolInput) => {
-      const mainOutput = await main(opts, toolInput);
+      const mainOutput = await main(opts, toolInput, await auth.getHeaders());
       // The registerTool method expects a specific return format
       return { content: [{ type: 'text', text: JSON.stringify(mainOutput, null, 2) }] };
     },

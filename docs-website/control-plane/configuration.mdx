@@ -55,5 +55,5 @@ Check the [WunderGraph Demo](https://github.com/wundergraph/cosmo) for a [setup 
 | STRIPE_SECRET_KEY | Stripe secret | "" |<Icon icon="square" />|
 | STRIPE_WEBHOOK_SECRET | Stripe webhook secret | "" |<Icon icon="square" />|
 | DEFAULT_PLAN | Based on your custom plans, the name of the default plan | "" |<Icon icon="square" />|
-| ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE | Requests per minute and organization that the analytics tools of `wgc mcp` may make | 120 |<Icon icon="square" />|
-| ANALYTICS_QUERY_ROW_BUDGET | The most rows one analytics query or trace search may read, estimated before it runs; larger queries are refused | 200000000 |<Icon icon="square" />|
+| ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE | Requests per minute and organization that the analytics tools of `wgc mcp` may make. Must be a positive integer | 120 |<Icon icon="square" />|
+| ANALYTICS_QUERY_ROW_BUDGET | The most rows a query on sampled analytics data (requests, spans) or a trace search may read, estimated before it runs; larger queries are refused. Must be a positive integer | 200000000 |<Icon icon="square" />|

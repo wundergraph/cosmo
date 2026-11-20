@@ -4,9 +4,11 @@ import { compileQuery, type CompileInput } from '../../src/core/repositories/ana
 import {
   findPhysicalDataset,
   HIDDEN_DIMENSIONS,
+  PHYSICAL_DATASETS,
   REQUESTS_ROOT_SPANS,
 } from '../../src/core/repositories/analytics/query/registry.js';
 import { validateQuery, type AnalyticsQueryRequest } from '../../src/core/repositories/analytics/query/validate.js';
+import { GRAIN_SECONDS, TIME_BUCKET_SECONDS } from '../../src/core/repositories/analytics/query/window.js';
 import { serializeClickHouseParam } from '../../src/core/clickhouse/params.js';
 
 const scope = { organizationId: 'org-1', graphIds: ['g-1'], start: 1000, end: 87_400 };
@@ -53,6 +55,10 @@ const compile = (
   });
 };
 
+/** The value kind the compiler produces for a catalog unit; every unit not listed is a number. */
+const UNIT_KINDS: Record<string, string> = { text: 'string', trace_id: 'string', datetime: 'datetime' };
+const kindOfUnit = (unit: string) => UNIT_KINDS[unit] ?? 'number';
+
 describe('Dataset registry', () => {
   test('has SQL for every dimension and measure of the shared catalog, and nothing the catalog lacks', () => {
     for (const descriptor of ANALYTICS_DATASETS) {
@@ -66,6 +72,53 @@ describe('Dataset registry', () => {
       );
       expect([...physicalMeasures].sort()).toEqual(descriptor.measures.map((m) => m.name).sort());
     }
+  });
+
+  test('knows the length of every time bucket and window grain the catalog offers', () => {
+    // A grain that is not a time span (a row of the dataset) doesn't snap the window.
+    const rowGrains = new Set(['request', 'span', 'raw', 'operation']);
+
+    expect(
+      ANALYTICS_DATASETS.flatMap((d) => d.timeBuckets.filter((bucket) => !(bucket in TIME_BUCKET_SECONDS))),
+    ).toEqual([]);
+    expect(
+      ANALYTICS_DATASETS.filter((d) => !(d.grain in GRAIN_SECONDS) && !rowGrains.has(d.grain)).map((d) => d.name),
+    ).toEqual([]);
+  });
+
+  test('offers attr:<key> dimensions exactly where a span attribute map exists', () => {
+    const mismatched = ANALYTICS_DATASETS.filter((descriptor) => {
+      const physical = findPhysicalDataset(descriptor.name)!;
+      const variants = descriptor.name === 'requests' ? [physical, REQUESTS_ROOT_SPANS] : [physical];
+      return descriptor.attributeDimensions !== variants.some((v) => Boolean(v.attributeMap));
+    });
+
+    expect(mismatched.map((d) => d.name)).toEqual([]);
+  });
+
+  test('lists only inventory dimensions that includeInactive can fill', () => {
+    expect(
+      ANALYTICS_DATASETS.flatMap((d) =>
+        d.inventoryDimensions.filter((dimension) => !['graph', 'subgraph', 'featureFlag'].includes(dimension)),
+      ),
+    ).toEqual([]);
+  });
+
+  test('computes each measure as the type the catalog announces', () => {
+    const mismatched = ANALYTICS_DATASETS.flatMap((descriptor) => {
+      const physical = findPhysicalDataset(descriptor.name)!;
+      const variants = descriptor.name === 'requests' ? [physical, REQUESTS_ROOT_SPANS] : [physical];
+      return descriptor.measures
+        .filter((m) => variants.some((v) => v.measures[m.name] && v.measures[m.name].kind !== kindOfUnit(m.unit)))
+        .map((m) => `${descriptor.name}.${m.name}`);
+    });
+
+    expect(mismatched).toEqual([]);
+  });
+
+  test('counts dimension values with a numeric measure in every dataset', () => {
+    const datasets = [...PHYSICAL_DATASETS, REQUESTS_ROOT_SPANS];
+    expect(datasets.filter((d) => d.measures[d.countMeasure]?.kind !== 'number').map((d) => d.name)).toEqual([]);
   });
 });
 

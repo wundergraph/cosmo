@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, Mock, onTestFinished, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { AnalyticsViewGroupName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { subDays } from 'date-fns';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
+import { createFederatedGraphWithSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
@@ -15,21 +14,6 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
 });
 
 let dbname = '';
-
-const setupGraph = async (client: Awaited<ReturnType<typeof SetupTest>>['client']) => {
-  const fedGraphName = genID('fedGraph');
-  const label = genUniqueLabel();
-  await createThenPublishSubgraph(
-    client,
-    genID('subgraph'),
-    DEFAULT_NAMESPACE,
-    'type Query { hello: String! }',
-    [label],
-    'http://localhost:4001',
-  );
-  await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-  return fedGraphName;
-};
 
 const requests = (graphName: string, subgraphName: string, dateRange: { start: string; end: string }) => ({
   getDashboardAnalyticsView: {
@@ -64,7 +48,7 @@ describe('Analytics retention', () => {
     test('returns an empty view without querying ClickHouse for a window entirely outside tracing retention', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
 
       const response = await client.getAnalyticsView({
         federatedGraphName: fedGraphName,
@@ -83,7 +67,7 @@ describe('Analytics retention', () => {
     test('clamps the start of a 30-day window to the 7-day tracing retention', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
       (chClient.queryPromise as Mock).mockResolvedValue([]);
 
       const before = Math.floor(subDays(new Date(), 7).getTime() / 1000);
@@ -105,7 +89,7 @@ describe('Analytics retention', () => {
     test('returns no usage without querying ClickHouse for a window entirely outside analytics retention', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
 
       const response = await client.getFieldUsage({
         graphName: fedGraphName,
@@ -135,18 +119,7 @@ describe('Analytics retention', () => {
     ] as const)('%s rejects a window outside retention instead of querying another one', async (rpc, dateRange) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       onTestFinished(() => server.close());
-      const fedGraphName = genID('fedGraph');
-      const subgraphName = genID('subgraph');
-      const label = genUniqueLabel();
-      await createThenPublishSubgraph(
-        client,
-        subgraphName,
-        DEFAULT_NAMESPACE,
-        'type Query { hello: String! }',
-        [label],
-        'http://localhost:4001',
-      );
-      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+      const { name: fedGraphName, subgraphName } = await createFederatedGraphWithSubgraph(client);
 
       const request = requests(fedGraphName, subgraphName, dateRange)[rpc];
       const response = (await (client[rpc] as (req: object) => Promise<unknown>)(request)) as {
@@ -165,7 +138,7 @@ describe('Analytics retention', () => {
     test('returns ERR_NOT_FOUND when the operation had no traffic within analytics retention', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
       (chClient.queryPromise as Mock).mockResolvedValueOnce([]);
 
       const response = await client.getOperationContent({
@@ -183,7 +156,7 @@ describe('Analytics retention', () => {
     test('finds the operation through GraphQL metrics when the router does not export OTEL metrics', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
       // Only the GraphQL metrics pipeline, which also stores the documents, has seen this operation.
       (chClient.queryPromise as Mock).mockImplementation((query: string) => {
         if (/\bgql_metrics_schema_usage_lite_1d_90d\b/.test(query)) {
@@ -208,7 +181,7 @@ describe('Analytics retention', () => {
     test('returns the content when the operation had traffic within analytics retention', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
-      const fedGraphName = await setupGraph(client);
+      const { name: fedGraphName } = await createFederatedGraphWithSubgraph(client);
       (chClient.queryPromise as Mock)
         .mockResolvedValueOnce([{ hasTraffic: 1 }])
         .mockResolvedValueOnce([{ operationContent: 'query A { a }' }]);

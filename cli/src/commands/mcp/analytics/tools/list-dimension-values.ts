@@ -1,10 +1,9 @@
-import { ANALYTICS_DATASETS } from '@wundergraph/cosmo-shared';
 import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { filterInput, graphsInput, serverMeta, toGraphRefs, toPredicate, toTimeWindow } from '../query.js';
-import { windowInput } from '../window.js';
+import { DATASET_NAMES, filterInput, graphsInput, serverMeta, toGraphRefs, toPredicate } from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 export function registerListDimensionValuesTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -17,7 +16,7 @@ export function registerListDimensionValuesTool(ctx: AnalyticsToolContext) {
       inputSchema: {
         ...graphsInput,
         ...windowInput,
-        dataset: z.enum(ANALYTICS_DATASETS.map((d) => d.name) as [string, ...string[]]),
+        dataset: z.enum(DATASET_NAMES),
         dimension: z.string().describe('A dimension of the dataset, or "attributeKeys".'),
         prefix: z.string().optional().describe('Only values that start with this.'),
         filters: z.array(filterInput).default([]),
@@ -32,7 +31,7 @@ export function registerListDimensionValuesTool(ctx: AnalyticsToolContext) {
           dimension: input.dimension,
           prefix: input.prefix,
           filters: input.filters.map((filter) => toPredicate(filter)),
-          window: toTimeWindow(input),
+          window: queryWindow(input),
           limit: input.limit,
         },
         { headers },

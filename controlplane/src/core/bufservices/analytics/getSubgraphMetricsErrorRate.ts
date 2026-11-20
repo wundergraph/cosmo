@@ -11,7 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError, OutOfRetentionError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
 
 export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,
@@ -29,11 +29,8 @@ export function getSubgraphMetricsErrorRate(
         series: [],
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const subgraphMetricsRepo = new SubgraphMetricsRepository(logger, opts.chClient, opts.db);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);

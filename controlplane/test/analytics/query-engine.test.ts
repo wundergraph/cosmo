@@ -2,38 +2,13 @@ import { describe, expect, test } from 'vitest';
 import type { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   AnalyticsQueryEngine,
-  applyGraphFilter,
-  observedSamplingRatio,
-  QueryBudgetError,
   type EngineGraph,
   type EngineScope,
 } from '../../src/core/repositories/analytics/query/engine.js';
 import type { AnalyticsInventory } from '../../src/core/repositories/analytics/query/inventory.js';
 import { validateQuery, type AnalyticsQueryRequest } from '../../src/core/repositories/analytics/query/validate.js';
-import { QueryValidationError } from '../../src/core/repositories/analytics/query/window.js';
-
-type Params = Record<string, unknown>;
-
-/** A ClickHouse client that answers queries with `respond` and EXPLAIN ESTIMATE with `estimate`, recording both. */
-const fakeClient = (
-  respond: (sql: string, params: Params) => unknown[] = () => [],
-  estimate: (sql: string, params: Params) => number = () => 0,
-) => {
-  const queries: { sql: string; params: Params }[] = [];
-  const estimates: { sql: string; params: Params }[] = [];
-  const client = {
-    database: 'cosmo',
-    queryPromise: (sql: string, params: Params) => {
-      queries.push({ sql, params });
-      return Promise.resolve(respond(sql, params));
-    },
-    estimateRows: (sql: string, params: Params) => {
-      estimates.push({ sql, params });
-      return Promise.resolve(estimate(sql, params));
-    },
-  } as unknown as ClickHouseClient;
-  return { client, queries, estimates };
-};
+import { QueryBudgetError, QueryValidationError } from '../../src/core/repositories/analytics/query/errors.js';
+import { fakeClickHouse } from './fake-clickhouse.js';
 
 const inventory = (overrides: Partial<AnalyticsInventory> = {}): AnalyticsInventory => ({
   featureFlagVersions: () => Promise.resolve([]),
@@ -71,12 +46,12 @@ const engineWith = (client: ClickHouseClient, overrides: Partial<AnalyticsInvent
   new AnalyticsQueryEngine(client, inventory(overrides), { rowBudget: 1_000_000 });
 
 /** The dataset query of a run, without the sampling-ratio queries a sampled dataset adds. */
-const datasetQueries = (queries: { sql: string; params: Params }[], alias: string) =>
+const datasetQueries = (queries: { sql: string; params: Record<string, unknown> }[], alias: string) =>
   queries.filter((q) => q.sql.includes(` AS ${alias}`));
 
 describe('Comparisons', () => {
   test('match graphs by namespace as well as by name', async () => {
-    const { client } = fakeClient((_, params) =>
+    const { client } = fakeClickHouse((_, params) =>
       params.start === 30_000
         ? [
             { d_graph: 'g-prod', m_requests: '100' },
@@ -120,7 +95,7 @@ describe('Comparisons', () => {
   });
 
   test('compare with the whole buckets just before the window, without overlapping it', async () => {
-    const { client, queries } = fakeClient();
+    const { client, queries } = fakeClickHouse();
 
     const result = await engineWith(client).run(
       query({
@@ -141,7 +116,7 @@ describe('Comparisons', () => {
   });
 
   test('check the row budget of the baseline too', async () => {
-    const { client } = fakeClient(
+    const { client } = fakeClickHouse(
       () => [],
       (_, params) => (params.start === 10_000 ? 0 : 5_000_000),
     );
@@ -160,7 +135,7 @@ describe('Comparisons', () => {
   });
 
   test("cut the baseline to the plan's retention, and say so", async () => {
-    const { client, queries } = fakeClient();
+    const { client, queries } = fakeClickHouse();
 
     const result = await engineWith(client).run(
       query({ dataset: 'spans', dimensions: ['spanName'], measures: ['count'], compare: { previousPeriod: true } }),
@@ -179,7 +154,7 @@ describe('Comparisons', () => {
   });
 
   test("refuse a baseline outside the plan's retention", async () => {
-    const { client } = fakeClient();
+    const { client } = fakeClickHouse();
 
     await expect(
       engineWith(client).run(
@@ -206,7 +181,7 @@ describe('Comparisons', () => {
 
 describe('includeInactive', () => {
   test('lists inactive graphs that share a name with active ones', async () => {
-    const { client } = fakeClient(() => [
+    const { client } = fakeClickHouse(() => [
       { d_graph: 'g-prod', m_requests: '100' },
       { d_graph: 'g-staging', m_requests: '10' },
     ]);
@@ -229,7 +204,7 @@ describe('includeInactive', () => {
       { id: 's1', name: 'products' },
       { id: 's2', name: 'products' },
     ];
-    const { client } = fakeClient(() => [{ d_subgraph: 's1', m_requests: '7' }]);
+    const { client } = fakeClickHouse(() => [{ d_subgraph: 's1', m_requests: '7' }]);
 
     const result = await engineWith(client, {
       organizationSubgraphs: () => Promise.resolve(subgraphs),
@@ -247,11 +222,25 @@ describe('includeInactive', () => {
   });
 });
 
+describe('Dimension types', () => {
+  test('return a numeric dimension as a number, as the catalog types it', async () => {
+    const { client } = fakeClickHouse(() => [{ d_pathDepth: '2', m_usages: '10' }]);
+
+    const result = await engineWith(client).run(
+      query({ dataset: 'field_usage', dimensions: ['pathDepth'], measures: ['usages'] }),
+      scopeOf([prod]),
+      0,
+    );
+
+    expect(result.rows).toEqual([{ pathDepth: 2, usages: 10 }]);
+  });
+});
+
 describe('Compositions', () => {
   test('look up only composition IDs, never empty or foreign config versions', async () => {
     const id = '0b0b2f6e-7a7c-4f7e-9a59-6f5a9c1d2e3f';
     const lookups: string[][] = [];
-    const { client } = fakeClient(() => [
+    const { client } = fakeClickHouse(() => [
       { d_composition: id, m_requests: '3' },
       { d_composition: 'not-a-uuid', m_requests: '2' },
       { d_composition: '', m_requests: '1' },
@@ -274,7 +263,7 @@ describe('Compositions', () => {
 
 describe('Dimension values', () => {
   test('filter attribute keys by the prefix in SQL, before the limit', async () => {
-    const { client, queries } = fakeClient(() => [{ d_attributeKeys: 'wg.operation.name', m_count: '40' }]);
+    const { client, queries } = fakeClickHouse(() => [{ d_attributeKeys: 'wg.operation.name', m_count: '40' }]);
 
     const result = await engineWith(client).dimensionValues({
       query: query({ dataset: 'spans' }),
@@ -297,7 +286,7 @@ describe('Dimension values', () => {
       { d_graph: 'g-beta', m_requests: '3' },
     ];
     // Like ClickHouse, the fake honours the LIMIT.
-    const { client } = fakeClient((_, params) => rows.slice(0, Number(params.limit)));
+    const { client } = fakeClickHouse((_, params) => rows.slice(0, Number(params.limit)));
 
     const result = await engineWith(client).dimensionValues({
       query: query({ dataset: 'operation_metrics' }),
@@ -310,8 +299,21 @@ describe('Dimension values', () => {
     expect(result.values).toEqual([{ value: 'beta', count: 3 }]);
   });
 
+  test('count operation documents with a number', async () => {
+    const { client } = fakeClickHouse(() => [{ d_operationType: 'query', m_operations: '3' }]);
+
+    const result = await engineWith(client).dimensionValues({
+      query: query({ dataset: 'operation_documents' }),
+      dimension: 'operationType',
+      scope: scopeOf([prod]),
+      limit: 5,
+    });
+
+    expect(result.values).toEqual([{ value: 'query', count: 3 }]);
+  });
+
   test('refuse a prefix on a dimension that is not text', async () => {
-    const { client, queries } = fakeClient();
+    const { client, queries } = fakeClickHouse();
 
     await expect(
       engineWith(client).dimensionValues({
@@ -322,53 +324,6 @@ describe('Dimension values', () => {
         limit: 5,
       }),
     ).rejects.toThrow(new QueryValidationError('prefix only applies to text dimensions; isRoot is boolean.'));
-    expect(queries).toEqual([]);
-  });
-});
-
-const graphFilter = (operator: 'eq' | 'neq' | 'in' | 'not_in', values: string[]) => ({
-  field: 'graph',
-  operator,
-  values,
-  type: 'string' as const,
-});
-
-describe('Graph filters', () => {
-  test('narrow the graphs a query reads', () => {
-    expect(applyGraphFilter([alpha, beta], [graphFilter('eq', ['alpha'])])).toEqual([alpha]);
-    expect(applyGraphFilter([alpha, beta], [graphFilter('neq', ['alpha'])])).toEqual([beta]);
-    expect(applyGraphFilter([alpha, beta], [graphFilter('in', ['alpha', 'beta'])])).toEqual([alpha, beta]);
-    expect(applyGraphFilter([alpha, beta], [graphFilter('not_in', ['beta'])])).toEqual([alpha]);
-    expect(applyGraphFilter([alpha, beta], [])).toEqual([alpha, beta]);
-  });
-});
-
-describe('Observed sampling ratio', () => {
-  const SAMPLED =
-    "SELECT sum(greatest(toUInt64OrZero(SpanAttributes['wg.operation.batching.operations_count']), 1)) FROM cosmo.span_search WHERE OrganizationID = {organizationId:String} AND FederatedGraphID IN {graphIds:Array(String)} AND TimeBucket >= toStartOfFifteenMinutes(toDateTime({start:UInt32})) AND TimeBucket <= toStartOfFifteenMinutes(toDateTime({end:UInt32})) AND Timestamp >= toDateTime({start:UInt32}) AND Timestamp <= toDateTime({end:UInt32}) AND IsRoot AND OperationType != 'subscription'";
-
-  test('counts every operation of a sampled batch from root spans alone, without subscriptions', async () => {
-    const { client, queries, estimates } = fakeClient(() => [{ sampled: '30', total: '900' }]);
-
-    const sampling = await observedSamplingRatio(client, scopeOf([prod]), 1_000_000);
-
-    expect(sampling).toEqual({ ratio: 0.0333 });
-    expect(estimates.map((e) => e.sql)).toEqual([SAMPLED]);
-    expect(queries.map((q) => q.sql)).toEqual([
-      `SELECT (${SAMPLED}) AS sampled, (SELECT sum(TotalRequests) FROM cosmo.operation_request_metrics_5_30 WHERE OrganizationID = {organizationId:String} AND FederatedGraphID IN {graphIds:Array(String)} AND Timestamp >= toDateTime({start:UInt32}) AND Timestamp <= toDateTime({end:UInt32}) AND OperationType != 'subscription') AS total`,
-    ]);
-  });
-
-  test('is left out, with a warning, when computing it would exceed the row budget', async () => {
-    const { client, queries } = fakeClient(
-      () => [],
-      () => 2_000_000,
-    );
-
-    expect(await observedSamplingRatio(client, scopeOf([prod]), 1_000_000)).toEqual({
-      warning:
-        'observedSamplingRatio is left out: computing it would read about 2,000,000 sampled spans (limit 1,000,000). Narrow the window to get it.',
-    });
     expect(queries).toEqual([]);
   });
 });

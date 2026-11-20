@@ -2,7 +2,9 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { OPERATORS, rowsToObjects, serverMeta, toTimeWindow, truncateValue } from '../query.js';
+import { truncateValue } from '../format.js';
+import { OPERATORS, rowsToObjects, serverMeta } from '../query-rpc.js';
+import { queryWindow } from '../window.js';
 
 export function registerSearchOperationDocumentsTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -31,7 +33,7 @@ export function registerSearchOperationDocumentsTool(ctx: AnalyticsToolContext) 
           dimensions: ['operationHash', 'operationName', 'operationType'],
           measures: ['document'],
           filters: [{ field: 'content', operator: OPERATORS.contains, values: [input.contains] }],
-          window: input.range ? toTimeWindow({ range: input.range }) : undefined,
+          window: input.range ? queryWindow({ range: input.range }) : undefined,
           orderBy: [{ field: 'operationName', desc: false }],
           limit: input.limit,
         },

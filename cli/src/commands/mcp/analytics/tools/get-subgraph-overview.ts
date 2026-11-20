@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { parseWindow, windowInput } from '../window.js';
-import { metricsFilterInput, metricsFilters, metricsWindow } from './metrics-request.js';
+import { metricsFilterInput, metricsFilters } from '../metrics-rpc.js';
+import { metricsWindow, retainedWindow, windowInput } from '../window.js';
 
 export function registerGetSubgraphOverviewTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -21,7 +21,7 @@ export function registerGetSubgraphOverviewTool(ctx: AnalyticsToolContext) {
       },
     },
     async (input, headers) => {
-      const window = parseWindow(input);
+      const { window, warnings: windowWarnings } = await retainedWindow(ctx, input, 'analytics');
       const request = {
         subgraphName: input.subgraph,
         namespace: input.namespace,
@@ -48,7 +48,10 @@ export function registerGetSubgraphOverviewTool(ctx: AnalyticsToolContext) {
           window,
           granularity: metrics.resolution ? `${metrics.resolution}m` : undefined,
           now: ctx.now().toISOString(),
-          warnings: ['Latency percentiles at or above 10s are reported as 10000ms (the histogram ends there).'],
+          warnings: [
+            ...windowWarnings,
+            'Latency percentiles at or above 10s are reported as 10000ms (the histogram ends there).',
+          ],
         },
       );
     },

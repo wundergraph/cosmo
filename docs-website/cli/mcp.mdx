@@ -183,7 +183,7 @@ The analytics tools let your AI assistant answer questions about your graphs' tr
 
 ### Authentication
 
-Analytics tools act either as you or as an API key:
+The MCP server, schema and analytics tools alike, acts either as you or as an API key:
 
 - **Your login (recommended).** Run `wgc auth login` once, then start the server with `--auth user`. The server refreshes your session as needed. You see exactly the graphs you can see in Studio, including namespace login-method restrictions.
 - **An API key.** Set `COSMO_API_KEY` (the default when it is set, or `--auth api-key`). The key's group permissions apply. API keys bypass namespace login-method restrictions, so give the key a group with `graph-viewer` on only the namespaces it needs.
@@ -199,7 +199,7 @@ Analytics tools act either as you or as an API key:
 }
 ```
 
-Use `--toolsets analytics` to register only the analytics tools, or `--toolsets schema` for only the schema tools. Both are registered by default.
+Use `--toolsets analytics` to register only the analytics tools, or `--toolsets schema` for only the schema tools. Both are registered by default. An unknown toolset name is an error.
 
 ### What the data means
 

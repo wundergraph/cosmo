@@ -1,8 +1,12 @@
+import { create } from '@bufbuild/protobuf';
 import { createClient, createRouterTransport, type ServiceImpl } from '@connectrpc/connect';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GetAnalyticsCapabilitiesResponseSchema,
+  PlatformService,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { createReadOnlyAnalyticsClient } from '../../../src/commands/mcp/analytics/client.js';
 import type { AnalyticsToolContext } from '../../../src/commands/mcp/analytics/context.js';
 
@@ -47,6 +51,18 @@ export function fakeContext(
     },
     webURL: 'https://cosmo.wundergraph.com',
     getOrgSlug: () => Promise.resolve('acme'),
+    // The fake platform's capabilities when it serves them; otherwise a plan that retains everything a test asks for.
+    getCapabilities: () =>
+      impl.getAnalyticsCapabilities
+        ? platform.getAnalyticsCapabilities({})
+        : Promise.resolve(
+            create(GetAnalyticsCapabilitiesResponseSchema, {
+              retention: ['analytics', 'schema_usage', 'tracing', 'request_volume'].map((family) => ({
+                family,
+                effectiveDays: 90,
+              })),
+            }),
+          ),
     now: () => now,
   };
   return { ctx, tools, resources, prompts };

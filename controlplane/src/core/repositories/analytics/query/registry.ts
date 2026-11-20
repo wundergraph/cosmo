@@ -21,8 +21,6 @@ export type VirtualKind = 'graph' | 'subgraph' | 'featureFlag' | 'composition';
 export interface PhysicalDimension {
   /** Expression for grouping and filtering. */
   sql: string;
-  /** Boolean dimensions come back as true/false; everything else groups as text. */
-  type?: 'boolean';
   /** The column holds an array: filters test membership, grouping uses arrayJoin (and can double-count). */
   array?: boolean;
   virtual?: VirtualKind;
@@ -127,7 +125,7 @@ const FIELD_USAGE_DIMENSIONS: Record<string, PhysicalDimension> = {
   path: { sql: "arrayStringConcat(Path, '.')" },
   namedType: { sql: 'NamedType' },
   pathDepth: { sql: 'length(Path)' },
-  isIntrospection: { sql: INTROSPECTION, type: 'boolean' },
+  isIntrospection: { sql: INTROSPECTION },
   ...OPERATION_DIMENSIONS,
   subgraph: { sql: 'SubgraphIDs', array: true, virtual: 'subgraph' },
   ...COMPOSED_DIMENSIONS('RouterConfigVersion'),
@@ -211,7 +209,7 @@ const REQUESTS: PhysicalDataset = {
     httpHost: { sql: 'HttpHost' },
     httpTarget: { sql: 'HttpTarget' },
     userAgent: { sql: 'HttpUserAgent' },
-    hasError: { sql: 'HasError', type: 'boolean' },
+    hasError: { sql: 'HasError' },
     statusMessage: { sql: 'StatusMessage' },
     durationMs: { sql: 'Duration / 1e6' },
   },
@@ -221,7 +219,8 @@ const REQUESTS: PhysicalDataset = {
 };
 
 const SPAN_ERROR = "StatusCode = 'STATUS_CODE_ERROR'";
-const ROOT_HAS_ERROR = `(${SPAN_ERROR} OR startsWith(HttpStatusCode, '4') OR startsWith(HttpStatusCode, '5') OR mapContains(SpanAttributes, 'wg.request.error'))`;
+/** A root span's error rule: an error status, an HTTP 4xx/5xx, or a GraphQL request error. */
+export const ROOT_HAS_ERROR = `(${SPAN_ERROR} OR startsWith(HttpStatusCode, '4') OR startsWith(HttpStatusCode, '5') OR mapContains(SpanAttributes, 'wg.request.error'))`;
 
 const SPAN_SEARCH_DIMENSIONS: Record<string, PhysicalDimension> = {
   ...OPERATION_DIMENSIONS,
@@ -247,9 +246,9 @@ const REQUESTS_FROM_ROOT_SPANS: PhysicalDataset = {
     httpHost: { sql: "SpanAttributes['http.host']" },
     httpTarget: { sql: "SpanAttributes['http.target']" },
     userAgent: { sql: "SpanAttributes['http.user_agent']" },
-    hasError: { sql: ROOT_HAS_ERROR, type: 'boolean' },
+    hasError: { sql: ROOT_HAS_ERROR },
     protocol: { sql: "SpanAttributes['wg.operation.protocol']" },
-    isBatched: { sql: "SpanAttributes['wg.operation.batching.is_batched'] = 'true'", type: 'boolean' },
+    isBatched: { sql: "SpanAttributes['wg.operation.batching.is_batched'] = 'true'" },
   },
   measures: {
     ...REQUEST_MEASURES,
@@ -276,8 +275,8 @@ const SPANS: PhysicalDataset = {
     subgraphName: { sql: 'SubgraphName' },
     subgraphId: { sql: 'SubgraphID' },
     statusCode: { sql: 'StatusCode' },
-    isRoot: { sql: 'IsRoot', type: 'boolean' },
-    hasError: { sql: SPAN_ERROR, type: 'boolean' },
+    isRoot: { sql: 'IsRoot' },
+    hasError: { sql: SPAN_ERROR },
   },
   measures: {
     count: { sql: 'count()', source: 'main', kind: 'number' },
@@ -366,8 +365,11 @@ const OPERATION_DOCUMENTS: PhysicalDataset = {
     content: { sql: 'OperationContent' },
     graph: { sql: 'FederatedGraphID', virtual: 'graph' },
   },
-  measures: { document: { sql: 'any(OperationContent)', source: 'main', kind: 'string' } },
-  countMeasure: 'document',
+  measures: {
+    document: { sql: 'any(OperationContent)', source: 'main', kind: 'string' },
+    operations: { sql: 'uniqExact(OperationHash)', source: 'main', kind: 'number' },
+  },
+  countMeasure: 'operations',
 };
 
 export const PHYSICAL_DATASETS: PhysicalDataset[] = [

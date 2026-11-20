@@ -1,9 +1,8 @@
 import { afterAll, beforeAll, describe, expect, Mock, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
+import { createFederatedGraphWithSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
@@ -28,19 +27,7 @@ describe('GetOrganizationRequestsCount history', () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel();
-    await createThenPublishSubgraph(
-      client,
-      genID('subgraph'),
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
-      [label],
-      'http://localhost:4001',
-    );
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-    const graphId = (await client.getFederatedGraphByName({ name: fedGraphName, namespace: DEFAULT_NAMESPACE })).graph!
-      .id;
+    const { name: fedGraphName, id: graphId } = await createFederatedGraphWithSubgraph(client);
 
     (chClient.queryPromise as Mock).mockImplementation((query: string) =>
       Promise.resolve(

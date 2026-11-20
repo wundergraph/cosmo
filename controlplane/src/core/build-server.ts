@@ -9,6 +9,7 @@ import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
+import { MCP_CLIENT_HEADER } from '@wundergraph/cosmo-shared';
 import { PromptToQueryService } from '@wundergraph/cosmo-connect/dist/yoko/v1/prompt_to_query_pb';
 import type { Redis } from 'ioredis';
 import routes from './routes.js';
@@ -78,8 +79,12 @@ import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composit
 
 export interface BuildConfig {
   logger: LoggerOptions;
-  analyticsMcpRateLimitPerMinute?: number;
-  analyticsQueryRowBudget?: number;
+  analytics: {
+    /** Requests per organization and minute that MCP clients may send to analytics RPCs. */
+    mcpRateLimitPerMinute: number;
+    /** Rows a query on sampled analytics data may plan to read before it is refused. */
+    queryRowBudget: number;
+  };
   composition?: {
     minThreads: number;
     maxThreads: number;
@@ -689,10 +694,10 @@ export default async function build(opts: BuildConfig) {
       promptToQueryClient,
       analyticsRateLimiter: new AnalyticsRateLimiter(
         fastify.redisForQueue as Redis,
-        opts.analyticsMcpRateLimitPerMinute ?? 120,
+        opts.analytics.mcpRateLimitPerMinute,
         logger,
       ),
-      analyticsQueryRowBudget: opts.analyticsQueryRowBudget,
+      analyticsQueryRowBudget: opts.analytics.queryRowBudget,
     }),
     contextValues(req) {
       const values = createContextValues().set<FastifyBaseLogger>(
@@ -719,7 +724,7 @@ export default async function build(opts: BuildConfig) {
       // Tags every ClickHouse query of this request and cancels it when the client goes away.
       (next) => (req) =>
         clickHouseQueryContext.run(
-          { rpc: req.method.name, client: req.header.get('x-cosmo-client') ?? undefined, signal: req.signal },
+          { rpc: req.method.name, client: req.header.get(MCP_CLIENT_HEADER) ?? undefined, signal: req.signal },
           () => next(req),
         ),
       (next) => (req) => {

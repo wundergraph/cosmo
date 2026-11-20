@@ -38,10 +38,10 @@ The analytics tools answer questions about traffic, latency, errors, clients, fi
 
 ### Options
 
-- `--auth user|api-key`: how the analytics tools authenticate. `user` uses your `wgc auth login` session and refreshes it as needed; namespace login-method restrictions apply. `api-key` uses `COSMO_API_KEY`, whose group permissions apply but which bypasses namespace login-method restrictions. Defaults to `api-key` when `COSMO_API_KEY` is set, otherwise `user`.
-- `--toolsets schema,analytics`: which tools to register. Both by default.
+- `--auth user|api-key`: how every tool authenticates. `user` uses your `wgc auth login` session and refreshes it as needed; namespace login-method restrictions apply. `api-key` uses `COSMO_API_KEY`, whose group permissions apply but which bypasses namespace login-method restrictions. Defaults to `api-key` when `COSMO_API_KEY` is set, otherwise `user`.
+- `--toolsets schema,analytics`: which tools to register. Both by default; an unknown name is an error.
 
-When you use an API key for analytics, give it a group with the `graph-viewer` role on only the namespaces it needs.
+When you use an API key, give it a group with only the roles and namespaces it needs; for analytics alone, `graph-viewer` is enough.
 
 ### Tools
 

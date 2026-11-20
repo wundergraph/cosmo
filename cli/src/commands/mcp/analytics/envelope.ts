@@ -1,5 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import type { AnalyticsWindow } from './window.js';
 
 type WindowRange = { start: string; end: string };
 
@@ -9,7 +10,7 @@ export type Meta = {
   completeness: 'complete' | 'sampled';
   /** Sampled results: sampled operations ÷ complete metric requests for the graphs and window. */
   observedSamplingRatio?: number;
-  window?: { range?: number; dateRange?: WindowRange };
+  window?: AnalyticsWindow;
   requestedWindow?: WindowRange;
   effectiveWindow?: WindowRange;
   baselineWindow?: WindowRange;

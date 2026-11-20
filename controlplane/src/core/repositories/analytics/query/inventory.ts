@@ -1,8 +1,9 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../../../db/schema.js';
+import { traced } from '../../../tracing.js';
 
-export const DELETED_FLAG = '(deleted flag)';
+const DELETED_FLAG = '(deleted flag)';
 
 export interface CompositionInfo {
   createdAt: string;
@@ -10,7 +11,7 @@ export interface CompositionInfo {
 }
 
 /**
- * Postgres reference data behind the virtual dimensions (spec §2.4): subgraph names, feature-flag compositions and
+ * Postgres reference data behind the virtual dimensions: subgraph names, feature-flag compositions and
  * composition metadata. Everything is scoped to one organization; graph IDs passed in are already access-checked.
  */
 export interface AnalyticsInventory {
@@ -24,6 +25,7 @@ export interface AnalyticsInventory {
   compositions(versions: string[]): Promise<Map<string, CompositionInfo>>;
 }
 
+@traced
 export class PostgresAnalyticsInventory implements AnalyticsInventory {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

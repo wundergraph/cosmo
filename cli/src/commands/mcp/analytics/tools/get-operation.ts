@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { parseWindow, windowInput } from '../window.js';
-import { metricsFilters, metricsWindow } from './metrics-request.js';
+import { metricsFilters } from '../metrics-rpc.js';
+import { metricsWindow, retainedWindow, windowInput } from '../window.js';
 
 export function registerGetOperationTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -21,7 +21,7 @@ export function registerGetOperationTool(ctx: AnalyticsToolContext) {
       },
     },
     async (input, headers) => {
-      const window = parseWindow(input);
+      const { window, warnings: windowWarnings } = await retainedWindow(ctx, input, 'analytics');
       const graph = { federatedGraphName: input.graph, namespace: input.namespace };
       const [content, clients, deprecated, metrics] = await Promise.all([
         ctx.client.getOperationContent(
@@ -70,7 +70,10 @@ export function registerGetOperationTool(ctx: AnalyticsToolContext) {
           completeness: 'complete',
           window,
           now: ctx.now().toISOString(),
-          warnings: contentError ? [`Document unavailable: ${content.response?.details ?? contentError}`] : [],
+          warnings: [
+            ...windowWarnings,
+            ...(contentError ? [`Document unavailable: ${content.response?.details ?? contentError}`] : []),
+          ],
         },
       );
     },

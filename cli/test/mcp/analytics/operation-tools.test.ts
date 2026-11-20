@@ -102,4 +102,34 @@ describe('get_field_usage', () => {
     expect(request?.typename).toBe('Query');
     expect(request?.field).toBe('id');
   });
+
+  test('reads only the window the plan retains, and says it cut the window', async () => {
+    let request: GetFieldUsageRequest | undefined;
+    const { ctx, tools } = fakeContext({
+      getFieldUsage: (req) => {
+        request = req;
+        return { ...okResponse, clients: [], requestSeries: [] };
+      },
+      getAnalyticsCapabilities: () => ({
+        ...okResponse,
+        retention: [{ family: 'schema_usage', planDays: 7, storageTtlDays: 90, effectiveDays: 7 }],
+      }),
+    });
+    registerGetFieldUsageTool(ctx);
+
+    const result = await tools.get('get_field_usage')!.handler({
+      graph: 'shop',
+      namespace: 'default',
+      type: 'Query',
+      field: 'id',
+      range: '30d',
+    });
+
+    expect(request?.range).toBe(168);
+    const meta = (result.structuredContent as any).meta;
+    expect([meta.window, meta.warnings]).toEqual([
+      { range: 168 },
+      ["Window clamped to 7 days by your plan's analytics retention."],
+    ]);
+  });
 });

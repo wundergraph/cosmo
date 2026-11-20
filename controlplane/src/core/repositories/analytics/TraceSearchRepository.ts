@@ -1,8 +1,10 @@
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { ParamBag } from '../../clickhouse/params.js';
 import { traced } from '../../tracing.js';
-import { compileFilters, ParamBag, tenantPredicate, windowPredicates, type CompiledFilter } from './query/compiler.js';
-import { findPhysicalDataset, REQUESTS_ROOT_SPANS } from './query/registry.js';
-import { QueryBudgetError } from './query/engine.js';
+import { compileFilters, tenantPredicate, windowPredicates, type CompiledFilter } from './query/compiler.js';
+import { findPhysicalDataset, REQUESTS_ROOT_SPANS, ROOT_HAS_ERROR } from './query/registry.js';
+import { formatRows, rowsOverBudget } from './query/budget.js';
+import { QueryBudgetError } from './query/errors.js';
 import { toIso, type Window } from './query/window.js';
 
 export interface SpanConditionInput {
@@ -86,8 +88,6 @@ const BATCH_CANDIDATES = 1000;
  */
 const BATCH_INDEX = "SpanAttributes['wg.operation.batching.operation_index']";
 const BATCH_OPERATION = `${BATCH_INDEX} != ''`;
-const ROOT_HAS_ERROR =
-  "(StatusCode = 'STATUS_CODE_ERROR' OR startsWith(HttpStatusCode, '4') OR startsWith(HttpStatusCode, '5') OR mapContains(SpanAttributes, 'wg.request.error'))";
 
 interface RootRow {
   traceId: string;
@@ -111,7 +111,7 @@ const ROOT_COLUMNS = `TraceId AS traceId, SpanId AS spanId, toUnixTimestamp(Time
   HttpStatusCode AS httpStatusCode, StatusMessage AS statusMessage, HasError AS hasError`;
 
 /**
- * Searches sampled traces (spec §7.5). Request filters alone read the root rows in traces_detail_by_time; span
+ * Searches sampled traces. Request filters alone read the root rows in traces_detail_by_time; span
  * conditions and root-span attributes read span_search, grouped by trace. Operation filters also match operations inside
  * batched requests (a batch has one root span without an operation name; the spans of each operation carry its batch
  * index).
@@ -369,10 +369,10 @@ export class TraceSearchRepository {
   }
 
   private async checkBudget(sql: string, params: ParamBag['params'], read: 'spans' | 'requests' = 'spans') {
-    const rows = await this.client.estimateRows(sql, params);
-    if (rows > this.rowBudget) {
-      const estimate = `This search would read about ${rows.toLocaleString('en-US')}`;
-      const limit = `(limit ${this.rowBudget.toLocaleString('en-US')}). Narrow the window (e.g. 6h)`;
+    const rows = await rowsOverBudget(this.client, { sql, params }, this.rowBudget);
+    if (rows !== undefined) {
+      const estimate = `This search would read about ${formatRows(rows)}`;
+      const limit = `(limit ${formatRows(this.rowBudget)}). Narrow the window (e.g. 6h)`;
       throw new QueryBudgetError(
         read === 'spans'
           ? `${estimate} spans ${limit} or add a span name, subgraph or operation.`

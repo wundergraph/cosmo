@@ -1,10 +1,10 @@
 import { ANALYTICS_DATASETS } from '@wundergraph/cosmo-shared';
 import type { AnalyticsToolContext } from './context.js';
-import { checkResponse, toPlain } from './envelope.js';
+import { toPlain } from './envelope.js';
 import { registerAnalyticsPrompts } from './prompts.js';
 import { registerAnalyzeSpansTool } from './tools/analyze-spans.js';
 import { registerComparePeriodsTool } from './tools/compare-periods.js';
-import { registerGetAnalyticsContextTool } from './tools/get-analytics-context.js';
+import { readAnalyticsContext, registerGetAnalyticsContextTool } from './tools/get-analytics-context.js';
 import { registerGetChangeTimelineTool } from './tools/get-change-timeline.js';
 import { registerGetCheckImpactTool } from './tools/get-check-impact.js';
 import { registerGetErrorBreakdownTool } from './tools/get-error-breakdown.js';
@@ -103,9 +103,10 @@ export function registerAnalyticsResources(ctx: AnalyticsToolContext) {
       mimeType: 'application/json',
     },
     async (uri) => {
-      const resp = await ctx.client.getAnalyticsCapabilities({}, { headers: await ctx.auth.getHeaders() });
-      const error = checkResponse(resp, 'Analytics context');
-      const text = error ? JSON.stringify({ error }) : JSON.stringify(toPlain({ ...resp, response: undefined }));
+      const text = await readAnalyticsContext(ctx).then(
+        (context) => JSON.stringify(toPlain(context)),
+        (error: unknown) => JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      );
       return { contents: [{ uri: uri.href, mimeType: 'application/json', text }] };
     },
   );

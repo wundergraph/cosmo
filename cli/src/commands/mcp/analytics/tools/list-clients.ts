@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { rowsToObjects, serverMeta, toTimeWindow } from '../query.js';
-import { windowInput } from '../window.js';
+import { rowsToObjects, serverMeta } from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 export function registerListClientsTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -28,7 +28,7 @@ export function registerListClientsTool(ctx: AnalyticsToolContext) {
             dimensions: ['clientName', 'clientVersion'],
             measures: ['requests', 'errors', 'errorRate', 'firstSeen', 'lastSeen'],
             orderBy: [{ field: 'requests', desc: true }],
-            window: toTimeWindow(input),
+            window: queryWindow(input),
             limit: input.limit,
           },
           { headers },

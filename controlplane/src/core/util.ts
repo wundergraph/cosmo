@@ -437,7 +437,8 @@ export const validatePlaygroundHeaders = (
   return errors.length === 0 ? { success: true } : { success: false, errors };
 };
 
-const toUtcIso = (date: Date) => date.toISOString().replace('.000Z', 'Z');
+/** A date as an ISO 8601 time without milliseconds. */
+export const toUtcIso = (date: Date) => date.toISOString().replace('.000Z', 'Z');
 
 /**
  * Clamps a requested window to the plan's retention `limit` (days). `range` is in hours.

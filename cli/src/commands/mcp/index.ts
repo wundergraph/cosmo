@@ -1,4 +1,4 @@
-import { Command, Option } from 'commander';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { BaseCommandOptions } from '../../core/types/types.js';
@@ -6,7 +6,7 @@ import { config } from '../../core/config.js';
 import { readConfigFile, updateConfigFile } from '../../utils.js';
 import { refreshAccessToken } from '../auth/utils.js';
 import { type AuthMode, createAuthProvider } from './auth.js';
-import { createReadOnlyAnalyticsClient } from './analytics/client.js';
+import { createAnalyticsToolContext } from './analytics/context.js';
 import { ANALYTICS_INSTRUCTIONS, registerAnalyticsTools } from './analytics/server.js';
 import {
   registerListSubgraphsTool,
@@ -23,6 +23,21 @@ import {
   registerVerifyRouterConfigTool,
 } from './tools/index.js';
 
+const TOOLSETS = ['schema', 'analytics'] as const;
+type Toolset = (typeof TOOLSETS)[number];
+
+/** The --toolsets value: a comma-separated list of known toolsets. */
+export function parseToolsets(value: string): Set<Toolset> {
+  const names = value
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name !== '');
+  if (names.length === 0 || names.some((name) => !(TOOLSETS as readonly string[]).includes(name))) {
+    throw new InvalidArgumentError(`Use a comma-separated list of: ${TOOLSETS.join(', ')}.`);
+  }
+  return new Set(names as Toolset[]);
+}
+
 export default (opts: BaseCommandOptions) => {
   const command = new Command('mcp');
   command.description('Start the Cosmo MCP server');
@@ -33,16 +48,18 @@ export default (opts: BaseCommandOptions) => {
     ).choices(['user', 'api-key']),
   );
 
-  command.option(
-    '--toolsets <list>',
-    'Comma-separated toolsets to register: "schema" (subgraphs, supergraphs, checks) and "analytics" (read-only analytics).',
-    'schema,analytics',
+  command.addOption(
+    new Option(
+      '--toolsets <list>',
+      'Comma-separated toolsets to register: "schema" (subgraphs, supergraphs, checks) and "analytics" (read-only analytics).',
+    )
+      .default(new Set(TOOLSETS), TOOLSETS.join(','))
+      .argParser(parseToolsets),
   );
 
-  command.action(async (options: { auth?: AuthMode; toolsets: string }) => {
-    const toolsets = new Set(options.toolsets.split(',').map((toolset) => toolset.trim()));
+  command.action(async ({ auth: authMode, toolsets }: { auth?: AuthMode; toolsets: Set<Toolset> }) => {
     const auth = createAuthProvider({
-      mode: options.auth,
+      mode: authMode,
       apiKey: process.env.COSMO_API_KEY,
       version: config.version,
       readConfig: readConfigFile,
@@ -60,42 +77,24 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (toolsets.has('analytics')) {
-      let organizationSlug: Promise<string> | undefined;
-      const client = createReadOnlyAnalyticsClient(opts.client.platform);
-      registerAnalyticsTools({
-        server,
-        client,
-        auth,
-        webURL: config.webURL,
-        now: () => new Date(),
-        getOrgSlug: () => {
-          organizationSlug ??= auth
-            .getHeaders()
-            .then((headers) => client.whoAmI({}, { headers }))
-            .then((resp) => resp.organizationSlug)
-            .catch((error) => {
-              // Don't cache a failure (e.g. not logged in yet): retry on the next call.
-              organizationSlug = undefined;
-              throw error;
-            });
-          return organizationSlug;
-        },
-      });
+      registerAnalyticsTools(
+        createAnalyticsToolContext({ server, platform: opts.client.platform, auth, webURL: config.webURL }),
+      );
     }
 
     if (toolsets.has('schema')) {
-      registerListSubgraphsTool({ server, opts });
-      registerGetSubgraphsTool({ server, opts });
-      registerSubgraphVerifySchemaChangesTool({ server, opts });
-      registerFederatedGraphTools({ server, opts });
+      registerListSubgraphsTool({ server, opts, auth });
+      registerGetSubgraphsTool({ server, opts, auth });
+      registerSubgraphVerifySchemaChangesTool({ server, opts, auth });
+      registerFederatedGraphTools({ server, opts, auth });
       registerSchemaChangeProposalWorkflowTool({ server, opts });
       registerDreamQueryWorkflowTool({ server, opts });
-      registerVerifyQueryAgainstRemoteSchemaTool({ server, opts });
+      registerVerifyQueryAgainstRemoteSchemaTool({ server, opts, auth });
       registerVerifyQueryAgainstInMemorySchemaTool({ server, opts });
       registerIntrospectSubgraphTool({ server, opts });
-      registerSupergraphChangelogTool({ server, opts });
-      registerSearchDocsTool({ server, opts });
-      registerVerifyRouterConfigTool({ server, opts });
+      registerSupergraphChangelogTool({ server, opts, auth });
+      registerSearchDocsTool({ server, opts, auth });
+      registerVerifyRouterConfigTool({ server, opts, auth });
     }
     // Start receiving messages on stdin and sending messages on stdout
     const transport = new StdioServerTransport();

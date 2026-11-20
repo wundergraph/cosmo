@@ -109,7 +109,7 @@ describe('query_analytics', () => {
       'operation_documents',
     ]);
     expect(catalog.at(-1)).toBe(
-      '- operation_documents (complete, operation): Normalized operation documents with traffic inside your retention; filter on `content` to search them. Dimensions: operationHash, operationName, operationType, graph. Measures: document.',
+      '- operation_documents (complete, operation): Normalized operation documents with traffic inside your retention; filter on `content` to search them. Dimensions: operationHash, operationName, operationType, graph. Measures: document, operations.',
     );
   });
 
@@ -260,6 +260,15 @@ describe('search_operation_documents', () => {
 });
 
 describe('get_change_timeline', () => {
+  test('asks for both ends of an explicit window', async () => {
+    const { ctx, tools } = fakeContext({});
+    registerGetChangeTimelineTool(ctx);
+
+    const result = await tools.get('get_change_timeline')!.handler({ graph: 'shop', to: '2026-10-31T00:00:00Z' });
+
+    expect(result).toEqual({ isError: true, content: [{ type: 'text', text: 'from and to must be given together.' }] });
+  });
+
   test('joins compositions with their schema changes over the last 7 days', async () => {
     let compositionsWindow: string[] = [];
     const { ctx, tools } = fakeContext({

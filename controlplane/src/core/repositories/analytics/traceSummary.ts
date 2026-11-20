@@ -33,7 +33,7 @@ export interface TraceSummaryResult {
   eventsAvailable: boolean;
 }
 
-export const PHASE_SPANS = [
+const PHASE_SPANS = [
   'HTTP - Read Body',
   'HTTP - Read Multipart',
   'Authenticate',
@@ -44,7 +44,7 @@ export const PHASE_SPANS = [
   'Operation - Plan',
   'Operation - Execute',
 ];
-export const FETCH_SPAN = 'Engine - Fetch';
+const FETCH_SPAN = 'Engine - Fetch';
 const SUBGRAPH_ATTRIBUTE = 'wg.subgraph.name';
 
 interface Node {

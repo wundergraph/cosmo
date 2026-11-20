@@ -1,3 +1,4 @@
+import { ANALYTICS_DATASETS } from '@wundergraph/cosmo-shared';
 import {
   AnalyticsOperator,
   type AnalyticsQueryMeta,
@@ -5,7 +6,14 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { z } from 'zod';
 import type { Meta } from './envelope.js';
-import { parseWindow } from './window.js';
+
+/*
+ * Helpers for the query RPCs (QueryAnalytics, GetAnalyticsDimensionValues, SearchTraces): the graph and filter inputs
+ * they share, and their results as plain rows and envelope meta.
+ */
+
+/** Every dataset of the shared catalog, for tool input enums. */
+export const DATASET_NAMES = ANALYTICS_DATASETS.map((d) => d.name) as [string, ...string[]];
 
 export const OPERATORS = {
   eq: AnalyticsOperator.EQ,
@@ -65,12 +73,6 @@ export function toGraphRefs(input: {
   return { graphs, allReadableGraphs: false };
 }
 
-/** The tool's range or from/to as the RPC's window. */
-export function toTimeWindow(input: { range?: string; from?: string; to?: string }) {
-  const window = parseWindow(input);
-  return window.dateRange ? { start: window.dateRange.start, end: window.dateRange.end } : { rangeHours: window.range };
-}
-
 /** Rows of an analytics result as plain objects, in column order. */
 export function rowsToObjects(rows: AnalyticsViewRow[], columns: string[]) {
   return rows.map((row) =>
@@ -106,17 +108,4 @@ export function serverMeta(
     warnings: [...(meta?.warnings ?? []), ...(extra.warnings ?? [])],
     studioUrl: extra.studioUrl,
   };
-}
-
-export const nsToMs = (value: bigint | number) => Number(value) / 1_000_000;
-export const msToNs = (value: number) => BigInt(Math.round(value * 1_000_000));
-
-export const MAX_VALUE_LENGTH = 2048;
-
-/** Long telemetry values are cut to protect the model's context; `full` returns them whole. */
-export function truncateValue(value: string, full: boolean): { value: string; truncated: boolean } {
-  if (full || value.length <= MAX_VALUE_LENGTH) {
-    return { value, truncated: false };
-  }
-  return { value: value.slice(0, MAX_VALUE_LENGTH), truncated: true };
 }

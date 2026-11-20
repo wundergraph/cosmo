@@ -1,32 +1,23 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { QueryAnalyticsRequest, QueryAnalyticsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import type { FeatureIds, PlainMessage } from '../../../types/index.js';
-import { AnalyticsQueryEngine, applyGraphFilter } from '../../repositories/analytics/query/engine.js';
-import { PostgresAnalyticsInventory } from '../../repositories/analytics/query/inventory.js';
+import type { PlainMessage } from '../../../types/index.js';
 import { validateQuery } from '../../repositories/analytics/query/validate.js';
-import {
-  clampCursorWindow,
-  decodeCursor,
-  encodeCursor,
-  GRAIN_SECONDS,
-  queryFingerprint,
-} from '../../repositories/analytics/query/window.js';
+import { grainSecondsOf } from '../../repositories/analytics/query/window.js';
 import type { RouterOptions } from '../../routes.js';
-import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { authenticateAnalyticsRead } from '../../util/analytics/auth.js';
+import { clampCursorWindow, decodeCursor, encodeCursor, queryFingerprint } from '../../util/analytics/cursor.js';
 import {
   baseMeta,
   dateRange,
   operatorName,
-  resolveAnalyticsGraphs,
-  resolveAnalyticsWindow,
-  retentionDays,
   toPredicates,
   toPublicError,
   toRowValue,
   windowWarnings,
-} from './analyticsRequest.js';
+} from '../../util/analytics/proto.js';
+import { createAnalyticsEngine, resolveAnalyticsScope, toEngineScope } from '../../util/analytics/scope.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function queryAnalytics(
   opts: RouterOptions,
@@ -36,14 +27,12 @@ export function queryAnalytics(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<QueryAnalyticsResponse>>(ctx, logger, async () => {
-    if (!opts.chClient) {
+    const chClient = opts.chClient;
+    if (!chClient) {
       return { response: { code: EnumStatusCode.ERR_ANALYTICS_DISABLED }, rows: [], columns: [] };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
-      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
-    });
+    const authContext = await authenticateAnalyticsRead(opts, ctx);
     logger = enrichLogger(ctx, logger, authContext);
-    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     try {
@@ -66,41 +55,29 @@ export function queryAnalytics(
             }
           : undefined,
       });
+      const { descriptor, filters, timeBucket, limit } = query;
 
-      // Graph filters narrow the graphs themselves; other filters reach the SQL.
-      const graphs = applyGraphFilter(
-        await resolveAnalyticsGraphs({
-          opts,
-          logger,
-          authContext,
-          graphs: req.graphs,
-          allReadableGraphs: req.allReadableGraphs,
-        }),
-        query.filters,
-      );
-
-      const feature = query.descriptor.retentionFeature as FeatureIds;
-      const retention = await retentionDays({
+      const scope = await resolveAnalyticsScope({
         opts,
         logger,
-        organizationId: authContext.organizationId,
-        feature,
-        storageTtlDays: query.descriptor.storageTtlDays,
+        authContext,
+        graphs: req.graphs,
+        allReadableGraphs: req.allReadableGraphs,
+        filters,
+        descriptor,
+        window: req.window,
+        nowSeconds,
+        // Documents are searched across the whole retention unless a window is given.
+        defaultRangeHours: (retention) => (descriptor.name === 'operation_documents' ? retention * 24 : 24),
       });
+      const { graphs, retentionDays } = scope;
       const fingerprint = queryFingerprint({
         ...req,
         cursor: undefined,
         window: undefined,
         graphs: graphs.map((g) => g.id),
       });
-      let resolved = resolveAnalyticsWindow({
-        window: req.window,
-        descriptor: query.descriptor,
-        retentionDays: retention,
-        nowSeconds,
-        // Documents are searched across the whole retention unless a window is given.
-        defaultRangeHours: query.descriptor.name === 'operation_documents' ? retention * 24 : 24,
-      });
+      let { resolved } = scope;
       let offset = 0;
       if (req.cursor) {
         const state = decodeCursor(req.cursor, fingerprint);
@@ -108,20 +85,14 @@ export function queryAnalytics(
         resolved = {
           ...resolved,
           effective: clampCursorWindow(state, {
-            retentionDays: retention,
+            retentionDays,
             nowSeconds,
-            grainSeconds: GRAIN_SECONDS[query.descriptor.grain] ?? 1,
+            grainSeconds: grainSecondsOf(descriptor.grain),
           }),
         };
       }
 
-      const meta = baseMeta({
-        descriptor: query.descriptor,
-        resolved,
-        graphs,
-        nowSeconds,
-        granularity: query.timeBucket,
-      });
+      const meta = baseMeta({ descriptor, resolved, graphs, nowSeconds, granularity: timeBucket });
       if (graphs.length === 0) {
         return {
           response: { code: EnumStatusCode.OK },
@@ -131,23 +102,12 @@ export function queryAnalytics(
         };
       }
 
-      const engine = new AnalyticsQueryEngine(
-        opts.chClient,
-        new PostgresAnalyticsInventory(opts.db, authContext.organizationId),
-        { rowBudget: opts.analyticsQueryRowBudget ?? DEFAULT_ROW_BUDGET },
-      );
-      const result = await engine.run(
+      const result = await createAnalyticsEngine(opts, chClient, authContext.organizationId).run(
         query,
-        {
-          organizationId: authContext.organizationId,
-          graphs,
-          window: resolved.effective,
-          retentionStart: nowSeconds - retention * 86_400,
-        },
+        toEngineScope(authContext.organizationId, scope, resolved.effective, nowSeconds),
         offset,
       );
 
-      const nextOffset = offset + query.limit;
       return {
         response: { code: EnumStatusCode.OK },
         columns: result.columns,
@@ -159,9 +119,12 @@ export function queryAnalytics(
           observedSamplingRatio: result.observedSamplingRatio,
           truncated: result.truncated,
           nextCursor: result.truncated
-            ? encodeCursor({ offset: nextOffset, ...resolved.effective, fingerprint })
+            ? encodeCursor({ offset: offset + limit, ...resolved.effective, fingerprint })
             : undefined,
-          warnings: [...windowWarnings(resolved, retention, feature, nowSeconds), ...result.warnings],
+          warnings: [
+            ...windowWarnings(resolved, retentionDays, descriptor.retentionFeature, nowSeconds),
+            ...result.warnings,
+          ],
           tables: req.explain ? result.tables : [],
           appliedFilters: req.explain ? result.appliedFilters : [],
           baselineWindow: result.baselineWindow ? dateRange(result.baselineWindow) : undefined,
@@ -172,6 +135,3 @@ export function queryAnalytics(
     }
   });
 }
-
-/** Rows a sampled-data query may plan to read (EXPLAIN ESTIMATE) before it is refused. */
-export const DEFAULT_ROW_BUDGET = 200_000_000;

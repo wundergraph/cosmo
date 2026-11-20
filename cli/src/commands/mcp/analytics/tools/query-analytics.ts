@@ -5,6 +5,7 @@ import { registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
 import { studioUrl } from '../links.js';
 import {
+  DATASET_NAMES,
   filterInput,
   graphsInput,
   OPERATORS,
@@ -12,11 +13,8 @@ import {
   serverMeta,
   toGraphRefs,
   toPredicate,
-  toTimeWindow,
-} from '../query.js';
-import { windowInput } from '../window.js';
-
-const DATASET_NAMES = ANALYTICS_DATASETS.map((d) => d.name) as [string, ...string[]];
+} from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 /** One line per dataset, generated from the shared catalog the server compiles from. */
 export const datasetCatalogText = () =>
@@ -87,7 +85,7 @@ export function registerQueryAnalyticsTool(ctx: AnalyticsToolContext) {
           filters: input.filters.map((filter) => toPredicate(filter)),
           having: input.having.map((h) => ({ measure: h.measure, operator: OPERATORS[h.operator], value: h.value })),
           timeBucket: input.timeBucket,
-          window: toTimeWindow(input),
+          window: queryWindow(input),
           orderBy: input.orderBy,
           limit: input.limit,
           cursor: input.cursor,

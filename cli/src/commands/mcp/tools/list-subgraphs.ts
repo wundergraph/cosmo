@@ -1,8 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
-export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
+export const registerListSubgraphsTool = ({ server, opts, auth }: ToolContext) => {
   server.registerTool(
     'list_subgraphs',
     {
@@ -16,7 +15,7 @@ export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
           offset: 0,
         },
         {
-          headers: getBaseHeaders(),
+          headers: await auth.getHeaders(),
         },
       );
 

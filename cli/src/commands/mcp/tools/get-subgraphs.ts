@@ -1,10 +1,9 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
 import type { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
-export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
+export const registerGetSubgraphsTool = ({ server, opts, auth }: ToolContext) => {
   server.registerTool(
     'get_subgraphs',
     {
@@ -16,6 +15,7 @@ export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
       },
     },
     async (params) => {
+      const headers = await auth.getHeaders();
       const results: Array<Partial<Subgraph> & { sdl?: string }> = [];
       const errors: string[] = [];
 
@@ -31,7 +31,7 @@ export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
               offset: 0,
             },
             {
-              headers: getBaseHeaders(),
+              headers,
             },
           )
           .then((resp) => ({ name, resp })),
@@ -75,7 +75,7 @@ export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
                 namespace: params.namespace, // Use the common namespace
               },
               {
-                headers: getBaseHeaders(),
+                headers,
               },
             )
             .then((sdlResp) => ({ name, sdlResp, graph })), // Pass graph info along

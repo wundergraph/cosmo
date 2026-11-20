@@ -1,5 +1,11 @@
-import type { AnalyticsOperatorName, AnalyticsValueType } from '@wundergraph/cosmo-shared';
-import { serializeClickHouseParam, type ClickHouseParamValue } from '../../../clickhouse/params.js';
+import {
+  ANALYTICS_ATTRIBUTE_PREFIX,
+  findAnalyticsDataset,
+  type AnalyticsOperatorName,
+  type AnalyticsValueType,
+} from '@wundergraph/cosmo-shared';
+import { ParamBag, type ClickHouseParamValue } from '../../../clickhouse/params.js';
+import { QueryCompileError } from './errors.js';
 import { INTROSPECTION_SQL, type PhysicalDataset, type PhysicalMeasure, type SourceKey } from './registry.js';
 
 export interface CompiledFilter {
@@ -62,8 +68,6 @@ export interface CompiledQuery {
   tables: string[];
 }
 
-export class QueryCompileError extends Error {}
-
 export const TIME_BUCKET_DIMENSION = 'time';
 
 /** The window on a table's time column, plus its stored bucket column when it has one (see span_search). */
@@ -77,7 +81,6 @@ export const windowPredicates = (timeColumn: string, bucketColumn?: string) => [
   `${timeColumn} >= toDateTime({start:UInt32})`,
   `${timeColumn} <= toDateTime({end:UInt32})`,
 ];
-export const ATTRIBUTE_PREFIX = 'attr:';
 
 const COMPARISON: Partial<Record<AnalyticsOperatorName, string>> = {
   eq: '=',
@@ -118,67 +121,9 @@ const typedValue = (type: AnalyticsValueType, value: string): ClickHouseParamVal
   return value;
 };
 
-/** Collects typed query parameters and hands out their placeholders. */
-export class ParamBag {
-  readonly params: Record<string, ClickHouseParamValue> = {};
-  private counters: Record<string, number> = {};
-
-  add(prefix: string, type: string, value: ClickHouseParamValue) {
-    const index = this.counters[prefix] ?? 0;
-    this.counters[prefix] = index + 1;
-    const name = `${prefix}${index}`;
-    this.params[name] = value;
-    return `{${name}:${type}}`;
-  }
-
-  /**
-   * Binds string arrays that belong together (e.g. versions and their names) as one parameter each, or, when one would
-   * be longer than ClickHouse accepts, as several aligned chunks named `<name>0`, `<name>1`, …. Returns the references
-   * per array.
-   */
-  addArrays(names: string[], arrays: string[][]): string[][] {
-    const chunks = chunkAligned(arrays);
-    if (chunks.length === 1) {
-      return names.map((name, i) => {
-        this.params[name] = arrays[i];
-        return [`{${name}:Array(String)}`];
-      });
-    }
-    return names.map((name, i) =>
-      chunks.map((chunk, c) => {
-        this.params[`${name}${c}`] = chunk[i];
-        return `{${name}${c}:Array(String)}`;
-      }),
-    );
-  }
-
-  /** Like add() for one string array, split into several parameters when it is too long for one. */
-  addArray(prefix: string, values: string[]): string[] {
-    return chunkAligned([values]).map(([chunk]) => this.add(prefix, 'Array(String)', chunk));
-  }
-}
-
-/** ClickHouse refuses an HTTP parameter longer than http_max_field_value_size (128 KiB by default) once URL-encoded. */
-const MAX_PARAM_BYTES = 60_000;
-
-/** Splits aligned arrays at the same indexes so that no chunk of any of them is longer than MAX_PARAM_BYTES. */
-function chunkAligned(arrays: string[][]): string[][][] {
-  const length = arrays[0]?.length ?? 0;
-  const chunks: string[][][] = [];
-  let from = 0;
-  let sizes = arrays.map(() => 0);
-  for (let i = 0; i < length; i++) {
-    const added = arrays.map((array) => encodeURIComponent(serializeClickHouseParam([array[i]])).length);
-    if (i > from && added.some((size, a) => sizes[a] + size > MAX_PARAM_BYTES)) {
-      chunks.push(arrays.map((array) => array.slice(from, i)));
-      from = i;
-      sizes = arrays.map(() => 0);
-    }
-    sizes = sizes.map((size, a) => size + added[a]);
-  }
-  chunks.push(arrays.map((array) => array.slice(from)));
-  return chunks;
-}
+/** Introspection queries are left out of schema usage unless a filter on `isIntrospection` asks for them. */
+export const excludesIntrospection = (dataset: PhysicalDataset, filters: CompiledFilter[]) =>
+  Boolean(dataset.dimensions.isIntrospection) && !filters.some((filter) => filter.field === 'isIntrospection');
 
 /** One array, or the concatenation of its chunks. */
 const arrayOf = (refs: string[]) => (refs.length === 1 ? refs[0] : `arrayConcat(${refs.join(', ')})`);
@@ -236,7 +181,10 @@ export function compileQuery(input: CompileInput): CompiledQuery {
 
   const attributeExpr = attributeExpressions(dataset, bag);
 
-  // Dimensions.
+  // Dimensions. Their value types come from the public catalog, where every dimension is typed.
+  const catalogDimensions = new Map(
+    (findAnalyticsDataset(dataset.name)?.dimensions ?? []).map((dimension) => [dimension.name, dimension.type]),
+  );
   const dimensionSelects: string[] = [];
   const columns: CompiledColumn[] = [];
   for (const name of dimensions) {
@@ -253,8 +201,8 @@ export function compileQuery(input: CompileInput): CompiledQuery {
       columns.push({ name, alias, role: 'dimension', kind: 'datetime' });
       continue;
     }
-    if (name.startsWith(ATTRIBUTE_PREFIX)) {
-      dimensionSelects.push(`${attributeExpr(name.slice(ATTRIBUTE_PREFIX.length)).sql} AS ${alias}`);
+    if (name.startsWith(ANALYTICS_ATTRIBUTE_PREFIX)) {
+      dimensionSelects.push(`${attributeExpr(name.slice(ANALYTICS_ATTRIBUTE_PREFIX.length)).sql} AS ${alias}`);
       columns.push({ name, alias, role: 'dimension', kind: 'string' });
       continue;
     }
@@ -270,17 +218,13 @@ export function compileQuery(input: CompileInput): CompiledQuery {
     } else {
       dimensionSelects.push(`${wrap(dimension.sql)} AS ${alias}`);
     }
-    columns.push({ name, alias, role: 'dimension', kind: dimension.type === 'boolean' ? 'boolean' : 'string' });
+    columns.push({ name, alias, role: 'dimension', kind: catalogDimensions.get(name) ?? 'string' });
   }
   const dimensionAliases = columns.map((column) => column.alias);
 
   // Filters, shared by every source of the dataset.
   const filterSql: string[] = [];
-  let filtersIntrospection = false;
   for (const filter of filters) {
-    if (filter.field === 'isIntrospection') {
-      filtersIntrospection = true;
-    }
     const dimension = dataset.dimensions[filter.field];
     if (dimension?.array && !dimension.virtual && dimensions.includes(filter.field)) {
       // Grouped by the same array: test the joined element, or other elements of a matching row would show up too.
@@ -289,7 +233,7 @@ export function compileQuery(input: CompileInput): CompiledQuery {
     }
     filterSql.push(...compileFilter(filter, dataset, virtual, bag, attributeExpr));
   }
-  if (dataset.dimensions.isIntrospection && !filtersIntrospection) {
+  if (excludesIntrospection(dataset, filters)) {
     filterSql.push(`NOT ${INTROSPECTION_SQL}`);
   }
   if (dataset.subgraphKeyColumn && !filters.some((filter) => filter.field === 'subgraph')) {
@@ -446,8 +390,8 @@ function compileFilter(
     throw new QueryCompileError(`Filter "${field} ${operator}" needs at least one value.`);
   }
 
-  if (field.startsWith(ATTRIBUTE_PREFIX)) {
-    const { sql, ref } = attributeExpr(field.slice(ATTRIBUTE_PREFIX.length));
+  if (field.startsWith(ANALYTICS_ATTRIBUTE_PREFIX)) {
+    const { sql, ref } = attributeExpr(field.slice(ANALYTICS_ATTRIBUTE_PREFIX.length));
     if (operator === 'exists') {
       return [`mapContains(${dataset.attributeMap}, ${ref})`];
     }

@@ -3,11 +3,11 @@ import { eq } from 'drizzle-orm';
 import { pino } from 'pino';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import * as schema from '../src/db/schema.js';
-import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
-import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import * as schema from '../../src/db/schema.js';
+import ApiKeyAuthenticator from '../../src/core/services/ApiKeyAuthenticator.js';
+import { OrganizationRepository } from '../../src/core/repositories/OrganizationRepository.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { SetupTest } from '../test-util.js';
 
 let dbname = '';
 

@@ -1,3 +1,5 @@
+import type { AnalyticsWindow } from './window.js';
+
 const PAGE_PATHS = {
   analytics: 'analytics',
   traces: 'analytics/traces',
@@ -21,4 +23,9 @@ export function studioUrl(
     url.searchParams.set(key, value);
   }
   return url.toString();
+}
+
+/** The window as Studio's analytics pages read it from the URL. */
+export function studioWindowParams(window: AnalyticsWindow): Record<string, string> {
+  return window.dateRange ? { dateRange: JSON.stringify(window.dateRange) } : { range: String(window.range) };
 }

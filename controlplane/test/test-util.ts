@@ -13,6 +13,7 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
 import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest';
+import { joinLabel } from '@wundergraph/cosmo-shared';
 import { AIService } from '@wundergraph/cosmo-connect/dist/ai/v1/ai_pb';
 import type { Redis } from 'ioredis';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
@@ -35,6 +36,8 @@ import Mailer from '../src/core/services/Mailer.js';
 import {
   createTestAuthenticator,
   createTestContext,
+  genID,
+  genUniqueLabel,
   seedTest,
   TestAuthenticator,
   TestAuthenticatorOptions,
@@ -90,6 +93,7 @@ export const SetupTest = async function ({
   organizationId,
   enableSplitConfigLoadingByDefault = true,
   analyticsRateLimitPerMinute,
+  analyticsQueryRowBudget = 200_000_000,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -102,6 +106,7 @@ export const SetupTest = async function ({
   organizationId?: UUID;
   enableSplitConfigLoadingByDefault?: boolean;
   analyticsRateLimitPerMinute?: number;
+  analyticsQueryRowBudget?: number;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -198,6 +203,7 @@ export const SetupTest = async function ({
         analyticsRateLimitPerMinute === undefined
           ? undefined
           : new AnalyticsRateLimiter(server.redisForQueue as Redis, analyticsRateLimitPerMinute, log),
+      analyticsQueryRowBudget,
     }),
   });
 
@@ -690,6 +696,27 @@ export const createFederatedGraph = async (
   });
   expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
   return createFedGraphRes;
+};
+
+/** Publishes a subgraph and creates a federated graph over it, for tests that need some graph to read. */
+export const createFederatedGraphWithSubgraph = async (
+  client: Client<typeof PlatformService>,
+  namespace = DEFAULT_NAMESPACE,
+) => {
+  const name = genID('fedGraph');
+  const subgraphName = genID('subgraph');
+  const label = genUniqueLabel();
+  await createThenPublishSubgraph(
+    client,
+    subgraphName,
+    namespace,
+    'type Query { hello: String! }',
+    [label],
+    DEFAULT_SUBGRAPH_URL_ONE,
+  );
+  await createFederatedGraph(client, name, namespace, [joinLabel(label)], 'http://localhost:3000');
+  const { graph } = await client.getFederatedGraphByName({ name, namespace });
+  return { name, subgraphName, id: graph!.id, targetId: graph!.targetId };
 };
 
 /**

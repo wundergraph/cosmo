@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { QueryBudgetError } from '../../src/core/repositories/analytics/query/engine.js';
+import { QueryBudgetError } from '../../src/core/repositories/analytics/query/errors.js';
 import { TraceRepository } from '../../src/core/repositories/analytics/TraceRepository.js';
 import { TraceSearchRepository } from '../../src/core/repositories/analytics/TraceSearchRepository.js';
 

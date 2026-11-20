@@ -1,9 +1,9 @@
 import type { AnalyticsToolContext } from '../context.js';
 import { graphInput, registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
-import { studioUrl } from '../links.js';
-import { parseWindow, windowInput } from '../window.js';
-import { metricsFilterInput, metricsFilters, metricsWindow, studioWindowParams } from './metrics-request.js';
+import { studioUrl, studioWindowParams } from '../links.js';
+import { metricsFilterInput, metricsFilters } from '../metrics-rpc.js';
+import { dashboardWindow, metricsWindow, retainedWindow, windowInput } from '../window.js';
 
 export function registerGetGraphOverviewTool(ctx: AnalyticsToolContext) {
   registerAnalyticsTool(
@@ -16,21 +16,13 @@ export function registerGetGraphOverviewTool(ctx: AnalyticsToolContext) {
       inputSchema: { ...graphInput, ...windowInput, ...metricsFilterInput },
     },
     async (input, headers) => {
-      const window = parseWindow(input);
+      const { window, warnings: windowWarnings } = await retainedWindow(ctx, input, 'analytics');
       const graph = { federatedGraphName: input.graph, namespace: input.namespace };
       const filters = metricsFilters(input);
       const [metrics, errorRate, dashboard] = await Promise.all([
         ctx.client.getGraphMetrics({ ...graph, ...metricsWindow(window), filters }, { headers }),
         ctx.client.getMetricsErrorRate({ ...graph, ...metricsWindow(window), filters }, { headers }),
-        ctx.client.getDashboardAnalyticsView(
-          {
-            ...graph,
-            range: window.range ?? 0,
-            startDate: window.dateRange?.start ?? '',
-            endDate: window.dateRange?.end ?? '',
-          },
-          { headers },
-        ),
+        ctx.client.getDashboardAnalyticsView({ ...graph, ...dashboardWindow(window) }, { headers }),
       ]);
       const error =
         checkResponse(metrics, 'Graph metrics') ??
@@ -55,7 +47,10 @@ export function registerGetGraphOverviewTool(ctx: AnalyticsToolContext) {
           window,
           granularity: metrics.resolution ? `${metrics.resolution}m` : undefined,
           now: ctx.now().toISOString(),
-          warnings: ['Latency percentiles at or above 10s are reported as 10000ms (the histogram ends there).'],
+          warnings: [
+            ...windowWarnings,
+            'Latency percentiles at or above 10s are reported as 10000ms (the histogram ends there).',
+          ],
           studioUrl: studioUrl(
             ctx.webURL,
             await ctx.getOrgSlug(),

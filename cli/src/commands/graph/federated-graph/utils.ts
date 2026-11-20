@@ -17,10 +17,12 @@ export const getSubgraphsOfFedGraph = async ({
   client,
   name,
   namespace,
+  headers = getBaseHeaders(),
 }: {
   client: Client;
   name: string;
   namespace?: string;
+  headers?: HeadersInit;
 }): Promise<Subgraph[]> => {
   const resp = await client.platform.getFederatedGraphByName(
     {
@@ -29,7 +31,7 @@ export const getSubgraphsOfFedGraph = async ({
       includeMetrics: false,
     },
     {
-      headers: getBaseHeaders(),
+      headers,
     },
   );
 
@@ -59,10 +61,12 @@ export const getFederatedGraphSchemas = async ({
   client,
   name,
   namespace,
+  headers = getBaseHeaders(),
 }: {
   client: Client;
   name: string;
   namespace?: string;
+  headers?: HeadersInit;
 }) => {
   const resp = await client.platform.getFederatedGraphSDLByName(
     {
@@ -70,7 +74,7 @@ export const getFederatedGraphSchemas = async ({
       namespace,
     },
     {
-      headers: getBaseHeaders(),
+      headers,
     },
   );
 

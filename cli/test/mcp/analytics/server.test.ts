@@ -71,7 +71,12 @@ describe('registerAnalyticsTools', () => {
     const context = JSON.parse(
       (await resources.get('cosmo://analytics/context')!(new URL('cosmo://analytics/context'))).contents[0].text,
     );
-    expect([context.principalType, context.datasets]).toEqual(['user', ['spans']]);
+    expect([context.principalType, context.datasets, context.organizationSlug, context.authMode]).toEqual([
+      'user',
+      ['spans'],
+      'acme',
+      'user',
+    ]);
   });
 
   test('offers the investigation prompts, each naming the graph', () => {

@@ -3,15 +3,15 @@ import type { AnalyticsToolContext } from '../context.js';
 import { registerAnalyticsTool } from '../context.js';
 import { checkResponse, fail, ok } from '../envelope.js';
 import {
+  DATASET_NAMES,
   filterInput,
   graphsInput,
   rowsToObjects,
   serverMeta,
   toGraphRefs,
   toPredicate,
-  toTimeWindow,
-} from '../query.js';
-import { windowInput } from '../window.js';
+} from '../query-rpc.js';
+import { queryWindow, windowInput } from '../window.js';
 
 /** Request counts, error rate and p95 latency for the metric datasets; the dataset's own defaults otherwise. */
 const defaultMeasures = (dataset: string) =>
@@ -28,18 +28,7 @@ export function registerComparePeriodsTool(ctx: AnalyticsToolContext) {
       inputSchema: {
         ...graphsInput,
         ...windowInput,
-        dataset: z
-          .enum([
-            'operation_metrics',
-            'subgraph_metrics',
-            'planning_metrics',
-            'request_volume',
-            'requests',
-            'spans',
-            'field_usage',
-            'router_runtime',
-          ])
-          .default('operation_metrics'),
+        dataset: z.enum(DATASET_NAMES).default('operation_metrics'),
         dimensions: z.array(z.string()).default(['operationName']),
         measures: z.array(z.string()).default([]),
         filters: z.array(filterInput).default([]),
@@ -69,7 +58,7 @@ export function registerComparePeriodsTool(ctx: AnalyticsToolContext) {
           dimensions: input.dimensions,
           measures,
           filters: input.filters.map((filter) => toPredicate(filter)),
-          window: toTimeWindow(input),
+          window: queryWindow(input),
           compare: {
             previousPeriod: !input.baselineFrom,
             baselineStart: input.baselineFrom,

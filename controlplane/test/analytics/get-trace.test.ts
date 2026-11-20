@@ -1,9 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
-import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
+import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
+import { createFederatedGraphWithSubgraph, SetupTest } from '../test-util.js';
 
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
@@ -13,22 +12,6 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
 });
 
 let dbname = '';
-
-const setupGraph = async (client: Awaited<ReturnType<typeof SetupTest>>['client']) => {
-  const fedGraphName = genID('fedGraph');
-  const label = genUniqueLabel();
-  await createThenPublishSubgraph(
-    client,
-    genID('subgraph'),
-    DEFAULT_NAMESPACE,
-    'type Query { hello: String! }',
-    [label],
-    'http://localhost:4001',
-  );
-  await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-  const graph = await client.getFederatedGraphByName({ name: fedGraphName, namespace: DEFAULT_NAMESPACE });
-  return graph.graph!.id;
-};
 
 describe('GetTrace', () => {
   let chClient: ClickHouseClient;
@@ -49,7 +32,7 @@ describe('GetTrace', () => {
   test('bounds the trace lookup to the tracing retention of the plan', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
-    const graphId = await setupGraph(client);
+    const { id: graphId } = await createFederatedGraphWithSubgraph(client);
     (chClient.queryPromise as Mock).mockResolvedValue([]);
 
     const response = await client.getTrace({ id: 't', spanId: 's', federatedGraphId: graphId });
@@ -67,7 +50,7 @@ describe('GetTrace', () => {
   test('returns every span attribute in rawAttributes', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
-    const graphId = await setupGraph(client);
+    const { id: graphId } = await createFederatedGraphWithSubgraph(client);
     (chClient.queryPromise as Mock).mockResolvedValue([
       {
         timestamp: '2026-10-31 12:00:00.000000000',
@@ -93,7 +76,7 @@ describe('GetTrace', () => {
   test('returns the whole trace with events, resource attributes and a summary when no span is given', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
-    const graphId = await setupGraph(client);
+    const { id: graphId } = await createFederatedGraphWithSubgraph(client);
     (chClient.queryPromise as Mock).mockResolvedValue([
       spanRow('root', '', 'query A', '2026-10-31 12:00:00.000000000', 10_000_000),
       spanRow('fetch', 'root', 'Engine - Fetch', '2026-10-31 12:00:00.002000000', 6_000_000, {
@@ -134,7 +117,7 @@ describe('GetTrace', () => {
   test('returns a span and its descendants, truncated to maxSpans', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
-    const graphId = await setupGraph(client);
+    const { id: graphId } = await createFederatedGraphWithSubgraph(client);
     (chClient.queryPromise as Mock).mockResolvedValue([
       spanRow('root', '', 'query A', '2026-10-31 12:00:00.000000000', 10),
       spanRow('a', 'root', 'Operation - Execute', '2026-10-31 12:00:00.000000001', 5),
@@ -154,7 +137,7 @@ describe('GetTrace', () => {
   test('rejects maxSpans above 2000', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
-    const graphId = await setupGraph(client);
+    const { id: graphId } = await createFederatedGraphWithSubgraph(client);
 
     const response = await client.getTrace({ id: 't', spanId: '', federatedGraphId: graphId, maxSpans: 2001 });
 
