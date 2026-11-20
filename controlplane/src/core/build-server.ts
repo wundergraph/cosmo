@@ -138,6 +138,7 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
+  hubApiUrl?: string;
   s3Storage: {
     url: string;
     endpoint?: string;
@@ -701,6 +702,7 @@ export default async function build(opts: BuildConfig) {
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
+      hubApiUrl: opts.hubApiUrl,
       lockAdapter: fastify.lockAdapter,
       promptToQueryClient,
     }),

@@ -12,6 +12,7 @@ import { HubAiSettingsRepository } from '../../repositories/HubAiSettingsReposit
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
+import { fetchHubAiModels } from '../../hub/hubAiModels.js';
 import type { HubAgentAllowanceDTO, HubAiSettingsDTO, PlainMessage } from '../../../types/index.js';
 
 const MODEL_TARGETS = new Set([
@@ -65,6 +66,23 @@ function normalizeSettings(settings: HubAiSettings): HubAiSettingsDTO | string {
   };
 }
 
+// The first model the settings name that Hub does not offer; Hub is only asked when the settings name one.
+async function firstUnavailableModel(
+  hubApiUrl: string | undefined,
+  settings: HubAiSettingsDTO,
+): Promise<string | undefined> {
+  const named = [settings.defaultModel, ...settings.modelOverrides.map(({ model }) => model)].filter(
+    (model) => model !== '',
+  );
+  if (!hubApiUrl || named.length === 0) {
+    return undefined;
+  }
+
+  const { models } = await fetchHubAiModels(hubApiUrl);
+  const offered = new Set(models.map(({ gatewayModelId }) => gatewayModelId));
+  return named.find((model) => !offered.has(model));
+}
+
 export function updateHubAiSettings(
   opts: RouterOptions,
   req: UpdateHubAiSettingsRequest,
@@ -89,6 +107,15 @@ export function updateHubAiSettings(
           response: {
             code: EnumStatusCode.ERR_BAD_REQUEST,
             details: settings,
+          },
+        };
+      }
+      const unavailable = await firstUnavailableModel(opts.hubApiUrl, settings);
+      if (unavailable) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_BAD_REQUEST,
+            details: `Hub does not offer the model "${unavailable}"; pick one from its list`,
           },
         };
       }

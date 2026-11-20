@@ -36,6 +36,7 @@ const {
   WEBHOOK_URL,
   WEBHOOK_SECRET,
   WEBHOOK_PROXY_URL,
+  HUB_API_URL,
   GITHUB_APP_WEBHOOK_SECRET,
   GITHUB_APP_CLIENT_ID,
   GITHUB_APP_CLIENT_SECRET,
@@ -133,6 +134,7 @@ const options: BuildConfig = {
     proxyUrl: WEBHOOK_PROXY_URL,
   },
   cdnBaseUrl: CDN_BASE_URL,
+  hubApiUrl: HUB_API_URL,
   admissionWebhook: {
     secret: AUTH_ADMISSION_JWT_SECRET,
   },
