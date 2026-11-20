@@ -334,6 +334,12 @@ const (
 	// PlatformServiceGetHubGovernanceProcedure is the fully-qualified name of the PlatformService's
 	// GetHubGovernance RPC.
 	PlatformServiceGetHubGovernanceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetHubGovernance"
+	// PlatformServiceGetHubAiSettingsProcedure is the fully-qualified name of the PlatformService's
+	// GetHubAiSettings RPC.
+	PlatformServiceGetHubAiSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetHubAiSettings"
+	// PlatformServiceUpdateHubAiSettingsProcedure is the fully-qualified name of the PlatformService's
+	// UpdateHubAiSettings RPC.
+	PlatformServiceUpdateHubAiSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateHubAiSettings"
 	// PlatformServiceGetGraphResourceOwnersProcedure is the fully-qualified name of the
 	// PlatformService's GetGraphResourceOwners RPC.
 	PlatformServiceGetGraphResourceOwnersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetGraphResourceOwners"
@@ -869,6 +875,10 @@ type PlatformServiceClient interface {
 	UpdateOrganizationGroupHubPermissions(context.Context, *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error)
 	// GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
 	GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error)
+	// GetHubAiSettings returns the Hub AI settings Cosmo manages for the organization
+	GetHubAiSettings(context.Context, *connect.Request[v1.GetHubAiSettingsRequest]) (*connect.Response[v1.GetHubAiSettingsResponse], error)
+	// UpdateHubAiSettings sets the Hub AI settings Cosmo manages, or hands them back to Hub
+	UpdateHubAiSettings(context.Context, *connect.Request[v1.UpdateHubAiSettingsRequest]) (*connect.Response[v1.UpdateHubAiSettingsResponse], error)
 	// GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
 	GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error)
 	// SetGraphResourceOwners replaces the owners of one resource of a federated graph
@@ -1705,6 +1715,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetHubGovernance")),
 			connect.WithClientOptions(opts...),
 		),
+		getHubAiSettings: connect.NewClient[v1.GetHubAiSettingsRequest, v1.GetHubAiSettingsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetHubAiSettingsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetHubAiSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateHubAiSettings: connect.NewClient[v1.UpdateHubAiSettingsRequest, v1.UpdateHubAiSettingsResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateHubAiSettingsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateHubAiSettings")),
+			connect.WithClientOptions(opts...),
+		),
 		getGraphResourceOwners: connect.NewClient[v1.GetGraphResourceOwnersRequest, v1.GetGraphResourceOwnersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetGraphResourceOwnersProcedure,
@@ -2520,6 +2542,8 @@ type platformServiceClient struct {
 	deleteOrganizationGroup                            *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
 	updateOrganizationGroupHubPermissions              *connect.Client[v1.UpdateOrganizationGroupHubPermissionsRequest, v1.UpdateOrganizationGroupHubPermissionsResponse]
 	getHubGovernance                                   *connect.Client[v1.GetHubGovernanceRequest, v1.GetHubGovernanceResponse]
+	getHubAiSettings                                   *connect.Client[v1.GetHubAiSettingsRequest, v1.GetHubAiSettingsResponse]
+	updateHubAiSettings                                *connect.Client[v1.UpdateHubAiSettingsRequest, v1.UpdateHubAiSettingsResponse]
 	getGraphResourceOwners                             *connect.Client[v1.GetGraphResourceOwnersRequest, v1.GetGraphResourceOwnersResponse]
 	setGraphResourceOwners                             *connect.Client[v1.SetGraphResourceOwnersRequest, v1.SetGraphResourceOwnersResponse]
 	createOrganizationWebhookConfig                    *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
@@ -3156,6 +3180,16 @@ func (c *platformServiceClient) UpdateOrganizationGroupHubPermissions(ctx contex
 // GetHubGovernance calls wg.cosmo.platform.v1.PlatformService.GetHubGovernance.
 func (c *platformServiceClient) GetHubGovernance(ctx context.Context, req *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error) {
 	return c.getHubGovernance.CallUnary(ctx, req)
+}
+
+// GetHubAiSettings calls wg.cosmo.platform.v1.PlatformService.GetHubAiSettings.
+func (c *platformServiceClient) GetHubAiSettings(ctx context.Context, req *connect.Request[v1.GetHubAiSettingsRequest]) (*connect.Response[v1.GetHubAiSettingsResponse], error) {
+	return c.getHubAiSettings.CallUnary(ctx, req)
+}
+
+// UpdateHubAiSettings calls wg.cosmo.platform.v1.PlatformService.UpdateHubAiSettings.
+func (c *platformServiceClient) UpdateHubAiSettings(ctx context.Context, req *connect.Request[v1.UpdateHubAiSettingsRequest]) (*connect.Response[v1.UpdateHubAiSettingsResponse], error) {
+	return c.updateHubAiSettings.CallUnary(ctx, req)
 }
 
 // GetGraphResourceOwners calls wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners.
@@ -3956,6 +3990,10 @@ type PlatformServiceHandler interface {
 	UpdateOrganizationGroupHubPermissions(context.Context, *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error)
 	// GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
 	GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error)
+	// GetHubAiSettings returns the Hub AI settings Cosmo manages for the organization
+	GetHubAiSettings(context.Context, *connect.Request[v1.GetHubAiSettingsRequest]) (*connect.Response[v1.GetHubAiSettingsResponse], error)
+	// UpdateHubAiSettings sets the Hub AI settings Cosmo manages, or hands them back to Hub
+	UpdateHubAiSettings(context.Context, *connect.Request[v1.UpdateHubAiSettingsRequest]) (*connect.Response[v1.UpdateHubAiSettingsResponse], error)
 	// GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
 	GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error)
 	// SetGraphResourceOwners replaces the owners of one resource of a federated graph
@@ -4786,6 +4824,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetHubGovernanceProcedure,
 		svc.GetHubGovernance,
 		connect.WithSchema(platformServiceMethods.ByName("GetHubGovernance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetHubAiSettingsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetHubAiSettingsProcedure,
+		svc.GetHubAiSettings,
+		connect.WithSchema(platformServiceMethods.ByName("GetHubAiSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateHubAiSettingsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateHubAiSettingsProcedure,
+		svc.UpdateHubAiSettings,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateHubAiSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetGraphResourceOwnersHandler := connect.NewUnaryHandler(
@@ -5700,6 +5750,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateOrganizationGroupHubPermissionsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetHubGovernanceProcedure:
 			platformServiceGetHubGovernanceHandler.ServeHTTP(w, r)
+		case PlatformServiceGetHubAiSettingsProcedure:
+			platformServiceGetHubAiSettingsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateHubAiSettingsProcedure:
+			platformServiceUpdateHubAiSettingsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetGraphResourceOwnersProcedure:
 			platformServiceGetGraphResourceOwnersHandler.ServeHTTP(w, r)
 		case PlatformServiceSetGraphResourceOwnersProcedure:
@@ -6341,6 +6395,14 @@ func (UnimplementedPlatformServiceHandler) UpdateOrganizationGroupHubPermissions
 
 func (UnimplementedPlatformServiceHandler) GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetHubGovernance is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetHubAiSettings(context.Context, *connect.Request[v1.GetHubAiSettingsRequest]) (*connect.Response[v1.GetHubAiSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetHubAiSettings is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateHubAiSettings(context.Context, *connect.Request[v1.UpdateHubAiSettingsRequest]) (*connect.Response[v1.UpdateHubAiSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateHubAiSettings is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error) {

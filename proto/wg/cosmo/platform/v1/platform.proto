@@ -1144,6 +1144,8 @@ message GetHubGovernanceResponse {
   repeated Member members = 3;
   repeated Group groups = 4;
   repeated GraphResourceOwner owners = 5;
+  // Set while Cosmo manages the organization's Hub AI settings.
+  optional HubAiSettings ai_settings = 6;
 }
 
 message UpdateOrganizationGroupHubPermissionsRequest {
@@ -4108,6 +4110,10 @@ service PlatformService {
   rpc UpdateOrganizationGroupHubPermissions(UpdateOrganizationGroupHubPermissionsRequest) returns (UpdateOrganizationGroupHubPermissionsResponse) {}
   // GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
   rpc GetHubGovernance(GetHubGovernanceRequest) returns (GetHubGovernanceResponse) {}
+  // GetHubAiSettings returns the Hub AI settings Cosmo manages for the organization
+  rpc GetHubAiSettings(GetHubAiSettingsRequest) returns (GetHubAiSettingsResponse) {}
+  // UpdateHubAiSettings sets the Hub AI settings Cosmo manages, or hands them back to Hub
+  rpc UpdateHubAiSettings(UpdateHubAiSettingsRequest) returns (UpdateHubAiSettingsResponse) {}
   // GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
   rpc GetGraphResourceOwners(GetGraphResourceOwnersRequest) returns (GetGraphResourceOwnersResponse) {}
   // SetGraphResourceOwners replaces the owners of one resource of a federated graph
@@ -4377,4 +4383,51 @@ service PlatformService {
   rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
   rpc CreateOnboarding(CreateOnboardingRequest) returns (CreateOnboardingResponse) {}
   rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
+}
+
+// Which repositories or allowlisted hosts Hub agent runs may use: every one, or only the entries.
+message HubAgentAllowance {
+  bool restricted = 1;
+  repeated string entries = 2;
+}
+
+message HubAiModelOverride {
+  // An agent job ("schema-change", "connect-api", "implement-subgraph", "router-upgrade", "fix-checks") or "ask-ai".
+  string target = 1;
+  string model = 2;
+}
+
+// The organization's Hub AI settings, which Hub mirrors and enforces while Cosmo manages them.
+message HubAiSettings {
+  // Off stops agent runs and Ask AI in Hub.
+  bool agents_disabled = 1;
+  // Empty runs each target with the Hub deployment's model.
+  string default_model = 2;
+  repeated HubAiModelOverride model_overrides = 3;
+  // Unset means no cap.
+  optional double monthly_cap_usd = 4;
+  optional double member_monthly_cap_usd = 5;
+  // Repositories (owner/name) agent runs may open pull requests in.
+  HubAgentAllowance repositories = 6;
+  // Egress-allowlisted hosts agent runs may reach.
+  HubAgentAllowance hosts = 7;
+  // Contract tags whose schema agents never see unless a group's view_hidden_schema grant shows them.
+  repeated string agent_hidden_tags = 8;
+}
+
+message GetHubAiSettingsRequest {}
+
+message GetHubAiSettingsResponse {
+  Response response = 1;
+  // Unset while Hub admins keep the settings in Hub.
+  optional HubAiSettings settings = 2;
+}
+
+message UpdateHubAiSettingsRequest {
+  // Unset hands the settings back to Hub admins.
+  optional HubAiSettings settings = 1;
+}
+
+message UpdateHubAiSettingsResponse {
+  Response response = 1;
 }
