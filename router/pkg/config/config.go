@@ -588,12 +588,22 @@ type SecurityConfiguration struct {
 	CostControl                 *CostControl                `yaml:"cost_control" envPrefix:"SECURITY_COST_CONTROL_"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	NormalizationLimits         NormalizationLimits         `yaml:"normalization_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
 }
 
 type ParserLimitsConfiguration struct {
 	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
 	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
+}
+
+type NormalizationLimits struct {
+	// MaxSelections is the maximum number of selections a document may hold while its
+	// fragment spreads are expanded. The count covers the whole document: the selections
+	// as sent, fragment definitions included, plus the copies and inline fragment wrappers
+	// added for every fragment spread. It applies whether or not there is anything to
+	// expand. 0 means disabled.
+	MaxSelections int `yaml:"max_selections,omitempty" envDefault:"10000" env:"SECURITY_NORMALIZATION_LIMITS_MAX_SELECTIONS"`
 }
 
 type QueryDepthConfiguration struct {
@@ -1143,6 +1153,29 @@ type TLSClientCertConfiguration struct {
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSeptember2026 returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for request errors
+	GraphQLOverHTTPStatusCodesSeptember2026 GraphQLOverHTTPStatusCodes = "September2026"
+)
+
+// IsValid returns true if the status codes are valid
+func (c GraphQLOverHTTPStatusCodes) IsValid() bool {
+	switch c {
+	case GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026:
+		return true
+	}
+
+	return false
+}
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
+}
+
 type SubgraphErrorPropagationMode string
 
 const (
@@ -1429,12 +1462,20 @@ type PersistedOperationsConfig struct {
 // while migrating away from what it supports.
 type BackwardsCompatibilityConfiguration struct {
 	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+	VariablesValidation VariablesValidationBackwardsCompatibility `yaml:"variables_validation" envPrefix:"VARIABLES_VALIDATION_"`
 }
 
 type PersistedOperationsBackwardsCompatibility struct {
 	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
 	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
 	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
+}
+
+type VariablesValidationBackwardsCompatibility struct {
+	// AllowInt64Values accepts Int variable values in the signed 64-bit range instead of
+	// the signed 32-bit range required by the GraphQL spec, as routers before 0.365.0 did.
+	// Non-integer values are still rejected.
+	AllowInt64Values bool `yaml:"allow_int64_values" env:"ALLOW_INT64_VALUES" envDefault:"false"`
 }
 
 type SafelistConfiguration struct {
@@ -1654,6 +1695,10 @@ type MCPSessionConfig struct {
 
 type MCPStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+	// ObjectPath is the path of an operation manifest in the storage provider. When set, the
+	// operations are loaded from the manifest and reloaded when its revision changes.
+	ObjectPath   string        `yaml:"object_path,omitempty" env:"MCP_STORAGE_OBJECT_PATH"`
+	PollInterval time.Duration `yaml:"poll_interval,omitempty" envDefault:"10s" env:"MCP_STORAGE_POLL_INTERVAL"`
 }
 
 type MCPServer struct {
@@ -1791,6 +1836,7 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
 	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
@@ -1944,6 +1990,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	// Validate the status codes configuration
+	if statusCodes := cfg.Config.GraphQLOverHTTP.StatusCodes; !statusCodes.IsValid() {
+		return nil, fmt.Errorf("graphql_over_http.status_codes must be %q or %q, got %q",
+			GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026, statusCodes)
 	}
 
 	// Post-process the config

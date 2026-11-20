@@ -4,7 +4,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange, Field, GraphFieldUsage, TimeFilters } from '../../../types/index.js';
+import { DateRange, GraphFieldUsage, TimeFilters } from '../../../types/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { traced } from '../../tracing.js';
 import { parseTimeFilters } from './util.js';
@@ -285,78 +285,32 @@ export class UsageRepository {
     }));
   }
 
-  public async getUnusedFields({
+  public async getUsedFieldPaths({
     organizationId,
     federatedGraphId,
     rangeInHours,
-    fields,
   }: {
     organizationId: string;
     federatedGraphId: string;
     rangeInHours: number;
-    fields: Field[];
-  }): Promise<{ name: string; typeName: string }[]> {
-    if (fields.length === 0) {
-      return [];
-    }
-
-    // Escape single quotes in field names and type names
-    const arrayJoinFields = fields
-      .map((field) => {
-        const escapedName = field.name.replace(/'/g, "''");
-        const escapedTypeName = field.typeName.replace(/'/g, "''");
-        return `('${escapedName}', '${escapedTypeName}')`;
-      })
-      .join(', ');
+  }): Promise<string[]> {
     const {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, rangeInHours);
-    // all_fields is a table of all fields and its typenames that we want to check if they are unused.
-    // used_fields is table which contains the fields that are used in the given time range.
-    // We then left join all_fields with used_fields and select the fields that do not have an entry in used_fields.
-    // which will give us the fields that are not used.
-
-    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
 
     const query = `
-      WITH 
+      WITH
         toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate,
-        all_fields AS (
-          SELECT
-              field.1 as Name,
-              field.2 as TypeName
-          FROM
-          (
-            SELECT
-                arrayJoin([ ${arrayJoinFields} ]) as field
-          )
-        ),
-        used_fields AS (
-            SELECT
-                DISTINCT on (FieldName, TypeName) FieldName,
-                TypeName
-            from
-                gql_metrics_schema_usage_lite_1d_90d 
-                ARRAY JOIN TypeNames AS TypeName
-            where
-                Timestamp >= startDate AND Timestamp <= endDate
-                AND OrganizationID = {organizationId:String}
-                AND FederatedGraphID = {federatedGraphId:String}
-                AND IsNull = false
-            GROUP BY
-                FieldName, TypeName
-        )
-      SELECT
-          all_fields.Name as name,
-          all_fields.TypeName as typeName
-      from
-          all_fields
-          LEFT JOIN used_fields ON all_fields.Name = used_fields.FieldName
-          AND all_fields.TypeName = used_fields.TypeName
+        toDateTime({endDate:UInt32}) AS endDate
+      SELECT DISTINCT
+          concat(TypeName, '.', FieldName) AS path
+      FROM gql_metrics_schema_usage_lite_1d_90d
+      ARRAY JOIN TypeNames AS TypeName
       WHERE
-          used_fields.FieldName = ''
-          AND used_fields.TypeName = ''
+          Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
+          AND IsNull = false
     `;
 
     const params = {
@@ -369,100 +323,7 @@ export class UsageRepository {
     const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
-      return res.map((item) => ({
-        name: item.name,
-        typeName: item.typeName,
-      }));
-    }
-
-    return [];
-  }
-
-  public async getUsedFields({
-    organizationId,
-    federatedGraphId,
-    range,
-    fields,
-  }: {
-    organizationId: string;
-    federatedGraphId: string;
-    range: number;
-    fields: Field[];
-  }): Promise<{ name: string; typeName: string }[]> {
-    if (fields.length === 0) {
-      return [];
-    }
-
-    // Escape single quotes in field names and type names
-    const arrayJoinFields = fields
-      .map((field) => {
-        const escapedName = field.name.replace(/'/g, "''");
-        const escapedTypeName = field.typeName.replace(/'/g, "''");
-        return `('${escapedName}', '${escapedTypeName}')`;
-      })
-      .join(', ');
-    const {
-      dateRange: { end, start },
-    } = parseTimeFilters(undefined, range);
-
-    // all_fields is a table of all fields and their typenames that we want to check if they are used.
-    // used_fields is table which contains the fields and their typenames that are used in the given time range.
-    // We then inner join all_fields with used_fields and select all the entries.
-    // which will give us the fields that are used.
-
-    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
-    const query = `
-      WITH 
-        toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate,
-        all_fields AS (
-          SELECT
-              field.1 as Name,
-              field.2 as TypeName
-          FROM
-          (
-            SELECT
-                arrayJoin([ ${arrayJoinFields} ]) as field
-          )
-        ),
-        used_fields AS (
-            SELECT
-                DISTINCT on (FieldName, TypeName) FieldName,
-                TypeName
-            from
-                gql_metrics_schema_usage_lite_1d_90d 
-                ARRAY JOIN TypeNames AS TypeName
-            where
-                Timestamp >= startDate AND Timestamp <= endDate
-                AND OrganizationID = {organizationId:String}
-                AND FederatedGraphID = {federatedGraphId:String}
-                AND IsNull = false
-            GROUP BY
-                FieldName, TypeName
-        )
-      SELECT
-          all_fields.Name as name,
-          all_fields.TypeName as typeName
-      from
-          all_fields
-          INNER JOIN used_fields ON all_fields.Name = used_fields.FieldName
-          AND all_fields.TypeName = used_fields.TypeName
-    `;
-
-    const params = {
-      startDate: start,
-      endDate: end,
-      organizationId,
-      federatedGraphId,
-    };
-
-    const res = await this.client.queryPromise(query, params);
-
-    if (Array.isArray(res)) {
-      return res.map((item) => ({
-        name: item.name,
-        typeName: item.typeName,
-      }));
+      return res.map((item) => item.path);
     }
 
     return [];
