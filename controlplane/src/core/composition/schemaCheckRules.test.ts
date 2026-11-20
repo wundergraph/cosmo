@@ -1,10 +1,7 @@
 import { CriticalityLevel, diff, Rule } from '@graphql-inspector/core';
 import { buildSchema } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import {
-  enumValueChangesBreakExhaustiveSwitches,
-  inaccessibleEnumValueChangesAreInvisible,
-} from './schemaCheckRules.js';
+import { enumValueChangesAreBreaking, inaccessibleEnumValueChangesAreInvisible } from './schemaCheckRules.js';
 
 const INACCESSIBLE_DEFINITION = 'directive @inaccessible on ENUM | ENUM_VALUE';
 
@@ -17,13 +14,13 @@ async function getCriticalityLevel(oldSDL: string, newSDL: string, rule: Rule, p
   return changes.find((change) => change.path === path)?.criticality.level;
 }
 
-describe('enumValueChangesBreakExhaustiveSwitches', () => {
+describe('enumValueChangesAreBreaking', () => {
   test('Should mark an added enum value as breaking', async () => {
     expect(
       await getCriticalityLevel(
         'enum Alphabet { A B }',
         'enum Alphabet { A B C }',
-        enumValueChangesBreakExhaustiveSwitches,
+        enumValueChangesAreBreaking,
         'Alphabet.C',
       ),
     ).toBe(CriticalityLevel.Breaking);
@@ -34,7 +31,7 @@ describe('enumValueChangesBreakExhaustiveSwitches', () => {
       await getCriticalityLevel(
         'enum Alphabet { A B C }',
         'enum Alphabet { A B }',
-        enumValueChangesBreakExhaustiveSwitches,
+        enumValueChangesAreBreaking,
         'Alphabet.C',
       ),
     ).toBe(CriticalityLevel.Breaking);
@@ -45,7 +42,7 @@ describe('enumValueChangesBreakExhaustiveSwitches', () => {
       await getCriticalityLevel(
         'type User { name: String! }',
         'type User { name: String! age: Int }',
-        enumValueChangesBreakExhaustiveSwitches,
+        enumValueChangesAreBreaking,
         'User.age',
       ),
     ).toBe(CriticalityLevel.NonBreaking);

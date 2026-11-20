@@ -3,10 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { INACCESSIBLE } from '@wundergraph/composition';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
-import {
-  enumValueChangesBreakExhaustiveSwitches,
-  inaccessibleEnumValueChangesAreInvisible,
-} from './schemaCheckRules.js';
+import { enumValueChangesAreBreaking, inaccessibleEnumValueChangesAreInvisible } from './schemaCheckRules.js';
 
 export interface SchemaDiff {
   message: string;
@@ -36,7 +33,7 @@ export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBe
 
 export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: GraphQLSchema): Promise<SchemaDiff[]> {
   const changes = await diff(oldSchemaSDL, newSchemaSDL, [
-    enumValueChangesBreakExhaustiveSwitches,
+    enumValueChangesAreBreaking,
     inaccessibleEnumValueChangesAreInvisible,
   ]);
   return changes.map((change) => {

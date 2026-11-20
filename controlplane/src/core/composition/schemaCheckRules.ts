@@ -11,10 +11,10 @@ function setCriticalityLevelWhen(level: CriticalityLevel, predicate: ChangePredi
     );
 }
 
-export const enumValueChangesBreakExhaustiveSwitches = setCriticalityLevelWhen(
-  CriticalityLevel.Breaking,
-  isEnumValueChange,
-);
+/**
+ * Clients commonly switch over enums, so adding or removing a value can leave those switches unhandled.
+ */
+export const enumValueChangesAreBreaking = setCriticalityLevelWhen(CriticalityLevel.Breaking, isEnumValueChange);
 
 /**
  * If @inaccessible in this subgraph hides or exposes a value another subgraph defines, the client schema diff reports it.
