@@ -21,8 +21,8 @@ import (
 func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log *zap.Logger) error {
 	mgr := expr.CreateNewExprManager()
 	if cfg.All.Enabled {
-		if cfg.All.FallbackTTL <= 0 {
-			return fmt.Errorf("response cache is enabled but all.fallback_ttl is %s, which must be greater than zero", cfg.All.FallbackTTL)
+		if cfg.All.FallbackTTL < 0 || (cfg.All.FallbackTTL == 0 && !cfg.All.FallbackTTLSet) {
+			return fmt.Errorf("response cache is enabled but all.fallback_ttl is %s, expected an explicit nonnegative duration", cfg.All.FallbackTTL)
 		}
 		if _, err := newResponseCachePrivateID(cfg.All.PrivateID, mgr); err != nil {
 			return err
@@ -35,8 +35,8 @@ func validateResponseCacheSubgraphs(cfg *config.ResponseCacheConfiguration, log 
 			continue
 		}
 		enabled = true
-		if o.FallbackTTL <= 0 {
-			return fmt.Errorf("response_cache.subgraphs.%s.fallback_ttl is %s, which must be greater than zero", name, o.FallbackTTL)
+		if o.FallbackTTL < 0 || (o.FallbackTTL == 0 && !o.FallbackTTLSet) {
+			return fmt.Errorf("response_cache.subgraphs.%s.fallback_ttl is %s, expected an explicit nonnegative duration", name, o.FallbackTTL)
 		}
 		if _, err := newResponseCachePrivateID(o.PrivateID, mgr); err != nil {
 			return fmt.Errorf("response_cache.subgraphs.%s: %w", name, err)
@@ -146,7 +146,7 @@ func (s *ResponseCacheSettings) subgraphs(ctx expr.Context, onError func(error))
 	// One evaluation per program, however many entries share it.
 	resolved := make(map[*responseCachePrivateID]string)
 	for name, entry := range s.entries {
-		o := resolve.ResponseCacheSubgraphOptions{Disabled: entry.disabled, DefaultTTL: entry.ttl}
+		o := resolve.ResponseCacheSubgraphOptions{Disabled: entry.disabled, DefaultTTL: entry.ttl, DisableFallbackTTL: entry.ttl == 0 && !entry.disabled}
 		if entry.privateID != nil {
 			id, ok := resolved[entry.privateID]
 			if !ok {

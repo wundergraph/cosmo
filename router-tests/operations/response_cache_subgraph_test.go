@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -26,6 +27,44 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 
 	allOn := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute}
 	allOff := config.ResponseCacheSubgraphConfiguration{Enabled: false}
+
+	zero := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTLSet: true}
+	for _, tc := range []struct {
+		name          string
+		all           config.ResponseCacheSubgraphConfiguration
+		override      string
+		entry         config.ResponseCacheSubgraphConfiguration
+		header, value string
+		requests      int
+	}{
+		{"global zero", zero, "", zero, "Cache-Control", "public", 2},
+		{"named zero overrides positive global", allOn, "mood", zero, "Cache-Control", "public", 2},
+		{"sibling retains global fallback", allOn, "employees", zero, "Cache-Control", "public", 1},
+		{"positive override under global zero", zero, "mood", allOn, "Cache-Control", "public", 1},
+		{"max-age with zero fallback", allOn, "mood", zero, "Cache-Control", "max-age=60", 1},
+		{"s-maxage with zero fallback", allOn, "mood", zero, "Cache-Control", "s-maxage=60", 1},
+		{"expires with zero fallback", allOn, "mood", zero, "Expires", time.Now().Add(time.Hour).UTC().Format(http.TimeFormat), 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &config.ResponseCacheConfiguration{
+				Enabled: true, All: tc.all,
+				Storage: config.ResponseCacheStorageConfig{Provider: config.ResponseCacheStorageProviderMemory, MaxEntries: 128},
+			}
+			if tc.override != "" {
+				cfg.Subgraphs = map[string]config.ResponseCacheSubgraphConfiguration{tc.override: tc.entry}
+			}
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{core.WithResponseCache(cfg)},
+				Subgraphs:     testenv.SubgraphsConfig{Mood: testenv.SubgraphConfig{Middleware: headersMiddleware(tc.header, tc.value)}},
+			}, func(t *testing.T, env *testenv.Environment) {
+				for range 2 {
+					env.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
+				}
+				require.EqualValues(t, tc.requests, env.SubgraphRequestCount.Mood.Load())
+			})
+		})
+	}
 
 	t.Run("a disabled subgraph is asked every time and stores nothing", func(t *testing.T) {
 		t.Parallel()

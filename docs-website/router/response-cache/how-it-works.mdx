@@ -323,6 +323,8 @@ The stored lifetime is the first of these that is present in the subgraph respon
 
 A subgraph response with no `Cache-Control` and no `Expires` is not stored. Neither is one whose `Cache-Control` holds only directives the cache does not use, such as `immutable` or `no-transform`. `fallback_ttl` does not apply to either.
 
+Setting `fallback_ttl: 0s` skips storage when the fallback is the only source of freshness.
+
 A zero lifetime is not stored and does not fall through to the next source. `max-age=60, s-maxage=0` is not stored. `max-age=0, s-maxage=60` is stored for 60 seconds.
 
 `public` is not required. `max-age=60` on its own is stored for 60 seconds.

@@ -3176,6 +3176,28 @@ version: "1"
 // entry never passes through env parsing, so it is explicit, and nothing under
 // all leaks into it.
 func TestResponseCacheSubgraphConfig(t *testing.T) {
+	t.Run("explicit zero survives loading from YAML and env", func(t *testing.T) {
+		for _, tc := range []struct{ env, all string }{
+			{"0s", "{}"},
+			{"30s", "{fallback_ttl: 0s}"},
+		} {
+			t.Setenv("RESPONSE_CACHE_ALL_FALLBACK_TTL", tc.env)
+			f := createTempFileFromFixture(t, `version: "1"
+response_cache:
+  all: `+tc.all+`
+  subgraphs:
+    mood: {enabled: true, fallback_ttl: 0s}
+    employees: {enabled: true}
+`)
+			cfg, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+			require.Zero(t, cfg.Config.ResponseCache.All.FallbackTTL)
+			require.True(t, cfg.Config.ResponseCache.All.FallbackTTLSet)
+			require.True(t, cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTLSet)
+			require.False(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTLSet)
+		}
+	})
+
 	t.Run("a map entry is explicit, nothing is defaulted or taken from all", func(t *testing.T) {
 		f := createTempFileFromFixture(t, `
 version: "1"

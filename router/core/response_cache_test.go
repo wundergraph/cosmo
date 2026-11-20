@@ -55,11 +55,9 @@ func TestSetupResponseCache(t *testing.T) {
 		require.Nil(t, r.responseCache)
 	})
 
-	t.Run("a non positive fallback_ttl is refused", func(t *testing.T) {
+	t.Run("an omitted or negative fallback_ttl is refused", func(t *testing.T) {
 		t.Parallel()
 
-		// A fallback of zero would otherwise be rediscovered and swallowed on
-		// every response that needs it, rather than failing once at startup.
 		for _, ttl := range []time.Duration{0, -time.Second} {
 			r := newRouter(&config.ResponseCacheConfiguration{
 				Enabled: true,

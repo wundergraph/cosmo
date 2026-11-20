@@ -5090,11 +5090,12 @@
         "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "description": "How long a response is kept when its Cache-Control header contains public, must-revalidate, proxy-revalidate, stale-if-error or stale-while-revalidate without max-age or s-maxage. The stale directives require valid durations. An explicit s-maxage takes precedence over max-age, and both override this fallback. No-store, no-cache, invalid durations or a zero selected lifetime prevent caching; private follows the same lifetime rules but is only stored when a private_id resolves. Missing, empty or unrecognized-only Cache-Control headers never use this fallback. Set to 0s to require an explicit lifetime. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
           "default": "30s",
-          "duration": {
-            "minimum": "1s"
-          }
+          "anyOf": [
+            { "const": "0s" },
+            { "duration": { "minimum": "1s" } }
+          ]
         },
         "private_id": {
           "type": "string",
@@ -5114,10 +5115,11 @@
         "fallback_ttl": {
           "type": "string",
           "format": "go-duration",
-          "description": "How long a response of this subgraph is kept when its Cache-Control header asks for caching without a max-age or s-maxage, under the same rules as 'all.fallback_ttl'. Required when 'enabled' is true. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
-          "duration": {
-            "minimum": "1s"
-          }
+          "description": "How long a response of this subgraph is kept when its Cache-Control header asks for caching without a max-age or s-maxage, under the same rules as 'all.fallback_ttl'. Required when 'enabled' is true. Set to 0s to require an explicit lifetime. The period is specified as a string with a number and a unit, e.g. 30s, 5m, 1h.",
+          "anyOf": [
+            { "const": "0s" },
+            { "duration": { "minimum": "1s" } }
+          ]
         },
         "private_id": {
           "type": "string",
