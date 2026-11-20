@@ -1090,6 +1090,90 @@ message OrganizationGroup {
   repeated OrganizationGroupRule rules = 6;
   bool hasOidcMappers = 7;
   int32 apiKeysCount = 8;
+  repeated HubPermissionGrant hub_permissions = 9;
+}
+
+message HubPermissionGrant {
+  // One of the Hub permission names, e.g. "create_sandbox".
+  string permission = 1;
+  // Namespace ids. Empty together with resources means organization-wide.
+  repeated string namespaces = 2;
+  // Target ids of federated graphs or subgraphs, like OrganizationGroupRule.resources.
+  repeated string resources = 3;
+}
+
+message GraphResourceOwner {
+  string federated_graph_id = 1;
+  // "subgraph" | "type" | "override"
+  string resource_kind = 2;
+  // Subgraph name, type name, or "Type.field" for an override.
+  string resource = 3;
+  // Exactly one of group_id and org_member_id is set.
+  optional string group_id = 4;
+  optional string org_member_id = 5;
+}
+
+message GetHubGovernanceRequest {}
+
+message GetHubGovernanceResponse {
+  message Organization {
+    string id = 1;
+    string slug = 2;
+  }
+
+  message Member {
+    string org_member_id = 1;
+    string user_id = 2;
+    string email = 3;
+    repeated string group_ids = 4;
+  }
+
+  message Group {
+    string group_id = 1;
+    string name = 2;
+    string description = 3;
+    bool builtin = 4;
+    repeated OrganizationGroupRule rules = 5;
+    repeated HubPermissionGrant hub_permissions = 6;
+  }
+
+  Response response = 1;
+  Organization organization = 2;
+  repeated Member members = 3;
+  repeated Group groups = 4;
+  repeated GraphResourceOwner owners = 5;
+}
+
+message UpdateOrganizationGroupHubPermissionsRequest {
+  string group_id = 1;
+  repeated HubPermissionGrant hub_permissions = 2;
+}
+
+message UpdateOrganizationGroupHubPermissionsResponse {
+  Response response = 1;
+}
+
+message GetGraphResourceOwnersRequest {
+  string federated_graph_name = 1;
+  string namespace = 2;
+}
+
+message GetGraphResourceOwnersResponse {
+  Response response = 1;
+  repeated GraphResourceOwner owners = 2;
+}
+
+message SetGraphResourceOwnersRequest {
+  string federated_graph_name = 1;
+  string namespace = 2;
+  string resource_kind = 3;
+  string resource = 4;
+  repeated string group_ids = 5;
+  repeated string org_member_ids = 6;
+}
+
+message SetGraphResourceOwnersResponse {
+  Response response = 1;
 }
 
 message CreateOrganizationGroupRequest {
@@ -4018,6 +4102,14 @@ service PlatformService {
   rpc UpdateOrganizationGroup(UpdateOrganizationGroupRequest) returns (UpdateOrganizationGroupResponse) {}
   // DeleteOrganizationGroup deletes an existing organization group
   rpc DeleteOrganizationGroup(DeleteOrganizationGroupRequest) returns (DeleteOrganizationGroupResponse) {}
+  // UpdateOrganizationGroupHubPermissions replaces the Hub permission grants of an organization group
+  rpc UpdateOrganizationGroupHubPermissions(UpdateOrganizationGroupHubPermissionsRequest) returns (UpdateOrganizationGroupHubPermissionsResponse) {}
+  // GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
+  rpc GetHubGovernance(GetHubGovernanceRequest) returns (GetHubGovernanceResponse) {}
+  // GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
+  rpc GetGraphResourceOwners(GetGraphResourceOwnersRequest) returns (GetGraphResourceOwnersResponse) {}
+  // SetGraphResourceOwners replaces the owners of one resource of a federated graph
+  rpc SetGraphResourceOwners(SetGraphResourceOwnersRequest) returns (SetGraphResourceOwnersResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}

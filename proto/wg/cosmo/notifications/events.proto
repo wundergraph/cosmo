@@ -14,6 +14,7 @@ enum OrganizationEventName {
   MONOGRAPH_SCHEMA_UPDATED = 1;
   VALIDATE_CONFIG = 3;
   PROPOSAL_STATE_UPDATED = 4;
+  ORGANIZATION_GOVERNANCE_UPDATED = 5;
 }
 
 message GraphSchemaUpdatedMeta {

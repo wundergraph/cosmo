@@ -650,6 +650,34 @@ export const updateOrganizationGroup = PlatformService.method.updateOrganization
 export const deleteOrganizationGroup = PlatformService.method.deleteOrganizationGroup;
 
 /**
+ * UpdateOrganizationGroupHubPermissions replaces the Hub permission grants of an organization group
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroupHubPermissions
+ */
+export const updateOrganizationGroupHubPermissions = PlatformService.method.updateOrganizationGroupHubPermissions;
+
+/**
+ * GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetHubGovernance
+ */
+export const getHubGovernance = PlatformService.method.getHubGovernance;
+
+/**
+ * GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners
+ */
+export const getGraphResourceOwners = PlatformService.method.getGraphResourceOwners;
+
+/**
+ * SetGraphResourceOwners replaces the owners of one resource of a federated graph
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetGraphResourceOwners
+ */
+export const setGraphResourceOwners = PlatformService.method.setGraphResourceOwners;
+
+/**
  * CreateOrganizationWebhookConfig create a new webhook config for the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig

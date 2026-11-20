@@ -328,6 +328,18 @@ const (
 	// PlatformServiceDeleteOrganizationGroupProcedure is the fully-qualified name of the
 	// PlatformService's DeleteOrganizationGroup RPC.
 	PlatformServiceDeleteOrganizationGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganizationGroup"
+	// PlatformServiceUpdateOrganizationGroupHubPermissionsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateOrganizationGroupHubPermissions RPC.
+	PlatformServiceUpdateOrganizationGroupHubPermissionsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationGroupHubPermissions"
+	// PlatformServiceGetHubGovernanceProcedure is the fully-qualified name of the PlatformService's
+	// GetHubGovernance RPC.
+	PlatformServiceGetHubGovernanceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetHubGovernance"
+	// PlatformServiceGetGraphResourceOwnersProcedure is the fully-qualified name of the
+	// PlatformService's GetGraphResourceOwners RPC.
+	PlatformServiceGetGraphResourceOwnersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetGraphResourceOwners"
+	// PlatformServiceSetGraphResourceOwnersProcedure is the fully-qualified name of the
+	// PlatformService's SetGraphResourceOwners RPC.
+	PlatformServiceSetGraphResourceOwnersProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphResourceOwners"
 	// PlatformServiceCreateOrganizationWebhookConfigProcedure is the fully-qualified name of the
 	// PlatformService's CreateOrganizationWebhookConfig RPC.
 	PlatformServiceCreateOrganizationWebhookConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganizationWebhookConfig"
@@ -853,6 +865,14 @@ type PlatformServiceClient interface {
 	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
 	// DeleteOrganizationGroup deletes an existing organization group
 	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
+	// UpdateOrganizationGroupHubPermissions replaces the Hub permission grants of an organization group
+	UpdateOrganizationGroupHubPermissions(context.Context, *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error)
+	// GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
+	GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error)
+	// GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
+	GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error)
+	// SetGraphResourceOwners replaces the owners of one resource of a federated graph
+	SetGraphResourceOwners(context.Context, *connect.Request[v1.SetGraphResourceOwnersRequest]) (*connect.Response[v1.SetGraphResourceOwnersResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -1673,6 +1693,30 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationGroup")),
 			connect.WithClientOptions(opts...),
 		),
+		updateOrganizationGroupHubPermissions: connect.NewClient[v1.UpdateOrganizationGroupHubPermissionsRequest, v1.UpdateOrganizationGroupHubPermissionsResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateOrganizationGroupHubPermissionsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationGroupHubPermissions")),
+			connect.WithClientOptions(opts...),
+		),
+		getHubGovernance: connect.NewClient[v1.GetHubGovernanceRequest, v1.GetHubGovernanceResponse](
+			httpClient,
+			baseURL+PlatformServiceGetHubGovernanceProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetHubGovernance")),
+			connect.WithClientOptions(opts...),
+		),
+		getGraphResourceOwners: connect.NewClient[v1.GetGraphResourceOwnersRequest, v1.GetGraphResourceOwnersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetGraphResourceOwnersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetGraphResourceOwners")),
+			connect.WithClientOptions(opts...),
+		),
+		setGraphResourceOwners: connect.NewClient[v1.SetGraphResourceOwnersRequest, v1.SetGraphResourceOwnersResponse](
+			httpClient,
+			baseURL+PlatformServiceSetGraphResourceOwnersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("SetGraphResourceOwners")),
+			connect.WithClientOptions(opts...),
+		),
 		createOrganizationWebhookConfig: connect.NewClient[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOrganizationWebhookConfigProcedure,
@@ -2474,6 +2518,10 @@ type platformServiceClient struct {
 	getOrganizationGroupMembers                        *connect.Client[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse]
 	updateOrganizationGroup                            *connect.Client[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse]
 	deleteOrganizationGroup                            *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
+	updateOrganizationGroupHubPermissions              *connect.Client[v1.UpdateOrganizationGroupHubPermissionsRequest, v1.UpdateOrganizationGroupHubPermissionsResponse]
+	getHubGovernance                                   *connect.Client[v1.GetHubGovernanceRequest, v1.GetHubGovernanceResponse]
+	getGraphResourceOwners                             *connect.Client[v1.GetGraphResourceOwnersRequest, v1.GetGraphResourceOwnersResponse]
+	setGraphResourceOwners                             *connect.Client[v1.SetGraphResourceOwnersRequest, v1.SetGraphResourceOwnersResponse]
 	createOrganizationWebhookConfig                    *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
 	getOrganizationWebhookConfigs                      *connect.Client[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse]
 	getOrganizationWebhookMeta                         *connect.Client[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse]
@@ -3097,6 +3145,27 @@ func (c *platformServiceClient) UpdateOrganizationGroup(ctx context.Context, req
 // DeleteOrganizationGroup calls wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup.
 func (c *platformServiceClient) DeleteOrganizationGroup(ctx context.Context, req *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error) {
 	return c.deleteOrganizationGroup.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationGroupHubPermissions calls
+// wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroupHubPermissions.
+func (c *platformServiceClient) UpdateOrganizationGroupHubPermissions(ctx context.Context, req *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error) {
+	return c.updateOrganizationGroupHubPermissions.CallUnary(ctx, req)
+}
+
+// GetHubGovernance calls wg.cosmo.platform.v1.PlatformService.GetHubGovernance.
+func (c *platformServiceClient) GetHubGovernance(ctx context.Context, req *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error) {
+	return c.getHubGovernance.CallUnary(ctx, req)
+}
+
+// GetGraphResourceOwners calls wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners.
+func (c *platformServiceClient) GetGraphResourceOwners(ctx context.Context, req *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error) {
+	return c.getGraphResourceOwners.CallUnary(ctx, req)
+}
+
+// SetGraphResourceOwners calls wg.cosmo.platform.v1.PlatformService.SetGraphResourceOwners.
+func (c *platformServiceClient) SetGraphResourceOwners(ctx context.Context, req *connect.Request[v1.SetGraphResourceOwnersRequest]) (*connect.Response[v1.SetGraphResourceOwnersResponse], error) {
+	return c.setGraphResourceOwners.CallUnary(ctx, req)
 }
 
 // CreateOrganizationWebhookConfig calls
@@ -3883,6 +3952,14 @@ type PlatformServiceHandler interface {
 	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
 	// DeleteOrganizationGroup deletes an existing organization group
 	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
+	// UpdateOrganizationGroupHubPermissions replaces the Hub permission grants of an organization group
+	UpdateOrganizationGroupHubPermissions(context.Context, *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error)
+	// GetHubGovernance returns members, groups, Hub permissions and resource owners of the organization
+	GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error)
+	// GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
+	GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error)
+	// SetGraphResourceOwners replaces the owners of one resource of a federated graph
+	SetGraphResourceOwners(context.Context, *connect.Request[v1.SetGraphResourceOwnersRequest]) (*connect.Response[v1.SetGraphResourceOwnersResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -4697,6 +4774,30 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceDeleteOrganizationGroupProcedure,
 		svc.DeleteOrganizationGroup,
 		connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationGroup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateOrganizationGroupHubPermissionsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrganizationGroupHubPermissionsProcedure,
+		svc.UpdateOrganizationGroupHubPermissions,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationGroupHubPermissions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetHubGovernanceHandler := connect.NewUnaryHandler(
+		PlatformServiceGetHubGovernanceProcedure,
+		svc.GetHubGovernance,
+		connect.WithSchema(platformServiceMethods.ByName("GetHubGovernance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetGraphResourceOwnersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetGraphResourceOwnersProcedure,
+		svc.GetGraphResourceOwners,
+		connect.WithSchema(platformServiceMethods.ByName("GetGraphResourceOwners")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceSetGraphResourceOwnersHandler := connect.NewUnaryHandler(
+		PlatformServiceSetGraphResourceOwnersProcedure,
+		svc.SetGraphResourceOwners,
+		connect.WithSchema(platformServiceMethods.ByName("SetGraphResourceOwners")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
@@ -5595,6 +5696,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateOrganizationGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationGroupProcedure:
 			platformServiceDeleteOrganizationGroupHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrganizationGroupHubPermissionsProcedure:
+			platformServiceUpdateOrganizationGroupHubPermissionsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetHubGovernanceProcedure:
+			platformServiceGetHubGovernanceHandler.ServeHTTP(w, r)
+		case PlatformServiceGetGraphResourceOwnersProcedure:
+			platformServiceGetGraphResourceOwnersHandler.ServeHTTP(w, r)
+		case PlatformServiceSetGraphResourceOwnersProcedure:
+			platformServiceSetGraphResourceOwnersHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOrganizationWebhookConfigProcedure:
 			platformServiceCreateOrganizationWebhookConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationWebhookConfigsProcedure:
@@ -6224,6 +6333,22 @@ func (UnimplementedPlatformServiceHandler) UpdateOrganizationGroup(context.Conte
 
 func (UnimplementedPlatformServiceHandler) DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateOrganizationGroupHubPermissions(context.Context, *connect.Request[v1.UpdateOrganizationGroupHubPermissionsRequest]) (*connect.Response[v1.UpdateOrganizationGroupHubPermissionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroupHubPermissions is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetHubGovernance(context.Context, *connect.Request[v1.GetHubGovernanceRequest]) (*connect.Response[v1.GetHubGovernanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetHubGovernance is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetGraphResourceOwners(context.Context, *connect.Request[v1.GetGraphResourceOwnersRequest]) (*connect.Response[v1.GetGraphResourceOwnersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) SetGraphResourceOwners(context.Context, *connect.Request[v1.SetGraphResourceOwnersRequest]) (*connect.Response[v1.SetGraphResourceOwnersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphResourceOwners is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error) {
