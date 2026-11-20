@@ -10,6 +10,8 @@ export interface ForgeDependencies {
   context: PluginContext;
   /** The directory the command was run from. */
   cwd: () => string;
+  /** Per-user settings, such as the release channel. */
+  settingsFile: string;
 }
 
 export interface CommonOptions {

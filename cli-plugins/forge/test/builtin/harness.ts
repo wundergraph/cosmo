@@ -170,7 +170,8 @@ export const runForge = async (
     system = createFakeSystem(),
     caller = 'agent',
     prompts = createPrompts({ canPrompt: false }),
-  }: { workspace: string; system?: System; caller?: CallerKind; prompts?: Prompts },
+    settingsFile = path.join(workspace, '.forge-settings.json'),
+  }: { workspace: string; system?: System; caller?: CallerKind; prompts?: Prompts; settingsFile?: string },
 ): Promise<ForgeRun> => {
   let stdout = '';
   let stderr = '';
@@ -185,7 +186,7 @@ export const runForge = async (
   });
 
   const program = new Command('wgc').exitOverride();
-  createBuiltinEngine({ system, cwd: () => workspace }).register(program.command('forge'), context);
+  createBuiltinEngine({ system, cwd: () => workspace, settingsFile }).register(program.command('forge'), context);
 
   process.exitCode = undefined;
   await program.parseAsync(['forge', ...args], { from: 'user' });

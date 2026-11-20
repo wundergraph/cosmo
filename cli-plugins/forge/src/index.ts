@@ -1,3 +1,5 @@
+import { homedir } from 'node:os';
+import path from 'node:path';
 import { definePlugin } from '@wundergraph/wgc-plugin-sdk';
 import type { WgcPlugin } from '@wundergraph/wgc-plugin-sdk';
 import { createBinaryEngine } from './binary-engine.js';
@@ -12,7 +14,11 @@ const engineFor = (env: NodeJS.ProcessEnv, argv: () => string[]): ForgeEngine =>
     return createBinaryEngine({ binary: choice.binary, argv });
   }
 
-  return createBuiltinEngine({ system: createSystem(), cwd: () => process.cwd() });
+  return createBuiltinEngine({
+    system: createSystem(),
+    cwd: () => process.cwd(),
+    settingsFile: path.join(homedir(), '.wgc', 'forge.json'),
+  });
 };
 
 export const createForgePlugin = ({
