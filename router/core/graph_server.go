@@ -1074,15 +1074,13 @@ func (s *graphServer) buildGraphMux(
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := withSubgraphResolver(r.Context(), subgraphResolver)
-			r = r.WithContext(withExecutionConfig(ctx, executionConfig))
-
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
+				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
 				metricSetAttributes:           b,
@@ -1096,7 +1094,10 @@ func (s *graphServer) buildGraphMux(
 				r:                             r,
 			})
 
-			r = r.WithContext(withRequestContext(r.Context(), reqContext))
+			reqContext.executionConfig = executionConfig
+			ctx := withSubgraphResolver(r.Context(), subgraphResolver)
+			r = r.WithContext(withRequestContext(ctx, reqContext))
+			reqContext.request = r
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -1747,8 +1748,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsCtx := withExecutionConfig(graphMuxCtx, executionConfig)
-		wsMiddleware := NewWebsocketMiddleware(wsCtx, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,

@@ -271,6 +271,7 @@ type requestContext struct {
 	cacheControl *cachedirective.RequestCacheDirectives
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
+	executionConfig  *routerconfig.ExecutionConfig
 	// dataSourceNames the list of datasource involved in resolving the operation
 	dataSourceNames []string
 	// graphQLErrorServices are the services that produced the GraphQL errors
@@ -948,17 +949,15 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
-func withExecutionConfig(ctx context.Context, cfg *routerconfig.ExecutionConfig) context.Context {
-	return context.WithValue(ctx, rcontext.ExecutionConfigKey, cfg)
-}
-
 // ExecutionConfigFromContext returns the execution config of the graph selected
 // for this request, including feature-flag selection. Modules can pass
 // RequestContext.Request().Context(). The snapshot stays valid across reloads.
 // It returns nil when the context has no selected graph.
 func ExecutionConfigFromContext(ctx context.Context) *routerconfig.ExecutionConfig {
-	cfg, _ := ctx.Value(rcontext.ExecutionConfigKey).(*routerconfig.ExecutionConfig)
-	return cfg
+	if rc := getRequestContext(ctx); rc != nil {
+		return rc.executionConfig
+	}
+	return nil
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
@@ -971,6 +970,7 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 }
 
 type requestContextOptions struct {
+	subgraphResolver              *SubgraphResolver
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
 	metricSetAttributes           map[string]string
@@ -1005,6 +1005,6 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
+		subgraphResolver:  opts.subgraphResolver,
 	}
 }

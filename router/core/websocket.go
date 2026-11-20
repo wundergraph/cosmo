@@ -1267,6 +1267,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	reqContext := buildRequestContext(requestContextOptions{
+		subgraphResolver:    subgraphResolverFromContext(registration.clientRequest.Context()),
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
 		metricSetAttributes: nil,
@@ -1298,6 +1299,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	}
 
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		reqContext.executionConfig = origCtx.executionConfig
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 		if h.graphqlHandler.headerPropagation != nil {
 			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
