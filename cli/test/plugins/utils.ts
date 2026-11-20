@@ -31,6 +31,7 @@ export const createTestContext = (
       cosmoApiUrl: 'http://cosmo.test',
       cosmoWebUrl: 'http://web.test',
       hubUrl: 'http://hub.test',
+      hubAppUrl: 'http://app.hub.test',
       wgcInstallArgs: 'wgc@latest',
     },
     credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),

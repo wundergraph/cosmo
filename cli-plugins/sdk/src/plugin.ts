@@ -7,7 +7,10 @@ import { Prompts } from './prompts.js';
 export interface Endpoints {
   cosmoApiUrl: string;
   cosmoWebUrl: string;
+  /** Hub's API, which every request goes to. */
   hubUrl: string;
+  /** Hub's web app, for links a person opens in a browser. */
+  hubAppUrl: string;
   /** The npm package spec that installs this wgc: `wgc@latest`, or the tarball a Hub deployment serves. */
   wgcInstallArgs: string;
 }

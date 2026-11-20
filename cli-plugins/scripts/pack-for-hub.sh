@@ -7,10 +7,12 @@
 #
 # The packed wgc has the deployment's hosts baked in and installs plugins from the same URL, so it
 # needs no environment variables; they still override the baked hosts. BASE_DOMAIN names the
-# deployment: cosmo.<base> is the control plane, studio.<base> Studio, hub.<base> Hub and Keycloak,
-# cdn.<base> the CDN. BASE_DOMAIN=localhost is the local install on its fixed ports. A Hub
-# deployment's wgc sends telemetry only with COSMO_TELEMETRY_ENABLED=true and does not check npm for
-# updates. The pack fails when a tarball still names a WunderGraph production host.
+# deployment: cosmo.<base> is the control plane, studio.<base> Studio, hub.<base> Hub's API, web app
+# and Keycloak, cdn.<base> the CDN. BASE_DOMAIN=localhost is the local install on its fixed ports,
+# with Hub's API on 4405 and its web app on 4400; hubDeployment in cli/src/core/deployment.ts holds
+# both sets of hosts. A Hub deployment's wgc sends telemetry only with COSMO_TELEMETRY_ENABLED=true
+# and does not check npm for updates. The pack fails when a tarball still names a WunderGraph
+# production host.
 #
 # wgc.tgz bundles the plugin SDK. The plugins resolve it from wgc-plugin-sdk.tgz at the same URL.
 # The packages wgc depends on from this repository (composition, connect, shared, protographic) must
@@ -22,20 +24,6 @@ set -euo pipefail
 if [[ -z "${BASE_DOMAIN:-}" ]]; then
   echo "Set BASE_DOMAIN to the Hub deployment the tarballs are for, e.g. BASE_DOMAIN=moonshot.wundergraph.com, or BASE_DOMAIN=localhost for the local install. Without it wgc talks to Cosmo Cloud." >&2
   exit 1
-fi
-
-if [[ "$BASE_DOMAIN" == localhost ]]; then
-  cosmo_api_url=http://localhost:4431
-  cosmo_web_url=http://localhost:4430
-  hub_url=http://localhost:4400
-  cdn_url=http://localhost:4487
-  keycloak_url=http://localhost:4480
-else
-  cosmo_api_url="https://cosmo.$BASE_DOMAIN"
-  cosmo_web_url="https://studio.$BASE_DOMAIN"
-  hub_url="https://hub.$BASE_DOMAIN"
-  cdn_url="https://cdn.$BASE_DOMAIN"
-  keycloak_url="$hub_url"
 fi
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -62,7 +50,7 @@ pack_package() {
   echo "Packed $output_dir/$tarball_name.tgz" >&2
 }
 
-# Replaces the compiled Cosmo Cloud hosts of cli/src/core/deployment.ts with the deployment's.
+# Replaces the compiled cli/src/core/deployment.ts with the hosts hubDeployment gives for BASE_DOMAIN.
 bake_deployment() {
   local module="$1/dist/src/core/deployment.js"
 
@@ -71,11 +59,13 @@ bake_deployment() {
     exit 1
   fi
 
-  node -e '
-    const [module, cosmoApiUrl, cosmoWebUrl, hubUrl, cdnUrl, keycloakUrl] = process.argv.slice(1);
-    const deployment = { kind: "hub", cosmoApiUrl, cosmoWebUrl, hubUrl, cdnUrl, keycloakUrl, cliPackagesUrl: `${hubUrl}/cli` };
-    require("node:fs").writeFileSync(module, `export const deployment = ${JSON.stringify(deployment, null, 2)};\n`);
-  ' "$module" "$cosmo_api_url" "$cosmo_web_url" "$hub_url" "$cdn_url" "$keycloak_url"
+  node --input-type=module -e '
+    import { writeFileSync } from "node:fs";
+    import { pathToFileURL } from "node:url";
+    const [module, baseDomain] = process.argv.slice(1);
+    const { hubDeployment } = await import(pathToFileURL(module).href);
+    writeFileSync(module, `export const deployment = ${JSON.stringify(hubDeployment(baseDomain), null, 2)};\n`);
+  ' "$module" "$BASE_DOMAIN"
   rm -f "$module.map"
   echo "Baked the hosts of $BASE_DOMAIN into wgc" >&2
 }

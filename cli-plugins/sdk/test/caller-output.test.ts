@@ -201,7 +201,7 @@ const contextFor = (caller: 'human' | 'agent', outputOverride?: 'json' | 'text')
   createPluginContext({
     cliVersion: '0',
     caller,
-    endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '', wgcInstallArgs: 'wgc@latest' },
+    endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '', hubAppUrl: '', wgcInstallArgs: 'wgc@latest' },
     credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
     outputOverride,
   });

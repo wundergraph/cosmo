@@ -15,6 +15,7 @@ export const createCliPluginContext = (): PluginContext =>
       cosmoApiUrl: config.baseURL,
       cosmoWebUrl: config.webURL,
       hubUrl: config.hubURL,
+      hubAppUrl: config.hubAppURL,
       wgcInstallArgs: config.wgcInstallArgs,
     },
     credentials: createCliCredentials(),

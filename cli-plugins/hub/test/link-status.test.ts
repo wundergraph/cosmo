@@ -148,25 +148,22 @@ const accessTool = () => ({
 });
 
 describe('wgc hub open', () => {
-  test('prints the page URL in the organization Hub reports when the caller is not a person', async () => {
+  test('prints the web app URL in the organization Hub reports when the caller is not a person', async () => {
     hub = await startFakeHub({ tools: accessTool() });
     const dir = await linkedRepo();
+    const urls = { hubUrl: hub.url, hubAppUrl: 'http://localhost:4400' };
 
-    const sandbox = await runWgc(['hub', 'open'], { cwd: dir, output: 'text', hubUrl: hub.url });
-    const operation = await runWgc(['hub', 'open', 'operation', 'op_7Kq2', '--json'], { cwd: dir, hubUrl: hub.url });
-    const proposal = await runWgc(['hub', 'open', 'proposal', '--print'], {
-      cwd: dir,
-      output: 'text',
-      hubUrl: hub.url,
-    });
+    const sandbox = await runWgc(['hub', 'open'], { cwd: dir, output: 'text', ...urls });
+    const operation = await runWgc(['hub', 'open', 'operation', 'op_7Kq2', '--json'], { cwd: dir, ...urls });
+    const proposal = await runWgc(['hub', 'open', 'proposal', '--print'], { cwd: dir, output: 'text', ...urls });
 
-    expect(sandbox.stdout).toBe(`${hub.url}/acme/graph/shop?view=shop-nithin\n`);
+    expect(sandbox.stdout).toBe('http://localhost:4400/acme/graph/shop?view=shop-nithin\n');
     expect(operation.json()).toEqual({
       ok: true,
-      data: { url: `${hub.url}/acme/operations/op_7Kq2`, opened: false },
-      url: `${hub.url}/acme/operations/op_7Kq2`,
+      data: { url: 'http://localhost:4400/acme/operations/op_7Kq2', opened: false },
+      url: 'http://localhost:4400/acme/operations/op_7Kq2',
     });
-    expect(proposal.stdout).toBe(`${hub.url}/acme/graph/shop?tab=proposal&view=shop-nithin\n`);
+    expect(proposal.stdout).toBe('http://localhost:4400/acme/graph/shop?tab=proposal&view=shop-nithin\n');
     expect(hub.toolCalls()[0]).toEqual({ name: 'describe_current_access', arguments: {} });
   });
 
@@ -175,11 +172,12 @@ describe('wgc hub open', () => {
 
     const run = await runWgc(['hub', 'open', '--sandbox', 'shop/checkout'], {
       hubUrl: hub.url,
+      hubAppUrl: 'https://hub.moonshot.example',
       cwd: await tempRepo({}),
       output: 'text',
     });
 
-    expect(run.stdout).toBe(`${hub.url}/acme/graph/shop?view=checkout\n`);
+    expect(run.stdout).toBe('https://hub.moonshot.example/acme/graph/shop?view=checkout\n');
   });
 
   test('an operation without its id is a usage error', async () => {

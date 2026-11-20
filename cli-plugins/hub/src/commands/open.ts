@@ -68,7 +68,7 @@ const runOpen = async (
     return;
   }
 
-  const pages = hubPages(context.endpoints.hubUrl, access.data.organizationSlug, session.data.selection.sandbox);
+  const pages = hubPages(context.endpoints.hubAppUrl, access.data.organizationSlug, session.data.selection.sandbox);
   const urls: Record<OpenTarget, () => string> = {
     sandbox: () => pages.sandbox,
     operation: () => pages.operation(id ?? ''),

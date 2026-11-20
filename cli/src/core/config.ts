@@ -32,6 +32,7 @@ export const config = {
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
   hubURL: process.env.HUB_URL || deployment.hubUrl,
+  hubAppURL: process.env.HUB_APP_URL || deployment.hubAppUrl,
   hubOidcAudience: process.env.HUB_OIDC_AUDIENCE || 'hub',
   cdnURL: process.env.CDN_URL || deployment.cdnUrl,
   // npm's latest wgc talks to Cosmo Cloud, so a Hub deployment's wgc never suggests it.

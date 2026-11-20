@@ -6,6 +6,7 @@ const hubDeployment: Deployment = {
   cosmoApiUrl: 'https://cosmo.poc.example',
   cosmoWebUrl: 'https://studio.poc.example',
   hubUrl: 'https://hub.poc.example',
+  hubAppUrl: 'https://hub-app.poc.example',
   cdnUrl: 'https://cdn.poc.example',
   keycloakUrl: 'https://hub.poc.example',
   cliPackagesUrl: 'https://hub.poc.example/cli',
@@ -32,6 +33,7 @@ describe('wgc packed for a Hub deployment', () => {
       'COSMO_API_URL',
       'COSMO_WEB_URL',
       'HUB_URL',
+      'HUB_APP_URL',
       'CDN_URL',
       'KC_API_URL',
       'PLUGIN_REGISTRY_URL',
@@ -55,6 +57,7 @@ describe('wgc packed for a Hub deployment', () => {
       baseURL: config.baseURL,
       webURL: config.webURL,
       hubURL: config.hubURL,
+      hubAppURL: config.hubAppURL,
       cdnURL: config.cdnURL,
       kcApiURL: config.kcApiURL,
       kcRealm: config.kcRealm,
@@ -67,6 +70,7 @@ describe('wgc packed for a Hub deployment', () => {
       baseURL: 'https://cosmo.poc.example',
       webURL: 'https://studio.poc.example',
       hubURL: 'https://hub.poc.example',
+      hubAppURL: 'https://hub-app.poc.example',
       cdnURL: 'https://cdn.poc.example',
       kcApiURL: 'https://hub.poc.example',
       kcRealm: 'cosmo',
@@ -81,10 +85,14 @@ describe('wgc packed for a Hub deployment', () => {
   test('environment variables still win over the baked hosts', async () => {
     vi.stubEnv('COSMO_API_URL', 'http://localhost:3001');
     vi.stubEnv('PLUGIN_REGISTRY_URL', 'localhost:5000');
+    vi.stubEnv('HUB_URL', 'http://localhost:3405');
+    vi.stubEnv('HUB_APP_URL', 'http://localhost:3400');
     const { config } = await import('../src/core/config.js');
     const { defaultPluginEnvironment } = await import('../src/core/plugins/environment.js');
 
     expect(config.baseURL).toBe('http://localhost:3001');
+    expect(config.hubURL).toBe('http://localhost:3405');
+    expect(config.hubAppURL).toBe('http://localhost:3400');
     expect(config.pluginRegistryURL).toBe('localhost:5000');
     expect(defaultPluginEnvironment({ WGC_PLUGIN_REGISTRY_URL: 'http://127.0.0.1:8099' }).registryUrl).toBe(
       'http://127.0.0.1:8099',
@@ -101,5 +109,39 @@ describe('wgc packed for a Hub deployment', () => {
     const on = await import('../src/core/telemetry.js');
     on.initTelemetry();
     expect(posthogCreated).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the hosts pack-for-hub.sh bakes in', () => {
+  test('the local install calls Hub on its API port and links to its web app port', async () => {
+    const { hubDeployment } =
+      await vi.importActual<typeof import('../src/core/deployment.js')>('../src/core/deployment.js');
+
+    expect(hubDeployment('localhost')).toEqual({
+      kind: 'hub',
+      cosmoApiUrl: 'http://localhost:4431',
+      cosmoWebUrl: 'http://localhost:4430',
+      hubUrl: 'http://localhost:4405',
+      hubAppUrl: 'http://localhost:4400',
+      cdnUrl: 'http://localhost:4487',
+      keycloakUrl: 'http://localhost:4480',
+      cliPackagesUrl: 'http://localhost:4405/cli',
+    });
+  });
+
+  test('a deployment on a base domain serves Hub API and web app from hub.<base>', async () => {
+    const { hubDeployment } =
+      await vi.importActual<typeof import('../src/core/deployment.js')>('../src/core/deployment.js');
+
+    expect(hubDeployment('moonshot.wundergraph.com')).toEqual({
+      kind: 'hub',
+      cosmoApiUrl: 'https://cosmo.moonshot.wundergraph.com',
+      cosmoWebUrl: 'https://studio.moonshot.wundergraph.com',
+      hubUrl: 'https://hub.moonshot.wundergraph.com',
+      hubAppUrl: 'https://hub.moonshot.wundergraph.com',
+      cdnUrl: 'https://cdn.moonshot.wundergraph.com',
+      keycloakUrl: 'https://hub.moonshot.wundergraph.com',
+      cliPackagesUrl: 'https://hub.moonshot.wundergraph.com/cli',
+    });
   });
 });

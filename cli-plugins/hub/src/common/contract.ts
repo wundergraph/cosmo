@@ -231,9 +231,9 @@ export const schemaPushResult = z.object({
   composition: z.object({ errors: z.array(z.string()), warnings: z.array(z.string()) }),
 });
 
-/** Hub's pages for the sandbox `<schema>/<sandbox>` of an organization. */
-export const hubPages = (hubUrl: string, organizationSlug: string, address: string) => {
-  const organization = `${hubUrl.replace(/\/+$/, '')}/${encodeURIComponent(organizationSlug)}`;
+/** Hub's web app pages for the sandbox `<schema>/<sandbox>` of an organization. */
+export const hubPages = (hubAppUrl: string, organizationSlug: string, address: string) => {
+  const organization = `${hubAppUrl.replace(/\/+$/, '')}/${encodeURIComponent(organizationSlug)}`;
   const [schema, name = ''] = address.split('/');
   const graph = `${organization}/graph/${encodeURIComponent(schema)}`;
 
