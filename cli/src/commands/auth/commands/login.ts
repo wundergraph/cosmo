@@ -1,115 +1,248 @@
-import { Command, program } from 'commander';
-import open from 'open';
-import pc from 'picocolors';
-import jwtDecode from 'jwt-decode';
+import { setTimeout as delay } from 'node:timers/promises';
+import { Command } from 'commander';
 import inquirer from 'inquirer';
+import open from 'open';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import ora from 'ora';
+import { createOutput, readOutputOverride, toFailure } from '@wundergraph/wgc-plugin-sdk';
+import type { Failure, Output } from '@wundergraph/wgc-plugin-sdk';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
-import { updateConfigFile } from '../../../utils.js';
 import { config, getBaseHeaders } from '../../../core/config.js';
+import { ConfigData, updateConfigFile } from '../../../utils.js';
 import { describeHubAudience, readHubAudience } from '../hub-audience.js';
+import { organizationSlugs, pollForToken, requestDeviceAuthorization } from '../device-login.js';
+import type { DeviceAuthorization, KeycloakEndpoints } from '../device-login.js';
+import type { KeycloakToken } from '../utils.js';
 
-export default (opts: BaseCommandOptions) => {
-  const loginCommand = new Command('login');
-  loginCommand.description('Login a user into the Cosmo platform. Supports browser-based authentication.');
+interface LoginOptions {
+  nonInteractive?: boolean;
+  complete?: string;
+  org?: string;
+  json?: boolean;
+}
 
-  loginCommand.action(async () => {
-    const resp = await performDeviceAuth();
-    if (!resp.success) {
-      program.error(pc.red('Could not perform authentication. Please try again'));
-    }
-    console.log('Code: %s\n', resp.response.deviceCode);
-    console.log(
-      'If your browser does not automatically open, use this URL and enter the Code to verify the login: %s\n',
-      resp.response.verificationURI,
-    );
-    console.log('Opening browser for login...\n');
-    await open(resp.response.verificationURI);
+export interface OrganizationChoice {
+  slug: string;
+  label: string;
+}
 
-    const accessTokenResp = await startPollingForAccessToken({
-      deviceCode: resp.response.deviceCode,
-      interval: resp.response.interval,
-    });
+/** Everything the login touches outside wgc, so tests can stand in for the browser and identity server. */
+export interface LoginDependencies {
+  fetchImpl: typeof fetch;
+  sleep: (milliseconds: number) => Promise<void>;
+  openBrowser: (url: string) => Promise<void>;
+  saveSession: (session: ConfigData) => void;
+  /** True when a person sits at the terminal: stdin and stdout are TTYs. */
+  interactive: boolean;
+  createOutput: (json: boolean) => Output;
+  describeOrganizations: (accessToken: string, slugs: string[]) => Promise<OrganizationChoice[]>;
+  chooseOrganization: (choices: OrganizationChoice[]) => Promise<string>;
+  endpoints: KeycloakEndpoints;
+}
 
-    if (!accessTokenResp.success) {
-      program.error(pc.red(accessTokenResp.errorMessage + ' Please try again.'));
-    }
-
-    if (!accessTokenResp.response) {
-      program.error(pc.red('Could not perform authentication. Please try again'));
-    }
-
-    let decoded: DecodedAccessToken;
-
-    try {
-      decoded = jwtDecode<DecodedAccessToken>(accessTokenResp.response.accessToken);
-    } catch {
-      program.error(pc.red('Could not perform authentication. Please try again'));
-    }
-
-    if (!decoded.groups) {
-      program.error(
-        pc.red(
-          'You are not part of any organizations on Cosmo. Please login to your account in the browser and try again.',
-        ),
-      );
-    }
-
-    const organizationSlugs = new Set(decoded.groups.map((group) => group.split('/')[1]));
-
-    const organizationSlugByDisplayKey = new Map<string, string>();
-    const organizationKeys: Array<string> = [];
-    const spinner = ora('Fetching organizations...').start();
-    for (const organizationSlug of organizationSlugs) {
-      const headers = getBaseHeaders();
+const defaultDependencies = (opts: BaseCommandOptions): LoginDependencies => ({
+  fetchImpl: fetch,
+  sleep: async (milliseconds) => {
+    await delay(milliseconds);
+  },
+  openBrowser: async (url) => {
+    await open(url);
+  },
+  saveSession: updateConfigFile,
+  interactive: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+  createOutput: (json) => createOutput({ json: json || readOutputOverride(process.env) === 'json' }),
+  describeOrganizations: async (accessToken, slugs) => {
+    const choices: OrganizationChoice[] = [];
+    for (const slug of slugs) {
       const response = await opts.client.platform.getOrganizationBySlug(
-        {
-          slug: organizationSlug,
-        },
-        {
-          headers: {
-            ...headers,
-            authorization: `Bearer ${accessTokenResp.response.accessToken}`,
-            'cosmo-org-slug': organizationSlug,
-          },
-        },
+        { slug },
+        { headers: { ...getBaseHeaders(), authorization: `Bearer ${accessToken}`, 'cosmo-org-slug': slug } },
       );
-      if (!response.response || response.response.code !== EnumStatusCode.OK || !response.organization) {
-        organizationKeys.push(organizationSlug);
-        organizationSlugByDisplayKey.set(organizationSlug, organizationSlug);
-        continue;
-      }
-      const organizationKey = `${response.organization.name} (${organizationSlug})`;
-      organizationKeys.push(organizationKey);
-      organizationSlugByDisplayKey.set(organizationKey, organizationSlug);
+      const found = response.response?.code === EnumStatusCode.OK ? response.organization : undefined;
+      choices.push({ slug, label: found ? `${found.name} (${slug})` : slug });
     }
-
-    spinner.stop();
-
-    const selectedOrganization = await inquirer.prompt({
-      name: 'organizationKey',
+    return choices;
+  },
+  chooseOrganization: async (choices) => {
+    const answer = await inquirer.prompt<{ slug: string }>({
+      name: 'slug',
       type: 'list',
       message: 'Select Organization:',
-      choices: organizationKeys,
+      choices: choices.map((choice) => ({ name: choice.label, value: choice.slug })),
     });
+    return answer.slug;
+  },
+  endpoints: { apiUrl: config.kcApiURL, realm: config.kcRealm, clientId: config.kcClientId },
+});
 
-    const organizationSlug = organizationSlugByDisplayKey.get(selectedOrganization.organizationKey);
+const completeCommand = (deviceCode: string, org: string | undefined): string =>
+  org === undefined
+    ? `wgc auth login --complete ${deviceCode}`
+    : `wgc auth login --complete ${deviceCode} --org ${org}`;
 
-    if (!organizationSlug) {
-      program.error('Unable to login.');
-    }
-
-    updateConfigFile({ ...accessTokenResp.response, organizationSlug });
-
-    console.log(pc.green('Logged in Successfully!'));
-
-    const hubAudience = readHubAudience(accessTokenResp.response.accessToken);
-    if (hubAudience) {
-      console.log(`Hub (${config.hubURL}): ${describeHubAudience(hubAudience)}`);
-    }
-  });
-
-  return loginCommand;
+/** Agents get the browser URL and pairing code to hand to a person, and the command that finishes the login. */
+const printLoginStart = (output: Output, authorization: DeviceAuthorization, org: string | undefined): void => {
+  const nextStep = completeCommand(authorization.deviceCode, org);
+  output.result(
+    {
+      browser_url: authorization.browserUrl,
+      verification_code: authorization.userCode,
+      expires_in: authorization.expiresInSeconds,
+      next_step: nextStep,
+    },
+    (data) =>
+      [
+        `Open ${data.browser_url}`,
+        `and approve the login with the code ${data.verification_code}. Then run the next command.`,
+      ].join('\n'),
+    { next: [{ command: nextStep, description: 'finish the login once the browser shows it approved' }] },
+  );
 };
+
+/** The organization to sign in to: `--org`, the only one, or the person's choice. Never a guess. */
+const pickOrganization = async (
+  token: KeycloakToken,
+  options: LoginOptions,
+  dependencies: LoginDependencies,
+  canAsk: boolean,
+): Promise<{ slug: string } | { failure: Failure }> => {
+  const slugs = organizationSlugs(token.accessToken);
+  if (slugs.length === 0) {
+    return {
+      failure: {
+        kind: 'unauthenticated',
+        code: 'NO_ORGANIZATION',
+        message: 'Your account is not part of any organization on Cosmo.',
+        remediation: 'Sign in to Cosmo in the browser, join or create an organization, then log in again.',
+      },
+    };
+  }
+
+  if (options.org !== undefined) {
+    if (slugs.includes(options.org)) {
+      return { slug: options.org };
+    }
+    return {
+      failure: {
+        kind: 'usage',
+        message: `Your account is not part of the organization ${options.org}.`,
+        remediation: `Pass one of: ${slugs.join(', ')}.`,
+      },
+    };
+  }
+
+  if (slugs.length === 1) {
+    return { slug: slugs[0] };
+  }
+
+  if (!canAsk) {
+    return {
+      failure: {
+        kind: 'usage',
+        message: `Your account belongs to ${slugs.length} organizations: ${slugs.join(', ')}.`,
+        remediation: 'Start a new login that names one: `wgc auth login --non-interactive --org <slug>`.',
+        next: ['wgc auth login --non-interactive --org <slug>'],
+      },
+    };
+  }
+
+  const choices = await dependencies.describeOrganizations(token.accessToken, slugs);
+  return { slug: await dependencies.chooseOrganization(choices) };
+};
+
+const finishLogin = async (
+  output: Output,
+  token: KeycloakToken,
+  options: LoginOptions,
+  dependencies: LoginDependencies,
+  canAsk: boolean,
+): Promise<void> => {
+  const picked = await pickOrganization(token, options, dependencies, canAsk);
+  if ('failure' in picked) {
+    output.fail(picked.failure);
+    return;
+  }
+
+  dependencies.saveSession({ ...token, organizationSlug: picked.slug });
+
+  const hubAudience = readHubAudience(token.accessToken);
+  output.result({ organizationSlug: picked.slug, hubAudience: hubAudience ?? null }, (data) =>
+    [
+      `Logged in to ${data.organizationSlug}.`,
+      ...(data.hubAudience ? [`Hub (${config.hubURL}): ${describeHubAudience(data.hubAudience)}`] : []),
+    ].join('\n'),
+  );
+};
+
+const runLogin = async (options: LoginOptions, dependencies: LoginDependencies): Promise<void> => {
+  const agentMode = options.nonInteractive === true || options.complete !== undefined || !dependencies.interactive;
+  const output = dependencies.createOutput(options.json === true || agentMode);
+
+  if (options.complete !== undefined) {
+    const token = await pollForToken({
+      fetchImpl: dependencies.fetchImpl,
+      endpoints: dependencies.endpoints,
+      deviceCode: options.complete,
+      intervalSeconds: 5,
+      sleep: dependencies.sleep,
+    });
+    if (!token.success) {
+      output.fail(toFailure(token));
+      return;
+    }
+    await finishLogin(output, token.data, options, dependencies, false);
+    return;
+  }
+
+  const authorization = await requestDeviceAuthorization(dependencies.fetchImpl, dependencies.endpoints);
+  if (!authorization.success) {
+    output.fail(toFailure(authorization));
+    return;
+  }
+
+  if (agentMode) {
+    printLoginStart(output, authorization.data, options.org);
+    return;
+  }
+
+  const { userCode, browserUrl, deviceCode, intervalSeconds } = authorization.data;
+  output.message(
+    [
+      `Pairing code  ${userCode}`,
+      'Check that your browser shows the same code before you approve the login.',
+      `  ${browserUrl}`,
+      '',
+    ].join('\n'),
+  );
+  await dependencies.openBrowser(browserUrl);
+
+  const token = await pollForToken({
+    fetchImpl: dependencies.fetchImpl,
+    endpoints: dependencies.endpoints,
+    deviceCode,
+    intervalSeconds,
+    sleep: dependencies.sleep,
+  });
+  if (!token.success) {
+    output.fail(toFailure(token));
+    return;
+  }
+  await finishLogin(output, token.data, options, dependencies, true);
+};
+
+export default (opts: BaseCommandOptions, dependencies: LoginDependencies = defaultDependencies(opts)) =>
+  new Command('login')
+    .description(
+      'Log in to Cosmo in the browser. The terminal and the browser show the same pairing code; approve only when they match.',
+    )
+    .option(
+      '--non-interactive',
+      'Print the browser URL, pairing code and the command that finishes the login as JSON, then exit. The default when stdin is not a terminal.',
+    )
+    .option('--complete <device-code>', 'Finish a login started with --non-interactive once it was approved.')
+    .option('--org <slug>', 'The organization to log in to, for accounts in several.')
+    .option('--json', 'Machine-readable output')
+    .addHelpText(
+      'after',
+      ['', 'Examples', '  wgc auth login', '  wgc auth login --non-interactive --org acme'].join('\n'),
+    )
+    .action((options: LoginOptions) => runLogin(options, dependencies));
