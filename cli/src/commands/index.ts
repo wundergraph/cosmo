@@ -49,6 +49,9 @@ WunderGraph Cosmo is the Full Lifecycle GraphQL API Management Solution to manag
 Composition checks, routing, analytics, and distributed tracing all in one platform.
 `);
 
+// wgc's own options go before the subcommand, so `wgc forge --version` reaches the plugin instead.
+program.enablePositionalOptions();
+
 program.addCommand(
   MonographCommands({
     client,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { gitRepositoryPath, latestRouterRelease, resolveModule, resolveRouter } from '../src/resolve.js';
+import { gitRepositoryPath, latestRouterRelease, resolveModule, resolveRouter } from '../../src/builtin/resolve.js';
 import { commitA, commitB, createFakeSystem, versionA } from './harness.js';
 
 const failureOf = (result: { success: boolean; errors?: Error[] }) => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { parseLock, renderLock } from '../src/lock.js';
-import { parseManifest, parseRouterCandidate, renderManifest } from '../src/manifest.js';
+import { parseLock, renderLock } from '../../src/builtin/lock.js';
+import { parseManifest, parseRouterCandidate, renderManifest } from '../../src/builtin/manifest.js';
 import { commitA, lockForReleaseA, versionA } from './harness.js';
 
 const failureOf = (result: { success: boolean; errors?: Error[] }) => {

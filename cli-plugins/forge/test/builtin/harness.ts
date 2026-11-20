@@ -4,8 +4,8 @@ import path from 'node:path';
 import { createCredentials, createPluginContext, createPrompts } from '@wundergraph/wgc-plugin-sdk';
 import type { CallerKind, Prompts } from '@wundergraph/wgc-plugin-sdk';
 import { Command } from 'commander';
-import { createForgePlugin } from '../src/index.js';
-import type { CommandOutcome, CommandRequest, System, TestRequest } from '../src/system.js';
+import { createBuiltinEngine } from '../../src/builtin/engine.js';
+import type { CommandOutcome, CommandRequest, System, TestRequest } from '../../src/builtin/system.js';
 
 export const routerModule = 'github.com/wundergraph/cosmo/router';
 
@@ -184,9 +184,8 @@ export const runForge = async (
     stderr: { write: (chunk) => (stderr += chunk) },
   });
 
-  const plugin = createForgePlugin({ system, cwd: () => workspace });
   const program = new Command('wgc').exitOverride();
-  plugin.register(program.command(plugin.name), context);
+  createBuiltinEngine({ system, cwd: () => workspace }).register(program.command('forge'), context);
 
   process.exitCode = undefined;
   await program.parseAsync(['forge', ...args], { from: 'user' });

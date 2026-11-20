@@ -56,7 +56,7 @@ export const catalog: CatalogEntry[] = [
   },
 ];
 
-const catalogDirectory = fileURLToPath(new URL('../gomodules', import.meta.url));
+const catalogDirectory = fileURLToPath(new URL('../../gomodules', import.meta.url));
 
 const moduleNamePattern = /^[a-z][\da-z-]*$/;
 

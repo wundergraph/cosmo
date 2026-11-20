@@ -1,7 +1,7 @@
 /* eslint-disable no-tabs -- the expected go.mod and main.go are indented with tabs, as gofmt writes them */
 import { expect, test } from 'vitest';
-import { renderGoMod, renderMainGo } from '../src/build-module.js';
-import type { BuildModule } from '../src/build-module.js';
+import { renderGoMod, renderMainGo } from '../../src/builtin/build-module.js';
+import type { BuildModule } from '../../src/builtin/build-module.js';
 
 const build: BuildModule = {
   goVersion: '1.26.0',
