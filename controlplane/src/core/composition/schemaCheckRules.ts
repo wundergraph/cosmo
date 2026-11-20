@@ -1,6 +1,7 @@
 import { Change, ChangeType, CriticalityLevel, Rule } from '@graphql-inspector/core';
 import { IGNORED_FEDERATED_TYPE_NAMES, INACCESSIBLE, TYPE_SYSTEM_DIRECTIVE_LOCATIONS } from '@wundergraph/composition';
-import { GraphQLSchema, isEnumType } from 'graphql';
+import { DirectableGraphQLObject, getDirectiveInExtensions } from '@graphql-tools/utils';
+import { GraphQLSchema, isEnumType, isInputObjectType, isInterfaceType, isObjectType } from 'graphql';
 
 type ChangePredicate = (change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema) => boolean;
 
@@ -17,11 +18,12 @@ function setCriticalityLevelWhen(level: CriticalityLevel, predicate: ChangePredi
 export const enumValuesAreExhaustive = setCriticalityLevelWhen(CriticalityLevel.Breaking, isEnumValueChange);
 
 /**
- * If @inaccessible in this subgraph hides or exposes a value another subgraph defines, the client schema diff reports it.
+ * @inaccessible in one subgraph hides an element from every client. If this subgraph hides or exposes something another
+ * subgraph defines, the client schema diff reports it.
  */
-export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
+export const inaccessibleChangesAreInvisible = setCriticalityLevelWhen(
   CriticalityLevel.NonBreaking,
-  isInaccessibleEnumValueChange,
+  isInaccessibleChange,
 );
 
 /**
@@ -45,7 +47,7 @@ export const internalFederationTypeRemovalsAreInvisible = setCriticalityLevelWhe
  */
 export const schemaCheckRules = [
   enumValuesAreExhaustive,
-  inaccessibleEnumValueChangesAreInvisible,
+  inaccessibleChangesAreInvisible,
   typeSystemDirectiveRemovalsAreInvisible,
   internalFederationTypeRemovalsAreInvisible,
 ];
@@ -54,27 +56,35 @@ function isEnumValueChange(change: Change): boolean {
   return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
 }
 
-function isInaccessibleEnumValueChange(change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema): boolean {
-  switch (change.type) {
-    case ChangeType.EnumValueAdded: {
-      return isInaccessibleEnumValue(newSchema, change.meta.enumName, change.meta.addedEnumValueName);
-    }
-    case ChangeType.EnumValueRemoved: {
-      return isInaccessibleEnumValue(oldSchema, change.meta.enumName, change.meta.removedEnumValueName);
-    }
-    default: {
-      return false;
-    }
-  }
+function isInaccessibleChange(change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema): boolean {
+  return isInaccessibleAtChangePath(oldSchema, change.path) || isInaccessibleAtChangePath(newSchema, change.path);
 }
 
-function isInaccessibleEnumValue(schema: GraphQLSchema, enumName: string, valueName: string): boolean {
-  const enumType = schema.getType(enumName);
-  if (!isEnumType(enumType)) {
+function isInaccessibleAtChangePath(schema: GraphQLSchema, changePath: string | undefined): boolean {
+  if (!changePath) {
     return false;
   }
-  const nodes = [enumType.astNode, enumType.getValue(valueName)?.astNode];
-  return nodes.some((node) => node?.directives?.some((directive) => directive.name.value === INACCESSIBLE));
+  return elementsAlongChangePath(schema, changePath.split('.')).some(
+    (element) => element && getDirectiveInExtensions(element, INACCESSIBLE),
+  );
+}
+
+function elementsAlongChangePath(
+  schema: GraphQLSchema,
+  [typeName, childName = '', argumentName = '']: string[],
+): Array<DirectableGraphQLObject | null | undefined> {
+  const type = schema.getType(typeName);
+  if (isEnumType(type)) {
+    return [type, type.getValue(childName)];
+  }
+  if (isObjectType(type) || isInterfaceType(type)) {
+    const field = type.getFields()[childName];
+    return [type, field, field?.args.find((arg) => arg.name === argumentName)];
+  }
+  if (isInputObjectType(type)) {
+    return [type, type.getFields()[childName]];
+  }
+  return [type];
 }
 
 function isTypeSystemDirectiveRemoval(change: Change, oldSchema: GraphQLSchema): boolean {

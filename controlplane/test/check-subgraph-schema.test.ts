@@ -1609,6 +1609,21 @@ type Category {
           published: 'type Query { a: String b: String @inaccessible }',
           checked: 'type Query { a: String b: String }',
         },
+        {
+          change: 'removing an @inaccessible field',
+          published: 'type Query { a: String b: String @inaccessible }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible type',
+          published: 'type Query { a: String t: T @inaccessible } type T @inaccessible { x: Int }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible argument',
+          published: 'type Query { a(x: Int @inaccessible): String }',
+          checked: 'type Query { a: String }',
+        },
       ])('Should not report a breaking change when $change', async ({ published, checked }) => {
         const checkResp = await checkAgainstLastPublishedSubgraph(client, [published], checked);
 
