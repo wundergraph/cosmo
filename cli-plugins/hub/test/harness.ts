@@ -165,6 +165,9 @@ export const runWgc = async (
     cwd = process.cwd(),
     output,
     interrupt = createInterrupt(),
+    openSocket = () => {
+      throw new Error('this test opens no portal tunnel');
+    },
   }: {
     hubUrl?: string;
     caller?: CallerKind;
@@ -174,6 +177,7 @@ export const runWgc = async (
     cwd?: string;
     output?: OutputOverride;
     interrupt?: ReturnType<typeof createInterrupt>;
+    openSocket?: HubRuntime['openSocket'];
   } = {},
 ): Promise<Run> => {
   let stdout = '';
@@ -196,6 +200,7 @@ export const runWgc = async (
     sleep: () => Promise.resolve(),
     onInterrupt: interrupt.onInterrupt,
     newIdempotencyKey: () => 'generated-key',
+    openSocket,
   };
   const hubPlugin = createHubPlugin(runtime);
   const program = new Command('wgc').exitOverride();

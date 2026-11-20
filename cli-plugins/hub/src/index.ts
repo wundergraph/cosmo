@@ -5,6 +5,7 @@ import { initCommand } from './commands/init.js';
 import { linkCommands } from './commands/link.js';
 import { openCommand } from './commands/open.js';
 import { operationCommand } from './commands/operation.js';
+import { portalCommand } from './commands/portal.js';
 import { proposeCommand } from './commands/propose.js';
 import { sandboxCommand } from './commands/sandbox.js';
 import { schemaCommand } from './commands/schema-push.js';
@@ -29,6 +30,7 @@ export const createHubPlugin = (runtime: HubRuntime = processRuntime()): WgcPlug
         .addCommand(collectionCommand(dependencies))
         .addCommand(proposeCommand(dependencies))
         .addCommand(operationCommand(dependencies))
+        .addCommand(portalCommand(dependencies))
         .addCommand(schemaCommand(dependencies));
     },
   });

@@ -16,6 +16,9 @@ export const hubTools = {
   listOperations: 'list_operations',
   runCollection: 'run_collection',
   createProposal: 'create_proposal',
+  openPortal: 'open_portal',
+  closePortal: 'close_portal',
+  listPortals: 'list_portals',
 } as const;
 
 /** How long one `get_operation` or `get_sandbox_logs` call may hold the request open for news. */
@@ -183,6 +186,23 @@ const logLineShape = z.object({ at: z.string(), component: z.enum(['router', 'fo
 
 export type LogLine = z.output<typeof logLineShape>;
 
+export const portalStatuses = ['connecting', 'connected', 'reconnecting', 'closed'] as const;
+
+export type PortalStatus = (typeof portalStatuses)[number];
+
+/** One subgraph of a sandbox served from outside Hub. Hub's portal tools answer in camelCase. */
+const portalShape = z.object({
+  portalId: z.string(),
+  subgraph: z.string(),
+  status: z.enum(portalStatuses),
+  upstream: z.enum(['tunnel', 'url']),
+  openedBy: z.string().nullable(),
+  lastRequestAt: z.string().nullable(),
+  operationId: z.string().nullable(),
+});
+
+export type Portal = z.output<typeof portalShape>;
+
 /** Result shapes per tool. Arguments are documented on the commands that send them. */
 export const hubResults = {
   /** `{ graph, name, sandbox_yaml, from_sandbox_id?, idempotency_key }` */
@@ -219,6 +239,18 @@ export const hubResults = {
     created: z.boolean(),
     changes: z.object({ total: z.number(), breaking: z.number() }),
   }),
+  /** `{ sandbox: '<schema>/<sandbox>', subgraph }`: replaces an open portal of the same subgraph */
+  openPortal: z.object({
+    portal: portalShape,
+    credential: z.string(),
+    tunnelPath: z.string(),
+    connectCommand: z.string(),
+    dashboardUrl: z.string(),
+  }),
+  /** `{ sandbox, subgraph }` */
+  closePortal: z.object({ portal: portalShape }),
+  /** `{ sandbox }`, open portals first */
+  listPortals: z.object({ portals: z.array(portalShape) }),
 };
 
 /** The JSON answer of `POST /ci/schema-push`, which CI calls with `{ sandboxYaml, subgraphs, sha }`. */
