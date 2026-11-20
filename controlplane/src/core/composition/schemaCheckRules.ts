@@ -57,7 +57,14 @@ function isEnumValueChange(change: Change): boolean {
 }
 
 function isInaccessibleChange(change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema): boolean {
+  if (changePathNamesDirective(change)) {
+    return false;
+  }
   return isInaccessibleAtChangePath(oldSchema, change.path) || isInaccessibleAtChangePath(newSchema, change.path);
+}
+
+function changePathNamesDirective(change: Change): boolean {
+  return 'addedDirectiveName' in change.meta || 'removedDirectiveName' in change.meta;
 }
 
 function isInaccessibleAtChangePath(schema: GraphQLSchema, changePath: string | undefined): boolean {

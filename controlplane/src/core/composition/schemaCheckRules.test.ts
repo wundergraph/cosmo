@@ -122,6 +122,17 @@ describe('Rule: changes to @inaccessible elements are invisible', () => {
     );
   });
 
+  test('Should keep adding @oneOf breaking when an @inaccessible input field shares its name', async () => {
+    expect(
+      await getCriticalityLevel({
+        oldSDL: 'input Filter { oneOf: Int @inaccessible x: Int y: Int }',
+        newSDL: 'input Filter @oneOf { oneOf: Int @inaccessible x: Int y: Int }',
+        rules: [inaccessibleChangesAreInvisible],
+        path: 'Filter.oneOf',
+      }),
+    ).toBe(CriticalityLevel.Breaking);
+  });
+
   test('Should keep a removed accessible field breaking', async () => {
     expect(
       await getCriticalityLevel({
