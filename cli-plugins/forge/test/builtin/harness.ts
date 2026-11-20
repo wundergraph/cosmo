@@ -204,7 +204,7 @@ export const runForge = async (
   const context = createPluginContext({
     cliVersion: 'test',
     caller,
-    endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '' },
+    endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '', wgcInstallArgs: 'wgc@latest' },
     credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
     prompts,
     stdout: { write: (chunk) => (stdout += chunk) },

@@ -158,6 +158,7 @@ export const runWgc = async (
   args: string[],
   {
     hubUrl = 'http://127.0.0.1:1',
+    wgcInstallArgs = 'wgc@latest',
     caller = 'agent',
     env = {},
     loginToken = 'login-token',
@@ -170,6 +171,7 @@ export const runWgc = async (
     },
   }: {
     hubUrl?: string;
+    wgcInstallArgs?: string;
     caller?: CallerKind;
     env?: NodeJS.ProcessEnv;
     loginToken?: string;
@@ -185,7 +187,7 @@ export const runWgc = async (
   const context = createPluginContext({
     cliVersion: '0.0.0-test',
     caller,
-    endpoints: { cosmoApiUrl: 'http://cosmo.invalid', cosmoWebUrl: 'http://cosmo.invalid', hubUrl },
+    endpoints: { cosmoApiUrl: 'http://cosmo.invalid', cosmoWebUrl: 'http://cosmo.invalid', hubUrl, wgcInstallArgs },
     credentials: createCredentials({ env, loginToken: () => Promise.resolve(loginToken) }),
     outputOverride: output,
     prompts,

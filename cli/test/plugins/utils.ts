@@ -27,7 +27,12 @@ export const createTestContext = (
   createPluginContext({
     cliVersion: '0.0.0-test',
     caller,
-    endpoints: { cosmoApiUrl: 'http://cosmo.test', cosmoWebUrl: 'http://web.test', hubUrl: 'http://hub.test' },
+    endpoints: {
+      cosmoApiUrl: 'http://cosmo.test',
+      cosmoWebUrl: 'http://web.test',
+      hubUrl: 'http://hub.test',
+      wgcInstallArgs: 'wgc@latest',
+    },
     credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
     stdout,
     stderr,

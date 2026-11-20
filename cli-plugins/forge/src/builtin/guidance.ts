@@ -4,12 +4,12 @@ import path from 'node:path';
 const start = '<!-- wgc-forge:start -->';
 const end = '<!-- wgc-forge:end -->';
 
-const guidance = `${start}
+const guidanceFor = (wgcInstallArgs: string): string => `${start}
 ## Custom Cosmo Router (Forge)
 
 This directory is a Forge workspace: it builds a Cosmo Router binary with custom Go modules compiled in.
 
-Install Forge globally with \`npm i -g wgc && wgc plugins install forge\`, or add wgc to this checkout with \`npm i -D wgc\`, run \`npx wgc plugins install forge\` and prefix the commands below with \`npx\`. Run \`wgc forge --help\` and \`wgc forge <command> --help\` to discover the commands. Agents pass \`--json\` to every command; the result is JSON on stdout and progress is NDJSON on stderr. Exit 3 means the check found problems; exit 5 means the change needs \`--yes\`.
+Install Forge globally with \`npm i -g ${wgcInstallArgs} && wgc plugins install forge\`, or add wgc to this checkout with \`npm i -D ${wgcInstallArgs}\`, run \`npx wgc plugins install forge\` and prefix the commands below with \`npx\`. Run \`wgc forge --help\` and \`wgc forge <command> --help\` to discover the commands. Agents pass \`--json\` to every command; the result is JSON on stdout and progress is NDJSON on stderr. Exit 3 means the check found problems; exit 5 means the change needs \`--yes\`.
 
 - \`forge.yaml\` declares the router release (\`release\`, \`rc\` or \`commit\`) and the modules. Edit the module list by hand or with the commands below.
 - \`forge.lock\` records the reviewed router revision and the full commit of every remote module. Never edit it by hand.
@@ -36,7 +36,12 @@ ${end}
 export type FileAction = 'created' | 'updated' | 'kept';
 
 /** Adds the Forge section to a guidance file, or refreshes it, leaving everything else in the file as it is. */
-export const writeGuidance = async (workspace: string, fileName: string): Promise<FileAction> => {
+export const writeGuidance = async (
+  workspace: string,
+  fileName: string,
+  wgcInstallArgs: string,
+): Promise<FileAction> => {
+  const guidance = guidanceFor(wgcInstallArgs);
   const filePath = path.join(workspace, fileName);
   let existing: string;
   try {

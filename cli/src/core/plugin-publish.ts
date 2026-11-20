@@ -141,6 +141,11 @@ export async function readPluginFiles(pluginDir: string): Promise<PluginFiles> {
 export async function publishPluginPipeline(params: PluginPublishParams): Promise<PluginPublishResult> {
   const { client, pluginName, pluginDir, namespace, labels, platforms, files, cancelSignal, onProcess } = params;
 
+  const registry = config.pluginRegistryURL;
+  if (!registry) {
+    return { error: new Error('This wgc has no plugin registry. Set PLUGIN_REGISTRY_URL to the registry to push to.') };
+  }
+
   // Step 1: Validate and fetch plugin data
   const pluginDataResponse = await client.platform.validateAndFetchPluginData(
     {
@@ -158,12 +163,12 @@ export async function publishPluginPipeline(params: PluginPublishParams): Promis
   }
 
   const { reference, newVersion, pushToken } = pluginDataResponse;
-  const imageTag = `${config.pluginRegistryURL}/${reference}:${newVersion}`;
+  const imageTag = `${registry}/${reference}:${newVersion}`;
   const platformStr = platforms.join(',');
 
   // Step 2: Docker operations
   try {
-    const loginProc = execa('docker', ['login', config.pluginRegistryURL, '-u', 'x', '--password-stdin'], {
+    const loginProc = execa('docker', ['login', registry, '-u', 'x', '--password-stdin'], {
       stdio: 'pipe',
       input: pushToken,
       ...(cancelSignal ? { cancelSignal } : {}),
@@ -198,7 +203,7 @@ export async function publishPluginPipeline(params: PluginPublishParams): Promis
     return { error: new Error(`Docker operation failed: ${error instanceof Error ? error.message : String(error)}`) };
   } finally {
     try {
-      const logoutProc = execa('docker', ['logout', config.pluginRegistryURL], { stdio: 'pipe' });
+      const logoutProc = execa('docker', ['logout', registry], { stdio: 'pipe' });
       onProcess?.(logoutProc);
       await logoutProc;
     } catch {

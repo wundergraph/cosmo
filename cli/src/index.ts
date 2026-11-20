@@ -6,6 +6,7 @@ import boxen from 'boxen';
 import program from './commands/index.js';
 import { defaultPluginEnvironment } from './core/plugins/environment.js';
 import { attachPlugins, createCliPluginContext } from './core/plugins/startup.js';
+import { config } from './core/config.js';
 import { initTelemetry, shutdownTelemetry, captureCommandFailure } from './core/telemetry.js';
 
 dotenv.config({
@@ -41,7 +42,7 @@ try {
 Please try the below steps to solve the issue
 
 [1] Upgrade to the latest version:
-    ${pc.cyan('npm i -g wgc@latest')}
+    ${pc.cyan(`npm i -g ${config.wgcInstallArgs}`)}
 [2] If it persists, please open an issue:
     ${pc.cyan('https://github.com/wundergraph/cosmo/issues/new/choose')}`;
 

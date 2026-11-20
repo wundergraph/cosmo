@@ -11,7 +11,12 @@ export const createCliPluginContext = (): PluginContext =>
   createPluginContext({
     cliVersion: config.version,
     caller: detectCaller(process.env, Boolean(process.stdin.isTTY && process.stdout.isTTY)),
-    endpoints: { cosmoApiUrl: config.baseURL, cosmoWebUrl: config.webURL, hubUrl: config.hubURL },
+    endpoints: {
+      cosmoApiUrl: config.baseURL,
+      cosmoWebUrl: config.webURL,
+      hubUrl: config.hubURL,
+      wgcInstallArgs: config.wgcInstallArgs,
+    },
     credentials: createCliCredentials(),
     outputOverride: readOutputOverride(process.env),
   });

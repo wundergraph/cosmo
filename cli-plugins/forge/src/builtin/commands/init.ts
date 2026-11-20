@@ -140,8 +140,8 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
     }
 
     files.push(
-      { path: 'AGENTS.md', action: await writeGuidance(workspace, 'AGENTS.md') },
-      { path: 'CLAUDE.md', action: await writeGuidance(workspace, 'CLAUDE.md') },
+      { path: 'AGENTS.md', action: await writeGuidance(workspace, 'AGENTS.md', context.endpoints.wgcInstallArgs) },
+      { path: 'CLAUDE.md', action: await writeGuidance(workspace, 'CLAUDE.md', context.endpoints.wgcInstallArgs) },
       { path: '.gitignore', action: await ignoreGeneratedFiles(workspace) },
     );
 

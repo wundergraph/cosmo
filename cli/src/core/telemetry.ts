@@ -4,11 +4,15 @@ import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { isAuthenticated } from '../commands/auth/utils.js';
 import { config, getBaseHeaders } from './config.js';
+import { deployment } from './deployment.js';
 import { CreateClient } from './client/client.js';
 
-// Environment variables to allow opting out of telemetry
-// Support for COSMO_TELEMETRY_DISABLED and Console Do Not Track standard
-const TELEMETRY_DISABLED = process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1';
+// Cosmo Cloud's wgc opts out with COSMO_TELEMETRY_DISABLED or Console Do Not Track; a Hub deployment's wgc opts in with COSMO_TELEMETRY_ENABLED.
+const TELEMETRY_DISABLED =
+  process.env.DO_NOT_TRACK === '1' ||
+  (deployment.kind === 'hub'
+    ? process.env.COSMO_TELEMETRY_ENABLED !== 'true'
+    : process.env.COSMO_TELEMETRY_DISABLED === 'true');
 const UNAUTHENTICATED_CONTEXT_METADATA = Object.freeze({ organizationId: 'anonymous' });
 
 let client: PostHog | null = null;
@@ -80,8 +84,7 @@ const isCI = (): boolean => {
  * Check if the CLI is talking to Cosmo Cloud or a self-hosted instance
  */
 const isTalkingToCosmoCloud = (): boolean => {
-  const cloudUrl = 'https://cosmo-cp.wundergraph.com';
-  return config.baseURL.startsWith(cloudUrl);
+  return deployment.kind === 'cosmo-cloud' && config.baseURL.startsWith(deployment.cosmoApiUrl);
 };
 
 /**

@@ -31,7 +31,7 @@ describe('wgc hub init', () => {
     const workflow = await readFile(path.join(dir, '.github/workflows/hub-sandbox.yml'), 'utf8');
     expect(workflow).toContain('  pull_request:\n');
     expect(workflow).toContain('  id-token: write\n');
-    expect(workflow).toContain('      - run: wgc plugins install hub\n');
+    expect(workflow).toContain('      - run: npm install --global wgc@latest\n      - run: wgc plugins install hub\n');
     expect(workflow).toContain(
       // eslint-disable-next-line no-template-curly-in-string
       '      - run: wgc hub schema push --json --sha ${{ github.event.pull_request.head.sha }}\n',
@@ -152,17 +152,21 @@ describe('wgc hub init', () => {
     );
   });
 
-  test('writes a GitLab snippet with an id_tokens entry for --ci gitlab', async () => {
+  test('writes a GitLab snippet with an id_tokens entry for --ci gitlab, installing the wgc this deployment serves', async () => {
     const dir = await tempRepo({ 'a.graphql': 'type Query { a: Int }' });
 
-    const run = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--ci', 'gitlab', '--json']);
+    const run = await runWgc(['hub', 'init', '--dir', dir, '--schema', 'shop', '--ci', 'gitlab', '--json'], {
+      wgcInstallArgs: '--allow-remote=all https://hub.example.test/cli/wgc.tgz',
+    });
 
     expect(run.json()).toMatchObject({
       data: { ci: 'gitlab', files: [{ path: 'sandbox.yaml' }, { path: 'hub-sandbox.gitlab-ci.yml' }] },
     });
     const snippet = await readFile(path.join(dir, 'hub-sandbox.gitlab-ci.yml'), 'utf8');
     expect(snippet).toContain('  id_tokens:\n    HUB_ID_TOKEN:\n      aud: hub\n');
-    expect(snippet).toContain('    - wgc plugins install hub\n    - wgc hub schema push --json\n');
+    expect(snippet).toContain(
+      '    - npm install --global --allow-remote=all https://hub.example.test/cli/wgc.tgz\n    - wgc plugins install hub\n    - wgc hub schema push --json\n',
+    );
     expect(existsSync(path.join(dir, '.github'))).toBe(false);
   });
 });

@@ -72,7 +72,7 @@ const subgraphsFromFiles = (files: string[], root: string): SubgraphDraft[] => {
   });
 };
 
-const githubWorkflow = (audience: string): string => `name: Hub sandbox
+const githubWorkflow = (audience: string, wgcInstallArgs: string): string => `name: Hub sandbox
 
 on:
   pull_request:
@@ -89,12 +89,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --global wgc@latest
+      - run: npm install --global ${wgcInstallArgs}
       - run: wgc plugins install hub
       - run: wgc hub schema push --json --sha \${{ github.event.pull_request.head.sha }}${audience === defaultAudience ? '' : ` --audience ${audience}`}
 `;
 
-const gitlabSnippet = (audience: string): string => `# Include from .gitlab-ci.yml:
+const gitlabSnippet = (audience: string, wgcInstallArgs: string): string => `# Include from .gitlab-ci.yml:
 #   include:
 #     - local: ${gitlabSnippetPath}
 hub-sandbox:
@@ -105,7 +105,7 @@ hub-sandbox:
     ${hubGitlabTokenVariable}:
       aud: ${audience}
   script:
-    - npm install --global wgc@latest
+    - npm install --global ${wgcInstallArgs}
     - wgc plugins install hub
     - wgc hub schema push --json${audience === defaultAudience ? '' : ` --audience ${audience}`}
 `;
@@ -228,9 +228,15 @@ const runInit = async (options: InitOptions, context: PluginContext): Promise<vo
     { path: sandboxFileName, content: yaml.dump(document, { lineWidth: -1 }) },
   ];
   if (ci === 'github') {
-    planned.push({ path: githubWorkflowPath, content: githubWorkflow(options.audience) });
+    planned.push({
+      path: githubWorkflowPath,
+      content: githubWorkflow(options.audience, context.endpoints.wgcInstallArgs),
+    });
   } else if (ci === 'gitlab') {
-    planned.push({ path: gitlabSnippetPath, content: gitlabSnippet(options.audience) });
+    planned.push({
+      path: gitlabSnippetPath,
+      content: gitlabSnippet(options.audience, context.endpoints.wgcInstallArgs),
+    });
   }
 
   const files: Array<{ path: string; action: FileAction }> = [];

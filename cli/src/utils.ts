@@ -266,7 +266,7 @@ export const checkForUpdates = async () => {
 
     const message = `Update available! ${pc.red(config.version)} → ${pc.green(latestVersion)}
 Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}
-Run npm i -g wgc@latest`;
+Run npm i -g ${config.wgcInstallArgs}`;
 
     console.warn(
       boxen(message, {

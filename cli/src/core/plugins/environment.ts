@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
+import { deployment } from '../deployment.js';
 
 /** Where wgc looks for plugins. */
 export interface PluginEnvironment {
@@ -11,7 +12,7 @@ export interface PluginEnvironment {
   workspaceRoot: string | undefined;
   /** True under tsx (`pnpm wgc`), where workspace plugins load from `src/index.ts` instead of their built `dist`. */
   runsFromSource: boolean;
-  /** A base URL serving plugin tarballs as `<url>/wgc-plugin-<name>.tgz`, used by install instead of npm. */
+  /** A base URL serving plugin tarballs as `<url>/wgc-plugin-<name>.tgz`, used by install instead of npm. A Hub deployment's wgc defaults to the Hub's. */
   registryUrl: string | undefined;
 }
 
@@ -33,5 +34,5 @@ export const defaultPluginEnvironment = (env: NodeJS.ProcessEnv = process.env): 
   managedDir: env.WGC_PLUGINS_DIR || join(homedir(), '.wgc', 'plugins'),
   workspaceRoot: findWorkspaceRoot(dirname(fileURLToPath(import.meta.url))),
   runsFromSource: import.meta.url.endsWith('.ts'),
-  registryUrl: env.WGC_PLUGIN_REGISTRY_URL || undefined,
+  registryUrl: env.WGC_PLUGIN_REGISTRY_URL || (deployment.kind === 'hub' ? deployment.cliPackagesUrl : undefined),
 });

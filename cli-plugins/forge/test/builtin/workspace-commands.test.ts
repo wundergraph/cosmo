@@ -83,6 +83,7 @@ describe('wgc forge init', () => {
     expect(await read(workspace, '.gitignore')).toBe('node_modules\n.forge/\n');
     const guidance = await read(workspace, 'AGENTS.md');
     expect(guidance.startsWith('# Our team rules\n\nAlways run the linter.\n\n<!-- wgc-forge:start -->')).toBe(true);
+    expect(guidance).toContain('`npm i -g wgc@latest && wgc plugins install forge`');
 
     const third = await runForge(['init'], { workspace, system });
     expect(JSON.parse(third.stdout).data.files.map((file: { action: string }) => file.action)).toEqual([

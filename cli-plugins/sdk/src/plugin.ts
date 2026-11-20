@@ -8,6 +8,8 @@ export interface Endpoints {
   cosmoApiUrl: string;
   cosmoWebUrl: string;
   hubUrl: string;
+  /** The npm package spec that installs this wgc: `wgc@latest`, or the tarball a Hub deployment serves. */
+  wgcInstallArgs: string;
 }
 
 /** What wgc hands a plugin when it registers its commands. */
