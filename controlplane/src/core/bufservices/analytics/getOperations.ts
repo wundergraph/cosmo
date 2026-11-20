@@ -27,6 +27,7 @@ import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getOperations(
   opts: RouterOptions,
@@ -44,8 +45,11 @@ export function getOperations(
         operations: [],
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const metricsRepo = new MetricsRepository(opts.chClient);
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);

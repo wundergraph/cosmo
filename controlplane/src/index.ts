@@ -71,6 +71,8 @@ const {
   COMPOSITION_MIN_THREADS,
   COMPOSITION_MAX_THREADS,
   REDIS_HOST,
+  ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE,
+  ANALYTICS_QUERY_ROW_BUDGET,
   REDIS_PORT,
   REDIS_TLS_CA,
   REDIS_TLS_CERT,
@@ -174,6 +176,8 @@ const options: BuildConfig = {
     smtpSecure: SMTP_SECURE,
     smtpRequireTls: SMTP_REQUIRE_TLS,
   },
+  analyticsMcpRateLimitPerMinute: ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE,
+  analyticsQueryRowBudget: ANALYTICS_QUERY_ROW_BUDGET,
   redis: {
     host: REDIS_HOST,
     port: REDIS_PORT,

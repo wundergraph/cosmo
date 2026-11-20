@@ -9,6 +9,7 @@ import { RouterMetricsRepository } from '../../repositories/analytics/RouterMetr
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getRouters(
   opts: RouterOptions,
@@ -18,8 +19,11 @@ export function getRouters(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();

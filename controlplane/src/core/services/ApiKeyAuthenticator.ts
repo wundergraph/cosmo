@@ -8,6 +8,11 @@ import { traced } from '../tracing.js';
 import type { LoginMethod } from '../../types/index.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
+export type AuthenticateOptions = {
+  /** Don't record the key's last use. Read-only RPCs set this so they cause no database write. */
+  skipApiKeyUsageUpdate?: boolean;
+};
+
 export type ApiKeyAuthContext = {
   auth: 'api_key';
   organizationId: string;
@@ -33,7 +38,7 @@ export default class ApiKeyAuthenticator {
    *
    * @param apiKey
    */
-  public async authenticate(apiKey: string): Promise<ApiKeyAuthContext> {
+  public async authenticate(apiKey: string, options?: AuthenticateOptions): Promise<ApiKeyAuthContext> {
     const apiKeyModel = await this.db.query.apiKeys.findFirst({
       where: eq(schema.apiKeys.key, apiKey),
       with: {
@@ -55,14 +60,16 @@ export default class ApiKeyAuthenticator {
     }
 
     /**
-     * Update the last used at timestamp.
+     * Update the last used at timestamp, unless the RPC must not write (read-only analytics RPCs).
      */
-    await this.db
-      .update(schema.apiKeys)
-      .set({
-        lastUsedAt: new Date(),
-      })
-      .where(eq(schema.apiKeys.id, apiKeyModel.id));
+    if (!options?.skipApiKeyUsageUpdate) {
+      await this.db
+        .update(schema.apiKeys)
+        .set({
+          lastUsedAt: new Date(),
+        })
+        .where(eq(schema.apiKeys.id, apiKeyModel.id));
+    }
 
     const organizationDeactivated = !!organization.deactivation;
     let rbac: RBACEvaluator;

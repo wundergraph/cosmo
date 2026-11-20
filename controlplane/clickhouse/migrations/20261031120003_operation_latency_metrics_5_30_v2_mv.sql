@@ -1,0 +1,46 @@
+-- migrate:up
+
+-- The query must stay identical to operation_latency_metrics_5_30_mv (test/clickhouse-v2-views.test.ts), so both
+-- tables hold the same rows.
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_v2_mv TO cosmo.operation_latency_metrics_5_30_v2 AS
+-- Aggregate histogram buckets into a 5 minute window, Counts are summed, Min/Max are taken
+SELECT
+    toStartOfFiveMinute(TimeUnix) as Timestamp,
+    toLowCardinality(Attributes [ 'wg.operation.name' ]) as OperationName,
+    Attributes [ 'wg.operation.hash' ] as OperationHash,
+    toLowCardinality(Attributes [ 'wg.operation.type' ]) as OperationType,
+    Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
+    toLowCardinality(Attributes [ 'wg.router.config.version']) as RouterConfigVersion,
+    toLowCardinality(Attributes [ 'wg.federated_graph.id']) as FederatedGraphID,
+    toLowCardinality(Attributes [ 'wg.organization.id' ]) as OrganizationID,
+    toLowCardinality(Attributes [ 'wg.client.name' ]) as ClientName,
+    toLowCardinality(Attributes [ 'wg.client.version' ]) as ClientVersion,
+    -- Sum up the bucket counts on the same index which produces the overall count of samples of the histogram
+    sumForEachState(BucketCounts) as BucketCounts,
+    -- Populate the bounds so we have a base value for quantile calculations
+    ExplicitBounds,
+    sumSimpleState(Sum) AS Sum,
+    sumSimpleState(Count) AS Count,
+    minSimpleState(Min) AS MinDuration,
+    maxSimpleState(Max) AS MaxDuration
+FROM otel_metrics_histogram
+-- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
+WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND MetricName = 'router.http.request.duration_milliseconds' AND Attributes [ 'wg.subgraph.id' ] = '' AND OrganizationID != '' AND FederatedGraphID != ''
+GROUP BY
+    OperationName,
+    OperationHash,
+    OperationPersistedID,
+    FederatedGraphID,
+    RouterConfigVersion,
+    OrganizationID,
+    OperationType,
+    Timestamp,
+    ClientName,
+    ClientVersion,
+    ExplicitBounds
+ORDER BY
+    Timestamp;
+
+-- migrate:down
+
+DROP VIEW IF EXISTS cosmo.operation_latency_metrics_5_30_v2_mv

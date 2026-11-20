@@ -32,6 +32,44 @@ and register the available tools for the connected AI model to use.
 The runs fully locally in the context of the CLI,
 which means that you'll need an API key to connect to the Cosmo Platform.
 
+## Analytics
+
+The analytics tools answer questions about traffic, latency, errors, clients, field usage, traces, routers, checks and request usage. They are read-only: they call only the RPCs in `ANALYTICS_READ_RPCS` (`@wundergraph/cosmo-shared`), and none of those write to Postgres, ClickHouse, blob storage or webhooks.
+
+### Options
+
+- `--auth user|api-key`: how the analytics tools authenticate. `user` uses your `wgc auth login` session and refreshes it as needed; namespace login-method restrictions apply. `api-key` uses `COSMO_API_KEY`, whose group permissions apply but which bypasses namespace login-method restrictions. Defaults to `api-key` when `COSMO_API_KEY` is set, otherwise `user`.
+- `--toolsets schema,analytics`: which tools to register. Both by default.
+
+When you use an API key for analytics, give it a group with the `graph-viewer` role on only the namespaces it needs.
+
+### Tools
+
+- **`get_analytics_context`**: Organization, principal, retention per data family, trace sampling ceiling and request limit.
+- **`get_graph_overview`** / **`get_subgraph_overview`**: Request rate, latency and error rate, with the previous period and top operations.
+- **`list_operations`**: Operations ranked by requests, latency or errors, with deprecated-field usage.
+- **`get_operation`**: Document, clients, deprecated fields and metrics of one operation.
+- **`get_field_usage`**: Clients and operations using a field, argument or input field.
+- **`search_traces`**: Sampled requests by any request field or root-span attribute (`attr:<key>`), and by span conditions (e.g. a fetch to subgraph `products` over 50 s). Each operation of a batched request is matched on its own. Paged with a cursor.
+- **`get_trace`**: One trace: a summary (time per router phase and per subgraph, the critical path, every error with downstream error codes) and the spans, or the full spans with events and resource attributes.
+- **`query_analytics`**: Any question one dataset can answer: dimensions, measures, filters, `having`, sorting and time buckets, across one graph, several or all readable graphs. Datasets: `operation_metrics`, `subgraph_metrics`, `planning_metrics`, `request_volume`, `requests`, `spans`, `field_usage`, `schema_presence`, `router_runtime`, `operation_documents`.
+- **`list_dimension_values`**: The values of one dimension with counts, or (`attributeKeys`) every span attribute key stored.
+- **`compare_periods`**: A window against the previous period or a custom baseline, with `<measure>Baseline`, `Delta` and `DeltaPct`.
+- **`analyze_spans`**: Where the time goes, per span name, subgraph or span attribute.
+- **`get_error_breakdown`**: Exact error counts from metrics, or failing sampled requests grouped by message, status, client, operation or subgraph, each with an example trace.
+- **`list_clients`**: Client names and versions with traffic, and registered clients without traffic.
+- **`search_operation_documents`**: Operations whose normalized document contains a text.
+- **`get_change_timeline`**: Compositions and their schema changes, newest first.
+- **`list_routers`**: Router instances, versions, compositions and resource usage.
+- **`get_usage_and_quota`**: Monthly request usage per graph, a forecast and the plan limit (organization admins).
+- **`get_check_impact`**: Schema checks and the operations their changes affect.
+
+The server also serves three resources, `cosmo://analytics/guide` (what each number means), `cosmo://analytics/datasets` (every dataset, dimension and measure) and `cosmo://analytics/context` (the caller's retention and datasets), and seven prompts: `investigate-slow-operation`, `incident-triage`, `deprecation-cleanup-report`, `unused-schema-report`, `client-adoption-report`, `release-impact` and `weekly-graph-health`.
+
+Generic queries are bounded: the controlplane estimates the rows a query reads before running it and refuses one above `ANALYTICS_QUERY_ROW_BUDGET` (default 200,000,000).
+
+Requests from these tools carry `x-cosmo-client: wgc-mcp/<version>`, which the controlplane rate-limits per organization (`ANALYTICS_MCP_RATE_LIMIT_PER_MINUTE`, default 120).
+
 ## Available Tools
 
 The MCP server exposes several tools that an AI model can utilize:

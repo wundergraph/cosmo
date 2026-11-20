@@ -9,6 +9,10 @@ import { getGraphMetrics } from './analytics/getGraphMetrics.js';
 import { getMetricsErrorRate } from './analytics/getMetricsErrorRate.js';
 import { getOperationContent } from './analytics/getOperationContent.js';
 import { getOrganizationRequestsCount } from './analytics/getOrganizationRequestsCount.js';
+import { getAnalyticsCapabilities } from './analytics/getAnalyticsCapabilities.js';
+import { getAnalyticsDimensionValues } from './analytics/getAnalyticsDimensionValues.js';
+import { queryAnalytics } from './analytics/queryAnalytics.js';
+import { searchTraces } from './analytics/searchTraces.js';
 import { getSubgraphMetrics } from './analytics/getSubgraphMetrics.js';
 import { getSubgraphMetricsErrorRate } from './analytics/getSubgraphMetricsErrorRate.js';
 import { getTrace } from './analytics/getTrace.js';
@@ -719,6 +723,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getOrganizationRequestsCount: (req, ctx) => {
       return getOrganizationRequestsCount(opts, req, ctx);
+    },
+
+    getAnalyticsCapabilities: (req, ctx) => {
+      return getAnalyticsCapabilities(opts, req, ctx);
+    },
+    searchTraces: (req, ctx) => {
+      return searchTraces(opts, req, ctx);
+    },
+    queryAnalytics: (req, ctx) => {
+      return queryAnalytics(opts, req, ctx);
+    },
+    getAnalyticsDimensionValues: (req, ctx) => {
+      return getAnalyticsDimensionValues(opts, req, ctx);
     },
 
     // returns the pending invites of a user

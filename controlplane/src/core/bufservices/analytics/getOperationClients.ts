@@ -12,6 +12,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getOperationClients(
   opts: RouterOptions,
@@ -29,8 +30,11 @@ export function getOperationClients(
         clients: [],
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
@@ -57,7 +61,11 @@ export function getOperationClients(
 
     // Use provided range/dateRange or fall back to default
     const inputRange = req.range ?? (req.dateRange ? undefined : 24);
-    const { range, dateRange: validatedDateRange } = validateDateRanges({
+    const {
+      range,
+      dateRange: validatedDateRange,
+      outOfRetention,
+    } = validateDateRanges({
       limit: analyticsRetention?.limit ?? 7,
       range: inputRange,
       dateRange: req.dateRange,

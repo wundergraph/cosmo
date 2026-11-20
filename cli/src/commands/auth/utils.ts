@@ -169,11 +169,7 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
   }
 
   // Access token is present and does not expire in the next 60 seconds
-  if (
-    userConfig?.accessToken &&
-    userConfig?.expiresAt &&
-    new Date(userConfig.expiresAt) > new Date(Date.now() - 60 * 1000)
-  ) {
+  if (userConfig?.accessToken && userConfig?.expiresAt && isAccessTokenFresh(new Date(userConfig.expiresAt))) {
     // Update the api key to the current valid access token
     config.apiKey = userConfig.accessToken;
     return;
@@ -189,6 +185,34 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
   }
 
   // Refresh tokens with the offline token
+  const data = await refreshAccessToken(userConfig.refreshToken!);
+  const present = new Date();
+
+  // Update the config file with the new access token and refresh token
+  updateConfigFile({
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: new Date(new Date().setSeconds(present.getSeconds() + data.expires_in)),
+    refreshExpiresAt: new Date(new Date().setSeconds(present.getSeconds() + data.refresh_expires_in)),
+    organizationSlug: userConfig.organizationSlug,
+  });
+
+  // Update the api key with the new access token
+  config.apiKey = data.access_token;
+}
+
+/**
+ * True when the access token is still valid for more than a minute, so it won't expire mid-request.
+ */
+export function isAccessTokenFresh(expiresAt: Date, now = new Date()): boolean {
+  return expiresAt.getTime() > now.getTime() + 60 * 1000;
+}
+
+/**
+ * Exchanges the offline refresh token for a new access token. Throws instead of exiting, so long-running callers
+ * (the MCP server) can report the failure.
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<KeycloakTokenResponse> {
   const resp = await fetch(`${config.kcApiURL}/realms/${config.kcRealm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
@@ -197,7 +221,7 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       client_id: config.kcClientId,
-      refresh_token: userConfig.refreshToken!,
+      refresh_token: refreshToken,
     }),
   });
 
@@ -208,20 +232,7 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
   }
 
   try {
-    const data: KeycloakTokenResponse = await resp.json();
-    const present = new Date();
-
-    // Update the config file with the new access token and refresh token
-    updateConfigFile({
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: new Date(new Date().setSeconds(present.getSeconds() + data.expires_in)),
-      refreshExpiresAt: new Date(new Date().setSeconds(present.getSeconds() + data.refresh_expires_in)),
-      organizationSlug: userConfig.organizationSlug,
-    });
-
-    // Update the api key with the new access token
-    config.apiKey = data.access_token;
+    return (await resp.json()) as KeycloakTokenResponse;
   } catch (e: any) {
     throw new Error(
       'Failed to parse the response from the identity server. If the issue persists, please contact support. Error: ' +

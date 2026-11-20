@@ -490,6 +490,18 @@ const (
 	// PlatformServiceGetOrganizationRequestsCountProcedure is the fully-qualified name of the
 	// PlatformService's GetOrganizationRequestsCount RPC.
 	PlatformServiceGetOrganizationRequestsCountProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationRequestsCount"
+	// PlatformServiceGetAnalyticsCapabilitiesProcedure is the fully-qualified name of the
+	// PlatformService's GetAnalyticsCapabilities RPC.
+	PlatformServiceGetAnalyticsCapabilitiesProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAnalyticsCapabilities"
+	// PlatformServiceSearchTracesProcedure is the fully-qualified name of the PlatformService's
+	// SearchTraces RPC.
+	PlatformServiceSearchTracesProcedure = "/wg.cosmo.platform.v1.PlatformService/SearchTraces"
+	// PlatformServiceQueryAnalyticsProcedure is the fully-qualified name of the PlatformService's
+	// QueryAnalytics RPC.
+	PlatformServiceQueryAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/QueryAnalytics"
+	// PlatformServiceGetAnalyticsDimensionValuesProcedure is the fully-qualified name of the
+	// PlatformService's GetAnalyticsDimensionValues RPC.
+	PlatformServiceGetAnalyticsDimensionValuesProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAnalyticsDimensionValues"
 	// PlatformServiceCreateOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// CreateOrganization RPC.
 	PlatformServiceCreateOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganization"
@@ -940,6 +952,14 @@ type PlatformServiceClient interface {
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
 	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
+	// GetAnalyticsCapabilities returns what the caller can query: retention per data family, sampling and limits.
+	GetAnalyticsCapabilities(context.Context, *connect.Request[v1.GetAnalyticsCapabilitiesRequest]) (*connect.Response[v1.GetAnalyticsCapabilitiesResponse], error)
+	// SearchTraces finds sampled traces by request filters and conditions on their spans.
+	SearchTraces(context.Context, *connect.Request[v1.SearchTracesRequest]) (*connect.Response[v1.SearchTracesResponse], error)
+	// QueryAnalytics answers a question over one analytics dataset (see the catalog in @wundergraph/cosmo-shared).
+	QueryAnalytics(context.Context, *connect.Request[v1.QueryAnalyticsRequest]) (*connect.Response[v1.QueryAnalyticsResponse], error)
+	// GetAnalyticsDimensionValues lists the values of a dimension with counts, including span attribute keys.
+	GetAnalyticsDimensionValues(context.Context, *connect.Request[v1.GetAnalyticsDimensionValuesRequest]) (*connect.Response[v1.GetAnalyticsDimensionValuesResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	// EnableLintingForTheNamespace enables the lint check for the namespace passed.
 	EnableLintingForTheNamespace(context.Context, *connect.Request[v1.EnableLintingForTheNamespaceRequest]) (*connect.Response[v1.EnableLintingForTheNamespaceResponse], error)
@@ -1985,6 +2005,30 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationRequestsCount")),
 			connect.WithClientOptions(opts...),
 		),
+		getAnalyticsCapabilities: connect.NewClient[v1.GetAnalyticsCapabilitiesRequest, v1.GetAnalyticsCapabilitiesResponse](
+			httpClient,
+			baseURL+PlatformServiceGetAnalyticsCapabilitiesProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsCapabilities")),
+			connect.WithClientOptions(opts...),
+		),
+		searchTraces: connect.NewClient[v1.SearchTracesRequest, v1.SearchTracesResponse](
+			httpClient,
+			baseURL+PlatformServiceSearchTracesProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("SearchTraces")),
+			connect.WithClientOptions(opts...),
+		),
+		queryAnalytics: connect.NewClient[v1.QueryAnalyticsRequest, v1.QueryAnalyticsResponse](
+			httpClient,
+			baseURL+PlatformServiceQueryAnalyticsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("QueryAnalytics")),
+			connect.WithClientOptions(opts...),
+		),
+		getAnalyticsDimensionValues: connect.NewClient[v1.GetAnalyticsDimensionValuesRequest, v1.GetAnalyticsDimensionValuesResponse](
+			httpClient,
+			baseURL+PlatformServiceGetAnalyticsDimensionValuesProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsDimensionValues")),
+			connect.WithClientOptions(opts...),
+		),
 		createOrganization: connect.NewClient[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOrganizationProcedure,
@@ -2484,6 +2528,10 @@ type platformServiceClient struct {
 	getFieldUsage                                      *connect.Client[v1.GetFieldUsageRequest, v1.GetFieldUsageResponse]
 	getGraphFieldUsage                                 *connect.Client[v1.GetGraphFieldUsageRequest, v1.GetGraphFieldUsageResponse]
 	getOrganizationRequestsCount                       *connect.Client[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse]
+	getAnalyticsCapabilities                           *connect.Client[v1.GetAnalyticsCapabilitiesRequest, v1.GetAnalyticsCapabilitiesResponse]
+	searchTraces                                       *connect.Client[v1.SearchTracesRequest, v1.SearchTracesResponse]
+	queryAnalytics                                     *connect.Client[v1.QueryAnalyticsRequest, v1.QueryAnalyticsResponse]
+	getAnalyticsDimensionValues                        *connect.Client[v1.GetAnalyticsDimensionValuesRequest, v1.GetAnalyticsDimensionValuesResponse]
 	createOrganization                                 *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
 	enableLintingForTheNamespace                       *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
 	configureNamespaceLintConfig                       *connect.Client[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse]
@@ -3331,6 +3379,27 @@ func (c *platformServiceClient) GetOrganizationRequestsCount(ctx context.Context
 	return c.getOrganizationRequestsCount.CallUnary(ctx, req)
 }
 
+// GetAnalyticsCapabilities calls wg.cosmo.platform.v1.PlatformService.GetAnalyticsCapabilities.
+func (c *platformServiceClient) GetAnalyticsCapabilities(ctx context.Context, req *connect.Request[v1.GetAnalyticsCapabilitiesRequest]) (*connect.Response[v1.GetAnalyticsCapabilitiesResponse], error) {
+	return c.getAnalyticsCapabilities.CallUnary(ctx, req)
+}
+
+// SearchTraces calls wg.cosmo.platform.v1.PlatformService.SearchTraces.
+func (c *platformServiceClient) SearchTraces(ctx context.Context, req *connect.Request[v1.SearchTracesRequest]) (*connect.Response[v1.SearchTracesResponse], error) {
+	return c.searchTraces.CallUnary(ctx, req)
+}
+
+// QueryAnalytics calls wg.cosmo.platform.v1.PlatformService.QueryAnalytics.
+func (c *platformServiceClient) QueryAnalytics(ctx context.Context, req *connect.Request[v1.QueryAnalyticsRequest]) (*connect.Response[v1.QueryAnalyticsResponse], error) {
+	return c.queryAnalytics.CallUnary(ctx, req)
+}
+
+// GetAnalyticsDimensionValues calls
+// wg.cosmo.platform.v1.PlatformService.GetAnalyticsDimensionValues.
+func (c *platformServiceClient) GetAnalyticsDimensionValues(ctx context.Context, req *connect.Request[v1.GetAnalyticsDimensionValuesRequest]) (*connect.Response[v1.GetAnalyticsDimensionValuesResponse], error) {
+	return c.getAnalyticsDimensionValues.CallUnary(ctx, req)
+}
+
 // CreateOrganization calls wg.cosmo.platform.v1.PlatformService.CreateOrganization.
 func (c *platformServiceClient) CreateOrganization(ctx context.Context, req *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
 	return c.createOrganization.CallUnary(ctx, req)
@@ -3914,6 +3983,14 @@ type PlatformServiceHandler interface {
 	GetFieldUsage(context.Context, *connect.Request[v1.GetFieldUsageRequest]) (*connect.Response[v1.GetFieldUsageResponse], error)
 	GetGraphFieldUsage(context.Context, *connect.Request[v1.GetGraphFieldUsageRequest]) (*connect.Response[v1.GetGraphFieldUsageResponse], error)
 	GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error)
+	// GetAnalyticsCapabilities returns what the caller can query: retention per data family, sampling and limits.
+	GetAnalyticsCapabilities(context.Context, *connect.Request[v1.GetAnalyticsCapabilitiesRequest]) (*connect.Response[v1.GetAnalyticsCapabilitiesResponse], error)
+	// SearchTraces finds sampled traces by request filters and conditions on their spans.
+	SearchTraces(context.Context, *connect.Request[v1.SearchTracesRequest]) (*connect.Response[v1.SearchTracesResponse], error)
+	// QueryAnalytics answers a question over one analytics dataset (see the catalog in @wundergraph/cosmo-shared).
+	QueryAnalytics(context.Context, *connect.Request[v1.QueryAnalyticsRequest]) (*connect.Response[v1.QueryAnalyticsResponse], error)
+	// GetAnalyticsDimensionValues lists the values of a dimension with counts, including span attribute keys.
+	GetAnalyticsDimensionValues(context.Context, *connect.Request[v1.GetAnalyticsDimensionValuesRequest]) (*connect.Response[v1.GetAnalyticsDimensionValuesResponse], error)
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
 	// EnableLintingForTheNamespace enables the lint check for the namespace passed.
 	EnableLintingForTheNamespace(context.Context, *connect.Request[v1.EnableLintingForTheNamespaceRequest]) (*connect.Response[v1.EnableLintingForTheNamespaceResponse], error)
@@ -4955,6 +5032,30 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationRequestsCount")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetAnalyticsCapabilitiesHandler := connect.NewUnaryHandler(
+		PlatformServiceGetAnalyticsCapabilitiesProcedure,
+		svc.GetAnalyticsCapabilities,
+		connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsCapabilities")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceSearchTracesHandler := connect.NewUnaryHandler(
+		PlatformServiceSearchTracesProcedure,
+		svc.SearchTraces,
+		connect.WithSchema(platformServiceMethods.ByName("SearchTraces")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceQueryAnalyticsHandler := connect.NewUnaryHandler(
+		PlatformServiceQueryAnalyticsProcedure,
+		svc.QueryAnalytics,
+		connect.WithSchema(platformServiceMethods.ByName("QueryAnalytics")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetAnalyticsDimensionValuesHandler := connect.NewUnaryHandler(
+		PlatformServiceGetAnalyticsDimensionValuesProcedure,
+		svc.GetAnalyticsDimensionValues,
+		connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsDimensionValues")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceCreateOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOrganizationProcedure,
 		svc.CreateOrganization,
@@ -5603,6 +5704,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetGraphFieldUsageHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationRequestsCountProcedure:
 			platformServiceGetOrganizationRequestsCountHandler.ServeHTTP(w, r)
+		case PlatformServiceGetAnalyticsCapabilitiesProcedure:
+			platformServiceGetAnalyticsCapabilitiesHandler.ServeHTTP(w, r)
+		case PlatformServiceSearchTracesProcedure:
+			platformServiceSearchTracesHandler.ServeHTTP(w, r)
+		case PlatformServiceQueryAnalyticsProcedure:
+			platformServiceQueryAnalyticsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetAnalyticsDimensionValuesProcedure:
+			platformServiceGetAnalyticsDimensionValuesHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOrganizationProcedure:
 			platformServiceCreateOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceEnableLintingForTheNamespaceProcedure:
@@ -6332,6 +6441,22 @@ func (UnimplementedPlatformServiceHandler) GetGraphFieldUsage(context.Context, *
 
 func (UnimplementedPlatformServiceHandler) GetOrganizationRequestsCount(context.Context, *connect.Request[v1.GetOrganizationRequestsCountRequest]) (*connect.Response[v1.GetOrganizationRequestsCountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetAnalyticsCapabilities(context.Context, *connect.Request[v1.GetAnalyticsCapabilitiesRequest]) (*connect.Response[v1.GetAnalyticsCapabilitiesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAnalyticsCapabilities is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) SearchTraces(context.Context, *connect.Request[v1.SearchTracesRequest]) (*connect.Response[v1.SearchTracesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SearchTraces is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) QueryAnalytics(context.Context, *connect.Request[v1.QueryAnalyticsRequest]) (*connect.Response[v1.QueryAnalyticsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.QueryAnalytics is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetAnalyticsDimensionValues(context.Context, *connect.Request[v1.GetAnalyticsDimensionValuesRequest]) (*connect.Response[v1.GetAnalyticsDimensionValuesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAnalyticsDimensionValues is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {

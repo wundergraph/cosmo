@@ -12,13 +12,15 @@ receivers:
 
 processors:
   attributes/from_auth_context:
+    # `upsert`, not `insert`: the tenant IDs must always come from the verified ingest token. With `insert`, a
+    # sender that pre-sets these attributes keeps its own values and can write into another organization's data.
     actions:
       - key: wg.organization.id
         from_context: auth.organization_id
-        action: insert
+        action: upsert
       - key: wg.federated_graph.id
         from_context: auth.federated_graph_id
-        action: insert
+        action: upsert
   attributes/delete_operation_bodies:
     actions:
       - key: wg.operation.normalized_content

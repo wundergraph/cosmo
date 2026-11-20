@@ -9,8 +9,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { SubgraphMetricsRepository } from '../../repositories/analytics/SubgraphMetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { UnauthorizedError, OutOfRetentionError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { enforceAnalyticsRateLimit, isMcpRequest } from '../../services/AnalyticsRateLimiter.js';
 
 export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,
@@ -28,8 +29,11 @@ export function getSubgraphMetricsErrorRate(
         series: [],
       };
     }
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    const authContext = await opts.authenticator.authenticate(ctx.requestHeader, {
+      skipApiKeyUsageUpdate: isMcpRequest(ctx.requestHeader),
+    });
     logger = enrichLogger(ctx, logger, authContext);
+    await enforceAnalyticsRateLimit(opts, ctx, authContext.organizationId);
 
     const subgraphMetricsRepo = new SubgraphMetricsRepository(logger, opts.chClient, opts.db);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
@@ -55,11 +59,14 @@ export function getSubgraphMetricsErrorRate(
       featureId: 'analytics-retention',
     });
 
-    const { range, dateRange } = validateDateRanges({
+    const { range, dateRange, outOfRetention } = validateDateRanges({
       limit: analyticsRetention?.limit ?? 7,
       range: req.range,
       dateRange: req.dateRange,
     });
+    if (outOfRetention) {
+      throw new OutOfRetentionError();
+    }
 
     const metrics = await subgraphMetricsRepo.getSubgraphErrorsView({
       range,
