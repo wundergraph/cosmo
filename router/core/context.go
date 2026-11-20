@@ -949,10 +949,14 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
-// ExecutionConfigFromContext returns the execution config of the graph selected
-// for this request, including feature-flag selection. Modules can pass
-// RequestContext.Request().Context(). The snapshot stays valid across reloads.
-// It returns nil when the context has no selected graph.
+// ExecutionConfigFromContext returns the execution config of the base or
+// feature-flag graph serving the request, or nil if no graph was selected.
+// Modules can pass RequestContext.Request().Context().
+//
+// The pointer is stable for the lifetime of that graph instance. All requests
+// served by it receive the same pointer, including after a reload that reuses
+// the graph. A rebuilt graph gets a distinct pointer even if its config is
+// identical. Modules can use the pointer as a process-local cache key.
 func ExecutionConfigFromContext(ctx context.Context) *routerconfig.ExecutionConfig {
 	if rc := getRequestContext(ctx); rc != nil {
 		return rc.executionConfig

@@ -80,7 +80,9 @@ func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
 }
 ```
 
-The module’s `rendererFor` method can cache renderers by `*routerconfig.ExecutionConfig` and parse `cfg.Schema()` on a cache miss. Requests served by the same graph share a pointer. Each feature-flag graph has its own pointer. A reload preserves the pointer for a reused graph and creates a fresh one for a rebuilt graph, even if the schema and version match. Bound the cache so retired snapshots can be collected.
+The returned pointer is **stable for the lifetime of a graph instance**. All requests served by that instance receive the same pointer. The base graph and each feature-flag graph have distinct pointers. A reload preserves the pointer for a reused graph. Rebuilding a graph creates a new pointer even if its config is identical.
+
+The module’s `rendererFor` method can use the pointer as a process-local cache key and parse `cfg.Schema()` on a cache miss. Bound the cache so retired snapshots can be collected.
 
 | Accessor | Returns |
 | --- | --- |
