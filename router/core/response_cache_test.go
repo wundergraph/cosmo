@@ -234,12 +234,12 @@ func TestSetupResponseCache(t *testing.T) {
 		require.Nil(t, r.responseCache)
 	})
 
-	t.Run("the memory provider builds a cache and needs no provider_id", func(t *testing.T) {
+	t.Run("the memory provider starts with zero global fallback and no provider_id", func(t *testing.T) {
 		t.Parallel()
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Duration)},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,
