@@ -417,6 +417,23 @@ access_logs:
 
 In addition to the router access logger, you can also add attributes to the subgraph access logger, this is useful when you want to log anything related to the `subgraph` expression context object.
 
+To tell which connection a subgraph request was sent on, log `subgraph.request.clientTrace.connection.localAddr`. Entries with the same value used the same connection. The subgraph sees the same value as the client address, so it also matches the subgraph's own logs.
+
+```yaml
+access_logs:
+  subgraphs:
+    enabled: true
+    fields:
+      - key: "connection_local_addr"
+        value_from:
+          expression: "subgraph.request.clientTrace.connection.localAddr"
+      - key: "connection_reused"
+        value_from:
+          expression: "subgraph.request.clientTrace.connection.reused"
+```
+
+See [Template Expressions](/router/configuration/template-expressions) for all `connection` fields.
+
 Subgraph response headers are available through `subgraph.response.header.Get('Header-Name')`, and the start of the subgraph latency measurement is available as `subgraph.request.startTime` (Unix epoch in milliseconds). Combined with the [`date`](https://expr-lang.org/docs/language-definition#date) function, these let you derive timing values from subgraph responses.
 
 Guard header access with a conditional so the expression still resolves when a response does not carry the header. An absent header makes `float(...)` or `date(...)` fail to resolve, in which case the field falls back to its configured `default` (or is omitted).
