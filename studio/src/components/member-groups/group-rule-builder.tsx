@@ -98,7 +98,7 @@ export function GroupRuleBuilder({
       </div>
 
       <div className="flex items-start justify-start gap-x-2">
-        {activeRole && activeRole.category !== 'organization' ? (
+        {activeRole && activeRole.category !== 'organization' && activeRole.category !== 'hub' ? (
           <GroupResourceSelector
             rule={rule}
             disabled={disabled}

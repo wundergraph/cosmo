@@ -280,6 +280,54 @@ export const roles = [
     displayName: 'Viewer',
     description: 'Grants readonly access to the selected subgraphs.',
   },
+  {
+    key: 'hub-sandbox-editor',
+    category: 'hub',
+    displayName: 'Sandbox editor',
+    description: 'Create, share and edit sandboxes.',
+  },
+  {
+    key: 'hub-proposer',
+    category: 'hub',
+    displayName: 'Proposer',
+    description: "Propose a sandbox's changes.",
+  },
+  {
+    key: 'hub-approver',
+    category: 'hub',
+    displayName: 'Approver',
+    description: 'Approve proposals for owned resources.',
+  },
+  {
+    key: 'hub-agent-runner',
+    category: 'hub',
+    displayName: 'Agent runner',
+    description: 'Run agents in sandboxes.',
+  },
+  {
+    key: 'hub-portal-viewer',
+    category: 'hub',
+    displayName: 'Portal viewer',
+    description: 'Open portals.',
+  },
+  {
+    key: 'hub-egress-manager',
+    category: 'hub',
+    displayName: 'Egress manager',
+    description: 'Approve outside hosts and manage credentials.',
+  },
+  {
+    key: 'hub-integration-manager',
+    category: 'hub',
+    displayName: 'Integration manager',
+    description: 'Manage integrations.',
+  },
+  {
+    key: 'hub-audit-viewer',
+    category: 'hub',
+    displayName: 'Audit viewer',
+    description: 'View the audit log.',
+  },
 ];
 
 export type OrganizationRole = (typeof roles)[number]['key'];
