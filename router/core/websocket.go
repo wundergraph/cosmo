@@ -782,6 +782,8 @@ type websocketResponseWriter struct {
 	protocol        wsproto.Proto
 	header          http.Header
 	buf             bytes.Buffer
+	fieldRenderer   resolve.FieldValueRenderer
+	renderErr       error
 	writtenBytes    int
 	logger          *zap.Logger
 	stats           statistics.EngineStatistics
@@ -864,7 +866,24 @@ func (rw *websocketResponseWriter) Error(data []byte) {
 	}
 }
 
+func (rw *websocketResponseWriter) RenderFieldValue(ctx *resolve.Context, value resolve.FieldValue, out io.Writer) error {
+	rw.renderErr = rw.fieldRenderer.RenderFieldValue(ctx, value, out)
+	return rw.renderErr
+}
+
+// Reset clears the pending frame and its saved renderer error without sending a message.
+func (rw *websocketResponseWriter) Reset() {
+	rw.buf.Reset()
+	rw.renderErr = nil
+}
+
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
+	// The resolver propagates an extension's own error directly. If the extension
+	// returns nil after a field failed, the resolver tries to close the incomplete
+	// frame. Return the field error on that write.
+	if rw.renderErr != nil {
+		return 0, rw.renderErr
+	}
 	rw.writtenBytes += len(data)
 	return rw.buf.Write(data)
 }
@@ -895,7 +914,7 @@ func (rw *websocketResponseWriter) Flush() error {
 		}
 
 		err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
-		rw.buf.Reset()
+		rw.Reset()
 		if err != nil {
 			return err
 		}
@@ -1298,6 +1317,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	}
 
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		if renderer := origCtx.customFieldValueRenderer; renderer != nil {
+			rw.fieldRenderer = renderer
+			resolveCtx.SetFieldValueRenderer(rw)
+		}
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 		if h.graphqlHandler.headerPropagation != nil {
 			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
