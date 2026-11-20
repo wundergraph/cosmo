@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - "infrastructure/**/*"
+      - "mise.toml"
+      - "mise.lock"
+      - ".github/actions/mise/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -21,15 +24,11 @@ jobs:
           path: ~/.tflint.d/plugins
           key: tflint-${{ hashFiles('.tflint.hcl') }}
 
-      - name: setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: setup Terraform and TFLint
+        uses: ./.github/actions/mise
         with:
-          terraform_version: 1.7
-
-      - uses: terraform-linters/setup-tflint@v4
-        name: Setup TFLint
-        with:
-          tflint_version: v0.50.3
+          working-directory: infrastructure
+          tools: terraform tflint
 
       - name: terraform init
         run: terraform init

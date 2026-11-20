@@ -25,16 +25,17 @@ Documentation for [WunderGraph Cosmo](https://cosmo-docs.wundergraph.com) — a 
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify):
+Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify) with [mise](https://mise.jdx.dev). The version is in `docs-website/mise.toml`:
 
-```
-pnpm add -g mintlify
+```bash
+cd docs-website
+mise install
 ```
 
 Start the local dev server:
 
 ```bash
-pnpm --filter=./docs-website dev
+mise x -- pnpm dev
 ```
 
 ## Adding a New Page

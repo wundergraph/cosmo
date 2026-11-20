@@ -8,6 +8,10 @@ on:
       - 'shared/**/*'
       - 'composition/**/*'
       - '.github/workflows/studio-ci.yaml'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/mise/**'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -24,10 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - uses: actions/cache@v4
         name: Cache Next.js build
