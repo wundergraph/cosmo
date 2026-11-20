@@ -1360,7 +1360,7 @@ const CheckDetails = ({ data, refetch }: { data: GetCheckSummaryResponse; refetc
                             </>
                           )}
                         </AlertDescription>
-                        {data.check.isForcedSuccess ? (
+                        {!data.check.isForcedSuccess ? (
                           <div className="mt-2 flex space-x-2">
                             <ForceSuccess
                               disabled={!data.canApproveChecks}
