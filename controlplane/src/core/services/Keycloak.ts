@@ -13,6 +13,9 @@ import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { isValidLocalhostOrSecureEndpoint } from '../util.js';
 import { traced } from '../tracing.js';
 
+// Set by bin/trial.ts on customer trial users and on their organization's root group.
+export const TRIAL_ORG_ATTRIBUTE = 'hub_trial_org';
+
 interface ParsedOpenIdConfiguration {
   issuer?: string;
   userinfo_endpoint?: string;
@@ -180,6 +183,11 @@ export default class Keycloak {
   }): Promise<Record<string, string[]>> {
     const user = await this.client.users.findOne({ id: userID, realm: realm || this.realm });
     return user?.attributes ?? {};
+  }
+
+  public async isTrialUser({ realm, userID }: { realm?: string; userID: string }): Promise<boolean> {
+    const attributes = await this.getUserAttributes({ realm, userID });
+    return (attributes[TRIAL_ORG_ATTRIBUTE]?.length ?? 0) > 0;
   }
 
   public async updateKeycloakUser({

@@ -699,6 +699,11 @@ export default class AuthUtils {
     // Authenticate on Keycloak and create the organization group
     await keycloakClient.authenticateClient();
 
+    // Trial users only ever join the organization they were provisioned into
+    if (await keycloakClient.isTrialUser({ realm: keycloakRealm, userID: userId })) {
+      return 0;
+    }
+
     const organizationSlug = uid(8);
     const [kcRootGroupId, kcCreatedGroups] = await keycloakClient.seedGroup({
       userID: userId,

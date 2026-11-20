@@ -64,6 +64,15 @@ export function createOrganization(
 
     await opts.keycloakClient.authenticateClient();
 
+    if (await opts.keycloakClient.isTrialUser({ realm: opts.keycloakRealm, userID: authContext.userId })) {
+      return {
+        response: {
+          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+          details: 'Trial accounts cannot create organizations.',
+        },
+      };
+    }
+
     // Create the organization group in Keycloak + subgroups
     const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
       userID: authContext.userId,
