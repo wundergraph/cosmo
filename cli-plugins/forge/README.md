@@ -33,7 +33,7 @@ Forge cannot tell a thorough test from a shallow one. A module counts as tested 
 
 ## `wgc forge check`
 
-`wgc forge check` reads the subgraphs from `graph.yaml` (the input file of `wgc router compose`, or `check.graph` in `forge.yaml`, or `--graph`), composes them and evaluates the rules. It exits non-zero on a finding of an `error` rule and when the check is incomplete because a schema is missing or the graph does not compose. Text and `--json` report the same findings.
+`wgc forge check` reads the subgraphs from `graph.yaml` (the input file of `wgc router compose`, or `check.graph` in `forge.yaml`, or `--graph`), composes them and evaluates the rules. It exits 3 on a finding of an `error` rule and when the check is incomplete because a schema is missing or the graph does not compose. Text and `--json` report the same findings.
 
 The rules are Cosmo's schema lint rules under their Cosmo IDs, reimplemented on the GraphQL AST so each finding carries a schema coordinate, plus `pagination.forward-connection`. The lint rules run on each subgraph schema. The pagination rule runs on the composed client schema and covers the fields of `Query` that return a list of objects or a `…Connection` type. Its findings carry the found and expected signature and a conforming field elsewhere in the graph.
 
