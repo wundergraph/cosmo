@@ -169,15 +169,184 @@ func TestWebSockets(t *testing.T) {
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
-			require.Equal(t, "error", res.Type)
+			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 			require.Equal(t, "1", complete.ID)
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization and required scope", func(t *testing.T) {
+		t.Parallel()
+
+		accessController, authServer := newPreFetchAccessController(t)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithAccessController(accessController)},
+			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+				cfg.EngineConfig.FieldConfigurations = append(cfg.EngineConfig.FieldConfigurations, &nodev1.FieldConfiguration{
+					TypeName:  "Time",
+					FieldName: "unixTime",
+					AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
+						RequiredOrScopes: []*nodev1.Scopes{
+							{
+								RequiredAndScopes: []string{"read:time"},
+							},
+						},
+					},
+				})
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{"scope": "read:time"})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime }}"}`),
+			})
+			require.NoError(t, err)
+
+			requireUnixTimeMessages(t, conn, 2)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authentication required on a field", func(t *testing.T) {
+		t.Parallel()
+
+		accessController, authServer := newPreFetchAccessController(t)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithAccessController(accessController)},
+			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+				cfg.EngineConfig.FieldConfigurations = append(cfg.EngineConfig.FieldConfigurations, &nodev1.FieldConfiguration{
+					TypeName:  "Time",
+					FieldName: "unixTime",
+					AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
+						RequiresAuthentication: true,
+					},
+				})
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime }}"}`),
+			})
+			require.NoError(t, err)
+
+			requireUnixTimeMessages(t, conn, 2)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization via initial payload and required scope", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(testutils.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder: tokenDecoder,
+			Key:          "Authorization",
+		})
+		require.NoError(t, err)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         []authentication.Authenticator{authenticator},
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Authentication.FromInitialPayload.Enabled = true
+				cfg.Enabled = true
+			},
+			RouterOptions: []core.Option{core.WithAccessController(accessController)},
+			ModifyRouterConfig: func(cfg *nodev1.RouterConfig) {
+				cfg.EngineConfig.FieldConfigurations = append(cfg.EngineConfig.FieldConfigurations, &nodev1.FieldConfiguration{
+					TypeName:  "Time",
+					FieldName: "unixTime",
+					AuthorizationConfiguration: &nodev1.AuthorizationConfiguration{
+						RequiredOrScopes: []*nodev1.Scopes{
+							{
+								RequiredAndScopes: []string{"read:time"},
+							},
+						},
+					},
+				})
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{"scope": "read:time"})
+			require.NoError(t, err)
+			initialPayload := []byte(`{"Authorization":"Bearer ` + token + `"}`)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime }}"}`),
+			})
+			require.NoError(t, err)
+
+			requireUnixTimeMessages(t, conn, 2)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization and required scopes on a nats source", func(t *testing.T) {
+		t.Parallel()
+
+		accessController, authServer := newPreFetchAccessController(t)
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions:            []core.Option{core.WithAccessController(accessController)},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{"scope": "read:employee read:private"})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id startDate }}"}`),
+			})
+			require.NoError(t, err)
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			for range 2 {
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.Equal(t, `{"data":{"employeeUpdated":{"id":3,"startDate":"June 2021"}}}`, string(res.Payload))
+			}
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("query with authorization no-reject", func(t *testing.T) {
@@ -228,7 +397,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]}}`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
@@ -296,7 +465,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":null}`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: missing required scopes.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*15)
@@ -354,9 +523,9 @@ func TestWebSockets(t *testing.T) {
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
-			require.Equal(t, "error", res.Type)
+			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*15)
@@ -2840,6 +3009,20 @@ func TestFlakyWebSockets(t *testing.T) {
 			require.NoError(t, client.Close())
 		})
 	})
+}
+
+// requireUnixTimeMessages reads count messages of the subscription currentTime { unixTime }.
+// The value of unixTime is the real clock of the subgraph, so the assertion matches any integer.
+func requireUnixTimeMessages(t *testing.T, conn *websocket.Conn, count int) {
+	t.Helper()
+	for range count {
+		var res testenv.WebSocketMessage
+		err := testenv.WSReadJSON(t, conn, &res)
+		require.NoError(t, err)
+		require.Equal(t, "next", res.Type)
+		require.Equal(t, "1", res.ID)
+		require.Regexp(t, `^\{"data":\{"currentTime":\{"unixTime":\d+\}\}\}$`, string(res.Payload))
+	}
 }
 
 func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {

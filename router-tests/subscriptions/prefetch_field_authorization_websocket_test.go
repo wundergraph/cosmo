@@ -74,7 +74,7 @@ func TestPreFetchFieldAuthorizationWebSocket(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]}}`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
@@ -98,9 +98,8 @@ func TestPreFetchFieldAuthorizationWebSocket(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Query.secret is nullable and protected, so it is nulled while the sibling floatField still
-			// resolves, giving a partial response. Over the websocket query path the field authorizer does
-			// not see the request as authenticated (same as the default-mode websocket tests), so the deny
-			// reason is "not authenticated" regardless of the token's scopes.
+			// resolves, giving a partial response. The token has no scope, so the deny reason is
+			// "missing required scopes".
 			token, err := authServer.Token(nil)
 			require.NoError(t, err)
 			header := http.Header{
@@ -118,7 +117,7 @@ func TestPreFetchFieldAuthorizationWebSocket(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.secret', Reason: not authenticated.","path":["secret"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"secret":null,"floatField":1.5}}`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.secret', Reason: missing required scopes.","path":["secret"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"secret":null,"floatField":1.5},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Query","fieldName":"secret"},"required":[["read:secret"]]}],"actualScopes":[]}}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
@@ -157,9 +156,9 @@ func TestPreFetchFieldAuthorizationWebSocket(t *testing.T) {
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
-			require.Equal(t, "error", res.Type)
+			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
@@ -223,7 +222,7 @@ func TestPreFetchFieldAuthorizationSubscription(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":null}`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: missing required scopes.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*15)
@@ -251,9 +250,9 @@ func TestPreFetchFieldAuthorizationSubscription(t *testing.T) {
 			var res testenv.WebSocketMessage
 			err := testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
-			require.Equal(t, "error", res.Type)
+			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*15)
