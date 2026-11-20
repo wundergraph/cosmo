@@ -1114,6 +1114,13 @@
       "when": 1795177276161,
       "tag": "0158_hub_hidden_schema_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1795181627063,
+      "tag": "0159_hub_ai_settings",
+      "breakpoints": true
     }
   ]
 }

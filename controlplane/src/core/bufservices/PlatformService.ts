@@ -124,6 +124,8 @@ import { getOrganizationGroupMembers } from './organization/getOrganizationGroup
 import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
 import { updateOrganizationGroupHubPermissions } from './organization/updateOrganizationGroupHubPermissions.js';
 import { getHubGovernance } from './organization/getHubGovernance.js';
+import { getHubAiSettings } from './organization/getHubAiSettings.js';
+import { updateHubAiSettings } from './organization/updateHubAiSettings.js';
 import { getGraphResourceOwners } from './federated-graph/getGraphResourceOwners.js';
 import { setGraphResourceOwners } from './federated-graph/setGraphResourceOwners.js';
 import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
@@ -674,6 +676,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getHubGovernance: (req, ctx) => {
       return getHubGovernance(opts, req, ctx);
+    },
+
+    getHubAiSettings: (req, ctx) => {
+      return getHubAiSettings(opts, req, ctx);
+    },
+
+    updateHubAiSettings: (req, ctx) => {
+      return updateHubAiSettings(opts, req, ctx);
     },
 
     getGraphResourceOwners: (req, ctx) => {

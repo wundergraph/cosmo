@@ -166,7 +166,7 @@ export interface ProposalStateUpdated {
   };
 }
 
-export type GovernanceUpdateReason = 'member' | 'group' | 'hub_permissions' | 'ownership';
+export type GovernanceUpdateReason = 'member' | 'group' | 'hub_permissions' | 'ownership' | 'hub_ai_settings';
 
 export interface OrganizationGovernanceUpdated {
   eventName: OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED;

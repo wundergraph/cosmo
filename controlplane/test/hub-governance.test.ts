@@ -170,6 +170,58 @@ describe('Hub governance', () => {
     expect(developerResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
   });
 
+  test('admins set the Hub AI settings GetHubGovernance carries, and hand them back to Hub', async (testContext) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
+
+    expect((await client.getHubGovernance({})).aiSettings).toBeUndefined();
+
+    const updateResponse = await client.updateHubAiSettings({
+      settings: {
+        agentsDisabled: true,
+        defaultModel: ' google/gemini-3.1-flash-lite ',
+        modelOverrides: [
+          { target: 'fix-checks', model: 'anthropic/claude-haiku-4.5' },
+          { target: 'ask-ai', model: ' ' },
+        ],
+        monthlyCapUsd: 200,
+        repositories: { restricted: true, entries: ['Acme/Payments', 'acme/payments'] },
+        hosts: { restricted: false, entries: ['ignored.test'] },
+        agentHiddenTags: ['PII', 'internal', ''],
+      },
+    });
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const governance = await client.getHubGovernance({});
+    expect(governance.aiSettings?.agentsDisabled).toBe(true);
+    expect(governance.aiSettings?.defaultModel).toBe('google/gemini-3.1-flash-lite');
+    expect(governance.aiSettings?.modelOverrides.map(({ target, model }) => ({ target, model }))).toEqual([
+      { target: 'fix-checks', model: 'anthropic/claude-haiku-4.5' },
+    ]);
+    expect(governance.aiSettings?.monthlyCapUsd).toBe(200);
+    expect(governance.aiSettings?.memberMonthlyCapUsd).toBeUndefined();
+    expect(governance.aiSettings?.repositories?.entries).toEqual(['acme/payments']);
+    expect(governance.aiSettings?.hosts?.restricted).toBe(false);
+    expect(governance.aiSettings?.hosts?.entries).toEqual([]);
+    expect(governance.aiSettings?.agentHiddenTags).toEqual(['internal', 'pii']);
+
+    const unknownTarget = await client.updateHubAiSettings({
+      settings: { modelOverrides: [{ target: 'write-poems', model: 'any' }] },
+    });
+    expect(unknownTarget.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'organization-developer' })),
+    });
+    const developerResponse = await client.updateHubAiSettings({});
+    expect(developerResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    authenticator.changeUserWithSuppliedContext(users.adminAliceCompanyA);
+    expect((await client.updateHubAiSettings({})).response?.code).toBe(EnumStatusCode.OK);
+    expect((await client.getHubGovernance({})).aiSettings).toBeUndefined();
+  });
+
   test('view_hidden_schema grants keep normalized tags and other grants drop them', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
     testContext.onTestFinished(() => server.close());
