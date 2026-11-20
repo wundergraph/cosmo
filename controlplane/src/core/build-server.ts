@@ -168,10 +168,11 @@ export interface BuildConfig {
   admissionWebhook: {
     secret: string;
   };
+  // The billing plan of organizations without one; applies with or without Stripe.
+  defaultBillingPlanId?: string;
   stripe?: {
     secret?: string;
     webhookSecret?: string;
-    defaultPlanId?: string;
   };
   redis: {
     host: string;
@@ -312,8 +313,8 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
-  const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
-  const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
+  const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.defaultBillingPlanId);
+  const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.defaultBillingPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(logger, fastify.db);
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
@@ -349,7 +350,7 @@ export default async function build(opts: BuildConfig) {
     logger,
   );
 
-  const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
+  const authorizer = new Authorization(logger, opts.defaultBillingPlanId);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
@@ -473,7 +474,7 @@ export default async function build(opts: BuildConfig) {
       redisConnection: fastify.redisForWorker,
       db: fastify.db,
       logger,
-      defaultBillingPlanId: opts.stripe?.defaultPlanId,
+      defaultBillingPlanId: opts.defaultBillingPlanId,
     }),
   );
 
@@ -606,7 +607,7 @@ export default async function build(opts: BuildConfig) {
     keycloakClient,
     keycloakRealm: opts.keycloak.realm,
     platformWebhooks,
-    defaultBillingPlanId: opts.stripe?.defaultPlanId,
+    defaultBillingPlanId: opts.defaultBillingPlanId,
   });
 
   await fastify.register(ScimController, {
@@ -685,7 +686,7 @@ export default async function build(opts: BuildConfig) {
       slack: opts.slack,
       blobStorage,
       mailerClient,
-      billingDefaultPlanId: opts.stripe?.defaultPlanId,
+      billingDefaultPlanId: opts.defaultBillingPlanId,
       openaiApiKey: opts.openaiAPIKey,
       queues: {
         readmeQueue,

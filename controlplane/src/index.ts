@@ -88,6 +88,7 @@ const {
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
+  defaultBillingPlanId: DEFAULT_PLAN,
   database: {
     url: DB_URL,
     tls: DB_TLS_CA || DB_TLS_CERT || DB_TLS_KEY ? { ca: DB_TLS_CA, cert: DB_TLS_CERT, key: DB_TLS_KEY } : undefined,
@@ -211,7 +212,6 @@ if (STRIPE_SECRET_KEY) {
   options.stripe = {
     secret: STRIPE_SECRET_KEY,
     webhookSecret: STRIPE_WEBHOOK_SECRET,
-    defaultPlanId: DEFAULT_PLAN,
   };
 }
 
