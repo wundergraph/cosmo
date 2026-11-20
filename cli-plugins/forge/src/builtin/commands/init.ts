@@ -6,7 +6,14 @@ import { fail, toFailure } from '../failure.js';
 import type { FileAction } from '../guidance.js';
 import { ignoreGeneratedFiles, writeGuidance } from '../guidance.js';
 import { lockFileName, readLock, writeLock } from '../lock.js';
-import { defaultBinaryPath, manifestFileName, readManifest, routerSourceSchema, writeManifest } from '../manifest.js';
+import {
+  defaultBinaryPath,
+  manifestFileName,
+  parseRouterCandidate,
+  readManifest,
+  routerSourceSchema,
+  writeManifest,
+} from '../manifest.js';
 import type { Manifest, RouterSource } from '../manifest.js';
 import { resolvePins } from '../pins.js';
 import { latestRouterRelease } from '../resolve.js';
@@ -62,14 +69,17 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
   withCommonOptions(
     command
       .command('init')
-      .description('Create a Forge workspace: forge.yaml, forge.lock and agent guidance. Safe to run again.')
+      .description(
+        'Initialize a workspace in the current or named directory: select the router release, create forge.yaml and forge.lock, and add agent guidance. Safe to run again.',
+      )
+      .argument('[directory]', 'The workspace directory. Defaults to the current directory.')
       .option('--release <version>', 'The router release to build, e.g. 0.299.0. Defaults to the latest release.')
       .option('--rc <version>', 'A router release candidate to build, e.g. 0.300.0-rc.1.')
       .option('--commit <sha>', 'A router commit to build.'),
-  ).action(async (options: InitOptions) => {
+  ).action(async (directory: string | undefined, options: InitOptions) => {
     const { system, context } = dependencies;
     const output = context.output({ json: options.json });
-    const workspace = workspaceOf(dependencies, options);
+    const workspace = workspaceOf(dependencies, { ...options, dir: directory ?? options.dir });
     const files: { path: string; action: FileAction }[] = [];
 
     const requested = requestedRouter(options);
@@ -96,6 +106,15 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
           return output.fail(toFailure(latest));
         }
         router = { release: latest.data };
+
+        if (context.prompts.canPrompt && options.json !== true) {
+          const answer = await context.prompts.text('Router release to build:', latest.data);
+          const selected = parseRouterCandidate(answer);
+          if (!selected.success) {
+            return output.fail(toFailure(selected));
+          }
+          router = selected.data;
+        }
       }
       manifest = { version: 1, router, binary: defaultBinaryPath, modules: [] };
       await writeManifest(workspace, manifest);

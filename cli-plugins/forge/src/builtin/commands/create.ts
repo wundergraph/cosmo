@@ -1,5 +1,7 @@
 import type { Command } from 'commander';
+import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
 import { catalog, createModule } from '../catalog.js';
+import type { CatalogEntry } from '../catalog.js';
 import { toFailure } from '../failure.js';
 import { lockFileName, readLock } from '../lock.js';
 import { readManifest, sameSource, writeManifest } from '../manifest.js';
@@ -13,6 +15,17 @@ interface CreateOptions extends CommonOptions {
   listTemplates?: boolean;
 }
 
+/** The starter menu for a person at a terminal: every preset and template, picked by number. */
+const chooseStarter = async (prompts: Prompts): Promise<CatalogEntry | undefined> => {
+  const menu = catalog.map(
+    (entry, index) =>
+      `  ${String(index + 1).padStart(2)}. ${entry.id.padEnd(22)} ${entry.kind.padEnd(8)} ${entry.description}`,
+  );
+  const answer = await prompts.text(['Starters:', ...menu, 'Choose a starter by number:'].join('\n'));
+  const index = Number.parseInt(answer, 10) - 1;
+  return catalog[index];
+};
+
 const idsOf = (kind: 'preset' | 'template'): string =>
   catalog
     .filter((entry) => entry.kind === kind)
@@ -23,7 +36,9 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
   withCommonOptions(
     command
       .command('create')
-      .description('Add a module to the workspace from a preset or a hook template.')
+      .description(
+        'Create and register a local module. Opens the starter menu at a terminal, or pass --template <id> or --preset <id>.',
+      )
       .argument('[name]', 'The module name, used for modules/<name>. Defaults to the preset ID.')
       .option('--template <id>', 'Start from an empty hook. See --list-templates.')
       .option('--preset <id>', 'Add a finished module. See --list-templates.')
@@ -47,24 +62,46 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       );
     }
 
-    if ((options.template === undefined) === (options.preset === undefined)) {
+    if (options.template !== undefined && options.preset !== undefined) {
       return output.fail({
-        message: 'Pass exactly one of --template <id> and --preset <id>.',
+        message: 'Pass only one of --template <id> and --preset <id>.',
         input: '--template, --preset',
         fix: 'Run `wgc forge create --list-templates` to see the IDs.',
       });
     }
 
-    const kind = options.preset === undefined ? 'template' : 'preset';
-    const id = options.preset ?? options.template;
-    const entry = catalog.find((candidate) => candidate.kind === kind && candidate.id === id);
-    if (entry === undefined) {
+    const interactive = dependencies.context.prompts.canPrompt && options.json !== true;
+    if (options.template === undefined && options.preset === undefined && !interactive) {
       return output.fail({
-        message: `There is no ${kind} "${id}".`,
-        input: `--${kind} ${id}`,
-        fix: `Use one of: ${idsOf(kind)}.`,
+        message: 'Pass one of --template <id> and --preset <id>.',
+        input: '--template, --preset',
+        fix: 'Run `wgc forge create --list-templates` to see the IDs.',
       });
     }
+
+    let entry: CatalogEntry | undefined;
+    if (options.template === undefined && options.preset === undefined) {
+      entry = await chooseStarter(dependencies.context.prompts);
+      if (entry === undefined) {
+        return output.fail({
+          message: 'That is not one of the listed starters.',
+          input: 'starter',
+          fix: 'Run `wgc forge create` again and type the number of a starter.',
+        });
+      }
+    } else {
+      const kind = options.preset === undefined ? 'template' : 'preset';
+      const id = options.preset ?? options.template;
+      entry = catalog.find((candidate) => candidate.kind === kind && candidate.id === id);
+      if (entry === undefined) {
+        return output.fail({
+          message: `There is no ${kind} "${id}".`,
+          input: `--${kind} ${id}`,
+          fix: `Use one of: ${idsOf(kind)}.`,
+        });
+      }
+    }
+    const kind = entry.kind;
 
     if (entry.experimental && options.experimental !== true) {
       return output.fail({
@@ -74,8 +111,10 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
       });
     }
 
-    const moduleName = name ?? (kind === 'preset' ? entry.id : undefined);
-    if (moduleName === undefined) {
+    const defaultName = kind === 'preset' ? entry.id : undefined;
+    const moduleName =
+      name ?? (interactive ? await dependencies.context.prompts.text('Module name:', defaultName) : defaultName);
+    if (moduleName === undefined || moduleName === '') {
       return output.fail({
         message: 'A module created from a template needs a name.',
         input: `--template ${entry.id}`,

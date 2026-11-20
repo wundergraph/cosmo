@@ -1,3 +1,4 @@
+import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
 import { describe, expect, test } from 'vitest';
 import {
   commitA,
@@ -99,6 +100,41 @@ describe('wgc forge init', () => {
 
     expect(JSON.parse(run.stdout).error.message).toBe('Pass only one of --release, --rc and --commit.');
   });
+
+  test('a directory argument initializes the workspace there', async () => {
+    const parent = await createWorkspace();
+
+    const run = await runForge(['init', 'routers/edge'], {
+      workspace: parent,
+      system: createFakeSystem({ routerTags: { '0.299.0': commitA } }),
+    });
+
+    expect(JSON.parse(run.stdout).workspace).toBe(`${parent}/routers/edge`);
+    expect(await read(parent, 'routers/edge/forge.yaml')).toBe(manifest);
+  });
+
+  test('a person selects the router release, with the latest one offered', async () => {
+    const workspace = await createWorkspace();
+    const questions: string[] = [];
+    const prompts: Prompts = {
+      canPrompt: true,
+      confirm: () => Promise.resolve(false),
+      text: (question, defaultAnswer) => {
+        questions.push(`${question} (${defaultAnswer})`);
+        return Promise.resolve('0.300.0-rc.1');
+      },
+    };
+
+    await runForge(['init'], {
+      workspace,
+      caller: 'human',
+      prompts,
+      system: createFakeSystem({ routerTags: { '0.299.0': commitA, '0.300.0-rc.1': commitB } }),
+    });
+
+    expect(questions).toEqual(['Router release to build: (0.299.0)']);
+    expect(await read(workspace, 'forge.yaml')).toBe(manifest.replace('release: 0.299.0', 'rc: 0.300.0-rc.1'));
+  });
 });
 
 describe('wgc forge create', () => {
@@ -173,6 +209,41 @@ describe('wgc forge create', () => {
     expect(await read(workspace, 'forge.yaml')).toBe(
       manifest.replace('modules: []', 'modules:\n  - path: ./modules/request-id'),
     );
+  });
+
+  test('a person picks a starter from the menu and names the module', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA });
+    const answers = ['2', 'require-client'];
+    const questions: string[] = [];
+    const prompts: Prompts = {
+      canPrompt: true,
+      confirm: () => Promise.resolve(false),
+      text: (question) => {
+        questions.push(question);
+        return Promise.resolve(answers.shift() ?? '');
+      },
+    };
+
+    const run = await runForge(['create'], { workspace, caller: 'human', prompts });
+
+    expect(questions[0]).toContain(' 2. client-name');
+    expect(questions[1]).toBe('Module name:');
+    expect(run.stdout).toContain('Created ./modules/require-client from preset client-name');
+    expect(await read(workspace, 'forge.yaml')).toBe(
+      manifest.replace('modules: []', 'modules:\n  - path: ./modules/require-client'),
+    );
+  });
+
+  test('an agent without --template or --preset is told to pass one', async () => {
+    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA });
+
+    const run = await runForge(['create'], { workspace });
+
+    expect(JSON.parse(run.stdout).error).toEqual({
+      message: 'Pass one of --template <id> and --preset <id>.',
+      input: '--template, --preset',
+      fix: 'Run `wgc forge create --list-templates` to see the IDs.',
+    });
   });
 
   test('--template names the module ID after the module', async () => {
