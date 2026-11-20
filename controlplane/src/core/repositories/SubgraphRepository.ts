@@ -55,7 +55,7 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CheckSubgraph, Composer } from '../composition/composer.js';
-import { getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
+import { changesNeedClientSchemaDiff, getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import {
   collectOperationUsageStats,
@@ -2738,20 +2738,8 @@ export class SubgraphRepository {
     );
 
     // Detect breaking changes in federated graph schemas by comparing old vs new client schemas
-    // Only perform this diff if the subgraph schema changes involve field or type additions, modifications, or deletions
-    // on interfaces and objects, as these are the only changes that can affect the composed federated schema
-    const fieldChangeTypes = new Set([
-      'FIELD_ADDED',
-      'FIELD_REMOVED',
-      'FIELD_TYPE_CHANGED',
-      'TYPE_ADDED',
-      'TYPE_REMOVED',
-    ]);
-    const allSubgraphChanges = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
-    // For new subgraphs (no existing schema), always perform federated diff since any field could affect composed schema
     const isNewSubgraph = !subgraph?.schemaSDL;
-    const hasFieldChanges =
-      isNewSubgraph || allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType));
+    const needsClientSchemaDiff = isNewSubgraph || changesNeedClientSchemaDiff(schemaChanges);
 
     // Collect subgraph-level breaking changes (path + message) to avoid duplicating in federated graph changes
     const subgraphBreakingChangeKeys = new Set<string>();
@@ -2796,7 +2784,7 @@ export class SubgraphRepository {
       let fedGraphInspectorChanges: InspectorSchemaChange[] = [];
       let storedFedGraphBreakingChanges: SchemaCheckChangeAction[] = [];
 
-      if (hasFieldChanges && composedGraph.errors.length === 0 && composedGraph.federatedClientSchema) {
+      if (needsClientSchemaDiff && composedGraph.errors.length === 0 && composedGraph.federatedClientSchema) {
         // Get the old client schema for this federated graph / flag composition.
         // For the base composition, diff against the latest valid federated schema version.
         // For a flag composition, diff against the latest valid flag-composed schema version (or skip if none).
