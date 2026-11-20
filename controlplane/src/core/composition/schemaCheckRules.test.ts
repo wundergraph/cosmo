@@ -5,7 +5,17 @@ import { enumValueChangesAreBreaking, inaccessibleEnumValueChangesAreInvisible }
 
 const INACCESSIBLE_DEFINITION = 'directive @inaccessible on ENUM | ENUM_VALUE';
 
-async function getCriticalityLevel(oldSDL: string, newSDL: string, rule: Rule, path: string) {
+async function getCriticalityLevel({
+  oldSDL,
+  newSDL,
+  rule,
+  path,
+}: {
+  oldSDL: string;
+  newSDL: string;
+  rule: Rule;
+  path: string;
+}) {
   const changes = await diff(
     buildSchema(`${INACCESSIBLE_DEFINITION} type Query { hello: String! } ${oldSDL}`),
     buildSchema(`${INACCESSIBLE_DEFINITION} type Query { hello: String! } ${newSDL}`),
@@ -17,34 +27,34 @@ async function getCriticalityLevel(oldSDL: string, newSDL: string, rule: Rule, p
 describe('enumValueChangesAreBreaking', () => {
   test('Should mark an added enum value as breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet { A B }',
-        'enum Alphabet { A B C }',
-        enumValueChangesAreBreaking,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet { A B }',
+        newSDL: 'enum Alphabet { A B C }',
+        rule: enumValueChangesAreBreaking,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.Breaking);
   });
 
   test('Should mark a removed enum value as breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet { A B C }',
-        'enum Alphabet { A B }',
-        enumValueChangesAreBreaking,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet { A B C }',
+        newSDL: 'enum Alphabet { A B }',
+        rule: enumValueChangesAreBreaking,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.Breaking);
   });
 
   test('Should keep the criticality of other changes', async () => {
     expect(
-      await getCriticalityLevel(
-        'type User { name: String! }',
-        'type User { name: String! age: Int }',
-        enumValueChangesAreBreaking,
-        'User.age',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'type User { name: String! }',
+        newSDL: 'type User { name: String! age: Int }',
+        rule: enumValueChangesAreBreaking,
+        path: 'User.age',
+      }),
     ).toBe(CriticalityLevel.NonBreaking);
   });
 });
@@ -52,56 +62,56 @@ describe('enumValueChangesAreBreaking', () => {
 describe('inaccessibleEnumValueChangesAreInvisible', () => {
   test('Should mark an added @inaccessible enum value as non breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet { A B }',
-        'enum Alphabet { A B C @inaccessible }',
-        inaccessibleEnumValueChangesAreInvisible,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet { A B }',
+        newSDL: 'enum Alphabet { A B C @inaccessible }',
+        rule: inaccessibleEnumValueChangesAreInvisible,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.NonBreaking);
   });
 
   test('Should mark a removed @inaccessible enum value as non breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet { A B C @inaccessible }',
-        'enum Alphabet { A B }',
-        inaccessibleEnumValueChangesAreInvisible,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet { A B C @inaccessible }',
+        newSDL: 'enum Alphabet { A B }',
+        rule: inaccessibleEnumValueChangesAreInvisible,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.NonBreaking);
   });
 
   test('Should mark a value added to an @inaccessible enum as non breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet @inaccessible { A B }',
-        'enum Alphabet @inaccessible { A B C }',
-        inaccessibleEnumValueChangesAreInvisible,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet @inaccessible { A B }',
+        newSDL: 'enum Alphabet @inaccessible { A B C }',
+        rule: inaccessibleEnumValueChangesAreInvisible,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.NonBreaking);
   });
 
   test('Should mark a value removed from an @inaccessible enum as non breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet @inaccessible { A B C }',
-        'enum Alphabet @inaccessible { A B }',
-        inaccessibleEnumValueChangesAreInvisible,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet @inaccessible { A B C }',
+        newSDL: 'enum Alphabet @inaccessible { A B }',
+        rule: inaccessibleEnumValueChangesAreInvisible,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.NonBreaking);
   });
 
   test('Should keep a removed accessible enum value breaking', async () => {
     expect(
-      await getCriticalityLevel(
-        'enum Alphabet { A B C }',
-        'enum Alphabet { A B }',
-        inaccessibleEnumValueChangesAreInvisible,
-        'Alphabet.C',
-      ),
+      await getCriticalityLevel({
+        oldSDL: 'enum Alphabet { A B C }',
+        newSDL: 'enum Alphabet { A B }',
+        rule: inaccessibleEnumValueChangesAreInvisible,
+        path: 'Alphabet.C',
+      }),
     ).toBe(CriticalityLevel.Breaking);
   });
 });
