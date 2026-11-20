@@ -6,6 +6,8 @@ import {
   UpdateOrganizationGroupRequest_GroupRuleSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
+export const hiddenSchemaRole = 'hub-hidden-schema-viewer';
+
 // Each Hub permission belongs to exactly one Hub role, so roles and stored grants convert both ways.
 const hubRolePermissions: Record<string, readonly string[]> = {
   'hub-sandbox-editor': ['create_sandbox', 'share_sandbox', 'edit_sandbox'],
@@ -16,6 +18,7 @@ const hubRolePermissions: Record<string, readonly string[]> = {
   'hub-egress-manager': ['approve_egress', 'manage_egress_credentials'],
   'hub-integration-manager': ['manage_integrations'],
   'hub-audit-viewer': ['view_audit_log'],
+  [hiddenSchemaRole]: ['view_hidden_schema'],
 };
 
 export function isHubRole(role: string): boolean {
@@ -30,10 +33,30 @@ export function hubRulesFromGrants(grants: readonly HubPermissionGrant[]): Updat
     .map(([role]) => create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role }));
 }
 
-export function grantsFromHubRules(rules: readonly UpdateOrganizationGroupRequest_GroupRule[]): HubPermissionGrant[] {
+// Empty tags on view_hidden_schema mean every hidden tag.
+export function grantsFromHubRules(
+  rules: readonly UpdateOrganizationGroupRequest_GroupRule[],
+  hiddenSchemaTags: readonly string[],
+): HubPermissionGrant[] {
   return rules.flatMap((rule) => {
     const permissions = hubRolePermissions[rule.role] ?? [];
 
-    return permissions.map((permission) => create(HubPermissionGrantSchema, { permission }));
+    return permissions.map((permission) =>
+      create(HubPermissionGrantSchema, {
+        permission,
+        tags: permission === 'view_hidden_schema' ? [...hiddenSchemaTags] : [],
+      }),
+    );
   });
+}
+
+export function hiddenSchemaTagsFromGrants(grants: readonly HubPermissionGrant[]): string[] {
+  return grants.find((grant) => grant.permission === 'view_hidden_schema')?.tags ?? [];
+}
+
+export function parseTagList(text: string): string[] {
+  return text
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
 }

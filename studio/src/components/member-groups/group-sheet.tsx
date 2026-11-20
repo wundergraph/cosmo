@@ -21,7 +21,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { roles } from '@/lib/constants';
-import { grantsFromHubRules, hubRulesFromGrants, isHubRole } from '@/lib/hub-roles';
+import {
+  grantsFromHubRules,
+  hiddenSchemaTagsFromGrants,
+  hubRulesFromGrants,
+  isHubRole,
+  parseTagList,
+} from '@/lib/hub-roles';
 import { useFeature } from '@/hooks/use-feature';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -87,6 +93,7 @@ function MemberGroupSheetContent({
     ),
     ...hubRulesFromGrants(group.hubPermissions),
   ]);
+  const [hiddenSchemaTags, setHiddenSchemaTags] = useState(hiddenSchemaTagsFromGrants(group.hubPermissions).join(', '));
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
   const groupMutation = useMutation(updateOrganizationGroup);
@@ -119,7 +126,10 @@ function MemberGroupSheetContent({
 
       const hubPermissionsResponse = await hubPermissionsMutation.mutateAsync({
         groupId: group.groupId,
-        hubPermissions: grantsFromHubRules(groupRules.filter((rule) => isHubRole(rule.role))),
+        hubPermissions: grantsFromHubRules(
+          groupRules.filter((rule) => isHubRole(rule.role)),
+          parseTagList(hiddenSchemaTags),
+        ),
       });
 
       if (hubPermissionsResponse.response?.code !== EnumStatusCode.OK) {
@@ -171,6 +181,8 @@ function MemberGroupSheetContent({
               rule={rule}
               accessibleResources={data}
               disabled={isDisabled}
+              hiddenSchemaTags={hiddenSchemaTags}
+              onHiddenSchemaTagsChange={setHiddenSchemaTags}
               onRuleUpdated={(newRule) => {
                 const newGroupRules = [...groupRules];
                 newGroupRules[index] = newRule;

@@ -6,6 +6,8 @@ import {
 
 import { create } from '@bufbuild/protobuf';
 import { roles as originalRoles } from '@/lib/constants';
+import { hiddenSchemaRole } from '@/lib/hub-roles';
+import { Input } from '@/components/ui/input';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TrashIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -23,6 +25,8 @@ export function GroupRuleBuilder({
   rule,
   accessibleResources,
   disabled,
+  hiddenSchemaTags,
+  onHiddenSchemaTagsChange,
   onRuleUpdated,
   onRemoveRule,
 }: {
@@ -31,6 +35,8 @@ export function GroupRuleBuilder({
   rule: UpdateOrganizationGroupRequest_GroupRule;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   disabled: boolean;
+  hiddenSchemaTags: string;
+  onHiddenSchemaTagsChange(tags: string): void;
   onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
   onRemoveRule(): void;
 }) {
@@ -98,7 +104,17 @@ export function GroupRuleBuilder({
       </div>
 
       <div className="flex items-start justify-start gap-x-2">
-        {activeRole && activeRole.category !== 'organization' && activeRole.category !== 'hub' ? (
+        {activeRole?.key === hiddenSchemaRole ? (
+          <div className="grow space-y-1">
+            <Input
+              value={hiddenSchemaTags}
+              placeholder="pii, internal"
+              disabled={disabled || !rbac?.enabled || builtin}
+              onChange={(event) => onHiddenSchemaTagsChange(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Leave empty for every hidden tag</p>
+          </div>
+        ) : activeRole && activeRole.category !== 'organization' && activeRole.category !== 'hub' ? (
           <GroupResourceSelector
             rule={rule}
             disabled={disabled}

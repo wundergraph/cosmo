@@ -328,6 +328,12 @@ export const roles = [
     displayName: 'Audit viewer',
     description: 'View the audit log.',
   },
+  {
+    key: 'hub-hidden-schema-viewer',
+    category: 'hub',
+    displayName: 'See schema hidden from agents',
+    description: 'Members and their agents see schema with the chosen hidden tags.',
+  },
 ];
 
 export type OrganizationRole = (typeof roles)[number]['key'];

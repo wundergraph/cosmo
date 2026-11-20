@@ -4,7 +4,13 @@ import {
   UpdateOrganizationGroupRequest_GroupRuleSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { expect, test } from 'vitest';
-import { grantsFromHubRules, hubRulesFromGrants, isHubRole } from '../lib/hub-roles';
+import {
+  grantsFromHubRules,
+  hiddenSchemaTagsFromGrants,
+  hubRulesFromGrants,
+  isHubRole,
+  parseTagList,
+} from '../lib/hub-roles';
 
 test('that a Hub role is saved as every permission it covers', () => {
   const rules = [
@@ -12,7 +18,7 @@ test('that a Hub role is saved as every permission it covers', () => {
     create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role: 'hub-egress-manager' }),
   ];
 
-  expect(grantsFromHubRules(rules).map((grant) => grant.permission)).toEqual([
+  expect(grantsFromHubRules(rules, []).map((grant) => grant.permission)).toEqual([
     'create_sandbox',
     'share_sandbox',
     'edit_sandbox',
@@ -36,4 +42,20 @@ test('that stored permissions load as the Hub roles that cover them', () => {
 test('that only Hub roles are told apart from Studio roles', () => {
   expect(isHubRole('hub-approver')).toBe(true);
   expect(isHubRole('graph-admin')).toBe(false);
+});
+
+test('that the hidden schema role saves its tags and no other role does', () => {
+  const rules = [
+    create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role: 'hub-agent-runner' }),
+    create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role: 'hub-hidden-schema-viewer' }),
+  ];
+
+  const grants = grantsFromHubRules(rules, parseTagList(' pii, ,internal '));
+
+  expect(grants.map((grant) => ({ permission: grant.permission, tags: grant.tags }))).toEqual([
+    { permission: 'run_agents', tags: [] },
+    { permission: 'view_hidden_schema', tags: ['pii', 'internal'] },
+  ]);
+  expect(hubRulesFromGrants(grants).map((rule) => rule.role)).toEqual(['hub-agent-runner', 'hub-hidden-schema-viewer']);
+  expect(hiddenSchemaTagsFromGrants(grants)).toEqual(['pii', 'internal']);
 });
