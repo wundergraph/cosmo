@@ -10,7 +10,7 @@ afterEach(() => {
   process.exitCode = undefined;
 });
 
-const wgc = async (managedDir: string, npm: NpmRunner, args: string[]) => {
+const wgc = async (managedDir: string, npm: NpmRunner, args: string[], registryUrl?: string) => {
   const stdout = createMemoryStream();
   const stderr = createMemoryStream();
   const program = new Command('wgc');
@@ -18,7 +18,7 @@ const wgc = async (managedDir: string, npm: NpmRunner, args: string[]) => {
   program.command('auth');
   program.addCommand(
     PluginCommands({
-      environment: { managedDir, workspaceRoot: undefined, runsFromSource: false },
+      environment: { managedDir, workspaceRoot: undefined, runsFromSource: false, registryUrl },
       npm,
       caller: 'script',
       stdout,
@@ -85,6 +85,42 @@ describe('wgc plugins', () => {
       error: { message: 'npm ERR! 404 Not Found', input: 'hub' },
     });
     expect(process.exitCode).toBe(1);
+  });
+
+  test('with a registry URL, install hub asks npm for the hub and SDK tarballs from that URL', async () => {
+    const calls: string[][] = [];
+    const npm: NpmRunner = (args) => {
+      calls.push(args);
+      return Promise.resolve({ success: false, errors: [new Error('npm ERR! 404 Not Found')] });
+    };
+
+    await wgc(createTempDir(), npm, ['install', 'hub'], 'https://hub.example.com/cli/');
+
+    expect(calls).toEqual([
+      [
+        'install',
+        '--save',
+        '--no-audit',
+        '--no-fund',
+        '--allow-remote=all',
+        'https://hub.example.com/cli/wgc-plugin-sdk.tgz',
+        'https://hub.example.com/cli/wgc-plugin-hub.tgz',
+      ],
+    ]);
+  });
+
+  test('with a registry URL, a package spec still installs from npm', async () => {
+    const calls: string[][] = [];
+    const npm: NpmRunner = (args) => {
+      calls.push(args);
+      return Promise.resolve({ success: false, errors: [new Error('npm ERR! 404 Not Found')] });
+    };
+
+    await wgc(createTempDir(), npm, ['install', '@acme/wgc-plugin-relay@2.0.0'], 'https://hub.example.com/cli');
+
+    expect(calls).toEqual([
+      ['install', '--save', '--no-audit', '--no-fund', '--allow-remote=all', '@acme/wgc-plugin-relay@2.0.0'],
+    ]);
   });
 
   test('a package that is not a plugin is uninstalled again and the install fails', async () => {

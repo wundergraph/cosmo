@@ -31,7 +31,12 @@ describe('attachPlugins', () => {
   test('a workspace plugin subcommand runs through the real wgc program', { timeout: 60_000 }, async () => {
     vi.stubEnv('DISABLE_UPDATE_CHECK', 'true');
     const { default: program } = await import('../../src/commands/index.js');
-    const environment = { managedDir: createTempDir(), workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: workspaceFixture,
+      runsFromSource: true,
+      registryUrl: undefined,
+    };
 
     const { stdout } = await run(program, ['greet', 'hello', 'Ada', '--json'], environment);
 
@@ -40,7 +45,12 @@ describe('attachPlugins', () => {
   });
 
   test('the built cli runs the workspace plugin from its package main', async () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: workspaceFixture, runsFromSource: false };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: workspaceFixture,
+      runsFromSource: false,
+      registryUrl: undefined,
+    };
 
     const { stdout } = await run(testProgram(), ['greet', 'hello', 'Ada'], environment);
 
@@ -54,7 +64,7 @@ describe('attachPlugins', () => {
       recursive: true,
     });
     writeFileSync(join(managedDir, 'plugins.json'), JSON.stringify({ plugins: { echo: 'wgc-plugin-echo' } }));
-    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true, registryUrl: undefined };
 
     const { stdout } = await run(testProgram(), ['echo', 'say', 'hi'], environment);
 
@@ -62,7 +72,12 @@ describe('attachPlugins', () => {
   });
 
   test('wgc hub without the hub plugin prints the install command as JSON and exits 1', async () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: undefined, runsFromSource: false };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: undefined,
+      runsFromSource: false,
+      registryUrl: undefined,
+    };
 
     const { stdout } = await run(testProgram(), ['hub', 'sandbox', 'create', '--json'], environment);
 
@@ -77,7 +92,12 @@ describe('attachPlugins', () => {
   });
 
   test('an agent caller gets the not-installed hint as JSON without --json', async () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: undefined, runsFromSource: false };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: undefined,
+      runsFromSource: false,
+      registryUrl: undefined,
+    };
 
     const { stdout } = await run(testProgram(), ['forge', 'deploy'], environment, 'agent');
 
@@ -88,7 +108,12 @@ describe('attachPlugins', () => {
   });
 
   test('a person sees the not-installed hint on stderr, even for --help', async () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: undefined, runsFromSource: false };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: undefined,
+      runsFromSource: false,
+      registryUrl: undefined,
+    };
 
     const { stdout, stderr } = await run(testProgram(), ['hub', '--help'], environment);
 
@@ -106,7 +131,7 @@ describe('attachPlugins', () => {
       recursive: true,
     });
     writeFileSync(join(managedDir, 'plugins.json'), JSON.stringify({ plugins: { broken: 'wgc-plugin-broken' } }));
-    const environment = { managedDir, workspaceRoot: undefined, runsFromSource: false };
+    const environment = { managedDir, workspaceRoot: undefined, runsFromSource: false, registryUrl: undefined };
 
     const { stdout } = await run(testProgram(), ['broken', 'anything', '--json'], environment);
 
@@ -123,7 +148,12 @@ describe('attachPlugins', () => {
 
   test('wgc --help names the available plugins and wgc plugins', async () => {
     const program = testProgram();
-    const environment = { managedDir: createTempDir(), workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: workspaceFixture,
+      runsFromSource: true,
+      registryUrl: undefined,
+    };
     let help = '';
     program.configureOutput({ writeOut: (text) => (help += text) });
 

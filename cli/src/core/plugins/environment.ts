@@ -11,6 +11,8 @@ export interface PluginEnvironment {
   workspaceRoot: string | undefined;
   /** True under tsx (`pnpm wgc`), where workspace plugins load from `src/index.ts` instead of their built `dist`. */
   runsFromSource: boolean;
+  /** A base URL serving plugin tarballs as `<url>/wgc-plugin-<name>.tgz`, used by install instead of npm. */
+  registryUrl: string | undefined;
 }
 
 const findWorkspaceRoot = (start: string): string | undefined => {
@@ -31,4 +33,5 @@ export const defaultPluginEnvironment = (env: NodeJS.ProcessEnv = process.env): 
   managedDir: env.WGC_PLUGINS_DIR || join(homedir(), '.wgc', 'plugins'),
   workspaceRoot: findWorkspaceRoot(dirname(fileURLToPath(import.meta.url))),
   runsFromSource: import.meta.url.endsWith('.ts'),
+  registryUrl: env.WGC_PLUGIN_REGISTRY_URL || undefined,
 });

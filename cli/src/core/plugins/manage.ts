@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { z } from 'zod';
 import { isAbsolute, join, resolve } from 'pathe';
 import { errorMessage, failure, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { ProgressEvent, Result } from '@wundergraph/wgc-plugin-sdk';
@@ -28,21 +29,69 @@ const registryPackageName = (spec: string): string => {
   return versionAt === -1 ? spec : spec.slice(0, versionAt);
 };
 
-/** What to hand npm and which package name it will install. */
-const resolveInstallTarget = (spec: string): Result<{ npmSpec: string; packageName: string }> => {
+interface InstallTarget {
+  /** Everything handed to one `npm install`. */
+  npmSpecs: string[];
+  /** The spec of the plugin itself among `npmSpecs`. */
+  pluginSpec: string;
+  /** Undefined when only the downloaded tarball names the package. */
+  packageName: string | undefined;
+}
+
+const pluginNamePattern = /^[a-z][\da-z-]*$/;
+
+/**
+ * A plugin tarball from the registry URL, installed together with the SDK tarball next to it, so the
+ * plugin's SDK dependency resolves from the same server instead of npm.
+ */
+const registryTarget = (registryUrl: string, name: string): InstallTarget => {
+  const base = registryUrl.replace(/\/+$/, '');
+  const pluginSpec = `${base}/wgc-plugin-${name}.tgz`;
+  return { npmSpecs: [`${base}/wgc-plugin-sdk.tgz`, pluginSpec], pluginSpec, packageName: knownPlugins[name] };
+};
+
+/** npm 12 refuses remote tarballs unless asked; the registry URL is the user's explicit choice. */
+const remoteFlags = (environment: PluginEnvironment): string[] =>
+  environment.registryUrl === undefined ? [] : ['--allow-remote=all'];
+
+const npmTarget = (spec: string): Result<InstallTarget> => {
   const known = knownPlugins[spec];
   if (known) {
-    return ok({ npmSpec: known, packageName: known });
+    return ok({ npmSpecs: [known], pluginSpec: known, packageName: known });
   }
+
   if (!isLocalPath(spec)) {
-    return ok({ npmSpec: spec, packageName: registryPackageName(spec) });
+    const packageName = registryPackageName(spec);
+    return ok({ npmSpecs: [spec], pluginSpec: spec, packageName });
   }
+
   const directory = resolve(process.cwd(), spec.replace(/^file:/, ''));
   const pkg = readPackageJson(directory);
   if (!pkg.success) {
     return pkg;
   }
-  return ok({ npmSpec: directory, packageName: pkg.data.name });
+  return ok({ npmSpecs: [directory], pluginSpec: directory, packageName: pkg.data.name });
+};
+
+const resolveInstallTarget = (spec: string, registryUrl: string | undefined): Result<InstallTarget> => {
+  if (registryUrl !== undefined && pluginNamePattern.test(spec)) {
+    return ok(registryTarget(registryUrl, spec));
+  }
+  return npmTarget(spec);
+};
+
+/** The package npm saved for `pluginSpec` in the managed project, e.g. the name inside a downloaded tarball. */
+const savedPackageName = (managedDir: string, pluginSpec: string): Result<string> => {
+  const packageJsonPath = join(managedDir, 'package.json');
+  const dependencies = z
+    .object({ dependencies: z.record(z.string(), z.string()).default({}) })
+    .parse(JSON.parse(readFileSync(packageJsonPath, 'utf8'))).dependencies;
+
+  const saved = Object.entries(dependencies).find(([, savedSpec]) => savedSpec === pluginSpec);
+  if (!saved) {
+    return failure(`npm installed ${pluginSpec}, but ${packageJsonPath} does not list it.`);
+  }
+  return ok(saved[0]);
 };
 
 const ensureManagedProject = (managedDir: string): void => {
@@ -91,19 +140,31 @@ export const installPlugin = async ({
   spec,
   reservedNames,
 }: ManageOptions & { spec: string; reservedNames: string[] }): Promise<Result<InstalledPlugin>> => {
-  const target = resolveInstallTarget(spec);
+  const target = resolveInstallTarget(spec, environment.registryUrl);
   if (!target.success) {
     return target;
   }
-  const { npmSpec, packageName } = target.data;
+  const { npmSpecs, pluginSpec } = target.data;
 
   progress({ step: 'prepare', subject: environment.managedDir, message: 'Preparing the plugin directory' });
   ensureManagedProject(environment.managedDir);
 
-  progress({ step: 'npm-install', subject: packageName, message: `Installing ${npmSpec} with npm` });
-  const installed = await npm(['install', '--save', '--no-audit', '--no-fund', npmSpec], environment.managedDir);
+  progress({ step: 'npm-install', subject: pluginSpec, message: `Installing ${npmSpecs.join(' ')} with npm` });
+  const installed = await npm(
+    ['install', '--save', '--no-audit', '--no-fund', ...remoteFlags(environment), ...npmSpecs],
+    environment.managedDir,
+  );
   if (!installed.success) {
     return installed;
+  }
+
+  let packageName = target.data.packageName;
+  if (packageName === undefined) {
+    const saved = savedPackageName(environment.managedDir, pluginSpec);
+    if (!saved.success) {
+      return saved;
+    }
+    packageName = saved.data;
   }
 
   progress({ step: 'verify', subject: packageName, message: 'Checking the package is a wgc plugin' });

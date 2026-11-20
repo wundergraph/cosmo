@@ -17,6 +17,7 @@ describe('wgc plugins install with real npm', () => {
       managedDir: join(createTempDir(), 'plugins'),
       workspaceRoot: undefined,
       runsFromSource: false,
+      registryUrl: undefined,
     };
     const installOutput = createMemoryStream();
     const installer = new Command('wgc');

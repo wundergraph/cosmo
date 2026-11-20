@@ -5,7 +5,9 @@ import { PluginCommandOptions } from '../index.js';
 
 export default (opts: PluginCommandOptions) => {
   const command = new Command('install');
-  command.description('Installs a plugin by name (hub, forge), npm package or local directory.');
+  command.description(
+    'Installs a plugin by name (hub, forge), npm package or local directory. With WGC_PLUGIN_REGISTRY_URL set, a name installs <url>/wgc-plugin-<name>.tgz.',
+  );
   command.argument('<plugin>', 'A known plugin name, an npm package spec, or a path to a plugin package.');
   command.option('--json', 'Prints the result as JSON.');
   command.action(async (spec: string, options: { json?: boolean }) => {

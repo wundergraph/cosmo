@@ -16,7 +16,7 @@ describe('plugin resolution', () => {
   test('a workspace package wins over a managed install of the same command', () => {
     const managedDir = createTempDir();
     installFixture(managedDir, 'greet', 'wgc-plugin-greet', '9.9.9');
-    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true, registryUrl: undefined };
 
     expect(resolvePlugin(environment, 'greet')).toEqual({
       name: 'greet',
@@ -30,7 +30,7 @@ describe('plugin resolution', () => {
   test('outside the repository the managed install resolves, loading its package entry', () => {
     const managedDir = createTempDir();
     installFixture(managedDir, 'greet', 'wgc-plugin-greet', '9.9.9');
-    const environment = { managedDir, workspaceRoot: undefined, runsFromSource: false };
+    const environment = { managedDir, workspaceRoot: undefined, runsFromSource: false, registryUrl: undefined };
 
     expect(resolvePlugin(environment, 'greet')).toEqual({
       name: 'greet',
@@ -42,7 +42,12 @@ describe('plugin resolution', () => {
   });
 
   test('the built cli loads a workspace plugin from its package main', () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: workspaceFixture, runsFromSource: false };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: workspaceFixture,
+      runsFromSource: false,
+      registryUrl: undefined,
+    };
 
     expect(resolvePlugin(environment, 'greet')?.entryPath).toBe(
       join(workspaceFixture, 'cli-plugins', 'greet', 'build', 'index.js'),
@@ -50,7 +55,12 @@ describe('plugin resolution', () => {
   });
 
   test('an unknown command resolves to nothing', () => {
-    const environment = { managedDir: createTempDir(), workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = {
+      managedDir: createTempDir(),
+      workspaceRoot: workspaceFixture,
+      runsFromSource: true,
+      registryUrl: undefined,
+    };
 
     expect(resolvePlugin(environment, 'nothing')).toBeUndefined();
   });
@@ -58,7 +68,7 @@ describe('plugin resolution', () => {
   test('list shows workspace, installed and known-but-not-installed plugins', () => {
     const managedDir = createTempDir();
     installFixture(managedDir, 'greet', 'wgc-plugin-greet', '9.9.9');
-    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true };
+    const environment = { managedDir, workspaceRoot: workspaceFixture, runsFromSource: true, registryUrl: undefined };
 
     expect(listPlugins(environment)).toEqual([
       { name: 'greet', packageName: '@acme/greet', version: '0.4.0', source: 'workspace', active: true },
