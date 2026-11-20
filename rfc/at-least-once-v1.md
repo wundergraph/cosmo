@@ -363,6 +363,13 @@ message KafkaPartitionOffset {
 The stored offset is the offset of the **last delivered** record of the partition, not the next one
 to read. Resume adds 1 when it seeks.
 
+A cursor lists every partition that existed when the subscription started, not only the ones that
+delivered a record. For a partition that has not delivered yet, the router records the position right
+before where the subscription started on it, which it resolves with the broker when the subscription
+is created. A time stamp is not enough for this. The cursor is issued when a record is delivered, so
+a record that was produced earlier on another partition but is not delivered yet is older than the
+cursor, and a resume that seeks that partition by time would skip it for good.
+
 ###### Leader epoch
 
 An offset alone does not identify a message. Kafka increments the leader epoch of a partition every
@@ -632,7 +639,7 @@ type SeekableAdapter interface {
 
 `SubscribeFrom` takes the whole verified cursor, not just its position. The adapter needs
 `IssuedAt` as well: it is where parts of the subscription the cursor does not cover start, such as
-a Kafka partition that never delivered a record to this client. Passing the cursor also means the
+a Kafka partition that was created after the subscription started. Passing the cursor also means the
 provider type check is the same type assertion on the `position` oneof the adapter has to do anyway.
 
 An adapter that does not implement `SeekableAdapter` cannot resume a subscription. The router finds
@@ -814,11 +821,11 @@ after a hook call. The cursor is meant to be immutable on `StreamBeforeEventsDis
   resource spike on the router.
 - Resume uses a static partition assignment, so partitions created on an already-assigned topic
   after the resume are never picked up for the life of that subscription.
-- A partition the cursor never saw resumes at the cursor's `IssuedAt` timestamp. That is a time
-  approximation of where a fresh subscribe would have started, not an exact position.
+- A partition, or a topic, that was created after the subscription started is not part of its
+  cursors until it delivers a record, and a resume starts it at the cursor's `IssuedAt` timestamp.
+  That is a time approximation, not an exact position, so a record that was produced to it before the
+  cursor was issued but had not been delivered is skipped.
 - Cursor resume is implemented for Kafka only.
-- Partitions without delivered records are missing from cursors, so resume needs a fallback for
-  them.
 - Messages can arrive out of order when an `OnReceiveEvents` handler times out, which breaks the
   [cumulative](#cursors-are-cumulative) order of cursors.
 - The [negotiation success](#negotiation-success) confirmation is not implemented.
