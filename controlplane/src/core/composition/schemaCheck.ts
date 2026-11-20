@@ -65,14 +65,8 @@ function changeNeedsClientSchemaDiff(change: SchemaDiff): boolean {
       const alreadyReportedAsBreaking = change.isBreaking;
       return !alreadyReportedAsBreaking;
     }
-    case ChangeType.DirectiveUsageEnumAdded:
-    case ChangeType.DirectiveUsageEnumRemoved:
-    case ChangeType.DirectiveUsageEnumValueAdded:
-    case ChangeType.DirectiveUsageEnumValueRemoved: {
-      return changedDirectiveName(change.meta) === INACCESSIBLE;
-    }
     default: {
-      return false;
+      return changedDirectiveName(change.meta) === INACCESSIBLE;
     }
   }
 }

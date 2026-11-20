@@ -1,6 +1,10 @@
 import { beforeAll, describe, expect, test } from 'vitest';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from '../src/core/composition/schemaCheck.js';
+import {
+  changesNeedClientSchemaDiff,
+  getDiffBetweenGraphs,
+  GetDiffBetweenGraphsResult,
+} from '../src/core/composition/schemaCheck.js';
 import { SchemaChangeType } from '../src/types/index.js';
 
 describe('BreakingChanges', () => {
@@ -314,5 +318,71 @@ describe('BreakingChanges', () => {
       expect(schemaChanges.nonBreakingChanges[1].path).toBe('User.key');
       expect(schemaChanges.nonBreakingChanges[1].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
     }
+  });
+});
+
+describe('changesNeedClientSchemaDiff', () => {
+  const hiddenLocations = [
+    {
+      location: 'a field',
+      exposed: 'type Query { a: String b: String }',
+      hidden: 'type Query { a: String b: String @inaccessible }',
+    },
+    {
+      location: 'an object',
+      exposed: 'type Query { a: String } type T { x: Int }',
+      hidden: 'type Query { a: String } type T @inaccessible { x: Int }',
+    },
+    {
+      location: 'an interface',
+      exposed: 'type Query { a: String } interface I { x: Int }',
+      hidden: 'type Query { a: String } interface I @inaccessible { x: Int }',
+    },
+    {
+      location: 'a union',
+      exposed: 'type Query { a: String } type T { x: Int } union U = T',
+      hidden: 'type Query { a: String } type T { x: Int } union U @inaccessible = T',
+    },
+    {
+      location: 'a scalar',
+      exposed: 'type Query { a: String } scalar S',
+      hidden: 'type Query { a: String } scalar S @inaccessible',
+    },
+    {
+      location: 'an input object',
+      exposed: 'type Query { a: String } input In { x: Int }',
+      hidden: 'type Query { a: String } input In @inaccessible { x: Int }',
+    },
+    {
+      location: 'an input field',
+      exposed: 'type Query { a: String } input In { x: Int y: Int }',
+      hidden: 'type Query { a: String } input In { x: Int y: Int @inaccessible }',
+    },
+    {
+      location: 'an argument',
+      exposed: 'type Query { a(x: Int): String }',
+      hidden: 'type Query { a(x: Int @inaccessible): String }',
+    },
+  ];
+
+  test.each(
+    hiddenLocations.flatMap(({ location, exposed, hidden }) => [
+      { change: `adding @inaccessible to ${location}`, from: exposed, to: hidden },
+      { change: `removing @inaccessible from ${location}`, from: hidden, to: exposed },
+    ]),
+  )('Should be true when $change', async ({ from, to }) => {
+    const schemaChanges = await getDiffBetweenGraphs(from, to, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && changesNeedClientSchemaDiff(schemaChanges)).toBe(true);
+  });
+
+  test('Should be false when adding a directive other than @inaccessible to a field', async () => {
+    const schemaChanges = await getDiffBetweenGraphs(
+      'type Query { a: String }',
+      'type Query { a: String @shareable }',
+      LATEST_ROUTER_COMPATIBILITY_VERSION,
+    );
+
+    expect(schemaChanges.kind === 'success' && changesNeedClientSchemaDiff(schemaChanges)).toBe(false);
   });
 });
