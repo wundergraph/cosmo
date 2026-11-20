@@ -194,11 +194,14 @@ export class BatchNormalizer {
           continue;
         }
 
-        if (configurationData.entityCaching) {
-          configurationData.entityCaching.cacheTagConfigurations =
-            configurationData.entityCaching.cacheTagConfigurations.filter(
-              ({ fieldName }) => !fieldNames.has(fieldName),
-            );
+        const { entityCaching } = configurationData;
+        if (entityCaching) {
+          /* Drop the tags of fields that @override moved to another subgraph.
+           * An entity tag has no field name, so it always stays.
+           */
+          entityCaching.cacheTagConfigurations = entityCaching.cacheTagConfigurations.filter(
+            ({ fieldName }) => fieldName === undefined || !fieldNames.has(fieldName),
+          );
         }
       }
     }
