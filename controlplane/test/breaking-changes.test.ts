@@ -371,18 +371,18 @@ describe('changesNeedClientSchemaDiff', () => {
       { change: `removing @inaccessible from ${location}`, from: hidden, to: exposed },
     ]),
   )('Should be true when $change', async ({ from, to }) => {
-    const schemaChanges = await getDiffBetweenGraphs(from, to, LATEST_ROUTER_COMPATIBILITY_VERSION);
-
-    expect(schemaChanges.kind === 'success' && changesNeedClientSchemaDiff(schemaChanges)).toBe(true);
+    expect(await needsClientSchemaDiff(from, to)).toBe(true);
   });
 
   test('Should be false when adding a directive other than @inaccessible to a field', async () => {
-    const schemaChanges = await getDiffBetweenGraphs(
-      'type Query { a: String }',
-      'type Query { a: String @shareable }',
-      LATEST_ROUTER_COMPATIBILITY_VERSION,
-    );
-
-    expect(schemaChanges.kind === 'success' && changesNeedClientSchemaDiff(schemaChanges)).toBe(false);
+    expect(await needsClientSchemaDiff('type Query { a: String }', 'type Query { a: String @shareable }')).toBe(false);
   });
 });
+
+async function needsClientSchemaDiff(oldSDL: string, newSDL: string) {
+  const schemaChanges = await getDiffBetweenGraphs(oldSDL, newSDL, LATEST_ROUTER_COMPATIBILITY_VERSION);
+  if (schemaChanges.kind === 'failure') {
+    throw new Error(`Could not diff schemas: ${schemaChanges.errorMessage}`);
+  }
+  return changesNeedClientSchemaDiff(schemaChanges);
+}
