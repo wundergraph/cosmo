@@ -1,0 +1,40 @@
+syntax = "proto3";
+package catalog.v1;
+
+import "google/protobuf/wrappers.proto";
+
+// Service definition for CatalogService
+service CatalogService {
+  rpc QueryCatalogItem(QueryCatalogItemRequest) returns (QueryCatalogItemResponse) {}
+  rpc QueryItems(QueryItemsRequest) returns (QueryItemsResponse) {}
+}
+
+// Request message for catalogItem operation.
+message QueryCatalogItemRequest {
+  string id = 1;
+}
+// Response message for catalogItem operation.
+message QueryCatalogItemResponse {
+  CatalogItem catalog_item = 1;
+}
+// Request message for items operation.
+message QueryItemsRequest {
+  google.protobuf.Int32Value limit = 1;
+  google.protobuf.StringValue tag = 2;
+}
+// Response message for items operation.
+message QueryItemsResponse {
+  repeated CatalogItem items = 1;
+}
+
+message CatalogItem {
+  string item_id = 1;
+  google.protobuf.StringValue display_name = 2;
+  google.protobuf.DoubleValue price = 3;
+  repeated string tags = 4;
+  Warehouse warehouse = 5;
+}
+
+message Warehouse {
+  string code = 1;
+}

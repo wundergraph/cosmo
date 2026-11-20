@@ -6,6 +6,7 @@ import { registerCreate } from './commands/create.js';
 import { registerInit } from './commands/init.js';
 import { registerLock } from './commands/lock.js';
 import { registerRouterUpgrade } from './commands/upgrade.js';
+import { registerSource } from './commands/source.js';
 import type { System } from './system.js';
 import { forgeVersion } from './version.js';
 import { registerCliUpgrade } from './commands/cli-upgrade.js';
@@ -32,5 +33,6 @@ export const createBuiltinEngine = ({
     registerRouterUpgrade(command, dependencies);
     registerCliUpgrade(command, dependencies);
     registerCheck(command, dependencies);
+    registerSource(command, dependencies);
   },
 });

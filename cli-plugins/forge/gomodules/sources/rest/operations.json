@@ -1,0 +1,47 @@
+{
+  "baseUrl": "https://catalog.example.com",
+  "listenAddr": "127.0.0.1:4011",
+  "operations": [
+    {
+      "rpc": "QueryCatalogItem",
+      "method": "GET",
+      "path": "/v1/items/{id}",
+      "parameters": [
+        {
+          "field": "id",
+          "name": "id",
+          "in": "path"
+        }
+      ]
+    },
+    {
+      "rpc": "QueryItems",
+      "method": "GET",
+      "path": "/v1/items",
+      "parameters": [
+        {
+          "field": "limit",
+          "name": "limit",
+          "in": "query"
+        },
+        {
+          "field": "tag",
+          "name": "tag",
+          "in": "query"
+        }
+      ]
+    }
+  ],
+  "types": {
+    "CatalogItem": {
+      "item_id": "item_id",
+      "display_name": "display_name",
+      "price": "price",
+      "tags": "tags",
+      "warehouse": "warehouse"
+    },
+    "Warehouse": {
+      "code": "code"
+    }
+  }
+}

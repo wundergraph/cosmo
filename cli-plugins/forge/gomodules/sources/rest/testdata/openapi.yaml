@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: Catalog
+  version: 1.0.0
+servers:
+  - url: https://catalog.example.com
+paths:
+  /v1/items/{id}:
+    get:
+      operationId: catalogItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItem'
+  /v1/items:
+    get:
+      operationId: items
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: ids
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: The items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogItem'
+    post:
+      operationId: createItem
+      responses:
+        '201':
+          description: Created.
+  /v1/export:
+    get:
+      operationId: exportItems
+      responses:
+        '200':
+          description: A spreadsheet.
+          content:
+            text/csv:
+              schema:
+                type: string
+components:
+  schemas:
+    CatalogItem:
+      type: object
+      required:
+        - item_id
+        - tags
+      properties:
+        item_id:
+          type: string
+        display_name:
+          type: string
+        price:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        warehouse:
+          $ref: '#/components/schemas/Warehouse'
+        attributes:
+          type: object
+          additionalProperties: true
+    Warehouse:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string

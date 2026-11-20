@@ -43,6 +43,8 @@ export interface FakeSystemOptions {
   packagesWithTests?: string[];
   /** The output of `go test` for a failing run, keyed by a package it was given or the directory it ran in. */
   failingGoTests?: Record<string, string>;
+  /** The documents `fetchText` answers with status 200, by URL. Any other URL answers 404. */
+  documents?: Record<string, string>;
 }
 
 export interface FakeSystem extends System {
@@ -154,6 +156,10 @@ export const createFakeSystem = (options: FakeSystemOptions = {}): FakeSystem =>
     tests,
     goTests,
     run,
+    fetchText(url) {
+      const body = options.documents?.[url];
+      return Promise.resolve(body === undefined ? { status: 404, body: '' } : { status: 200, body });
+    },
     async runTest(request) {
       tests.push({ ...request, binaryAtTestTime: await readFile(request.env.FORGE_ROUTER_BINARY, 'utf8') });
       return { exitCode: options.testExitCode ?? 0 };
