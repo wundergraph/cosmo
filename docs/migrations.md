@@ -26,6 +26,10 @@ pnpm db:custom
 pnpm db:drop
 ```
 
+Only the latest snapshot in `migrations/meta` is kept, since drizzle only diffs against that one. `db:generate` and `db:custom` delete older ones and sort the keys of the latest, so a new migration shows up in review as a small rename rather than a new 10k-line file. Run `pnpm db:prune-snapshots` if you generated a migration some other way, such as calling `drizzle-kit` directly or rebasing onto a branch that added one.
+
+`db:drop` only drops the latest migration, and restores the previous snapshot from git. If you generated two migrations without committing in between, the first one's snapshot was never committed, so it can't be restored and `db:drop` refuses.
+
 ### ClickHouse
 
 ```sh
@@ -49,6 +53,3 @@ Try to write migrations that are backwards compatible. For complex migrations, m
 ## Production migrations
 
 In production, we coordinate all migrations with [Kapp](https://carvel.dev/kapp/) and Kubernetes Jobs. In that way, we can ensure that all migrations are run in the correct order and only once. Additionally, the deployment is stopped if a migration fails.
-
-
-
