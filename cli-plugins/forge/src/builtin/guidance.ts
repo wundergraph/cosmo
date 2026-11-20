@@ -9,22 +9,24 @@ const guidance = `${start}
 
 This directory is a Forge workspace: it builds a Cosmo Router binary with custom Go modules compiled in.
 
-- \`forge.yaml\` is the source of truth: the router version (\`release\`, \`rc\` or \`commit\`) and the modules. Edit it or use the commands below.
-- \`forge.lock\` pins the exact router commit and every remote module version. Never edit it by hand; \`wgc forge lock\` rewrites it.
+Install Forge globally with \`npm i -g wgc && wgc plugins install forge\`, or add wgc to this checkout with \`npm i -D wgc\`, run \`npx wgc plugins install forge\` and prefix the commands below with \`npx\`. Run \`wgc forge --help\` and \`wgc forge <command> --help\` to discover the commands. Agents pass \`--json\` to every command; the result is JSON on stdout and progress is NDJSON on stderr.
+
+- \`forge.yaml\` declares the router release (\`release\`, \`rc\` or \`commit\`) and the modules. Edit the module list by hand or with the commands below.
+- \`forge.lock\` records the reviewed router revision and the full commit of every remote module. Never edit it by hand.
 - \`modules/<name>\` holds local modules. They are built from disk and are not pinned.
 - \`.forge/\` is generated (build module, binary). Never edit or commit it.
 
-Commands (add \`--json\` for machine-readable output; progress goes to stderr):
+Commands:
 
-- \`wgc forge build\` compiles the router to the \`binary\` path in forge.yaml. A failed build keeps the previous binary.
-- \`wgc forge create --list-templates\` lists presets and hook templates. \`wgc forge create --preset <id>\` or \`wgc forge create --template <id> <name>\` adds one under \`modules/\`.
-- \`wgc forge add <source>\` adds a local path, a Go package (\`github.com/acme/mod@v1.2.0\`) or a Git URL (\`--ref\`, \`--package\`).
-- \`wgc forge lock\` re-resolves every pin, moving branches and \`latest\` forward.
-- \`wgc forge router upgrade --config <router.yaml> --check <candidate>\` builds a candidate router with these modules and runs the tests against it without changing anything. Drop \`--check\` and pass \`--yes\` to adopt it when the tests pass.
+- \`wgc forge build\` compiles the router to the \`binary\` path in forge.yaml from the locked pins. A failed build keeps the previous binary and never changes pins.
+- \`wgc forge create --list-templates\` lists presets and hook templates. \`wgc forge create --preset <id> <name>\` or \`wgc forge create --template <id> <name>\` creates one under \`modules/\`.
+- \`wgc forge add <source>\` registers a local path, a Go package (\`github.com/acme/mod@v1.2.0\`) or a Git URL (\`--ref\`, \`--package\`). Re-adding a registered module previews its newer selection; pass \`--yes\` to accept it.
+- \`wgc forge lock\` previews the forge.lock changes after a hand edit of forge.yaml and keeps unchanged pins. Pass \`--yes\` to apply them.
+- \`wgc forge router upgrade --check --config <router.yaml> <candidate>\` builds a candidate router with these modules and runs the tests against it without changing anything. Drop \`--check\` and pass \`--yes\` to adopt it when the tests pass.
 
-Writing a module: implement the hook interfaces from \`github.com/wundergraph/cosmo/router/core\` (\`RouterOnRequestHandler\`, \`RouterMiddlewareHandler\`, \`EnginePreOriginHandler\`, \`EnginePostOriginHandler\`), register it in \`init()\` with \`core.RegisterModule\`, and read its settings from \`modules.<moduleID>\` in the router config. Run \`go mod tidy && go test ./...\` inside the module, then \`wgc forge build\`.
+Writing a module: implement the hook interfaces from \`github.com/wundergraph/cosmo/router/core\` (\`RouterOnRequestHandler\`, \`RouterMiddlewareHandler\`, \`EnginePreOriginHandler\`, \`EnginePostOriginHandler\`), register it in \`init()\` with \`core.RegisterModule\`, and read its settings from \`modules.<moduleID>\` in the router config.
 
-The upgrade test command receives \`FORGE_ROUTER_BINARY\` and \`FORGE_ROUTER_CONFIG\`. Set it once as \`test:\` in forge.yaml.
+Testing: run \`go mod tidy && go test ./...\` inside \`modules/<name>\` for a module's own tests. The router behaviour tests run with \`go test ./...\` from the workspace once \`wgc forge build\` has produced the binary; the test command receives \`FORGE_ROUTER_BINARY\` and \`FORGE_ROUTER_CONFIG\`. Set it once as \`test:\` in forge.yaml so \`wgc forge router upgrade\` runs it.
 ${end}
 `;
 
