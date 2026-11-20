@@ -1096,8 +1096,8 @@ func (s *graphServer) buildGraphMux(
 				r:                             r,
 			})
 
-			ctx := withSubgraphResolver(r.Context(), subgraphResolver)
-			r = r.WithContext(withRequestContext(ctx, reqContext))
+			ctx := withRequestContext(withSubgraphResolver(r.Context(), subgraphResolver), reqContext)
+			r = r.WithContext(ctx)
 			reqContext.request = r
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
