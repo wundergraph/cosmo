@@ -39,11 +39,16 @@ export interface FakeSystemOptions {
   /** Extra `dep` lines `go version -m` reports, keyed by the router version compiled into the binary. */
   extraDependencies?: Record<string, string[]>;
   testExitCode?: number;
+  /** Go packages that have test files, as `go list` finds them below a module. */
+  packagesWithTests?: string[];
+  /** The output of `go test` for a failing run, keyed by a package it was given or the directory it ran in. */
+  failingGoTests?: Record<string, string>;
 }
 
 export interface FakeSystem extends System {
   commands: string[];
   tests: (TestRequest & { binaryAtTestTime: string })[];
+  goTests: { packages: string[]; cwd: string; env: Record<string, string> }[];
 }
 
 const ok = (stdout = ''): CommandOutcome => ({ exitCode: 0, stdout, stderr: '' });
@@ -54,6 +59,7 @@ export const createFakeSystem = (options: FakeSystemOptions = {}): FakeSystem =>
   const routerTags = options.routerTags ?? { '0.299.0': commitA, '0.300.0': commitB };
   const commands: string[] = [];
   const tests: FakeSystem['tests'] = [];
+  const goTests: FakeSystem['goTests'] = [];
 
   const goList = async (query: string): Promise<CommandOutcome> => {
     const [module, commit] = query.split('@');
@@ -77,7 +83,7 @@ export const createFakeSystem = (options: FakeSystemOptions = {}): FakeSystem =>
     return failed(`go: ${query}: module not found`);
   };
 
-  const run = async ({ file, args, cwd }: CommandRequest): Promise<CommandOutcome> => {
+  const run = async ({ file, args, cwd, env }: CommandRequest): Promise<CommandOutcome> => {
     commands.push([file, ...args].join(' '));
 
     if (file === 'git' && args[0] === 'ls-remote') {
@@ -99,8 +105,21 @@ export const createFakeSystem = (options: FakeSystemOptions = {}): FakeSystem =>
     if (file === 'go' && args[0] === 'list' && args.includes('-json')) {
       return goList(args.at(-1) ?? '');
     }
-    if (file === 'go' && args[0] === 'list') {
+    if (file === 'go' && args[0] === 'list' && args.includes('-m')) {
       return ok(options.selectedVersions ?? '');
+    }
+    if (file === 'go' && args[0] === 'list') {
+      const prefix = (args.at(-1) ?? '').replace('/...', '');
+      const tested = (options.packagesWithTests ?? []).filter(
+        (candidate) => candidate === prefix || candidate.startsWith(`${prefix}/`),
+      );
+      return ok(tested.join('\n'));
+    }
+    if (file === 'go' && args[0] === 'test') {
+      const packages = args.slice(2);
+      goTests.push({ packages, cwd: cwd ?? '', env: env ?? {} });
+      const failure = [...packages, cwd ?? ''].map((key) => options.failingGoTests?.[key]).find(Boolean);
+      return failure === undefined ? ok('ok') : { exitCode: 1, stdout: failure, stderr: '' };
     }
     if (file === 'go' && args.join(' ') === 'mod tidy') {
       return ok();
@@ -133,6 +152,7 @@ export const createFakeSystem = (options: FakeSystemOptions = {}): FakeSystem =>
   return {
     commands,
     tests,
+    goTests,
     run,
     async runTest(request) {
       tests.push({ ...request, binaryAtTestTime: await readFile(request.env.FORGE_ROUTER_BINARY, 'utf8') });

@@ -1,6 +1,8 @@
 import { access, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import type { Command } from 'commander';
+import { runModuleTests, workspaceTestsDirectory } from '../behaviour-tests.js';
+import type { ModuleOutcome } from '../behaviour-tests.js';
 import { buildRouter } from '../build.js';
 import { toFailure } from '../failure.js';
 import { lockFileName, readLock, writeLock } from '../lock.js';
@@ -78,6 +80,40 @@ const describeChange = (change: DependencyChange): string => {
   return `${change.from} -> ${change.to}`;
 };
 
+type CommandReport = { command: string; passed: true } | { command: string; passed: false; exitCode: number };
+
+const namesWith = (modules: ModuleOutcome[], outcome: ModuleOutcome['outcome']): string[] =>
+  modules.filter((module) => module.outcome === outcome).map((module) => module.module);
+
+/** Why a candidate is not eligible, one clause per kind of problem. Empty when every check passed. */
+const describeProblems = (modules: ModuleOutcome[], command: CommandReport | undefined): string[] => {
+  const problems: string[] = [];
+
+  const failed = namesWith(modules, 'failed');
+  if (failed.length > 0) {
+    problems.push(`${failed.join(', ')} failed ${failed.length === 1 ? 'its' : 'their'} behaviour tests`);
+  }
+
+  const untested = namesWith(modules, 'untested');
+  if (untested.length > 0) {
+    problems.push(`${untested.join(', ')} ${untested.length === 1 ? 'has' : 'have'} no behaviour test`);
+  }
+
+  if (command !== undefined && !command.passed) {
+    problems.push(`the test command \`${command.command}\` exited with code ${command.exitCode}`);
+  }
+
+  return problems;
+};
+
+const describeFix = (modules: ModuleOutcome[]): string => {
+  if (namesWith(modules, 'untested').length === 0) {
+    return 'Fix the modules for the new router or stay on the current one.';
+  }
+
+  return `Add Go tests to each untested module, or a Go test package under ${workspaceTestsDirectory}/<module>, that start the router at FORGE_ROUTER_BINARY with --config FORGE_ROUTER_CONFIG and check the behaviour you rely on.`;
+};
+
 export const registerRouterUpgrade = (command: Command, dependencies: ForgeDependencies): void => {
   const router = command.command('router').description('Manage the router version of the workspace.');
 
@@ -85,13 +121,16 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     router
       .command('upgrade')
       .description(
-        'Build a candidate router with the workspace modules, run the tests against it, and adopt it when they pass.',
+        "Build a candidate router with the workspace modules, run every module's Go behaviour tests against it, and adopt it when they pass.",
       )
       .argument('<candidate>', 'A router release (0.299.0), release candidate (0.300.0-rc.1) or commit SHA.')
       .requiredOption('--config <router.yaml>', 'The router config the tests run the candidate with.')
       .option('--check', 'Only build and test the candidate. Never changes forge.yaml, forge.lock or the binary.')
       .option('--yes', 'Adopt the candidate without asking when the tests pass.')
-      .option('--test <command>', 'The test command. Defaults to `test` in forge.yaml.'),
+      .option(
+        '--test <command>',
+        'A test command to run as well as the module tests. Defaults to `test` in forge.yaml.',
+      ),
   ).action(async (candidate: string, options: UpgradeOptions) => {
     const { system, context } = dependencies;
     const output = context.output({ json: options.json });
@@ -107,13 +146,6 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     }
 
     const testCommand = options.test ?? manifest.data.test;
-    if (testCommand === undefined) {
-      return output.fail({
-        message: 'There is no test command to prove the candidate works with your modules.',
-        input: '--test',
-        fix: `Pass --test "<command>" or set \`test:\` in ${manifestFileName}. The command receives FORGE_ROUTER_BINARY and FORGE_ROUTER_CONFIG.`,
-      });
-    }
 
     const configPath = path.resolve(dependencies.cwd(), options.config);
     if (!(await fileExists(configPath))) {
@@ -168,61 +200,81 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       output.progress({ step: 'compare-dependencies', subject: change.module, message: describeChange(change) });
     }
 
+    const environment = { FORGE_ROUTER_BINARY: paths.candidateBinary, FORGE_ROUTER_CONFIG: configPath };
+    const modules = await runModuleTests({
+      workspace,
+      manifest: candidateManifest,
+      lock: candidateLock.data,
+      buildDirectory: paths.candidateBuildDirectory,
+      env: environment,
+      system,
+      output,
+    });
+    if (!modules.success) {
+      return output.fail(toFailure(modules));
+    }
+
+    let command: CommandReport | undefined;
+    if (testCommand !== undefined) {
+      output.progress({
+        step: 'test',
+        subject: testCommand,
+        message: 'Running the test command against the candidate',
+      });
+      const tests = await system.runTest({ command: testCommand, cwd: workspace, env: environment });
+      command =
+        tests.exitCode === 0
+          ? { command: testCommand, passed: true }
+          : { command: testCommand, passed: false, exitCode: tests.exitCode };
+    }
+
     const report = {
       candidate: routerSummary(candidateLock.data),
       ...(current.data === undefined ? {} : { current: routerSummary(current.data) }),
       dependencyChanges,
+      modules: modules.data,
+      ...(command === undefined ? {} : { tests: command }),
     };
-
-    output.progress({ step: 'test', subject: testCommand, message: 'Running the tests against the candidate' });
-    const tests = await system.runTest({
-      command: testCommand,
-      cwd: workspace,
-      env: { FORGE_ROUTER_BINARY: paths.candidateBinary, FORGE_ROUTER_CONFIG: configPath },
-    });
-    if (tests.exitCode !== 0) {
-      return output.fail({
-        message: `The tests failed against router ${describeRouterSource(candidateSource.data)} (exit code ${tests.exitCode}). Nothing was changed.`,
-        input: testCommand,
-        fix: `Fix the modules for the new router or stay on the current one. The candidate binary is at ${paths.candidateBinary}.`,
-        details: {
-          ...report,
-          tests: { command: testCommand, passed: false, exitCode: tests.exitCode },
-          adopted: false,
-          binary: paths.candidateBinary,
-        },
-      });
-    }
-
-    const passed = { ...report, tests: { command: testCommand, passed: true } };
     const renderReport = (headline: string): string =>
       [
         headline,
         `  ${dependencyChanges.length} dependency change(s)`,
         ...dependencyChanges.map((change) => `    ${change.module} ${describeChange(change)}`),
+        `  ${modules.data.length} module(s)`,
+        ...modules.data.map((module) => `    ${module.outcome.padEnd(8)} ${module.module}`),
       ].join('\n');
 
+    const problems = describeProblems(modules.data, command);
+    if (problems.length > 0) {
+      return output.fail({
+        message: `Router ${describeRouterSource(candidateSource.data)} cannot be adopted: ${problems.join('; ')}. Nothing was changed.`,
+        input: candidate,
+        fix: `${describeFix(modules.data)} The candidate binary is at ${paths.candidateBinary}.`,
+        details: { ...report, adopted: false, binary: paths.candidateBinary },
+      });
+    }
+
     if (options.check) {
-      return output.result({ ...passed, adopted: false, binary: paths.candidateBinary }, () =>
-        renderReport(`Router ${passed.candidate.source} passes the tests. Nothing was changed (--check).`),
+      return output.result({ ...report, adopted: false, binary: paths.candidateBinary }, () =>
+        renderReport(`Router ${report.candidate.source} passes the tests. Nothing was changed (--check).`),
       );
     }
 
     const acceptance = await askToAccept(
       context,
       options,
-      `${renderReport('Tests passed.')}\nAdopt router ${passed.candidate.source}?`,
+      `${renderReport('Tests passed.')}\nAdopt router ${report.candidate.source}?`,
     );
     if (acceptance === 'needs-yes') {
       return output.fail({
-        message: `Router ${passed.candidate.source} passes the tests, but adopting it needs your confirmation.`,
+        message: `Router ${report.candidate.source} passes the tests, but adopting it needs your confirmation.`,
         input: candidate,
         fix: 'Run the command again with --yes to adopt it.',
       });
     }
     if (acceptance === 'declined') {
-      return output.result({ ...passed, adopted: false, binary: paths.candidateBinary }, () =>
-        renderReport(`Router ${passed.candidate.source} passes the tests. Not adopted.`),
+      return output.result({ ...report, adopted: false, binary: paths.candidateBinary }, () =>
+        renderReport(`Router ${report.candidate.source} passes the tests. Not adopted.`),
       );
     }
 
@@ -232,8 +284,8 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     await writeLock(workspace, candidateLock.data);
     await writeManifest(workspace, candidateManifest);
 
-    output.result({ ...passed, adopted: true, binary: paths.binary }, () =>
-      renderReport(`Upgraded to router ${passed.candidate.source}. Binary: ${paths.binary}`),
+    output.result({ ...report, adopted: true, binary: paths.binary }, () =>
+      renderReport(`Upgraded to router ${report.candidate.source}. Binary: ${paths.binary}`),
     );
   });
 };

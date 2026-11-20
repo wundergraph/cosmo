@@ -1,4 +1,3 @@
-import { writeFile } from 'node:fs/promises';
 import { describe, expect, test } from 'vitest';
 import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
 import {
@@ -88,6 +87,7 @@ describe('wgc forge router upgrade --check', () => {
         { module: routerModule, from: versionA, to: versionB },
         { module: 'go.uber.org/zap', from: 'v1.27.0', to: 'v1.28.0' },
       ],
+      modules: [],
       tests: { command: 'go test ./e2e/...', passed: true },
       adopted: false,
       binary: `${workspace}/.forge/candidate/router`,
@@ -108,13 +108,15 @@ describe('wgc forge router upgrade --check', () => {
     expect(JSON.parse(run.stdout)).toEqual({
       status: 'error',
       error: {
-        message: 'The tests failed against router release 0.300.0 (exit code 2). Nothing was changed.',
-        input: 'go test ./e2e/...',
+        message:
+          'Router release 0.300.0 cannot be adopted: the test command `go test ./e2e/...` exited with code 2. Nothing was changed.',
+        input: '0.300.0',
         fix: `Fix the modules for the new router or stay on the current one. The candidate binary is at ${workspace}/.forge/candidate/router.`,
         details: {
           candidate: { source: 'release 0.300.0', version: versionB, commit: commitB },
           current: { source: 'release 0.299.0', version: versionA, commit: 'a'.repeat(40) },
           dependencyChanges: [{ module: routerModule, from: versionA, to: versionB }],
+          modules: [],
           tests: { command: 'go test ./e2e/...', passed: false, exitCode: 2 },
           adopted: false,
           binary: `${workspace}/.forge/candidate/router`,
@@ -153,24 +155,6 @@ describe('wgc forge router upgrade --check', () => {
     });
 
     expect(system.tests.map((run) => run.command)).toEqual(['./smoke.sh']);
-  });
-
-  test('without any test command it refuses before building', async () => {
-    const workspace = await upgradeWorkspace();
-    const system = createFakeSystem();
-    await writeFile(`${workspace}/forge.yaml`, manifest.replace('test: go test ./e2e/...\n', ''));
-
-    const run = await runForge(['router', 'upgrade', '--config', 'router.yaml', '--check', '0.300.0'], {
-      workspace,
-      system,
-    });
-
-    expect(JSON.parse(run.stdout).error).toEqual({
-      message: 'There is no test command to prove the candidate works with your modules.',
-      input: '--test',
-      fix: 'Pass --test "<command>" or set `test:` in forge.yaml. The command receives FORGE_ROUTER_BINARY and FORGE_ROUTER_CONFIG.',
-    });
-    expect(system.commands).toEqual([]);
   });
 
   test('a router config that does not exist is named', async () => {
@@ -243,7 +227,7 @@ describe('wgc forge router upgrade', () => {
     });
 
     expect(run.stdout).toBe(
-      `Upgraded to router release 0.300.0. Binary: ${workspace}/bin/router\n  1 dependency change(s)\n    ${routerModule} ${versionA} -> ${versionB}\n`,
+      `Upgraded to router release 0.300.0. Binary: ${workspace}/bin/router\n  1 dependency change(s)\n    ${routerModule} ${versionA} -> ${versionB}\n  0 module(s)\n`,
     );
     expect(await read(workspace, 'forge.lock')).toBe(upgradedLock);
   });
@@ -260,5 +244,177 @@ describe('wgc forge router upgrade', () => {
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain('Router release 0.300.0 passes the tests. Not adopted.');
     await expectNothingChanged(workspace);
+  });
+});
+
+describe("wgc forge router upgrade runs every module's Go behaviour tests", () => {
+  const metrics = 'github.com/acme/router-metrics';
+
+  const manifestWithModules = `version: 1
+router:
+  release: 0.299.0
+binary: bin/router
+modules:
+  - path: ./modules/request-id
+  - go: ${metrics}
+`;
+
+  const lockWithModules = lockForReleaseA.replace(
+    'modules: []\n',
+    `modules:
+  - source:
+      go: ${metrics}
+    module: ${metrics}
+    package: ${metrics}
+    version: v1.2.0
+`,
+  );
+
+  const moduleWorkspace = (files: Record<string, string> = {}) =>
+    createWorkspace({
+      'forge.yaml': manifestWithModules,
+      'forge.lock': lockWithModules,
+      'bin/router': workingBinary,
+      'router.yaml': "version: '1'\n",
+      'modules/request-id/go.mod': 'module forge.local/request-id\n\ngo 1.26.0\n',
+      ...files,
+    });
+
+  const expectNothingChanged = async (workspace: string) => {
+    expect(await read(workspace, 'forge.yaml')).toBe(manifestWithModules);
+    expect(await read(workspace, 'forge.lock')).toBe(lockWithModules);
+    expect(await read(workspace, 'bin/router')).toBe(workingBinary);
+  };
+
+  const check = ['router', 'upgrade', '--config', 'router.yaml', '--check', '0.300.0'];
+
+  test('each module is tested in the candidate build with the candidate binary and the router config', async () => {
+    const workspace = await moduleWorkspace();
+    const system = createFakeSystem({ packagesWithTests: ['forge.local/request-id', `${metrics}/internal/export`] });
+
+    const run = await runForge(check, { workspace, system });
+
+    const env = {
+      FORGE_ROUTER_BINARY: `${workspace}/.forge/candidate/router`,
+      FORGE_ROUTER_CONFIG: `${workspace}/router.yaml`,
+      GOWORK: 'off',
+    };
+    expect(system.goTests).toEqual([
+      { packages: ['forge.local/request-id'], cwd: `${workspace}/.forge/candidate/build`, env },
+      { packages: [`${metrics}/internal/export`], cwd: `${workspace}/.forge/candidate/build`, env },
+    ]);
+    expect(system.tests).toEqual([]);
+    expect(run.exitCode).toBe(0);
+    expect(JSON.parse(run.stdout)).toEqual({
+      status: 'success',
+      candidate: { source: 'release 0.300.0', version: versionB, commit: commitB },
+      current: { source: 'release 0.299.0', version: versionA, commit: 'a'.repeat(40) },
+      dependencyChanges: [{ module: routerModule, from: versionA, to: versionB }],
+      modules: [
+        { module: 'forge.local/request-id', outcome: 'passed' },
+        { module: metrics, outcome: 'passed' },
+      ],
+      adopted: false,
+      binary: `${workspace}/.forge/candidate/router`,
+    });
+    await expectNothingChanged(workspace);
+  });
+
+  test('a remote module without a behaviour test is named as untested and blocks adoption', async () => {
+    const workspace = await moduleWorkspace();
+    const system = createFakeSystem({ packagesWithTests: ['forge.local/request-id'] });
+
+    const run = await runForge(['router', 'upgrade', '--config', 'router.yaml', '--yes', '0.300.0'], {
+      workspace,
+      system,
+    });
+
+    expect(run.exitCode).toBe(1);
+    expect(JSON.parse(run.stdout)).toEqual({
+      status: 'error',
+      error: {
+        message: `Router release 0.300.0 cannot be adopted: ${metrics} has no behaviour test. Nothing was changed.`,
+        input: '0.300.0',
+        fix: `Add Go tests to each untested module, or a Go test package under tests/<module>, that start the router at FORGE_ROUTER_BINARY with --config FORGE_ROUTER_CONFIG and check the behaviour you rely on. The candidate binary is at ${workspace}/.forge/candidate/router.`,
+        details: {
+          candidate: { source: 'release 0.300.0', version: versionB, commit: commitB },
+          current: { source: 'release 0.299.0', version: versionA, commit: 'a'.repeat(40) },
+          dependencyChanges: [{ module: routerModule, from: versionA, to: versionB }],
+          modules: [
+            { module: 'forge.local/request-id', outcome: 'passed' },
+            { module: metrics, outcome: 'untested' },
+          ],
+          adopted: false,
+          binary: `${workspace}/.forge/candidate/router`,
+        },
+      },
+    });
+    await expectNothingChanged(workspace);
+  });
+
+  test('a module the candidate breaks is named with its test output, and the others are still reported', async () => {
+    const workspace = await moduleWorkspace();
+    const system = createFakeSystem({
+      packagesWithTests: ['forge.local/request-id', metrics],
+      failingGoTests: { 'forge.local/request-id': '--- FAIL: TestGeneratesOneRequestID\nFAIL\tforge.local/request-id' },
+    });
+
+    const run = await runForge(check, { workspace, system });
+
+    expect(run.exitCode).toBe(1);
+    const { error } = JSON.parse(run.stdout);
+    expect(error.message).toBe(
+      'Router release 0.300.0 cannot be adopted: forge.local/request-id failed its behaviour tests. Nothing was changed.',
+    );
+    expect(error.details.modules).toEqual([
+      {
+        module: 'forge.local/request-id',
+        outcome: 'failed',
+        output: '--- FAIL: TestGeneratesOneRequestID\nFAIL\tforge.local/request-id',
+      },
+      { module: metrics, outcome: 'passed' },
+    ]);
+    await expectNothingChanged(workspace);
+  });
+
+  test('a test package the workspace keeps under tests/<module> covers a remote module', async () => {
+    const workspace = await moduleWorkspace({
+      [`tests/${metrics}/behaviour_test.go`]: 'package behaviour\n',
+    });
+    const system = createFakeSystem({ packagesWithTests: ['forge.local/request-id'] });
+
+    const run = await runForge(check, { workspace, system });
+
+    expect(system.goTests.at(-1)).toEqual({
+      packages: ['./...'],
+      cwd: `${workspace}/tests/${metrics}`,
+      env: {
+        FORGE_ROUTER_BINARY: `${workspace}/.forge/candidate/router`,
+        FORGE_ROUTER_CONFIG: `${workspace}/router.yaml`,
+      },
+    });
+    expect(JSON.parse(run.stdout).modules).toEqual([
+      { module: 'forge.local/request-id', outcome: 'passed' },
+      { module: metrics, outcome: 'passed' },
+    ]);
+  });
+
+  test('a person reads the same per-module outcomes', async () => {
+    const workspace = await moduleWorkspace();
+    const system = createFakeSystem({ packagesWithTests: ['forge.local/request-id', metrics] });
+
+    const run = await runForge(check, { workspace, system, caller: 'human' });
+
+    expect(run.stdout).toBe(
+      [
+        'Router release 0.300.0 passes the tests. Nothing was changed (--check).',
+        '  1 dependency change(s)',
+        `    ${routerModule} ${versionA} -> ${versionB}`,
+        '  2 module(s)',
+        '    passed   forge.local/request-id',
+        `    passed   ${metrics}`,
+        '',
+      ].join('\n'),
+    );
   });
 });
