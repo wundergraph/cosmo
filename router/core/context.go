@@ -974,6 +974,7 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 }
 
 type requestContextOptions struct {
+	executionConfig               *routerconfig.ExecutionConfig
 	subgraphResolver              *SubgraphResolver
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
@@ -1009,6 +1010,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
+		executionConfig:   opts.executionConfig,
 		subgraphResolver:  opts.subgraphResolver,
 	}
 }

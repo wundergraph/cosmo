@@ -1081,6 +1081,7 @@ func (s *graphServer) buildGraphMux(
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
+				executionConfig:               executionConfig,
 				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
@@ -1095,7 +1096,6 @@ func (s *graphServer) buildGraphMux(
 				r:                             r,
 			})
 
-			reqContext.executionConfig = executionConfig
 			ctx := withSubgraphResolver(r.Context(), subgraphResolver)
 			r = r.WithContext(withRequestContext(ctx, reqContext))
 			reqContext.request = r
