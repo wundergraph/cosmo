@@ -631,8 +631,8 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
 		}
 	case errorTypeDeliveryGuarantee:
-		var guaranteeErr *datasource.DeliveryGuaranteeError
-		if !errors.As(err, &guaranteeErr) {
+		guaranteeErr, ok := errors.AsType[*datasource.DeliveryGuaranteeError](err)
+		if !ok {
 			response.Errors[0].Message = "Internal server error"
 			break
 		}
