@@ -58,7 +58,6 @@ class ExecutionConfigTest(unittest.TestCase):
         client = config["engineConfig"].get("graphqlClientSchema") or schema
         sg, = config["subgraphs"]
         self.assertEqual(json.loads(headers["X-Execution-Config"] or "null"), {
-            "version": config["version"],
             "schema": digest(schema), "clientSchema": digest(client),
             "subgraphs": [{"ID": sg["id"], "Name": sg["name"], "RoutingURL": override or sg["routingUrl"]}],
         })

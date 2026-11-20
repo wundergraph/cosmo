@@ -4,7 +4,7 @@ Run `./run.sh` from this directory with Docker Compose available. The script bui
 
 The subgraph returns `hello world` for greetings and `goodbye` for a farewell. On the first request for a graph, the module scans its composed schema for `@translate(language:)` on field definitions. It indexes rules by parent type and field name and caches them by the request's execution config. The cache holds up to eight graphs. Its translator accepts `hello world` and a supported language code. Other strings and unknown languages produce an error.
 
-The test checks the response body as well as the schema hashes, version, and effective subgraph URL. It exercises:
+The test checks the response body as well as the schema hashes and effective subgraph URL. It exercises:
 
 - Annotated root and nested fields and an unannotated field with the same name on another type.
 - German and French feature flags, an unknown flag, and fallback after flag removal.

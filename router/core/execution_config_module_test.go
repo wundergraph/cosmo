@@ -27,7 +27,11 @@ func (m *captureGraphRequest) RouterOnRequest(ctx RequestContext, _ http.Handler
 func TestExecutionConfigFromContext(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, routerconfig.ExecutionConfig{}, ExecutionConfigFromContext(t.Context()))
+	missing := ExecutionConfigFromContext(t.Context())
+	require.Nil(t, missing)
+	require.Empty(t, missing.Schema())
+	require.Empty(t, missing.ClientSchema())
+	require.Nil(t, missing.Subgraphs())
 
 	base := routerconfig.GetDefaultConfig()
 	flagged := routerconfig.GetDefaultConfig()
@@ -52,24 +56,37 @@ func TestExecutionConfigFromContext(t *testing.T) {
 	_, err = r.NewServer(t.Context())
 	require.NoError(t, err)
 
-	previewRequest := func() context.Context {
+	request := func(flag string) context.Context {
 		t.Helper()
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)
-		req.Header.Set(featureFlagHeader, "preview")
+		req.Header.Set(featureFlagHeader, flag)
 		response := httptest.NewRecorder()
 		r.httpServer.HttpServer().Handler.ServeHTTP(response, req)
 		require.Equal(t, http.StatusNoContent, response.Code)
 		return module.ctx
 	}
 
-	oldRequest := previewRequest()
-	otherPreviewRequest := previewRequest()
-	require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{Config: base}))
+	baseConfig := ExecutionConfigFromContext(request(""))
+	require.NotNil(t, baseConfig)
+	oldRequest := request("preview")
+	otherPreviewRequest := request("preview")
+	require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{
+		Config:  base,
+		Changes: &routerconfig.Changes{RemovedConfigs: map[string]struct{}{"preview": {}}},
+	}))
 
 	// Once the flag is removed, new requests fall back to base. The old
 	// request still identifies its graph when first read after the reload.
-	require.Equal(t, base.EngineConfig.GraphqlSchema, ExecutionConfigFromContext(previewRequest()).Schema())
+	fallback := ExecutionConfigFromContext(request("preview"))
+	require.Equal(t, base.EngineConfig.GraphqlSchema, fallback.Schema())
+	require.Same(t, baseConfig, fallback, "the base graph was reused")
 	oldConfig := ExecutionConfigFromContext(oldRequest)
 	require.Equal(t, flagged.EngineConfig.GraphqlSchema, oldConfig.Schema())
-	require.True(t, oldConfig == ExecutionConfigFromContext(otherPreviewRequest), "requests to the same graph must share a cache key")
+	require.NotSame(t, baseConfig, oldConfig, "the flag and base graph share a version")
+	require.Same(t, oldConfig, ExecutionConfigFromContext(otherPreviewRequest))
+
+	require.NoError(t, r.newServer(t.Context(), &routerconfig.Response{Config: base}))
+	rebuilt := ExecutionConfigFromContext(request(""))
+	require.NotNil(t, rebuilt)
+	require.NotSame(t, baseConfig, rebuilt, "rebuilding the identical config creates a new snapshot")
 }

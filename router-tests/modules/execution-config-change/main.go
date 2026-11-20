@@ -66,7 +66,7 @@ type snapshot struct {
 	header string
 }
 
-func readSnapshot(cfg routerconfig.ExecutionConfig) snapshot {
+func readSnapshot(cfg *routerconfig.ExecutionConfig) snapshot {
 	doc, report := astparser.ParseGraphqlDocumentString(cfg.Schema())
 	if report.HasErrors() {
 		panic(report.Error())
@@ -87,7 +87,7 @@ func readSnapshot(cfg routerconfig.ExecutionConfig) snapshot {
 		}
 	}
 	data, err := json.Marshal(map[string]any{
-		"version": cfg.Version(), "subgraphs": cfg.Subgraphs(),
+		"subgraphs":    cfg.Subgraphs(),
 		"schema":       fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.Schema()))),
 		"clientSchema": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.ClientSchema()))),
 	})
@@ -98,7 +98,7 @@ func readSnapshot(cfg routerconfig.ExecutionConfig) snapshot {
 }
 
 type translator struct {
-	cache *lru.Cache[routerconfig.ExecutionConfig, func() snapshot]
+	cache *lru.Cache[*routerconfig.ExecutionConfig, func() snapshot]
 }
 
 func (*translator) Module() core.ModuleInfo {
@@ -106,12 +106,12 @@ func (*translator) Module() core.ModuleInfo {
 }
 
 func (m *translator) Provision(*core.ModuleContext) error {
-	cache, err := lru.New[routerconfig.ExecutionConfig, func() snapshot](8)
+	cache, err := lru.New[*routerconfig.ExecutionConfig, func() snapshot](8)
 	m.cache = cache
 	return err
 }
 
-func (m *translator) snapshotFor(cfg routerconfig.ExecutionConfig) snapshot {
+func (m *translator) snapshotFor(cfg *routerconfig.ExecutionConfig) snapshot {
 	if load, ok := m.cache.Get(cfg); ok {
 		return load()
 	}

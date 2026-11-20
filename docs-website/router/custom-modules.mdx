@@ -70,21 +70,22 @@ In this example, the module `myModule` has a priority of 1, meaning it will be l
 
 ### Access the execution config
 
-Call `core.ExecutionConfigFromContext` in a request hook to read the schema, config version, and subgraph routing information for the graph serving that request. The router selects the base graph or a feature-flag graph before the hook runs. The request keeps that snapshot even if the router reloads its config before the request finishes.
+Call `core.ExecutionConfigFromContext` in a request hook to read the schema and subgraph routing information for the graph serving that request. The router selects the base graph or a feature-flag graph before the hook runs. The request keeps that snapshot even if the router reloads its config before the request finishes.
 
 ```go
 func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
     cfg := core.ExecutionConfigFromContext(ctx.Request().Context())
-    m.Logger.Debug("Serving graph", zap.String("version", cfg.Version()))
+    ctx.SetCustomFieldValueRenderer(m.rendererFor(cfg))
     next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 ```
+
+The module’s `rendererFor` method can cache renderers by `*routerconfig.ExecutionConfig` and parse `cfg.Schema()` on a cache miss. Requests served by the same graph share a pointer. Each feature-flag graph has its own pointer. A reload preserves the pointer for a reused graph and creates a fresh one for a rebuilt graph, even if the schema and version match. Bound the cache so retired snapshots can be collected.
 
 | Accessor | Returns |
 | --- | --- |
 | `Schema()` | The composed router SDL, including custom directives preserved by composition and inaccessible elements. |
 | `ClientSchema()` | The SDL used for validation and introspection. It falls back to `Schema()` when the config omits a separate client schema. Both accessors return SDL before the router adds runtime introspection definitions. |
-| `Version()` | The version supplied by the execution config. It can be empty or shared by multiple graphs. |
 | `Subgraphs()` | Subgraphs in config order, with each subgraph’s `ID`, `Name`, and effective `RoutingURL`, including local routing overrides. Modules can modify the returned slice. |
 
 To expose a custom field directive to modules, import it with `@link` and include it with `@composeDirective` in the subgraph schema. This subgraph records which team owns its schema and its `Query.stock` field.
@@ -107,7 +108,7 @@ type Query {
 
 A module can parse `cfg.Schema()` and read `@owner(team: "inventory")` from the `Query.stock` field definition.
 
-Outside a graph request the accessor returns the zero value. If your module caches data derived from the schema, use the snapshot itself as the key. Requests served by the same graph share a snapshot, and a rebuilt graph gets a distinct key even when its version is unchanged. Bound the cache so retired schemas can be collected.
+Outside a graph request, `ExecutionConfigFromContext` returns `nil`. Its accessors are safe to call on a nil pointer. `Schema()` and `ClientSchema()` return an empty string, and `Subgraphs()` returns a nil slice.
 
 ### Access the GraphQL operation
 

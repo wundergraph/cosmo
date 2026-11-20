@@ -1067,7 +1067,7 @@ func (s *graphServer) buildGraphMux(
 	for i, sg := range subgraphs {
 		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
 	}
-	executionConfig := routerconfig.NewExecutionConfig(opts.RouterConfigVersion,
+	executionConfig := routerconfig.NewExecutionConfig(
 		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
 
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
