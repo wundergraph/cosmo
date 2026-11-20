@@ -1,0 +1,93 @@
+import { Change, ChangeType, CriticalityLevel, Rule } from '@graphql-inspector/core';
+import { IGNORED_FEDERATED_TYPE_NAMES, INACCESSIBLE, TYPE_SYSTEM_DIRECTIVE_LOCATIONS } from '@wundergraph/composition';
+import { GraphQLSchema, isEnumType } from 'graphql';
+
+type ChangePredicate = (change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema) => boolean;
+
+function setCriticalityLevelWhen(level: CriticalityLevel, predicate: ChangePredicate): Rule {
+  return ({ changes, oldSchema, newSchema }) =>
+    changes.map((change) =>
+      predicate(change, oldSchema, newSchema) ? { ...change, criticality: { ...change.criticality, level } } : change,
+    );
+}
+
+/**
+ * Clients commonly switch over enums, so adding or removing a value can leave those switches unhandled.
+ */
+export const enumValuesAreExhaustive = setCriticalityLevelWhen(CriticalityLevel.Breaking, isEnumValueChange);
+
+/**
+ * If @inaccessible in this subgraph hides or exposes a value another subgraph defines, the client schema diff reports it.
+ */
+export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isInaccessibleEnumValueChange,
+);
+
+/**
+ * Operations can only use executable directives, so clients never see a type system directive.
+ */
+export const typeSystemDirectiveRemovalsAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isTypeSystemDirectiveRemoval,
+);
+
+/**
+ * Clients reach these types only through fields that use them, and removing such a field is reported on its own.
+ */
+export const internalFederationTypeRemovalsAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isInternalFederationTypeRemoval,
+);
+
+/**
+ * Rules are applied in order, and a later rule overrides the criticality an earlier one set for the same change.
+ */
+export const schemaCheckRules = [
+  enumValuesAreExhaustive,
+  inaccessibleEnumValueChangesAreInvisible,
+  typeSystemDirectiveRemovalsAreInvisible,
+  internalFederationTypeRemovalsAreInvisible,
+];
+
+function isEnumValueChange(change: Change): boolean {
+  return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
+}
+
+function isInaccessibleEnumValueChange(change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema): boolean {
+  switch (change.type) {
+    case ChangeType.EnumValueAdded: {
+      return isInaccessibleEnumValue(newSchema, change.meta.enumName, change.meta.addedEnumValueName);
+    }
+    case ChangeType.EnumValueRemoved: {
+      return isInaccessibleEnumValue(oldSchema, change.meta.enumName, change.meta.removedEnumValueName);
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+function isInaccessibleEnumValue(schema: GraphQLSchema, enumName: string, valueName: string): boolean {
+  const enumType = schema.getType(enumName);
+  if (!isEnumType(enumType)) {
+    return false;
+  }
+  const nodes = [enumType.astNode, enumType.getValue(valueName)?.astNode];
+  return nodes.some((node) => node?.directives?.some((directive) => directive.name.value === INACCESSIBLE));
+}
+
+function isTypeSystemDirectiveRemoval(change: Change, oldSchema: GraphQLSchema): boolean {
+  return (
+    change.type === ChangeType.DirectiveRemoved && isTypeSystemDirective(oldSchema, change.meta.removedDirectiveName)
+  );
+}
+
+function isTypeSystemDirective(schema: GraphQLSchema, directiveName: string): boolean {
+  const directive = schema.getDirective(directiveName);
+  return !!directive && directive.locations.every((location) => TYPE_SYSTEM_DIRECTIVE_LOCATIONS.has(location));
+}
+
+function isInternalFederationTypeRemoval(change: Change): boolean {
+  return change.type === ChangeType.TypeRemoved && IGNORED_FEDERATED_TYPE_NAMES.has(change.meta.removedTypeName);
+}

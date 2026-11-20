@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { getDiffBetweenGraphs } from '../src/core/composition/schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from '../src/core/composition/schemaCheck.js';
 import { SchemaChangeType } from '../src/types/index.js';
 
 describe('BreakingChanges', () => {
@@ -99,6 +99,79 @@ describe('BreakingChanges', () => {
     }
   });
 
+  test('Should cause breaking changes on adding an enum value', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet { A B }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet { A B C }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges.map((c) => c.path)).toStrictEqual([
+      'Alphabet.C',
+    ]);
+  });
+
+  describe('Adding an @inaccessible enum value', () => {
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    beforeAll(async () => {
+      schemaChanges = await getDiffBetweenGraphs(
+        'type Query { hello: String! } enum Alphabet { A B }',
+        'type Query { hello: String! } enum Alphabet { A B C @inaccessible }',
+        LATEST_ROUTER_COMPATIBILITY_VERSION,
+      );
+    });
+
+    test('Should not cause breaking changes', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+    });
+
+    test('Should report the enum value as a non breaking change', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.nonBreakingChanges.map((c) => c.changeType)).toContain(
+        SchemaChangeType.ENUM_VALUE_ADDED,
+      );
+    });
+  });
+
+  test('Should not cause breaking changes on adding a value to an @inaccessible enum', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet @inaccessible { A B }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet @inaccessible { A B C }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  describe('Removing an @inaccessible enum value', () => {
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    beforeAll(async () => {
+      schemaChanges = await getDiffBetweenGraphs(
+        'type Query { hello: String! } enum Alphabet { A B C @inaccessible }',
+        'type Query { hello: String! } enum Alphabet { A B }',
+        LATEST_ROUTER_COMPATIBILITY_VERSION,
+      );
+    });
+
+    test('Should not cause breaking changes', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+    });
+
+    test('Should report the enum value as a non breaking change', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.nonBreakingChanges.map((c) => c.changeType)).toContain(
+        SchemaChangeType.ENUM_VALUE_REMOVED,
+      );
+    });
+  });
+
+  test('Should not cause breaking changes on removing a value from an @inaccessible enum', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet @inaccessible { A B C }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet @inaccessible { A B }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
   test('Should cause non breaking changes on adding directives to fields', async () => {
     const schemaA = 'type Query { hello: String! @shareable } type User { name: String! }';
     const schemaB = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
@@ -135,6 +208,53 @@ describe('BreakingChanges', () => {
         SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED,
       );
     }
+  });
+
+  test('Should not cause breaking changes on removing the last use of a federation directive', async () => {
+    const schemaA = 'type Query { hello: String! @shareable }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing the last @key', async () => {
+    const schemaA = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
+    const schemaB = 'type Query { hello: String! } type User { name: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing the last @requiresScopes', async () => {
+    const schemaA = 'type Query { hello: String! @requiresScopes(scopes: [["read"]]) }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should not cause breaking changes on removing a type system directive definition', async () => {
+    const schemaA = 'directive @internal on FIELD_DEFINITION type Query { hello: String! }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+  });
+
+  test('Should cause breaking changes on removing an executable directive definition', async () => {
+    const schemaA = 'directive @cached on FIELD type Query { hello: String! }';
+    const schemaB = 'type Query { hello: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges.map((c) => c.path)).toStrictEqual([
+      '@cached',
+    ]);
   });
 
   test('Should cause non breaking changes on adding directives to objects', async () => {
@@ -189,10 +309,10 @@ describe('BreakingChanges', () => {
     expect(schemaChanges.kind).toBe('success');
 
     if (schemaChanges.kind === 'success') {
-      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
-      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'key' was removed from object 'User'");
-      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.key');
-      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
+      expect(schemaChanges.nonBreakingChanges.length).toBe(3);
+      expect(schemaChanges.nonBreakingChanges[1].message).toBe("Directive 'key' was removed from object 'User'");
+      expect(schemaChanges.nonBreakingChanges[1].path).toBe('User.key');
+      expect(schemaChanges.nonBreakingChanges[1].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
     }
   });
 });
