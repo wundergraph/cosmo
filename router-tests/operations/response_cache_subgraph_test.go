@@ -25,10 +25,10 @@ func subgraphCacheOptions(t *testing.T, all config.ResponseCacheSubgraphConfigur
 func TestResponseCacheSubgraphs(t *testing.T) {
 	t.Parallel()
 
-	allOn := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute}
+	allOn := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)}
 	allOff := config.ResponseCacheSubgraphConfiguration{Enabled: false}
 
-	zero := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTLSet: true}
+	zero := config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Duration)}
 	for _, tc := range []struct {
 		name          string
 		all           config.ResponseCacheSubgraphConfiguration
@@ -112,7 +112,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		t.Run("with an entry", func(t *testing.T) {
 			t.Parallel()
 			_, opts := subgraphCacheOptions(t, allOff, map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute)},
 			})
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: opts,
@@ -148,7 +148,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		t.Parallel()
 
 		_, opts := subgraphCacheOptions(t, allOn, map[string]config.ResponseCacheSubgraphConfiguration{
-			"mood": {Enabled: true, FallbackTTL: 5 * time.Minute},
+			"mood": {Enabled: true, FallbackTTL: new(5 * time.Minute)},
 		})
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: opts,
@@ -176,7 +176,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 		cfg, opts := privateMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
 			cfg.All.PrivateID = ""
 			cfg.Subgraphs = map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute, PrivateID: privateUserExpression},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: privateUserExpression},
 			}
 		})
 		testenv.Run(t, &testenv.Config{
@@ -201,7 +201,7 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 
 		cfg, opts := privateMoodConfig(t, func(cfg *config.ResponseCacheConfiguration) {
 			cfg.Subgraphs = map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood": {Enabled: true, FallbackTTL: time.Minute},
+				"mood": {Enabled: true, FallbackTTL: new(time.Minute)},
 			}
 		})
 		testenv.Run(t, &testenv.Config{

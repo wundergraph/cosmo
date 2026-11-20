@@ -3191,10 +3191,9 @@ response_cache:
 `)
 			cfg, err := LoadConfig([]string{f})
 			require.NoError(t, err)
-			require.Zero(t, cfg.Config.ResponseCache.All.FallbackTTL)
-			require.True(t, cfg.Config.ResponseCache.All.FallbackTTLSet)
-			require.True(t, cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTLSet)
-			require.False(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTLSet)
+			require.Equal(t, new(time.Duration), cfg.Config.ResponseCache.All.FallbackTTL)
+			require.Equal(t, new(time.Duration), cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTL)
+			require.Nil(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTL)
 		}
 	})
 
@@ -3219,20 +3218,20 @@ response_cache:
 
 		rc := cfg.Config.ResponseCache
 		require.True(t, rc.All.Enabled)
-		require.Equal(t, 2*time.Minute, rc.All.FallbackTTL)
+		require.Equal(t, new(2*time.Minute), rc.All.FallbackTTL)
 
 		products := rc.Subgraphs["products"]
 		require.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
-		require.Equal(t, 5*time.Minute, products.FallbackTTL)
+		require.Equal(t, new(5*time.Minute), products.FallbackTTL)
 		require.Empty(t, products.PrivateID, "nothing is inherited from all")
 
 		inventory := rc.Subgraphs["inventory"]
 		require.False(t, inventory.Enabled)
-		require.Zero(t, inventory.FallbackTTL, "no default, and not all's 2m")
+		require.Nil(t, inventory.FallbackTTL, "no default, and not all's 2m")
 
 		reviews := rc.Subgraphs["reviews"]
 		require.True(t, reviews.Enabled)
-		require.Equal(t, 10*time.Second, reviews.FallbackTTL)
+		require.Equal(t, new(10*time.Second), reviews.FallbackTTL)
 
 	})
 
@@ -3246,7 +3245,7 @@ response_cache:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, 5*time.Minute, cfg.Config.ResponseCache.All.FallbackTTL)
+		require.Equal(t, new(5*time.Minute), cfg.Config.ResponseCache.All.FallbackTTL)
 		require.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
 	})
 

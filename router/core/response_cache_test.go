@@ -58,7 +58,7 @@ func TestSetupResponseCache(t *testing.T) {
 	t.Run("an omitted or negative fallback_ttl is refused", func(t *testing.T) {
 		t.Parallel()
 
-		for _, ttl := range []time.Duration{0, -time.Second} {
+		for _, ttl := range []*time.Duration{nil, new(-time.Second)} {
 			r := newRouter(&config.ResponseCacheConfiguration{
 				Enabled: true,
 				All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: ttl},
@@ -76,7 +76,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Storage: config.ResponseCacheStorageConfig{Provider: "memcached"},
 		}, config.StorageProviders{})
 
@@ -93,7 +93,7 @@ func TestSetupResponseCache(t *testing.T) {
 		// anything else would quietly turn one shared cache into one per replica.
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 		}, config.StorageProviders{})
 
 		err := r.setupResponseCache(t.Context())
@@ -106,7 +106,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderRedis,
 				ProviderID: "not_declared",
@@ -123,7 +123,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 0,
@@ -140,7 +140,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second, PrivateID: "request.nope"},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second), PrivateID: "request.nope"},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,
@@ -161,7 +161,7 @@ func TestSetupResponseCache(t *testing.T) {
 			Enabled: true,
 			All:     config.ResponseCacheSubgraphConfiguration{Enabled: false},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
-				"products": {Enabled: true, FallbackTTL: time.Minute},
+				"products": {Enabled: true, FallbackTTL: new(time.Minute)},
 			},
 			Storage: memory,
 		}, config.StorageProviders{})
@@ -189,7 +189,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
 				"products": {Enabled: true},
 			},
@@ -206,7 +206,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
 				"products": {Enabled: false, PrivateID: "request.nope"},
 			},
@@ -222,9 +222,9 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
-				"products": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.nope"},
+				"products": {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.nope"},
 			},
 			Storage: memory,
 		}, config.StorageProviders{})
@@ -239,7 +239,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,
@@ -260,7 +260,7 @@ func TestSetupResponseCache(t *testing.T) {
 
 		r := newRouter(&config.ResponseCacheConfiguration{
 			Enabled: true,
-			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: 30 * time.Second},
+			All:     config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(30 * time.Second)},
 			Storage: config.ResponseCacheStorageConfig{
 				Provider:   config.ResponseCacheStorageProviderMemory,
 				MaxEntries: 128,

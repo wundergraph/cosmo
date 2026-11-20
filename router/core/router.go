@@ -1374,7 +1374,7 @@ func (r *Router) setupInMemoryResponseCache() error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Durationp("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
 		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderMemory)),
 		zap.Int64("max_entries", r.responseCacheConfig.Storage.MaxEntries),
@@ -1426,7 +1426,7 @@ func (r *Router) setupRedisResponseCache(ctx context.Context) error {
 
 	r.logger.Info(
 		"Response cache enabled",
-		zap.Duration("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
+		zap.Durationp("fallback_ttl", r.responseCacheConfig.All.FallbackTTL),
 		zap.Int("subgraph_overrides", len(r.responseCacheConfig.Subgraphs)),
 		zap.String("storage_provider", string(config.ResponseCacheStorageProviderRedis)),
 		zap.String("key_prefix", r.responseCacheConfig.KeyPrefix),

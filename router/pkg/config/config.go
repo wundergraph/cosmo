@@ -1232,30 +1232,9 @@ type ResponseCacheConfiguration struct {
 
 // ResponseCacheSubgraphConfiguration is what the cache does for a subgraph.
 type ResponseCacheSubgraphConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
-	// FallbackTTLSet distinguishes an explicit zero from a missing TTL.
-	FallbackTTLSet bool          `yaml:"-" json:"-" env:"-"`
-	FallbackTTL    time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
-	PrivateID      string        `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
-}
-
-func (c *ResponseCacheSubgraphConfiguration) UnmarshalYAML(unmarshal func(any) error) error {
-	type plain ResponseCacheSubgraphConfiguration
-	if err := unmarshal((*plain)(c)); err != nil {
-		return err
-	}
-	if c.FallbackTTL != 0 {
-		c.FallbackTTLSet = true
-		return nil
-	}
-	var fields struct {
-		TTL *time.Duration `yaml:"fallback_ttl"`
-	}
-	if err := unmarshal(&fields); err != nil {
-		return err
-	}
-	c.FallbackTTLSet = c.FallbackTTLSet || fields.TTL != nil
-	return nil
+	Enabled     bool           `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	FallbackTTL *time.Duration `yaml:"fallback_ttl,omitempty" envDefault:"30s" env:"FALLBACK_TTL"`
+	PrivateID   string         `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
 }
 
 type ResponseCacheTagHeaderConfig struct {
@@ -1915,9 +1894,6 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	if err := env.Parse(&cfg.Config); err != nil {
 		return nil, err
 	}
-
-	// The all block always gets a fallback from the environment or its 30s default.
-	cfg.Config.ResponseCache.All.FallbackTTLSet = true
 
 	// Contains the bytes of every config as bytes
 	configListBytes := make([][]byte, 0, len(configFilePaths))
