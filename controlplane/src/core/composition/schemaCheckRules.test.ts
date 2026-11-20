@@ -24,7 +24,7 @@ async function getCriticalityLevel({
   return changes.find((change) => change.path === path)?.criticality.level;
 }
 
-describe('enumValueChangesAreBreaking', () => {
+describe('Rule: enum value changes are breaking', () => {
   test('Should mark an added enum value as breaking', async () => {
     expect(
       await getCriticalityLevel({
@@ -59,7 +59,7 @@ describe('enumValueChangesAreBreaking', () => {
   });
 });
 
-describe('inaccessibleEnumValueChangesAreInvisible', () => {
+describe('Rule: @inaccessible enum value changes are invisible', () => {
   test('Should mark an added @inaccessible enum value as non breaking', async () => {
     expect(
       await getCriticalityLevel({
