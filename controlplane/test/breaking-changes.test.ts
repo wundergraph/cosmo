@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
-import { getDiffBetweenGraphs } from '../src/core/composition/schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from '../src/core/composition/schemaCheck.js';
 import { SchemaChangeType } from '../src/types/index.js';
 
 describe('BreakingChanges', () => {
@@ -97,6 +97,48 @@ describe('BreakingChanges', () => {
       expect(schemaChanges.breakingChanges[0].path).toBe('Alphabet.C');
       expect(schemaChanges.breakingChanges[0].changeType).toBe(SchemaChangeType.ENUM_VALUE_REMOVED);
     }
+  });
+
+  test('Should cause breaking changes on adding an enum value', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet { A B }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet { A B C }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges.map((c) => c.path)).toStrictEqual([
+      'Alphabet.C',
+    ]);
+  });
+
+  describe('Adding an @inaccessible enum value', () => {
+    let schemaChanges: GetDiffBetweenGraphsResult;
+
+    beforeAll(async () => {
+      schemaChanges = await getDiffBetweenGraphs(
+        'type Query { hello: String! } enum Alphabet { A B }',
+        'type Query { hello: String! } enum Alphabet { A B C @inaccessible }',
+        LATEST_ROUTER_COMPATIBILITY_VERSION,
+      );
+    });
+
+    test('Should not cause breaking changes', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
+    });
+
+    test('Should report the enum value as a non breaking change', () => {
+      expect(schemaChanges.kind === 'success' && schemaChanges.nonBreakingChanges.map((c) => c.changeType)).toContain(
+        SchemaChangeType.ENUM_VALUE_ADDED,
+      );
+    });
+  });
+
+  test('Should not cause breaking changes on adding a value to an @inaccessible enum', async () => {
+    const schemaA = 'type Query { hello: String! } enum Alphabet @inaccessible { A B }';
+    const schemaB = 'type Query { hello: String! } enum Alphabet @inaccessible { A B C }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
+
+    expect(schemaChanges.kind === 'success' && schemaChanges.breakingChanges).toStrictEqual([]);
   });
 
   test('Should cause non breaking changes on adding directives to fields', async () => {

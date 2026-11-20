@@ -3,7 +3,10 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { INACCESSIBLE } from '@wundergraph/composition';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
-import { enumValueChangesBreakExhaustiveSwitches } from './schemaCheckRules.js';
+import {
+  enumValueChangesBreakExhaustiveSwitches,
+  inaccessibleEnumValueChangesAreInvisible,
+} from './schemaCheckRules.js';
 
 export interface SchemaDiff {
   message: string;
@@ -32,7 +35,10 @@ export interface GetDiffBetweenGraphsFailure {
 export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBetweenGraphsFailure;
 
 export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: GraphQLSchema): Promise<SchemaDiff[]> {
-  const changes = await diff(oldSchemaSDL, newSchemaSDL, [enumValueChangesBreakExhaustiveSwitches]);
+  const changes = await diff(oldSchemaSDL, newSchemaSDL, [
+    enumValueChangesBreakExhaustiveSwitches,
+    inaccessibleEnumValueChangesAreInvisible,
+  ]);
   return changes.map((change) => {
     return {
       message: change.message,
@@ -59,6 +65,10 @@ function changeNeedsClientSchemaDiff(change: SchemaDiff): boolean {
     case ChangeType.TypeAdded:
     case ChangeType.TypeRemoved: {
       return true;
+    }
+    case ChangeType.EnumValueAdded: {
+      const alreadyReportedAsBreaking = change.isBreaking;
+      return !alreadyReportedAsBreaking;
     }
     case ChangeType.DirectiveUsageEnumAdded:
     case ChangeType.DirectiveUsageEnumRemoved:

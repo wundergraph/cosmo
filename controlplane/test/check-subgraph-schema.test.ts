@@ -1499,11 +1499,34 @@ type Category {
         return () => setup.server.close();
       });
 
+      test('Should not report a breaking change when adding an @inaccessible enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B }'],
+          'type Query { letter: Letter } enum Letter { A B C @inaccessible }',
+        );
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
       test('Should report a composed breaking change when removing @inaccessible from an enum value', async () => {
         const checkResp = await checkAgainstLastPublishedSubgraph(
           client,
           ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
           'type Query { letter: Letter } enum Letter { A B C }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+
+      test('Should report a composed breaking change when an @inaccessible enum value hides one another subgraph exposes', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          [
+            'type Query { letter: Letter } enum Letter { A B C }',
+            'type Query { otherLetter: Letter } enum Letter { A B }',
+          ],
+          'type Query { otherLetter: Letter } enum Letter { A B C @inaccessible }',
         );
 
         expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);

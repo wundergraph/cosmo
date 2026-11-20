@@ -1,5 +1,6 @@
 import { Change, ChangeType, CriticalityLevel, Rule } from '@graphql-inspector/core';
-import { GraphQLSchema } from 'graphql';
+import { INACCESSIBLE } from '@wundergraph/composition';
+import { GraphQLSchema, isEnumType } from 'graphql';
 
 type ChangePredicate = (change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema) => boolean;
 
@@ -15,6 +16,34 @@ export const enumValueChangesBreakExhaustiveSwitches = setCriticalityLevelWhen(
   isEnumValueChange,
 );
 
+/**
+ * If @inaccessible in this subgraph hides or exposes a value another subgraph defines, the client schema diff reports it.
+ */
+export const inaccessibleEnumValueChangesAreInvisible = setCriticalityLevelWhen(
+  CriticalityLevel.NonBreaking,
+  isInaccessibleEnumValueChange,
+);
+
 function isEnumValueChange(change: Change): boolean {
   return change.type === ChangeType.EnumValueAdded || change.type === ChangeType.EnumValueRemoved;
+}
+
+function isInaccessibleEnumValueChange(change: Change, oldSchema: GraphQLSchema, newSchema: GraphQLSchema): boolean {
+  switch (change.type) {
+    case ChangeType.EnumValueAdded: {
+      return isInaccessibleEnumValue(newSchema, change.meta.enumName, change.meta.addedEnumValueName);
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+function isInaccessibleEnumValue(schema: GraphQLSchema, enumName: string, valueName: string): boolean {
+  const enumType = schema.getType(enumName);
+  if (!isEnumType(enumType)) {
+    return false;
+  }
+  const nodes = [enumType.astNode, enumType.getValue(valueName)?.astNode];
+  return nodes.some((node) => node?.directives?.some((directive) => directive.name.value === INACCESSIBLE));
 }
