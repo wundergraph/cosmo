@@ -58,7 +58,7 @@ export function testAuditLogStreamConfig(
         action: 'tested',
         auditAction: 'audit_log_stream_config.tested',
         auditableType: 'audit_log_stream_config',
-        auditableDisplayName: destinationDisplayName(config.destination),
+        auditableDisplayName: destinationDisplayName(config),
         targetId: null,
         targetType: null,
         targetDisplayName: null,

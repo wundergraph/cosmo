@@ -5,17 +5,17 @@ import { AuditLogRow, sendToHec, toHecEvent } from './splunk-hec.js';
 type FailureReason = string;
 
 export function sendAuditLogs(config: AuditLogStreamConfig, logs: AuditLogRow[]): Promise<FailureReason | undefined> {
-  const { destination, organizationId, secret } = config;
-  switch (destination.kind) {
+  const { organizationId, secret, kind, settings } = config;
+  switch (kind) {
     case 'splunk_hec': {
-      const target = { organizationId, token: secret, ...destination.settings };
+      const target = { organizationId, token: secret, ...settings };
       return sendToHec(
         target,
         logs.map((log) => toHecEvent(log, target)),
       );
     }
     default: {
-      return unhandledKind(destination.kind);
+      return unhandledKind(kind);
     }
   }
 }

@@ -30,7 +30,7 @@ export function getAuditLogStreamConfig(
       return { response: { code: EnumStatusCode.OK } };
     }
 
-    const splunkHecSettings = config.destination.settings;
+    const splunkHecSettings = config.settings;
     return {
       response: { code: EnumStatusCode.OK },
       config: {

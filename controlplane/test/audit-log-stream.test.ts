@@ -350,10 +350,8 @@ describe('Audit log stream delivery', () => {
     const repo = new AuditLogStreamRepository(db);
     await repo.upsert({
       organizationId: org.id,
-      destination: {
-        kind: 'splunk_hec',
-        settings: { endpoint, index: 'cosmo', source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
-      },
+      kind: 'splunk_hec',
+      settings: { endpoint, index: 'cosmo', source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
       secret: 'good-token',
       enabled: true,
     });
@@ -445,10 +443,8 @@ describe('Audit log stream delivery', () => {
     await addLogs(1);
     await repo.upsert({
       organizationId: org.id,
-      destination: {
-        kind: 'splunk_hec',
-        settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
-      },
+      kind: 'splunk_hec',
+      settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
       enabled: false,
     });
     await deliver();
@@ -467,10 +463,8 @@ describe('Audit log stream delivery', () => {
     await repo.delete(org.id);
     const saved = await repo.upsert({
       organizationId: org.id,
-      destination: {
-        kind: 'splunk_hec',
-        settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
-      },
+      kind: 'splunk_hec',
+      settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
       enabled: true,
     });
     expect(saved).toBe(false);

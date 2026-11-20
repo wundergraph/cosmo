@@ -90,7 +90,7 @@ export function upsertAuditLogStreamConfig(
     const saved = await opts.db.transaction(async (tx) => {
       const saved = await new AuditLogStreamRepository(tx).upsert({
         organizationId: authContext.organizationId,
-        destination,
+        ...destination,
         secret: token,
         enabled: req.enabled,
       });

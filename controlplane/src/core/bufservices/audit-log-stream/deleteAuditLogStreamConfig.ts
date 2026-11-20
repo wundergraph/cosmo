@@ -40,7 +40,7 @@ export function deleteAuditLogStreamConfig(
         action: 'deleted',
         actorId: authContext.userId,
         auditableType: 'audit_log_stream_config',
-        auditableDisplayName: destinationDisplayName(config.destination),
+        auditableDisplayName: destinationDisplayName(config),
         actorDisplayName: authContext.userDisplayName,
         apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',

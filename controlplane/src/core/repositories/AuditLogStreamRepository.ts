@@ -18,16 +18,7 @@ export async function isAuditLogStreamingEnabled(orgRepo: OrganizationRepository
   return !!feature?.enabled;
 }
 
-type AuditLogStreamConfigRow = typeof auditLogStreamConfigs.$inferSelect;
-
-export type AuditLogStreamConfig = Omit<AuditLogStreamConfigRow, 'kind' | 'settings'> & {
-  destination: AuditLogStreamDestination;
-};
-
-function toConfig(row: AuditLogStreamConfigRow): AuditLogStreamConfig {
-  const { kind, settings, ...rest } = row;
-  return { ...rest, destination: auditLogStreamDestinationSchema.parse({ kind, settings }) };
-}
+export type AuditLogStreamConfig = typeof auditLogStreamConfigs.$inferSelect & AuditLogStreamDestination;
 
 export class AuditLogStreamRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -36,7 +27,7 @@ export class AuditLogStreamRepository {
     const row = await this.db.query.auditLogStreamConfigs.findFirst({
       where: eq(auditLogStreamConfigs.organizationId, organizationId),
     });
-    return row && toConfig(row);
+    return row && { ...row, ...auditLogStreamDestinationSchema.parse(row) };
   }
 
   /**
@@ -44,14 +35,11 @@ export class AuditLogStreamRepository {
    * existing config, so a config deleted in the meantime is never recreated without a secret. Returns whether a config
    * was saved. Any previous error is cleared, so a fixed config doesn't show the old error.
    */
-  public async upsert(input: {
-    organizationId: string;
-    destination: AuditLogStreamDestination;
-    secret?: string;
-    enabled: boolean;
-  }) {
-    const { organizationId, destination, secret, enabled } = input;
-    const { kind, settings } = auditLogStreamDestinationSchema.parse(destination);
+  public async upsert(
+    input: AuditLogStreamDestination & { organizationId: string; secret?: string; enabled: boolean },
+  ) {
+    const { organizationId, secret, enabled } = input;
+    const { kind, settings } = auditLogStreamDestinationSchema.parse(input);
     const fields = { kind, settings, enabled };
     const set = { ...fields, lastError: null, lastErrorAt: null, updatedAt: new Date() };
 
@@ -79,7 +67,7 @@ export class AuditLogStreamRepository {
       .where(eq(auditLogStreamConfigs.organizationId, organizationId))
       .returning()
       .execute();
-    return deleted[0] && toConfig(deleted[0]);
+    return deleted[0] && { ...deleted[0], ...auditLogStreamDestinationSchema.parse(deleted[0]) };
   }
 
   /**
