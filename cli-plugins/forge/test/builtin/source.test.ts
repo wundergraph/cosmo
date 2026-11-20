@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fromJsonString } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { describe, expect, test } from 'vitest';
 import { createFakeSystem, createWorkspace, lockForReleaseA, read, runForge, versionA } from './harness.js';
 
@@ -126,6 +128,19 @@ describe('wgc forge source add <openapi>', () => {
         Warehouse: { code: 'code' },
       },
     });
+  });
+
+  test('writes the mapping in the format `wgc router compose` reads', async () => {
+    const workspace = await sourceWorkspace();
+
+    await runForge(['source', 'add', url], { workspace, system: await catalogSystem() });
+
+    const mapping = fromJsonString(GRPCMappingSchema, await read(workspace, 'modules/catalog/generated/mapping.json'));
+    expect(mapping.service).toBe('CatalogService');
+    expect(mapping.operationMappings.map((operation) => `${operation.original} ${operation.mapped}`)).toEqual([
+      'catalogItem QueryCatalogItem',
+      'items QueryItems',
+    ]);
   });
 
   test('registers the module in forge.yaml and the subgraph in the graph file', async () => {

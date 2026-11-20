@@ -1,55 +1,45 @@
 {
-  "$typeName": "wg.cosmo.node.v1.GRPCMapping",
   "version": 1,
   "service": "CatalogService",
   "operationMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "catalogItem",
       "mapped": "QueryCatalogItem",
       "request": "QueryCatalogItemRequest",
       "response": "QueryCatalogItemResponse"
     },
     {
-      "$typeName": "wg.cosmo.node.v1.OperationMapping",
-      "type": 1,
+      "type": "OPERATION_TYPE_QUERY",
       "original": "items",
       "mapped": "QueryItems",
       "request": "QueryItemsRequest",
       "response": "QueryItemsResponse"
     }
   ],
-  "entityMappings": [],
   "typeFieldMappings": [
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Query",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "catalogItem",
           "mapped": "catalog_item",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "id",
               "mapped": "id"
             }
           ]
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "items",
           "mapped": "items",
           "argumentMappings": [
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "limit",
               "mapped": "limit"
             },
             {
-              "$typeName": "wg.cosmo.node.v1.ArgumentMapping",
               "original": "tag",
               "mapped": "tag"
             }
@@ -58,54 +48,38 @@
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "CatalogItem",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "itemId",
-          "mapped": "item_id",
-          "argumentMappings": []
+          "mapped": "item_id"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "displayName",
-          "mapped": "display_name",
-          "argumentMappings": []
+          "mapped": "display_name"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "price",
-          "mapped": "price",
-          "argumentMappings": []
+          "mapped": "price"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "tags",
-          "mapped": "tags",
-          "argumentMappings": []
+          "mapped": "tags"
         },
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "warehouse",
-          "mapped": "warehouse",
-          "argumentMappings": []
+          "mapped": "warehouse"
         }
       ]
     },
     {
-      "$typeName": "wg.cosmo.node.v1.TypeFieldMapping",
       "type": "Warehouse",
       "fieldMappings": [
         {
-          "$typeName": "wg.cosmo.node.v1.FieldMapping",
           "original": "code",
-          "mapped": "code",
-          "argumentMappings": []
+          "mapped": "code"
         }
       ]
     }
-  ],
-  "enumMappings": [],
-  "resolveMappings": []
+  ]
 }

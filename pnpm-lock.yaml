@@ -526,9 +526,15 @@ importers:
 
   cli-plugins/forge:
     dependencies:
+      '@bufbuild/protobuf':
+        specifier: 'catalog:'
+        version: 2.12.0
       '@wundergraph/composition':
         specifier: workspace:*
         version: link:../../composition
+      '@wundergraph/cosmo-connect':
+        specifier: workspace:*
+        version: link:../../connect
       '@wundergraph/protographic':
         specifier: workspace:*
         version: link:../../protographic

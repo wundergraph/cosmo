@@ -23,7 +23,9 @@
     "test:go": "cd gomodules && go test ./..."
   },
   "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
     "@wundergraph/composition": "workspace:*",
+    "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/protographic": "workspace:*",
     "@wundergraph/wgc-plugin-sdk": "workspace:*",
     "commander": "11.1.0",

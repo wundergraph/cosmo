@@ -1,6 +1,8 @@
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { toJsonString } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import { compileGraphQLToMapping, compileGraphQLToProto, validateGraphQLSDL } from '@wundergraph/protographic';
 import { localModuleName } from '../catalog.js';
@@ -92,7 +94,7 @@ export const generateSource = ({
     data: {
       sdl,
       proto,
-      mapping: `${JSON.stringify(mapping, null, 2)}\n`,
+      mapping: `${toJsonString(GRPCMappingSchema, mapping, { prettySpaces: 2 })}\n`,
       operations: `${JSON.stringify({ baseUrl: model.baseUrl ?? '', listenAddr, operations, types }, null, 2)}\n`,
     },
   };
