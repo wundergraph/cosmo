@@ -14,6 +14,7 @@ Install Forge globally with \`npm i -g wgc && wgc plugins install forge\`, or ad
 - \`forge.yaml\` declares the router release (\`release\`, \`rc\` or \`commit\`) and the modules. Edit the module list by hand or with the commands below.
 - \`forge.lock\` records the reviewed router revision and the full commit of every remote module. Never edit it by hand.
 - \`modules/<name>\` holds local modules. They are built from disk and are not pinned.
+- \`graph.yaml\` lists the subgraphs and their schema files, in the input format of \`wgc router compose\`.
 - \`.forge/\` is generated (build module, binary). Never edit or commit it.
 
 Commands:
@@ -22,11 +23,13 @@ Commands:
 - \`wgc forge create --list-templates\` lists presets and hook templates. \`wgc forge create --preset <id> <name>\` or \`wgc forge create --template <id> <name>\` creates one under \`modules/\`.
 - \`wgc forge add <source>\` registers a local path, a Go package (\`github.com/acme/mod@v1.2.0\`) or a Git URL (\`--ref\`, \`--package\`). Re-adding a registered module previews its newer selection; pass \`--yes\` to accept it.
 - \`wgc forge lock\` previews the forge.lock changes after a hand edit of forge.yaml and keeps unchanged pins. Pass \`--yes\` to apply them.
-- \`wgc forge router upgrade --check --config <router.yaml> <candidate>\` builds a candidate router with these modules and runs the tests against it without changing anything. Drop \`--check\` and pass \`--yes\` to adopt it when the tests pass.
+- \`wgc forge router upgrade --check --config <router.yaml> <candidate>\` builds a candidate router with these modules and runs every module's Go behaviour tests against it without changing anything. The result names each module as passed, failed or untested. A failed or untested module blocks adoption. Drop \`--check\` and pass \`--yes\` to adopt a candidate that passes.
+- \`wgc forge check\` checks the subgraph schemas in \`graph.yaml\` against the API design rules and exits non-zero on a blocking finding or when the graph does not compose. Each finding has the rule, the schema coordinate, the file and line, and for a pagination finding the expected shape and a field that already follows the rule. Run it before submitting a schema change. \`wgc forge check --help\` lists the rules. Set them under \`check.rules\` in forge.yaml as \`error\`, \`warn\` or \`off\`, and record approved exceptions under \`check.exceptions\`.
+- \`wgc forge source add <openapi-url-or-file>\` generates a Cosmo Connect subgraph from an OpenAPI 3 description: one query field per GET operation. It creates \`modules/<name>\`, registers it in forge.yaml and adds the subgraph to \`graph.yaml\`. The result has the subgraph SDL, the module path and everything that was left out. The module runs inside the router and serves the subgraph on a loopback address (\`modules.<name>.listen_addr\`), so no plugin executable is started. Set the REST API under \`modules.<name>.base_url\`. Proto files and Postgres URLs are not supported.
 
 Writing a module: implement the hook interfaces from \`github.com/wundergraph/cosmo/router/core\` (\`RouterOnRequestHandler\`, \`RouterMiddlewareHandler\`, \`EnginePreOriginHandler\`, \`EnginePostOriginHandler\`), register it in \`init()\` with \`core.RegisterModule\`, and read its settings from \`modules.<moduleID>\` in the router config.
 
-Testing: run \`go mod tidy && go test ./...\` inside \`modules/<name>\` for a module's own tests. The router behaviour tests run with \`go test ./...\` from the workspace once \`wgc forge build\` has produced the binary; the test command receives \`FORGE_ROUTER_BINARY\` and \`FORGE_ROUTER_CONFIG\`. Set it once as \`test:\` in forge.yaml so \`wgc forge router upgrade\` runs it.
+Testing: run \`go mod tidy && go test ./...\` inside \`modules/<name>\` for a module's own tests. \`wgc forge router upgrade\` runs those tests for every module, local and remote, compiled against the candidate router, with \`FORGE_ROUTER_BINARY\` set to the candidate binary and \`FORGE_ROUTER_CONFIG\` to the \`--config\` file, so a test can start the router with \`--config\` and send it requests. For a remote module without tests, keep a Go test package in \`tests/<Go package path of the module>\`. A command set as \`test:\` in forge.yaml, or passed with \`--test\`, runs as well and receives the same two variables.
 ${end}
 `;
 
