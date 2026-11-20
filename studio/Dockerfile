@@ -5,6 +5,9 @@ WORKDIR /app
 # Ensure we have pnpm available to us, pinned to the version in package.json's packageManager field
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
+# The filtered install below is complete for these packages; without this, each later pnpm run reinstalls the whole workspace.
+ENV pnpm_config_verify_deps_before_run=false
+
 # Files required by pnpm install
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches patches
@@ -18,7 +21,7 @@ COPY composition/package.json composition/
 COPY studio/entrypoint.sh studio/
 COPY studio/.env.docker studio/.env.production
 
-RUN pnpm install --filter=wundergraph-cosmo --filter=./connect --filter=./shared --filter=./studio --filter=./composition --frozen-lockfile
+RUN --mount=type=cache,id=cosmo-pnpm,target=/pnpm/store --mount=type=cache,id=cosmo-pnpm-metadata,target=/root/.cache/pnpm pnpm install --store-dir /pnpm/store --filter=wundergraph-cosmo --filter=./connect --filter=./shared --filter=./studio --filter=./composition --frozen-lockfile
 
 # enables building custom on premise images with sentry support.
 ARG NEXT_PUBLIC_SENTRY_ENABLED
