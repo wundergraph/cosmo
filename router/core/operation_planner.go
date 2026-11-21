@@ -35,6 +35,8 @@ type OperationPlanner struct {
 	slowPlanCache  *slowplancache.Cache[*planWithMetaData]
 	executor       *Executor
 	trackUsageInfo bool
+	// remote plans operations on plan workers instead of in this process, when set.
+	remote *remotePlanner
 
 	// planningDurationOverride, when set, replaces the measured planning duration.
 	// This is used in tests to simulate slow queries.
@@ -69,6 +71,21 @@ func NewOperationPlanner(
 		slowPlanCache:            fallbackCache,
 		planningDurationOverride: planningDurationOverride,
 	}
+}
+
+// planOperationOnWorker has a plan worker do the core planning work, if there are any.
+// The router still plans the operations whose plans can't be transferred between
+// processes.
+func (p *OperationPlanner) planOperationOnWorker(ctx *operationContext) (*planWithMetaData, error) {
+	includeQueryPlan := ctx.executionOptions.IncludeQueryPlanInResponse
+	// The plan of a subscription is never transferable, so there is no point in making a worker plan it.
+	if p.remote != nil && ctx.opType != OperationTypeSubscription {
+		out, err := p.remote.plan(ctx.content, ctx.name, includeQueryPlan)
+		if !errors.Is(err, errPlanLocally) {
+			return out, err
+		}
+	}
+	return p.planOperation(ctx.content, ctx.name, includeQueryPlan)
 }
 
 // planOperation performs the core planning work: parse, plan, and postprocess.
@@ -113,7 +130,7 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 }
 
 func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
-	out, err := p.planOperation(ctx.content, ctx.name, ctx.executionOptions.IncludeQueryPlanInResponse)
+	out, err := p.planOperationOnWorker(ctx)
 	if err != nil {
 		return nil, err
 	}

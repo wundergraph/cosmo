@@ -55,6 +55,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/planworker"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -107,6 +108,8 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
+		// planWorkerPool is owned by the router and nil unless plan workers are enabled.
+		planWorkerPool *planworker.Pool
 	}
 )
 
@@ -225,6 +228,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		},
 		storageProviders:  &r.storageProviders,
 		headerPropagation: r.headerPropagation,
+		planWorkerPool:    r.planWorkerPool,
 	}
 
 	defer func() {
@@ -703,6 +707,9 @@ type graphMux struct {
 	pubSubProviders          []datasource.Provider
 	skipUnavailableProviders bool
 
+	// remotePlanner is nil unless plan workers are enabled.
+	remotePlanner *remotePlanner
+
 	logger *zap.Logger
 }
 
@@ -807,6 +814,10 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	// Operations still being prepared keep the caches open until they are done.
 	s.caches.Close()
+
+	if s.remotePlanner != nil {
+		s.remotePlanner.close()
+	}
 
 	var err error
 
@@ -1432,6 +1443,26 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	operationPlanner := NewOperationPlanner(executor, gm.caches.Plan, gm.caches.PlanFallback, s.planningDurationOverride)
+
+	if s.planWorkerPool != nil {
+		gm.remotePlanner, err = newRemotePlanner(
+			s.planWorkerPool,
+			planWorkerSettings{
+				Introspection:  ecb.introspection,
+				TrackUsageInfo: ecb.trackUsageInfo,
+				PluginsEnabled: s.plugins.Enabled,
+				Execution:      s.engineExecutionConfiguration,
+			},
+			opts.EngineConfig,
+			opts.ConfigSubgraphs,
+			executor,
+			s.logger,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set up plan workers: %w", err)
+		}
+		operationPlanner.remote = gm.remotePlanner
+	}
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {

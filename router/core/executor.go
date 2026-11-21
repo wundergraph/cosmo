@@ -37,6 +37,10 @@ type ExecutorConfigurationBuilder struct {
 	subscriptionClientOptions *SubscriptionClientOptions
 
 	subscriptionHooks subscriptionHooks
+
+	// factoryResolver replaces how the data sources of the plans reach their subgraphs.
+	// Plan workers set it to plan without any transports.
+	factoryResolver FactoryResolver
 }
 
 type Executor struct {
@@ -52,6 +56,9 @@ type Executor struct {
 	// PostprocessorOptions configure the plan postprocessor from the engine
 	// execution configuration (multi-fetch merging, fetch scheduling).
 	PostprocessorOptions []postprocess.ProcessorOption
+	// subgraphFetchClients are the HTTP clients of the data sources that fetch from a
+	// GraphQL subgraph over HTTP, by data source ID.
+	subgraphFetchClients map[string]*http.Client
 }
 
 type ExecutorBuildOptions struct {
@@ -68,9 +75,9 @@ type ExecutorBuildOptions struct {
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, []pubsub_datasource.Provider, error) {
-	planConfig, providers, err := b.buildPlannerConfiguration(ctx, opts)
+	executor, providers, err := b.buildPlanningExecutor(ctx, opts)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build planner configuration: %w", err)
+		return nil, providers, err
 	}
 
 	options := resolve.ResolverOptions{
@@ -138,8 +145,30 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, options)
+	executor.Resolver = resolve.New(ctx, options)
 
+	return executor, providers, nil
+}
+
+// buildPlanningExecutor builds an Executor that can plan operations, but has no resolver
+// to execute them. Router and plan workers have to plan operations identically, which is
+// why they both get their configuration from here.
+func (b *ExecutorConfigurationBuilder) buildPlanningExecutor(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, []pubsub_datasource.Provider, error) {
+	planConfig, providers, fetchClients, err := b.buildPlannerConfiguration(ctx, opts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to build planner configuration: %w", err)
+	}
+
+	executor, err := b.buildExecutor(opts, planConfig)
+	if err != nil {
+		return nil, providers, err
+	}
+	executor.subgraphFetchClients = fetchClients
+
+	return executor, providers, nil
+}
+
+func (b *ExecutorConfigurationBuilder) buildExecutor(opts *ExecutorBuildOptions, planConfig *plan.Configuration) (*Executor, error) {
 	var (
 		// clientSchemaDefinition is the GraphQL Schema that is exposed from our API
 		// it should be used for the introspection and query normalization/validation.
@@ -151,15 +180,15 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 
 	routerSchemaDefinition, report = astparser.ParseGraphqlDocumentString(opts.EngineConfig.GraphqlSchema)
 	if report.HasErrors() {
-		return nil, providers, fmt.Errorf("failed to parse graphql schema from engine config: %w", &report)
+		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", &report)
 	}
 	// we need to merge the base schema, it contains the __schema and __type queries,
 	// as well as built-in scalars like Int, String, etc...
 	// these are usually not part of a regular GraphQL schema
 	// the engine needs to have them defined, otherwise it cannot resolve such fields
-	err = asttransform.MergeDefinitionWithBaseSchema(&routerSchemaDefinition)
+	err := asttransform.MergeDefinitionWithBaseSchema(&routerSchemaDefinition)
 	if err != nil {
-		return nil, providers, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
+		return nil, fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
 
 	if clientSchemaStr := opts.EngineConfig.GetGraphqlClientSchema(); clientSchemaStr != "" {
@@ -168,11 +197,11 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 
 		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
 		if report.HasErrors() {
-			return nil, providers, fmt.Errorf("failed to parse graphql client schema from engine config: %w", &report)
+			return nil, fmt.Errorf("failed to parse graphql client schema from engine config: %w", &report)
 		}
 		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
 		if err != nil {
-			return nil, providers, fmt.Errorf("failed to merge graphql client schema with base schema: %w", err)
+			return nil, fmt.Errorf("failed to merge graphql client schema with base schema: %w", err)
 		}
 		clientSchemaDefinition = &clientSchema
 	} else {
@@ -188,7 +217,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		// datasource is attached to Query.__schema, Query.__type, __Type.fields and __Type.enumValues fields
 		introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(clientSchemaDefinition)
 		if err != nil {
-			return nil, providers, fmt.Errorf("failed to create introspection config factory: %w", err)
+			return nil, fmt.Errorf("failed to create introspection config factory: %w", err)
 		}
 		fieldConfigs := introspectionFactory.BuildFieldConfigurations()
 		// we need to add these fields to the config
@@ -224,34 +253,40 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PlanConfig:           *planConfig,
 		ClientSchema:         clientSchemaDefinition,
 		RouterSchema:         &routerSchemaDefinition,
-		Resolver:             resolver,
 		RenameTypeNames:      renameTypeNames,
 		TrackUsageInfo:       b.trackUsageInfo,
 		PostprocessorOptions: postprocessorOptions,
-	}, providers, nil
+	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, opts *ExecutorBuildOptions) (*plan.Configuration, []pubsub_datasource.Provider, error) {
+// buildPlannerConfiguration returns the plan configuration, the event providers and the
+// HTTP clients of the data sources that fetch from a GraphQL subgraph, by data source ID.
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, opts *ExecutorBuildOptions) (*plan.Configuration, []pubsub_datasource.Provider, map[string]*http.Client, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	loader := NewLoader(ctx, b.trackUsageInfo, NewDefaultFactoryResolver(
-		ctx,
-		b.transportOptions,
-		b.subscriptionClientOptions,
-		b.baseTripper,
-		b.subgraphTrippers,
-		b.pluginHost,
-		b.logger,
-		opts.RouterEngineConfig.Execution.EnableNetPoll,
-		opts.InstanceData,
-	), b.logger, b.subscriptionHooks)
+	factoryResolver := b.factoryResolver
+	if factoryResolver == nil {
+		factoryResolver = NewDefaultFactoryResolver(
+			ctx,
+			b.transportOptions,
+			b.subscriptionClientOptions,
+			b.baseTripper,
+			b.subgraphTrippers,
+			b.pluginHost,
+			b.logger,
+			opts.RouterEngineConfig.Execution.EnableNetPoll,
+			opts.InstanceData,
+		)
+	}
+
+	loader := NewLoader(ctx, b.trackUsageInfo, factoryResolver, b.logger, b.subscriptionHooks)
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, providers, err := loader.Load(opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PluginsEnabled)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 	debug := &opts.RouterEngineConfig.Execution.Debug
 	planConfig.Debug = plan.DebugConfiguration{
@@ -279,5 +314,5 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		planConfig.IgnoreImplementingTypeWeights = opts.RouterEngineConfig.CostControl.IgnoreImplementingTypeWeights
 	}
 
-	return planConfig, providers, nil
+	return planConfig, providers, loader.fetchClients, nil
 }

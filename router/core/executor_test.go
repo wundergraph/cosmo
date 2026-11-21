@@ -61,7 +61,7 @@ func TestBuildPlannerConfigurationPassesInstanceDataToNatsProvider(t *testing.T)
 		},
 	}
 
-	_, providers, err := b.buildPlannerConfiguration(t.Context(), opts)
+	_, providers, _, err := b.buildPlannerConfiguration(t.Context(), opts)
 	require.NoError(t, err)
 	require.Len(t, providers, 1)
 

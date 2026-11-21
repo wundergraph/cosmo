@@ -571,6 +571,23 @@ type EngineExecutionConfiguration struct {
 	AllowStringLiteralsForEnums bool `envDefault:"false" env:"ENGINE_ALLOW_STRING_LITERALS_FOR_ENUMS" yaml:"allow_string_literals_for_enums"`
 
 	ValidateInlineArguments ValidateInlineArguments `yaml:"validate_inline_arguments" envPrefix:"ENGINE_VALIDATE_INLINE_ARGUMENTS_"`
+
+	PlanWorkers EnginePlanWorkersConfiguration `yaml:"plan_workers" envPrefix:"ENGINE_PLAN_WORKERS_"`
+}
+
+// EnginePlanWorkersConfiguration moves query planning out of the router process into
+// worker processes started by the router.
+type EnginePlanWorkersConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	// Count is the number of worker processes, i.e. how many operations are planned in parallel.
+	Count int `yaml:"count,omitempty" envDefault:"4" env:"COUNT"`
+	// QueueSize is the number of operations that can wait for a free worker.
+	QueueSize int `yaml:"queue_size,omitempty" envDefault:"1024" env:"QUEUE_SIZE"`
+	// PlanTimeout is the maximum time to plan an operation, including the time it waits for
+	// a free worker. A worker that is still planning at that point is stopped.
+	PlanTimeout time.Duration `yaml:"plan_timeout,omitempty" envDefault:"30s" env:"PLAN_TIMEOUT"`
+	// StartTimeout is the maximum time a worker has to start and to load the graph.
+	StartTimeout time.Duration `yaml:"start_timeout,omitempty" envDefault:"60s" env:"START_TIMEOUT"`
 }
 
 type BlockOperationConfiguration struct {

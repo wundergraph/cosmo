@@ -604,6 +604,13 @@
       "ErrorMessage": "Inline argument values are not allowed. Use variables instead.",
       "IncludePersistedOperations": false,
       "ReturnInResponseExtensions": false
+    },
+    "PlanWorkers": {
+      "Enabled": false,
+      "Count": 4,
+      "QueueSize": 1024,
+      "PlanTimeout": 30000000000,
+      "StartTimeout": 60000000000
     }
   },
   "WebSocket": {

@@ -40,6 +40,9 @@ type Loader struct {
 	subscriptionHooks subscriptionHooks
 	includeInfo       bool
 	logger            *zap.Logger
+	// fetchClients are the HTTP clients of the data sources that fetch from a GraphQL
+	// subgraph over HTTP, by data source ID.
+	fetchClients map[string]*http.Client
 }
 
 type InstanceData struct {
@@ -51,6 +54,13 @@ type FactoryResolver interface {
 	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	InstanceData() InstanceData
+}
+
+// fetchClientResolver is implemented by a FactoryResolver that can tell which HTTP client
+// the factory of a subgraph fetches with.
+type fetchClientResolver interface {
+	// SubgraphFetchClient returns false for subgraphs that are not fetched over HTTP.
+	SubgraphFetchClient(subgraphName string) (*http.Client, bool)
 }
 
 type ApiTransportFactory interface {
@@ -69,7 +79,9 @@ type DefaultFactoryResolver struct {
 	engineCtx context.Context
 
 	subgraphHTTPClients map[string]*http.Client
-	connector           *grpcconnector.Connector
+	// fetchClients are the HTTP clients handed to the GraphQL factories, by subgraph name.
+	fetchClients map[string]*http.Client
+	connector    *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
@@ -158,6 +170,7 @@ func NewDefaultFactoryResolver(
 		factoryLogger:                 factoryLogger,
 		engineCtx:                     ctx,
 		subgraphHTTPClients:           subgraphHTTPClients,
+		fetchClients:                  make(map[string]*http.Client),
 		connector:                     connector,
 		instanceData:                  instanceData,
 		baseTransport:                 baseTransport,
@@ -203,13 +216,22 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		append([]graphql_datasource.SubscriptionClientOption{graphql_datasource.WithUpgradeClient(defaultHTTPClient), graphql_datasource.WithStreamingClient(streamingClient)}, d.subscriptionClientOptions...)...,
 	)
 
+	fetchClient := defaultHTTPClient
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
 		// custom subgraph clients are intended to be used for custom timeouts, which is not relevant for subscriptions
-		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
+		fetchClient = subgraphClient
+	}
+	if d.fetchClients != nil {
+		d.fetchClients[subgraphName] = fetchClient
 	}
 
-	return graphql_datasource.NewFactory(d.engineCtx, defaultHTTPClient, subscriptionClient)
+	return graphql_datasource.NewFactory(d.engineCtx, fetchClient, subscriptionClient)
+}
+
+func (d *DefaultFactoryResolver) SubgraphFetchClient(subgraphName string) (*http.Client, bool) {
+	client, ok := d.fetchClients[subgraphName]
+	return client, ok
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
@@ -500,6 +522,15 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			)
 			if err != nil {
 				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+			}
+
+			if clients, ok := l.resolver.(fetchClientResolver); ok && grpcConfig == nil {
+				if client, ok := clients.SubgraphFetchClient(dataSourceName); ok {
+					if l.fetchClients == nil {
+						l.fetchClients = make(map[string]*http.Client)
+					}
+					l.fetchClients[in.Id] = client
+				}
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:

@@ -4231,6 +4231,48 @@
             }
           }
         },
+        "plan_workers": {
+          "type": "object",
+          "description": "Experimental. Plans operations in worker processes instead of in the router process. The router starts the workers and distributes the operations that need a plan across them through a queue. Planning that takes too long is stopped by terminating the worker, which is not possible when the router plans itself. Plans that can't be moved between processes are still planned by the router: subscriptions, introspection, and operations that involve gRPC or event-driven subgraphs. Can't be combined with cost control.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable planning in worker processes."
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 4,
+              "description": "The number of worker processes. This is the number of operations that are planned in parallel. Every worker keeps its own copy of the graph in memory."
+            },
+            "queue_size": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1024,
+              "description": "The number of operations that can wait for a free worker. When the queue is full, operations that need a plan are rejected."
+            },
+            "plan_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "30s",
+              "description": "The maximum time to plan an operation, including the time it waits for a free worker. A worker that is still planning at that point is terminated and replaced, and the request fails.",
+              "duration": {
+                "minimum": "1ms"
+              }
+            },
+            "start_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "60s",
+              "description": "The maximum time a worker has to start and to load the graph.",
+              "duration": {
+                "minimum": "1s"
+              }
+            }
+          }
+        },
         "debug": {
           "type": "object",
           "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine.",

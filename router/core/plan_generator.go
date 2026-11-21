@@ -15,9 +15,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -394,41 +391,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	if opts.EnableScheduleFetches {
 		pg.postprocessorOptions = append(pg.postprocessorOptions, postprocess.EnableScheduleFetches())
 	}
-	natSources := map[string]*nats.ProviderAdapter{}
-	kafkaSources := map[string]*kafka.ProviderAdapter{}
-	redisSources := map[string]*redis.ProviderAdapter{}
-	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
-		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
-			continue
-		}
-		for _, natConfig := range ds.GetCustomEvents().GetNats() {
-			providerId := natConfig.GetEngineEventConfiguration().GetProviderId()
-			if _, ok := natSources[providerId]; !ok {
-				natSources[providerId] = nil
-				routerEngineConfig.Events.Providers.Nats = append(routerEngineConfig.Events.Providers.Nats, config.NatsEventSource{
-					ID: providerId,
-				})
-			}
-		}
-		for _, kafkaConfig := range ds.GetCustomEvents().GetKafka() {
-			providerId := kafkaConfig.GetEngineEventConfiguration().GetProviderId()
-			if _, ok := kafkaSources[providerId]; !ok {
-				kafkaSources[providerId] = nil
-				routerEngineConfig.Events.Providers.Kafka = append(routerEngineConfig.Events.Providers.Kafka, config.KafkaEventSource{
-					ID: providerId,
-				})
-			}
-		}
-		for _, redisConfig := range ds.GetCustomEvents().GetRedis() {
-			providerId := redisConfig.GetEngineEventConfiguration().GetProviderId()
-			if _, ok := redisSources[providerId]; !ok {
-				redisSources[providerId] = nil
-				routerEngineConfig.Events.Providers.Redis = append(routerEngineConfig.Events.Providers.Redis, config.RedisEventSource{
-					ID: providerId,
-				})
-			}
-		}
-	}
+	routerEngineConfig.Events = planningEventsConfiguration(routerConfig.GetEngineConfig())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -510,6 +473,49 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	pg.definition = &definition
 	pg.clientDefinition = clientSchemaDefinition
 	return nil
+}
+
+// planningEventsConfiguration returns an events configuration that declares the event
+// providers the data sources of the engine config refer to. The providers have no
+// connection details. That is enough to plan operations, but not to execute them.
+func planningEventsConfiguration(engineConfig *nodev1.EngineConfiguration) config.EventsConfiguration {
+	var out config.EventsConfiguration
+	natSources := map[string]struct{}{}
+	kafkaSources := map[string]struct{}{}
+	redisSources := map[string]struct{}{}
+	for _, ds := range engineConfig.GetDatasourceConfigurations() {
+		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
+			continue
+		}
+		for _, natConfig := range ds.GetCustomEvents().GetNats() {
+			providerId := natConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := natSources[providerId]; !ok {
+				natSources[providerId] = struct{}{}
+				out.Providers.Nats = append(out.Providers.Nats, config.NatsEventSource{
+					ID: providerId,
+				})
+			}
+		}
+		for _, kafkaConfig := range ds.GetCustomEvents().GetKafka() {
+			providerId := kafkaConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := kafkaSources[providerId]; !ok {
+				kafkaSources[providerId] = struct{}{}
+				out.Providers.Kafka = append(out.Providers.Kafka, config.KafkaEventSource{
+					ID: providerId,
+				})
+			}
+		}
+		for _, redisConfig := range ds.GetCustomEvents().GetRedis() {
+			providerId := redisConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := redisSources[providerId]; !ok {
+				redisSources[providerId] = struct{}{}
+				out.Providers.Redis = append(out.Providers.Redis, config.RedisEventSource{
+					ID: providerId,
+				})
+			}
+		}
+	}
+	return out
 }
 
 func (pg *PlanGenerator) GetPlanConfiguration() *plan.Configuration {

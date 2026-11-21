@@ -59,6 +59,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/planworker"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
 	inmemorycache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/in_memory"
 	rediscache "github.com/wundergraph/cosmo/router/pkg/responsecaching/cache/redis"
@@ -110,6 +111,10 @@ type (
 		connectionMetricsLock sync.Mutex
 		connectionMetrics     *rmetric.ConnectionMetrics
 		traceDialer           *TraceDialer
+		// planWorkerPool is nil unless plan workers are enabled.
+		planWorkerPool *planworker.Pool
+		// planWorkerLauncher starts the plan workers. Defaults to child processes of the router binary.
+		planWorkerLauncher planworker.Launcher
 	}
 
 	UsageTracker interface {
@@ -1126,6 +1131,38 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			otel.SetTextMapPropagator(r.compositePropagator)
 		}
 	}
+
+	return r.startPlanWorkers(ctx)
+}
+
+// startPlanWorkers starts the workers that plan operations outside of the router process,
+// if they are enabled. The workers live as long as the router and are shared by all graphs.
+func (r *Router) startPlanWorkers(ctx context.Context) error {
+	cfg := r.engineExecutionConfiguration.PlanWorkers
+	if !cfg.Enabled {
+		return nil
+	}
+	if r.securityConfiguration.CostControl != nil && r.securityConfiguration.CostControl.Enabled {
+		// Cost control attaches a cost calculator to every plan, and those can't be
+		// transferred between processes. Every operation would be planned twice.
+		r.logger.Warn("Plan workers are not started because they can't be combined with cost control. Operations are planned by the router.")
+		return nil
+	}
+
+	pool, err := newPlanWorkerPool(cfg, r.planWorkerLauncher, r.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create plan workers: %w", err)
+	}
+	if err := pool.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start plan workers: %w", err)
+	}
+	r.planWorkerPool = pool
+
+	r.logger.Info("Plan workers started. Operations are planned outside of the router process",
+		zap.Int("count", cfg.Count),
+		zap.Int("queue_size", cfg.QueueSize),
+		zap.Duration("plan_timeout", cfg.PlanTimeout),
+	)
 
 	return nil
 }
@@ -2223,6 +2260,11 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		err.Append(fmt.Errorf("failed to shutdown connection metrics: %w", subErr))
 	}
 
+	// The graph server is shut down at this point, nothing is planned anymore.
+	if r.planWorkerPool != nil {
+		r.planWorkerPool.Close()
+	}
+
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
@@ -2957,6 +2999,15 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
+	}
+}
+
+// WithPlanWorkerLauncher replaces how plan workers are started. By default, every worker is a
+// child process running the router binary. The option has no effect unless plan workers are
+// enabled in the engine execution configuration.
+func WithPlanWorkerLauncher(launcher planworker.Launcher) Option {
+	return func(r *Router) {
+		r.planWorkerLauncher = launcher
 	}
 }
 

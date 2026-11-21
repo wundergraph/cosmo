@@ -482,6 +482,12 @@ engine:
   websocket_client_ping_interval: 10s
   websocket_client_ping_timeout: 30s
   websocket_client_ack_timeout: 30s
+  plan_workers:
+    enabled: true
+    count: 8
+    queue_size: 512
+    plan_timeout: 15s
+    start_timeout: 45s
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
   debug:
