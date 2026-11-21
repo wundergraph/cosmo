@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -22,6 +23,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"time"
 )
@@ -1246,6 +1250,112 @@ func simulateConnectionFailureOnClose(w http.ResponseWriter) {
 		panic(err)
 	}
 	_ = conn.Close()
+}
+
+func TestGRPCCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
+	const projectsQuery = `query { projects { id } }`
+
+	t.Run("verify circuit breaker opens and recovers for a remote gRPC subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		breaker := getCircuitBreakerWithDefaults()
+		breaker.RequestThreshold = 2
+		breaker.SleepWindow = 2 * time.Second
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		var (
+			isSuccessRequest atomic.Bool
+			subgraphCalls    atomic.Int64
+		)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{
+					GRPCInterceptor: func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+						subgraphCalls.Add(1)
+						if !isSuccessRequest.Load() {
+							return nil, status.Error(codes.Unavailable, "service is down")
+						}
+						return handler(ctx, req)
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			send := func() *testenv.TestResponse {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: projectsQuery})
+				require.NoError(t, err)
+				return res
+			}
+
+			isSuccessRequest.Store(true)
+			require.Contains(t, send().Body, `"projects":[{"id":"1"}`)
+			require.Equal(t, int64(1), subgraphCalls.Load())
+
+			// Failed calls reach the subgraph until the circuit opens
+			isSuccessRequest.Store(false)
+			for range 3 {
+				require.Contains(t, send().Body, `"errors"`)
+			}
+			callsWhenOpened := subgraphCalls.Load()
+			require.Greater(t, callsWhenOpened, int64(1))
+
+			// The subgraph is healthy again, but the circuit is open so calls are rejected without reaching it
+			isSuccessRequest.Store(true)
+			for range 3 {
+				require.Contains(t, send().Body, `"errors"`)
+			}
+			require.Equal(t, callsWhenOpened, subgraphCalls.Load())
+
+			// After the sleep window a probe is let through and closes the circuit
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.Contains(c, send().Body, `"projects":[{"id":"1"}`)
+			}, 10*time.Second, 200*time.Millisecond)
+			require.Greater(t, subgraphCalls.Load(), callsWhenOpened)
+		})
+	})
+
+	t.Run("verify errors answered by a remote gRPC subgraph do not open the circuit", func(t *testing.T) {
+		t.Parallel()
+
+		breaker := getCircuitBreakerWithDefaults()
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		var subgraphCalls atomic.Int64
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Projects: testenv.SubgraphConfig{
+					GRPCInterceptor: func(_ context.Context, _ any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+						subgraphCalls.Add(1)
+						return nil, status.Error(codes.NotFound, "not found")
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for range 5 {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: projectsQuery})
+				require.NoError(t, err)
+				require.Contains(t, res.Body, `"errors"`)
+			}
+			// Every call reached the subgraph, the circuit never opened
+			require.Equal(t, int64(5), subgraphCalls.Load())
+		})
+	})
 }
 
 func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) string {
