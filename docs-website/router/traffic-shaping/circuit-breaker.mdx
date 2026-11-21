@@ -87,6 +87,24 @@ Since the circuit breaker relies on Go's RoundTripper behavior, HTTP error respo
 **Request Cancellations and Timeouts**
 When a request is cancelled or times out due to client-side constraints, this will not be recorded as a failure for the circuit breaker. These scenarios are treated differently from execution timeouts, which are circuit breaker-specific.
 
+### gRPC Subgraphs
+
+Circuit breakers also apply to remote [gRPC services](/router/gRPC/grpc-services). The configuration, grouping, and metrics are the same as for HTTP subgraphs. Router plugins are not covered.
+
+A gRPC call has no HTTP round trip, so the circuit breaker classifies a failed call by its gRPC status code.
+
+The following status codes count as failures:
+
+* `UNAVAILABLE`
+* `DEADLINE_EXCEEDED`
+* `RESOURCE_EXHAUSTED`
+* `INTERNAL`
+* `DATA_LOSS`
+
+Other application replies count as successful calls in the breaker's error rate and can close a half-open circuit. This includes `UNKNOWN` when a handler returns an error without an explicit status code. The caller still receives the original RPC status.
+
+The breaker records calls that exceed `execution_timeout` as failures. The RPC keeps its original deadline and can still return a successful response. Caller cancellations are handled the same way as for HTTP subgraphs.
+
 
 ## Example YAML Configuration
 

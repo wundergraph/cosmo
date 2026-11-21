@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -1856,11 +1857,18 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				grpcTLS = opts.defaultClientTLS
 			}
 
+			// The circuits are shared with the HTTP subgraphs and are looked up by subgraph name on every call
+			var unaryInterceptors []grpc.UnaryClientInterceptor
+			if s.circuitBreakerManager != nil {
+				unaryInterceptors = append(unaryInterceptors, circuit.NewUnaryClientInterceptor(sg.Name, s.circuitBreakerManager, s.logger))
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:     s.logger,
-				Endpoint:   sg.RoutingUrl,
-				TLSConfig:  grpcTLS,
-				Propagator: s.compositePropagator,
+				Logger:            s.logger,
+				Endpoint:          sg.RoutingUrl,
+				TLSConfig:         grpcTLS,
+				Propagator:        s.compositePropagator,
+				UnaryInterceptors: unaryInterceptors,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
