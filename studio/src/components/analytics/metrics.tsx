@@ -493,8 +493,12 @@ const TopList: React.FC<{
           value: Number.parseFloat(row.value ?? '0'),
           name: (
             <div className="flex items-center">
-              <span className="flex w-16 shrink-0">{row.hash.slice(0, 6) || '-------'}</span>
-              <span className="truncate">{row.name === '' ? '-' : row.name}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="truncate">{row.name === '' ? 'Unnamed operation' : row.name}</span>
+                </TooltipTrigger>
+                <TooltipContent>{row.hash}</TooltipContent>
+              </Tooltip>
               {row.isPersisted && (
                 <Tooltip>
                   <TooltipTrigger>

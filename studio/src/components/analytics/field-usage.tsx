@@ -2,6 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from 'nuqs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import useWindowSize from '@/hooks/use-window-size';
 import { formatMetric } from '@/lib/format-metric';
 import { createStringifiedDateRange, useChartData } from '@/lib/insights-helpers';
@@ -189,7 +190,6 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-24">Hash</TableHead>
                             <TableHead>Operation Name</TableHead>
                             <TableHead className="w-24 text-center">Requests</TableHead>
                           </TableRow>
@@ -198,31 +198,35 @@ export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) 
                           {client.operations.map((op) => {
                             return (
                               <TableRow key={op.hash}>
-                                <TableCell>{op.hash.slice(0, 6)}</TableCell>
                                 <TableCell>
-                                  <Link
-                                    href={{
-                                      pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
-                                      query: {
-                                        namespace,
-                                        organizationSlug,
-                                        slug: router.query.slug,
-                                        filterState: createFilterState({
-                                          operationName: op.name,
-                                          operationHash: op.hash,
-                                        }),
-                                        dateRange: range
-                                          ? createStringifiedDateRange(getRange(range))
-                                          : JSON.stringify({
-                                              start: formatISO(dateRange.start),
-                                              end: formatISO(dateRange.end),
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link
+                                        href={{
+                                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
+                                          query: {
+                                            namespace,
+                                            organizationSlug,
+                                            slug: router.query.slug,
+                                            filterState: createFilterState({
+                                              operationName: op.name,
+                                              operationHash: op.hash,
                                             }),
-                                      },
-                                    }}
-                                    className="text-primary"
-                                  >
-                                    {op.name || '-'}
-                                  </Link>
+                                            dateRange: range
+                                              ? createStringifiedDateRange(getRange(range))
+                                              : JSON.stringify({
+                                                  start: formatISO(dateRange.start),
+                                                  end: formatISO(dateRange.end),
+                                                }),
+                                          },
+                                        }}
+                                        className="text-primary"
+                                      >
+                                        {op.name || 'Unnamed operation'}
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{op.hash}</TooltipContent>
+                                  </Tooltip>
                                 </TableCell>
                                 <TableCell className="text-center">{op.count}</TableCell>
                               </TableRow>
