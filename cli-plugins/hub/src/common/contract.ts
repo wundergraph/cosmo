@@ -185,7 +185,7 @@ export const hubResults = {
   getSandbox: z.object({ address: z.string(), endpointUrl: z.string(), routerStatus: z.enum(routerStatuses) }),
   /** `{ schema }` */
   listSandboxes: z.object({ sandboxes: z.array(sandboxRowShape) }),
-  /** `{ sandbox_id, sources?, cursor?, wait_seconds? }`: `wait_seconds` holds the call open only with `cursor` */
+  /** `{ sandbox, sources?, cursor?, wait_seconds? }`: `wait_seconds` holds the call open only with `cursor` */
   streamLogs: z
     .object({
       notice: z.string(),

@@ -132,7 +132,7 @@ describe('wgc hub sandbox logs', () => {
     });
 
     expect(hub.toolCalls()).toEqual([
-      { name: 'stream_logs', arguments: { sandbox_id: 'shop/shop-nithin', sources: ['router', 'build'] } },
+      { name: 'stream_logs', arguments: { sandbox: 'shop/shop-nithin', sources: ['router', 'build'] } },
     ]);
     expect(run.stdout).toBe('2026-11-20T11:59:00Z  router   started\n');
   });
@@ -192,9 +192,9 @@ describe('wgc hub sandbox logs', () => {
         .map((text) => JSON.parse(text).message),
     ).toEqual(['line 1', 'line 2']);
     expect(hub.toolCalls().map((call) => call.arguments)).toEqual([
-      { sandbox_id: 'shop/shop-nithin' },
-      { sandbox_id: 'shop/shop-nithin', cursor: 'c1', wait_seconds: 30 },
-      { sandbox_id: 'shop/shop-nithin', cursor: 'c2', wait_seconds: 30 },
+      { sandbox: 'shop/shop-nithin' },
+      { sandbox: 'shop/shop-nithin', cursor: 'c1', wait_seconds: 30 },
+      { sandbox: 'shop/shop-nithin', cursor: 'c2', wait_seconds: 30 },
     ]);
   });
 });

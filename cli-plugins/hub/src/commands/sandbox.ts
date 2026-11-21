@@ -228,7 +228,7 @@ const runLogs = async (options: LogsOptions, dependencies: HubDependencies): Pro
   }
 
   const { hub, selection } = session.data;
-  const args: Record<string, ToolArgument> = { sandbox_id: selection.sandbox };
+  const args: Record<string, ToolArgument> = { sandbox: selection.sandbox };
   if (options.source !== undefined) {
     args.sources = options.source;
   }
