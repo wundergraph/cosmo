@@ -22,15 +22,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { NextPageWithLayout } from '@/lib/page';
 
-const MODEL_TARGETS = [
-  { target: 'schema-change', label: 'Schema change' },
-  { target: 'connect-api', label: 'Connect an API' },
-  { target: 'implement-subgraph', label: 'Implement subgraph resolvers' },
-  { target: 'router-upgrade', label: 'Router upgrade' },
-  { target: 'fix-checks', label: 'Fix failing checks' },
-  { target: 'ask-ai', label: 'Ask AI' },
-];
-
 type Form = {
   managed: boolean;
   agentsEnabled: boolean;
@@ -101,8 +92,6 @@ const HubAiPage: NextPageWithLayout = () => {
   }
 
   const models = offered?.models ?? [];
-  const deploymentModel = models.find((model) => model.gatewayModelId === offered?.deploymentModel);
-  const defaultLabel = `Default (${deploymentModel?.name ?? offered?.deploymentModel ?? 'Hub deployment model'})`;
 
   const update = (patch: Partial<Form>) => {
     setForm((current) => ({ ...current, ...patch }));
@@ -181,10 +170,10 @@ const HubAiPage: NextPageWithLayout = () => {
               id="default-model"
               models={models}
               value={form.defaultModel}
-              unsetLabel={defaultLabel}
+              unsetLabel={offered?.defaultModelLabel ?? ''}
               onChange={(defaultModel) => update({ defaultModel })}
             />
-            {MODEL_TARGETS.map(({ target, label }) => (
+            {(offered?.targets ?? []).map(({ target, label }) => (
               <div key={target} className="contents">
                 <Label htmlFor={`model-${target}`}>{label}</Label>
                 <HubAiModelPicker
