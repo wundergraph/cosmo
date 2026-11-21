@@ -4443,6 +4443,18 @@ message HubAiModel {
   string gateway_model_id = 3;
   // The name the AI gateway gives the model.
   string name = 4;
+  // How Hub shows the model, as in "Google · Light".
+  string label = 5;
+  // How Hub shows the provider, as in "Google".
+  string provider_label = 6;
+}
+
+// What the settings pick a model for, as Hub shows it.
+message HubAiModelTarget {
+  // An agent job kind, or "ask-ai".
+  string target = 1;
+  // As in "Design a schema change".
+  string label = 2;
 }
 
 message GetHubAiModelsRequest {}
@@ -4452,4 +4464,8 @@ message GetHubAiModelsResponse {
   repeated HubAiModel models = 2;
   // The model Hub runs agents with when the settings name no default model.
   string deployment_model = 3;
+  // How Hub shows an unset default model, as in "Default (Gemini Flash)".
+  string default_model_label = 4;
+  // Every target the settings pick a model for, in Hub's order.
+  repeated HubAiModelTarget targets = 5;
 }
