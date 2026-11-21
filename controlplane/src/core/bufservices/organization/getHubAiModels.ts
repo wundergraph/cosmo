@@ -30,10 +30,12 @@ export function getHubAiModels(
         },
         models: [],
         deploymentModel: '',
+        defaultModelLabel: '',
+        targets: [],
       };
     }
 
-    const { models, deploymentModel } = await fetchHubAiModels(opts.hubApiUrl);
+    const { models, deploymentModel, defaultModelLabel, targets } = await fetchHubAiModels(opts.hubApiUrl);
 
     return {
       response: {
@@ -41,6 +43,8 @@ export function getHubAiModels(
       },
       models,
       deploymentModel,
+      defaultModelLabel,
+      targets,
     };
   });
 }

@@ -35,15 +35,24 @@ const hubModels = {
       tier: 'light',
       gatewayModelId: 'google/gemini-3.1-flash-lite',
       name: 'Gemini 3.1 Flash Lite',
+      label: 'Google · Light',
+      providerLabel: 'Google',
     },
     {
       provider: 'anthropic',
       tier: 'medium',
       gatewayModelId: 'anthropic/claude-sonnet-5.5',
       name: 'Claude Sonnet 5.5',
+      label: 'Anthropic · Medium',
+      providerLabel: 'Anthropic',
     },
   ],
   deploymentModel: 'google/gemini-3.1-flash-lite',
+  defaultModelLabel: 'Default (Gemini Flash-Lite)',
+  targets: [
+    { target: 'schema-change', label: 'Design a schema change' },
+    { target: 'ask-ai', label: 'Ask AI' },
+  ],
 };
 
 const subgraphSDL = `
@@ -252,9 +261,18 @@ describe('Hub governance', () => {
     const offered = await client.getHubAiModels({});
     expect(offered.response?.code).toBe(EnumStatusCode.OK);
     expect(offered.deploymentModel).toBe('google/gemini-3.1-flash-lite');
+    expect(offered.defaultModelLabel).toBe('Default (Gemini Flash-Lite)');
     expect(
-      offered.models.map(({ provider, tier, gatewayModelId, name }) => ({ provider, tier, gatewayModelId, name })),
+      offered.models.map(({ provider, tier, gatewayModelId, name, label, providerLabel }) => ({
+        provider,
+        tier,
+        gatewayModelId,
+        name,
+        label,
+        providerLabel,
+      })),
     ).toEqual(hubModels.models);
+    expect(offered.targets.map(({ target, label }) => ({ target, label }))).toEqual(hubModels.targets);
 
     const unknownOverride = await client.updateHubAiSettings({
       settings: { modelOverrides: [{ target: 'ask-ai', model: 'openai/gpt-4o' }] },

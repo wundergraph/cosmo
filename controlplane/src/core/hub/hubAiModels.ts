@@ -7,9 +7,13 @@ const HubAiModels = z.object({
       tier: z.string(),
       gatewayModelId: z.string(),
       name: z.string(),
+      label: z.string(),
+      providerLabel: z.string(),
     }),
   ),
   deploymentModel: z.string(),
+  defaultModelLabel: z.string(),
+  targets: z.array(z.object({ target: z.string(), label: z.string() })),
 });
 
 export type HubAiModels = z.infer<typeof HubAiModels>;
