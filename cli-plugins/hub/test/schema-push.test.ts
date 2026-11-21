@@ -17,8 +17,12 @@ mocks:
 `;
 
 const pushed = {
-  sandbox: { name: 'pr-42', url: 'https://hub.example/shop/sandboxes/pr-42' },
-  composition: { errors: [], warnings: ['Product.price is unused'] },
+  target: 'sandbox',
+  sandboxName: 'pr-42',
+  endpointUrl: 'https://hub.example/s/pr-42/graphql',
+  hubUrl: 'https://hub.example/shop/sandboxes/pr-42',
+  passed: 3,
+  failed: 0,
 };
 
 let hub: FakeHub | undefined;
@@ -60,7 +64,7 @@ describe('wgc hub schema push', () => {
       'read products: Reading products.graphql',
       "generate reviews: Running printf 'type Query { reviews: [String] }'",
       'upload shop: Uploading 2 subgraphs at abc123def456',
-      'compose pr-42: Composed with 0 error(s) and 1 warning(s)',
+      'collections pr-42: Collections: 3 passed, 0 failed',
     ]);
     expect(run.json()).toEqual({ ok: true, data: { sha: 'abc123def4567890', ...pushed } });
   });
@@ -115,13 +119,8 @@ describe('wgc hub schema push', () => {
     ]);
   });
 
-  test('exits non-zero with the composition errors', async () => {
-    hub = await startFakeHub({
-      schemaPush: {
-        sandbox: { name: 'pr-42', url: 'https://hub.example/shop/sandboxes/pr-42' },
-        composition: { errors: ['Field "Query.a" is defined in two subgraphs'], warnings: [] },
-      },
-    });
+  test('exits non-zero when collection operations fail in the sandbox', async () => {
+    hub = await startFakeHub({ schemaPush: { ...pushed, passed: 2, failed: 1 } });
     const dir = await tempRepo({
       'sandbox.yaml': 'schema: shop\nsubgraphs:\n  - name: a\n    schema: a.graphql\n',
       'a.graphql': 'type Query { a: Int }',
@@ -138,13 +137,29 @@ describe('wgc hub schema push', () => {
     expect(run.json()).toEqual({
       ok: false,
       error: {
-        code: 'COMPOSITION_FAILED',
-        message: 'Composition failed for sandbox pr-42:\n  - Field "Query.a" is defined in two subgraphs',
+        code: 'COLLECTIONS_FAILED',
+        message: '1 collection operation(s) failed in sandbox pr-42',
         input: 'sandbox.yaml',
-        remediation: 'Fix the subgraph schemas and push again.',
+        remediation: 'Open the sandbox in Hub to see which operations failed.',
       },
       url: 'https://hub.example/shop/sandboxes/pr-42',
     });
+  });
+
+  test('reports the schema a push to the default branch updated', async () => {
+    hub = await startFakeHub({ schemaPush: { target: 'schema', graphSlug: 'shop' } });
+    const dir = await tempRepo({
+      'sandbox.yaml': 'schema: shop\nsubgraphs:\n  - name: a\n    schema: a.graphql\n',
+      'a.graphql': 'type Query { a: Int }',
+    });
+
+    const run = await runWgc(
+      ['hub', 'schema', 'push', '--config', path.join(dir, 'sandbox.yaml'), '--sha', 'abc', '--json'],
+      { hubUrl: hub.url },
+    );
+
+    expect(run.exitCode).toBe(0);
+    expect(run.json()).toEqual({ ok: true, data: { sha: 'abc', target: 'schema', graphSlug: 'shop' } });
   });
 
   test('fails before uploading when a generate command exits non-zero', async () => {

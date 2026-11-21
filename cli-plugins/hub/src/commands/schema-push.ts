@@ -108,30 +108,36 @@ const runPush = async (options: PushOptions, { context, runtime }: HubDependenci
     return;
   }
 
-  const { sandbox, composition } = pushed.data;
+  const pushedTo = pushed.data;
+  if (pushedTo.target === 'schema') {
+    output.result(
+      { sha: sha.data, ...pushedTo },
+      (data) => `${pc.green('Pushed')} ${data.graphSlug} ${pc.dim(data.sha.slice(0, 12))}`,
+    );
+    return;
+  }
+
   output.progress({
-    step: 'compose',
-    subject: sandbox.name,
-    message: `Composed with ${composition.errors.length} error(s) and ${composition.warnings.length} warning(s)`,
+    step: 'collections',
+    subject: pushedTo.sandboxName,
+    message: `Collections: ${pushedTo.passed} passed, ${pushedTo.failed} failed`,
   });
 
-  if (composition.errors.length > 0) {
+  if (pushedTo.failed > 0) {
     output.fail({
-      code: 'COMPOSITION_FAILED',
-      message: `Composition failed for sandbox ${sandbox.name}:\n${composition.errors.map((error) => `  - ${error}`).join('\n')}`,
+      code: 'COLLECTIONS_FAILED',
+      message: `${pushedTo.failed} collection operation(s) failed in sandbox ${pushedTo.sandboxName}`,
       input: sandboxFileName,
-      remediation: 'Fix the subgraph schemas and push again.',
-      url: sandbox.url,
+      remediation: 'Open the sandbox in Hub to see which operations failed.',
+      url: pushedTo.hubUrl,
     });
     return;
   }
 
-  output.result({ sha: sha.data, ...pushed.data }, (data) =>
-    [
-      `${pc.green('Pushed')} ${data.sandbox.name} ${pc.dim(data.sha.slice(0, 12))}`,
-      ...data.composition.warnings.map((warning) => `${pc.yellow('warning')} ${warning}`),
-      data.sandbox.url,
-    ].join('\n'),
+  output.result({ sha: sha.data, ...pushedTo }, (data) =>
+    [`${pc.green('Pushed')} ${data.sandboxName} ${pc.dim(data.sha.slice(0, 12))}`, data.endpointUrl, data.hubUrl].join(
+      '\n',
+    ),
   );
 };
 

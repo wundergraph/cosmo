@@ -226,10 +226,17 @@ export const hubResults = {
 };
 
 /** The JSON answer of `POST /ci/schema-push`, which CI calls with `{ sandboxYaml, subgraphs, sha }`. */
-export const schemaPushResult = z.object({
-  sandbox: z.object({ name: z.string(), url: z.string() }),
-  composition: z.object({ errors: z.array(z.string()), warnings: z.array(z.string()) }),
-});
+export const schemaPushResult = z.discriminatedUnion('target', [
+  z.object({
+    target: z.literal('sandbox'),
+    sandboxName: z.string(),
+    endpointUrl: z.string(),
+    hubUrl: z.string(),
+    passed: z.number(),
+    failed: z.number(),
+  }),
+  z.object({ target: z.literal('schema'), graphSlug: z.string() }),
+]);
 
 /** Hub's web app pages for the sandbox `<schema>/<sandbox>` of an organization. */
 export const hubPages = (hubAppUrl: string, organizationSlug: string, address: string) => {
