@@ -101,6 +101,29 @@ func setSample(request *dynamicpb.Message, fieldName string) string {
 	}
 }
 
+// sampleBody is a REST answer the result field can be read from: a list, an object, or a scalar for a scalar or wrapped scalar.
+func sampleBody(field protoreflect.FieldDescriptor) string {
+	if field.IsList() {
+		return "[]"
+	}
+	if field.Kind() == protoreflect.MessageKind {
+		value := field.Message().Fields().ByName("value")
+		if value == nil || field.Message().Fields().Len() != 1 {
+			return "{}"
+		}
+		field = value
+	}
+
+	switch field.Kind() {
+	case protoreflect.Int32Kind, protoreflect.Int64Kind, protoreflect.DoubleKind, protoreflect.FloatKind:
+		return "0"
+	case protoreflect.BoolKind:
+		return "false"
+	default:
+		return `"sample"`
+	}
+}
+
 func TestEveryOperationCallsItsRESTPath(t *testing.T) {
 	loaded, err := loadSpec(operationsJSON)
 	if err != nil {
@@ -120,9 +143,7 @@ func TestEveryOperationCallsItsRESTPath(t *testing.T) {
 			defer restAPI.Close()
 
 			started := startSubgraph(t, restAPI)
-			if started.service.Methods().ByName(protoreflect.Name(operation.RPC)).Output().Fields().Get(0).IsList() {
-				emptyBody = "[]"
-			}
+			emptyBody = sampleBody(started.service.Methods().ByName(protoreflect.Name(operation.RPC)).Output().Fields().Get(0))
 
 			wantPath := operation.Path
 			wantQuery := map[string]string{}
