@@ -2,6 +2,8 @@ import { Kind, TypeNode } from 'graphql';
 import { create } from '@bufbuild/protobuf';
 
 import {
+  ContextArgumentSchema,
+  ContextProviderSchema,
   ArgumentConfigurationSchema,
   ArgumentSource,
   AuthorizationConfigurationSchema,
@@ -26,6 +28,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import type {
+  ContextArgument,
+  ContextProvider,
   ArgumentConfiguration,
   AuthorizationConfiguration,
   DataSourceCustomEvents,
@@ -59,6 +63,8 @@ import {
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
+  contextProviders: ContextProvider[];
+  contextArguments: ContextArgument[];
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
@@ -156,6 +162,8 @@ export function configurationDatasToDataSourceConfiguration(
   dataByTypeName: Map<TypeName, ConfigurationData>,
 ): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
+    contextProviders: [],
+    contextArguments: [],
     rootNodes: [],
     childNodes: [],
     keys: [],
@@ -166,6 +174,15 @@ export function configurationDatasToDataSourceConfiguration(
     interfaceObjects: [],
   };
   for (const data of dataByTypeName.values()) {
+    for (const provider of data.contextProviders ?? []) {
+      output.contextProviders.push(create(ContextProviderSchema, provider));
+    }
+    for (const argument of data.contextArguments ?? []) {
+      output.contextArguments.push(create(ContextArgumentSchema, argument));
+    }
+    if (data.contextMetadataOnly) {
+      continue;
+    }
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
     const typeField = create(TypeFieldSchema, { fieldNames, typeName });
