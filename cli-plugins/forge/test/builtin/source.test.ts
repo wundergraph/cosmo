@@ -351,6 +351,90 @@ type OrderLineDimensions {
   });
 });
 
+describe('wgc forge source add <openapi> --rename', () => {
+  test('renames a root field and a type in the graph and keeps calling the same REST operation', async () => {
+    const workspace = await sourceWorkspace();
+
+    const run = await runForge(
+      ['source', 'add', '--rename', 'Query.catalogItem=item', '--rename', 'CatalogItem=Product', url],
+      {
+        workspace,
+        system: await catalogSystem(),
+      },
+    );
+
+    const result = JSON.parse(run.stdout).data;
+    expect(result.subgraph.sdl).toBe(`type Query {
+  item(id: ID!): Product
+  items(limit: Int, tag: String): [Product!]!
+}
+
+type Product {
+  itemId: String!
+  displayName: String
+  price: Float
+  tags: [String!]!
+  warehouse: Warehouse
+}
+
+type Warehouse {
+  code: String!
+}
+`);
+    expect(result.operations).toEqual([
+      { field: 'item', request: 'GET /v1/items/{id}' },
+      { field: 'items', request: 'GET /v1/items' },
+    ]);
+    expect(JSON.parse(await read(workspace, 'modules/catalog/operations.json'))).toEqual({
+      baseUrl: 'https://catalog.example.com',
+      listenAddr: '127.0.0.1:4011',
+      operations: [
+        {
+          rpc: 'QueryItem',
+          method: 'GET',
+          path: '/v1/items/{id}',
+          parameters: [{ field: 'id', name: 'id', in: 'path' }],
+        },
+        {
+          rpc: 'QueryItems',
+          method: 'GET',
+          path: '/v1/items',
+          parameters: [
+            { field: 'limit', name: 'limit', in: 'query' },
+            { field: 'tag', name: 'tag', in: 'query' },
+          ],
+        },
+      ],
+      types: {
+        Product: {
+          item_id: 'item_id',
+          display_name: 'display_name',
+          price: 'price',
+          tags: 'tags',
+          warehouse: 'warehouse',
+        },
+        Warehouse: { code: 'code' },
+      },
+    });
+  });
+
+  test('a REST API has no Mutation field to rename', async () => {
+    const workspace = await sourceWorkspace();
+
+    const run = await runForge(['source', 'add', '--rename', 'Mutation.items=allItems', url], {
+      workspace,
+      system: await catalogSystem(),
+    });
+
+    expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
+      message: 'Mutation.items names no type or root field that the generated graph can rename.',
+      input: '--rename Mutation.items=allItems',
+      remediation: 'Pass a type or a root field of the generated SDL, such as CatalogItem or Query.catalogItem.',
+    });
+  });
+});
+
 describe('wgc forge source add rejects what it cannot generate', () => {
   test('a Postgres URL names what is missing and does not repeat the credentials', async () => {
     const workspace = await sourceWorkspace();

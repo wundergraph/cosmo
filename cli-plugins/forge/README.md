@@ -59,6 +59,8 @@ Without configuration the naming, enum, typename-prefix and deprecation rules wa
 
 From an OpenAPI description, every GET operation with an `application/json` response for status 200 becomes a field on `Query`.
 
+`--rename <coordinate>=<name>` gives a generated type, such as `Salary`, or a root field, such as `Query.salary`, another name, and can be repeated. A renamed type is renamed wherever the graph uses it. Only GraphQL names change, so the module still calls the same REST operations and RPCs with the same fields. A rename fails when its coordinate names nothing in the generated graph or its name is already taken.
+
 ### From a proto file
 
 The module answers each field with one unary call to the existing gRPC service. It reads the service's proto at startup and builds its messages with `dynamicpb`, so no Go code is generated per service. `--target` names the service's address, and `modules.<name>.target` in the router config overrides it. The schema is derived from the file as follows.

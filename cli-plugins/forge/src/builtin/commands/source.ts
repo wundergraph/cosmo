@@ -11,6 +11,8 @@ import { generateProtoSource, generateSource, sourceFiles, writeSourceModule } f
 import type { GeneratedSource } from '../source/generate.js';
 import { openApiTitle, readOpenApi } from '../source/openapi.js';
 import { readProto } from '../source/proto.js';
+import { parseRenames, renameProtoSource, renameSource } from '../source/rename.js';
+import type { Rename } from '../source/rename.js';
 import type { Skipped } from '../source/model.js';
 import type { System } from '../system.js';
 import { modulesDirectory } from '../workspace.js';
@@ -21,6 +23,7 @@ interface SourceAddOptions extends CommonOptions {
   name?: string;
   listen: string;
   target?: string;
+  rename: string[];
 }
 
 const defaultListenAddr = '127.0.0.1:4011';
@@ -93,9 +96,13 @@ interface DescribedSource {
   generate: (name: string, listenAddr: string) => Result<GeneratedSource>;
 }
 
-const describeSource = (text: string, location: string, target: string): Result<DescribedSource> => {
+const describeSource = (text: string, location: string, target: string, renames: Rename[]): Result<DescribedSource> => {
   if (isProto(location)) {
-    const model = readProto(text, location);
+    const read = readProto(text, location);
+    if (!read.success) {
+      return read;
+    }
+    const model = renameProtoSource(read.data, renames);
     if (!model.success) {
       return model;
     }
@@ -115,7 +122,11 @@ const describeSource = (text: string, location: string, target: string): Result<
     };
   }
 
-  const model = readOpenApi(text, location);
+  const read = readOpenApi(text, location);
+  if (!read.success) {
+    return read;
+  }
+  const model = renameSource(read.data, renames);
   if (!model.success) {
     return model;
   }
@@ -153,6 +164,12 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
         '--target <address>',
         'For a proto file: the address of the gRPC service, such as dns:///payroll:50051. The router config can set it instead.',
       )
+      .option(
+        '--rename <coordinate=name>',
+        'Renames a generated type, such as Salary=PayrollSalary, or root field, such as Query.salary=payrollSalary. Repeatable.',
+        (value: string, previous: string[]) => [...previous, value],
+        [],
+      )
       .addHelpText(
         'after',
         [
@@ -162,7 +179,8 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
           'List, or when it has no side effects, and on Mutation otherwise. The module runs inside the router',
           'process: it serves the subgraph on --listen and the router reaches it there as a gRPC subgraph, so',
           `there is no plugin executable and no bridge service. The subgraph is added to ${defaultGraphFile}, the input`,
-          'of `wgc router compose`. Postgres URLs are not supported yet.',
+          'of `wgc router compose`. --rename changes only GraphQL names, and the module still calls the',
+          'same REST operations or RPCs with the same fields. Postgres URLs are not supported yet.',
         ].join('\n'),
       ),
   ).action(async (location: string, options: SourceAddOptions) => {
@@ -186,12 +204,17 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       });
     }
 
+    const renames = parseRenames(options.rename);
+    if (!renames.success) {
+      return output.fail(toFailure(renames));
+    }
+
     output.progress({ step: 'read-source', subject: location, message: 'Reading the API description' });
     const text = await readSource(system, dependencies.cwd(), location);
     if (!text.success) {
       return output.fail(toFailure(text));
     }
-    const described = describeSource(text.data, location, options.target ?? '');
+    const described = describeSource(text.data, location, options.target ?? '', renames.data);
     if (!described.success) {
       return output.fail(toFailure(described));
     }
