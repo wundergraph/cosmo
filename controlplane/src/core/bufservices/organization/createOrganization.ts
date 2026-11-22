@@ -11,7 +11,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { organizationSchema } from '../../constants.js';
 import type { PlainMessage } from '../../../types/index.js';
@@ -21,11 +21,11 @@ export function createOrganization(
   req: CreateOrganizationRequest,
   ctx: HandlerContext,
 ): Promise<PlainMessage<CreateOrganizationResponse>> {
-  let logger = getLogger(ctx, opts.logger);
+  const logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateOrganizationResponse>>(ctx, logger, async () => {
-    const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-    logger = enrichLogger(ctx, logger, authContext);
+    // A user's first organization is created before they belong to any.
+    const authContext = await opts.authenticator.authenticateUser(ctx.requestHeader);
 
     const validatedReq = organizationSchema.safeParse(req);
     if (!validatedReq.success) {
@@ -156,7 +156,7 @@ export function createOrganization(
         }
 
         await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
+          organizationId: organization.id,
           organizationSlug: organization.slug,
           auditAction: 'namespace.created',
           action: 'created',

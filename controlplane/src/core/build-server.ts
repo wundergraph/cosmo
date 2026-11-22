@@ -330,6 +330,7 @@ export default async function build(opts: BuildConfig) {
     oidcRepository,
     namespaceLoginMethodRepository,
     organizationLoginMethodRepository,
+    userRepo,
   );
   const ciOidcAuth = new CiOidcAuthenticator(new CiTrustedRepositoryRepository(fastify.db), organizationRepository, {
     audience: opts.ciOidc?.audience ?? defaultCiOidcAudience,

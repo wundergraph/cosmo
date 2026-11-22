@@ -18,8 +18,12 @@ import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 
+/** The user behind a request, without the organization a call may not need. */
+export type UserAuthContext = Pick<AuthContext, 'auth' | 'userId' | 'userDisplayName' | 'apiKeyName'>;
+
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
+  authenticateUser(headers: Headers): Promise<UserAuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
   getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
@@ -48,6 +52,27 @@ export class Authentication implements Authenticator {
    * the `cosmo-org-id` header to be set and will validate that the user is a member of the organization.
    * If none of these are found, an error is thrown.
    */
+  /**
+   * Authenticate the user behind a request, for calls that act for the user rather than within an organization, such
+   * as creating one. A user's access token needs no organization; every other credential is authenticated as usual.
+   */
+  public async authenticateUser(headers: Headers): Promise<UserAuthContext> {
+    const authorization = headers.get('authorization');
+    if (authorization) {
+      const token = authorization.replace(/^bearer\s+/i, '');
+      if (!token.toLowerCase().startsWith('cosmo') && !this.ciOidcAuth.issuerOf(token)) {
+        try {
+          return await this.accessTokenAuth.authenticateUser(token);
+        } catch (error: unknown) {
+          this.logger.debug(error, 'Could not authenticate the user of an access token');
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+        }
+      }
+    }
+
+    return await this.authenticate(headers);
+  }
+
   public async authenticate(headers: Headers): Promise<AuthContext> {
     try {
       /**

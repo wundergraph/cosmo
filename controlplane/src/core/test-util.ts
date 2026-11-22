@@ -281,6 +281,12 @@ export function createTestAuthenticator(
       }
       return Promise.resolve(activeContext);
     },
+    authenticateUser(headers: Headers): Promise<AuthContext> {
+      if (!activeContext) {
+        throw new Error('No active context found');
+      }
+      return Promise.resolve(activeContext);
+    },
     async getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
       if (!token || token.trim().length === 0) {
         return undefined;

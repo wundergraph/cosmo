@@ -5,6 +5,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import { NamespaceLoginMethodRepository } from '../repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
+import type { UserRepository } from '../repositories/UserRepository.js';
 import { traced } from '../tracing.js';
 import type { LoginMethod, OrganizationDTO } from '../../types/index.js';
 import { buildAuthState } from '../util.js';
@@ -21,6 +22,13 @@ export type AccessTokenAuthContext = {
   loginMethod: LoginMethod;
 };
 
+/** Who an access token belongs to, apart from any organization. */
+export type AccessTokenUserContext = {
+  auth: 'access_token';
+  userId: string;
+  userDisplayName: string;
+};
+
 @traced
 export default class AccessTokenAuthenticator {
   constructor(
@@ -29,7 +37,27 @@ export default class AccessTokenAuthenticator {
     private oidcRepo: OidcRepository,
     private namespaceLoginMethodRepo: NamespaceLoginMethodRepository,
     private orgLoginMethodRepo: OrganizationLoginMethodRepository,
+    private userRepo: Pick<UserRepository, 'byId' | 'addUser'>,
   ) {}
+
+  /**
+   * Authenticates the user with the given access token without an organization, for the calls a user makes before
+   * they belong to one, such as creating their first organization. A user Keycloak knows but the control plane has
+   * not met yet, because they never signed in to Studio, is recorded here, as the login callback records them.
+   */
+  public async authenticateUser(accessToken: string): Promise<AccessTokenUserContext> {
+    const userInfoData = await this.authUtils.getUserInfo(accessToken);
+
+    if (!(await this.userRepo.byId(userInfoData.sub))) {
+      await this.userRepo.addUser({ id: userInfoData.sub, email: userInfoData.email });
+    }
+
+    return {
+      auth: 'access_token',
+      userId: userInfoData.sub,
+      userDisplayName: userInfoData.email,
+    };
+  }
 
   /**
    * Authenticates the user with the given access token. Returns the user's organization ID and user's ID.
