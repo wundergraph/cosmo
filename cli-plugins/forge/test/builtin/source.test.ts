@@ -224,7 +224,7 @@ subgraphs:
     expect(run.stdout).toBe(
       [
         'Created ./modules/catalog from api/openapi.yaml and added it to forge.yaml and graph.yaml.',
-        '  2 query field(s)',
+        '  2 field(s)',
         '    catalogItem  GET /v1/items/{id}',
         '    items  GET /v1/items',
         '  4 skipped',
@@ -352,22 +352,6 @@ type OrderLineDimensions {
 });
 
 describe('wgc forge source add rejects what it cannot generate', () => {
-  test('a proto file names what is missing', async () => {
-    const workspace = await sourceWorkspace({ 'service.proto': 'syntax = "proto3";\n' });
-
-    const run = await runForge(['source', 'add', 'service.proto'], { workspace });
-
-    expect(run.exitCode).toBe(1);
-    expect(JSON.parse(run.stdout).error).toEqual({
-      code: 'COMMAND_FAILED',
-      message:
-        'A proto file cannot become a subgraph yet. Cosmo compiles a GraphQL schema to a proto contract, and nothing derives a graph schema and its field mapping from a proto service.',
-      input: 'service.proto',
-      remediation: 'Add the OpenAPI 3 description of the same API instead.',
-    });
-    expect(await read(workspace, 'forge.yaml')).toBe(manifest);
-  });
-
   test('a Postgres URL names what is missing and does not repeat the credentials', async () => {
     const workspace = await sourceWorkspace();
 
@@ -377,9 +361,10 @@ describe('wgc forge source add rejects what it cannot generate', () => {
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
       message:
-        'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API, not from SQL.',
+        'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API or a gRPC service, not from SQL.',
       input: 'postgres source',
-      remediation: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
+      remediation:
+        'Add the OpenAPI 3 description of a REST API, or the proto file of a gRPC service, in front of the database instead.',
     });
   });
 

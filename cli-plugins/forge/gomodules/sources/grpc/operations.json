@@ -1,0 +1,73 @@
+{
+  "target": "",
+  "listenAddr": "127.0.0.1:4011",
+  "operations": [
+    {
+      "rpc": "QuerySalary",
+      "method": "/payroll.v1.PayrollService/GetSalary",
+      "returns": "field",
+      "field": "salary"
+    },
+    {
+      "rpc": "QueryListSalaries",
+      "method": "/payroll.v1.PayrollService/ListSalaries",
+      "returns": "message"
+    },
+    {
+      "rpc": "MutationUpdateSalary",
+      "method": "/payroll.v1.PayrollService/UpdateSalary",
+      "returns": "field",
+      "field": "salary"
+    },
+    {
+      "rpc": "MutationDeleteSalary",
+      "method": "/payroll.v1.PayrollService/DeleteSalary",
+      "returns": "empty"
+    }
+  ],
+  "messages": {
+    "QuerySalaryRequest": {
+      "user_id": "user_id"
+    },
+    "QueryListSalariesRequest": {
+      "frequencies": "frequencies",
+      "page_size": "page_size",
+      "page_token": "page_token"
+    },
+    "MutationUpdateSalaryRequest": {
+      "user_id": "user_id",
+      "base": "base",
+      "pay_frequency": "pay_frequency"
+    },
+    "MutationDeleteSalaryRequest": {
+      "user_id": "user_id"
+    },
+    "Salary": {
+      "id": "id",
+      "user_id": "user_id",
+      "base": "base",
+      "pay_frequency": "pay_frequency",
+      "effective_from": "effective_from",
+      "note": "note",
+      "tags": "tags"
+    },
+    "Money": {
+      "currency": "currency",
+      "amount_cents": "amount_cents"
+    },
+    "ListSalariesResponse": {
+      "salaries": "salaries",
+      "next_page_token": "next_page_token"
+    },
+    "MoneyInput": {
+      "currency": "currency",
+      "amount_cents": "amount_cents"
+    }
+  },
+  "enums": {
+    "PayFrequency": {
+      "PAY_FREQUENCY_MONTHLY": "PAY_FREQUENCY_MONTHLY",
+      "PAY_FREQUENCY_BIWEEKLY": "PAY_FREQUENCY_BIWEEKLY"
+    }
+  }
+}

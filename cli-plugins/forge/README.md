@@ -55,7 +55,25 @@ Without configuration the naming, enum, typename-prefix and deprecation rules wa
 
 ## `wgc forge source add`
 
-`wgc forge source add <openapi-url-or-file>` turns an OpenAPI 3 description into a Cosmo Connect subgraph. Every GET operation with an `application/json` response for status 200 becomes a field on `Query`. `@wundergraph/protographic` compiles the schema to `service.proto` and `mapping.json`, the same contract `wgc grpc-service generate` writes. The command creates `modules/<name>`, registers it in `forge.yaml` and adds the subgraph to `graph.yaml`. Its result has the subgraph SDL, the module path and a `skipped` list of every operation, parameter and property it left out.
+`wgc forge source add <openapi-or-proto>` turns an OpenAPI 3 description or a gRPC service's `.proto` file into a Cosmo Connect subgraph. `@wundergraph/protographic` compiles the subgraph schema to `service.proto` and `mapping.json`, the same contract `wgc grpc-service generate` writes. The command creates `modules/<name>`, registers it in `forge.yaml` and adds the subgraph to `graph.yaml`. Its result has the subgraph SDL, the module path and a `skipped` list of everything it left out.
+
+From an OpenAPI description, every GET operation with an `application/json` response for status 200 becomes a field on `Query`.
+
+### From a proto file
+
+The module answers each field with one unary call to the existing gRPC service. It reads the service's proto at startup and builds its messages with `dynamicpb`, so no Go code is generated per service. `--target` names the service's address, and `modules.<name>.target` in the router config overrides it. The schema is derived from the file as follows.
+
+- Every unary RPC becomes one field. It goes on `Query` when the RPC sets `idempotency_level = NO_SIDE_EFFECTS` or its name starts with the word Get, List, Search, Find, Lookup, Query, Count, Fetch, Read or Describe. Every other unary RPC goes on `Mutation`. Streaming RPCs are skipped.
+- The field is the RPC's name in camel case. A `Query` field drops a leading Get, so `GetSalary` becomes `salary`, unless another field already has that name.
+- The fields of the request message become the field's arguments. A request field is optional on the wire, so every argument is nullable. A repeated field becomes a list argument that defaults to `[]`.
+- A response message with one field returns that field's type. An empty response, such as `google.protobuf.Empty`, returns `Boolean`, which is true when the call succeeded. Any other response returns an object type named after the message. A root field is nullable, and a `NOT_FOUND` from the service answers it with null.
+- A message becomes an object type named after it, with its parent messages' names in front for a nested one. A message used in a request also becomes an input type with `Input` appended.
+- An enum becomes an enum. Its unspecified zero value is left out, and the enum's name in upper snake case is removed from the front of each value, so `PAY_FREQUENCY_MONTHLY` becomes `MONTHLY`.
+- `double`, `float`, `uint32` and `fixed32` become `Float`. The other 32-bit integers become `Int`. 64-bit integers become `String`, as protojson writes them. `bool` becomes `Boolean`, and `string` and `bytes` become `String`. A string field named `id` or ending in `_id` becomes `ID`.
+- `google.protobuf.Timestamp` and `Duration` become `String`, and the wrapper types become their nullable scalar. Maps and the other well-known types are skipped.
+- A response field that always has a value is non-null: a scalar outside a `oneof` and not marked `optional`. Enum and message fields are nullable. A repeated field is a non-null list of non-null items.
+
+The file may import the google/protobuf well-known types and nothing else.
 
 ### What runs in the router process
 
@@ -64,9 +82,9 @@ The router has no way for a compiled module to hand it a gRPC client for a subgr
 - The module is compiled into the router binary by `wgc forge build`, like any other module.
 - When the router provisions it, it starts a gRPC server inside the router process on a loopback address (`127.0.0.1:4011` by default) and serves the generated service from the embedded `service.proto` with dynamic messages.
 - `graph.yaml` declares the subgraph as a standalone gRPC subgraph with that address as its routing URL, so the router's existing remote provider dials its own process.
-- Each RPC makes one HTTP call to the REST API with a client the module owns.
+- Each RPC makes one HTTP call to the REST API, or one unary call to the gRPC service, with a client the module owns.
 
-One binary and one process serve the graph field and call the REST API. No plugin executable is started and no bridge service is deployed. It is not an in-memory connection. Each call crosses a loopback TCP socket and is encoded as gRPC, and the listen address is configured in two places, the graph file and `modules.<name>.listen_addr`. Removing that hop needs a router change that lets a module register a `grpcconnector.ClientProvider` for a named subgraph.
+One binary and one process serve the graph field and call the API. No plugin executable is started and no bridge service is deployed. It is not an in-memory connection. Each call crosses a loopback TCP socket and is encoded as gRPC, and the listen address is configured in two places, the graph file and `modules.<name>.listen_addr`. Removing that hop needs a router change that lets a module register a `grpcconnector.ClientProvider` for a named subgraph.
 
 ```yaml
 # router.yaml
@@ -77,12 +95,20 @@ modules:
     timeout: 5s
     headers:
       Authorization: Bearer ${CATALOG_TOKEN}
+  payroll:
+    target: dns:///payroll.internal:50051
+    tls: false
+    listen_addr: 127.0.0.1:4012
+    timeout: 5s
+    headers:
+      authorization: Bearer ${PAYROLL_TOKEN}
 ```
 
 ### Limits
 
-- Only OpenAPI 3.0 and 3.1 documents are read. A proto file and a Postgres URL are rejected with what is missing: Cosmo has no tool that derives a graph schema from a proto service, and Forge neither introspects a database nor generates SQL.
-- Only GET operations are generated. Path and query parameters must be plain strings, numbers or booleans.
+- OpenAPI 3.0 and 3.1 documents and proto files are read. A Postgres URL is rejected with what is missing: Forge neither introspects a database nor generates SQL.
+- Only GET operations of a REST API are generated. Path and query parameters must be plain strings, numbers or booleans.
 - Response objects, arrays, `$ref` and `allOf` are translated. `oneOf`, `anyOf`, maps, enums as enums and lists of lists are skipped and listed.
-- A 404 from the REST API is a null field. Other failures are gRPC errors. The caller's identity is not forwarded. Only the configured static headers are sent.
-- The listener is bound once per process. A config reload updates the REST settings, and a new listen address needs a restart.
+- A 404 from the REST API or a `NOT_FOUND` from the gRPC service is a null field. Other failures are gRPC errors. The caller's identity is not forwarded. Only the configured static headers are sent.
+- A gRPC source without a target still lets the router start, and each of its fields answers `FAILED_PRECONDITION` until `modules.<name>.target` is set.
+- The listener is bound once per process. A config reload updates the API settings, and a new listen address needs a restart.

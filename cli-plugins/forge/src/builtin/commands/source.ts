@@ -7,8 +7,11 @@ import { localModuleName } from '../catalog.js';
 import { defaultGraphFile, readGraphFile, writeGraphFile } from '../graph.js';
 import { lockFileName, readLock } from '../lock.js';
 import { manifestFileName, readManifest, sameSource, writeManifest } from '../manifest.js';
-import { generateSource, sourceFiles, writeSourceModule } from '../source/generate.js';
+import { generateProtoSource, generateSource, sourceFiles, writeSourceModule } from '../source/generate.js';
+import type { GeneratedSource } from '../source/generate.js';
 import { openApiTitle, readOpenApi } from '../source/openapi.js';
+import { readProto } from '../source/proto.js';
+import type { Skipped } from '../source/model.js';
 import type { System } from '../system.js';
 import { modulesDirectory } from '../workspace.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
@@ -17,6 +20,7 @@ import type { CommonOptions, ForgeDependencies } from './shared.js';
 interface SourceAddOptions extends CommonOptions {
   name?: string;
   listen: string;
+  target?: string;
 }
 
 const defaultListenAddr = '127.0.0.1:4011';
@@ -29,23 +33,17 @@ const unsupportedSource = (source: string): Result<string> | undefined => {
   if (/^postgres(ql)?:\/\//.test(source)) {
     return failWith({
       message:
-        'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API, not from SQL.',
+        'A Postgres database cannot become a subgraph yet. Forge does not read a database schema, and the module it generates answers fields from a REST API or a gRPC service, not from SQL.',
       input: 'postgres source',
-      remediation: 'Add the OpenAPI 3 description of a REST API in front of the database instead.',
-    });
-  }
-
-  if (source.endsWith('.proto')) {
-    return failWith({
-      message:
-        'A proto file cannot become a subgraph yet. Cosmo compiles a GraphQL schema to a proto contract, and nothing derives a graph schema and its field mapping from a proto service.',
-      input: source,
-      remediation: 'Add the OpenAPI 3 description of the same API instead.',
+      remediation:
+        'Add the OpenAPI 3 description of a REST API, or the proto file of a gRPC service, in front of the database instead.',
     });
   }
 
   return undefined;
 };
+
+const isProto = (source: string): boolean => new URL(source, 'file:///').pathname.endsWith('.proto');
 
 const readSource = async (system: System, invokedFrom: string, source: string): Promise<Result<string>> => {
   const unsupported = unsupportedSource(source);
@@ -75,7 +73,7 @@ const readSource = async (system: System, invokedFrom: string, source: string): 
     return failWith({
       message: `${source} is not a file or an http(s) URL.`,
       input: source,
-      remediation: 'Pass the URL or path of an OpenAPI 3 description.',
+      remediation: 'Pass the URL or path of an OpenAPI 3 description or a proto file.',
     });
   }
 };
@@ -86,6 +84,56 @@ const slug = (text: string): string =>
     .replaceAll(/[^\da-z]+/g, '-')
     .replaceAll(/^[\d-]+|-+$/g, '');
 
+/** A description read as the graph it becomes, before it is generated under a name. */
+interface DescribedSource {
+  kind: 'openapi' | 'proto';
+  defaultName: string;
+  operations: { field: string; request: string }[];
+  skipped: Skipped[];
+  generate: (name: string, listenAddr: string) => Result<GeneratedSource>;
+}
+
+const describeSource = (text: string, location: string, target: string): Result<DescribedSource> => {
+  if (isProto(location)) {
+    const model = readProto(text, location);
+    if (!model.success) {
+      return model;
+    }
+    return {
+      success: true,
+      data: {
+        kind: 'proto',
+        defaultName: slug(model.data.serviceName.replace(/Service$/, '')),
+        operations: model.data.operations.map((operation) => ({
+          field: `${operation.root}.${operation.field}`,
+          request: operation.method,
+        })),
+        skipped: model.data.skipped,
+        generate: (name, listenAddr) =>
+          generateProtoSource({ model: model.data, name, listenAddr, target, upstreamProto: text }),
+      },
+    };
+  }
+
+  const model = readOpenApi(text, location);
+  if (!model.success) {
+    return model;
+  }
+  return {
+    success: true,
+    data: {
+      kind: 'openapi',
+      defaultName: slug(openApiTitle(text) ?? ''),
+      operations: model.data.operations.map((operation) => ({
+        field: operation.field,
+        request: `${operation.method} ${operation.path}`,
+      })),
+      skipped: model.data.skipped,
+      generate: (name, listenAddr) => generateSource({ model: model.data, name, listenAddr }),
+    },
+  };
+};
+
 export const registerSource = (command: Command, dependencies: ForgeDependencies): void => {
   const source = command.command('source').description('Bring an existing API into the graph.');
 
@@ -93,19 +141,28 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     source
       .command('add')
       .description(
-        'Generate a Cosmo Connect subgraph from an OpenAPI 3 description and register it as a module that `wgc forge build` compiles into the router.',
+        'Generate a Cosmo Connect subgraph from an OpenAPI 3 description or a gRPC proto file and register it as a module that `wgc forge build` compiles into the router.',
       )
-      .argument('<source>', 'The URL or path of an OpenAPI 3 description (JSON or YAML).')
-      .option('--name <name>', 'The module and subgraph name. Defaults to the title of the API.')
+      .argument('<source>', 'The URL or path of an OpenAPI 3 description (JSON or YAML) or of a .proto file.')
+      .option(
+        '--name <name>',
+        'The module and subgraph name. Defaults to the title of the API or the name of the service.',
+      )
       .option('--listen <address>', 'Where the router serves the subgraph to itself.', defaultListenAddr)
+      .option(
+        '--target <address>',
+        'For a proto file: the address of the gRPC service, such as dns:///payroll:50051. The router config can set it instead.',
+      )
       .addHelpText(
         'after',
         [
           '',
-          'Every GET operation with a JSON response becomes a query field. The module runs inside the router',
+          'From an OpenAPI description, every GET operation with a JSON response becomes a query field. From a proto',
+          'file, every unary RPC becomes a field: on Query when its name starts with a reading verb such as Get or',
+          'List, or when it has no side effects, and on Mutation otherwise. The module runs inside the router',
           'process: it serves the subgraph on --listen and the router reaches it there as a gRPC subgraph, so',
           `there is no plugin executable and no bridge service. The subgraph is added to ${defaultGraphFile}, the input`,
-          'of `wgc router compose`. Proto files and Postgres URLs are not supported yet.',
+          'of `wgc router compose`. Postgres URLs are not supported yet.',
         ].join('\n'),
       ),
   ).action(async (location: string, options: SourceAddOptions) => {
@@ -134,16 +191,16 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     if (!text.success) {
       return output.fail(toFailure(text));
     }
-    const model = readOpenApi(text.data, location);
-    if (!model.success) {
-      return output.fail(toFailure(model));
+    const described = describeSource(text.data, location, options.target ?? '');
+    if (!described.success) {
+      return output.fail(toFailure(described));
     }
 
-    const name = options.name ?? slug(openApiTitle(text.data) ?? '');
+    const name = options.name ?? described.data.defaultName;
     if (!moduleNamePattern.test(name)) {
       return output.fail({
         message: `"${name}" is not a valid module name.`,
-        input: options.name === undefined ? 'the title of the API' : `--name ${name}`,
+        input: options.name === undefined ? 'the name of the API' : `--name ${name}`,
         remediation:
           'Pass --name with lowercase letters, digits and dashes, starting with a letter, for example --name catalog.',
       });
@@ -174,7 +231,7 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     }
 
     output.progress({ step: 'generate', subject: name, message: 'Generating the schema, proto and mapping' });
-    const generated = generateSource({ model: model.data, name, listenAddr: options.listen });
+    const generated = described.data.generate(name, options.listen);
     if (!generated.success) {
       return output.fail(toFailure(generated));
     }
@@ -210,7 +267,7 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
 
     output.result(
       {
-        source: { kind: 'openapi', location },
+        source: { kind: described.data.kind, location },
         module: { id: name, path: written.data, package: localModuleName(name) },
         subgraph: {
           name,
@@ -221,17 +278,14 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
           sdl: generated.data.sdl,
         },
         graph: graphFile,
-        operations: model.data.operations.map((operation) => ({
-          field: operation.field,
-          request: `${operation.method} ${operation.path}`,
-        })),
-        skipped: model.data.skipped,
+        operations: described.data.operations,
+        skipped: described.data.skipped,
         execution: { process: 'router', transport: 'grpc over loopback tcp', listenAddr: options.listen },
       },
       (data) =>
         [
           `Created ${data.module.path} from ${location} and added it to ${manifestFileName} and ${graphFile}.`,
-          `  ${data.operations.length} query field(s)`,
+          `  ${data.operations.length} field(s)`,
           ...data.operations.map((operation) => `    ${operation.field}  ${operation.request}`),
           `  ${data.skipped.length} skipped`,
           ...data.skipped.map((skipped) => `    ${skipped.subject}: ${skipped.reason}`),

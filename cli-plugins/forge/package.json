@@ -33,6 +33,7 @@
     "graphql": "catalog:",
     "js-yaml": "4.3.2",
     "picocolors": "1.0.0",
+    "protobufjs": "^7.6.0",
     "zod": "catalog:",
     "semver": "7.7.1"
   },

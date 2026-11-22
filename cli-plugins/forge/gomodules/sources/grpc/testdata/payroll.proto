@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package payroll.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// PayrollService answers what each employee is paid.
+service PayrollService {
+  rpc GetSalary(GetSalaryRequest) returns (GetSalaryResponse);
+  rpc ListSalaries(ListSalariesRequest) returns (ListSalariesResponse);
+  rpc UpdateSalary(UpdateSalaryRequest) returns (UpdateSalaryResponse);
+  rpc DeleteSalary(DeleteSalaryRequest) returns (google.protobuf.Empty);
+  rpc WatchSalaries(WatchSalariesRequest) returns (stream Salary);
+}
+
+enum PayFrequency {
+  PAY_FREQUENCY_UNSPECIFIED = 0;
+  PAY_FREQUENCY_MONTHLY = 1;
+  PAY_FREQUENCY_BIWEEKLY = 2;
+}
+
+message Money {
+  string currency = 1;
+  int64 amount_cents = 2;
+}
+
+message Salary {
+  string id = 1;
+  string user_id = 2;
+  Money base = 3;
+  PayFrequency pay_frequency = 4;
+  google.protobuf.Timestamp effective_from = 5;
+  google.protobuf.StringValue note = 6;
+  repeated string tags = 7;
+  map<string, string> labels = 8;
+}
+
+message GetSalaryRequest {
+  string user_id = 1;
+}
+
+message GetSalaryResponse {
+  Salary salary = 1;
+}
+
+message ListSalariesRequest {
+  repeated PayFrequency frequencies = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListSalariesResponse {
+  repeated Salary salaries = 1;
+  string next_page_token = 2;
+}
+
+message UpdateSalaryRequest {
+  string user_id = 1;
+  Money base = 2;
+  PayFrequency pay_frequency = 3;
+}
+
+message UpdateSalaryResponse {
+  Salary salary = 1;
+}
+
+message DeleteSalaryRequest {
+  string user_id = 1;
+}
+
+message WatchSalariesRequest {}

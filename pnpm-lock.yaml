@@ -556,6 +556,9 @@ importers:
       picocolors:
         specifier: 1.0.0
         version: 1.0.0
+      protobufjs:
+        specifier: ^7.6.0
+        version: 7.6.2
       semver:
         specifier: 7.7.1
         version: 7.7.1

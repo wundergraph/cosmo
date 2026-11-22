@@ -17,6 +17,7 @@ export interface Skipped {
 export type TypeReference =
   | { kind: 'scalar'; name: ScalarName }
   | { kind: 'object'; name: string }
+  | { kind: 'enum'; name: string }
   | { kind: 'list'; of: TypeReference };
 
 export type ScalarName = 'ID' | 'String' | 'Int' | 'Float' | 'Boolean';
@@ -72,7 +73,7 @@ export const pascalName = (text: string): string =>
 export const camelName = (text: string): string => startWithLetter(lowerFirst(pascalName(text).replace(/^_/, '')));
 
 /** Lists are never null and never hold nulls, so a missing array reads as an empty list. */
-const renderType = (type: TypeReference, required: boolean): string => {
+export const renderType = (type: TypeReference, required: boolean): string => {
   if (type.kind === 'list') {
     return `[${renderType(type.of, true)}]!`;
   }

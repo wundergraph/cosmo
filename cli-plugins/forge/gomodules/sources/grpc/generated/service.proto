@@ -1,0 +1,80 @@
+syntax = "proto3";
+package payroll.v1;
+
+import "google/protobuf/wrappers.proto";
+
+// Service definition for PayrollService
+service PayrollService {
+  rpc MutationDeleteSalary(MutationDeleteSalaryRequest) returns (MutationDeleteSalaryResponse) {}
+  rpc MutationUpdateSalary(MutationUpdateSalaryRequest) returns (MutationUpdateSalaryResponse) {}
+  rpc QueryListSalaries(QueryListSalariesRequest) returns (QueryListSalariesResponse) {}
+  rpc QuerySalary(QuerySalaryRequest) returns (QuerySalaryResponse) {}
+}
+
+// Request message for salary operation.
+message QuerySalaryRequest {
+  google.protobuf.StringValue user_id = 1;
+}
+// Response message for salary operation.
+message QuerySalaryResponse {
+  Salary salary = 1;
+}
+// Request message for listSalaries operation.
+message QueryListSalariesRequest {
+  repeated PayFrequency frequencies = 1;
+  google.protobuf.Int32Value page_size = 2;
+  google.protobuf.StringValue page_token = 3;
+}
+// Response message for listSalaries operation.
+message QueryListSalariesResponse {
+  ListSalariesResponse list_salaries = 1;
+}
+// Request message for updateSalary operation.
+message MutationUpdateSalaryRequest {
+  google.protobuf.StringValue user_id = 1;
+  MoneyInput base = 2;
+  PayFrequency pay_frequency = 3;
+}
+// Response message for updateSalary operation.
+message MutationUpdateSalaryResponse {
+  Salary update_salary = 1;
+}
+// Request message for deleteSalary operation.
+message MutationDeleteSalaryRequest {
+  google.protobuf.StringValue user_id = 1;
+}
+// Response message for deleteSalary operation.
+message MutationDeleteSalaryResponse {
+  google.protobuf.BoolValue delete_salary = 1;
+}
+
+message Salary {
+  string id = 1;
+  string user_id = 2;
+  Money base = 3;
+  PayFrequency pay_frequency = 4;
+  google.protobuf.StringValue effective_from = 5;
+  google.protobuf.StringValue note = 6;
+  repeated string tags = 7;
+}
+
+message ListSalariesResponse {
+  repeated Salary salaries = 1;
+  string next_page_token = 2;
+}
+
+message MoneyInput {
+  google.protobuf.StringValue currency = 1;
+  google.protobuf.StringValue amount_cents = 2;
+}
+
+message Money {
+  string currency = 1;
+  string amount_cents = 2;
+}
+
+enum PayFrequency {
+  PAY_FREQUENCY_UNSPECIFIED = 0;
+  PAY_FREQUENCY_MONTHLY = 1;
+  PAY_FREQUENCY_BIWEEKLY = 2;
+}

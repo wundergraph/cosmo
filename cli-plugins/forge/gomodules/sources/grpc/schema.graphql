@@ -1,0 +1,39 @@
+type Query {
+  salary(userId: ID): Salary
+  listSalaries(frequencies: [PayFrequency!]! = [], pageSize: Int, pageToken: String): ListSalariesResponse
+}
+
+type Mutation {
+  updateSalary(userId: ID, base: MoneyInput, payFrequency: PayFrequency): Salary
+  deleteSalary(userId: ID): Boolean
+}
+
+type Salary {
+  id: ID!
+  userId: ID!
+  base: Money
+  payFrequency: PayFrequency
+  effectiveFrom: String
+  note: String
+  tags: [String!]!
+}
+
+type Money {
+  currency: String!
+  amountCents: String!
+}
+
+type ListSalariesResponse {
+  salaries: [Salary!]!
+  nextPageToken: String!
+}
+
+input MoneyInput {
+  currency: String
+  amountCents: String
+}
+
+enum PayFrequency {
+  MONTHLY
+  BIWEEKLY
+}

@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "service": "PayrollService",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "salary",
+      "mapped": "QuerySalary",
+      "request": "QuerySalaryRequest",
+      "response": "QuerySalaryResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "listSalaries",
+      "mapped": "QueryListSalaries",
+      "request": "QueryListSalariesRequest",
+      "response": "QueryListSalariesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "updateSalary",
+      "mapped": "MutationUpdateSalary",
+      "request": "MutationUpdateSalaryRequest",
+      "response": "MutationUpdateSalaryResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "deleteSalary",
+      "mapped": "MutationDeleteSalary",
+      "request": "MutationDeleteSalaryRequest",
+      "response": "MutationDeleteSalaryResponse"
+    }
+  ],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "salary",
+          "mapped": "salary",
+          "argumentMappings": [
+            {
+              "original": "userId",
+              "mapped": "user_id"
+            }
+          ]
+        },
+        {
+          "original": "listSalaries",
+          "mapped": "list_salaries",
+          "argumentMappings": [
+            {
+              "original": "frequencies",
+              "mapped": "frequencies"
+            },
+            {
+              "original": "pageSize",
+              "mapped": "page_size"
+            },
+            {
+              "original": "pageToken",
+              "mapped": "page_token"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Mutation",
+      "fieldMappings": [
+        {
+          "original": "updateSalary",
+          "mapped": "update_salary",
+          "argumentMappings": [
+            {
+              "original": "userId",
+              "mapped": "user_id"
+            },
+            {
+              "original": "base",
+              "mapped": "base"
+            },
+            {
+              "original": "payFrequency",
+              "mapped": "pay_frequency"
+            }
+          ]
+        },
+        {
+          "original": "deleteSalary",
+          "mapped": "delete_salary",
+          "argumentMappings": [
+            {
+              "original": "userId",
+              "mapped": "user_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Salary",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id"
+        },
+        {
+          "original": "userId",
+          "mapped": "user_id"
+        },
+        {
+          "original": "base",
+          "mapped": "base"
+        },
+        {
+          "original": "payFrequency",
+          "mapped": "pay_frequency"
+        },
+        {
+          "original": "effectiveFrom",
+          "mapped": "effective_from"
+        },
+        {
+          "original": "note",
+          "mapped": "note"
+        },
+        {
+          "original": "tags",
+          "mapped": "tags"
+        }
+      ]
+    },
+    {
+      "type": "Money",
+      "fieldMappings": [
+        {
+          "original": "currency",
+          "mapped": "currency"
+        },
+        {
+          "original": "amountCents",
+          "mapped": "amount_cents"
+        }
+      ]
+    },
+    {
+      "type": "ListSalariesResponse",
+      "fieldMappings": [
+        {
+          "original": "salaries",
+          "mapped": "salaries"
+        },
+        {
+          "original": "nextPageToken",
+          "mapped": "next_page_token"
+        }
+      ]
+    },
+    {
+      "type": "MoneyInput",
+      "fieldMappings": [
+        {
+          "original": "currency",
+          "mapped": "currency"
+        },
+        {
+          "original": "amountCents",
+          "mapped": "amount_cents"
+        }
+      ]
+    }
+  ],
+  "enumMappings": [
+    {
+      "type": "PayFrequency",
+      "values": [
+        {
+          "original": "MONTHLY",
+          "mapped": "PAY_FREQUENCY_MONTHLY"
+        },
+        {
+          "original": "BIWEEKLY",
+          "mapped": "PAY_FREQUENCY_BIWEEKLY"
+        }
+      ]
+    }
+  ]
+}
