@@ -61,12 +61,8 @@ export class Authentication implements Authenticator {
     if (authorization) {
       const token = authorization.replace(/^bearer\s+/i, '');
       if (!token.toLowerCase().startsWith('cosmo') && !this.ciOidcAuth.issuerOf(token)) {
-        try {
-          return await this.accessTokenAuth.authenticateUser(token);
-        } catch (error: unknown) {
-          this.logger.debug(error, 'Could not authenticate the user of an access token');
-          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
-        }
+        // A refused token fails as not authenticated; failing to record the user is an error of its own, not that.
+        return await this.accessTokenAuth.authenticateUser(token);
       }
     }
 
