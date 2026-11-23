@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.134.0](https://github.com/wundergraph/cosmo/compare/wgc@0.133.13...wgc@0.134.0) (2026-11-23)
+
+### Features
+
+* **cli:** add wgc audit-log stream commands ([#3540](https://github.com/wundergraph/cosmo/issues/3540)) ([d6e0fe8](https://github.com/wundergraph/cosmo/commit/d6e0fe858c42b5b8e2cf5d3de56a09f3ac516b3d)) (@gausie)
+
 ## [0.133.13](https://github.com/wundergraph/cosmo/compare/wgc@0.133.12...wgc@0.133.13) (2026-11-18)
 
 ### Bug Fixes

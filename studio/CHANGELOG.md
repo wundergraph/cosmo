@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.188.0](https://github.com/wundergraph/cosmo/compare/studio@0.187.0...studio@0.188.0) (2026-11-23)
+
+### Features
+
+* **studio:** move Apollo migration into a tab on the create graph page ([#3566](https://github.com/wundergraph/cosmo/issues/3566)) ([d5e5b72](https://github.com/wundergraph/cosmo/commit/d5e5b72d99e2ffcb1dd6ce74004524be786e978d)) (@gausie)
+
 ## [0.187.0](https://github.com/wundergraph/cosmo/compare/studio@0.186.10...studio@0.187.0) (2026-11-19)
 
 ### Features
