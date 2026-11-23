@@ -38,6 +38,7 @@ const (
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
 	errorTypeStreamsHandlerError
+	errorTypeDeliveryGuarantee
 )
 
 type (
@@ -48,11 +49,17 @@ type (
 	}
 
 	Extensions struct {
-		RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
-		Authorization json.RawMessage `json:"authorization,omitempty"`
-		Trace         json.RawMessage `json:"trace,omitempty"`
-		StatusCode    int             `json:"statusCode,omitempty"`
-		Code          string          `json:"code,omitempty"`
+		RateLimit     json.RawMessage       `json:"rateLimit,omitempty"`
+		Authorization json.RawMessage       `json:"authorization,omitempty"`
+		Trace         json.RawMessage       `json:"trace,omitempty"`
+		StatusCode    int                   `json:"statusCode,omitempty"`
+		Code          string                `json:"code,omitempty"`
+		CosmoCursor   *CosmoCursorExtension `json:"cosmoCursor,omitempty"`
+	}
+
+	// CosmoCursorExtension carries the cursor handshake details of an error.
+	CosmoCursorExtension struct {
+		Supported []string `json:"supported"`
 	}
 )
 
@@ -75,6 +82,7 @@ func isTerminalSubscriptionError(err error) bool {
 	case errorTypeUnauthorized,
 		errorTypeSubscriptionConnectionFailed,
 		errorTypeInvalidWsSubprotocol,
+		errorTypeDeliveryGuarantee,
 		errorTypeRateLimit,
 		errorTypeContextCanceled,
 		errorTypeContextTimeout:
@@ -102,6 +110,10 @@ func getErrorType(err error) errorType {
 		if nErr.Timeout() {
 			return errorTypeContextTimeout
 		}
+	}
+	var deliveryGuaranteeErr *datasource.DeliveryGuaranteeError
+	if errors.As(err, &deliveryGuaranteeErr) {
+		return errorTypeDeliveryGuarantee
 	}
 	var edfsErr *datasource.Error
 	if errors.As(err, &edfsErr) {
