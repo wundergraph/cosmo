@@ -1,11 +1,10 @@
-import { describe, expect, test } from 'vitest';
+import { assert, describe, expect, test } from 'vitest';
 import {
   blankCacheTagFormatErrorMessage,
   CACHE_TAG,
   type CacheTagConfiguration,
   type ContractTagOptions,
   type EntityCacheConfiguration,
-  type FederationFailure,
   FIRST_ORDINAL,
   FORMAT,
   fromContextCacheTagReferenceErrorMessage,
@@ -1224,8 +1223,14 @@ describe('@cacheTag tests', () => {
         ]),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
-      expect((federationResultByContractName.get('excludesRegion') as FederationFailure).errors).toStrictEqual([
+      const retainsRegionResult = federationResultByContractName.get('retainsRegion');
+      const excludesRegionResult = federationResultByContractName.get('excludesRegion');
+
+      assert.isOk(retainsRegionResult);
+      assert.isFalse(excludesRegionResult?.success);
+
+      expect(retainsRegionResult.success).toBe(true);
+      expect(excludesRegionResult.errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Query.products(region: ...)',
@@ -1254,8 +1259,14 @@ describe('@cacheTag tests', () => {
         ]),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(federationResultByContractName.get('retainsRegion')?.success).toBe(true);
-      expect((federationResultByContractName.get('excludesRegion') as FederationFailure).errors).toStrictEqual([
+      const retainsRegionResult = federationResultByContractName.get('retainsRegion');
+      const excludesRegionResult = federationResultByContractName.get('excludesRegion');
+
+      assert.isOk(retainsRegionResult);
+      assert.isFalse(excludesRegionResult?.success);
+
+      expect(retainsRegionResult.success).toBe(true);
+      expect(excludesRegionResult.errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Query.products(region: ...)',
@@ -1285,8 +1296,14 @@ describe('@cacheTag tests', () => {
         ]),
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(federationResultByContractName.get('retainsCategory')?.success).toBe(true);
-      expect((federationResultByContractName.get('excludesCategory') as FederationFailure).errors).toStrictEqual([
+      const retainsCategoryResult = federationResultByContractName.get('retainsCategory');
+      const excludesCategoryResult = federationResultByContractName.get('excludesCategory');
+
+      assert.isOk(retainsCategoryResult);
+      assert.isFalse(excludesCategoryResult?.success);
+
+      expect(retainsCategoryResult.success).toBe(true);
+      expect(excludesCategoryResult.errors).toStrictEqual([
         unavailableCacheTagReferencesError('Query.products', [
           inaccessibleCacheTagReferenceErrorMessage({
             coords: 'Filter.category',
@@ -1665,8 +1682,9 @@ describe('@cacheTag tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
-      expect(configurationData?.fieldNames).toStrictEqual(new Set(['id', 'price']));
-      expect(configurationData?.entityCaching?.cacheTagConfigurations).toStrictEqual([
+      assert.isOk(configurationData);
+      expect(configurationData.fieldNames).toStrictEqual(new Set(['id', 'price']));
+      expect(configurationData.entityCaching?.cacheTagConfigurations).toStrictEqual([
         { format: 'product-{$key.id}', typeName: 'Product' },
       ] satisfies Array<CacheTagConfiguration>);
     });
@@ -1726,6 +1744,6 @@ function getCacheTagConfigurations(subgraph: Subgraph, typeName: TypeName): Arra
   // A supported usage must not produce a warning.
   expect(warnings).toHaveLength(0);
   const configurationData = configurationDataByTypeName.get(typeName);
-  expect(configurationData).toBeDefined();
-  return configurationData!.entityCaching?.cacheTagConfigurations;
+  assert.isOk(configurationData);
+  return configurationData.entityCaching?.cacheTagConfigurations;
 }
