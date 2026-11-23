@@ -894,7 +894,6 @@ export class FederationFactory {
       source: incomingData.subgraphNames,
       target: targetData.subgraphNames,
     });
-    this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
     // TODO refactor type merging
     const mergeResult = getMostRestrictiveMergedTypeNode(
       targetData.type,
@@ -918,6 +917,7 @@ export class FederationFactory {
     if (!validationResult.success) {
       this.errors.push(validationResult.error);
     }
+    this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
   }
 
   /* Note that this cannot be done at normalization time because the argument's field or parent type could be
@@ -939,7 +939,7 @@ export class FederationFactory {
       return;
     }
 
-    if (isTypeRequired(inputValueData.type)) {
+    if (isTypeRequired(inputValueData.type) && !inputValueData.includeDefaultValue) {
       this.inaccessibleRequiredInputValueErrorByCoords.set(
         inputValueData.federatedCoords,
         inaccessibleRequiredInputValueError(inputValueData, parentCoords),
