@@ -60,12 +60,22 @@ export function createGraphCollection(
     }
 
     const repo = new GraphCollectionsRepository(logger, opts.db, authContext.organizationId);
-    const id = await repo.createCollection({
+    const created = await repo.createCollection({
       federatedGraphId: federatedGraph.id,
       name,
       userId: authContext.userId,
       teamScoped: req.teamScoped,
     });
+    if (created === 'name_taken') {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
+          details: `A team collection named "${name}" already exists on this graph.`,
+        },
+        id: '',
+      };
+    }
+    const { id } = created;
 
     await new AuditLogRepository(opts.db).addAuditLog({
       organizationId: authContext.organizationId,

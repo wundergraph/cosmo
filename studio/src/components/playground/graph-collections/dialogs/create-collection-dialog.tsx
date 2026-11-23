@@ -1,6 +1,11 @@
 import { useMutation } from '@connectrpc/connect-query';
 import { createGraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { collectionMutationHandlers, MAX_COLLECTION_NAME_LENGTH } from '@/lib/graph-collections';
+import {
+  collectionMutationHandlers,
+  MAX_COLLECTION_NAME_LENGTH,
+  teamNameTaken,
+  teamNameTakenMessage,
+} from '@/lib/graph-collections';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio';
+import { GraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FormEvent, useState } from 'react';
 
 /**
@@ -22,6 +28,7 @@ import { FormEvent, useState } from 'react';
  */
 export const CreateCollectionDialog = ({
   canCreateTeamCollection,
+  collections,
   federatedGraphName,
   namespace,
   onClose,
@@ -29,6 +36,8 @@ export const CreateCollectionDialog = ({
 }: {
   /** False for anyone without write access to the graph; the option is then omitted. */
   canCreateTeamCollection: boolean;
+  /** Every collection the user can see, to catch a team name clash before submitting. */
+  collections: GraphCollection[];
   federatedGraphName: string;
   namespace: string;
   onClose: () => void;
@@ -37,19 +46,22 @@ export const CreateCollectionDialog = ({
   const { mutate, isPending } = useMutation(createGraphCollection);
   const [name, setName] = useState('');
   const [scope, setScope] = useState<'private' | 'team'>('private');
+  const [serverError, setServerError] = useState<string>();
 
   const trimmed = name.trim();
+  const clash = scope === 'team' && teamNameTaken(collections, trimmed) ? teamNameTakenMessage(trimmed) : undefined;
+  const error = clash ?? serverError;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
-    if (!trimmed || isPending) {
+    if (!trimmed || isPending || error) {
       return;
     }
 
     mutate(
       { federatedGraphName, namespace, name: trimmed, teamScoped: scope === 'team' },
-      collectionMutationHandlers('Could not create the collection', onDone),
+      collectionMutationHandlers('Could not create the collection', onDone, setServerError),
     );
   };
 
@@ -70,16 +82,32 @@ export const CreateCollectionDialog = ({
                 id="graph-collection-name"
                 autoFocus
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setServerError(undefined);
+                }}
                 maxLength={MAX_COLLECTION_NAME_LENGTH}
                 placeholder="Cart operations"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'graph-collection-name-error' : undefined}
               />
+              {error && (
+                <p id="graph-collection-name-error" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
             </div>
 
             {canCreateTeamCollection && (
               <div className="space-y-2">
                 <span className="text-sm font-medium">Who can see it</span>
-                <RadioGroup value={scope} onValueChange={(value) => setScope(value as 'private' | 'team')}>
+                <RadioGroup
+                  value={scope}
+                  onValueChange={(value) => {
+                    setScope(value as 'private' | 'team');
+                    setServerError(undefined);
+                  }}
+                >
                   <div className="flex items-start gap-x-2">
                     <RadioGroupItem value="private" id="graph-collection-scope-private" className="mt-0.5" />
                     <label htmlFor="graph-collection-scope-private" className="text-sm">
@@ -109,7 +137,7 @@ export const CreateCollectionDialog = ({
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!trimmed} isLoading={isPending}>
+            <Button type="submit" disabled={!trimmed || !!error} isLoading={isPending}>
               Create
             </Button>
           </DialogFooter>

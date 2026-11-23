@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import postgres from 'postgres';
 import { validate as isValidUuid } from 'uuid';
 import * as schema from '../../db/schema.js';
 import { graphCollectionOperations, graphCollections, users } from '../../db/schema.js';
@@ -55,6 +56,10 @@ const computeContentHash = (query: string, variables?: string | null): string =>
   createHash('sha256')
     .update(`${query}\n${variables ?? ''}`)
     .digest('hex');
+
+/** A write broke `gc_unique_team_name`: another team collection on the graph has this name. */
+const isTeamNameConflict = (e: unknown): boolean =>
+  e instanceof postgres.PostgresError && e.code === '23505' && e.constraint_name === 'gc_unique_team_name';
 
 @traced
 export class GraphCollectionsRepository {
@@ -219,45 +224,79 @@ export class GraphCollectionsRepository {
     name: string;
     userId: string;
     teamScoped?: boolean;
-  }): Promise<string> {
-    const [row] = await this.db
-      .insert(graphCollections)
-      .values({
-        organizationId: this.organizationId,
-        federatedGraphId: data.federatedGraphId,
-        name: data.name,
-        privateToUserId: data.teamScoped ? null : data.userId,
-        createdById: data.userId,
-      })
-      .returning({ id: graphCollections.id });
+  }): Promise<{ id: string } | 'name_taken'> {
+    try {
+      const [row] = await this.db
+        .insert(graphCollections)
+        .values({
+          organizationId: this.organizationId,
+          federatedGraphId: data.federatedGraphId,
+          name: data.name,
+          privateToUserId: data.teamScoped ? null : data.userId,
+          createdById: data.userId,
+        })
+        .returning({ id: graphCollections.id });
 
-    return row.id;
+      return { id: row.id };
+    } catch (e) {
+      if (isTeamNameConflict(e)) {
+        return 'name_taken';
+      }
+      throw e;
+    }
   }
 
-  public async renameCollection(id: string, name: string, federatedGraphId: string): Promise<void> {
-    await this.db
-      .update(graphCollections)
-      .set({ name, updatedAt: new Date() })
-      .where(
-        and(
-          eq(graphCollections.id, id),
-          eq(graphCollections.organizationId, this.organizationId),
-          eq(graphCollections.federatedGraphId, federatedGraphId),
-        ),
-      );
+  /**
+   * Returns `'name_taken'` when the collection is team-scoped and another team
+   * collection on the graph already has this name (ignoring case).
+   */
+  public async renameCollection(id: string, name: string, federatedGraphId: string): Promise<'ok' | 'name_taken'> {
+    try {
+      await this.db
+        .update(graphCollections)
+        .set({ name, updatedAt: new Date() })
+        .where(
+          and(
+            eq(graphCollections.id, id),
+            eq(graphCollections.organizationId, this.organizationId),
+            eq(graphCollections.federatedGraphId, federatedGraphId),
+          ),
+        );
+    } catch (e) {
+      if (isTeamNameConflict(e)) {
+        return 'name_taken';
+      }
+      throw e;
+    }
+
+    return 'ok';
   }
 
-  public async shareCollection(id: string, federatedGraphId: string): Promise<void> {
-    await this.db
-      .update(graphCollections)
-      .set({ privateToUserId: null, updatedAt: new Date() })
-      .where(
-        and(
-          eq(graphCollections.id, id),
-          eq(graphCollections.organizationId, this.organizationId),
-          eq(graphCollections.federatedGraphId, federatedGraphId),
-        ),
-      );
+  /**
+   * Promotes a private collection to team scope. Returns `'name_taken'` when a
+   * team collection on the graph already has this name (ignoring case), in
+   * which case nothing changes.
+   */
+  public async shareCollection(id: string, federatedGraphId: string): Promise<'ok' | 'name_taken'> {
+    try {
+      await this.db
+        .update(graphCollections)
+        .set({ privateToUserId: null, updatedAt: new Date() })
+        .where(
+          and(
+            eq(graphCollections.id, id),
+            eq(graphCollections.organizationId, this.organizationId),
+            eq(graphCollections.federatedGraphId, federatedGraphId),
+          ),
+        );
+    } catch (e) {
+      if (isTeamNameConflict(e)) {
+        return 'name_taken';
+      }
+      throw e;
+    }
+
+    return 'ok';
   }
 
   public async deleteCollection(id: string, federatedGraphId: string): Promise<void> {

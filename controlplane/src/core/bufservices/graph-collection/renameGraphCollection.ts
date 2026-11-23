@@ -52,7 +52,15 @@ export function renameGraphCollection(
       throw new UnauthorizedError();
     }
 
-    await repo.renameCollection(req.id, name, req.federatedGraphId);
+    const result = await repo.renameCollection(req.id, name, req.federatedGraphId);
+    if (result === 'name_taken') {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
+          details: `A team collection named "${name}" already exists on this graph.`,
+        },
+      };
+    }
 
     await new AuditLogRepository(opts.db).addAuditLog({
       organizationId: authContext.organizationId,

@@ -59,7 +59,15 @@ export function shareGraphCollection(
       throw new UnauthorizedError();
     }
 
-    await repo.shareCollection(req.id, req.federatedGraphId);
+    const result = await repo.shareCollection(req.id, req.federatedGraphId);
+    if (result === 'name_taken') {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
+          details: `A team collection named "${collection.name}" already exists on this graph. Rename this collection before sharing it.`,
+        },
+      };
+    }
 
     // Irreversible: a shared collection cannot be made private again.
     await new AuditLogRepository(opts.db).addAuditLog({

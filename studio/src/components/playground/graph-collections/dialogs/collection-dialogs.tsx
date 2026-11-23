@@ -1,3 +1,4 @@
+import { GraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useCallback } from 'react';
 import { DeletedEntity, DialogState } from '@/lib/graph-collections';
 import { CreateCollectionDialog } from './create-collection-dialog';
@@ -15,6 +16,7 @@ import { ShareCollectionDialog } from './share-collection-dialog';
  */
 export const CollectionDialogs = ({
   dialog,
+  collections,
   closeDialog,
   onChanged,
   canCreateTeamCollection,
@@ -23,6 +25,7 @@ export const CollectionDialogs = ({
   federatedGraphId,
 }: {
   dialog: DialogState;
+  collections: GraphCollection[];
   closeDialog: () => void;
   canCreateTeamCollection: boolean;
   onChanged: (deleted?: DeletedEntity) => void;
@@ -47,6 +50,7 @@ export const CollectionDialogs = ({
       return (
         <CreateCollectionDialog
           canCreateTeamCollection={canCreateTeamCollection}
+          collections={collections}
           federatedGraphName={federatedGraphName}
           namespace={namespace}
           onClose={closeDialog}
@@ -59,6 +63,7 @@ export const CollectionDialogs = ({
       return (
         <RenameCollectionDialog
           collection={dialog.collection}
+          collections={collections}
           federatedGraphId={federatedGraphId}
           onClose={closeDialog}
           onDone={onDone}
@@ -81,6 +86,7 @@ export const CollectionDialogs = ({
       return (
         <ShareCollectionDialog
           collection={dialog.collection}
+          collections={collections}
           federatedGraphId={federatedGraphId}
           onClose={closeDialog}
           onDone={onDone}

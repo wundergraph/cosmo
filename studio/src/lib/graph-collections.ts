@@ -351,14 +351,43 @@ export const reportFailure = (fallback: string, details?: string) => {
 };
 
 /**
+ * Whether another team collection already uses `name`. Mirrors the
+ * controlplane's `gc_unique_team_name` index (case-insensitive, team scope
+ * only), so a clash can be shown before the request. The server stays the
+ * source of truth for a list that is out of date.
+ */
+export const teamNameTaken = (
+  collections: Pick<GraphCollection, 'id' | 'name' | 'isTeamScoped'>[],
+  name: string,
+  exceptId?: string,
+) => {
+  const wanted = name.trim().toLowerCase();
+  return collections.some((c) => c.isTeamScoped && c.id !== exceptId && c.name.toLowerCase() === wanted);
+};
+
+export const teamNameTakenMessage = (name: string) => `A team collection named "${name.trim()}" already exists.`;
+
+/**
  * The callbacks every collections mutation passes to `mutate`.
  *
  * A transport failure and an application error have to reach the same toast,
  * and `onDone` must run only for an OK response, or a dialog closes over a
  * mutation that did not happen.
+ *
+ * `onNameTaken`, when given, receives a team name clash instead of the toast,
+ * so the dialog can show it beside the name field.
  */
-export const collectionMutationHandlers = (failure: string, onDone: () => void) => ({
+export const collectionMutationHandlers = (
+  failure: string,
+  onDone: () => void,
+  onNameTaken?: (details: string) => void,
+) => ({
   onSuccess: ({ response }: { response?: { code: EnumStatusCode; details?: string } }) => {
+    if (response?.code === EnumStatusCode.ERR_ALREADY_EXISTS && onNameTaken) {
+      onNameTaken(response.details ?? failure);
+      return;
+    }
+
     if (response?.code !== EnumStatusCode.OK) {
       reportFailure(failure, response?.details);
       return;
