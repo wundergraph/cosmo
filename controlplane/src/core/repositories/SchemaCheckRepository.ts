@@ -698,13 +698,7 @@ export class SchemaCheckRepository {
     );
   }
 
-  public getBreakingChangesOfOperation({
-    checkId,
-    operationHash,
-  }: {
-    checkId: string;
-    operationHash: string;
-  }) {
+  public getBreakingChangesOfOperation({ checkId, operationHash }: { checkId: string; operationHash: string }) {
     return this.db
       .selectDistinct({
         changeType: schema.schemaCheckChangeAction.changeType,
@@ -856,17 +850,12 @@ export class SchemaCheckRepository {
       baseSubgraphName: string;
     }[] = [];
 
+    // Record every checked subgraph before linking the check to a federated graph. Check approvers can only find the
+    // check through a federated graph, so they always see the complete set of subgraphs, even if the check stops early.
+    const recordedSubgraphs = [];
     for (const s of subgraphs) {
       const subgraph = await subgraphRepo.byName(s.name, namespace.name);
       const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
-
-      const graphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph?.labels || s.labels,
-        namespaceId: namespace.id,
-      });
-
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
-
       const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
         data: {
           schemaCheckId: schemaCheckID,
@@ -880,6 +869,16 @@ export class SchemaCheckRepository {
           isFeatureSubgraph: subgraph?.isFeatureSubgraph ?? false,
         },
       });
+      recordedSubgraphs.push({ s, subgraph, newSchemaSDL, schemaCheckSubgraphId });
+    }
+
+    for (const { s, subgraph, newSchemaSDL, schemaCheckSubgraphId } of recordedSubgraphs) {
+      const graphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph?.labels || s.labels,
+        namespaceId: namespace.id,
+      });
+
+      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
 
       if (subgraph) {
         const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: subgraph.id });
