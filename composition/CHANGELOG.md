@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.68.1...@wundergraph/composition@0.68.2) (2026-11-18)
+
+### Bug Fixes
+
+* **deps:** address wgc security advisories ([#3552](https://github.com/wundergraph/cosmo/issues/3552)) ([9c5cdcb](https://github.com/wundergraph/cosmo/commit/9c5cdcbb2a2c3cff282fff3db940306b5710563d)) (@comatory)
+
+## [0.68.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.68.0...@wundergraph/composition@0.68.1) (2026-11-16)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.67.1...@wundergraph/composition@0.68.0) (2026-11-12)
 
 ### Features

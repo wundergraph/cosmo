@@ -1,5 +1,5 @@
 {
-  "id": "64262595-4850-472b-9e43-6596294051ac",
+  "id": "63a7f7c6-ac03-4be5-9955-9cbe70135f77",
   "prevId": "0b4d9faa-ea7e-4c50-8d79-5cc0d3aeff41",
   "version": "7",
   "dialect": "postgresql",
@@ -449,11 +449,23 @@
         }
       },
       "indexes": {
-        "auditlogs_organization_idx": {
-          "name": "auditlogs_organization_idx",
+        "auditlogs_org_created_at_id_idx": {
+          "name": "auditlogs_org_created_at_id_idx",
           "columns": [
             {
               "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -10123,8 +10135,7 @@
         "subgraph-admin",
         "subgraph-publisher",
         "subgraph-checker",
-        "subgraph-viewer",
-        "subgraph-check-approver"
+        "subgraph-viewer"
       ]
     },
     "public.playground_script_type": {

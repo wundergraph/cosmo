@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
@@ -48,14 +48,21 @@ type Options struct {
 
 	ProviderClient StorageClient
 	APQStore       apq.Store
-	PQLStore       *pqlmanifest.Store
+	PQLStore       *operationmanifest.Store
+
+	// AllowMismatchedSHA256IDs serves stored operations whose ID looks like a
+	// SHA256 hash but isn't the SHA256 of their body, instead of returning an
+	// OperationIDMismatchError.
+	AllowMismatchedSHA256IDs bool
 }
 
 type Client struct {
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
 	apqStore       apq.Store
-	pqlStore       *pqlmanifest.Store
+	pqlStore       *operationmanifest.Store
+
+	allowMismatchedSHA256IDs bool
 }
 
 func NewClient(opts *Options) (*Client, error) {
@@ -71,6 +78,8 @@ func NewClient(opts *Options) (*Client, error) {
 		cache:          cache,
 		apqStore:       opts.APQStore,
 		pqlStore:       opts.PQLStore,
+
+		allowMismatchedSHA256IDs: opts.AllowMismatchedSHA256IDs,
 	}, nil
 }
 
@@ -79,7 +88,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 }
 
 // ManifestSnapshot captures the manifest used for cache identity and body lookup.
-func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
+func (c *Client) ManifestSnapshot() *operationmanifest.Manifest {
 	if c == nil || c.pqlStore == nil {
 		return nil
 	}
@@ -89,7 +98,7 @@ func (c *Client) ManifestSnapshot() *pqlmanifest.Manifest {
 // PersistedOperationWithManifest resolves against the captured manifest, even if it has since reloaded.
 // A nil snapshot uses the storage provider, as before the initial manifest load.
 func (c *Client) PersistedOperationWithManifest(
-	ctx context.Context, clientName, sha256Hash string, manifest *pqlmanifest.Manifest,
+	ctx context.Context, clientName, sha256Hash string, manifest *operationmanifest.Manifest,
 ) ([]byte, bool, error) {
 	if c.APQEnabled() {
 		resp, apqErr := c.apqStore.Get(ctx, sha256Hash)
@@ -101,7 +110,7 @@ func (c *Client) PersistedOperationWithManifest(
 	// A loaded manifest takes precedence over cached storage-provider responses.
 	if manifest != nil {
 		if body, found := manifest.Operations[sha256Hash]; found {
-			if !OperationIDMatchesBody(sha256Hash, body) {
+			if !c.allowMismatchedSHA256IDs && !OperationIDMatchesBody(sha256Hash, body) {
 				return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
 			}
 			return []byte(body), false, nil
@@ -128,7 +137,7 @@ func (c *Client) PersistedOperationWithManifest(
 	var poNotFound *PersistentOperationNotFoundError
 
 	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if err == nil && !OperationIDMatchesBody(sha256Hash, string(content)) {
+	if err == nil && !c.allowMismatchedSHA256IDs && !OperationIDMatchesBody(sha256Hash, string(content)) {
 		return nil, false, &OperationIDMismatchError{Sha256Hash: sha256Hash}
 	}
 	if errors.As(err, &poNotFound) && c.APQEnabled() {
@@ -178,8 +187,14 @@ func (c *Client) ManifestEnabled() bool {
 }
 
 // PQLStore returns the PQL manifest store, or nil if no manifest is configured.
-func (c *Client) PQLStore() *pqlmanifest.Store {
+func (c *Client) PQLStore() *operationmanifest.Store {
 	return c.pqlStore
+}
+
+// AllowsMismatchedSHA256IDs reports whether the client serves operations whose
+// ID looks like a SHA256 hash but isn't the SHA256 of their body.
+func (c *Client) AllowsMismatchedSHA256IDs() bool {
+	return c.allowMismatchedSHA256IDs
 }
 
 func (c *Client) Close() error {

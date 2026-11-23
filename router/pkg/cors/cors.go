@@ -93,7 +93,7 @@ func (c *Config) Validate() error {
 func (c *Config) parseNewWildcardRules() []*WildcardPattern {
 	var wRules []*WildcardPattern
 
-	for _, o := range c.AllowOrigins {
+	for _, o := range normalize(c.AllowOrigins) {
 		if !strings.Contains(o, "*") {
 			continue
 		}

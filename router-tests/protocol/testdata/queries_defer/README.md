@@ -1,15 +1,24 @@
 # Defer Query Test Fixtures
 
-This directory contains GraphQL query variants that exercise `@defer` support,
-along with their golden response fixtures (`.txt`).
+This directory contains 105 GraphQL query variants that exercise `@defer`
+support across nine query families. Each family has one expected complete
+response, `<source>_original.json`, shared by all of its variants.
+
+`TestDeferTestDataQueries` parses each multipart response with Go's MIME
+reader, validates every part as JSON, checks pending/completed IDs and
+`hasNext`, requires at least one deferred payload, then merges the deferred
+data and compares it with the family's expected response. None of these checks
+depend on part order, so parallel defers are covered like every other variant.
+Multipart framing is covered by small writer tests rather than a wire snapshot
+for every query.
 
 ## Naming Convention
 
 ```text
-{source}_{number}_{description}.graphql
+{source}_defer_{number}_{description}.graphql
 ```
 
-`source` is the base query name (matches a file in `../queries/`).
+`source` is the base query name (`<source>_original.graphql` in this directory).
 `number` is the two-digit variation index (01–13).
 `description` is a short slug.
 
@@ -22,13 +31,17 @@ along with their golden response fixtures (`.txt`).
 | 01 | `single_defer` | One field deferred, rest immediate |
 | 02 | `single_defer_between_regular` | Deferred fragment sandwiched between non-deferred fields |
 | 03 | `multiple_fields_deferred` | Multiple fields inside a single `... @defer` |
-| 04 | `all_fields_deferred` | Everything deferred; initial response is `{"data":{},"hasNext":true}` |
+| 04 | `all_fields_deferred` | Everything deferred; the initial data is empty |
 | 05 | `nested_defer` | Two levels of nested `... @defer { ... @defer { } }` |
 | 06 | `nested_defer_variation` | Outer defer has a regular field plus an inner defer |
 | 07 | `parallel_defers` | Two sibling `... @defer` fragments at the same level |
 | 08 | `defer_nested_object` | An entire nested object (typically from a different subgraph) is deferred |
 | 09 | `duplicated_field_across_defer` | Same field appears in both deferred and non-deferred selection |
 | 10 | `extensive_parallel` | Every individual field group in its own `... @defer` inside a top-level defer |
+
+`findEmployees_defer_09` and `findEmployeesNoCriteria_defer_09` only defer
+fields that are also selected outside the fragment, so the defer is removed and
+the router answers with plain JSON. The test lists them in `plainJSONDeferQueries`.
 
 ### Fragment Variations (11–13)
 
@@ -43,11 +56,13 @@ definitions, inline fragments are first promoted to named fragment definitions.
 | 12 | `fragment_body_defer` | Fragment spread used normally; fragment body contains `... @defer { fields }` |
 | 13 | `fragment_spread_defer` | `...FragmentName @defer` — defer directive on the spread itself |
 
-## Regenerating Fixtures
+## Running the Tests
 
 ```bash
 cd router-tests
-go test -v -run TestDeferTestDataQueries -update ./...
+go test ./protocol -run '^TestDefer' -count=1
 ```
 
-Fixtures are deterministic because defer resolution is sequential in this router implementation.
+When expected application data changes, update the family's single
+`<source>_original.json`. Changes to MIME boundaries, JSON field order, defer
+IDs or parallel scheduling do not require regenerating any file.

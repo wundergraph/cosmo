@@ -46,7 +46,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { CheckSubgraph, Composer } from '../composition/composer.js';
 import { DeserializedComposedGraph } from '../composition/composeGraphs.pool.js';
 import { buildSchema } from '../composition/composition.js';
-import { getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
+import { changesNeedClientSchemaDiff, getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
 import {
   collectOperationUsageStats,
   InspectorOperationResult,
@@ -1300,30 +1300,13 @@ export class SchemaCheckRepository {
 
     let hasClientTraffic = false;
 
-    // Detect if any subgraph changes involve field or type additions, modifications, or deletions
-    // on interfaces and objects, as these are the only changes that can affect the composed federated schema
-    const fieldChangeTypes = new Set([
-      'FIELD_ADDED',
-      'FIELD_REMOVED',
-      'FIELD_TYPE_CHANGED',
-      'TYPE_ADDED',
-      'TYPE_REMOVED',
-    ]);
-    let hasFieldChanges = false;
+    const needsClientSchemaDiff = [...checkSubgraphs.values()].some((checkSubgraph) => {
+      const isNewSubgraph = !checkSubgraph.subgraph?.schemaSDL;
+      return isNewSubgraph || changesNeedClientSchemaDiff(checkSubgraph.schemaChanges);
+    });
     // Collect all subgraph-level breaking changes (path + message) to avoid duplicating in federated graph changes
     const subgraphBreakingChangeKeys = new Set<string>();
     for (const checkSubgraph of checkSubgraphs.values()) {
-      // For new subgraphs (no existing schema), always perform federated diff since any field could affect composed schema
-      if (!checkSubgraph.subgraph?.schemaSDL) {
-        hasFieldChanges = true;
-      }
-      const allSubgraphChanges = [
-        ...checkSubgraph.schemaChanges.breakingChanges,
-        ...checkSubgraph.schemaChanges.nonBreakingChanges,
-      ];
-      if (allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType))) {
-        hasFieldChanges = true;
-      }
       // Collect breaking change keys (path + message combination)
       for (const change of checkSubgraph.schemaChanges.breakingChanges) {
         const key = `${change.path ?? ''}::${change.message ?? ''}`;
@@ -1358,7 +1341,7 @@ export class SchemaCheckRepository {
       let fedGraphInspectorChanges: InspectorSchemaChange[] = [];
       let storedFedGraphBreakingChanges: SchemaCheckChangeAction[] = [];
 
-      if (hasFieldChanges && composition.errors.length === 0 && composition.federatedClientSchema) {
+      if (needsClientSchemaDiff && composition.errors.length === 0 && composition.federatedClientSchema) {
         // Get the old client schema for this federated graph
         const oldSchemaVersion = await fedGraphRepo.getLatestValidSchemaVersion({
           targetId: composition.targetID,

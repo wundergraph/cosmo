@@ -253,7 +253,18 @@
                 "icon": "flask-round-potion",
                 "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
-              "router/response-cache",
+              {
+                "group": "Response Cache",
+                "icon": "boxes-stacked",
+                "pages": [
+                  "router/response-cache",
+                  "router/response-cache/how-it-works",
+                  "router/response-cache/configuration",
+                  "router/response-cache/invalidation",
+                  "router/response-cache/observability",
+                  "router/response-cache/limitations"
+                ]
+              },
               "router/request-deduplication",
               "router/performance-debugging",
               "router/advanced-request-tracing-art",
@@ -648,6 +659,17 @@
                 "group": "Clients",
                 "icon": "laptop-mobile",
                 "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
+              },
+              {
+                "group": "Audit Log",
+                "icon": "people-roof",
+                "pages": [
+                  "cli/audit-log",
+                  "cli/audit-log/stream/set-splunk-hec",
+                  "cli/audit-log/stream/get",
+                  "cli/audit-log/stream/test",
+                  "cli/audit-log/stream/delete"
+                ]
               },
               {
                 "group": "Schema Contracts",

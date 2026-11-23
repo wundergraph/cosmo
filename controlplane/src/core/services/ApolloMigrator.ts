@@ -7,9 +7,12 @@ import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { sanitizeMigratedGraphName } from '../util.js';
 import { traced } from '../tracing.js';
 
+const DEFAULT_APOLLO_API_URL = 'https://graphql.api.apollographql.com/api/graphql';
+
 @traced
 export default class ApolloMigrator {
   apiKey = '';
+  apiUrl: string;
   organizationSlug = '';
   variantName = '';
   logger: FastifyBaseLogger;
@@ -18,6 +21,7 @@ export default class ApolloMigrator {
 
   constructor({
     apiKey,
+    apiUrl = DEFAULT_APOLLO_API_URL,
     organizationSlug,
     variantName,
     logger,
@@ -25,6 +29,7 @@ export default class ApolloMigrator {
     userEmail,
   }: {
     apiKey: string;
+    apiUrl?: string;
     organizationSlug: string;
     variantName: string;
     logger: FastifyBaseLogger;
@@ -32,6 +37,7 @@ export default class ApolloMigrator {
     userEmail: string;
   }) {
     this.apiKey = apiKey;
+    this.apiUrl = apiUrl;
     this.organizationSlug = organizationSlug;
     this.variantName = variantName;
     this.logger = logger;
@@ -59,7 +65,7 @@ export default class ApolloMigrator {
       variables: {},
     });
 
-    const response = await fetch('https://graphql.api.apollographql.com/api/graphql', {
+    const response = await fetch(this.apiUrl, {
       method: 'POST',
       headers,
       body: graphql,
@@ -136,7 +142,7 @@ export default class ApolloMigrator {
       },
     });
 
-    const response = await fetch('https://graphql.api.apollographql.com/api/graphql', {
+    const response = await fetch(this.apiUrl, {
       method: 'POST',
       headers,
       body: graphql,

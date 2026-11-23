@@ -79,6 +79,7 @@ export const envVariables = z
      * OPEN AI
      */
     OPENAI_API_KEY: z.string().optional(),
+    APOLLO_API_URL: z.string().url().optional(),
     /**
      * Composition workers
      */

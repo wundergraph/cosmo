@@ -129,6 +129,17 @@ func TestWildcardOriginCompatibility(t *testing.T) {
 	}
 }
 
+func TestWildcardOriginNormalization(t *testing.T) {
+	t.Parallel()
+
+	c := newCors(nil, Config{AllowOrigins: []string{" HTTPS://*.Example.COM "}})
+
+	assert.True(t, c.validateOrigin("https://app.example.com"))
+	assert.True(t, c.validateOrigin("https://APP.EXAMPLE.COM"))
+	assert.True(t, c.validateOrigin("HTTPS://sub.example.com"))
+	assert.False(t, c.validateOrigin("https://app.other.com"))
+}
+
 func TestMatchOrigins(t *testing.T) {
 	t.Parallel()
 
