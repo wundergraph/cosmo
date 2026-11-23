@@ -1,6 +1,6 @@
 [tools]
 helm = "4.3.2"
-helm-docs = "1.11.3"
+helm-docs = "1.14.2"
 kapp = "0.66.2"
 kubeconform = "0.6.3"
 yq = "4.42.1"
