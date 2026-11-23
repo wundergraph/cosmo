@@ -25,10 +25,10 @@ Documentation for [WunderGraph Cosmo](https://cosmo-docs.wundergraph.com) — a 
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify):
+The [Mintlify CLI](https://www.npmjs.com/package/mintlify) is a dev dependency of this package. Install it from the repository root:
 
-```
-pnpm add -g mintlify
+```bash
+pnpm install
 ```
 
 Start the local dev server:
