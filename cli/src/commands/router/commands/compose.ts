@@ -33,15 +33,15 @@ import {
   FederationSuccess,
   newContractTagOptionsFromArrays,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  type Warning,
 } from '@wundergraph/composition';
-import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 import {
   featureFlagsDir,
   getRouterConfigOutputFile,
   mapperFile,
+  printCompositionErrors,
+  printCompositionWarnings,
   routerConfigFile,
   writeFeatureFlagConfigToFile,
 } from '../utils.js';
@@ -403,96 +403,12 @@ export default (_: BaseCommandOptions) => {
   return command;
 };
 
-type CompositionDiagnosticsParams = {
-  warnings: Array<Warning>;
-  json?: boolean;
-  // Diagnostics must not be mixed into stdout when the router config is printed there.
-  toStderr: boolean;
-  // Set when the diagnostics were produced while composing a feature flag rather than the base graph.
-  featureFlagName?: string;
-};
-
 /**
  * The router config is printed to stdout only if no destination is provided. Split configs are always written
  * to a directory.
  */
 function isRouterConfigPrintedToStdout(options: { out?: string; splitConfigsEnabled?: boolean }): boolean {
   return !options.out && !options.splitConfigsEnabled;
-}
-
-function toCompositionDiagnosticsJSON(errors: Array<Error>, warnings: Array<Warning>, featureFlagName?: string) {
-  return JSON.stringify({
-    ...(featureFlagName ? { featureFlag: featureFlagName } : {}),
-    errors: errors.map((error) => ({ message: error.message })),
-    warnings: warnings.map((warning) => ({ message: warning.message, subgraphName: warning.subgraph?.name })),
-  });
-}
-
-function toMessagesTable(head: string, messages: Array<string>): string {
-  const table = new Table({
-    head: [pc.bold(pc.white(head))],
-    colWidths: [120],
-    wordWrap: true,
-  });
-  for (const message of messages) {
-    table.push([message]);
-  }
-  return table.toString();
-}
-
-/**
- * Prints the composition errors either as a table or, if the json option is set, as a single JSON document.
- * Rendering a table is very slow for huge error messages, which the JSON output avoids.
- *
- * The output is written to stderr if the router config is printed to stdout, and to stdout otherwise.
- */
-function printCompositionErrors({
-  errors,
-  warnings,
-  json,
-  toStderr,
-  featureFlagName,
-}: CompositionDiagnosticsParams & { errors: Array<Error> }) {
-  const print = toStderr ? console.error : console.log;
-  if (json) {
-    print(toCompositionDiagnosticsJSON(errors, warnings, featureFlagName));
-    return;
-  }
-
-  const target = featureFlagName ? ` the feature flag ${pc.italic(featureFlagName)}` : '';
-  print(pc.red(`We found composition errors, while composing${target}.\n${pc.bold('Please check the errors below:')}`));
-  print(
-    toMessagesTable(
-      'ERROR_MESSAGE',
-      errors.map((error) => error.message),
-    ),
-  );
-}
-
-/**
- * Prints the composition warnings of a successful composition either as a table or, if the json option is set,
- * as a single JSON document. The output is written to stderr if the router config is printed to stdout, and to
- * stdout otherwise.
- */
-function printCompositionWarnings({ warnings, json, toStderr, featureFlagName }: CompositionDiagnosticsParams) {
-  if (warnings.length === 0) {
-    return;
-  }
-
-  const print = toStderr ? console.error : console.log;
-  if (json) {
-    print(toCompositionDiagnosticsJSON([], warnings, featureFlagName));
-    return;
-  }
-
-  const target = featureFlagName ? ` the feature flag ${pc.italic(featureFlagName)}` : '';
-  print(pc.yellow(`The following warnings were produced while composing${target}:`));
-  print(
-    toMessagesTable(
-      'WARNING_MESSAGE',
-      warnings.map((warning) => warning.message),
-    ),
-  );
 }
 
 /**
