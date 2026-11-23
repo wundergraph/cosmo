@@ -23,6 +23,7 @@ interface SourceAddOptions extends CommonOptions {
   name?: string;
   listen: string;
   target?: string;
+  servedFrom?: string;
   rename: string[];
 }
 
@@ -96,7 +97,15 @@ interface DescribedSource {
   generate: (name: string, listenAddr: string) => Result<GeneratedSource>;
 }
 
-const describeSource = (text: string, location: string, target: string, renames: Rename[]): Result<DescribedSource> => {
+const describeSource = (params: {
+  text: string;
+  location: string;
+  target: string;
+  servedFrom: string | undefined;
+  renames: Rename[];
+}): Result<DescribedSource> => {
+  const { text, location, target, servedFrom, renames } = params;
+
   if (isProto(location)) {
     const read = readProto(text, location);
     if (!read.success) {
@@ -122,7 +131,7 @@ const describeSource = (text: string, location: string, target: string, renames:
     };
   }
 
-  const read = readOpenApi(text, location);
+  const read = readOpenApi(text, location, servedFrom ?? (isUrl(location) ? location : undefined));
   if (!read.success) {
     return read;
   }
@@ -163,6 +172,10 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       .option(
         '--target <address>',
         'For a proto file: the address of the gRPC service, such as dns:///payroll:50051. The router config can set it instead.',
+      )
+      .option(
+        '--served-from <url>',
+        'For an OpenAPI file: the URL the description was downloaded from. A relative server URL in it, such as /api/v3, is resolved against this URL.',
       )
       .option(
         '--rename <coordinate=name>',
@@ -214,7 +227,13 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     if (!text.success) {
       return output.fail(toFailure(text));
     }
-    const described = describeSource(text.data, location, options.target ?? '', renames.data);
+    const described = describeSource({
+      text: text.data,
+      location,
+      target: options.target ?? '',
+      servedFrom: options.servedFrom,
+      renames: renames.data,
+    });
     if (!described.success) {
       return output.fail(toFailure(described));
     }

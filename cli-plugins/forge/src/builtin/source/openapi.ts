@@ -340,11 +340,37 @@ export const openApiTitle = (text: string): string | undefined => {
   return parsed.success ? parsed.data.info?.title : undefined;
 };
 
+const isAbsolute = (url: string): boolean => /^https?:\/\//.test(url);
+
+/**
+ * The address of the API. OpenAPI resolves a relative server URL against the URL the description is served
+ * from, and a description that names no server is served from `/` there.
+ */
+const resolveServer = (server: string | undefined, location: string, servedFrom?: string): Result<string> => {
+  if (server !== undefined && isAbsolute(server)) {
+    return { success: true, data: server };
+  }
+
+  if (servedFrom !== undefined && isAbsolute(servedFrom) && URL.canParse(server ?? '/', servedFrom)) {
+    return { success: true, data: new URL(server ?? '/', servedFrom).toString().replace(/\/$/, '') };
+  }
+
+  return failWith({
+    message:
+      server === undefined
+        ? `${location} names no server, so its API is at the root of the URL the description is served from, and Forge was not told that URL.`
+        : `${location} names the server ${server}, which is relative to the URL the description is served from, and Forge was not told that URL.`,
+    input: location,
+    remediation:
+      'Give the description a full server URL under `servers`, such as https://api.example.com/v1, or pass --served-from with the http(s) URL the description is served from.',
+  });
+};
+
 /**
  * Reads an OpenAPI 3 description as a graph. Every GET operation that answers with JSON becomes a query
  * field. What cannot be translated is listed in `skipped` instead of being guessed at.
  */
-export const readOpenApi = (text: string, location: string): Result<SourceModel> => {
+export const readOpenApi = (text: string, location: string, servedFrom?: string): Result<SourceModel> => {
   let raw: unknown;
   try {
     raw = yaml.load(text);
@@ -403,10 +429,15 @@ export const readOpenApi = (text: string, location: string): Result<SourceModel>
     });
   }
 
+  const baseUrl = resolveServer(document.servers?.[0]?.url, location, servedFrom);
+  if (!baseUrl.success) {
+    return baseUrl;
+  }
+
   return {
     success: true,
     data: {
-      ...(document.servers?.[0] === undefined ? {} : { baseUrl: document.servers[0].url }),
+      baseUrl: baseUrl.data,
       operations,
       types: [...translator.types.values()],
       skipped: translator.skipped,

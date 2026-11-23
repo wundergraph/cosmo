@@ -269,6 +269,7 @@ subgraphs:
       'openapi.json': JSON.stringify({
         openapi: '3.1.0',
         info: { title: 'Orders API' },
+        servers: [{ url: 'https://orders.example.com' }],
         paths: {
           '/orders/{order-id}/lines': {
             parameters: [{ name: 'order-id', in: 'path', required: true, schema: { type: 'integer' } }],
@@ -432,6 +433,99 @@ type Warehouse {
       input: '--rename Mutation.items=allItems',
       remediation: 'Pass a type or a root field of the generated SDL, such as CatalogItem or Query.catalogItem.',
     });
+  });
+});
+
+const petsWith = (servers: object): string =>
+  JSON.stringify({
+    openapi: '3.0.4',
+    info: { title: 'Pets' },
+    ...servers,
+    paths: {
+      '/pet': {
+        get: {
+          operationId: 'pet',
+          responses: {
+            200: {
+              description: 'A pet.',
+              content: {
+                'application/json': { schema: { type: 'object', properties: { name: { type: 'string' } } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+describe('wgc forge source add resolves the server of an OpenAPI description', () => {
+  const servedFrom = 'https://petstore3.swagger.io/api/v3/openapi.json';
+  const baseUrlAfter = async (args: string[], description: string): Promise<string> => {
+    const workspace = await sourceWorkspace({ 'openapi.json': description });
+    await runForge(['source', 'add', ...args], {
+      workspace,
+      system: createFakeSystem({ documents: { [servedFrom]: description } }),
+    });
+    return JSON.parse(await read(workspace, 'modules/pets/operations.json')).baseUrl;
+  };
+
+  test('a relative server is resolved against the URL the description is served from', async () => {
+    const relative = petsWith({ servers: [{ url: '/api/v3' }] });
+
+    expect([
+      await baseUrlAfter([servedFrom], relative),
+      await baseUrlAfter(['openapi.json', '--served-from', servedFrom], relative),
+      await baseUrlAfter([servedFrom], petsWith({ servers: [{ url: 'v2' }] })),
+    ]).toEqual([
+      'https://petstore3.swagger.io/api/v3',
+      'https://petstore3.swagger.io/api/v3',
+      'https://petstore3.swagger.io/api/v3/v2',
+    ]);
+  });
+
+  test('an absolute server is kept as the description names it', async () => {
+    const absolute = petsWith({ servers: [{ url: 'https://api.example.com/v1' }] });
+
+    expect([
+      await baseUrlAfter(['openapi.json'], absolute),
+      await baseUrlAfter(['openapi.json', '--served-from', servedFrom], absolute),
+    ]).toEqual(['https://api.example.com/v1', 'https://api.example.com/v1']);
+  });
+
+  test('a description without servers is served from the root of its URL', async () => {
+    expect([
+      await baseUrlAfter([servedFrom], petsWith({})),
+      await baseUrlAfter(['openapi.json', '--served-from', servedFrom], petsWith({ servers: [] })),
+    ]).toEqual(['https://petstore3.swagger.io', 'https://petstore3.swagger.io']);
+  });
+
+  test('a file whose server cannot be resolved is refused with what to pass', async () => {
+    const remediation =
+      'Give the description a full server URL under `servers`, such as https://api.example.com/v1, or pass --served-from with the http(s) URL the description is served from.';
+    const relative = await sourceWorkspace({ 'openapi.json': petsWith({ servers: [{ url: '/api/v3' }] }) });
+    const missing = await sourceWorkspace({ 'openapi.json': petsWith({}) });
+
+    const refusedRelative = await runForge(['source', 'add', 'openapi.json'], { workspace: relative });
+    const refusedMissing = await runForge(['source', 'add', 'openapi.json'], { workspace: missing });
+
+    expect([refusedRelative.exitCode, JSON.parse(refusedRelative.stdout).error]).toEqual([
+      1,
+      {
+        code: 'COMMAND_FAILED',
+        message:
+          'openapi.json names the server /api/v3, which is relative to the URL the description is served from, and Forge was not told that URL.',
+        input: 'openapi.json',
+        remediation,
+      },
+    ]);
+    expect(JSON.parse(refusedMissing.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
+      message:
+        'openapi.json names no server, so its API is at the root of the URL the description is served from, and Forge was not told that URL.',
+      input: 'openapi.json',
+      remediation,
+    });
+    expect(await read(relative, 'forge.yaml')).toBe(manifest);
   });
 });
 

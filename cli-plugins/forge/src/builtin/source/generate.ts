@@ -128,7 +128,7 @@ export const generateSource = ({
     data: {
       template: 'rest',
       sdl,
-      files: contractFiles(sdl, contract.data, { baseUrl: model.baseUrl ?? '', listenAddr, operations, types }),
+      files: contractFiles(sdl, contract.data, { baseUrl: model.baseUrl, listenAddr, operations, types }),
     },
   };
 };

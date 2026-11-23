@@ -1,7 +1,7 @@
 /** A REST API described as the graph it becomes: one query field per operation, one type per response object. */
 export interface SourceModel {
-  /** The first server the API description names, used when the router config sets no base URL. */
-  baseUrl?: string;
+  /** The full URL of the first server the API description names, used when the router config sets no base URL. */
+  baseUrl: string;
   operations: SourceOperation[];
   types: SourceType[];
   /** Everything in the description that was left out of the graph, and why. */
