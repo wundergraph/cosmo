@@ -708,7 +708,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status", "cli/proposal/status"]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update", "cli/proposal/update-status", "cli/proposal/status", "cli/proposal/list"]
               }
             ]
           }

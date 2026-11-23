@@ -1,0 +1,42 @@
+---
+title: 'List'
+description: 'Lists the proposals of a federated graph.'
+icon: list
+---
+
+## Usage
+
+```bash
+npx wgc proposal list --federation-graph <federated-graph-name> [options]
+```
+
+## Description
+
+The `npx wgc proposal list` command lists every proposal of a federated graph, along with its status, the subgraphs it changes and the result of its latest check. Use `--status draft` to see the proposals that are awaiting approval.
+
+## **Options**
+
+- `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph to list proposals for.
+
+- `-s, --status <statuses...>`: Only list proposals with these statuses. Allowed values: `draft`, `approved`, `published`, `closed`.
+
+- `-n, --namespace [namespace]`: The namespace of the federated graph (Default: "default").
+
+- `-j, --json`: Print the result in JSON format instead of a table.
+
+## **Examples**
+
+### List all proposals
+
+```bash
+npx wgc proposal list --federation-graph my-graph
+```
+
+### Count proposals awaiting approval
+
+The command exits with code `1` when it cannot list the proposals. Set `pipefail` so that failure is not hidden behind `jq`, which would otherwise print `0`.
+
+```bash
+set -o pipefail
+npx wgc proposal list --federation-graph my-graph --status draft --json | jq '.proposals | length'
+```
