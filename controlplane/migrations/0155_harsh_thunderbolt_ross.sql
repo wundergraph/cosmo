@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS "gc_unique_team_name" ON "graph_collections" USING btree ("federated_graph_id",lower("name")) WHERE "graph_collections"."private_to_user_id" IS NULL;
