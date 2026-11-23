@@ -2370,7 +2370,7 @@ export function unsupportedFieldCacheTagNamespaceErrorMessage(namespace: string)
 }
 
 export function nonResolvableEntityCacheTagErrorMessage(): string {
-  return `The directive upon an Object is valid only if the Object is an entity that defines a resolvable "@key" directive.`;
+  return `OBJECT is only a valid location if the Object also defines a resolvable "@key" directive.`;
 }
 
 export function unsupportedEntityCacheTagNamespaceErrorMessage(namespace: string): string {

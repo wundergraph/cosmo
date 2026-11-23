@@ -182,13 +182,13 @@ export class BatchNormalizer {
       }
 
       internalSubgraph.overriddenFieldNamesByParentTypeName = overriddenFieldNamesByParentTypeName;
-      for (const [parentTypeName, fieldNames] of overriddenFieldNamesByParentTypeName) {
+      for (const [parentTypeName, overriddenFieldNames] of overriddenFieldNamesByParentTypeName) {
         const configurationData = internalSubgraph.configurationDataByTypeName.get(parentTypeName);
         if (!configurationData) {
           continue;
         }
 
-        subtractSet(fieldNames, configurationData.fieldNames);
+        subtractSet(overriddenFieldNames, configurationData.fieldNames);
         if (configurationData.fieldNames.size < 1) {
           internalSubgraph.configurationDataByTypeName.delete(parentTypeName);
           continue;
@@ -200,7 +200,7 @@ export class BatchNormalizer {
            * An entity tag has no field name, so it always stays.
            */
           entityCaching.cacheTagConfigurations = entityCaching.cacheTagConfigurations.filter(
-            ({ fieldName }) => fieldName === undefined || !fieldNames.has(fieldName),
+            ({ fieldName }) => fieldName === undefined || !overriddenFieldNames.has(fieldName),
           );
         }
       }
