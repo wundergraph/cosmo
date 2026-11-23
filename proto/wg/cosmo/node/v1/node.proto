@@ -109,7 +109,7 @@ message ContextArgument {
   string field_name = 3;
   string argument_name = 4;
   string argument_type = 5;
-  string selection_set = 6;
+  string context_selection = 6;
 }
 
 // Entity caching configuration for a subgraph data source.

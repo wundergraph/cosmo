@@ -94,7 +94,7 @@ test.each([
     { contextName: 'root', typeName: root, concreteTypeNames: [root] },
   ]);
   expect(result.configurationDataByTypeName.has('Entry')).toBe(false);
-  const selection = result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0].selectionSet;
+  const selection = result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0].contextSelection;
   expect(selection).toContain(`... on ${root} {`);
 
   const composed = federateSubgraphs({ subgraphs: [createSubgraph('wallets', sdlString)], version: '1' });
@@ -115,7 +115,7 @@ test('omits coerced operation-root defaults and preserves other interface provid
   const result = normalizeSubgraphFromString({ sdlString: sdl, version: '1' });
   if (!result.success) throw result.errors[0];
   const [binding] = result.configurationDataByTypeName.get('Wallet')!.contextArguments!;
-  expect(stripIgnoredCharacters(binding.selectionSet)).toBe(
+  expect(stripIgnoredCharacters(binding.contextSelection)).toBe(
     '{...on Mutation{wallet{id}}...on Source{wallet(opts:{score:2.50 ids:1}){id}}}',
   );
   const federation = federateSubgraphs({ subgraphs: [createSubgraph('accounts', sdl)], version: '1' });

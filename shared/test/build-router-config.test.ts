@@ -42,7 +42,7 @@ describe('Router compatibility version tests', () => {
     expect(config.compatibilityVersion.split(':')[0]).toBe('1');
     const datasource = config.engineConfig!.datasourceConfigurations[0];
     expect(datasource.contextProviders).toHaveLength(1);
-    expect(datasource.contextArguments).toHaveLength(1);
+    expect(datasource.contextArguments.map((argument) => argument.contextSelection.trim())).toEqual(['{\n  plan\n}']);
   });
 
   test('that "1" is a valid router compatibility version', () => {

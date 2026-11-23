@@ -74,10 +74,10 @@ export function validateContextPaths(
         if (!config.fieldNames.has(arg.fieldName)) continue;
         const context = `${subgraph.name}.${arg.contextName}`;
         const selections = getValueOrDefault(bindingsByName, context, () => new Map<string, Binding>());
-        const binding = getValueOrDefault(selections, arg.selectionSet, () => ({
+        const binding = getValueOrDefault(selections, arg.contextSelection, () => ({
           id: nextBindingID++,
           context,
-          selection: parseSelection(arg.selectionSet),
+          selection: parseSelection(arg.contextSelection),
         }));
         getValueOrDefault(requirements, `${subgraph.name}.${arg.typeName}.${arg.fieldName}`, () => []).push(binding);
       }

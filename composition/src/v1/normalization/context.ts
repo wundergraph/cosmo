@@ -44,7 +44,7 @@ export type ContextArgument = {
   fieldName: string;
   argumentName: string;
   argumentType: string;
-  selectionSet: string;
+  contextSelection: string;
 };
 
 function stringArgument(directive: ConstDirectiveNode, name: string): string {
@@ -286,7 +286,7 @@ export function collectContexts(schema: GraphQLSchema, federatedTypeName = (name
             fieldName: field.name,
             argumentName: arg.name,
             argumentType: String(arg.type),
-            selectionSet: print(selectionSet),
+            contextSelection: print(selectionSet),
           });
         } catch (error) {
           throw new Error(

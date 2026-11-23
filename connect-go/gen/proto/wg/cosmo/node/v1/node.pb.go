@@ -1348,15 +1348,15 @@ func (x *ContextProvider) GetConcreteTypeNames() []string {
 }
 
 type ContextArgument struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ContextName   string                 `protobuf:"bytes,1,opt,name=context_name,json=contextName,proto3" json:"context_name,omitempty"`
-	TypeName      string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	FieldName     string                 `protobuf:"bytes,3,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
-	ArgumentName  string                 `protobuf:"bytes,4,opt,name=argument_name,json=argumentName,proto3" json:"argument_name,omitempty"`
-	ArgumentType  string                 `protobuf:"bytes,5,opt,name=argument_type,json=argumentType,proto3" json:"argument_type,omitempty"`
-	SelectionSet  string                 `protobuf:"bytes,6,opt,name=selection_set,json=selectionSet,proto3" json:"selection_set,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ContextName      string                 `protobuf:"bytes,1,opt,name=context_name,json=contextName,proto3" json:"context_name,omitempty"`
+	TypeName         string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	FieldName        string                 `protobuf:"bytes,3,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	ArgumentName     string                 `protobuf:"bytes,4,opt,name=argument_name,json=argumentName,proto3" json:"argument_name,omitempty"`
+	ArgumentType     string                 `protobuf:"bytes,5,opt,name=argument_type,json=argumentType,proto3" json:"argument_type,omitempty"`
+	ContextSelection string                 `protobuf:"bytes,6,opt,name=context_selection,json=contextSelection,proto3" json:"context_selection,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ContextArgument) Reset() {
@@ -1424,9 +1424,9 @@ func (x *ContextArgument) GetArgumentType() string {
 	return ""
 }
 
-func (x *ContextArgument) GetSelectionSet() string {
+func (x *ContextArgument) GetContextSelection() string {
 	if x != nil {
-		return x.SelectionSet
+		return x.ContextSelection
 	}
 	return ""
 }
@@ -5254,15 +5254,15 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x0fContextProvider\x12!\n" +
 	"\fcontext_name\x18\x01 \x01(\tR\vcontextName\x12\x1b\n" +
 	"\ttype_name\x18\x02 \x01(\tR\btypeName\x12.\n" +
-	"\x13concrete_type_names\x18\x03 \x03(\tR\x11concreteTypeNames\"\xdf\x01\n" +
+	"\x13concrete_type_names\x18\x03 \x03(\tR\x11concreteTypeNames\"\xe7\x01\n" +
 	"\x0fContextArgument\x12!\n" +
 	"\fcontext_name\x18\x01 \x01(\tR\vcontextName\x12\x1b\n" +
 	"\ttype_name\x18\x02 \x01(\tR\btypeName\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x03 \x01(\tR\tfieldName\x12#\n" +
 	"\rargument_name\x18\x04 \x01(\tR\fargumentName\x12#\n" +
-	"\rargument_type\x18\x05 \x01(\tR\fargumentType\x12#\n" +
-	"\rselection_set\x18\x06 \x01(\tR\fselectionSet\"\xf2\x02\n" +
+	"\rargument_type\x18\x05 \x01(\tR\fargumentType\x12+\n" +
+	"\x11context_selection\x18\x06 \x01(\tR\x10contextSelection\"\xf2\x02\n" +
 	"\x1aEntityCachingConfiguration\x12j\n" +
 	"\x1bentity_cache_configurations\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\x19entityCacheConfigurations\x12v\n" +
 	"\x1fcache_invalidate_configurations\x18\x02 \x03(\v2..wg.cosmo.node.v1.CacheInvalidateConfigurationR\x1dcacheInvalidateConfigurations\x12p\n" +
