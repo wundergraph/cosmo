@@ -97,11 +97,13 @@ The following status codes count as failures:
 
 * `UNAVAILABLE`
 * `DEADLINE_EXCEEDED`
-* `RESOURCE_EXHAUSTED`
-* `INTERNAL`
-* `DATA_LOSS`
 
-Other application replies count as successful calls in the breaker's error rate and can close a half-open circuit. This includes `UNKNOWN` when a handler returns an error without an explicit status code. The caller still receives the original RPC status.
+Every other status code counts as a successful call in the breaker's error rate and can close a half-open circuit. The caller still receives the original RPC status. This includes:
+
+* `UNKNOWN`, the status of a handler error without an explicit status code.
+* `INTERNAL` and `RESOURCE_EXHAUSTED`. A service returns them for its own errors and for rate limits, like an HTTP 500 or 429. The router also raises them for a reply that it cannot decode or that exceeds the maximum receive message size.
+
+When the circuit is open, the router rejects the call with the `UNAVAILABLE` status and the message `circuit breaker is open`.
 
 The breaker records calls that exceed `execution_timeout` as failures. The RPC keeps its original deadline and can still return a successful response. Caller cancellations are handled the same way as for HTTP subgraphs.
 

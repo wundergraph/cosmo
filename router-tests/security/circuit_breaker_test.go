@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -26,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"time"
 )
@@ -1311,7 +1314,8 @@ func TestGRPCCircuitBreaker(t *testing.T) {
 			// The subgraph is healthy again, but the circuit is open so calls are rejected without reaching it
 			isSuccessRequest.Store(true)
 			for range 3 {
-				require.Contains(t, send().Body, `"errors"`)
+				// The rejection is reported as Unavailable, not as an Internal error of the subgraph
+				require.Contains(t, send().Body, `{"message":"rpc error: code = Unavailable desc = circuit breaker is open","extensions":{"code":"Unavailable"}}`)
 			}
 			require.Equal(t, callsWhenOpened, subgraphCalls.Load())
 
@@ -1355,6 +1359,74 @@ func TestGRPCCircuitBreaker(t *testing.T) {
 			// Every call reached the subgraph, the circuit never opened
 			require.Equal(t, int64(5), subgraphCalls.Load())
 		})
+	})
+
+	t.Run("verify errors raised in the router for a gRPC reply do not open the circuit", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name        string
+			interceptor grpc.UnaryServerInterceptor
+			message     string
+		}{
+			{
+				// grpc-go rejects the reply in the router with ResourceExhausted
+				name: "reply larger than the max receive message size",
+				interceptor: func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+					res, err := handler(ctx, req)
+					if err != nil {
+						return nil, err
+					}
+					res.(*projects.QueryProjectsResponse).Projects[0].Name = strings.Repeat("a", 5*1024*1024)
+					return res, nil
+				},
+				message: "received message larger than max",
+			},
+			{
+				// grpc-go fails to decode the reply in the router with Internal
+				name: "reply that does not match the proto schema",
+				interceptor: func(_ context.Context, _ any, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+					return wrapperspb.Bytes([]byte{0xff, 0xff, 0xff}), nil
+				},
+				message: "failed to unmarshal the received message",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				breaker := getCircuitBreakerWithDefaults()
+				trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+				var subgraphCalls atomic.Int64
+
+				testenv.Run(t, &testenv.Config{
+					RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+					EnableGRPC:               true,
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Projects: testenv.SubgraphConfig{
+							GRPCInterceptor: func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+								subgraphCalls.Add(1)
+								return tt.interceptor(ctx, req, info, handler)
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					for range 5 {
+						res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: projectsQuery})
+						require.NoError(t, err)
+						require.Contains(t, res.Body, tt.message)
+					}
+					// The subgraph answered every call, so the circuit never opened
+					require.Equal(t, int64(5), subgraphCalls.Load())
+				})
+			})
+		}
 	})
 }
 

@@ -99,7 +99,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 		// The circuit is open, so the call is rejected without reaching the service
 		err := interceptor(context.Background(), "/service/Method", nil, nil, nil, invokerReturning(&calls, nil))
-		require.ErrorContains(t, err, "circuit is open")
+		require.ErrorContains(t, err, "circuit breaker is open")
 		require.Equal(t, 2, calls)
 	})
 
@@ -126,6 +126,46 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		}
 		require.Equal(t, 5*len(callErrs), calls)
 		require.False(t, manager.GetCircuitBreaker(subgraph).IsOpen())
+	})
+
+	t.Run("does not open the circuit on errors raised by the client for a reply", func(t *testing.T) {
+		t.Parallel()
+
+		manager := newGRPCTestManager(t, subgraph)
+		interceptor := NewUnaryClientInterceptor(subgraph, manager, nil)
+
+		// grpc-go raises these in the client after the service replied
+		callErrs := []error{
+			status.Error(codes.ResourceExhausted, "grpc: received message larger than max (5242880 vs. 4194304)"),
+			status.Error(codes.Internal, "grpc: failed to unmarshal the received message: proto: cannot parse invalid wire-format data"),
+		}
+
+		var calls int
+		for range 5 {
+			for _, callErr := range callErrs {
+				err := interceptor(context.Background(), "/service/Method", nil, nil, nil, invokerReturning(&calls, callErr))
+				require.Equal(t, callErr, err)
+			}
+		}
+		require.Equal(t, 5*len(callErrs), calls)
+		require.False(t, manager.GetCircuitBreaker(subgraph).IsOpen())
+	})
+
+	t.Run("rejects calls with the Unavailable status when the circuit is open", func(t *testing.T) {
+		t.Parallel()
+
+		manager := newGRPCTestManager(t, subgraph)
+		interceptor := NewUnaryClientInterceptor(subgraph, manager, nil)
+		manager.GetCircuitBreaker(subgraph).OpenCircuit(t.Context())
+
+		var calls int
+		err := interceptor(t.Context(), "/service/Method", nil, nil, nil, invokerReturning(&calls, nil))
+		require.Zero(t, calls)
+
+		st, ok := status.FromError(err)
+		require.True(t, ok, "expected a gRPC status, got %v", err)
+		require.Equal(t, codes.Unavailable, st.Code())
+		require.Equal(t, "circuit breaker is open", st.Message())
 	})
 
 	t.Run("counts slow RPCs as timeouts and returns their result", func(t *testing.T) {
@@ -192,7 +232,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			}
 
 			cb.OpenCircuit(t.Context())
-			require.ErrorContains(t, invoke(nil), "circuit is open")
+			require.ErrorContains(t, invoke(nil), "circuit breaker is open")
 			require.Zero(t, calls)
 
 			time.Sleep(time.Minute + time.Second)
