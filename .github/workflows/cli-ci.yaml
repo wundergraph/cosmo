@@ -13,6 +13,8 @@ on:
       - 'mise.toml'
       - 'mise.lock'
       - '.github/actions/node/**'
+      - '.mise/locks/**'
+      - 'package.json'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

@@ -18,6 +18,8 @@ on:
       - '.github/actions/go-linter/**'
       - '.github/workflows/router-ci.yaml'
       - '.github/actions/node/**'
+      - '.mise/locks/**'
+      - 'package.json'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

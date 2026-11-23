@@ -6,6 +6,7 @@ on:
       - "mise.toml"
       - "mise.lock"
       - ".github/actions/mise/**"
+      - ".mise/locks/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

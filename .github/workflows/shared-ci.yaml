@@ -12,6 +12,8 @@ on:
       - 'mise.lock'
       - '.github/actions/mise/**'
       - '.github/actions/node/**'
+      - '.mise/locks/**'
+      - 'package.json'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

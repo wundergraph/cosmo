@@ -9,6 +9,7 @@ on:
       - "mise.lock"
       - ".github/actions/mise/**"
       - ".github/actions/go/**"
+      - ".mise/locks/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

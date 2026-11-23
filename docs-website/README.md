@@ -49,5 +49,5 @@ Create a pull request with your changes. A preview will be automatically generat
 
 ## Troubleshooting
 
-- **Mintlify dev isn't running** — Run `mintlify install` to re-install dependencies.
+- **Mintlify dev isn't running** — Run `pnpm --filter=./docs-website exec mintlify install` to re-install dependencies.
 - **Page loads as a 404** — Make sure you are running in a folder with `docs.json` and the page is listed in the navigation.
