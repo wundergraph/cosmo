@@ -12,6 +12,7 @@ import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { findCheckToApprove } from '../../util/check/permissions.js';
 import type { PlainMessage } from '../../../types/index.js';
 
 export function toggleChangeOverridesForAllOperations(
@@ -46,24 +47,20 @@ export function toggleChangeOverridesForAllOperations(
       throw new UnauthorizedError();
     }
 
-    const check = await new SubgraphRepository(logger, opts.db, authContext.organizationId).checkById({
-      id: req.checkId,
-      federatedGraphTargetId: graph.targetId,
-      federatedGraphId: graph.id,
+    const check = await findCheckToApprove({
+      subgraphRepo: new SubgraphRepository(logger, opts.db, authContext.organizationId),
+      schemaCheckRepo: new SchemaCheckRepository(opts.db),
+      authContext,
+      graph,
+      checkId: req.checkId,
     });
-
-    if (!check || !check.affectedGraphs.some((ag) => ag.id === graph.id)) {
+    if (!check) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested check does not exist',
         },
       };
-    }
-
-    const checkedSubgraphs = await new SchemaCheckRepository(opts.db).getCheckedSubgraphTargets({ checkId: check.id });
-    if (!authContext.rbac.canApproveCheck(graph, checkedSubgraphs)) {
-      throw new UnauthorizedError();
     }
 
     return opts.db.transaction(async (tx) => {

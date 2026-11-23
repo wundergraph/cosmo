@@ -675,8 +675,7 @@ export class SchemaCheckRepository {
   }
 
   /**
-   * Returns `undefined` when the check does not belong to the federated graph, and `null` for every checked
-   * subgraph that did not exist when the check ran.
+   * Returns `null` for every checked subgraph that did not exist when the check ran.
    */
   public async getCheckedSubgraphTargets({
     checkId,
@@ -701,11 +700,9 @@ export class SchemaCheckRepository {
 
   public getBreakingChangesOfOperation({
     checkId,
-    federatedGraphId,
     operationHash,
   }: {
     checkId: string;
-    federatedGraphId: string;
     operationHash: string;
   }) {
     return this.db
@@ -723,7 +720,6 @@ export class SchemaCheckRepository {
           eq(schema.schemaCheckChangeAction.schemaCheckId, checkId),
           eq(schema.schemaCheckChangeAction.isBreaking, true),
           eq(schema.schemaCheckChangeActionOperationUsage.hash, operationHash),
-          eq(schema.schemaCheckChangeActionOperationUsage.federatedGraphId, federatedGraphId),
         ),
       );
   }
