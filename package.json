@@ -42,7 +42,7 @@
     "runtime": {
       "name": "node",
       "version": "22.23.4",
-      "onFail": "download"
+      "onFail": "error"
     }
   },
   "lint-staged": {

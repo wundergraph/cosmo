@@ -1,0 +1,23 @@
+min_version = "2026.11.0"
+monorepo_root = true
+
+[monorepo]
+lockfile = true
+config_roots = ["helm", "infrastructure", "router"]
+
+[settings]
+lockfile = true
+idiomatic_version_file_enable_tools = ["node", "pnpm"]
+
+[env]
+GOTOOLCHAIN = "local"
+
+[tools]
+go = "1.26.11"
+bun = "1.4.5"
+buf = "1.34.0"
+dbmate = "2.6.0"
+golangci-lint = "2.14.0"
+gotestsum = "1.13.0"
+protoc-gen-go = "1.36.11"
+protoc-gen-connect-go = "1.19.1"

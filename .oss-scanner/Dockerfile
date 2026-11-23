@@ -1,6 +1,6 @@
 FROM golang:1.26.0-bookworm AS go-toolchain
 
-FROM node:22.22.2-bookworm
+FROM node:22.23.4-bookworm
 
 COPY --from=go-toolchain /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"

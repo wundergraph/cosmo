@@ -9,6 +9,9 @@ on:
       - 'composition/**/*'
       - '.github/workflows/cli-ci.yaml'
       - '.github/actions/cli-build/action.yml'
+      - '.github/actions/mise/**'
+      - 'mise.toml'
+      - 'mise.lock'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -25,11 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+      - uses: ./.github/actions/node
         with:
-          cache: true
-          install: false
-      - uses: oven-sh/setup-bun@v2
+          tools: bun
 
       - name: Install dependencies
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
@@ -71,6 +72,8 @@ jobs:
   build_test_node_matrix:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    env:
+      pnpm_config_runtime_on_fail: ignore
 
     strategy:
       matrix:
@@ -79,25 +82,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+      - uses: ./.github/actions/node
         with:
-          runtime: node@${{ matrix.node-version }}
-          cache: true
-          install: false
-      - uses: oven-sh/setup-bun@v2
+          tools: bun
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+        run: mise x node@${{ matrix.node-version }} -- pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+        run: mise x node@${{ matrix.node-version }} -- pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Unit Test
-        run: pnpm run --filter wgc test
+        run: mise x node@${{ matrix.node-version }} -- pnpm run --filter wgc test
 
       - name: E2E test (node)
         working-directory: cli
-        run: bun test e2e --test-name-pattern node
+        run: mise x node@${{ matrix.node-version }} -- bun test e2e --test-name-pattern node
 
   build_bun_matrix:
     runs-on: ubuntu-latest

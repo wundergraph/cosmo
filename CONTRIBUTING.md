@@ -13,19 +13,33 @@ The following sections provide a guide on how to contribute to the WunderGraph C
 This guide assumes you have already installed the following software:
 
 - make (should be installed on all Linux / MacOS systems)
-- [golang](https://go.dev/dl/) `>= 1.26`
-- [pnpm](https://pnpm.io/installation) >= 9
-- Node.js [LTS](https://nodejs.org/en/about/releases/). You can also pnpm to [install](https://pnpm.io/cli/env) Node.js.
+- Go, Node.js, pnpm and the other development tools. See [Tool versions](#tool-versions).
 - [docker desktop](https://docs.docker.com/desktop/) (includes: engine, buildkit & compose) **or**:
 - [docker engine](https://docs.docker.com/engine/) with:
   - [docker buildkit](https://docs.docker.com/build/buildkit/), with optionally: [docker buildx plugin](https://docs.docker.com/build/install-buildx/)
   - [docker compose plugin](https://docs.docker.com/compose/install/#scenario-two-install-the-compose-plugin)
 
-## Other Dependencies
+## Tool versions
 
-These are not core requirements, but they are needed for certain parts of the development workflow:
+[mise](https://mise.jdx.dev) installs the tools at the versions that CI uses. We recommend mise, but it is optional.
 
-- [bun](https://bun.com/docs/installation): Used for building and testing TypeScript-based router plugins. Some integration tests compile Bun binaries as part of the testing process, so having Bun installed is required when working with those components.
+1. [Install mise](https://mise.jdx.dev/getting-started.html) and [activate it](https://mise.jdx.dev/getting-started.html#activate-mise) in your shell.
+2. Run `mise trust` in the repository root.
+3. Run `mise install` to install the tools for the repository root.
+4. Run `mise install --monorepo` if you also want the tools of all subprojects, for example helm and terraform.
+
+The versions are in these files:
+
+- `mise.toml` in the repository root has the tools that most subprojects use, for example Go, bun and buf.
+- `package.json` in the repository root has the Node.js version (`devEngines.runtime`) and the pnpm version (`packageManager`). mise reads both fields.
+- `mise.toml` in a subproject has the tools that only that subproject uses. A subproject also gets the tools of the repository root.
+- `mise.lock` has the checksum of each tool download.
+
+If you do not use mise, install the versions from these files by hand.
+
+To change a tool version, edit the version in `mise.toml` (or in `package.json` for Node.js and pnpm), run `mise install`, and commit `mise.lock` with your change.
+
+The Go version in `mise.toml` is the toolchain for builds. The `go` line in each `go.mod` is the minimum version for users who import our modules. The toolchain version can be newer than that minimum.
 
 ## Monorepo
 
@@ -70,11 +84,7 @@ Run `make lint` or `make lint-fix` in `router`, `router-tests`, `graphqlmetrics`
 `aws-lambda-router` to run the shared golangci-lint checks, including vet and
 Staticcheck. `lint-fix` also applies supported automatic fixes.
 
-The first invocation installs the version pinned in `.golangci-lint-version`
-into the gitignored `.bin/` directory using the upstream `install.sh` from the
-same immutable release tag. Later invocations use the cached binary without
-requiring a global golangci-lint or Staticcheck installation. CI uses the same
-version and `.golangci.yml` policy.
+`mise.toml` pins the golangci-lint version. CI uses the same version and the same `.golangci.yml` policy.
 
 ## Conventional Commit Standard
 
@@ -110,9 +120,7 @@ If you're fixing a bug, or adding a feature which is not trivial, ensure the rev
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose V2](https://docs.docker.com/compose/install/)
-- [NodeJS LTS](https://nodejs.org/en/download/)
-- [PNPM 9+](https://pnpm.io/installation)
-- [Go 1.26+](https://golang.org/doc/install)
+- Node.js, pnpm and Go. See [Tool versions](#tool-versions).
 - [wgc](https://www.npmjs.com/package/wgc)
 - .env/.env.local (see below)
 

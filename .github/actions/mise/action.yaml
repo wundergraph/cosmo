@@ -1,0 +1,22 @@
+---
+name: mise
+description: Installs the tool versions from mise.toml and mise.lock
+inputs:
+  working-directory:
+    description: The directory whose tools are installed. A subproject also gets the tools of the repository root.
+    default: '.'
+    required: false
+  tools:
+    description: Space-separated tools to install. The default is all tools of the working directory.
+    default: ''
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+      with:
+        version: 2026.11.8
+        working_directory: ${{ inputs.working-directory }}
+        install_args: --locked ${{ inputs.tools }}
+        monorepo: false

@@ -20,16 +20,10 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
+    - name: Setup Node and Bun
+      uses: ./.github/actions/node
       with:
-        bun-version: '1.2.19'
-
-    - name: Setup Node
-      uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-      with:
-        cache: true
-        install: false
+        tools: bun
 
     - name: Generate outfile name
       id: outfile
