@@ -46,11 +46,8 @@ type PlanGenerator struct {
 }
 
 type PlanGeneratorOptions struct {
-	// MaxDataSourceCollectorsConcurrency limits the number of concurrent data source
-	// collectors during planning. Zero means no limit.
-	MaxDataSourceCollectorsConcurrency uint
-	EnableMultiFetch                   bool
-	EnableScheduleFetches              bool
+	EnableMultiFetch      bool
+	EnableScheduleFetches bool
 }
 
 type Planner struct {
@@ -453,8 +450,6 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		PlanningVisitor:               false,
 		DatasourceVisitor:             false,
 	}
-
-	planConfig.MaxDataSourceCollectorsConcurrency = opts.MaxDataSourceCollectorsConcurrency
 
 	if logger != nil {
 		planConfig.Logger = log.NewZapLogger(logger, log.DebugLevel)

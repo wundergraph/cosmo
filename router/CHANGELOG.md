@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.376.0](https://github.com/wundergraph/cosmo/compare/router@0.375.0...router@0.376.0) (2026-11-23)
+
+### Features
+
+* **router:** expose the execution config for the current request ([#3554](https://github.com/wundergraph/cosmo/issues/3554)) ([ed994e5](https://github.com/wundergraph/cosmo/commit/ed994e527be9d227dfb14413258c13f481da22e1)) (@fiam)
+
+### Performance Improvements
+
+* **router:** bump graphql-go-tools to v2.32.2 ([#3576](https://github.com/wundergraph/cosmo/issues/3576)) ([860ad1f](https://github.com/wundergraph/cosmo/commit/860ad1fa0e3a4fcc9ac2be34abee3d1a3e3ccf55)) (@ysmolski)
+
 ## [0.375.0](https://github.com/wundergraph/cosmo/compare/router@0.374.0...router@0.375.0) (2026-11-19)
 
 ### Features
