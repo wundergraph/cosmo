@@ -14,6 +14,7 @@ import {
   unique,
   index,
   json,
+  jsonb,
   real,
 } from 'drizzle-orm/pg-core';
 import { AxiosHeaderValue } from 'axios';
@@ -22,6 +23,7 @@ import type {
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { AuditLogStreamDestination } from '../core/audit-log-stream/destination.js';
 import type { PlainMessage } from '../types/index.js';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
@@ -2169,8 +2171,12 @@ export const auditLogs = pgTable(
   },
 );
 
+export const auditLogStreamKindEnum = pgEnum('audit_log_stream_kind', [
+  'splunk_hec',
+] as const satisfies readonly AuditLogStreamDestination['kind'][]);
+
 /**
- * Where an organization's audit logs are streamed. One per organization; only Splunk HEC for now.
+ * Where an organization's audit logs are streamed. One per organization.
  */
 export const auditLogStreamConfigs = pgTable('audit_log_stream_configs', {
   organizationId: uuid('organization_id')
@@ -2179,11 +2185,9 @@ export const auditLogStreamConfigs = pgTable('audit_log_stream_configs', {
     .references(() => organizations.id, {
       onDelete: 'cascade',
     }),
-  endpoint: text('endpoint').notNull(),
-  token: text('token').notNull(),
-  index: text('index'),
-  source: text('source').notNull(),
-  sourcetype: text('sourcetype').notNull(),
+  kind: auditLogStreamKindEnum('kind').notNull(),
+  settings: jsonb('settings').$type<AuditLogStreamDestination['settings']>().notNull(),
+  secret: text('secret').notNull(),
   enabled: boolean('enabled').notNull().default(true),
   // The (created_at, id) of the last audit log delivered. Delivery resumes after this point.
   cursorCreatedAt: timestamp('cursor_created_at', { withTimezone: true }).notNull().defaultNow(),

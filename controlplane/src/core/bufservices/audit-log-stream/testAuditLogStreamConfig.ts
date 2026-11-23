@@ -6,7 +6,7 @@ import {
   TestAuditLogStreamConfigResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { sendToHec, toHecEvent } from '../../audit-log-stream/splunk-hec.js';
+import { destinationDisplayName, sendAuditLogs } from '../../audit-log-stream/deliver.js';
 import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../../repositories/AuditLogStreamRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -49,8 +49,8 @@ export function testAuditLogStreamConfig(
       };
     }
 
-    // The test event has the same shape as a real one, so it exercises the user's Splunk field extractions too.
-    const event = toHecEvent(
+    // The test event has the same shape as a real one, so it exercises the user's field extractions too.
+    const error = await sendAuditLogs(config, [
       {
         id: randomUUID(),
         organizationId: authContext.organizationId,
@@ -58,7 +58,7 @@ export function testAuditLogStreamConfig(
         action: 'tested',
         auditAction: 'audit_log_stream_config.tested',
         auditableType: 'audit_log_stream_config',
-        auditableDisplayName: config.endpoint,
+        auditableDisplayName: destinationDisplayName(config),
         targetId: null,
         targetType: null,
         targetDisplayName: null,
@@ -70,10 +70,7 @@ export function testAuditLogStreamConfig(
         apiKeyName: authContext.apiKeyName ?? null,
         createdAt: new Date(),
       },
-      config,
-    );
-
-    const error = await sendToHec(config, [event]);
+    ]);
     if (error) {
       await repo.recordError(authContext.organizationId, error);
       return {

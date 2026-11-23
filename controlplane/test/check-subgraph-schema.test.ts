@@ -1545,8 +1545,8 @@ type Category {
       test('Should not report a breaking change when removing an @inaccessible enum value', async () => {
         const checkResp = await checkAgainstLastPublishedSubgraph(
           client,
-          ['type Query { letter: Letter } enum Letter { A B @inaccessible C @inaccessible }'],
-          'type Query { letter: Letter } enum Letter { A B @inaccessible }',
+          ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B }',
         );
 
         expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
@@ -1557,12 +1557,87 @@ type Category {
           client,
           [
             'type Query { letter: Letter } enum Letter { A B C }',
-            'type Query { otherLetter: Letter } enum Letter { A B @inaccessible C @inaccessible }',
+            'type Query { otherLetter: Letter } enum Letter { A B C @inaccessible }',
           ],
-          'type Query { otherLetter: Letter } enum Letter { A B @inaccessible }',
+          'type Query { otherLetter: Letter } enum Letter { A B }',
         );
 
         expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+    });
+
+    describe('@inaccessible fields, arguments and input fields', () => {
+      let client: Awaited<ReturnType<typeof SetupTest>>['client'];
+
+      beforeEach(async () => {
+        const setup = await SetupTest({ dbname, chClient });
+        client = setup.client;
+        return () => setup.server.close();
+      });
+
+      test.each([
+        {
+          element: 'field',
+          published: 'type Query { a: String b: String }',
+          checked: 'type Query { a: String b: String @inaccessible }',
+          path: 'Query.b',
+        },
+        {
+          element: 'argument',
+          published: 'type Query { a(x: Int): String }',
+          checked: 'type Query { a(x: Int @inaccessible): String }',
+          path: 'Query.a.x',
+        },
+        {
+          element: 'input field',
+          published: 'type Query { a(in: In): String } input In { x: Int y: Int }',
+          checked: 'type Query { a(in: In): String } input In { x: Int y: Int @inaccessible }',
+          path: 'In.y',
+        },
+      ])(
+        'Should report a composed breaking change when adding @inaccessible to an exposed $element',
+        async ({ published, checked, path }) => {
+          const checkResp = await checkAgainstLastPublishedSubgraph(client, [published], checked);
+
+          expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual([path]);
+        },
+      );
+
+      test.each([
+        {
+          change: 'removing @inaccessible from a field',
+          published: 'type Query { a: String b: String @inaccessible }',
+          checked: 'type Query { a: String b: String }',
+        },
+        {
+          change: 'removing an @inaccessible field',
+          published: 'type Query { a: String b: String @inaccessible }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible type',
+          published: 'type Query { a: String t: T @inaccessible } type T @inaccessible { x: Int }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible argument',
+          published: 'type Query { a(x: Int @inaccessible): String }',
+          checked: 'type Query { a: String }',
+        },
+      ])('Should not report a breaking change when $change', async ({ published, checked }) => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(client, [published], checked);
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
+      test('Should report removing @inaccessible from a field as a non breaking change', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { a: String b: String @inaccessible }'],
+          'type Query { a: String b: String }',
+        );
+
+        expect(checkResp.nonBreakingChanges.map((c) => c.path)).toContain('Query.b.inaccessible');
       });
     });
 

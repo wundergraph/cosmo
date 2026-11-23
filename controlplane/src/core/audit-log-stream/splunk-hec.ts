@@ -1,4 +1,5 @@
 import * as schema from '../../db/schema.js';
+import type { SplunkHecSettings } from './destination.js';
 
 export const DEFAULT_SOURCETYPE = 'wundergraph:cosmo:audit';
 export const DEFAULT_SOURCE = 'cosmo';
@@ -14,15 +15,10 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export type AuditLogRow = typeof schema.auditLogs.$inferSelect;
 
-export interface HecTarget {
-  organizationId: string;
-  /** Must already be normalized with normalizeHecEndpoint. */
-  endpoint: string;
-  token: string;
-  index: string | null;
-  source: string;
-  sourcetype: string;
-}
+/**
+ * The endpoint must already be normalized with normalizeHecEndpoint.
+ */
+export type HecTarget = SplunkHecSettings & { organizationId: string; token: string };
 
 class HecError extends Error {}
 

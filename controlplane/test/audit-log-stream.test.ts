@@ -294,7 +294,9 @@ describe('Audit log streaming', () => {
       await client.upsertAuditLogStreamConfig({ endpoint: 'https://splunk.example.com', token, enabled: true });
       await server.db
         .update(schema.auditLogStreamConfigs)
-        .set({ endpoint: hec.endpoint })
+        .set({
+          settings: sql`jsonb_set(${schema.auditLogStreamConfigs.settings}, '{endpoint}', to_jsonb(${hec.endpoint}::text))`,
+        })
         .where(eq(schema.auditLogStreamConfigs.organizationId, users.adminAliceCompanyA.organizationId));
     };
 
@@ -348,11 +350,9 @@ describe('Audit log stream delivery', () => {
     const repo = new AuditLogStreamRepository(db);
     await repo.upsert({
       organizationId: org.id,
-      endpoint,
-      token: 'good-token',
-      index: 'cosmo',
-      source: 'cosmo',
-      sourcetype: 'wundergraph:cosmo:audit',
+      kind: 'splunk_hec',
+      settings: { endpoint, index: 'cosmo', source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
+      secret: 'good-token',
       enabled: true,
     });
 
@@ -443,10 +443,8 @@ describe('Audit log stream delivery', () => {
     await addLogs(1);
     await repo.upsert({
       organizationId: org.id,
-      endpoint: hec.endpoint,
-      index: null,
-      source: 'cosmo',
-      sourcetype: 'wundergraph:cosmo:audit',
+      kind: 'splunk_hec',
+      settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
       enabled: false,
     });
     await deliver();
@@ -465,10 +463,8 @@ describe('Audit log stream delivery', () => {
     await repo.delete(org.id);
     const saved = await repo.upsert({
       organizationId: org.id,
-      endpoint: hec.endpoint,
-      index: null,
-      source: 'cosmo',
-      sourcetype: 'wundergraph:cosmo:audit',
+      kind: 'splunk_hec',
+      settings: { endpoint: hec.endpoint, index: null, source: 'cosmo', sourcetype: 'wundergraph:cosmo:audit' },
       enabled: true,
     });
     expect(saved).toBe(false);
