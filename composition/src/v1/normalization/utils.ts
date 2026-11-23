@@ -201,7 +201,8 @@ export function getNormalizedFieldSet(documentNode: DocumentNode): string {
   return print(lexicographicallySortDocumentNode(documentNode)).replaceAll(/\s+/g, ' ').slice(2, -2);
 }
 
-/* Returns whether the field set selects the path, and the path ends at a field without a selection set.
+/**
+ * Returns whether the field set selects the path, and the path ends at a field without a selection set.
  * In a valid field set, such a field is a scalar or an Enum.
  * A field is matched by its name; an alias is ignored.
  */
