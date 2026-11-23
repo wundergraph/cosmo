@@ -1050,6 +1050,9 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegistration) (*ParsedOperation, *operationContext, error) {
+	release := h.operationProcessor.caches.Acquire()
+	defer release()
+
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, nil, err
@@ -1264,6 +1267,8 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	reqContext := buildRequestContext(requestContextOptions{
+		executionConfig:     ExecutionConfigFromContext(registration.clientRequest.Context()),
+		subgraphResolver:    subgraphResolverFromContext(registration.clientRequest.Context()),
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
 		metricSetAttributes: nil,

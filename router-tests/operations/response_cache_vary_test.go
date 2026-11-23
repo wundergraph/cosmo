@@ -178,6 +178,30 @@ func TestResponseCacheVary(t *testing.T) {
 		})
 	})
 
+	t.Run("Vary on a header the HTTP client sets is cached", func(t *testing.T) {
+		t.Parallel()
+
+		otherSubgraphRule := config.HeaderRules{Subgraphs: map[string]*config.GlobalHeaderRule{
+			"employees": {Request: []*config.RequestHeaderRule{{Operation: config.HeaderRuleOperationPropagate, Named: "X-Other"}}},
+		}}
+		for _, rules := range []*config.HeaderRules{nil, &otherSubgraphRule} {
+			for _, vary := range []string{"Accept-Encoding", "Accept"} {
+				opts := []core.Option{responseCacheStorageProviders(), core.WithResponseCache(responseCacheConfig(t, time.Minute))}
+				if rules != nil {
+					opts = append(opts, core.WithHeaderRules(*rules))
+				}
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: opts,
+					Subgraphs:     testenv.SubgraphsConfig{Mood: testenv.SubgraphConfig{Middleware: varyMoodMiddleware(vary)}},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					moodIn(t, xEnv, "")
+					moodIn(t, xEnv, "")
+					require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load(), "Vary: %s, rules=%v", vary, rules != nil)
+				})
+			}
+		}
+	})
+
 	t.Run("the in memory provider serves variants the same way", func(t *testing.T) {
 		t.Parallel()
 

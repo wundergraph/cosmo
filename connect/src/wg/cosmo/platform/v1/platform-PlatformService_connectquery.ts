@@ -734,6 +734,34 @@ export const updateIntegrationConfig = PlatformService.method.updateIntegrationC
 export const deleteIntegration = PlatformService.method.deleteIntegration;
 
 /**
+ * GetAuditLogStreamConfig returns the organization's audit log stream (Splunk HEC) configuration
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAuditLogStreamConfig
+ */
+export const getAuditLogStreamConfig = PlatformService.method.getAuditLogStreamConfig;
+
+/**
+ * UpsertAuditLogStreamConfig creates or updates the organization's audit log stream configuration
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpsertAuditLogStreamConfig
+ */
+export const upsertAuditLogStreamConfig = PlatformService.method.upsertAuditLogStreamConfig;
+
+/**
+ * DeleteAuditLogStreamConfig removes the organization's audit log stream configuration
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteAuditLogStreamConfig
+ */
+export const deleteAuditLogStreamConfig = PlatformService.method.deleteAuditLogStreamConfig;
+
+/**
+ * TestAuditLogStreamConfig sends a single test event to the configured collector
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.TestAuditLogStreamConfig
+ */
+export const testAuditLogStreamConfig = PlatformService.method.testAuditLogStreamConfig;
+
+/**
  * DeleteUser deletes the user
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteUser

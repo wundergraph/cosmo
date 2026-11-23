@@ -341,7 +341,9 @@ The Model Context Protocol (MCP) server allows AI models to discover and interac
 | MCP_ENABLED                     | mcp.enabled                     | <Icon icon="square" /> | Enable or disable the MCP server                                                                                                                             | false          |
 | MCP_SERVER_LISTEN_ADDR          | mcp.server.listen_addr          | <Icon icon="square" /> | The address and port where the MCP server will listen for requests                                                                                           | localhost:5025 |
 | MCP_ROUTER_URL                  | mcp.router_url                  | <Icon icon="square" /> | Custom URL to use for the router GraphQL endpoint in MCP. Use this when your router is behind a proxy; used in MCP responses to provide the real router URL. | -              |
-| MCP_STORAGE_PROVIDER_ID         | mcp.storage.provider_id         | <Icon icon="square" /> | The ID of a storage provider to use for loading GraphQL operations. Only file_system providers are supported.                                                | -              |
+| MCP_STORAGE_PROVIDER_ID         | mcp.storage.provider_id         | <Icon icon="square" /> | The ID of a storage provider to use for loading GraphQL operations. With mcp.storage.object_path, file_system and s3 providers are supported. Without it, only file_system providers are supported. | -              |
+| MCP_STORAGE_OBJECT_PATH         | mcp.storage.object_path         | <Icon icon="square" /> | The path of an operation manifest in the storage provider. When set, the router loads operations from the manifest and polls it for a new revision. | -              |
+| MCP_STORAGE_POLL_INTERVAL       | mcp.storage.poll_interval       | <Icon icon="square" /> | How often the router polls the operation manifest for a new revision. The minimum is 1s.                                                                     | 10s            |
 | MCP_SESSION_STATELESS           | mcp.session.stateless           | <Icon icon="square" /> | Whether the MCP server should operate in stateless mode. When true, no server-side session state is maintained between requests.                             | true           |
 | MCP_GRAPH_NAME                  | mcp.graph_name                  | <Icon icon="square" /> | The name of the graph this router exposes via MCP. Used to build the MCP server name (wundergraph-cosmo-$graph_name) and for logging; it does not select a different graph.  | mygraph        |
 | MCP_EXCLUDE_MUTATIONS           | mcp.exclude_mutations           | <Icon icon="square" /> | Whether to exclude mutation operations from being exposed                                                                                                    | false          |
@@ -361,6 +363,8 @@ mcp:
   router_url: "https://your-public-router-url.example.com/graphql" # Optional: Used in MCP responses when your router is behind a proxy.
   storage:
     provider_id: "mcp" # References a file_system provider defined below
+    object_path: "manifest.json" # Optional: Load operations from an operation manifest
+    poll_interval: 10s # Optional: How often to poll the manifest for a new revision
   session:
     stateless: true # Optional: When true, no server-side session state is kept
   graph_name: "my-graph"
@@ -380,6 +384,11 @@ For more details on how to use the MCP server, see the [MCP Integration document
 ## TLS
 
 The Router supports TLS and mTLS for secure communication with your clients and infrastructure components like load balancer.
+
+| Environment Variable | YAML           | Required               | Description                                                                                                                                 | Default Value |
+| -------------------- | -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_WATCH            | watch          | <Icon icon="square" /> | Enables certificate/key reloading for router server and HTTP/gRPC subgraph TLS. Excludes CA bundles. | false         |
+| TLS_WATCH_INTERVAL   | watch_interval | <Icon icon="square" /> | How often certificate/key files are checked for changes. | 1s            |
 
 ### Server TLS
 
@@ -718,7 +727,7 @@ This option may change or be removed in future versions as the OpenTelemetry SDK
 | METRICS_OTLP_ENABLED               | enabled               | <Icon icon="square-check" iconType="solid" /> | Enables OTEL metrics instrumentation                                                                                                                                       | true          |
 | METRICS_OTLP_ROUTER_RUNTIME        | router_runtime        | <Icon icon="square" />                        | Enable the collection of metrics for the router runtime.                                                                                                                   | true          |
 | METRICS_OTLP_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false         |
-| METRICS_OTLP_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache#cache-health). | false         |
+| METRICS_OTLP_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache/observability#cache-health). | false         |
 | METRICS_OTLP_EXCLUDE_METRICS       | exclude_metrics       | <Icon icon="square" />                        | The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                        | []            |
 | METRICS_OTLP_EXCLUDE_METRIC_LABELS | exclude_metric_labels | <Icon icon="square" />                        | The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions.                  | []            |
 | METRICS_OTLP_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false         |
@@ -799,7 +808,7 @@ telemetry:
 | PROMETHEUS_HTTP_PATH             | path                  | <Icon icon="square" />                        | The HTTP path where metrics are exposed.                                                                                                                                   | "/metrics"       |
 | PROMETHEUS_LISTEN_ADDR           | listen_addr           | <Icon icon="square" />                        | The address to listen on for the prometheus metrics endpoint.                                                                                                              | "127.0.0.1:8088" |
 | PROMETHEUS_GRAPHQL_CACHE         | graphql_cache         | <Icon icon="square" />                        | Enable the collection of metrics for the GraphQL operation router caches.                                                                                                  | false            |
-| PROMETHEUS_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache#cache-health). | false            |
+| PROMETHEUS_RESPONSE_CACHE        | response_cache        | <Icon icon="square" />                        | Enable the collection of metrics for the [response cache](/router/response-cache/observability#cache-health). | false            |
 | PROMETHEUS_CONNECTION_STATS      | connection_stats      | <Icon icon="square" />                        | Enable connection metrics.                                                                                                                                                 | false            |
 | PROMETHEUS_NETWORK_ENABLED       | network.enabled       | <Icon icon="square" />                        | Enable per-request subgraph HTTP phase metrics: DNS lookup, TCP connect, TLS handshake, time-to-first-request-byte, time-to-last-request-byte (request transfer duration), time-to-first-byte, and time-to-last-byte (response transfer duration) histograms.                                                  | false            |
 | PROMETHEUS_RESOLVER_ENABLED      | resolver.enabled      | <Icon icon="square" />                        | Enable resolver metrics: resolver concurrency gauges and the resolver acquire duration histogram.                                                                           | false            |
@@ -1026,10 +1035,15 @@ cors:
 
 Configure your cache control policy. More information on this feature can be found here: [#cache-control-policy](/router/proxy-capabilities#cache-control-policy)
 
-| Environment Variable         | YAML    | Required               | Description                                                                                                                 | Default Value |
-| ---------------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| CACHE_CONTROL_POLICY_ENABLED | enabled | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
-| CACHE_CONTROL_POLICY_VALUE   | value   | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| Environment Variable                  | YAML             | Required               | Description                                                                                                                 | Default Value |
+| ------------------------------------- | ---------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| CACHE_CONTROL_POLICY_ENABLED          | enabled          | <Icon icon="square" /> | Set this to enable/disable the strict cache control policy. It is false by default                                          | false         |
+| CACHE_CONTROL_POLICY_VALUE            | value            | <Icon icon="square" /> | The default value for the cache control policy. It will be applied to all requests, unless a subgraph has a more strict one |               |
+| CACHE_CONTROL_POLICY_MISSING_NO_STORE | missing_no_store | <Icon icon="square" /> | Treats a subgraph response without caching information as `no-store`. See [Missing caching information](#missing-caching-information). | false         |
+
+### Missing Caching Information
+
+How `missing_no_store` treats subgraph responses without caching information is described under [Subgraphs without caching information](/router/proxy-capabilities/adjusting-cache-control#subgraphs-without-caching-information).
 
 ### Example YAML Config:
 
@@ -1039,11 +1053,84 @@ version: "1"
 cache_control_policy:
   enabled: true
   value: "max-age=180, public"
+  missing_no_store: false
   subgraphs:
     - name: "products"
       value: "max-age=60, public"
     - name: "pricing"
       value: "no-cache"
+```
+
+## Response Cache
+
+Configure the response cache. More information on this feature can be found here: [Response Cache](/router/response-cache). For how each setting behaves, see [Configure the Response Cache](/router/response-cache/configuration).
+
+| Environment Variable | YAML | Required | Description | Default Value |
+| --- | --- | --- | --- | --- |
+| RESPONSE_CACHE_ENABLED | enabled | <Icon icon="square" /> | Enable the response cache. | `false` |
+| RESPONSE_CACHE_KEY_PREFIX | key_prefix | <Icon icon="square" /> | Prepended to every Redis key. | `cosmo_response_cache:` |
+| RESPONSE_CACHE_ALL_ENABLED | all.enabled | <Icon icon="square" /> | Cache every subgraph without an entry under `subgraphs`. Set to `false` to cache only the subgraphs listed there. | `true` |
+| RESPONSE_CACHE_ALL_FALLBACK_TTL | all.fallback_ttl | <Icon icon="square" /> | Lifetime of a response with a directive that allows a default but no lifetime of its own. Minimum `1s`. | `30s` |
+| RESPONSE_CACHE_ALL_PRIVATE_ID | all.private_id | <Icon icon="square" /> | [Expression](/router/configuration/template-expressions) naming the private context of a request, so `private` responses can be cached per context. |  |
+|  | subgraphs | <Icon icon="square" /> | Per-subgraph settings keyed by subgraph name: `enabled`, `fallback_ttl`, `private_id`. An entry replaces `all` for that subgraph. Config file only. |  |
+| RESPONSE_CACHE_STORAGE_PROVIDER | storage.provider | <Icon icon="square" /> | `redis`, or `memory`. The memory provider is not suitable for production. | `redis` |
+| RESPONSE_CACHE_STORAGE_PROVIDER_ID | storage.provider_id | <Icon icon="square-check" /> | Id of an entry under `storage_providers.redis`. Required for `redis`. |  |
+| RESPONSE_CACHE_STORAGE_MAX_ENTRIES | storage.max_entries | <Icon icon="square" /> | Memory provider only. 1 to 100000. | `10000` |
+| RESPONSE_CACHE_INVALIDATION_CACHE_TAG | invalidation.cache_tag | <Icon icon="square" /> | Index entries by the cache tags subgraphs declare. | `true` |
+| RESPONSE_CACHE_INVALIDATION_SUBGRAPH | invalidation.subgraph | <Icon icon="square" /> | Index entries by subgraph. | `true` |
+| RESPONSE_CACHE_INVALIDATION_TYPE | invalidation.type | <Icon icon="square" /> | Index entries by type. | `true` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_ENABLED | invalidation.endpoint.enabled | <Icon icon="square" /> | Serve the invalidation endpoint on its own listener. | `false` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_LISTEN_ADDR | invalidation.endpoint.listen_addr | <Icon icon="square" /> | Address of the invalidation listener. | `localhost:5027` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_PATH | invalidation.endpoint.path | <Icon icon="square" /> | Path of the invalidation endpoint. Must start with `/`. | `/invalidation` |
+| RESPONSE_CACHE_INVALIDATION_ENDPOINT_SHARED_KEY | invalidation.endpoint.shared_key | <Icon icon="square" /> | Expected `Authorization` header value. At least 32 characters. Required when the endpoint is enabled. |  |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_ENABLED | cache_tag_header.enabled | <Icon icon="square" /> | Send the tags of a response in a header a CDN can purge by. | `false` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_NAME | cache_tag_header.name | <Icon icon="square" /> | Header name. | `Cache-Tag` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_DELIMITER | cache_tag_header.delimiter | <Icon icon="square" /> | Separator between tags. | `,` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_TIERS | cache_tag_header.tiers | <Icon icon="square" /> | Which tags to send: `subgraph`, `type`, `cache_tag`. | `subgraph, type, cache_tag` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_MAX_BYTES | cache_tag_header.max_bytes | <Icon icon="square" /> | Largest header value in bytes. | `16384` |
+| RESPONSE_CACHE_CACHE_TAG_HEADER_ON_OVERFLOW | cache_tag_header.on_overflow | <Icon icon="square" /> | What to do when the tags do not fit: `truncate` or `private`. | `truncate` |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+storage_providers:
+  redis:
+    - id: "response_cache"
+      urls:
+        - "redis://localhost:6379?read_timeout=250ms&write_timeout=250ms&dial_timeout=500ms&pool_timeout=250ms&max_retries=-1"
+
+response_cache:
+  enabled: true
+  key_prefix: "cosmo_response_cache:"
+  all:
+    enabled: true
+    fallback_ttl: 30s
+    private_id: "request.auth.claims.sub"
+  subgraphs:
+    products:
+      enabled: true
+      fallback_ttl: 5m
+  storage:
+    provider: "redis"
+    provider_id: "response_cache"
+  invalidation:
+    cache_tag: true
+    subgraph: true
+    type: true
+    endpoint:
+      enabled: true
+      listen_addr: "localhost:5027"
+      path: "/invalidation"
+      shared_key: "${INVALIDATION_SHARED_KEY}"
+  cache_tag_header:
+    enabled: false
+    name: "Cache-Tag"
+    delimiter: ","
+    tiers: ["subgraph", "type", "cache_tag"]
+    max_bytes: 16384
+    on_overflow: "truncate"
 ```
 
 ## Custom Modules
@@ -1368,7 +1455,7 @@ Use the `rediss://` scheme instead of `redis://` to connect over TLS. There is n
 | dial_timeout       | Timeout for establishing a new connection, e.g. `5s`.                             | 5s            |
 | read_timeout       | Socket read timeout, e.g. `3s`. Also the basis for the default `pool_timeout`.     | 3s            |
 | write_timeout      | Socket write timeout, e.g. `3s`.                                                  | read timeout  |
-| max_retries        | Number of retries before giving up on a command. `-1` disables retries.           | 3             |
+| max_retries        | Number of retries before giving up on a command. `-1` disables retries. `0` uses the default. | 3             |
 | min_retry_backoff  | Minimum backoff between retries, e.g. `8ms`. `-1` disables backoff.               | 8ms           |
 | max_retry_backoff  | Maximum backoff between retries, e.g. `512ms`. `-1` disables backoff.             | 512ms         |
 | client_name        | Name sent to Redis with `CLIENT SETNAME`, which makes the router's connections identifiable in `CLIENT LIST`. |               |
@@ -1386,7 +1473,7 @@ These apply when `cluster_enabled: true`.
 
 | Parameter        | Description                                                                                | Default Value |
 | ---------------- | ------------------------------------------------------------------------------------------ | ------------- |
-| max_redirects    | Number of MOVED/ASK redirects to follow before giving up on a command.                      | 3             |
+| max_redirects    | Number of times a command is retried after a MOVED/ASK redirect or a retryable error such as a timeout, independent of `max_retries`. `-1` disables them. `0` uses the default. | 3             |
 | read_only        | Route read-only commands to a replica of the shard that owns the key, instead of its master. Requires a cluster that has replicas, see [Reading from replicas](/router/configuration#reading-from-replicas). | false         |
 | route_by_latency | Route read-only commands to whichever node of the shard has the lowest measured latency, the master included. Implies `read_only`. | false         |
 | route_randomly   | Route read-only commands to a random node of the shard, the master included. Implies `read_only`. | false         |
@@ -1481,9 +1568,9 @@ These rules apply to requests being made from the Router to all Subgraphs.
 | PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX | persisted_operations.storage.object_prefix | <Icon icon="square" />                        | The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. \$prefix/SHA256.json                                                               |               |
 | PERSISTED_OPERATIONS_LOG_UNKNOWN           | persisted_operations.log_unknown           | <Icon icon="square" />                        | Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.                                  | false         |
 | PERSISTED_OPERATIONS_SAFELIST_ENABLED      | persisted_operations.safelist.enabled      | <Icon icon="square" />                        | Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked.                                                    | false         |
-| PERSISTED_OPERATIONS_MANIFEST_ENABLED      | persisted_operations.manifest.enabled      | <Icon icon="square" />                        | Enable the PQL manifest. When enabled, the router loads all persisted operations from a single manifest file and serves them from memory. Uses the `storage` config above when a provider is set, otherwise fetches from the Cosmo CDN. Only S3 and CDN storage providers are supported. | false         |
-| PERSISTED_OPERATIONS_MANIFEST_FILE_NAME    | persisted_operations.manifest.file_name    | <Icon icon="square" />                        | The manifest file name. Only used when a custom storage provider is configured. The router resolves the full object path as `<object_prefix>/<file_name>`. Use a `.gz` or `.zst` extension (e.g. `manifest.json.gz`) to enable transparent decompression. Ignored in CDN mode. | manifest.json |
-| PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL| persisted_operations.manifest.poll_interval| <Icon icon="square" />                        | The interval at which the router polls the Cosmo CDN for manifest updates (only when no storage provider is configured). Minimum 10s.                                                                 | 10s           |
+| PERSISTED_OPERATIONS_MANIFEST_ENABLED      | persisted_operations.manifest.enabled      | <Icon icon="square" />                        | Enable the PQL manifest. When enabled, the router loads all persisted operations from a single manifest file and serves them from memory. Uses the `storage` config above when a provider is set, otherwise fetches from the Cosmo CDN. S3, CDN, and file system storage providers are supported. | false         |
+| PERSISTED_OPERATIONS_MANIFEST_FILE_NAME    | persisted_operations.manifest.file_name    | <Icon icon="square" />                        | The manifest file name. Only used when a custom storage provider is configured. The router resolves the full object path as `<object_prefix>/<file_name>`. With S3, use a `.gz` or `.zst` extension (e.g. `manifest.json.gz`) to enable transparent decompression. Ignored in CDN mode. | manifest.json |
+| PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL| persisted_operations.manifest.poll_interval| <Icon icon="square" />                        | The interval at which the router polls the Cosmo CDN or the configured storage provider for manifest updates. Minimum 10s.                                                                 | 10s           |
 | PERSISTED_OPERATIONS_MANIFEST_POLL_JITTER  | persisted_operations.manifest.poll_jitter  | <Icon icon="square" />                        | Random jitter added to each poll interval to avoid thundering herd. Minimum 1s.                                                                                                                        | 5s            |
 
 ## Automatic Persisted Queries
@@ -1663,6 +1750,11 @@ traffic_shaping:
     max_header_bytes: 1MiB
     decompression_enabled: true
     response_compression_min_size: 4KiB
+    # Client-facing HTTP server timeouts
+    request_read_timeout: 60s
+    request_header_read_timeout: 0s # 0 falls back to request_read_timeout
+    idle_timeout: 0s # 0 falls back to request_read_timeout
+    write_timeout: 0s # disabled by default, setting it disrupts SSE and multipart subscriptions
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -1786,6 +1878,10 @@ These rules apply to requests being made from clients to the Router.
 | MAX_HEADER_BYTES     | max_header_bytes              | <Icon icon="square" /> | Minimum Router version: [0.156.0](https://github.com/wundergraph/cosmo/compare/router@0.155.0...router@0.156.0) The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB. | 1mib          |
 |                      | decompression_enabled         | <Icon icon="square" /> | When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly Note: Currently only "gzip" is supported                                                                           | true          |
 |                      | response_compression_min_size | <Icon icon="square" /> | The minimum size of the response body in bytes to enable response compression. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB                                                                               | 4KiB          |
+| TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT | request_read_timeout | <Icon icon="square" /> | The maximum duration for reading the entire client request, including headers and body. Clients that do not finish sending the request in time have their connection closed; if the headers were already read, the router responds with `408 Request Timeout`. Minimum is 1s. See [Client timeouts](/router/traffic-shaping/timeout#client-timeouts). | 60s |
+| TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT | request_header_read_timeout | <Icon icon="square" /> | The maximum duration for reading the client request headers. Setting this to 0 falls back to `request_read_timeout`. Applies to HTTP/1 only; for HTTP/2 over TLS, `idle_timeout` limits slow headers, except while another stream on the same connection is open. | 0s |
+| TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT | idle_timeout | <Icon icon="square" /> | The maximum duration to wait for the next request on an idle keep-alive client connection. Setting this to 0 falls back to `request_read_timeout`. | 0s |
+| TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT | write_timeout | <Icon icon="square" /> | The maximum duration for writing the response to the client, measured from the end of reading the request headers. Disabled by default. **Setting it disrupts subscriptions over SSE and multipart**: they are terminated once the timeout elapses. See [Client timeouts](/router/traffic-shaping/timeout#client-timeouts). | 0s (disabled) |
 | 5mb                  |                               |                        |                                                                                                                                                                                                                                              |               |
 
 ## WebSocket
@@ -2581,6 +2677,7 @@ The configuration for the security. The security is used to configure the securi
 | SECURITY_COMPLEXITY_IGNORE_INTROSPECTION          | complexity_limits.ignore_introspection   | <Icon icon="square" /> | When true, complexity validation is skipped for all introspection queries.                                                        | false         |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
+| SECURITY_NORMALIZATION_LIMITS_MAX_SELECTIONS      | normalization_limits.max_selections      | <Icon icon="square" /> | The maximum number of selections a GraphQL document may hold while its fragment spreads are expanded. The count covers the whole document: the selections as sent, fragment definitions included, plus the copies and inline fragment wrappers added for every fragment spread. It applies to every operation, whether or not it uses fragments. Set to 0 to disable. | 10000         |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
 
 
@@ -2624,6 +2721,8 @@ security:
   parser_limits:
     approximate_depth_limit: 300
     total_fields_limit: 700
+  normalization_limits:
+    max_selections: 20000
   operation_name_length_limit: 1024
 ```
 
@@ -2880,6 +2979,20 @@ Skips the validation error raised when `null` is supplied for a variable of a no
 | ------------------------------------------------------------- | ------------------------- | ---------------------- | ----------------------------------------------------------------- | ------------- |
 | APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_ENABLED | skip_null_variables_error | <Icon icon="square" /> | Skips the error when a null variable is supplied for a non-nullable type. | false         |
 
+### Apollo Router Compatibility Cache Control Any Public
+
+Changes how the [restrictive cache control policy](/router/proxy-capabilities/adjusting-cache-control) merges `public` across subgraph fetches, matching Apollo Router behavior. By default, the response is `public` only when every fetch that sets `Cache-Control` is `public`. With this flag, one `public` fetch is enough. Within a single fetch, the global and subgraph values still both have to grant `public`. So when a subgraph sends no `Cache-Control` of its own, a subgraph value without `public` withholds it from that fetch. When the subgraph sends its own header, configured values only cap its lifetime. `private` and `no-store` still win.
+
+For example, subgraph A sends `max-age=300, public` and subgraph B sends `max-age=60`. By default the router sends `max-age=60`. With this flag it sends `max-age=60, public`.
+
+<Warning>
+  Shared caches store responses to requests with `Authorization` only when they are `public`. With this flag, data from a subgraph that did not send `public` can end up in a shared cache. Enable it only when no subgraph returns per-user data without `private`.
+</Warning>
+
+| Environment Variable                                         | YAML                     | Required               | Description                                          | Default Value |
+| ------------------------------------------------------------ | ------------------------ | ---------------------- | ---------------------------------------------------- | ------------- |
+| APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_ENABLED | cache_control_any_public | <Icon icon="square" /> | Sends `public` when any subgraph fetch is `public`. | false         |
+
 ### Example YAML Configuration
 
 ```yaml
@@ -2890,6 +3003,55 @@ apollo_router_compatibility_flags:
     enabled: true
   skip_null_variables_error:
     enabled: true
+  cache_control_any_public:
+    enabled: true
+```
+
+## GraphQL over HTTP
+
+Configures how the router follows the [GraphQL over HTTP spec](https://http-spec.graphql.org/September2026/).
+
+| Environment Variable           | YAML         | Required               | Description                                                                                                                                                                | Default Value |
+| ------------------------------ | ------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| GRAPHQL_OVER_HTTP_STATUS_CODES | status_codes | <Icon icon="square" /> | The status codes for request errors. `legacy` returns 200 for most request errors. `September2026` returns the 4xx status codes of the September 2026 edition of the spec. | legacy        |
+
+With `status_codes: September2026`, the router returns these status codes for request errors:
+
+| Error                                                                                                                                  | Status code |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Blocked mutation, subscription, persisted or non-persisted operation                                                                   | 403         |
+| Operation not on the safelist                                                                                                          | 403         |
+| Introspection query while introspection is disabled                                                                                    | 403         |
+| Operation name not found                                                                                                               | 422         |
+| Variables missing or not matching their type                                                                                           | 422         |
+| Persisted query sent while persisted operations are disabled                                                                           | 422         |
+| `@defer` with an `Accept` header that allows none of the [accepted forms](/router/defer#send-a-request), or with an unsupported format | 406         |
+| `multipart/form-data` request while file upload is disabled                                                                            | 415         |
+
+Other request errors keep their status code.
+The response body is the same in both modes.
+Error responses keep the `Content-Type: application/json` header.
+
+A request with only the hash of an unknown persisted operation returns 200 with `PersistedQueryNotFound` in both modes.
+Clients using automatic persisted queries rely on this response to send the full query.
+
+<Warning>
+  Some clients treat non-2xx responses as network errors.
+  For example, Apollo Client 3 reports them as `networkError` instead of `graphQLErrors`.
+  Check how your clients handle 4xx responses before you use `September2026`.
+</Warning>
+
+<Info>
+  Mutations sent over `GET` return 405 with the `Allow: POST` header in both modes.
+</Info>
+
+### Example YAML Configuration
+
+```yaml
+version: "1"
+
+graphql_over_http:
+  status_codes: September2026
 ```
 
 ## Cache warmer

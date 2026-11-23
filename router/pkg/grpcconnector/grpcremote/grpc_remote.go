@@ -8,10 +8,13 @@ import (
 	"sync"
 
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // RemoteGRPCProviderConfig holds the configuration parameters for creating a new RemoteGRPCProvider.
@@ -22,15 +25,20 @@ type RemoteGRPCProviderConfig struct {
 	Endpoint string
 	// TLSConfig is the TLS configuration for the gRPC connection. When nil, an insecure connection is used.
 	TLSConfig *tls.Config
+	// Propagator injects OpenTelemetry trace context (W3C traceparent/tracestate)
+	// into the metadata of outgoing gRPC calls so that remote gRPC subgraph
+	// services can continue the trace. If nil, no trace context is propagated.
+	Propagator propagation.TextMapPropagator
 }
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
-	logger    *zap.Logger
-	endpoint  string
-	tlsConfig *tls.Config
+	logger     *zap.Logger
+	endpoint   string
+	tlsConfig  *tls.Config
+	propagator propagation.TextMapPropagator
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
@@ -51,9 +59,10 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 	}
 
 	return &RemoteGRPCProvider{
-		logger:    config.Logger,
-		endpoint:  config.Endpoint,
-		tlsConfig: config.TLSConfig,
+		logger:     config.Logger,
+		endpoint:   config.Endpoint,
+		tlsConfig:  config.TLSConfig,
+		propagator: config.Propagator,
 	}, nil
 }
 
@@ -77,8 +86,21 @@ func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 		} else {
 			transportCreds = grpc.WithTransportCredentials(insecure.NewCredentials())
 		}
+		opts := []grpc.DialOption{
+			transportCreds,
+		}
 
-		clientConn, err := grpc.NewClient(g.endpoint, transportCreds)
+		// When a propagator is configured, inject the OpenTelemetry trace context
+		// (W3C traceparent/tracestate) into the metadata of outgoing gRPC calls so
+		// that remote gRPC subgraph services can continue the trace.
+		if g.propagator != nil {
+			opts = append(opts,
+				grpc.WithChainUnaryInterceptor(traceUnaryClientInterceptor(g.propagator)),
+				grpc.WithChainStreamInterceptor(traceStreamClientInterceptor(g.propagator)),
+			)
+		}
+
+		clientConn, err := grpc.NewClient(g.endpoint, opts...)
 		if err != nil {
 			return fmt.Errorf("failed to create client connection: %w", err)
 		}
@@ -87,6 +109,39 @@ func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// injectTraceContext injects the trace context from ctx into the outgoing gRPC
+// metadata using the configured propagator and returns the updated context.
+func injectTraceContext(ctx context.Context, propagator propagation.TextMapPropagator) context.Context {
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	} else {
+		md = md.Copy()
+	}
+
+	trace.Inject(ctx, propagator, &md)
+
+	return metadata.NewOutgoingContext(ctx, md)
+}
+
+// traceUnaryClientInterceptor returns a unary client interceptor that injects the
+// trace context into the metadata of outgoing unary gRPC calls.
+func traceUnaryClientInterceptor(propagator propagation.TextMapPropagator) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		ctx = injectTraceContext(ctx, propagator)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+// traceStreamClientInterceptor returns a stream client interceptor that injects the
+// trace context into the metadata of outgoing streaming gRPC calls.
+func traceStreamClientInterceptor(propagator propagation.TextMapPropagator) grpc.StreamClientInterceptor {
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		ctx = injectTraceContext(ctx, propagator)
+		return streamer(ctx, desc, cc, method, opts...)
+	}
 }
 
 // Stop closes the gRPC client connection if it implements the io.Closer interface.

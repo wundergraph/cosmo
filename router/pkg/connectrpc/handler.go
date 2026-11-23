@@ -79,8 +79,15 @@ type GraphQLError struct {
 
 // GraphQLResponse represents a GraphQL response structure
 type GraphQLResponse struct {
-	Errors []GraphQLError  `json:"errors,omitempty"`
-	Data   json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError            `json:"errors,omitempty"`
+	Data       json.RawMessage           `json:"data,omitempty"`
+	Extensions GraphQLResponseExtensions `json:"extensions"`
+}
+
+type GraphQLResponseExtensions struct {
+	Authorization struct {
+		MissingScopes []json.RawMessage `json:"missingScopes"`
+	} `json:"authorization"`
 }
 
 // RPCHandler handles RPC requests and orchestrates GraphQL execution
@@ -577,7 +584,7 @@ func (h *RPCHandler) unspecifiedEnumValueName(enumDesc protoreflect.EnumDescript
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
 // This follows Relay's error classification pattern for critical errors.
-func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus int) error {
+func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, code connect.Code, httpStatus int) error {
 	// Serialize GraphQL errors to JSON for metadata
 	errorsJSON, err := json.Marshal(errors)
 	if err != nil {
@@ -586,9 +593,8 @@ func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus 
 	}
 
 	// Create Connect error with CRITICAL classification
-	// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server defects)
 	connectErr := connect.NewError(
-		connect.CodeUnknown,
+		code,
 		fmt.Errorf("GraphQL operation failed: %s", errors[0].Message),
 	)
 	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
@@ -740,7 +746,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 
 		if !hasData {
 			// CRITICAL: Errors with no data - complete failure
-			return nil, h.makeCriticalGraphQLError(graphqlResponse.Errors, resp.StatusCode)
+			return nil, h.makeCriticalGraphQLError(graphqlResponse.Errors, graphqlResponse.ConnectCode(), resp.StatusCode)
 		}
 
 		// PARTIAL: Errors with partial data - partial success

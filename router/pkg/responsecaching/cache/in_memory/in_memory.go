@@ -155,8 +155,13 @@ func (c *InMemoryCache) SetMany(ctx context.Context, items []enginecache.Item) e
 			sharedOnly:    item.SharedOnly,
 			clientTTLGap:  max(item.TTL-item.ClientTTL, 0),
 		}
-		if c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
-			c.tags.add(item.Key, item.Tags, now.Add(item.TTL))
+		if !c.cache.SetWithTTL(item.Key, stored, entryCost, item.TTL) {
+			continue
+		}
+		// Read before an invalidation of one of its tags: stale already. Stored
+		// first, so an invalidation after the check finds it indexed.
+		if !c.tags.addUnlessInvalidated(item.Key, item.Tags, now.Add(item.TTL), item.FetchedAt) {
+			c.cache.Del(item.Key)
 		}
 	}
 

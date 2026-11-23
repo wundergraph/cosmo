@@ -12,6 +12,7 @@ import (
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
@@ -37,6 +38,7 @@ const (
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
 	errorTypeStreamsHandlerError
+	errorTypeDeliveryGuarantee
 )
 
 type (
@@ -47,11 +49,17 @@ type (
 	}
 
 	Extensions struct {
-		RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
-		Authorization json.RawMessage `json:"authorization,omitempty"`
-		Trace         json.RawMessage `json:"trace,omitempty"`
-		StatusCode    int             `json:"statusCode,omitempty"`
-		Code          string          `json:"code,omitempty"`
+		RateLimit     json.RawMessage       `json:"rateLimit,omitempty"`
+		Authorization json.RawMessage       `json:"authorization,omitempty"`
+		Trace         json.RawMessage       `json:"trace,omitempty"`
+		StatusCode    int                   `json:"statusCode,omitempty"`
+		Code          string                `json:"code,omitempty"`
+		CosmoCursor   *CosmoCursorExtension `json:"cosmoCursor,omitempty"`
+	}
+
+	// CosmoCursorExtension carries the cursor handshake details of an error.
+	CosmoCursorExtension struct {
+		Supported []string `json:"supported"`
 	}
 )
 
@@ -74,6 +82,7 @@ func isTerminalSubscriptionError(err error) bool {
 	case errorTypeUnauthorized,
 		errorTypeSubscriptionConnectionFailed,
 		errorTypeInvalidWsSubprotocol,
+		errorTypeDeliveryGuarantee,
 		errorTypeRateLimit,
 		errorTypeContextCanceled,
 		errorTypeContextTimeout:
@@ -101,6 +110,10 @@ func getErrorType(err error) errorType {
 		if nErr.Timeout() {
 			return errorTypeContextTimeout
 		}
+	}
+	var deliveryGuaranteeErr *datasource.DeliveryGuaranteeError
+	if errors.As(err, &deliveryGuaranteeErr) {
+		return errorTypeDeliveryGuarantee
 	}
 	var edfsErr *datasource.Error
 	if errors.As(err, &edfsErr) {
@@ -370,8 +383,9 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 }
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
-// It also logs additional information about the error.
-func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation) {
+// It also logs additional information about the error. The status code of classified errors depends on
+// the configured status codes, see graphql_over_http.status_codes.
+func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, statusCodes config.GraphQLOverHTTPStatusCodes) {
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
@@ -389,10 +403,23 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			headerPropagation: propagation,
 		})
 	case errors.As(err, &httpErr):
+		statusCode := httpErr.StatusCode()
+		if gqlErr, ok := errors.AsType[*httpGraphqlError](err); ok {
+			switch statusCodes {
+			case config.GraphQLOverHTTPStatusCodesSeptember2026:
+				if specStatusCode, ok := specStatusCodes[gqlErr.kind]; ok {
+					statusCode = specStatusCode
+				}
+			}
+			// A 405 response must list the allowed methods
+			if gqlErr.kind == errorKindMutationOverGET {
+				w.Header().Set("Allow", http.MethodPost)
+			}
+		}
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
 			writer:            w,
-			statusCode:        httpErr.StatusCode(),
+			statusCode:        statusCode,
 			requestErrors:     requestErrorsFromHttpError(httpErr),
 			logger:            requestLogger,
 			headerPropagation: propagation,
@@ -461,4 +488,18 @@ func WrapExprError(err error) error {
 		return nil
 	}
 	return &ExprWrapError{Err: err}
+}
+
+// isNetTimeoutError reports whether err was caused by a network timeout, e.g. the server's read
+// deadline expiring while a slow client is still sending the request body.
+func isNetTimeoutError(err error) bool {
+	netErr, ok := errors.AsType[net.Error](err)
+	return ok && netErr.Timeout()
+}
+
+func newRequestBodyTimeoutError() error {
+	return &httpGraphqlError{
+		message:    "timeout while reading the request body",
+		statusCode: http.StatusRequestTimeout,
+	}
 }
