@@ -1606,87 +1606,89 @@ describe('@cacheTag tests', () => {
       ]);
     });
 
-    // Each subgraph caches its own part of an entity, so its formats apply only to that part.
-    test('that each subgraph retains its own CacheTagConfigurations without a warning', () => {
-      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
-        [
-          createSubgraph(
-            'a',
-            `
-            type Query { product(id: ID!): Product }
-            type Product
-                @key(fields: "id")
-                @cacheTag(format: "product-{$key.id}") {
-              id: ID!
-              name: String!
-            }
-          `,
-          ),
-          createSubgraph(
-            'b',
-            `
-            type Product
-                @key(fields: "id")
-                @cacheTag(format: "reviews-{$key.id}") {
-              id: ID!
-              reviews: [String!]!
-            }
-          `,
-          ),
-          createSubgraph(
-            'c',
-            `
-            type Product @key(fields: "id") { id: ID! price: Int! }
-          `,
-          ),
-        ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(warnings).toStrictEqual([]);
-      expect(
-        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
-      expect(
-        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([{ format: 'reviews-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
-      expect(
-        subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product')?.entityCaching,
-      ).toBeUndefined();
-    });
+    describe('federation tests', () => {
+      // Each subgraph caches its own part of an entity, so its formats apply only to that part.
+      test('that each subgraph retains its own CacheTagConfigurations without a warning', () => {
+        const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+          [
+            createSubgraph(
+              'a',
+              `
+              type Query { product(id: ID!): Product }
+              type Product
+                  @key(fields: "id")
+                  @cacheTag(format: "product-{$key.id}") {
+                id: ID!
+                name: String!
+              }
+            `,
+            ),
+            createSubgraph(
+              'b',
+              `
+              type Product
+                  @key(fields: "id")
+                  @cacheTag(format: "reviews-{$key.id}") {
+                id: ID!
+                reviews: [String!]!
+              }
+            `,
+            ),
+            createSubgraph(
+              'c',
+              `
+              type Product @key(fields: "id") { id: ID! price: Int! }
+            `,
+            ),
+          ],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(warnings).toStrictEqual([]);
+        expect(
+          subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product')?.entityCaching
+            ?.cacheTagConfigurations,
+        ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+        expect(
+          subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product')?.entityCaching
+            ?.cacheTagConfigurations,
+        ).toStrictEqual([{ format: 'reviews-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+        expect(
+          subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product')?.entityCaching,
+        ).toBeUndefined();
+      });
 
-    test('that an overridden entity field leaves the CacheTagConfiguration of the entity intact', () => {
-      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
-        [
-          createSubgraph(
-            'a',
-            `
-            type Query { product(id: ID!): Product }
-            type Product
-                @key(fields: "id")
-                @cacheTag(format: "product-{$key.id}") {
-              id: ID!
-              name: String!
-              price: Int!
-            }
-          `,
-          ),
-          createSubgraph(
-            'b',
-            `
-            type Product @key(fields: "id") { id: ID! name: String! @override(from: "a") }
-          `,
-          ),
-        ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
-      assert.isOk(configurationData);
-      expect(configurationData.fieldNames).toStrictEqual(new Set(['id', 'price']));
-      expect(configurationData.entityCaching?.cacheTagConfigurations).toStrictEqual([
-        { format: 'product-{$key.id}', typeName: 'Product' },
-      ] satisfies Array<CacheTagConfiguration>);
+      test('that an overridden entity field leaves the CacheTagConfiguration of the entity intact', () => {
+        const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+          [
+            createSubgraph(
+              'a',
+              `
+              type Query { product(id: ID!): Product }
+              type Product
+                  @key(fields: "id")
+                  @cacheTag(format: "product-{$key.id}") {
+                id: ID!
+                name: String!
+                price: Int!
+              }
+            `,
+            ),
+            createSubgraph(
+              'b',
+              `
+              type Product @key(fields: "id") { id: ID! name: String! @override(from: "a") }
+            `,
+            ),
+          ],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
+        assert.isOk(configurationData);
+        expect(configurationData.fieldNames).toStrictEqual(new Set(['id', 'price']));
+        expect(configurationData.entityCaching?.cacheTagConfigurations).toStrictEqual([
+          { format: 'product-{$key.id}', typeName: 'Product' },
+        ] satisfies Array<CacheTagConfiguration>);
+      });
     });
   });
 
