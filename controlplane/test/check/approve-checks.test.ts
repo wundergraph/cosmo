@@ -358,6 +358,45 @@ describe('Check approval RBAC', () => {
     expect(await forceCheckSuccess(client, graphName, checkId)).toBe(EnumStatusCode.OK);
   });
 
+  test('Check approver must be granted every subgraph of a multi-subgraph check that stopped early', async () => {
+    const {
+      client,
+      graphName,
+      employeesName,
+      teamsName,
+      employeesTargetId,
+      teamsTargetId,
+      graphViewer,
+      approverOf,
+      loginAs,
+    } = await setup();
+    // The check stops at the invalid schema of the first subgraph, before it gets to the second one.
+    const proposal = await client.createProposal({
+      federatedGraphName: graphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: genID('proposal'),
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [
+        { name: teamsName, schemaSDL: 'type Query { teams: [Team }', isNew: false, isDeleted: false, labels: [] },
+        {
+          name: employeesName,
+          schemaSDL: 'type Query { employees: [Employee] } type Employee { id: Int! }',
+          isNew: false,
+          isDeleted: false,
+          labels: [],
+        },
+      ],
+    });
+    expect(proposal.checkId).not.toBe('');
+
+    loginAs(graphViewer, approverOf(teamsTargetId));
+    expect(await forceCheckSuccess(client, graphName, proposal.checkId)).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    loginAs(graphViewer, approverOf(employeesTargetId, teamsTargetId));
+    expect(await forceCheckSuccess(client, graphName, proposal.checkId)).toBe(EnumStatusCode.OK);
+  });
+
   test('Only graph writers can approve a check that includes a new subgraph', async () => {
     const {
       client,
