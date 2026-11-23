@@ -181,7 +181,10 @@ async function handleSplitRouterConfig({
   }
 
   await writeFile(join(outputDir, mapperFile), JSON.stringify(Object.fromEntries(mapper)));
-  console.log(pc.green(`Router execution manifest successfully written to "${pc.bold(outputDir)}".`));
+  // In JSON mode, stdout must contain only the JSON diagnostics.
+  if (!options.json) {
+    console.log(pc.green(`Router execution manifest successfully written to "${pc.bold(outputDir)}".`));
+  }
 }
 
 async function handleEmbeddedRouterConfig({
@@ -206,7 +209,10 @@ async function handleEmbeddedRouterConfig({
   if (options.out) {
     const output = await getRouterConfigOutputFile(options.out);
     await writeFile(output, routerConfigJson);
-    console.log(pc.green(`Router execution config successfully written to "${pc.bold(options.out)}".`));
+    // In JSON mode, stdout must contain only the JSON diagnostics.
+    if (!options.json) {
+      console.log(pc.green(`Router execution config successfully written to "${pc.bold(options.out)}".`));
+    }
   } else {
     console.log(routerConfigJson);
   }

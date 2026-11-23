@@ -823,6 +823,44 @@ describe('router compose json output tests', () => {
     expect(stderr).not.toContain('ERROR_MESSAGE');
   });
 
+  test('that the success message is printed in normal mode when a destination is provided', async () => {
+    const outputFile = tmpRouterConfigFile();
+    const { stdout } = await composeInvalidGraph({ args: ['-o', outputFile], invalidFeatureFlagOnly: true });
+
+    expect(existsSync(outputFile)).toBe(true);
+    expect(stdout).toContain('Router execution config successfully written');
+  });
+
+  test('that stdout contains only json diagnostics when the json flag is set and a destination is provided', async () => {
+    const outputFile = tmpRouterConfigFile();
+    const { stdout, stderr } = await composeInvalidGraph({
+      args: ['--json', '-o', outputFile],
+      invalidFeatureFlagOnly: true,
+    });
+
+    // The router config is still written, but the success message is suppressed.
+    expect(process.exitCode).toBeUndefined();
+    expect(existsSync(outputFile)).toBe(true);
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('successfully written');
+    expect(JSON.parse(stdout).featureFlag).toBe('my-feature-flag');
+  });
+
+  test('that stdout contains only json diagnostics when the json flag is set and config splitting is enabled', async () => {
+    const outputDir = join(tmpdir(), 'router-compose-json', randomUUID());
+    const { stdout, stderr } = await composeInvalidGraph({
+      args: ['--json', '-o', outputDir, '--split-configs-enabled'],
+      invalidFeatureFlagOnly: true,
+    });
+
+    expect(process.exitCode).toBeUndefined();
+    expect(existsSync(join(outputDir, 'router-config.json'))).toBe(true);
+    expect(existsSync(join(outputDir, 'mapper.json'))).toBe(true);
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('successfully written');
+    expect(JSON.parse(stdout).featureFlag).toBe('my-feature-flag');
+  });
+
   test('that feature flag composition errors are printed as json to stderr when no destination is provided', async () => {
     const { stdout, stderr } = await composeInvalidGraph({ args: ['--json'], invalidFeatureFlagOnly: true });
 
