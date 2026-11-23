@@ -317,6 +317,10 @@ export const hubSandbox = (address = sandboxAddress) => ({
   endpointToken: 'endpoint-secret',
   routerStatus: 'live',
   viewSeq: 14,
+  source: { kind: 'schema', name: 'shop', deleted: false },
+  sharing: 'private',
+  openPortals: 0,
+  proposalOutcome: null,
 });
 
 export const linkedRepo = (files: Record<string, string> = {}) =>

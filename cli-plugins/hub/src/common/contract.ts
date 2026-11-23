@@ -95,13 +95,13 @@ export type Operation = z.output<typeof operationShape>;
 
 export type OperationStep = Operation['steps'][number];
 
-const routerStatuses = ['live', 'ready', 'starting'] as const;
+const routerStatuses = ['live', 'ready', 'starting', 'failed'] as const;
 
 const sandboxRowShape = z.object({
   address: z.string(),
   schema: z.string(),
   name: z.string(),
-  createdFrom: z.string().nullable(),
+  source: z.object({ kind: z.enum(['schema', 'sandbox', 'cosmo']), name: z.string(), deleted: z.boolean() }).nullable(),
   routerStatus: z.enum(routerStatuses),
   endpointUrl: z.string(),
 });
@@ -141,7 +141,7 @@ const collectionResultShape = z.object({
 
 export type CollectionResult = z.output<typeof collectionResultShape>;
 
-export const portalStatuses = ['connecting', 'connected', 'reconnecting', 'closed'] as const;
+export const portalStatuses = ['connecting', 'connected', 'disconnected', 'closed'] as const;
 
 export type PortalStatus = (typeof portalStatuses)[number];
 

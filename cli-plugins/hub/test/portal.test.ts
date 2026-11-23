@@ -241,7 +241,7 @@ describe('wgc hub portal list and close', () => {
       tools: {
         list_portals: () => ({
           structuredContent: {
-            portals: [{ ...portal('connected'), lastRequestAt: '2026-11-20T11:58:00Z' }, portal('closed')],
+            portals: [{ ...portal('connected'), lastRequestAt: '2026-11-20T11:58:00Z' }, portal('disconnected')],
           },
         }),
       },
@@ -251,7 +251,9 @@ describe('wgc hub portal list and close', () => {
 
     expect(hub.toolCalls()).toEqual([{ name: 'list_portals', arguments: { sandbox: 'shop/shop-nithin' } }]);
     expect(run.stdout).toBe(
-      ['SUBGRAPH  STATUS     LAST REQUEST', 'reviews   connected  2m ago', 'reviews   closed     -', ''].join('\n'),
+      ['SUBGRAPH  STATUS        LAST REQUEST', 'reviews   connected     2m ago', 'reviews   disconnected  -', ''].join(
+        '\n',
+      ),
     );
   });
 

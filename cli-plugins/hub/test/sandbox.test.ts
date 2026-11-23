@@ -11,9 +11,12 @@ const sandboxRow = (name: string, routerStatus: string) => ({
   address: `shop/${name}`,
   schema: 'shop',
   name,
-  createdFrom: null,
+  source: { kind: 'schema', name: 'shop', deleted: false },
   routerStatus,
   endpointUrl: `https://${name}.sandbox.wundergraph.dev/graphql`,
+  sharing: 'private',
+  openPortals: 0,
+  proposalOutcome: null,
 });
 
 describe('wgc hub sandbox list', () => {
@@ -21,7 +24,7 @@ describe('wgc hub sandbox list', () => {
     hub = await startFakeHub({
       tools: {
         list_sandboxes: () => ({
-          structuredContent: { sandboxes: [sandboxRow('shop-nithin', 'live'), sandboxRow('shop-agent', 'starting')] },
+          structuredContent: { sandboxes: [sandboxRow('shop-nithin', 'live'), sandboxRow('shop-agent', 'failed')] },
         }),
       },
     });
@@ -33,7 +36,7 @@ describe('wgc hub sandbox list', () => {
     expect(run.stdout).toBe(
       [
         'shop/shop-nithin   live   https://shop-nithin.sandbox.wundergraph.dev/graphql',
-        'shop/shop-agent   starting   https://shop-agent.sandbox.wundergraph.dev/graphql',
+        'shop/shop-agent   failed   https://shop-agent.sandbox.wundergraph.dev/graphql',
         '',
       ].join('\n'),
     );
