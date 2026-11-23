@@ -3771,6 +3771,37 @@ message FinishOnboardingResponse {
   string finishedAt = 3;
 }
 
+message GetResponseCacheStatusRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional DateRange dateRange = 3;
+}
+
+enum ResponseCacheStatus {
+  HIT = 0;
+  MISS = 1;
+}
+
+message ResponseCacheStatusCount {
+  ResponseCacheStatus cacheStatus = 1;
+  int64 totalFetches = 2;
+}
+
+message SubgraphResponseCacheStatus {
+  string subgraphId = 1;
+  string subgraphName = 2;
+  int64 totalFetches = 3;
+  int64 nonDeltaPoints = 4;
+  repeated ResponseCacheStatusCount statuses = 5;
+}
+
+message GetResponseCacheStatusResponse {
+  Response response = 1;
+  DateRange interval = 2;
+  int32 coverageCount = 3;
+  repeated SubgraphResponseCacheStatus subgraphs = 4;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -4152,6 +4183,12 @@ service PlatformService {
 
   rpc GetSubgraphCheckExtensionsConfig(GetSubgraphCheckExtensionsConfigRequest) returns (GetSubgraphCheckExtensionsConfigResponse) {}
   rpc ConfigureSubgraphCheckExtensions(ConfigureSubgraphCheckExtensionsRequest) returns (ConfigureSubgraphCheckExtensionsResponse) {}
+
+  //
+  // Entity Caching
+  //-----------------------------------------------------------------------------------------------------------------------------
+
+  rpc GetResponseCacheStatus(GetResponseCacheStatusRequest) returns (GetResponseCacheStatusResponse) {}
 
   //
   // Billing

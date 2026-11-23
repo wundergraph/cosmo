@@ -210,6 +210,7 @@ import { configureSubgraphCheckExtensions } from './check-extensions/configureSu
 import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 import { listOrganizations } from './organization/listOrganizations.js';
 import { recomposeGraph } from './graph/recomposeGraph.js';
+import { getResponseCacheStatus } from './entity-caching/getResponseCacheStatus.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1047,6 +1048,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     finishOnboarding: (req, ctx) => {
       return finishOnboarding(opts, req, ctx);
+    },
+
+    getResponseCacheStatus: (req, ctx) => {
+      return getResponseCacheStatus(opts, req, ctx);
     },
   };
 }
