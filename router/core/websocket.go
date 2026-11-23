@@ -1272,6 +1272,8 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	reqContext := buildRequestContext(requestContextOptions{
+		executionConfig:     ExecutionConfigFromContext(registration.clientRequest.Context()),
+		subgraphResolver:    subgraphResolverFromContext(registration.clientRequest.Context()),
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
 		metricSetAttributes: nil,
