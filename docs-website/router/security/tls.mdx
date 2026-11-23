@@ -117,6 +117,29 @@ _, err = client.Do(req)
 
 That's it! The router should now be able to receive TLS connections **only** from clients who authenticate themselves using a certificate issued by your trusted CA.
 
+## Certificate Reloading
+
+Enable `tls.watch` to reload certificate/key files without restarting. For example, for outbound subgraph mTLS:
+
+```yaml config.yaml
+tls:
+  watch: true
+  watch_interval: 1s
+  client:
+    all:
+      cert_file: /etc/router/tls/client.crt
+      key_file: /etc/router/tls/client.key
+      ca_file: /etc/router/tls/ca.crt
+```
+
+| TLS configuration | Certificate/key reload |
+| --- | --- |
+| Router server (`tls.server`) | Yes |
+| HTTP subgraphs (`tls.client`) | Yes (global and per-subgraph) |
+| gRPC subgraphs (`tls.client_grpc`) | Yes (global and per-subgraph) |
+
+CA bundles are not watched. Updated certificates apply to new connections; existing connections stay open. Failed reloads retain the previous certificate.
+
 ## TLS with Subgraphs
 
 For subgraph connections, encryption and authentication are automatically enabled when the subgraph URL uses the `https://` protocol.

@@ -1,7 +1,9 @@
 import { ChangeType, CriticalityLevel, diff, TypeOfChangeType, SerializableChange } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { INACCESSIBLE } from '@wundergraph/composition';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
+import { schemaCheckRules } from './schemaCheckRules.js';
 
 export interface SchemaDiff {
   message: string;
@@ -30,40 +32,73 @@ export interface GetDiffBetweenGraphsFailure {
 export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBetweenGraphsFailure;
 
 export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: GraphQLSchema): Promise<SchemaDiff[]> {
-  const changes = await diff(oldSchemaSDL, newSchemaSDL);
+  const changes = await diff(oldSchemaSDL, newSchemaSDL, schemaCheckRules);
   return changes.map((change) => {
     return {
       message: change.message,
       changeType: change.type,
       path: change.path ?? '',
       meta: change.meta,
-      isBreaking:
-        change.criticality.level === CriticalityLevel.Breaking ||
-        // We consider enum value changes as breaking changes because it is common to use enums in switch statements
-        // and if a value is removed or added, the switch statement will not be exhaustive anymore and might
-        // lead to unexpected behavior.
-        change.type === ChangeType.EnumValueRemoved ||
-        change.type === ChangeType.EnumValueAdded,
+      isBreaking: change.criticality.level === CriticalityLevel.Breaking,
     };
   });
 }
 
+export function changesNeedClientSchemaDiff({
+  breakingChanges,
+  nonBreakingChanges,
+}: Pick<GetDiffBetweenGraphsSuccess, 'breakingChanges' | 'nonBreakingChanges'>): boolean {
+  return [...breakingChanges, ...nonBreakingChanges].some((change) => changeNeedsClientSchemaDiff(change));
+}
+
+function changeNeedsClientSchemaDiff(change: SchemaDiff): boolean {
+  switch (change.changeType) {
+    case ChangeType.FieldAdded:
+    case ChangeType.FieldRemoved:
+    case ChangeType.FieldTypeChanged:
+    case ChangeType.TypeAdded:
+    case ChangeType.TypeRemoved: {
+      return true;
+    }
+    case ChangeType.EnumValueAdded:
+    case ChangeType.EnumValueRemoved: {
+      const alreadyReportedAsBreaking = change.isBreaking;
+      return !alreadyReportedAsBreaking;
+    }
+    default: {
+      return changedDirectiveName(change.meta) === INACCESSIBLE;
+    }
+  }
+}
+
+function changedDirectiveName(meta: SchemaDiff['meta']): string | undefined {
+  if ('addedDirectiveName' in meta) {
+    return meta.addedDirectiveName;
+  }
+  if ('removedDirectiveName' in meta) {
+    return meta.removedDirectiveName;
+  }
+  return undefined;
+}
+
 export async function getDiffBetweenGraphs(
-  oldSchemaSDL: string,
-  newSchemaSDL: string,
+  oldSchemaSDL: string | GraphQLSchema,
+  newSchemaSDL: string | GraphQLSchema,
   routerCompatibilityVersion: string,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
     let newSchema: GraphQLSchema = new GraphQLSchema({});
-    if (oldSchemaSDL) {
+    if (typeof oldSchemaSDL === 'string') {
       const result = buildSchema(oldSchemaSDL, true, routerCompatibilityVersion);
       if (result.success) {
         oldSchema = result.schema;
       }
+    } else if (oldSchemaSDL instanceof GraphQLSchema) {
+      oldSchema = oldSchemaSDL;
     }
 
-    if (newSchemaSDL.length > 0) {
+    if (typeof newSchemaSDL === 'string' && newSchemaSDL.length > 0) {
       const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
@@ -73,13 +108,14 @@ export async function getDiffBetweenGraphs(
           errorMessage: result.errors.map((e) => e.toString()).join('\n'),
         };
       }
+
       newSchema = result.schema;
+    } else if (newSchemaSDL instanceof GraphQLSchema) {
+      newSchema = newSchemaSDL;
     }
 
     const schemaChanges = await getSchemaDiff(oldSchema, newSchema);
-
     const breakingChanges = schemaChanges.filter((change) => change.isBreaking);
-
     const breakingSchemaChanges: SchemaDiff[] = breakingChanges.map((breakingChange) => {
       return {
         message: breakingChange.message,

@@ -244,6 +244,8 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueries),
 		WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags),
 		WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags),
+		WithGraphQLOverHTTP(config.GraphQLOverHTTP),
+		WithBackwardsCompatibility(config.BackwardsCompatibility),
 		WithStorageProviders(config.StorageProviders),
 		WithGraphQLPath(config.GraphQLPath),
 		WithModulesConfig(config.Modules),
@@ -347,6 +349,7 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			KeyId:     jwks.KeyId,
 
 			Audiences: jwks.Audiences,
+			Issuers:   jwks.Issuers,
 			RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
 				Enabled:  jwks.RefreshUnknownKID.Enabled,
 				MaxWait:  jwks.RefreshUnknownKID.MaxWait,

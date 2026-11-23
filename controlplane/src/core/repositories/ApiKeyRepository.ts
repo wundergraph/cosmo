@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -5,6 +6,20 @@ import * as schema from '../../db/schema.js';
 import { apiKeyPermissions, apiKeyResources, apiKeys, users } from '../../db/schema.js';
 import { APIKeyDTO } from '../../types/index.js';
 import { traced } from '../tracing.js';
+
+/**
+ * The keys are random and high-entropy, so a fast unsalted hash is enough and still allows lookup by equality.
+ */
+function hashApiKey(apiKey: string): string {
+  return createHash('sha256').update(apiKey).digest('hex');
+}
+
+/**
+ * Only a hash of each key is stored, so lookups must go through this instead of comparing the column directly.
+ */
+export function byApiKey(apiKey: string) {
+  return eq(apiKeys.keyHash, hashApiKey(apiKey));
+}
 
 /**
  * Repository for organization related operations.
@@ -52,7 +67,7 @@ export class ApiKeyRepository {
       const apiKey = await tx
         .insert(apiKeys)
         .values({
-          key: input.key,
+          keyHash: hashApiKey(input.key),
           name: input.name,
           organizationId: input.organizationID,
           userId: input.userID,
@@ -217,7 +232,7 @@ export class ApiKeyRepository {
       })
       .from(apiKeys)
       .innerJoin(apiKeyResources, eq(apiKeyResources.apiKeyId, apiKeys.id))
-      .where(eq(apiKeys.key, apiKey));
+      .where(byApiKey(apiKey));
 
     if (resources.length === 0) {
       // if no resources, it means that the api key has access to all the resources of the organization.
@@ -246,7 +261,7 @@ export class ApiKeyRepository {
       })
       .from(apiKeys)
       .innerJoin(apiKeyPermissions, eq(apiKeyPermissions.apiKeyId, apiKeys.id))
-      .where(eq(apiKeys.key, apiKey));
+      .where(byApiKey(apiKey));
 
     if (dbPermissions.length === 0) {
       return false;

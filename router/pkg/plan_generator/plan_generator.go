@@ -20,20 +20,19 @@ import (
 const ReportFileName = "report.json"
 
 type QueryPlanConfig struct {
-	ExecutionConfig                    string
-	SourceDir                          string
-	OutDir                             string
-	Concurrency                        int
-	Filter                             string
-	Timeout                            string
-	OutputFiles                        bool
-	OutputReport                       bool
-	FailOnPlanError                    bool
-	FailFast                           bool
-	OutputFormat                       core.PlanOutputFormat
-	LogLevel                           string
-	Logger                             *zap.Logger
-	MaxDataSourceCollectorsConcurrency uint
+	ExecutionConfig string
+	SourceDir       string
+	OutDir          string
+	Concurrency     int
+	Filter          string
+	Timeout         string
+	OutputFiles     bool
+	OutputReport    bool
+	FailOnPlanError bool
+	FailFast        bool
+	OutputFormat    core.PlanOutputFormat
+	LogLevel        string
+	Logger          *zap.Logger
 	// EnableMultiFetch mirrors the engine.enable_multi_fetch router setting.
 	EnableMultiFetch bool
 	// EnableScheduleFetches mirrors the engine.enable_schedule_fetches router setting.
@@ -117,9 +116,8 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	defer cancelError(nil)
 
 	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger, core.PlanGeneratorOptions{
-		MaxDataSourceCollectorsConcurrency: cfg.MaxDataSourceCollectorsConcurrency,
-		EnableMultiFetch:                   cfg.EnableMultiFetch,
-		EnableScheduleFetches:              cfg.EnableScheduleFetches,
+		EnableMultiFetch:      cfg.EnableMultiFetch,
+		EnableScheduleFetches: cfg.EnableScheduleFetches,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create plan generator: %w", err)

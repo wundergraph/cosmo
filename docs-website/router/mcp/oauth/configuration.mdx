@@ -34,6 +34,8 @@ oauth:
     - url: 'https://auth.example.com/.well-known/jwks.json'
       audiences:
         - 'https://mcp.example.com'
+      issuers:
+        - 'https://auth.example.com/'
       algorithms:
         - 'RS256'
         - 'ES256'
@@ -44,6 +46,7 @@ oauth:
 | ------------------ | ------------------------------------------------------------- | ---------- |
 | `url`              | URL of the JWKS endpoint                                      | (required) |
 | `audiences`        | Allowed JWT `aud` claim values                                | (any)      |
+| `issuers`          | Allowed JWT `iss` claim values (exact match)                  | (any)      |
 | `algorithms`       | Allowed signing algorithms (RS256, ES256, PS256, EdDSA, etc.) | (all)      |
 | `refresh_interval` | How often to refresh the JWKS key set                         | `1m`       |
 

@@ -14,6 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -124,6 +125,137 @@ router_config_path: "config.json"
 	cfg, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 	require.Equal(t, 5*time.Second, cfg.Config.EffectiveDrainPeriod())
+}
+
+func TestGraphQLOverHTTPStatusCodesFromEnv(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+
+	t.Run("loads a valid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "September2026")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesSeptember2026, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("falls back to legacy for an empty value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "")
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, GraphQLOverHTTPStatusCodesLegacy, cfg.Config.GraphQLOverHTTP.StatusCodes)
+	})
+
+	t.Run("fails for an invalid value", func(t *testing.T) {
+		t.Setenv("GRAPHQL_OVER_HTTP_STATUS_CODES", "september2026")
+
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, `graphql_over_http.status_codes must be "legacy" or "September2026", got "september2026"`)
+	})
+}
+
+func TestRouterTrafficTimeouts(t *testing.T) {
+	t.Run("defaults keep the 60s read timeout", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 60*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.IdleTimeout)
+		require.Zero(t, cfg.Config.TrafficShaping.Router.WriteTimeout)
+	})
+
+	t.Run("from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+
+traffic_shaping:
+  router:
+    request_read_timeout: 30s
+    request_header_read_timeout: 5s
+    idle_timeout: 2m
+    write_timeout: 3m
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, 30*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+		require.Equal(t, 5*time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
+		require.Equal(t, 2*time.Minute, cfg.Config.TrafficShaping.Router.IdleTimeout)
+		require.Equal(t, 3*time.Minute, cfg.Config.TrafficShaping.Router.WriteTimeout)
+	})
+
+	t.Run("read timeout below minimum is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+
+traffic_shaping:
+  router:
+    request_read_timeout: 0s
+`)
+		_, err := LoadConfig([]string{f})
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/traffic_shaping/router/request_read_timeout': duration must be greater or equal than 1s", js.Causes[0].Error())
+	})
+}
+
+func TestRouterTrafficTimeoutsFromEnv(t *testing.T) {
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT", "20s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT", "3s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "45s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "50s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, 20*time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+	require.Equal(t, 3*time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
+	require.Equal(t, 45*time.Second, cfg.Config.TrafficShaping.Router.IdleTimeout)
+	require.Equal(t, 50*time.Second, cfg.Config.TrafficShaping.Router.WriteTimeout)
+}
+
+// Environment variables don't go through the JSON schema validation, so negative durations are
+// loaded as-is. The HTTP server guards against them, see TestNewServer_NegativeTimeoutsFromEnv in
+// router/core.
+func TestRouterTrafficTimeoutsFromEnvAreNotValidated(t *testing.T) {
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "-1s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.RequestReadTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.RequestHeaderReadTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.IdleTimeout)
+	require.Equal(t, -time.Second, cfg.Config.TrafficShaping.Router.WriteTimeout)
 }
 
 func TestCustomBytesExtension(t *testing.T) {
@@ -653,6 +785,25 @@ telemetry:
 
 	require.Equal(t, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"}, js.Causes[0].InstanceLocation)
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
+}
+
+func TestTracingExporterSamplingRate(t *testing.T) {
+	t.Parallel()
+
+	for _, rate := range []string{"-0.1", "1.5"} {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+router_config_path: "config.json"
+telemetry:
+  tracing:
+    exporters:
+      - endpoint: https://otel-collector.example.com
+        sampling_rate: `+rate+`
+`)
+		_, err := LoadConfig([]string{f})
+		assert.ErrorContains(t, err, "/telemetry/tracing/exporters/0/sampling_rate", rate)
+	}
 }
 
 func TestLoadFullConfig(t *testing.T) {
@@ -1548,6 +1699,9 @@ func TestConfigMerging(t *testing.T) {
 			ReadinessCheckPath: "/readiness",
 			SubgraphErrorPropagation: SubgraphErrorPropagationConfiguration{
 				Mode: "wrapped",
+			},
+			GraphQLOverHTTP: GraphQLOverHTTPConfiguration{
+				StatusCodes: GraphQLOverHTTPStatusCodesLegacy,
 			},
 			ExecutionConfig: ExecutionConfig{
 				File: ExecutionConfigFile{
@@ -2677,6 +2831,29 @@ mcp:
 
 		require.Equal(t, "My Commerce API", cfg.Config.MCP.Server.Title)
 		require.Equal(t, "Query products, orders and customers.", cfg.Config.MCP.Server.Description)
+	})
+
+	t.Run("rejects a manifest poll interval below one second", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+mcp:
+  enabled: true
+  storage:
+    provider_id: mcp
+    object_path: manifest.json
+    poll_interval: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/mcp/storage/poll_interval': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }
 

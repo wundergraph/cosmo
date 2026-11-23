@@ -142,6 +142,44 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		assert.Contains(t, connectErr.Message(), "Employee not found")
 	})
 
+	t.Run("field authorization without a token returns CodeUnauthenticated", func(t *testing.T) {
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"errors": [{
+					"message": "Unauthorized to load field 'Query.employee', Reason: not authenticated.",
+					"path": ["employee"],
+					"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+				}],
+				"data": null
+			}`))
+		}
+
+		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+			GraphQLHandler: handler,
+		})
+
+		err := ts.Start()
+		require.NoError(t, err)
+
+		client := employeev1connect.NewEmployeeServiceClient(
+			http.DefaultClient,
+			"http://"+ts.Addr().String(),
+		)
+
+		req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
+			EmployeeId: 1,
+		})
+
+		_, err = client.GetEmployeeById(context.Background(), req)
+		require.Error(t, err)
+
+		var connectErr *connect.Error
+		require.ErrorAs(t, err, &connectErr)
+		assert.Equal(t, connect.CodeUnauthenticated, connectErr.Code())
+	})
+
 	t.Run("GraphQL error with partial data returns error", func(t *testing.T) {
 		// Custom handler for partial data with errors
 		// Per GraphQL spec, errors at top level indicate a failure even with partial data

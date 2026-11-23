@@ -52,6 +52,7 @@ import {
   SCHEMA_SUBSCRIPTION_DEFINITION,
 } from './utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -295,6 +296,42 @@ describe('events Configuration tests', () => {
             },
           ],
         ]),
+      );
+    });
+
+    test('that an undefined edfs__NatsStreamConfiguration Input is injected if used', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          type Entity @key(fields: "id", resolvable: false) {
+            id: ID! @external
+          }
+          
+          type Subscription {
+            entity(id: ID): Entity! @edfs__natsSubscribe(subjects: ["entity.{{ args.id }}"], providerId: "provider", streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"})
+          }
+        `,
+      );
+      const { schema } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(`
+          ${SCHEMA_SUBSCRIPTION_DEFINITION}
+          ${EDFS_NATS_SUBSCRIBE_DIRECTIVE}
+          ${EXTERNAL_DIRECTIVE}
+          ${KEY_DIRECTIVE}
+      
+          type Entity @key(fields: "id", resolvable: false) {
+            id: ID! @external
+          }
+          
+          type Subscription {
+            entity(id: ID): Entity! @edfs__natsSubscribe(subjects: ["entity.{{ args.id }}"], providerId: "provider", streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"})
+          }
+  
+          ${EDFS_NATS_STREAM_CONFIGURATION_INPUT}
+          
+          ${OPENFED_FIELD_SET}
+        `),
       );
     });
 

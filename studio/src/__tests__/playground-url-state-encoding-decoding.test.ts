@@ -22,6 +22,9 @@ describe('buildStateToShare', () => {
       operation: true,
       variables: false,
       headers: false,
+      preFlight: false,
+      preOperation: false,
+      postOperation: false,
     };
 
     const result = buildStateToShare(selected, tab);
@@ -36,6 +39,9 @@ describe('buildStateToShare', () => {
       operation: true,
       variables: true,
       headers: true,
+      preFlight: false,
+      preOperation: false,
+      postOperation: false,
     };
 
     const result = buildStateToShare(selected, tab);
@@ -50,6 +56,9 @@ describe('buildStateToShare', () => {
       operation: true,
       variables: true,
       headers: false,
+      preFlight: false,
+      preOperation: false,
+      postOperation: false,
     };
 
     const result = buildStateToShare(selected, tab);

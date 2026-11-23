@@ -4,6 +4,109 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.376.0](https://github.com/wundergraph/cosmo/compare/router@0.375.0...router@0.376.0) (2026-11-23)
+
+### Features
+
+* **router:** expose the execution config for the current request ([#3554](https://github.com/wundergraph/cosmo/issues/3554)) ([ed994e5](https://github.com/wundergraph/cosmo/commit/ed994e527be9d227dfb14413258c13f481da22e1)) (@fiam)
+
+### Performance Improvements
+
+* **router:** bump graphql-go-tools to v2.32.2 ([#3576](https://github.com/wundergraph/cosmo/issues/3576)) ([860ad1f](https://github.com/wundergraph/cosmo/commit/860ad1fa0e3a4fcc9ac2be34abee3d1a3e3ccf55)) (@ysmolski)
+
+## [0.375.0](https://github.com/wundergraph/cosmo/compare/router@0.374.0...router@0.375.0) (2026-11-19)
+
+### Features
+
+* **router:** add configurable normalization selection limit ([#3505](https://github.com/wundergraph/cosmo/issues/3505)) ([f80e4a9](https://github.com/wundergraph/cosmo/commit/f80e4a92de5e2d00122ebfcf664bb86c4502b8c1)) (@fiam)
+
+### Bug Fixes
+
+* **router:** preserve response arena ownership during entity fetches ([#3562](https://github.com/wundergraph/cosmo/issues/3562)) ([bfb2841](https://github.com/wundergraph/cosmo/commit/bfb2841bd7dc64671b44a43cba3dbf231eb009dc)) (@fiam)
+
+## [0.374.0](https://github.com/wundergraph/cosmo/compare/router@0.373.1...router@0.374.0) (2026-11-19)
+
+### Features
+
+* **router:** mcp operation manifests ([#3320](https://github.com/wundergraph/cosmo/issues/3320)) ([8aa9501](https://github.com/wundergraph/cosmo/commit/8aa9501640bb04ca15ea31a14de4112ae30bce47)) (@endigma)
+
+## [0.373.1](https://github.com/wundergraph/cosmo/compare/router@0.373.0...router@0.373.1) (2026-11-19)
+
+### Bug Fixes
+
+* **router:** add int64 vars backwards compatibility option ([#3551](https://github.com/wundergraph/cosmo/issues/3551)) ([dc7c61e](https://github.com/wundergraph/cosmo/commit/dc7c61ee41b7ff71b93fdcfe4d586556f22e2a5e)) (@vdatcu)
+
+## [0.373.0](https://github.com/wundergraph/cosmo/compare/router@0.372.0...router@0.373.0) (2026-11-18)
+
+### Features
+
+* allow to set http server timeouts ([#3372](https://github.com/wundergraph/cosmo/issues/3372)) ([b5fcf3d](https://github.com/wundergraph/cosmo/commit/b5fcf3dafd808f6fcaacf769f28e65764f5fd173)) (@alepane21)
+* keep defer analysis across edits that leave the measured fields alone ([#3443](https://github.com/wundergraph/cosmo/issues/3443)) ([243300d](https://github.com/wundergraph/cosmo/commit/243300da850ee83d5ba997182c6106aef6d5a143)) (@gausie)
+* **router:** add backwards_compatibility option for mismatched SHA256 persisted operation IDs ([#3508](https://github.com/wundergraph/cosmo/issues/3508)) ([cc6230a](https://github.com/wundergraph/cosmo/commit/cc6230a31e556df7440636fbee7039d15915db1b)) (@fiam)
+* **router:** add option to use GraphQL over HTTP status codes for request errors ([#3454](https://github.com/wundergraph/cosmo/issues/3454)) ([4a550b3](https://github.com/wundergraph/cosmo/commit/4a550b334d0606115e1843917fe0a590357ab0e1)) (@Noroth)
+* **router:** hot reloading mTLS certificates ([#3492](https://github.com/wundergraph/cosmo/issues/3492)) ([e2ec73f](https://github.com/wundergraph/cosmo/commit/e2ec73f33b9df03c09231c715141767b481406eb)) (@endigma)
+
+### Bug Fixes
+
+* **router:** close deferred multipart responses with the final payload ([#3544](https://github.com/wundergraph/cosmo/issues/3544)) ([8758385](https://github.com/wundergraph/cosmo/commit/8758385ade0b3b230ca9e6052e1d8b9302b490b3)) (@vdatcu)
+* **router:** map coded GraphQL errors to ConnectRPC status codes ([#3545](https://github.com/wundergraph/cosmo/issues/3545)) ([870d405](https://github.com/wundergraph/cosmo/commit/870d405c27b92ea4ab509b28ce51249497fed109)) (@gausie)
+* **router:** normalize wildcard CORS origins for case-insensitive matching ([#3546](https://github.com/wundergraph/cosmo/issues/3546)) ([2f2c689](https://github.com/wundergraph/cosmo/commit/2f2c689a787dcba039b129c433d1f8e206e66c6a)) (@Tyagiquamar)
+* **router:** return a protocol error for unknown ConnectRPC routes ([#3528](https://github.com/wundergraph/cosmo/issues/3528)) ([ae08e34](https://github.com/wundergraph/cosmo/commit/ae08e344e15f9fa36ccfafc5753656ad67d0ef6b)) (@fiam)
+
+## [0.372.0](https://github.com/wundergraph/cosmo/compare/router@0.371.0...router@0.372.0) (2026-11-16)
+
+### Features
+
+* allow custom modules to push new metrics to prometheus and otlp ([#3527](https://github.com/wundergraph/cosmo/issues/3527)) ([4dd5897](https://github.com/wundergraph/cosmo/commit/4dd589704b1095d85b05b5a39a91102c5001cfb3)) (@alepane21)
+* propagate trace context also to remote gRPC services ([#3534](https://github.com/wundergraph/cosmo/issues/3534)) ([f821a55](https://github.com/wundergraph/cosmo/commit/f821a5561415cb43edda45fc7689e81e7621a4fc)) (@alepane21)
+
+## [0.371.0](https://github.com/wundergraph/cosmo/compare/router@0.370.1...router@0.371.0) (2026-11-13)
+
+### Features
+
+* **controlplane:** add deliveryGuarantees to proto and controlplane ([#3434](https://github.com/wundergraph/cosmo/issues/3434)) ([5a5f8c3](https://github.com/wundergraph/cosmo/commit/5a5f8c3f157dd2cce655705908647045112cee92)) (@dkorittki)
+
+### Bug Fixes
+
+* **router:** prevent "send on closed channel" panic on hot reload ([#3507](https://github.com/wundergraph/cosmo/issues/3507)) ([421ac3b](https://github.com/wundergraph/cosmo/commit/421ac3b5ec04bd97b95529bbaff3bb2452fdf6b0)) (@fiam)
+
+## [0.370.1](https://github.com/wundergraph/cosmo/compare/router@0.370.0...router@0.370.1) (2026-11-12)
+
+### Bug Fixes
+
+* **router:** bump response cache key format version to 3 ([#3530](https://github.com/wundergraph/cosmo/issues/3530)) ([89fbcbf](https://github.com/wundergraph/cosmo/commit/89fbcbf3892ae7caa7d25eaa957e25f15d44d577)) (@SkArchon)
+
+## [0.370.0](https://github.com/wundergraph/cosmo/compare/router@0.369.2...router@0.370.0) (2026-11-12)
+
+### Features
+
+* **router:** cache_control_policy.missing_no_store and cache_control_any_public flag ([#3436](https://github.com/wundergraph/cosmo/issues/3436)) ([4639de8](https://github.com/wundergraph/cosmo/commit/4639de84c6473d7ce5acfa4e184afc852bee53ee)) (@SkArchon)
+
+## [0.369.2](https://github.com/wundergraph/cosmo/compare/router@0.369.1...router@0.369.2) (2026-11-12)
+
+### Bug Fixes
+
+* migrate all packages to Zod v4 ([#3511](https://github.com/wundergraph/cosmo/issues/3511)) ([68cc6a9](https://github.com/wundergraph/cosmo/commit/68cc6a9631b45ba4614963299dbc1186c661bdff)) (@comatory)
+* **router:** accurate client Cache-Control and request directives for response cache ([#3384](https://github.com/wundergraph/cosmo/issues/3384)) ([f36777c](https://github.com/wundergraph/cosmo/commit/f36777c9f3af66d702a6f7bf07ff888507f4d048)) (@SkArchon)
+* **router:** invalidate root entries and in-flight writes ([#3377](https://github.com/wundergraph/cosmo/issues/3377)) ([cfc369d](https://github.com/wundergraph/cosmo/commit/cfc369d000c453959bbb70a211382a937086f19a)) (@SkArchon)
+* **router:** keep slowplancache Close from racing Set and Wait ([#3509](https://github.com/wundergraph/cosmo/issues/3509)) ([bd9e01b](https://github.com/wundergraph/cosmo/commit/bd9e01b8003c13b53d924eaba63bc7c07d30324f)) (@fiam)
+
+## [0.369.1](https://github.com/wundergraph/cosmo/compare/router@0.369.0...router@0.369.1) (2026-11-10)
+
+**Note:** Version bump only for package router
+
+## [0.369.0](https://github.com/wundergraph/cosmo/compare/router@0.368.0...router@0.369.0) (2026-11-10)
+
+### Features
+
+* **router:** validate the JWT iss claim against configured issuers ([#3481](https://github.com/wundergraph/cosmo/issues/3481)) ([fb6203d](https://github.com/wundergraph/cosmo/commit/fb6203da593e69cd638ed7971c4750dabd26b920)) (@vdatcu)
+
+## [0.368.0](https://github.com/wundergraph/cosmo/compare/router@0.367.0...router@0.368.0) (2026-11-09)
+
+### Features
+
+* **router:** support per-exporter trace sampling ([#3433](https://github.com/wundergraph/cosmo/issues/3433)) ([6cdee5c](https://github.com/wundergraph/cosmo/commit/6cdee5cb0d410babd90b382bfa5ad62156d7b271)) (@fiam)
+
 ## [0.367.0](https://github.com/wundergraph/cosmo/compare/router@0.366.2...router@0.367.0) (2026-11-09)
 
 ### Features

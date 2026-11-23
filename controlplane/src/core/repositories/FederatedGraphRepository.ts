@@ -389,7 +389,10 @@ export class FederatedGraphRepository {
 
     if (namespaces.length > 0 && resources.length > 0) {
       conditions.push(
-        or(inArray(schema.targets.id, [...new Set(namespaces)]), inArray(schema.targets.id, [...new Set(resources)])),
+        or(
+          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
+          inArray(schema.targets.id, [...new Set(resources)]),
+        ),
       );
     } else if (namespaces.length > 0) {
       conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));

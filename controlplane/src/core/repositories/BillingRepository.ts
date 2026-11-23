@@ -8,6 +8,7 @@ import { traced } from '../tracing.js';
 
 export const billingSchema = z.object({
   plans: z.record(
+    z.string(),
     z.object({
       name: z.string(),
       price: z.number(),

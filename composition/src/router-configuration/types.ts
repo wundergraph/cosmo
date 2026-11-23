@@ -6,6 +6,7 @@ import {
   type FieldName,
   type TypeName,
 } from '../types/types';
+import { type CURSOR_UPPER, type OFF_UPPER } from '../utils/string-constants';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
@@ -19,12 +20,23 @@ export type StreamConfiguration = {
   streamName: string;
 };
 
+export type DeliveryGuaranteeMode = typeof OFF_UPPER | typeof CURSOR_UPPER;
+
+export type DeliveryGuaranteesConfiguration = {
+  mode: DeliveryGuaranteeMode;
+};
+
+export type DeliveryGuarantees = {
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
+};
+
 export type KafkaEventConfiguration = {
   fieldName: string;
   providerId: string;
   providerType: 'kafka';
   topics: string[];
   type: KafkaEventType;
+  deliveryGuarantees?: DeliveryGuaranteesConfiguration;
 };
 
 export type NatsEventConfiguration = {

@@ -7,6 +7,7 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/pkg/responsecaching"
@@ -48,6 +49,12 @@ func (c *RedisCache) InvalidateByTags(ctx context.Context, tags []string) (int, 
 func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error) {
 	tagKey := c.tagKey(tag)
 
+	// Before the walk: a write landing after this finds it, one before is
+	// listed for the walk to drop.
+	if err := c.client.Eval(ctx, recordInvalidation, []string{tagKey}, invalidatedMember, -time.Now().UnixMilli(), responsecaching.InvalidationWindow.Milliseconds()).Err(); err != nil {
+		return 0, err
+	}
+
 	var leftover []mark
 	var removed int
 	for pairs, err := range c.scanPages(ctx, tagKey) {
@@ -71,6 +78,15 @@ func (c *RedisCache) invalidateTag(ctx context.Context, tag string) (int, error)
 	// deleted after it was placed.
 	return removed, c.removeMarks(ctx, tagKey, leftover)
 }
+
+// recordInvalidation keeps the latest invalidation, ARGV[2] (minus ms), in
+// member ARGV[1] of KEYS[1], which lives at least ARGV[3] ms.
+const recordInvalidation = `
+redis.call('ZADD', KEYS[1], 'LT', ARGV[2], ARGV[1])
+redis.call('PEXPIRE', KEYS[1], ARGV[3], 'NX')
+redis.call('PEXPIRE', KEYS[1], ARGV[3], 'GT')
+return 0
+`
 
 // scanPages yields the tag set's ZSCAN pages as member, score pairs, stopping
 // after an error. A cursor, not a rank offset: concurrent writes can't shift
@@ -264,7 +280,7 @@ func classify(pairs []string) (page, error) {
 	var p page
 	for i := 0; i+1 < len(pairs); i += 2 {
 		member, raw := pairs[i], pairs[i+1]
-		if member == walksMember {
+		if reservedMember(member) {
 			continue
 		}
 		score, err := strconv.ParseFloat(raw, 64)

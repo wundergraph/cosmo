@@ -61,6 +61,7 @@ type TracingExporter struct {
 	Endpoint              string              `yaml:"endpoint,omitempty"`
 	HTTPPath              string              `yaml:"path,omitempty" envDefault:"/v1/traces"`
 	Headers               map[string]string   `yaml:"headers,omitempty"`
+	SamplingRate          *float64            `yaml:"sampling_rate,omitempty"`
 	TracingExporterConfig `yaml:",inline"`
 }
 
@@ -237,6 +238,18 @@ type RouterTrafficConfiguration struct {
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
 	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
+	// RequestReadTimeout is the maximum duration for reading the entire client request, including headers and body.
+	// A zero or negative value falls back to the default of 60s.
+	RequestReadTimeout time.Duration `yaml:"request_read_timeout" envDefault:"60s" env:"ROUTER_REQUEST_READ_TIMEOUT"`
+	// RequestHeaderReadTimeout is the maximum duration for reading the client request headers.
+	// A zero or negative value falls back to RequestReadTimeout.
+	RequestHeaderReadTimeout time.Duration `yaml:"request_header_read_timeout" envDefault:"0s" env:"ROUTER_REQUEST_HEADER_READ_TIMEOUT"`
+	// IdleTimeout is the maximum duration to wait for the next request on a keep-alive client connection.
+	// A zero or negative value falls back to RequestReadTimeout.
+	IdleTimeout time.Duration `yaml:"idle_timeout" envDefault:"0s" env:"ROUTER_IDLE_TIMEOUT"`
+	// WriteTimeout is the maximum duration before timing out writes of the response to the client.
+	// It is disabled by default because it also caps long-lived responses such as SSE and multipart subscriptions.
+	WriteTimeout time.Duration `yaml:"write_timeout" envDefault:"0s" env:"ROUTER_WRITE_TIMEOUT"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -314,9 +327,11 @@ type SubgraphCacheControlRule struct {
 }
 
 type CacheControlPolicy struct {
-	Enabled   bool                       `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
-	Value     string                     `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
-	Subgraphs []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"CACHE_CONTROL_POLICY_ENABLED"`
+	Value   string `yaml:"value" env:"CACHE_CONTROL_POLICY_VALUE"`
+	// MissingNoStore merges a fetch with no caching directives as no-store.
+	MissingNoStore bool                       `yaml:"missing_no_store" envDefault:"false" env:"CACHE_CONTROL_POLICY_MISSING_NO_STORE"`
+	Subgraphs      []SubgraphCacheControlRule `yaml:"subgraphs,omitempty"`
 }
 
 // HeaderRules configures header propagation between the client, the router and
@@ -573,12 +588,22 @@ type SecurityConfiguration struct {
 	CostControl                 *CostControl                `yaml:"cost_control" envPrefix:"SECURITY_COST_CONTROL_"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	NormalizationLimits         NormalizationLimits         `yaml:"normalization_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
 }
 
 type ParserLimitsConfiguration struct {
 	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
 	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
+}
+
+type NormalizationLimits struct {
+	// MaxSelections is the maximum number of selections a document may hold while its
+	// fragment spreads are expanded. The count covers the whole document: the selections
+	// as sent, fragment definitions included, plus the copies and inline fragment wrappers
+	// added for every fragment spread. It applies whether or not there is anything to
+	// expand. 0 means disabled.
+	MaxSelections int `yaml:"max_selections,omitempty" envDefault:"10000" env:"SECURITY_NORMALIZATION_LIMITS_MAX_SELECTIONS"`
 }
 
 type QueryDepthConfiguration struct {
@@ -720,6 +745,7 @@ type JWKSConfiguration struct {
 
 	// Common
 	Audiences []string `yaml:"audiences"`
+	Issuers   []string `yaml:"issuers"`
 }
 
 type RefreshUnknownKID struct {
@@ -1038,6 +1064,12 @@ type TLSConfiguration struct {
 	Server     TLSServerConfiguration     `yaml:"server"`
 	Client     HTTPClientTLSConfiguration `yaml:"client"`
 	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
+
+	// Watch reloads router server and HTTP/gRPC subgraph client certificate and key files.
+	// CA bundles and NATS TLS files are not watched.
+	// Open connections keep the material they were established with.
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"TLS_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"TLS_WATCH_INTERVAL"`
 }
 
 type TLSServerConfiguration struct {
@@ -1119,6 +1151,29 @@ type TLSClientCertConfiguration struct {
 	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
 	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type GraphQLOverHTTPStatusCodes string
+
+const (
+	// GraphQLOverHTTPStatusCodesLegacy returns 200 for most request errors
+	GraphQLOverHTTPStatusCodesLegacy GraphQLOverHTTPStatusCodes = "legacy"
+	// GraphQLOverHTTPStatusCodesSeptember2026 returns the 4xx status codes of the GraphQL over HTTP spec, September 2026 edition, for request errors
+	GraphQLOverHTTPStatusCodesSeptember2026 GraphQLOverHTTPStatusCodes = "September2026"
+)
+
+// IsValid returns true if the status codes are valid
+func (c GraphQLOverHTTPStatusCodes) IsValid() bool {
+	switch c {
+	case GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026:
+		return true
+	}
+
+	return false
+}
+
+type GraphQLOverHTTPConfiguration struct {
+	StatusCodes GraphQLOverHTTPStatusCodes `yaml:"status_codes" envDefault:"legacy" env:"STATUS_CODES"`
 }
 
 type SubgraphErrorPropagationMode string
@@ -1402,6 +1457,27 @@ type PersistedOperationsConfig struct {
 	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
+// BackwardsCompatibilityConfiguration restores behavior of older router versions.
+// Each option gives up a guarantee of the current behavior, so enable one only
+// while migrating away from what it supports.
+type BackwardsCompatibilityConfiguration struct {
+	PersistedOperations PersistedOperationsBackwardsCompatibility `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
+	VariablesValidation VariablesValidationBackwardsCompatibility `yaml:"variables_validation" envPrefix:"VARIABLES_VALIDATION_"`
+}
+
+type PersistedOperationsBackwardsCompatibility struct {
+	// AllowMismatchedSHA256IDs serves published operations whose ID looks like a
+	// SHA256 hash but isn't the SHA256 of their body, as routers before 0.355.0 did.
+	AllowMismatchedSHA256IDs bool `yaml:"allow_mismatched_sha256_ids" env:"ALLOW_MISMATCHED_SHA256_IDS" envDefault:"false"`
+}
+
+type VariablesValidationBackwardsCompatibility struct {
+	// AllowInt64Values accepts Int variable values in the signed 64-bit range instead of
+	// the signed 32-bit range required by the GraphQL spec, as routers before 0.365.0 did.
+	// Non-integer values are still rejected.
+	AllowInt64Values bool `yaml:"allow_int64_values" env:"ALLOW_INT64_VALUES" envDefault:"false"`
+}
+
 type SafelistConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
@@ -1480,6 +1556,7 @@ type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
 	SkipNullVariablesError  ApolloCompatibilityFlag `yaml:"skip_null_variables_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SKIP_NULL_VARIABLES_ERROR_"`
+	CacheControlAnyPublic   ApolloCompatibilityFlag `yaml:"cache_control_any_public" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_CACHE_CONTROL_ANY_PUBLIC_"`
 }
 
 type ApolloCompatibilityFlag struct {
@@ -1618,6 +1695,10 @@ type MCPSessionConfig struct {
 
 type MCPStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+	// ObjectPath is the path of an operation manifest in the storage provider. When set, the
+	// operations are loaded from the manifest and reloaded when its revision changes.
+	ObjectPath   string        `yaml:"object_path,omitempty" env:"MCP_STORAGE_OBJECT_PATH"`
+	PollInterval time.Duration `yaml:"poll_interval,omitempty" envDefault:"10s" env:"MCP_STORAGE_POLL_INTERVAL"`
 }
 
 type MCPServer struct {
@@ -1755,7 +1836,10 @@ type Config struct {
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	GraphQLOverHTTP                GraphQLOverHTTPConfiguration    `yaml:"graphql_over_http" envPrefix:"GRAPHQL_OVER_HTTP_"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	BackwardsCompatibility BackwardsCompatibilityConfiguration `yaml:"backwards_compatibility" envPrefix:"BACKWARDS_COMPATIBILITY_"`
 
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
@@ -1906,6 +1990,12 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	// for the actual shutdown. The derived default always fits.
 	if c := cfg.Config; c.DrainPeriod != nil && *c.DrainPeriod > 0 && *c.DrainPeriod+c.GracePeriod > c.ShutdownDelay {
 		return nil, fmt.Errorf("drain_period (%s) + grace_period (%s) must not exceed shutdown_delay (%s)", *c.DrainPeriod, c.GracePeriod, c.ShutdownDelay)
+	}
+
+	// Validate the status codes configuration
+	if statusCodes := cfg.Config.GraphQLOverHTTP.StatusCodes; !statusCodes.IsValid() {
+		return nil, fmt.Errorf("graphql_over_http.status_codes must be %q or %q, got %q",
+			GraphQLOverHTTPStatusCodesLegacy, GraphQLOverHTTPStatusCodesSeptember2026, statusCodes)
 	}
 
 	// Post-process the config

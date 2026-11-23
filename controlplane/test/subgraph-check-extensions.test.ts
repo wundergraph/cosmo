@@ -1,4 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import * as Sentry from '@sentry/node';
 import { afterAll, afterEach, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import axios from 'axios';
@@ -6,6 +7,11 @@ import { TestUser, afterAllSetup, beforeAllSetup, genUniqueLabel, genID } from '
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
+
+vi.mock('@sentry/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sentry/node')>()),
+  captureException: vi.fn(() => 'sentry-event-id'),
+}));
 
 const subgraph1Schema = `
 type Query {
@@ -128,6 +134,201 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
   afterAll(async () => {
     await afterAllSetup(dbname);
+  });
+
+  test('accepts a large collection of error messages', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const validErrorMessages = Array.from({ length: 1001 }, () => 'extension error');
+    postSpy.mockResolvedValue({ status: 200, data: { errors: validErrorMessages } });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage).toBe(validErrorMessages.join('\n'));
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  test('accepts a large collection of lint issues', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const validLintIssue = {
+      lintRuleType: ' custom ',
+      severity: 0,
+      message: ' lint warning ',
+      issueLocation: { line: 1, column: 1 },
+    };
+    const validLintIssues = Array.from({ length: 1001 }, () => validLintIssue);
+    postSpy.mockResolvedValue({ status: 200, data: { lintIssues: { [subgraph1Name]: validLintIssues } } });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage).toBeUndefined();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  test('accepts lint-issue collections for a large number of subgraphs', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const validLintIssueCollections = Object.fromEntries(Array.from({ length: 1001 }, (_, i) => [`subgraph-${i}`, []]));
+    postSpy.mockResolvedValue({ status: 200, data: { lintIssues: validLintIssueCollections } });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage).toBeUndefined();
+  });
+
+  test('reports schema validation errors only for the first error message that does not match the schema', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name, fedGraphName } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    // schema expects a string, not `{}`
+    const invalidErrorMessages = Array.from({ length: 10_000 }, () => ({}));
+    postSpy.mockResolvedValue({ status: 200, data: { errors: invalidErrorMessages } });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage).toBe(
+      'Check extension returned an invalid response:\n✖ Invalid input: expected string, received object\n  → at errors[0]',
+    );
+    expect(Sentry.captureException).toHaveBeenCalledExactlyOnceWith(new Error(response.checkExtensionErrorMessage), {
+      extra: {
+        organizationId: expect.any(String),
+        schemaCheckId: response.checkId,
+        webhookDeliveryId: expect.any(String),
+      },
+    });
+
+    const summary = await client.getCheckSummary({
+      namespace: 'default',
+      graphName: fedGraphName,
+      checkId: response.checkId,
+    });
+    expect(summary.check?.checkExtensionErrorMessage).toBe(response.checkExtensionErrorMessage);
+  });
+
+  test('reports schema validation errors only for the first lint issue that does not match the schema', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const invalidLintIssues = Array.from({ length: 10_000 }, () => ({}));
+    postSpy.mockResolvedValue({ status: 200, data: { lintIssues: { [subgraph1Name]: invalidLintIssues } } });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage?.replaceAll(subgraph1Name, 'subgraph-1')).toMatchInlineSnapshot(`
+      "Check extension returned an invalid response:
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-1"][0].lintRuleType
+      ✖ Invalid option: expected one of 0|1
+        → at lintIssues["subgraph-1"][0].severity
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-1"][0].message
+      ✖ Invalid input: expected object, received undefined
+        → at lintIssues["subgraph-1"][0].issueLocation"
+    `);
+  });
+
+  test('stops at a lint issue that does not match the schema after earlier subgraphs pass schema validation', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name, subgraph2Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const validLintIssue = {
+      lintRuleType: 'custom',
+      severity: 0,
+      message: 'lint warning',
+      issueLocation: { line: 1, column: 1 },
+    };
+    const invalidLintIssues = Array.from({ length: 10_000 }, () => ({}));
+    postSpy.mockResolvedValue({
+      status: 200,
+      data: {
+        lintIssues: {
+          [subgraph1Name]: [validLintIssue],
+          [subgraph2Name]: [validLintIssue, ...invalidLintIssues],
+        },
+      },
+    });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage?.replaceAll(subgraph2Name, 'subgraph-2')).toMatchInlineSnapshot(`
+      "Check extension returned an invalid response:
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-2"][1].lintRuleType
+      ✖ Invalid option: expected one of 0|1
+        → at lintIssues["subgraph-2"][1].severity
+      ✖ Invalid input: expected string, received undefined
+        → at lintIssues["subgraph-2"][1].message
+      ✖ Invalid input: expected object, received undefined
+        → at lintIssues["subgraph-2"][1].issueLocation"
+    `);
+  });
+
+  test('reports schema validation errors only for the first lint-issue collection that does not match the schema', async (testContext) => {
+    const postSpy = vi.fn();
+    const { client, server, subgraph1Name, subgraph2Name } = await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
+
+    const invalidLintIssueCollection = null;
+    postSpy.mockResolvedValue({
+      status: 200,
+      data: {
+        lintIssues: {
+          [subgraph1Name]: invalidLintIssueCollection,
+          [subgraph2Name]: invalidLintIssueCollection,
+        },
+      },
+    });
+
+    const response = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      schema: new Uint8Array(Buffer.from(subgraph1Schema)),
+      namespace: 'default',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.checkExtensionErrorMessage).toBe(
+      `Check extension returned an invalid response:\n✖ Invalid input: expected array, received null\n  → at lintIssues["${subgraph1Name}"]`,
+    );
   });
 
   test('Should enable subgraph check extensions', async (testContext) => {

@@ -7,8 +7,8 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -108,12 +108,15 @@ type Config struct {
 	routerConfigPollerConfig        *RouterConfigPollerConfig
 	cdnConfig                       config.CDNConfiguration
 	persistedOperationClient        *persistedoperation.Client
-	pqlStore                        *pqlmanifest.Store
-	pqlPoller                       *pqlmanifest.Poller
+	pqlPoller                       *operationmanifest.Poller
+	mcpManifestStore                *operationmanifest.Store
+	mcpManifestPoller               *operationmanifest.Poller
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
+	backwardsCompatibility          config.BackwardsCompatibilityConfiguration
+	graphqlOverHTTP                 config.GraphQLOverHTTPConfiguration
 	storageProviders                config.StorageProviders
 	providerRegistry                *ProviderRegistry
 	demoMode                        bool
@@ -218,6 +221,11 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
 	usage["apollo_router_compatibility_flags_skip_null_variables_error_enabled"] = c.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled
+	usage["apollo_router_compatibility_flags_cache_control_any_public_enabled"] = c.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled
+
+	usage["backwards_compatibility_persisted_operations_allow_mismatched_sha256_ids"] = c.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs
+	usage["backwards_compatibility_variables_validation_allow_int64_values"] = c.backwardsCompatibility.VariablesValidation.AllowInt64Values
+	usage["graphql_over_http_status_codes"] = string(c.graphqlOverHTTP.StatusCodes)
 
 	usage["demo_mode"] = c.demoMode
 
@@ -273,6 +281,7 @@ func (c *Config) Usage() map[string]any {
 	usage["prometheus"] = c.prometheusServer != nil
 	usage["custom_modules"] = len(c.customModules) > 0
 	usage["header_rules"] = c.headerRules != nil && (c.headerRules.All != nil || len(c.headerRules.Subgraphs) > 0)
+	usage["cache_control_policy_missing_no_store"] = c.cacheControlPolicy.MissingNoStore
 	usage["subgraph_transport_options"] = c.subgraphTransportOptions != nil
 	usage["subgraph_circuit_breaker_options"] = c.subgraphCircuitBreakerOptions.IsEnabled()
 	usage["graphql_metrics"] = c.graphqlMetricsConfig != nil && c.graphqlMetricsConfig.Enabled
