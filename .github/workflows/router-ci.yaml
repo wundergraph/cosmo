@@ -17,6 +17,7 @@ on:
       - '.github/actions/mise/**'
       - '.github/actions/go-linter/**'
       - '.github/workflows/router-ci.yaml'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

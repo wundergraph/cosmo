@@ -8,6 +8,10 @@ on:
       - 'shared/**/*'
       - 'composition/**/*'
       - '.github/workflows/studio-ci.yaml'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/mise/**'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

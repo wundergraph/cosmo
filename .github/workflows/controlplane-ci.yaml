@@ -10,6 +10,10 @@ on:
       - '.github/workflows/controlplane-ci.yaml'
       - '.github/compose/controlplane-ci.yaml'
       - '.github/scripts/setup-keycloak.sh'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/mise/**'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

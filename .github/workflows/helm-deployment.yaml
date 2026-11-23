@@ -4,6 +4,9 @@ on:
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-ci.yaml"
+      - "mise.toml"
+      - "mise.lock"
+      - ".github/actions/mise/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

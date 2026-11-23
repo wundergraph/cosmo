@@ -5,6 +5,10 @@ on:
       - 'pnpm-lock.yaml'
       - 'protographic/**/*'
       - '.github/workflows/protographic.yaml'
+      - 'mise.toml'
+      - 'mise.lock'
+      - '.github/actions/mise/**'
+      - '.github/actions/node/**'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

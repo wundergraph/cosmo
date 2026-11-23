@@ -37,7 +37,7 @@ The versions are in these files:
 
 If you do not use mise, install the versions from these files by hand.
 
-To change a tool version, edit the version in `mise.toml` (or in `package.json` for Node.js and pnpm), run `mise install`, and commit `mise.lock` with your change.
+To change a tool version, edit the version in `mise.toml` (or in `package.json` for Node.js and pnpm), run `mise install`, and commit `mise.lock` with your change. If the files in `.mise/locks/` change, commit them also.
 
 The Go version in `mise.toml` is the toolchain for builds. The `go` line in each `go.mod` is the minimum version for users who import our modules. The toolchain version can be newer than that minimum.
 
