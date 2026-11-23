@@ -4,10 +4,15 @@ import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
+  FIRST_ORDINAL,
+  FROM_CONTEXT,
+  fromContextArgumentDefaultValueErrorMessage,
+  invalidDirectiveError,
   requiredContextArgumentError,
   type ImplementationErrors,
   type InvalidFieldImplementation,
@@ -352,6 +357,60 @@ describe('@context and @fromContext directives', () => {
           ${OPENFED_FIELD_SET}
         `),
       );
+    });
+
+    test('returns an error if a nullable context argument defines a default value', () => {
+      const subgraph = createSubgraph(
+        'subgraph-default-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") {
+            id: ID!
+            apply(plan: String = "basic" @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { errors } = normalizeSubgraphFailure(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(FROM_CONTEXT, 'Wallet.apply(plan: ...)', FIRST_ORDINAL, [
+          fromContextArgumentDefaultValueErrorMessage,
+        ]),
+      ]);
+    });
+
+    test('returns an error if a non-null context argument defines a default value', () => {
+      const subgraph = createSubgraph(
+        'subgraph-default-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") {
+            id: ID!
+            apply(plan: String! = "basic" @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { errors } = normalizeSubgraphFailure(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(FROM_CONTEXT, 'Wallet.apply(plan: ...)', FIRST_ORDINAL, [
+          fromContextArgumentDefaultValueErrorMessage,
+        ]),
+      ]);
     });
   });
 

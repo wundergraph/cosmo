@@ -88,6 +88,7 @@ import {
   expectedEntityError,
   externalInterfaceFieldsError,
   fieldAlreadyProvidedErrorMessage,
+  fromContextArgumentDefaultValueErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
@@ -817,6 +818,9 @@ export class NormalizationFactory {
     }
     if (unexpectedArgumentNames.size > 0) {
       errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, [...unexpectedArgumentNames]));
+    }
+    if (directiveName === FROM_CONTEXT && data.kind === Kind.ARGUMENT && data.defaultValue) {
+      errorMessages.push(fromContextArgumentDefaultValueErrorMessage);
     }
     const undefinedArgumentNames = getEntriesNotInHashSet(requiredArgumentNames, definedArgumentNames);
     if (undefinedArgumentNames.length > 0) {
