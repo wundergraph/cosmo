@@ -580,6 +580,9 @@ const (
 	// PlatformServiceConfigureSubgraphCheckExtensionsProcedure is the fully-qualified name of the
 	// PlatformService's ConfigureSubgraphCheckExtensions RPC.
 	PlatformServiceConfigureSubgraphCheckExtensionsProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureSubgraphCheckExtensions"
+	// PlatformServiceGetResponseCacheStatusProcedure is the fully-qualified name of the
+	// PlatformService's GetResponseCacheStatus RPC.
+	PlatformServiceGetResponseCacheStatusProcedure = "/wg.cosmo.platform.v1.PlatformService/GetResponseCacheStatus"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -1009,6 +1012,7 @@ type PlatformServiceClient interface {
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
 	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
+	GetResponseCacheStatus(context.Context, *connect.Request[v1.GetResponseCacheStatusRequest]) (*connect.Response[v1.GetResponseCacheStatusResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -2185,6 +2189,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("ConfigureSubgraphCheckExtensions")),
 			connect.WithClientOptions(opts...),
 		),
+		getResponseCacheStatus: connect.NewClient[v1.GetResponseCacheStatusRequest, v1.GetResponseCacheStatusResponse](
+			httpClient,
+			baseURL+PlatformServiceGetResponseCacheStatusProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetResponseCacheStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -2558,6 +2568,7 @@ type platformServiceClient struct {
 	deleteCacheWarmerOperation                         *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
 	getSubgraphCheckExtensionsConfig                   *connect.Client[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse]
 	configureSubgraphCheckExtensions                   *connect.Client[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse]
+	getResponseCacheStatus                             *connect.Client[v1.GetResponseCacheStatusRequest, v1.GetResponseCacheStatusResponse]
 	getBillingPlans                                    *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                              *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession                         *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -3541,6 +3552,11 @@ func (c *platformServiceClient) ConfigureSubgraphCheckExtensions(ctx context.Con
 	return c.configureSubgraphCheckExtensions.CallUnary(ctx, req)
 }
 
+// GetResponseCacheStatus calls wg.cosmo.platform.v1.PlatformService.GetResponseCacheStatus.
+func (c *platformServiceClient) GetResponseCacheStatus(ctx context.Context, req *connect.Request[v1.GetResponseCacheStatusRequest]) (*connect.Response[v1.GetResponseCacheStatusResponse], error) {
+	return c.getResponseCacheStatus.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -4039,6 +4055,7 @@ type PlatformServiceHandler interface {
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
 	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
+	GetResponseCacheStatus(context.Context, *connect.Request[v1.GetResponseCacheStatusRequest]) (*connect.Response[v1.GetResponseCacheStatusResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -5211,6 +5228,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("ConfigureSubgraphCheckExtensions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetResponseCacheStatusHandler := connect.NewUnaryHandler(
+		PlatformServiceGetResponseCacheStatusProcedure,
+		svc.GetResponseCacheStatus,
+		connect.WithSchema(platformServiceMethods.ByName("GetResponseCacheStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -5763,6 +5786,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetSubgraphCheckExtensionsConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceConfigureSubgraphCheckExtensionsProcedure:
 			platformServiceConfigureSubgraphCheckExtensionsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetResponseCacheStatusProcedure:
+			platformServiceGetResponseCacheStatusHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -6560,6 +6585,10 @@ func (UnimplementedPlatformServiceHandler) GetSubgraphCheckExtensionsConfig(cont
 
 func (UnimplementedPlatformServiceHandler) ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetResponseCacheStatus(context.Context, *connect.Request[v1.GetResponseCacheStatusRequest]) (*connect.Response[v1.GetResponseCacheStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetResponseCacheStatus is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
