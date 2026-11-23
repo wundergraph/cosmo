@@ -396,8 +396,8 @@ github.com/wundergraph/astjson v1.1.0 h1:xORDosrZ87zQFJwNGe/HIHXqzpdHOFmqWgykCLV
 github.com/wundergraph/astjson v1.1.0/go.mod h1:h12D/dxxnedtLzsKyBLK7/Oe4TAoGpRVC9nDpDrZSWw=
 github.com/wundergraph/go-arena v1.3.0 h1:n0ng5a1vbd8YGq1u3rMr0vPU5f6AZ1BXIiUhL1UIok8=
 github.com/wundergraph/go-arena v1.3.0/go.mod h1:ROOysEHWJjLQ8FSfNxZCziagb7Qw2nXY3/vgKRh7eWw=
-github.com/wundergraph/graphql-go-tools/v2 v2.32.3-0.20261123222836-b99fd137bc78 h1:pb0kNk8jrCwUR/UtLlyHtmgDoT2YBCXDvkBGVCXNymY=
-github.com/wundergraph/graphql-go-tools/v2 v2.32.3-0.20261123222836-b99fd137bc78/go.mod h1:YpJ22gqzHgShBuBY8kOGhZCOsr9Kof6AQM2wVjkezL8=
+github.com/wundergraph/graphql-go-tools/v2 v2.32.3-0.20261123222915-0b6f2d473437 h1:GURS67ZU3rqya6p3Nd/hAEP8aSk0IEK/jDW4r7Bjv/E=
+github.com/wundergraph/graphql-go-tools/v2 v2.32.3-0.20261123222915-0b6f2d473437/go.mod h1:YpJ22gqzHgShBuBY8kOGhZCOsr9Kof6AQM2wVjkezL8=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 h1:FnBeRrxr7OU4VvAzt5X7s6266i6cSVkkFPS0TuXWbIg=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=

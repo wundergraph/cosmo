@@ -175,7 +175,18 @@ export function configurationDatasToDataSourceConfiguration(
   };
   for (const data of dataByTypeName.values()) {
     for (const provider of data.contextProviders ?? []) {
-      output.contextProviders.push(create(ContextProviderSchema, provider));
+      output.contextProviders.push(
+        create(ContextProviderSchema, {
+          contextName: provider.contextName,
+          provider:
+            provider.kind === 'concrete'
+              ? { case: 'concrete', value: { typeName: provider.typeName } }
+              : {
+                  case: 'abstract',
+                  value: { typeName: provider.typeName, concreteTypeNames: provider.concreteTypeNames },
+                },
+        }),
+      );
     }
     for (const argument of data.contextArguments ?? []) {
       output.contextArguments.push(create(ContextArgumentSchema, argument));

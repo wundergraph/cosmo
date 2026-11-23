@@ -24,7 +24,7 @@ function collect(selection: string) {
 describe('context selection on an interface', () => {
   test('records the field selected for each runtime type', () => {
     const result = collect('$account ... on Member { plan } ... on Team { tier }');
-    expect(result.providers[0].concreteTypeNames).toEqual(['Member', 'Team']);
+    expect(result.providers[0]).toMatchObject({ kind: 'abstract', concreteTypeNames: ['Member', 'Team'] });
     expect([...result.referenced].sort()).toEqual(['Member.plan', 'Team.tier']);
   });
   test('allows unmatched runtime types for a nullable contextual argument', () => {
@@ -33,6 +33,18 @@ describe('context selection on an interface', () => {
   test('rejects overlapping branches', () => {
     expect(() => collect('$account ... on Member { plan } ... on Member { plan }')).toThrow('one field for Member');
   });
+});
+
+test('emits an abstract provider for an interface object with no local implementations', () => {
+  const schema = buildSchema(`
+    directive @context(name: String!) on OBJECT
+    directive @interfaceObject on OBJECT
+    type Query { node: Node }
+    type Node @interfaceObject @context(name: "node") { id: ID! }
+  `);
+  expect(collectContexts(schema).providers).toEqual([
+    { kind: 'abstract', contextName: 'node', typeName: 'Node', concreteTypeNames: [] },
+  ]);
 });
 
 test('rejects an implementation-only contextual argument on an interface field', () => {
@@ -63,7 +75,7 @@ test('serializes an interface binding in a v1 router config', () => {
   expect(result.success).toBe(true);
   if (!result.success) throw result.errors[0];
   expect(result.configurationDataByTypeName.get('Account')?.contextProviders).toEqual([
-    { contextName: 'account', typeName: 'Account', concreteTypeNames: ['Member'] },
+    { kind: 'abstract', contextName: 'account', typeName: 'Account', concreteTypeNames: ['Member'] },
   ]);
   expect(result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0]).toMatchObject({
     contextName: 'account',
@@ -91,7 +103,7 @@ test.each([
   const result = normalizeSubgraphFromString({ sdlString, version: '1' });
   if (!result.success) throw result.errors[0];
   expect(result.configurationDataByTypeName.get(root)?.contextProviders).toEqual([
-    { contextName: 'root', typeName: root, concreteTypeNames: [root] },
+    { kind: 'concrete', contextName: 'root', typeName: root },
   ]);
   expect(result.configurationDataByTypeName.has('Entry')).toBe(false);
   const selection = result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0].contextSelection;

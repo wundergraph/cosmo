@@ -37,7 +37,15 @@ import {
 } from 'graphql';
 import { isEqual } from 'lodash';
 
-export type ContextProvider = { contextName: string; typeName: string; concreteTypeNames: string[] };
+export type ContextProvider = { contextName: string; typeName: string } & (
+  | { kind: 'concrete' }
+  | { kind: 'abstract'; concreteTypeNames: string[] }
+);
+
+function providesRuntimeType(provider: ContextProvider, name: string): boolean {
+  return provider.kind === 'concrete' ? provider.typeName === name : provider.concreteTypeNames.includes(name);
+}
+
 export type ContextArgument = {
   contextName: string;
   typeName: string;
@@ -133,7 +141,7 @@ function validateSelection(
       const name = fragment.typeCondition.name.value;
       const type = schema.getType(name);
       if (!isObjectType(type)) throw new Error(`Context type condition ${name} must name an object type.`);
-      if (!provider.concreteTypeNames.includes(name)) continue;
+      if (!providesRuntimeType(provider, name)) continue;
       if (seen.has(name)) throw new Error(`Context selection must select one field for ${name}.`);
       seen.add(name);
       used.add(name);
@@ -155,7 +163,7 @@ function canonicalRootSelection(
   set: SelectionSetNode,
 ): SelectionSetNode {
   const roots = [schema.getMutationType(), schema.getSubscriptionType()].filter(
-    (root): root is GraphQLObjectType => !!root && providers.some((p) => p.concreteTypeNames.includes(root.name)),
+    (root): root is GraphQLObjectType => !!root && providers.some((p) => providesRuntimeType(p, root.name)),
   );
   if (!roots.length) return set;
   function omitDefaults(root: GraphQLObjectType, field: FieldNode): FieldNode {
@@ -215,11 +223,19 @@ export function collectContexts(schema: GraphQLSchema, federatedTypeName = (name
       const contextName = stringArgument(directive, 'name');
       if (!/^[A-Za-z][A-Za-z0-9]*$/.test(contextName))
         throw new Error(`Invalid context name "${contextName}" on ${type.name}.`);
-      providers.push({
-        contextName,
-        typeName: type.name,
-        concreteTypeNames: concreteTypes(schema, type).map((t) => t.name),
-      });
+      // An interface object represents the federated interface; its implementations live in other subgraphs.
+      const abstract = isAbstractType(type);
+      const interfaceObject = type.astNode?.directives?.some((d) => d.name.value === 'interfaceObject');
+      providers.push(
+        abstract || interfaceObject
+          ? {
+              kind: 'abstract',
+              contextName,
+              typeName: type.name,
+              concreteTypeNames: abstract ? schema.getPossibleTypes(type).map((t) => t.name) : [],
+            }
+          : { kind: 'concrete', contextName, typeName: type.name },
+      );
     }
   }
   for (const directive of schema.getDirectives()) {
@@ -297,11 +313,12 @@ export function collectContexts(schema: GraphQLSchema, federatedTypeName = (name
     }
   }
   return {
-    providers: providers.map((provider) => ({
-      ...provider,
-      typeName: federatedTypeName(provider.typeName),
-      concreteTypeNames: provider.concreteTypeNames.map(federatedTypeName).sort(),
-    })),
+    providers: providers.map((provider): ContextProvider => {
+      const typeName = federatedTypeName(provider.typeName);
+      return provider.kind === 'concrete'
+        ? { ...provider, typeName }
+        : { ...provider, typeName, concreteTypeNames: provider.concreteTypeNames.map(federatedTypeName).sort() };
+    }),
     argumentsFromContext,
     referenced,
   };

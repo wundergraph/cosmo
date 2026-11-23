@@ -639,7 +639,16 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 
 	for _, provider := range in.ContextProviders {
-		out.ContextProviders = append(out.ContextProviders, plan.ContextProvider{ContextName: provider.ContextName, TypeName: provider.TypeName, ConcreteTypeNames: provider.ConcreteTypeNames})
+		var source plan.ContextProviderType
+		switch p := provider.GetProvider().(type) {
+		case *nodev1.ContextProvider_Concrete:
+			source = plan.ConcreteContextProvider{TypeName: p.Concrete.GetTypeName()}
+		case *nodev1.ContextProvider_Abstract:
+			source = plan.AbstractContextProvider{TypeName: p.Abstract.GetTypeName(), ConcreteTypeNames: p.Abstract.GetConcreteTypeNames()}
+		default:
+			continue
+		}
+		out.ContextProviders = append(out.ContextProviders, plan.ContextProvider{ContextName: provider.ContextName, Provider: source})
 	}
 	for _, binding := range in.ContextArguments {
 		out.ContextArguments = append(out.ContextArguments, plan.ContextArgument{ContextName: binding.ContextName, TypeName: binding.TypeName, FieldName: binding.FieldName, ArgumentName: binding.ArgumentName, ArgumentType: binding.ArgumentType, ContextSelection: binding.ContextSelection})

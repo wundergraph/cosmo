@@ -99,8 +99,10 @@ message DataSourceConfiguration {
 
 message ContextProvider {
   string context_name = 1;
-  string type_name = 2;
-  repeated string concrete_type_names = 3;
+  oneof provider {
+    ConcreteContextProvider concrete = 2;
+    AbstractContextProvider abstract = 3;
+  }
 }
 
 message ContextArgument {
@@ -615,4 +617,13 @@ message PersistedQuery {
 message ClientInfo {
   string name = 1;
   string version = 2;
+}
+
+message ConcreteContextProvider {
+  string type_name = 1;
+}
+
+message AbstractContextProvider {
+  string type_name = 1;
+  repeated string concrete_type_names = 2;
 }

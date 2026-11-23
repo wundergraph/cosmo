@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'vitest';
+import { toJson } from '@bufbuild/protobuf';
+import { ContextProviderSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { normalizeSubgraphFromString } from '@wundergraph/composition';
 import { buildRouterConfig, Input, SubgraphKind } from '../src';
 
@@ -13,7 +15,8 @@ describe('Router compatibility version tests', () => {
   test('serializes contextual datasource metadata at compatibility version 1', () => {
     const sdl = `
       type Query { member: Member }
-      type Member @context(name: "member") { plan: String, wallet: Wallet }
+      interface Account @context(name: "account") { plan: String }
+      type Member implements Account @context(name: "member") { plan: String, wallet: Wallet }
       type Wallet @key(fields: "id") { id: ID!, quote(plan: String @fromContext(field: "$member { plan }")): String }
     `;
     const result = normalizeSubgraphFromString({ sdlString: sdl, version: '1' });
@@ -41,7 +44,10 @@ describe('Router compatibility version tests', () => {
     });
     expect(config.compatibilityVersion.split(':')[0]).toBe('1');
     const datasource = config.engineConfig!.datasourceConfigurations[0];
-    expect(datasource.contextProviders).toHaveLength(1);
+    expect(datasource.contextProviders.map((provider) => toJson(ContextProviderSchema, provider))).toEqual([
+      { contextName: 'account', abstract: { typeName: 'Account', concreteTypeNames: ['Member'] } },
+      { contextName: 'member', concrete: { typeName: 'Member' } },
+    ]);
     expect(datasource.contextArguments.map((argument) => argument.contextSelection.trim())).toEqual(['{\n  plan\n}']);
   });
 
