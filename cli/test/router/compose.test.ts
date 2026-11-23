@@ -1,10 +1,10 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { Command } from 'commander';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { fromJsonString } from '@bufbuild/protobuf';
 import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -774,4 +774,133 @@ async function composeContractRouterConfig(args: string[]) {
   );
 
   return fromJsonString(RouterConfigSchema, await readFile(outputFile, 'utf8'));
+}
+
+describe('router compose json output tests', () => {
+  afterEach(() => {
+    process.exitCode = undefined;
+    vi.restoreAllMocks();
+  });
+
+  test('that composition errors are printed as a table to stdout by default when a destination is provided', async () => {
+    const { stdout, stderr } = await composeInvalidGraph({ args: ['-o', tmpRouterConfigFile()] });
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('ERROR_MESSAGE');
+    expect(() => JSON.parse(stdout)).toThrow();
+  });
+
+  test('that composition errors are printed as a table to stderr by default when no destination is provided', async () => {
+    const { stdout, stderr } = await composeInvalidGraph({ args: [] });
+
+    expect(process.exitCode).toBe(1);
+    expect(stdout).toBe('');
+    expect(stderr).toContain('ERROR_MESSAGE');
+  });
+
+  test('that composition errors are printed as json to stdout when a destination is provided', async () => {
+    const { stdout, stderr } = await composeInvalidGraph({ args: ['--json', '-o', tmpRouterConfigFile()] });
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout).errors.length).toBeGreaterThan(0);
+  });
+
+  test('that composition errors are printed as json to stderr when no destination is provided', async () => {
+    const { stdout, stderr } = await composeInvalidGraph({ args: ['--json'] });
+
+    expect(process.exitCode).toBe(1);
+    expect(stdout).toBe('');
+
+    const output = JSON.parse(stderr);
+    expect(output).not.toHaveProperty('featureFlag');
+    expect(output.warnings).toStrictEqual([]);
+    expect(output.errors.length).toBeGreaterThan(0);
+    for (const error of output.errors) {
+      expect(error.message).toStrictEqual(expect.any(String));
+    }
+    expect(stderr).not.toContain('ERROR_MESSAGE');
+  });
+
+  test('that feature flag composition errors are printed as json to stderr when no destination is provided', async () => {
+    const { stdout, stderr } = await composeInvalidGraph({ args: ['--json'], invalidFeatureFlagOnly: true });
+
+    // A feature flag that fails to compose is skipped, so the router config is still produced on stdout.
+    expect(process.exitCode).toBeUndefined();
+    const routerConfig = fromJsonString(RouterConfigSchema, stdout);
+    expect(routerConfig.featureFlagConfigs?.configByFeatureFlagName).not.toHaveProperty('my-feature-flag');
+
+    const output = JSON.parse(stderr);
+    expect(output.featureFlag).toBe('my-feature-flag');
+    expect(output.errors.length).toBeGreaterThan(0);
+  });
+});
+
+function tmpRouterConfigFile(): string {
+  return join(tmpdir(), 'router-compose-json', randomUUID(), 'router-config.json');
+}
+
+async function composeInvalidGraph({
+  args,
+  invalidFeatureFlagOnly = false,
+}: {
+  args: string[];
+  invalidFeatureFlagOnly?: boolean;
+}) {
+  const dir = join(tmpdir(), 'router-compose-json', randomUUID());
+  await mkdir(dir, { recursive: true });
+
+  // The field "Query.value" has incompatible types across "a" and the conflicting schema.
+  await writeFile(join(dir, 'a.graphql'), 'type Query {\n  value: String @shareable\n}\n');
+  await writeFile(join(dir, 'b.graphql'), 'type Query {\n  value: String @shareable\n}\n');
+  await writeFile(join(dir, 'conflict.graphql'), 'type Query {\n  value: Int @shareable\n}\n');
+
+  const input = invalidFeatureFlagOnly
+    ? `version: 1
+subgraphs:
+  - name: a
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./a.graphql
+  - name: b
+    routing_url: http://localhost:4002/graphql
+    schema:
+      file: ./b.graphql
+feature_flags:
+  - name: my-feature-flag
+    feature_graphs:
+      - name: b-feature
+        subgraph_name: b
+        routing_url: http://localhost:4003/graphql
+        schema:
+          file: ./conflict.graphql
+`
+    : `version: 1
+subgraphs:
+  - name: a
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./a.graphql
+  - name: b
+    routing_url: http://localhost:4002/graphql
+    schema:
+      file: ./conflict.graphql
+`;
+  await writeFile(join(dir, 'graph.yaml'), input);
+
+  const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  const client: Client = {
+    platform: createClient(PlatformService, mockPlatformTransport()),
+  };
+  const program = new Command();
+  program.addCommand(ComposeCommand({ client }));
+  await program.parseAsync(['compose', '-i', join(dir, 'graph.yaml'), ...args], { from: 'user' });
+
+  return {
+    stdout: logSpy.mock.calls.flat().join('\n'),
+    stderr: errorSpy.mock.calls.flat().join('\n'),
+  };
 }

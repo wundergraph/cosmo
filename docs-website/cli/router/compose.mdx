@@ -26,6 +26,8 @@ The `npx wgc router compose` command allows you to compose subgraphs and build a
 
 * `--suppress-warnings`: This flag suppresses any warnings produced by composition.
 
+* `-j, --json`: Prints composition errors and warnings in JSON format instead of a table. See [JSON output](#json-output).
+
 * `--split-configs-enabled`: This flag enables splitting the router config into multiple files.
 
 * `--exclude [tags...]`: Schema elements with these tags will be excluded from the composed schema.
@@ -128,6 +130,49 @@ Compose a contract for feature flags "ff1" and "ff2" (but not the base federated
 <Note>
   Note: Contract filtering relies on the `@tag` directive. Make sure `@tag` is imported in each subgraph schema that uses it.
 </Note>
+
+## JSON output
+
+By default, composition errors and warnings are rendered as tables.Pass `--json` to print them as a single-line JSON document instead.
+
+```bash
+npx wgc router compose -i graph.yaml -o router.json --json
+```
+
+```json
+{
+  "errors": [{ "message": "..." }],
+  "warnings": [{ "message": "...", "subgraphName": "employees" }]
+}
+```
+
+* Composition errors of the base graph exit the command with code `1`. No router config is produced.
+
+* A feature flag that fails to compose is skipped. Its errors and warnings are printed as a separate document with a `featureFlag` property that contains the name of the feature flag.
+
+* `--suppress-warnings` omits the warnings from the JSON output.
+
+### Output stream
+
+The stream for composition errors and warnings depends on where the router config is written.
+This applies to both the table and the JSON format.
+
+* With `--out` or `--split-configs-enabled`, errors and warnings are written to standard output.
+
+* Without them, the router config is printed to standard output. Errors and warnings are written to standard error, so standard output contains only the router config.
+
+```bash
+npx wgc router compose -i graph.yaml --json > router.json 2> diagnostics.json
+```
+
+### The command appears to hang
+
+Rendering the error table is slow when a composition error message is very large.
+This happens, for example, when an error embeds long schema descriptions.
+The command can then appear to hang for several minutes after composition has finished.
+
+If `wgc router compose` does not return, run it again with `--json`.
+The JSON output skips table rendering and prints the errors immediately.
 
 ## Examples
 

@@ -33,6 +33,7 @@ import {
   FederationSuccess,
   newContractTagOptionsFromArrays,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  type Warning,
 } from '@wundergraph/composition';
 import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -220,6 +221,10 @@ export default (_: BaseCommandOptions) => {
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option(
+    '-j, --json',
+    'Prints composition errors and warnings in json format instead of a table. Use this flag if the command appears to hang while rendering very large error messages.',
+  );
+  command.option(
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
@@ -339,35 +344,22 @@ export default (_: BaseCommandOptions) => {
     );
 
     if (!result.success) {
-      const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
+      printCompositionErrors({
+        errors: result.errors,
+        warnings: options.suppressWarnings ? [] : result.warnings,
+        json: options.json,
+        toStderr: isRouterConfigPrintedToStdout(options),
       });
-
-      console.log(
-        pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}`),
-      );
-      for (const compositionError of result.errors) {
-        compositionErrorsTable.push([compositionError.message]);
-      }
-      console.log(compositionErrorsTable.toString());
       process.exitCode = 1;
       return;
     }
 
-    if (!options.suppressWarnings && result.warnings.length > 0) {
-      const compositionWarningsTable = new Table({
-        head: [pc.bold(pc.white('WARNING_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
+    if (!options.suppressWarnings) {
+      printCompositionWarnings({
+        warnings: result.warnings,
+        json: options.json,
+        toStderr: isRouterConfigPrintedToStdout(options),
       });
-
-      console.log(pc.yellow(`The following warnings were produced while composing:`));
-      for (const warning of result.warnings) {
-        compositionWarningsTable.push([warning.message]);
-      }
-      console.log(compositionWarningsTable.toString());
     }
 
     const federatedClientSDL = result.shouldIncludeClientSchema
@@ -404,6 +396,98 @@ export default (_: BaseCommandOptions) => {
 
   return command;
 };
+
+type CompositionDiagnosticsParams = {
+  warnings: Array<Warning>;
+  json?: boolean;
+  // Diagnostics must not be mixed into stdout when the router config is printed there.
+  toStderr: boolean;
+  // Set when the diagnostics were produced while composing a feature flag rather than the base graph.
+  featureFlagName?: string;
+};
+
+/**
+ * The router config is printed to stdout only if no destination is provided. Split configs are always written
+ * to a directory.
+ */
+function isRouterConfigPrintedToStdout(options: { out?: string; splitConfigsEnabled?: boolean }): boolean {
+  return !options.out && !options.splitConfigsEnabled;
+}
+
+function toCompositionDiagnosticsJSON(errors: Array<Error>, warnings: Array<Warning>, featureFlagName?: string) {
+  return JSON.stringify({
+    ...(featureFlagName ? { featureFlag: featureFlagName } : {}),
+    errors: errors.map((error) => ({ message: error.message })),
+    warnings: warnings.map((warning) => ({ message: warning.message, subgraphName: warning.subgraph?.name })),
+  });
+}
+
+function toMessagesTable(head: string, messages: Array<string>): string {
+  const table = new Table({
+    head: [pc.bold(pc.white(head))],
+    colWidths: [120],
+    wordWrap: true,
+  });
+  for (const message of messages) {
+    table.push([message]);
+  }
+  return table.toString();
+}
+
+/**
+ * Prints the composition errors either as a table or, if the json option is set, as a single JSON document.
+ * Rendering a table is very slow for huge error messages, which the JSON output avoids.
+ *
+ * The output is written to stderr if the router config is printed to stdout, and to stdout otherwise.
+ */
+function printCompositionErrors({
+  errors,
+  warnings,
+  json,
+  toStderr,
+  featureFlagName,
+}: CompositionDiagnosticsParams & { errors: Array<Error> }) {
+  const print = toStderr ? console.error : console.log;
+  if (json) {
+    print(toCompositionDiagnosticsJSON(errors, warnings, featureFlagName));
+    return;
+  }
+
+  const target = featureFlagName ? ` the feature flag ${pc.italic(featureFlagName)}` : '';
+  print(pc.red(`We found composition errors, while composing${target}.\n${pc.bold('Please check the errors below:')}`));
+  print(
+    toMessagesTable(
+      'ERROR_MESSAGE',
+      errors.map((error) => error.message),
+    ),
+  );
+}
+
+/**
+ * Prints the composition warnings of a successful composition either as a table or, if the json option is set,
+ * as a single JSON document. The output is written to stderr if the router config is printed to stdout, and to
+ * stdout otherwise.
+ */
+function printCompositionWarnings({ warnings, json, toStderr, featureFlagName }: CompositionDiagnosticsParams) {
+  if (warnings.length === 0) {
+    return;
+  }
+
+  const print = toStderr ? console.error : console.log;
+  if (json) {
+    print(toCompositionDiagnosticsJSON([], warnings, featureFlagName));
+    return;
+  }
+
+  const target = featureFlagName ? ` the feature flag ${pc.italic(featureFlagName)}` : '';
+  print(pc.yellow(`The following warnings were produced while composing${target}:`));
+  print(
+    toMessagesTable(
+      'WARNING_MESSAGE',
+      warnings.map((warning) => warning.message),
+    ),
+  );
+}
 
 /**
  * Returns the contract tag options for the provided exclude and include tags, or undefined if
@@ -766,40 +850,23 @@ async function buildFeatureFlagsConfig(
     );
 
     if (!featureResult.success) {
-      const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
+      printCompositionErrors({
+        errors: featureResult.errors,
+        warnings: options.suppressWarnings ? [] : featureResult.warnings,
+        json: options.json,
+        toStderr: isRouterConfigPrintedToStdout(options),
+        featureFlagName: ff.name,
       });
-
-      console.log(
-        pc.red(
-          `We found composition errors, while composing the feature flag ${pc.italic(ff.name)}.\n${pc.bold(
-            'Please check the errors below:',
-          )}`,
-        ),
-      );
-      for (const compositionError of featureResult.errors) {
-        compositionErrorsTable.push([compositionError.message]);
-      }
-      console.log(compositionErrorsTable.toString());
       continue;
     }
 
-    if (!options.suppressWarnings && featureResult.warnings.length > 0) {
-      const compositionWarningsTable = new Table({
-        head: [pc.bold(pc.white('WARNING_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
+    if (!options.suppressWarnings) {
+      printCompositionWarnings({
+        warnings: featureResult.warnings,
+        json: options.json,
+        toStderr: isRouterConfigPrintedToStdout(options),
+        featureFlagName: ff.name,
       });
-
-      console.log(
-        pc.yellow(`The following warnings were produced while composing the feature flag ${pc.italic(ff.name)}:`),
-      );
-      for (const warning of featureResult.warnings) {
-        compositionWarningsTable.push([warning.message]);
-      }
-      console.log(compositionWarningsTable.toString());
     }
 
     const featureFederatedClientSDL = featureResult.shouldIncludeClientSchema
