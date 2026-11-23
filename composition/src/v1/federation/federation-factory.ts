@@ -475,7 +475,7 @@ export class FederationFactory {
             invalidFieldImplementation.invalidImplementedArguments.push({ actualType, argumentName, expectedType });
           }
         }
-        // Additional arguments must be optional (nullable)
+        // Additional arguments must be optional
         for (const [argumentName, implArg] of implField.argumentDataByName) {
           if (implField.subgraphNames.size === implArg.subgraphNames.size) {
             unsatisfiedOptionalArgs.delete(argumentName);
@@ -486,7 +486,7 @@ export class FederationFactory {
             continue;
           }
 
-          if (implArg.node.type.kind !== Kind.NON_NULL_TYPE) {
+          if (implArg.requiredSubgraphNames.size < 1) {
             continue;
           }
 
@@ -2123,7 +2123,7 @@ export class FederationFactory {
         continue;
       }
 
-      if (isTypeRequired(inputValueData.type)) {
+      if (inputValueData.requiredSubgraphNames.size > 0) {
         invalidRequiredArguments.push({
           inputValueName: argumentName,
           missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
@@ -2200,7 +2200,7 @@ export class FederationFactory {
       const params = { coords: data.federatedCoords, reference, subgraphName };
       // A required argument that defines @fromContext is reported by its own error.
       if (doesArgumentDefineFromContext(data)) {
-        return isTypeRequired(data.type) ? undefined : fromContextCacheTagReferenceErrorMessage(params);
+        return data.requiredSubgraphNames.size > 0 ? undefined : fromContextCacheTagReferenceErrorMessage(params);
       }
       // A required input value declared @inaccessible may have been reported by its own error.
       if (isNodeDataInaccessible(data)) {
@@ -2395,7 +2395,7 @@ export class FederationFactory {
                 ...inputValueData.node,
                 directives: getClientFederatedDirectiveNodes(inputValueData),
               });
-            } else if (isTypeRequired(inputValueData.type)) {
+            } else if (inputValueData.requiredSubgraphNames.size > 0) {
               invalidRequiredInputs.push({
                 inputValueName,
                 missingSubgraphs: getEntriesNotInHashSet(

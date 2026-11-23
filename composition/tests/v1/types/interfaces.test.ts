@@ -1291,6 +1291,105 @@ describe('Interface tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
+    test('that an error is returned if an implemented non-null argument with a default is not defined in one applicable subgraph', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a(arg: ID! = "1"): ID
+          }
+
+          type Entity implements Interface @key(fields: "id") {
+            a(arg: ID! = "1"): ID
+            id: ID!
+          }
+
+          type Query {
+            entities: [Entity!]
+          }
+        `,
+      );
+      const b = createSubgraph(
+        'b',
+        `
+          type Entity @key(fields: "id") {
+            a: ID
+            id: ID!
+          }
+        `,
+      );
+      const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedOptionalArguments: new Set(['arg']),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an implementation can define an additional non-null argument with a default', () => {
+      const a = createSubgraph(
+        'a',
+        `
+          interface Interface {
+            a: ID
+          }
+
+          type Entity implements Interface {
+            a(arg: String! = "1"): ID
+          }
+
+          type Query {
+            interfaces: [Interface!]
+          }
+        `,
+      );
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess([a], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(`
+          ${SCHEMA_QUERY_DEFINITION}
+
+          type Entity implements Interface {
+            a(arg: String! = "1"): ID
+          }
+
+          interface Interface {
+            a: ID
+          }
+
+          type Query {
+            interfaces: [Interface!]
+          }
+        `),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
     test('that an error is returned if an implemented optional argument is not defined in multiple applicable subgraphs', () => {
       const a = createSubgraph(
         'a',

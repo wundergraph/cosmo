@@ -973,6 +973,46 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that a non-null executable directive argument with a default that is not defined in all subgraphs is not persisted in the federated graph', () => {
+    const a = createSubgraph(
+      'a',
+      `
+      directive @a(a: String! = "a") on FIELD
+
+      type Query {
+        a: ID
+      }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+      directive @a on FIELD
+
+      type Query {
+        a: ID
+      }
+    `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expectedSchema = normalizeString(
+      SCHEMA_QUERY_DEFINITION +
+        `
+        directive @a on FIELD
+
+        type Query {
+          a: ID
+        }
+    `,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that an executable directive is not persisted in the federated graph if it is not defined in all subgraphs', () => {
     const a = createSubgraph(
       'a',

@@ -153,6 +153,10 @@ export function isTypeRequired(node: TypeNode): boolean {
   return node.kind === Kind.NON_NULL_TYPE;
 }
 
+export function isNonNullWithoutDefault(node: InputValueDefinitionNode): boolean {
+  return isTypeRequired(node.type) && !node.defaultValue;
+}
+
 export function isTypeNodeListType(node: TypeNode): boolean {
   switch (node.kind) {
     case Kind.LIST_TYPE:

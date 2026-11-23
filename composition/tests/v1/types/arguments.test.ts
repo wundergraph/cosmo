@@ -373,6 +373,39 @@ describe('Argument tests', () => {
     expect(errors[1]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Object.field', errorArrayTwo));
   });
 
+  test('that a non-null argument with a default that is not defined in all definitions of a field is not present in the federated graph', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID! = "1"): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a: ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expectedSchema = normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      type Query {
+        a: ID
+      }
+    `);
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
     const { errors } = normalizeSubgraphFailure(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(2);
