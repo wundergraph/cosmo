@@ -1,0 +1,945 @@
+{
+  "launch_sandbox": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "address": {
+        "type": "string"
+      },
+      "schema": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "source": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "schema",
+                  "sandbox",
+                  "cosmo"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "deleted"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "routerStatus": {
+        "type": "string",
+        "enum": [
+          "live",
+          "ready",
+          "starting",
+          "failed"
+        ]
+      },
+      "endpointUrl": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      },
+      "operationId": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "needs_approval",
+          "needs_input",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "dashboardUrl": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "address",
+      "schema",
+      "name",
+      "source",
+      "routerStatus",
+      "endpointUrl",
+      "url",
+      "operationId",
+      "status",
+      "dashboardUrl"
+    ]
+  },
+  "export_sandbox_config": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sandbox_yaml": {
+        "type": "string"
+      },
+      "router_version": {
+        "type": "string"
+      },
+      "sources": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "sandbox_yaml",
+      "router_version",
+      "sources"
+    ]
+  },
+  "get_sandbox": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "address": {
+        "type": "string"
+      },
+      "endpointUrl": {
+        "type": "string"
+      },
+      "routerStatus": {
+        "type": "string",
+        "enum": [
+          "live",
+          "ready",
+          "starting",
+          "failed"
+        ]
+      }
+    },
+    "required": [
+      "address",
+      "endpointUrl",
+      "routerStatus"
+    ]
+  },
+  "list_sandboxes": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sandboxes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "schema": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "schema",
+                        "sandbox",
+                        "cosmo"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name",
+                    "deleted"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "routerStatus": {
+              "type": "string",
+              "enum": [
+                "live",
+                "ready",
+                "starting",
+                "failed"
+              ]
+            },
+            "endpointUrl": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "address",
+            "schema",
+            "name",
+            "source",
+            "routerStatus",
+            "endpointUrl"
+          ]
+        }
+      }
+    },
+    "required": [
+      "sandboxes"
+    ]
+  },
+  "stream_logs": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "notice": {
+        "type": "string"
+      },
+      "untrustedData": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "debug",
+                    "info",
+                    "warn",
+                    "error",
+                    "fatal"
+                  ]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "router",
+                    "agent",
+                    "boot",
+                    "build",
+                    "command"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at",
+                "level",
+                "source",
+                "message"
+              ]
+            }
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lines",
+          "cursor"
+        ]
+      }
+    },
+    "required": [
+      "notice",
+      "untrustedData"
+    ]
+  },
+  "list_sandbox_history": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "seq": {
+              "type": "number"
+            },
+            "operationId": {
+              "type": "string"
+            },
+            "author": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "agent",
+                    "system"
+                  ]
+                },
+                "userId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "userId"
+              ]
+            },
+            "agentName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "verdict": {
+              "type": "string",
+              "enum": [
+                "applied",
+                "refused"
+              ]
+            },
+            "refusalReason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "seq",
+            "operationId",
+            "author",
+            "agentName",
+            "createdAt",
+            "kind",
+            "verdict",
+            "refusalReason"
+          ]
+        }
+      }
+    },
+    "required": [
+      "entries"
+    ]
+  },
+  "get_operation": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "operationId": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "needs_approval",
+          "needs_input",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "title": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string",
+        "enum": [
+          "ui",
+          "cli",
+          "mcp",
+          "ci",
+          "integration",
+          "system"
+        ]
+      },
+      "sandbox": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "createdAt": {
+        "type": "string"
+      },
+      "finishedAt": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "dashboardUrl": {
+        "type": "string"
+      },
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "running",
+                "succeeded",
+                "failed",
+                "skipped"
+              ]
+            },
+            "detail": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "label",
+            "status",
+            "detail"
+          ]
+        }
+      },
+      "error": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "remediation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "remediation"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "approval": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "reason"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "operationId",
+      "kind",
+      "status",
+      "title",
+      "origin",
+      "sandbox",
+      "createdAt",
+      "finishedAt",
+      "dashboardUrl",
+      "steps",
+      "error",
+      "approval"
+    ]
+  },
+  "cancel_operation": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "operationId": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "needs_approval",
+          "needs_input",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "title": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string",
+        "enum": [
+          "ui",
+          "cli",
+          "mcp",
+          "ci",
+          "integration",
+          "system"
+        ]
+      },
+      "sandbox": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "createdAt": {
+        "type": "string"
+      },
+      "finishedAt": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "dashboardUrl": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "operationId",
+      "kind",
+      "status",
+      "title",
+      "origin",
+      "sandbox",
+      "createdAt",
+      "finishedAt",
+      "dashboardUrl"
+    ]
+  },
+  "list_operations": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "operations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "operationId": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running",
+                "needs_approval",
+                "needs_input",
+                "succeeded",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "origin": {
+              "type": "string",
+              "enum": [
+                "ui",
+                "cli",
+                "mcp",
+                "ci",
+                "integration",
+                "system"
+              ]
+            },
+            "sandbox": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "finishedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "dashboardUrl": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operationId",
+            "kind",
+            "status",
+            "title",
+            "origin",
+            "sandbox",
+            "createdAt",
+            "finishedAt",
+            "dashboardUrl"
+          ]
+        }
+      }
+    },
+    "required": [
+      "operations"
+    ]
+  },
+  "run_collection": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sandbox": {
+        "type": "string"
+      },
+      "passed": {
+        "type": "number"
+      },
+      "failed": {
+        "type": "number"
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "operation": {
+              "type": "string"
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "number"
+            },
+            "durationMs": {
+              "type": "number"
+            },
+            "error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "collection",
+            "operation",
+            "passed",
+            "status",
+            "durationMs",
+            "error"
+          ]
+        }
+      }
+    },
+    "required": [
+      "sandbox",
+      "passed",
+      "failed",
+      "results"
+    ]
+  },
+  "create_proposal": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ]
+  },
+  "open_portal": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "portal": {
+        "type": "object",
+        "properties": {
+          "portalId": {
+            "type": "string"
+          },
+          "subgraph": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "connected",
+              "disconnected",
+              "closed"
+            ]
+          },
+          "upstream": {
+            "type": "string",
+            "enum": [
+              "tunnel",
+              "url"
+            ]
+          },
+          "openedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastRequestAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "operationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "portalId",
+          "subgraph",
+          "status",
+          "upstream",
+          "openedBy",
+          "lastRequestAt",
+          "operationId"
+        ]
+      },
+      "credential": {
+        "type": "string"
+      },
+      "tunnelPath": {
+        "type": "string"
+      },
+      "connectCommand": {
+        "type": "string"
+      },
+      "dashboardUrl": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "portal",
+      "credential",
+      "tunnelPath",
+      "connectCommand",
+      "dashboardUrl"
+    ]
+  },
+  "close_portal": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "portal": {
+        "type": "object",
+        "properties": {
+          "portalId": {
+            "type": "string"
+          },
+          "subgraph": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "connected",
+              "disconnected",
+              "closed"
+            ]
+          },
+          "upstream": {
+            "type": "string",
+            "enum": [
+              "tunnel",
+              "url"
+            ]
+          },
+          "openedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastRequestAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "operationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "portalId",
+          "subgraph",
+          "status",
+          "upstream",
+          "openedBy",
+          "lastRequestAt",
+          "operationId"
+        ]
+      }
+    },
+    "required": [
+      "portal"
+    ]
+  },
+  "list_portals": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "portals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "portalId": {
+              "type": "string"
+            },
+            "subgraph": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "connecting",
+                "connected",
+                "disconnected",
+                "closed"
+              ]
+            },
+            "upstream": {
+              "type": "string",
+              "enum": [
+                "tunnel",
+                "url"
+              ]
+            },
+            "openedBy": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "lastRequestAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operationId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "portalId",
+            "subgraph",
+            "status",
+            "upstream",
+            "openedBy",
+            "lastRequestAt",
+            "operationId"
+          ]
+        }
+      }
+    },
+    "required": [
+      "portals"
+    ]
+  },
+  "describe_current_access": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "organizationSlug": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "organizationSlug"
+    ]
+  }
+}

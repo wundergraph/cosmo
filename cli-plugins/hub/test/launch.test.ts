@@ -289,7 +289,7 @@ describe('wgc hub sandbox launch', () => {
           status: 'needs_approval',
           approval: {
             reason: 'Allowing a wildcard host lets sandbox code reach any matching host.',
-            approvalPermission: 'manage_egress',
+            approvalPermission: 'approve_egress',
             decidedBy: null,
             decidedAt: null,
           },

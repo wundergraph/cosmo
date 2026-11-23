@@ -142,6 +142,7 @@ const accessTool = () => ({
       role: 'editor',
       canMakeChanges: true,
       token: null,
+      governanceSync: { syncedAt: null, failure: null },
       activeSandbox: null,
     },
   }),

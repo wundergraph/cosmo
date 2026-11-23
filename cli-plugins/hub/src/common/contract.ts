@@ -3,6 +3,12 @@ import { z } from 'zod';
 /**
  * Every Hub MCP tool, argument and result shape the hub commands assume, in one place. When Hub's
  * contract changes, this file is the one to edit. Hub names a sandbox `<schema>/<sandbox>`.
+ *
+ * Two files keep this and Hub from drifting apart, each the same in both repositories. `contract/reads.json`
+ * is the result shapes below as JSON Schema: `vitest -u` rewrites it after a change here, and Hub's tests
+ * check its copy (`wgc-hub-reads.json`) against every answer Hub may give. `contract/answers.json` is Hub's
+ * output schema of each tool, copied from Hub's `wgc-hub-answers.json`: the fake Hub in the tests refuses
+ * an answer that does not match it.
  */
 export const hubTools = {
   launchSandbox: 'launch_sandbox',

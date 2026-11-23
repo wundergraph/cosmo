@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { createServer, IncomingMessage } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Command } from 'commander';
+import { z } from 'zod';
 import { createCredentials, createPluginContext } from '@wundergraph/wgc-plugin-sdk';
 import type { CallerKind, OutputOverride, Prompts } from '@wundergraph/wgc-plugin-sdk';
 import { createHubPlugin } from '../src/index.js';
@@ -32,15 +34,31 @@ const readBody = async (request: IncomingMessage): Promise<string> => {
   return Buffer.concat(chunks).toString('utf8');
 };
 
+type ToolOutcome = { structuredContent?: Json; isError?: boolean; text?: string };
+
+/** Hub's own output schema of every tool the commands call, copied from Hub's tests/fixtures/wgc-hub-answers.json. */
+const hubAnswers: Record<string, z.core.JSONSchema.JSONSchema> = JSON.parse(
+  readFileSync(new URL('../contract/answers.json', import.meta.url), 'utf8'),
+);
+
+/** Refuses a successful answer Hub could not give, so a test cannot pass on an answer that went stale. */
+const asHubAnswers = (tool: string, outcome: ToolOutcome): ToolOutcome => {
+  if (outcome.isError || outcome.structuredContent === undefined) {
+    return outcome;
+  }
+
+  const answer = z.fromJSONSchema(hubAnswers[tool]).safeParse(outcome.structuredContent);
+  return answer.success
+    ? outcome
+    : { isError: true, text: `The test's ${tool} answer is not one Hub gives:\n${z.prettifyError(answer.error)}` };
+};
+
 /** Speaks MCP JSON-RPC on `/mcp`, `/ci/schema-push` and GitHub's OIDC token endpoint on `/oidc`. */
 export const startFakeHub = async ({
   tools = {},
   schemaPush = {},
 }: {
-  tools?: Record<
-    string,
-    (args: { [key: string]: Json }) => { structuredContent?: Json; isError?: boolean; text?: string }
-  >;
+  tools?: Record<string, (args: { [key: string]: Json }) => ToolOutcome>;
   schemaPush?: Json;
 }): Promise<FakeHub> => {
   const requests: HubRequest[] = [];
@@ -76,7 +94,10 @@ export const startFakeHub = async ({
       return;
     }
     const tool = tools[body.params.name];
-    const outcome = tool ? tool(body.params.arguments) : { isError: true, text: `Unknown tool ${body.params.name}` };
+    const outcome = asHubAnswers(
+      body.params.name,
+      tool ? tool(body.params.arguments) : { isError: true, text: `Unknown tool ${body.params.name}` },
+    );
     const result = {
       content: outcome.text ? [{ type: 'text', text: outcome.text }] : [],
       structuredContent: outcome.structuredContent,
@@ -298,7 +319,13 @@ export const hubOperation = ({
   steps?: StepJson[];
   error?: { code: string; message: string; remediation: string | null } | null;
   approval?: { reason: string; approvalPermission: string | null; decidedBy: null; decidedAt: null } | null;
-}) => ({ ...operationSummary(summary), steps, result: null, error, approval });
+}) => ({
+  ...operationSummary(summary),
+  steps,
+  result: null,
+  error: error === null ? null : { ...error, failureKind: null, failureReason: null },
+  approval,
+});
 
 /** Answers each call with the next item, repeating the last one. */
 export const sequence = <T>(items: T[]) => {
