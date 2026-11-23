@@ -11,6 +11,7 @@ import {
 import inquirer from 'inquirer';
 import DeleteClientsCommand from '../src/commands/clients/commands/delete.js';
 import { Client } from '../src/core/client/client.js';
+import { getJsonOutput } from './utils.js';
 
 vi.mock('inquirer', () => ({
   default: {
@@ -63,23 +64,6 @@ async function runDelete({
   program.exitOverride();
   program.addCommand(DeleteClientsCommand({ client }));
   await program.parseAsync(['delete', 'web', '--graph-name', 'mygraph', ...args], { from: 'user' });
-}
-
-function getJsonOutput(logSpy: MockInstance<typeof console.log>) {
-  const call = logSpy.mock.calls.find(([arg]) => {
-    try {
-      JSON.parse(String(arg));
-      return true;
-    } catch {
-      return false;
-    }
-  });
-
-  if (!call) {
-    throw new Error('No JSON output found in console.log calls');
-  }
-
-  return JSON.parse(String(call[0]));
 }
 
 const successPreview = {
