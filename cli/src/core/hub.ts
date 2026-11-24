@@ -1,5 +1,5 @@
-import { createCredentials, createHubClient } from '@wundergraph/wgc-plugin-sdk';
-import type { Credentials, HubClient } from '@wundergraph/wgc-plugin-sdk';
+import { createCredentials } from '@wundergraph/wgc-plugin-sdk';
+import type { Credentials } from '@wundergraph/wgc-plugin-sdk';
 import { checkAuth } from '../commands/auth/utils.js';
 import { readConfigFile } from '../utils.js';
 import { config } from './config.js';
@@ -15,14 +15,3 @@ const loginToken = async (): Promise<string | undefined> => {
 
 export const createCliCredentials = (): Credentials =>
   createCredentials({ env: process.env, loginToken, authorizeTarget: instanceRegistry.authorize });
-
-export const createCliHubClient = (credentials: Credentials = createCliCredentials()): HubClient =>
-  createHubClient({
-    baseUrl: config.hubURL,
-    clientVersion: config.version,
-    bearer: (target) =>
-      credentials.resolveBearer(
-        { audience: config.hubOidcAudience, gitlabTokenVariable: hubGitlabTokenVariable },
-        target,
-      ),
-  });

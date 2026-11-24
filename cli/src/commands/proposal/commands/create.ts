@@ -3,28 +3,18 @@ import ora from 'ora';
 import pc from 'picocolors';
 import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getBaseHeaders } from '../../../core/config.js';
-import { createCliHubClient } from '../../../core/hub.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleProposalResult } from '../../../handle-proposal-result.js';
 import { processProposalSubgraphs } from '../utils.js';
-import { createProposalFromHubSandbox } from '../hub-sandbox-proposal.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description('Creates a proposal for a federated graph.');
-  command.argument(
-    '[name]',
-    'The name of the proposal to create. Omit it with --hub-sandbox; Hub names that proposal.',
-  );
-  command.option(
+  command.argument('<name>', 'The name of the proposal to create.');
+  command.requiredOption(
     '-f, --federation-graph <federatedGraphName>',
-    'The name of the federated graph this proposal is for. Required unless --hub-sandbox is used.',
+    'The name of the federated graph this proposal is for.',
   );
-  command.option(
-    '--hub-sandbox <schema/sandbox>',
-    'Create the proposal in Hub from this sandbox. Hub opens the Cosmo proposal, runs its checks and links both.',
-  );
-  command.option('-j, --json', 'Output the result in JSON format (with --hub-sandbox).');
   command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option(
     '--subgraph <subgraph>',
@@ -54,26 +44,7 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
 
-  command.action(async (name: string | undefined, options) => {
-    if (options.hubSandbox) {
-      if (name) {
-        return command.error('error: Hub names proposals created with --hub-sandbox. Drop the name argument.');
-      }
-      await createProposalFromHubSandbox({
-        hubSandbox: options.hubSandbox,
-        json: options.json === true,
-        hubClient: createCliHubClient(),
-      });
-      return;
-    }
-
-    if (!name) {
-      return command.error("error: missing required argument 'name'");
-    }
-    if (!options.federationGraph) {
-      return command.error("error: required option '-f, --federation-graph <federatedGraphName>' not specified");
-    }
-
+  command.action(async (name: string, options) => {
     if (options.subgraph.length === 0 && options.deletedSubgraph.length === 0 && options.newSubgraph.length === 0) {
       program.error(
         pc.red(
