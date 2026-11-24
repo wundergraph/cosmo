@@ -328,7 +328,7 @@ func GetEmployeeById(id int32) *projects.Employee {
 func GetAssignedTasksByEmployeeId(employeeId int32) []*projects.Task {
 	var tasks []*projects.Task
 	for _, task := range ServiceTasks {
-		if task.AssigneeId != nil && task.AssigneeId.Value == employeeId &&
+		if task.AssigneeId != nil && *task.AssigneeId == employeeId &&
 			task.Status != projects.TaskStatus_TASK_STATUS_COMPLETED {
 			tasks = append(tasks, task)
 		}
@@ -340,7 +340,7 @@ func GetAssignedTasksByEmployeeId(employeeId int32) []*projects.Task {
 func GetCompletedTasksByEmployeeId(employeeId int32) []*projects.Task {
 	var tasks []*projects.Task
 	for _, task := range ServiceTasks {
-		if task.AssigneeId != nil && task.AssigneeId.Value == employeeId &&
+		if task.AssigneeId != nil && *task.AssigneeId == employeeId &&
 			task.Status == projects.TaskStatus_TASK_STATUS_COMPLETED {
 			tasks = append(tasks, task)
 		}
