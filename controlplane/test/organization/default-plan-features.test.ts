@@ -36,12 +36,12 @@ describe('Default plan features of a new organization', () => {
     expect(await orgRepo.getFeature({ organizationId, featureId: 'federated-graphs' })).toEqual({
       id: 'federated-graphs',
       enabled: true,
-      limit: 25,
+      limit: -1,
     });
     expect(await orgRepo.getFeature({ organizationId, featureId: 'users' })).toEqual({
       id: 'users',
       enabled: true,
-      limit: 1000,
+      limit: -1,
     });
 
     authenticator.changeUserWithSuppliedContext(createTestContext(slug, organizationId));

@@ -146,11 +146,11 @@
       "weight": 3,
       "features": [
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
-        { "id": "users", "description": "Custom Number of Users", "limit": 1000 },
+        { "id": "users", "description": "Custom Number of Users", "limit": -1 },
         {
           "id": "federated-graphs",
           "description": "Custom Number of Federated Graphs",
-          "limit": 25
+          "limit": -1
         },
         {
           "id": "requests",
