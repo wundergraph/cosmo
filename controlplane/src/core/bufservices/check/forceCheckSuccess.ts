@@ -7,10 +7,12 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../../repositories/GitHubRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { findCheckToApprove } from '../../util/check/permissions.js';
 import type { PlainMessage } from '../../../types/index.js';
 
 export function forceCheckSuccess(
@@ -43,16 +45,17 @@ export function forceCheckSuccess(
       };
     }
 
-    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
       throw new UnauthorizedError();
     }
 
-    const check = await subgraphRepo.checkById({
-      id: req.checkId,
-      federatedGraphTargetId: graph.targetId,
-      federatedGraphId: graph.id,
+    const check = await findCheckToApprove({
+      subgraphRepo,
+      schemaCheckRepo: new SchemaCheckRepository(opts.db),
+      authContext,
+      graph,
+      checkId: req.checkId,
     });
-
     if (!check) {
       return {
         response: {
