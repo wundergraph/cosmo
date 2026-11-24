@@ -140,7 +140,15 @@ export function publishFederatedSubgraph(
     }[] = [];
 
     // if the subgraph is a feature subgraph, we don't need to check for proposal matches for now.
-    if (namespace.enableProposals && !subgraph?.isFeatureSubgraph) {
+    if (
+      namespace.enableProposals &&
+      !subgraph?.isFeatureSubgraph &&
+      !(await ProposalRepository.isLiveSchema({
+        liveSchemaSDL: subgraph?.schemaSDL,
+        schemaSDL: subgraphSchemaSDL,
+        routerCompatibilityVersion,
+      }))
+    ) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const matches = await proposalRepo.matchSchemaWithProposals({

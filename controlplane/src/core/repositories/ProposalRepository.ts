@@ -579,6 +579,31 @@ export class ProposalRepository {
     return diff.kind === 'failure' ? null : { ...base, isMatch: diff.changes.length === 0 };
   }
 
+  /**
+   * Whether the schema is the subgraph's live schema, so checking or publishing it changes nothing and needs no
+   * proposal.
+   */
+  public static async isLiveSchema({
+    liveSchemaSDL,
+    schemaSDL,
+    routerCompatibilityVersion,
+  }: {
+    liveSchemaSDL: string | undefined;
+    schemaSDL: string;
+    routerCompatibilityVersion: string;
+  }): Promise<boolean> {
+    if (!liveSchemaSDL) {
+      return false;
+    }
+
+    if (liveSchemaSDL === schemaSDL) {
+      return true;
+    }
+
+    const diff = await getDiffBetweenGraphs(liveSchemaSDL, schemaSDL, routerCompatibilityVersion);
+    return diff.kind === 'success' && diff.changes.length === 0;
+  }
+
   public async matchSchemaWithProposals({
     subgraphName,
     namespaceId,

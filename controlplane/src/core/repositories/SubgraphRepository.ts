@@ -2470,7 +2470,16 @@ export class SubgraphRepository {
     );
 
     let proposalMatchMessage: string | undefined;
-    if (namespace.enableProposals && !isTargetCheck) {
+    if (
+      namespace.enableProposals &&
+      !isTargetCheck &&
+      (isDeleted ||
+        !(await ProposalRepository.isLiveSchema({
+          liveSchemaSDL: subgraph?.schemaSDL,
+          schemaSDL: newSchemaSDL,
+          routerCompatibilityVersion,
+        })))
+    ) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const matches = await proposalRepo.matchSchemaWithProposals({
