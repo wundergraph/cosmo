@@ -21,7 +21,7 @@ export const hubTools = {
   cancelOperation: 'cancel_operation',
   listOperations: 'list_operations',
   runCollection: 'run_collection',
-  createProposal: 'create_proposal',
+  propose: 'propose',
   openPortal: 'open_portal',
   closePortal: 'close_portal',
   listPortals: 'list_portals',
@@ -164,6 +164,20 @@ const portalShape = z.object({
 
 export type Portal = z.output<typeof portalShape>;
 
+export const proposeTargets = ['cosmo', 'git'] as const;
+
+export type ProposeTarget = (typeof proposeTargets)[number];
+
+/** One place a proposal went: a Cosmo proposal or the git pull requests. */
+const proposalTargetShape = z.object({
+  kind: z.enum(proposeTargets),
+  status: z.enum(['open', 'done', 'closed', 'failed']),
+  externalRef: z.string().nullable(),
+  detail: z.string().nullable(),
+});
+
+export type ProposalTarget = z.output<typeof proposalTargetShape>;
+
 /** Result shapes per tool, each with the arguments the commands send. */
 export const hubResults = {
   /** `{ from, name, idempotency_key }`: `from` is a schema slug or `<schema>/<sandbox>` */
@@ -213,8 +227,24 @@ export const hubResults = {
     failed: z.number(),
     results: z.array(collectionResultShape),
   }),
-  /** `{ sandbox }`: fails when the sandbox has no committed changes or already has a proposal */
-  createProposal: z.object({ ok: z.boolean() }),
+  /**
+   * `{ sandbox, targets?, description? }`: without targets Hub proposes where its Propose dialog would. Fails
+   * when the sandbox has no committed changes or already has a proposal.
+   */
+  propose: z.discriminatedUnion('status', [
+    z.object({
+      status: z.literal('proposed'),
+      proposalId: z.string(),
+      proposalUrl: z.string(),
+      targets: z.array(proposalTargetShape),
+    }),
+    z.object({
+      status: z.literal('needs_approval'),
+      operationId: z.string(),
+      reason: z.string(),
+      dashboardUrl: z.string(),
+    }),
+  ]),
   /** `{ sandbox, subgraph }`: replaces an open portal of the same subgraph */
   openPortal: z.object({
     portal: portalShape,

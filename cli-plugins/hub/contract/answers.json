@@ -1314,18 +1314,116 @@
     },
     "additionalProperties": false
   },
-  "create_proposal": {
+  "propose": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "required": [
-      "ok"
-    ],
-    "properties": {
-      "ok": {
-        "type": "boolean"
+    "anyOf": [
+      {
+        "type": "object",
+        "required": [
+          "status",
+          "proposalId",
+          "proposalUrl",
+          "targets"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed"
+            ]
+          },
+          "proposalId": {
+            "type": "string"
+          },
+          "proposalUrl": {
+            "type": "string",
+            "description": "Where people review the proposal in Hub."
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "status",
+                "externalRef",
+                "detail"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "cosmo",
+                    "git"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "done",
+                    "closed",
+                    "failed"
+                  ]
+                },
+                "externalRef": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "detail": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "status",
+          "operationId",
+          "reason",
+          "dashboardUrl"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "needs_approval"
+            ]
+          },
+          "operationId": {
+            "type": "string",
+            "description": "The waiting operation; follow it with get_operation."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why a person has to approve it."
+          },
+          "dashboardUrl": {
+            "type": "string",
+            "description": "Where a person who may decide it approves or denies it."
+          }
+        },
+        "additionalProperties": false
       }
-    },
-    "additionalProperties": false
+    ]
   },
   "open_portal": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

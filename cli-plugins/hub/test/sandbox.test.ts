@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { createInterrupt, FakeHub, linkedRepo, runWgc, startFakeHub, tempRepo } from './harness.js';
+import { createInterrupt, FakeHub, linkedRepo, operationUrl, runWgc, startFakeHub, tempRepo } from './harness.js';
 
 let hub: FakeHub | undefined;
 afterEach(async () => {
@@ -205,29 +205,183 @@ describe('wgc hub sandbox logs', () => {
   });
 });
 
+const proposalUrl = 'https://hub.wundergraph.com/acme/graph/shop?view=shop-nithin&tab=proposal';
+
+const proposed = (
+  targets: Array<{ kind: string; status: string; externalRef: string | null; detail: string | null }>,
+) => ({
+  structuredContent: { status: 'proposed', proposalId: 'proposal-1', proposalUrl, targets },
+});
+
 describe('wgc hub propose', () => {
-  test('opens a Hub proposal from the linked sandbox', async () => {
-    hub = await startFakeHub({ tools: { create_proposal: () => ({ structuredContent: { ok: true } }) } });
+  test('without --target lets Hub pick the target and prints each target it proposed to', async () => {
+    hub = await startFakeHub({
+      tools: {
+        propose: () =>
+          proposed([
+            {
+              kind: 'cosmo',
+              status: 'open',
+              externalRef: 'https://cosmo.wundergraph.com/acme/proposals/7',
+              detail: null,
+            },
+          ]),
+      },
+    });
 
     const run = await runWgc(['hub', 'propose'], { hubUrl: hub.url, cwd: await linkedRepo(), output: 'text' });
 
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toBe(
       [
-        'Created a proposal from sandbox shop/shop-nithin',
+        'Proposed sandbox shop/shop-nithin',
+        '  cosmo  open    https://cosmo.wundergraph.com/acme/proposals/7',
+        `  Review it in Hub: ${proposalUrl}`,
         '',
         'Next',
         '  wgc hub open proposal      review it in Hub',
         '',
       ].join('\n'),
     );
-    expect(hub.toolCalls()).toEqual([{ name: 'create_proposal', arguments: { sandbox: 'shop/shop-nithin' } }]);
+    expect(hub.toolCalls()).toEqual([{ name: 'propose', arguments: { sandbox: 'shop/shop-nithin' } }]);
+  });
+
+  test('sends each --target once with the description and prints the pull requests', async () => {
+    hub = await startFakeHub({
+      tools: {
+        propose: () =>
+          proposed([
+            {
+              kind: 'cosmo',
+              status: 'open',
+              externalRef: 'https://cosmo.wundergraph.com/acme/proposals/7',
+              detail: null,
+            },
+            {
+              kind: 'git',
+              status: 'open',
+              externalRef: 'https://github.com/acme/shop/pull/12',
+              detail: 'wrote 1 schema file',
+            },
+          ]),
+      },
+    });
+
+    const run = await runWgc(
+      ['hub', 'propose', '--target', 'cosmo', '--target', 'git', '--target', 'cosmo', '--description', 'Add reviews'],
+      { hubUrl: hub.url, cwd: await linkedRepo(), output: 'text' },
+    );
+
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout.split('\n').slice(0, 4)).toEqual([
+      'Proposed sandbox shop/shop-nithin',
+      '  cosmo  open    https://cosmo.wundergraph.com/acme/proposals/7',
+      '  git    open    https://github.com/acme/shop/pull/12  wrote 1 schema file',
+      `  Review it in Hub: ${proposalUrl}`,
+    ]);
+    expect(hub.toolCalls()).toEqual([
+      {
+        name: 'propose',
+        arguments: { sandbox: 'shop/shop-nithin', targets: ['cosmo', 'git'], description: 'Add reviews' },
+      },
+    ]);
+  });
+
+  test('a target Hub could not reach exits 1 and still prints every target', async () => {
+    hub = await startFakeHub({
+      tools: {
+        propose: () =>
+          proposed([
+            {
+              kind: 'cosmo',
+              status: 'open',
+              externalRef: 'https://cosmo.wundergraph.com/acme/proposals/7',
+              detail: null,
+            },
+            { kind: 'git', status: 'failed', externalRef: null, detail: 'GitHub refused the push' },
+          ]),
+      },
+    });
+
+    const run = await runWgc(['hub', 'propose', '--target', 'cosmo', '--target', 'git'], {
+      hubUrl: hub.url,
+      cwd: await linkedRepo(),
+      output: 'text',
+    });
+
+    expect(run.exitCode).toBe(1);
+    expect(run.stdout).toBe(
+      [
+        'Proposed sandbox shop/shop-nithin',
+        '  cosmo  open    https://cosmo.wundergraph.com/acme/proposals/7',
+        '  git    failed  GitHub refused the push',
+        `  Review it in Hub: ${proposalUrl}`,
+        '',
+      ].join('\n'),
+    );
+  });
+
+  test('a target the JSON caller asked for that failed is in the error envelope', async () => {
+    hub = await startFakeHub({
+      tools: {
+        propose: () => proposed([{ kind: 'cosmo', status: 'failed', externalRef: null, detail: 'Cosmo is down' }]),
+      },
+    });
+
+    const run = await runWgc(['hub', 'propose', '--target', 'cosmo', '--json'], {
+      hubUrl: hub.url,
+      cwd: await linkedRepo(),
+    });
+
+    expect(run.exitCode).toBe(1);
+    expect(run.json()).toMatchObject({
+      ok: false,
+      error: { code: 'PROPOSE_TARGET_FAILED', message: 'cosmo failed: Cosmo is down' },
+      url: proposalUrl,
+    });
+  });
+
+  test('a proposal that waits for approval says so with the page to approve it on', async () => {
+    hub = await startFakeHub({
+      tools: {
+        propose: () => ({
+          structuredContent: {
+            status: 'needs_approval',
+            operationId: 'op_prop',
+            reason: 'Proposing needs a reviewer.',
+            dashboardUrl: operationUrl('op_prop'),
+          },
+        }),
+      },
+    });
+
+    const run = await runWgc(['hub', 'propose', '--json'], { hubUrl: hub.url, cwd: await linkedRepo() });
+
+    expect(run.exitCode).toBe(5);
+    expect(run.json()).toMatchObject({
+      ok: false,
+      error: {
+        code: 'CONFIRMATION_REQUIRED',
+        message: 'Waiting on approval in Hub: Proposing needs a reviewer.',
+        next: ['wgc hub operation watch op_prop'],
+      },
+      url: operationUrl('op_prop'),
+    });
+  });
+
+  test.each(['svn', 'hub'])('--target %s is a usage error and calls nothing', async (target) => {
+    hub = await startFakeHub({});
+
+    const run = await runWgc(['hub', 'propose', '--target', target], { hubUrl: hub.url, cwd: await linkedRepo() });
+
+    expect(run.exitCode).toBe(2);
+    expect(hub.toolCalls()).toEqual([]);
   });
 
   test('a sandbox that already has a proposal fails with Hub’s reason', async () => {
     hub = await startFakeHub({
       tools: {
-        create_proposal: () => ({
+        propose: () => ({
           isError: true,
           structuredContent: { code: 'PROPOSAL_CONFLICT', message: 'That sandbox already has a proposal open.' },
         }),

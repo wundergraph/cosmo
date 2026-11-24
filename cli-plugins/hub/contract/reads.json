@@ -710,16 +710,96 @@
       "results"
     ]
   },
-  "create_proposal": {
+  "propose": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "ok": {
-        "type": "boolean"
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "proposed"
+          },
+          "proposalId": {
+            "type": "string"
+          },
+          "proposalUrl": {
+            "type": "string"
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "cosmo",
+                    "git"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "done",
+                    "closed",
+                    "failed"
+                  ]
+                },
+                "externalRef": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "status",
+                "externalRef",
+                "detail"
+              ]
+            }
+          }
+        },
+        "required": [
+          "status",
+          "proposalId",
+          "proposalUrl",
+          "targets"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "needs_approval"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "dashboardUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "operationId",
+          "reason",
+          "dashboardUrl"
+        ]
       }
-    },
-    "required": [
-      "ok"
     ]
   },
   "open_portal": {
