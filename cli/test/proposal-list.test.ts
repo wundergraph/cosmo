@@ -167,9 +167,7 @@ describe('proposal list', () => {
           state: 'DRAFT',
           federatedGraphId: '',
           federatedGraphName: 'my-graph',
-          subgraphs: [
-            { name: 'products', schemaSDL: 'type Query { a: String }', isDeleted: false, isNew: false, labels: [] },
-          ],
+          subgraphs: [{ name: 'products', isDeleted: false, isNew: false, labels: [] }],
           createdAt: '2026-11-01T10:00:00.000Z',
           createdByEmail: 'dev@example.com',
           latestCheckSuccess: true,

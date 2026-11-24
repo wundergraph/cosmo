@@ -49,7 +49,11 @@ export default (opts: BaseCommandOptions) => {
     const proposals = statuses ? result.proposals.filter((p) => statuses.includes(p.state)) : result.proposals;
 
     if (options.json) {
-      console.log(JSON.stringify({ status: 'success', proposals }, stripProtobufInternals));
+      const withoutSchemas = proposals.map(({ subgraphs, ...proposal }) => ({
+        ...proposal,
+        subgraphs: subgraphs.map(({ schemaSDL: _, ...subgraph }) => subgraph),
+      }));
+      console.log(JSON.stringify({ status: 'success', proposals: withoutSchemas }, stripProtobufInternals));
       return;
     }
 
