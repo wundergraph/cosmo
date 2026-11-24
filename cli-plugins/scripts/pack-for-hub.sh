@@ -38,7 +38,7 @@ build_package() {
   local filter="$1"
 
   echo "Building $filter" >&2
-  pnpm --dir "$repo_root" --filter "$filter" run build >&2
+  pnpm --dir "$repo_root" --filter "$filter..." run build >&2
 }
 
 # pnpm pack turns workspace: and catalog: ranges into the versions they resolve to.
