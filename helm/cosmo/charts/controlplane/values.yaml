@@ -309,6 +309,8 @@ jobs:
   databaseMigration:
     # -- Adds additional labels to the database-migration job
     additionalLabels: {}
+    # -- Syncs the billing plans in the controlplane's billing.json after migrating. Only for WunderGraph Cloud; self-hosted installs have no billing.
+    seedBillingPlans: false
   seedOrganization:
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}

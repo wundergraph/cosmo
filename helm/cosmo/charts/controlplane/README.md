@@ -91,7 +91,7 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"enableSplitConfigLoading":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{},"seedBillingPlans":false},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"enableSplitConfigLoading":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
@@ -103,6 +103,7 @@ WunderGraph Cosmo Controlplane
 | jobs.cleanupOldData.schedule | string | `"0 2 1 * *"` | Cron schedule (default: 1st of every month at 2AM UTC) |
 | jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
 | jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
+| jobs.databaseMigration.seedBillingPlans | bool | `false` | Syncs the billing plans in the controlplane's billing.json after migrating. Only for WunderGraph Cloud; self-hosted installs have no billing. |
 | jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
 | jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |

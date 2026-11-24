@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.databaseMigration.additionalLabels "context" .) | nindent 4 }}
   annotations:
-    # Run migration job before helm install/upgrade
+    # Run migration job after helm install/upgrade
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
     # Less priority than the migration job so the secret is created before the migration job
@@ -62,6 +62,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: databaseTlsKey
+            {{- end }}
+            {{- if .Values.jobs.databaseMigration.seedBillingPlans }}
+            - name: SEED_BILLING_PLANS
+              value: "true"
             {{- end }}
           args:
             - "/app/dist/bin/db-migrate.js"
