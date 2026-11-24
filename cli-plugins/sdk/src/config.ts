@@ -172,8 +172,13 @@ const uniqueNames = (entries: ReadonlyArray<{ name: string }>): boolean =>
   new Set(entries.map((entry) => entry.name)).size === entries.length;
 
 export const configSchema = z.strictObject({
-  graph: name.describe('The federated graph in Cosmo'),
-  namespace: name.default('default'),
+  graph: z
+    .string({ error: 'set `graph` to the federated graph in Cosmo, e.g. `graph: shop`' })
+    .regex(/^[\dA-Za-z][\w-]*$/, 'use letters, digits, `-` and `_` only, e.g. `graph: shop`'),
+  namespace: z
+    .string({ error: 'set `namespace` to the Cosmo namespace, e.g. `namespace: default`' })
+    .regex(/^[\dA-Za-z][\w-]*$/, 'use letters, digits, `-` and `_` only, e.g. `namespace: default`')
+    .default('default'),
   subgraphs: z
     .array(subgraph, { error: 'list the subgraphs under `subgraphs:`, each with a `name`' })
     .default([])

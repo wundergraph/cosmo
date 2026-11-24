@@ -159,6 +159,14 @@ router:
     );
   });
 
+  test('asks for the graph when it is missing', () => {
+    expect(failure('subgraphs: []')).toBe(
+      ['wundergraph.yaml is invalid:', '  graph: set `graph` to the federated graph in Cosmo, e.g. `graph: shop`'].join(
+        '\n',
+      ),
+    );
+  });
+
   test('reports YAML syntax errors', () => {
     expect(failure('graph: [shop')).toMatch(/^wundergraph\.yaml is not valid YAML: /);
   });
