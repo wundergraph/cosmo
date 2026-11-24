@@ -10,6 +10,7 @@ import { proposeCommand } from './commands/propose.js';
 import { sandboxCommand } from './commands/sandbox.js';
 import { schemaCommand } from './commands/schema-push.js';
 import { statusCommand } from './commands/status.js';
+import { registerHubHooks } from './common/hooks.js';
 import { processRuntime } from './common/runtime.js';
 import type { HubRuntime } from './common/runtime.js';
 
@@ -17,6 +18,9 @@ export const createHubPlugin = (runtime: HubRuntime = processRuntime()): WgcPlug
   definePlugin({
     name: 'hub',
     description: 'Launch, link and follow Hub sandboxes, run collections and propose schema changes',
+    hooks(hooks, context) {
+      registerHubHooks(hooks, { context, runtime });
+    },
     register(command, context) {
       const dependencies = { context, runtime };
       for (const linkCommand of linkCommands(dependencies)) {

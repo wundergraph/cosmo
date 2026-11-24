@@ -29,6 +29,8 @@ export interface HubClient {
   ): Promise<Result<T>>;
   /** Posts a schema push from CI to `POST /ci/schema-push`. */
   pushSchema<T>(request: SchemaPushRequest, schema: z.ZodType<T>): Promise<Result<T>>;
+  /** Posts JSON to one of Hub's plain HTTP endpoints, such as `ci/subgraph-check`, and validates the answer. */
+  postJson<T>(path: string, body: Record<string, ToolArgument>, schema: z.ZodType<T>): Promise<Result<T>>;
 }
 
 const jsonRpcResponse = z.object({
@@ -54,6 +56,9 @@ const hubToolError = z.object({
   cli: z.string().optional(),
   docs_url: z.string().optional(),
 });
+
+/** The `{ error }` body Hub's plain HTTP endpoints answer a refusal with. */
+const hubErrorAnswer = z.object({ error: z.string() });
 
 /** Hub error codes that need their own exit code; every other code exits 1. */
 const hubErrorKinds: Record<string, FailureKind> = {
@@ -160,7 +165,11 @@ export const createHubClient = ({
     }
     const text = await readJsonRpcBody(response);
     if (!response.ok && response.status !== 202) {
-      return failure(`Hub answered HTTP ${response.status}: ${text.slice(0, 200)}`);
+      const json = parseJson(text);
+      const reason = json.success ? hubErrorAnswer.safeParse(json.data) : undefined;
+      return failure(
+        `Hub answered HTTP ${response.status}: ${reason?.success ? reason.data.error : text.slice(0, 200)}`,
+      );
     }
     return ok({ response, text });
   };
@@ -272,6 +281,22 @@ export const createHubClient = ({
       const typed = schema.safeParse(json.data);
       if (!typed.success) {
         return failure(`Hub returned an unexpected schema push result: ${typed.error.message}`);
+      }
+      return ok(typed.data);
+    },
+
+    async postJson(path, body, schema) {
+      const sent = await post(path, body, undefined);
+      if (!sent.success) {
+        return sent;
+      }
+      const json = parseJson(sent.data.text);
+      if (!json.success) {
+        return json;
+      }
+      const typed = schema.safeParse(json.data);
+      if (!typed.success) {
+        return failure(`Hub returned an unexpected answer from ${path}: ${typed.error.message}`);
       }
       return ok(typed.data);
     },

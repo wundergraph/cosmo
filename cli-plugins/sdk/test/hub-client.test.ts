@@ -144,4 +144,18 @@ describe('createHubClient', () => {
     expect(hub.calls[0].url).toBe('https://hub.example/ci/schema-push');
     expect(JSON.parse(hub.calls[0].body)).toEqual(request);
   });
+
+  test('postJson posts to a plain Hub endpoint and reads its answer', async () => {
+    const hub = fakeHub({});
+
+    const result = await client(hub.fetchImpl).postJson(
+      'ci/subgraph-check',
+      { subgraph: 'products', namespace: 'default' },
+      z.object({ accepted: z.boolean(), compositionErrors: z.array(z.string()) }),
+    );
+
+    expect(result).toEqual({ success: true, data: { accepted: true, compositionErrors: [] } });
+    expect(hub.calls[0].url).toBe('https://hub.example/ci/subgraph-check');
+    expect(JSON.parse(hub.calls[0].body)).toEqual({ subgraph: 'products', namespace: 'default' });
+  });
 });

@@ -244,6 +244,30 @@ export const schemaPushResult = z.discriminatedUnion('target', [
   z.object({ target: z.literal('schema'), graphSlug: z.string() }),
 ]);
 
+/** Hub's answer to `POST /ci/subgraph-check`: the pull request sandbox the checked SDL went to, if the run has one. */
+export const subgraphCheckAnswer = z.union([
+  z.object({ pullRequest: z.null() }),
+  z.object({
+    pullRequest: z.object({ number: z.number(), url: z.string() }),
+    sandbox: z.object({
+      name: z.string(),
+      endpointUrl: z.string(),
+      hubUrl: z.string(),
+      passed: z.number(),
+      failed: z.number(),
+      problem: z.object({ code: z.string(), message: z.string(), remediation: z.string().nullable() }).nullable(),
+    }),
+  }),
+]);
+
+export type SubgraphCheckAnswer = z.output<typeof subgraphCheckAnswer>;
+
+/** Hub's answer to `POST /ci/subgraph-publish`: the graph that follows the subgraph, and whether it has the schema yet. */
+export const subgraphPublishAnswer = z.object({
+  graph: z.object({ slug: z.string(), hubUrl: z.string() }),
+  inSync: z.boolean(),
+});
+
 /** Hub's web app pages for the sandbox `<schema>/<sandbox>` of an organization. */
 export const hubPages = (hubAppUrl: string, organizationSlug: string, address: string) => {
   const organization = `${hubAppUrl.replace(/\/+$/, '')}/${encodeURIComponent(organizationSlug)}`;

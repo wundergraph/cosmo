@@ -7,7 +7,14 @@ import path from 'node:path';
 import { Command } from 'commander';
 import { z } from 'zod';
 import { createCredentials, createPluginContext } from '@wundergraph/wgc-plugin-sdk';
-import type { CallerKind, OutputOverride, Prompts } from '@wundergraph/wgc-plugin-sdk';
+import type {
+  AfterHook,
+  CallerKind,
+  CommandHooks,
+  HookableCommand,
+  OutputOverride,
+  Prompts,
+} from '@wundergraph/wgc-plugin-sdk';
 import { createHubPlugin } from '../src/index.js';
 import type { HubRuntime } from '../src/common/runtime.js';
 
@@ -53,13 +60,16 @@ const asHubAnswers = (tool: string, outcome: ToolOutcome): ToolOutcome => {
     : { isError: true, text: `The test's ${tool} answer is not one Hub gives:\n${z.prettifyError(answer.error)}` };
 };
 
-/** Speaks MCP JSON-RPC on `/mcp`, `/ci/schema-push` and GitHub's OIDC token endpoint on `/oidc`. */
+/** Speaks MCP JSON-RPC on `/mcp`, answers `ci` on its `/ci/*` paths and plays GitHub's OIDC token endpoint on `/oidc`. */
 export const startFakeHub = async ({
   tools = {},
   schemaPush = {},
+  ci = {},
 }: {
   tools?: Record<string, (args: { [key: string]: Json }) => ToolOutcome>;
   schemaPush?: Json;
+  /** Status and body per `/ci/*` path, e.g. `{ '/ci/subgraph-check': { status: 200, body: { pullRequest: null } } }`. */
+  ci?: Record<string, { status: number; body: Json }>;
 }): Promise<FakeHub> => {
   const requests: HubRequest[] = [];
   const server = createServer(async (request, response) => {
@@ -81,6 +91,11 @@ export const startFakeHub = async ({
 
     if (url.pathname === '/ci/schema-push') {
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(schemaPush));
+      return;
+    }
+    const ciAnswer = ci[url.pathname];
+    if (ciAnswer) {
+      response.writeHead(ciAnswer.status, { 'content-type': 'application/json' }).end(JSON.stringify(ciAnswer.body));
       return;
     }
     if (body.method === 'initialize') {
@@ -352,3 +367,58 @@ export const hubSandbox = (address = sandboxAddress) => ({
 
 export const linkedRepo = (files: Record<string, string> = {}) =>
   tempRepo({ '.wgc/link.json': JSON.stringify({ sandbox: sandboxAddress }), ...files });
+
+const noop = () => {};
+const ignoreInterrupt: HubRuntime['onInterrupt'] = () => noop;
+
+/** The hub plugin's `after` hooks, registered the way wgc registers them, for a CI job (or not) talking to `hubUrl`. */
+export const hubHooks = ({ hubUrl, env }: { hubUrl: string; env: NodeJS.ProcessEnv }) => {
+  const after: { [N in HookableCommand]: AfterHook<N>[] } = {
+    'subgraph check': [],
+    'subgraph publish': [],
+    'subgraph create': [],
+    'subgraph delete': [],
+    'federated-graph create': [],
+    'federated-graph delete': [],
+  };
+  const hooks: CommandHooks = {
+    before: () => {},
+    after: (command, hook) => {
+      after[command].push(hook);
+    },
+  };
+  const context = createPluginContext({
+    cliVersion: '0.0.0-test',
+    command: 'wgcm',
+    homeDir: '/nonexistent/.wgc',
+    caller: 'agent',
+    endpoints: {
+      cosmoApiUrl: 'http://cosmo.invalid',
+      cosmoWebUrl: 'http://cosmo.invalid',
+      hubUrl,
+      hubAppUrl: 'http://hub-app.invalid',
+      wgcInstallArgs: 'wgc@latest',
+    },
+    credentials: createCredentials({ env, loginToken: () => Promise.resolve('login-token') }),
+  });
+  const runtime: HubRuntime = {
+    cwd: () => process.cwd(),
+    env,
+    now: () => testNow,
+    sleep: () => Promise.resolve(),
+    onInterrupt: ignoreInterrupt,
+    newIdempotencyKey: () => 'generated-key',
+    openSocket: () => {
+      throw new Error('hooks open no portal tunnel');
+    },
+  };
+  createHubPlugin(runtime).hooks?.(hooks, context);
+  return { after, context };
+};
+
+/** The env of a GitHub Actions job whose OIDC token endpoint is the fake Hub's `/oidc`. */
+export const githubActionsEnv = (hubUrl: string): NodeJS.ProcessEnv => ({
+  GITHUB_ACTIONS: 'true',
+  ACTIONS_ID_TOKEN_REQUEST_URL: `${hubUrl}/oidc`,
+  ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
+});
