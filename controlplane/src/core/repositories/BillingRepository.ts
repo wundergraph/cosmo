@@ -1,11 +1,17 @@
 import { and, asc, eq, not } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DB } from '../../db/index.js';
-import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
+import { billingPlans, billingSubscriptions, Feature, organizationBilling } from '../../db/schema.js';
 import type { NewBillingPlan } from '../../db/models.js';
-import { BillingPlanDTO, FeatureIds } from '../../types/index.js';
+import { BillingPlanDTO, featureIds } from '../../types/index.js';
 import { BillingService } from '../services/BillingService.js';
 import { traced } from '../tracing.js';
+
+/**
+ * Listed on the pricing page but never checked by the controlplane, so they are not FeatureIds. The billing_plans
+ * column is still typed as Feature[], which is why upsertPlans casts.
+ */
+const displayOnlyFeatureIds = ['retention', 'router', 'sla'] as const;
 
 const billingSchema = z.object({
   plans: z.record(
@@ -18,7 +24,7 @@ const billingSchema = z.object({
       stripePriceId: z.string().optional(),
       features: z.array(
         z.object({
-          id: z.custom<FeatureIds>((id) => typeof id === 'string'),
+          id: z.enum([...featureIds, ...displayOnlyFeatureIds]),
           description: z.string().optional(),
           limit: z.number().optional(),
         }),
@@ -64,7 +70,12 @@ export class BillingRepository {
 
     await this.db.transaction(async (tx) => {
       for (const [id, plan] of Object.entries(plans)) {
-        const values: NewBillingPlan = { id, ...plan, stripePriceId: plan.stripePriceId ?? null };
+        const values: NewBillingPlan = {
+          id,
+          ...plan,
+          stripePriceId: plan.stripePriceId ?? null,
+          features: plan.features as Feature[],
+        };
 
         await tx.insert(billingPlans).values(values).onConflictDoUpdate({
           target: billingPlans.id,

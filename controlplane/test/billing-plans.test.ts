@@ -42,6 +42,26 @@ describe('BillingRepository.upsertPlans', () => {
     expect((await billingRepository.getPlanById(id))?.stripePriceId).toBeNull();
   });
 
+  test('rejects a feature id that is not a known feature', async () => {
+    const upsert = billingRepository.upsertPlans({
+      plans: { [genID('plan')]: plan({ features: [{ id: 'feature-flag', limit: 10 }] }) },
+    });
+
+    await expect(upsert).rejects.toThrow('feature-flag');
+  });
+
+  test('accepts display-only feature ids', async () => {
+    const id = genID('plan');
+
+    await billingRepository.upsertPlans({
+      plans: { [id]: plan({ features: [{ id: 'router', description: 'Self-Hosted Router' }] }) },
+    });
+
+    expect((await billingRepository.getPlanById(id))?.features).toEqual([
+      { id: 'router', description: 'Self-Hosted Router' },
+    ]);
+  });
+
   test('keeps earlier plans unchanged when a later plan fails to write', async () => {
     const id = genID('plan');
     await billingRepository.upsertPlans({ plans: { [id]: plan({ name: 'Before' }) } });
