@@ -486,7 +486,7 @@ export class FederationFactory {
             continue;
           }
 
-          if (implArg.requiredSubgraphNames.size < 1) {
+          if (!isTypeRequired(implArg.type) || implArg.includeDefaultValue) {
             continue;
           }
 

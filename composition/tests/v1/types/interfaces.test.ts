@@ -1390,6 +1390,76 @@ describe('Interface tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
+    test('that an error is returned if an additional argument composes into a non-null argument without a default #1', () => {
+      const { errors, warnings } = federateSubgraphsFailure([fcaaa, fcaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(['arg']),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedOptionalArguments: new Set(),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an error is returned if an additional argument composes into a non-null argument without a default #2', () => {
+      const { errors, warnings } = federateSubgraphsFailure([fcaab, fcaaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidInterfaceImplementationError(
+          'Entity',
+          OBJECT,
+          new Map<string, ImplementationErrors>([
+            [
+              INTERFACE,
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'a',
+                    {
+                      implementationContextCoords: new Set(),
+                      interfaceContextCoords: new Set(),
+                      invalidAdditionalArguments: new Set(['arg']),
+                      invalidImplementedArguments: [],
+                      isInaccessible: false,
+                      originalResponseType: ID_SCALAR,
+                      unfederatedOptionalArguments: new Set(),
+                      unimplementedArguments: new Set(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      ]);
+      expect(warnings).toHaveLength(0);
+    });
+
     test('that an error is returned if an implemented optional argument is not defined in multiple applicable subgraphs', () => {
       const a = createSubgraph(
         'a',
@@ -2369,6 +2439,38 @@ const fbaaa = createSubgraph(
   
   type Query {
     a: InterfaceC
+  }
+  `,
+);
+
+const fcaaa = createSubgraph(
+  'fcaaa',
+  `
+  type Entity implements Interface @key(fields: "id") {
+    a(arg: String! = "1"): ID @shareable
+    id: ID!
+  }
+
+  interface Interface {
+    a: ID
+  }
+
+  type Query {
+    interfaces: [Interface!]
+  }
+  `,
+);
+
+const fcaab = createSubgraph(
+  'fcaab',
+  `
+  type Entity implements Interface @key(fields: "id") {
+    a(arg: String): ID @shareable
+    id: ID!
+  }
+
+  interface Interface {
+    a: ID
   }
   `,
 );
