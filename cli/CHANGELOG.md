@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.135.0](https://github.com/wundergraph/cosmo/compare/wgc@0.134.0...wgc@0.135.0) (2026-11-24)
+
+### Features
+
+* add json output to compose command ([#3581](https://github.com/wundergraph/cosmo/issues/3581)) ([358f556](https://github.com/wundergraph/cosmo/commit/358f55663f37ed41e359082913ebd6837e15de34)) (@alepane21)
+
 ## [0.134.0](https://github.com/wundergraph/cosmo/compare/wgc@0.133.13...wgc@0.134.0) (2026-11-23)
 
 ### Features

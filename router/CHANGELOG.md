@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.377.0](https://github.com/wundergraph/cosmo/compare/router@0.376.0...router@0.377.0) (2026-11-24)
+
+### Features
+
+* **router:** negotiate delivery guarantees for EDFS subscriptions ([#3456](https://github.com/wundergraph/cosmo/issues/3456)) ([d17fb5e](https://github.com/wundergraph/cosmo/commit/d17fb5e19387d68ba1a7e0eb7c209465275a0c7b)) (@dkorittki)
+
 ## [0.376.0](https://github.com/wundergraph/cosmo/compare/router@0.375.0...router@0.376.0) (2026-11-23)
 
 ### Features
