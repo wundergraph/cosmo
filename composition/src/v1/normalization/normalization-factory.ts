@@ -4823,7 +4823,7 @@ export class NormalizationFactory {
 
   // Returns undefined for a missing or non-String format, which validateDirectives() has already reported.
   getCacheTagFormat(directiveNode: ConstDirectiveNode): string | undefined {
-    const value = directiveNode.arguments?.find(({ name }) => name.value === FORMAT)?.value;
+    const { value } = directiveNode.arguments?.find(({ name }) => name.value === FORMAT) || {};
     return value?.kind === Kind.STRING ? value.value : undefined;
   }
 
