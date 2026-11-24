@@ -84,7 +84,9 @@ const attachHooks = async ({
   hooks: CommandHookRegistry;
   warn: (message: string) => void;
 }): Promise<void> => {
-  const names = new Set([...listWorkspacePlugins(environment), ...listInstalledPlugins(environment)].map((p) => p.name));
+  const names = new Set(
+    [...listWorkspacePlugins(environment), ...listInstalledPlugins(environment)].map((p) => p.name),
+  );
   for (const name of names) {
     const resolved = resolvePlugin(environment, name);
     if (!resolved) {

@@ -515,7 +515,9 @@ const finishCheck = ({
 
   if (cosmoPassed && !plugins.failed) {
     if (verdictLine || plugins.verdicts.length > 0) {
-      console.log('\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n\n' + trailer + '\n');
+      console.log(
+        '\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n\n' + trailer + '\n',
+      );
     }
     return true;
   }
