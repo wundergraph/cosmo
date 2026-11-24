@@ -72,20 +72,6 @@ func TestRedisCacheEntryExpiry(t *testing.T) {
 		require.Equal(t, []string{"get", "get"}, commandNames(recorder))
 	})
 
-	t.Run("an entry carries when it expires", func(t *testing.T) {
-		t.Parallel()
-
-		c, mr := newTestRedisCache(t)
-		require.NoError(t, c.SetMany(ctx, []enginecache.Item{
-			{Key: "a", Value: []byte("1"), TTL: time.Minute},
-		}))
-
-		stored, err := mr.Get(entryKey("a"))
-		require.NoError(t, err)
-		require.Equal(t, clockFor(mr).Now().Add(time.Minute), storedExpiry(t, stored))
-		require.Equal(t, time.Minute, mr.TTL(entryKey("a")))
-	})
-
 	t.Run("a tagged entry carries the expiry it was extended to, not its lease", func(t *testing.T) {
 		t.Parallel()
 

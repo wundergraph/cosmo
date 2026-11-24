@@ -201,7 +201,18 @@ func (c cutRepliesAfter) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 	}
 }
 
+// TestRedisCache runs on a single node, which reads with one MGET.
 func TestRedisCache(t *testing.T) {
+	testRedisCache(t, newTestRedisCache)
+}
+
+// TestRedisCachePipelined runs the same cases reading the way a cluster does,
+// with a pipeline of GETs.
+func TestRedisCachePipelined(t *testing.T) {
+	testRedisCache(t, func(t *testing.T) (*RedisCache, *miniredis.Miniredis) { return newTestPipelinedRedisCache(t) })
+}
+
+func testRedisCache(t *testing.T, newCache func(t *testing.T) (*RedisCache, *miniredis.Miniredis)) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -244,7 +255,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("round trips through redis", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour},
@@ -261,7 +272,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("surrogateKeys come back with the entry", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			surrogateKeys := []enginecache.SurrogateKey{
 				enginecache.SubgraphSurrogateKey("accounts"), enginecache.TypeSurrogateKey("accounts", "User"),
@@ -282,7 +293,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a vary record comes back as a record", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
 			err := c.SetMany(ctx, []enginecache.Item{
@@ -307,7 +318,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a value not in the entry format fails the batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			require.NoError(t, mr.Set(c.entryKey("raw"), `{"id":42}`))
 			mr.SetTTL(c.entryKey("raw"), time.Hour)
@@ -342,7 +353,7 @@ func TestRedisCache(t *testing.T) {
 			// Twice here, and a third time from the cleanup the helper
 			// registered, so a second shutdown path reaching it is answered the
 			// same as the first rather than with go-redis' already-closed.
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 			require.NoError(t, c.Close())
 			require.NoError(t, c.Close())
 		})
@@ -354,7 +365,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("nil items is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, nil)
 			require.ErrorIs(t, err, enginecache.ErrNoItems)
@@ -364,7 +375,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("empty items is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
 			require.ErrorIs(t, err, enginecache.ErrNoItems)
@@ -374,7 +385,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("stores multiple items with their own TTLs", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("1"), TTL: time.Minute},
@@ -395,7 +406,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("namespaces keys with the prefix", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -408,7 +419,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("duplicate key in one batch, last one wins", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("first"), TTL: time.Minute},
@@ -429,7 +440,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("overwriting replaces value and TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("old"), TTL: time.Minute},
@@ -453,7 +464,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("rejects an item with no TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{{Key: "a", Value: []byte("value")}})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
@@ -464,7 +475,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("rejects an item with a negative TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: -time.Minute},
@@ -476,7 +487,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("one item with an invalid TTL rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// The items with a valid TTL sit on both sides of the invalid one,
 			// so an implementation that queued as it went would leave traces.
@@ -494,7 +505,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("one item with an unknown key tier rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "before", Value: []byte("1"), TTL: time.Minute, Tags: []string{"t"}},
@@ -511,7 +522,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("reports a failure to reach redis", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 			mr.Close()
 
 			err := c.SetMany(ctx, []enginecache.Item{
@@ -584,7 +595,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("an invalid TTL is not a partial write", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// This one fails before anything is sent, so unlike every other
 			// failure it really does mean nothing was written.
@@ -600,418 +611,402 @@ func TestRedisCache(t *testing.T) {
 		})
 	})
 
-	// Lookups and lifetimes, read both ways the cache reads: one MGET on a
-	// single node, a pipeline of GETs on a cluster.
-	readers := []struct {
-		name string
-		new  func(t *testing.T) (*RedisCache, *miniredis.Miniredis)
-	}{
-		{"MGET", newTestRedisCache},
-		{"pipeline", func(t *testing.T) (*RedisCache, *miniredis.Miniredis) { return newTestPipelinedRedisCache(t) }},
-	}
-	for _, read := range readers {
-		t.Run(read.name, func(t *testing.T) {
+	t.Run("GetMany", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("nil keys is an error", func(t *testing.T) {
 			t.Parallel()
 
-			t.Run("GetMany", func(t *testing.T) {
-				t.Parallel()
-
-				t.Run("nil keys is an error", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					results, err := c.GetMany(ctx, nil)
-					require.ErrorIs(t, err, enginecache.ErrNoKeys)
-					require.Nil(t, results)
-				})
-
-				t.Run("empty keys is an error", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					results, err := c.GetMany(ctx, []string{})
-					require.ErrorIs(t, err, enginecache.ErrNoKeys)
-					require.Nil(t, results)
-				})
-
-				t.Run("misses are absent from the map, never an error", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					results, err := c.GetMany(ctx, []string{"a", "b", "c"})
-					require.NoError(t, err)
-
-					// Nothing found means an empty map rather than a nil one or a map
-					// of zero Items, so a caller can range over it without checking.
-					require.NotNil(t, results)
-					require.Empty(t, results)
-				})
-
-				t.Run("reads through the prefix", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					// Written straight to redis, bypassing SetMany. The expiry has to be
-					// set by hand too, a key without one is never served.
-					require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
-					mr.SetTTL(entryKey("a"), time.Minute)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Equal(t, map[string]enginecache.Item{
-						"a": {Key: "a", Value: []byte("value"), TTL: time.Minute, ClientTTL: time.Minute},
-					}, results)
-				})
-
-				t.Run("entries are keyed and named by what the caller asked with, not the prefixed key", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// The namespace is this cache's business. A caller that never saw
-					// the prefix should not have to strip it back off, from either the
-					// map key or the Item.
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Contains(t, results, "a")
-					require.NotContains(t, results, entryKey("a"))
-					require.Equal(t, "a", results["a"].Key)
-				})
-
-				t.Run("an unprefixed key is not visible", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					require.NoError(t, mr.Set("a", "value"))
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-				})
-
-				t.Run("only the keys that were found come back", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "hit-1", Value: []byte("1"), TTL: time.Minute},
-						{Key: "hit-2", Value: []byte("2"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// The misses are interleaved, so an implementation that lined the
-					// map up with the key order rather than the keys themselves would
-					// mislabel the hits.
-					results, err := c.GetMany(ctx, []string{"miss-1", "hit-1", "miss-2", "hit-2", "miss-3"})
-					require.NoError(t, err)
-					require.Equal(t, map[string]enginecache.Item{
-						"hit-1": {Key: "hit-1", Value: []byte("1"), TTL: time.Minute},
-						"hit-2": {Key: "hit-2", Value: []byte("2"), TTL: time.Minute},
-					}, results)
-				})
-
-				t.Run("a repeated key yields the one entry", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// Asking twice is not an error, it just cannot produce two entries
-					// under the one key.
-					results, err := c.GetMany(ctx, []string{"a", "b", "a"})
-					require.NoError(t, err)
-					require.Equal(t, map[string]enginecache.Item{
-						"a": {Key: "a", Value: []byte("value"), TTL: time.Minute},
-					}, results)
-				})
-
-				t.Run("a cached empty value is not a miss", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "empty", Value: []byte{}, TTL: time.Minute},
-						{Key: "nil", Value: nil, TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					results, err := c.GetMany(ctx, []string{"empty", "nil", "missing"})
-					require.NoError(t, err)
-
-					require.Contains(t, results, "empty")
-					require.Empty(t, results["empty"].Value)
-
-					require.Contains(t, results, "nil")
-					require.Empty(t, results["nil"].Value)
-
-					// Only presence in the map separates a cached empty value from a
-					// real miss, never the value itself.
-					require.NotContains(t, results, "missing")
-				})
-
-				t.Run("reports a failure to reach redis", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-					mr.Close()
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.ErrorContains(t, err, "connection refused")
-					// There is no partial read to salvage.
-					require.Nil(t, results)
-				})
-
-				t.Run("one failed key fails the whole batch", func(t *testing.T) {
-					t.Parallel()
-
-					// Read with a pipeline, as on a cluster: a hash where a string is
-					// expected, so GET returns WRONGTYPE. The leading miss makes
-					// redis.Nil the error Exec reports, so the per-command failure is
-					// only caught while reading the results.
-					c, mr := newTestPipelinedRedisCache(t)
-					mr.HSet(entryKey("wrong-type"), "field", "value")
-
-					results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
-					require.Error(t, err)
-					require.ErrorContains(t, err, "wrong-type")
-					require.Nil(t, results)
-				})
-
-				t.Run("a key of another type is a miss to an MGET", func(t *testing.T) {
-					t.Parallel()
-
-					// MGET answers nil for a key that holds no string, so on a single
-					// node it is a miss, not this cache's to serve, and left in place.
-					c, mr := newTestRedisCache(t)
-					mr.HSet(entryKey("wrong-type"), "field", "value")
-
-					results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
-					require.NoError(t, err)
-					require.Empty(t, results)
-					require.True(t, mr.Exists(entryKey("wrong-type")))
-				})
-			})
-
-			t.Run("TTL", func(t *testing.T) {
-				t.Parallel()
-
-				t.Run("before expiry is a hit", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					fastForward(mr, 30*time.Second)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Contains(t, results, "a")
-				})
-
-				t.Run("past expiry is a miss", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// Redis owns expiry, so the key is gone without a sweep here.
-					fastForward(mr, 2*time.Minute)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-					require.Empty(t, mr.Keys())
-				})
-
-				t.Run("expiry only drops the expired keys", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "short", Value: []byte("1"), TTL: time.Minute},
-						{Key: "long", Value: []byte("2"), TTL: time.Hour},
-					})
-					require.NoError(t, err)
-
-					fastForward(mr, 2*time.Minute)
-
-					results, err := c.GetMany(ctx, []string{"short", "long"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "short")
-					require.Contains(t, results, "long")
-				})
-
-				t.Run("a hit reports the lifetime it has left", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					fastForward(mr, 20*time.Second)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Contains(t, results, "a")
-					require.Equal(t, 40*time.Second, results["a"].TTL)
-				})
-
-				t.Run("the reported TTL shrinks as the entry ages", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// What is reported is what the entry has left, not what it was
-					// stored with, so the same key answers differently over time.
-					first, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Equal(t, time.Minute, first["a"].TTL)
-
-					fastForward(mr, 20*time.Second)
-
-					second, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.Equal(t, 40*time.Second, second["a"].TTL)
-				})
-
-				t.Run("each key reports its own remaining lifetime", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "short", Value: []byte("1"), TTL: time.Minute},
-						{Key: "long", Value: []byte("2"), TTL: time.Hour},
-					})
-					require.NoError(t, err)
-
-					fastForward(mr, 30*time.Second)
-
-					results, err := c.GetMany(ctx, []string{"short", "long"})
-					require.NoError(t, err)
-					require.Equal(t, map[string]enginecache.Item{
-						"short": {Key: "short", Value: []byte("1"), TTL: 30 * time.Second},
-						"long":  {Key: "long", Value: []byte("2"), TTL: time.Hour - 30*time.Second},
-					}, results)
-				})
-
-				t.Run("a miss reports no TTL", func(t *testing.T) {
-					t.Parallel()
-
-					c, _ := read.new(t)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-				})
-
-				t.Run("a key with no expiry is not a hit", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					// SetMany refuses an item without a TTL, so a key sitting in the
-					// namespace with no expiry was put there by something else and is
-					// not this cache's to serve.
-					require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-
-					// Reported as a miss, but left where it was found.
-					require.Equal(t, []string{entryKey("a")}, mr.Keys())
-				})
-
-				t.Run("a sub-millisecond remainder is not a hit", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					// PTTL answers in whole milliseconds, so anything shorter rounds
-					// down to nothing left. Seeded by hand because a SetMany of this
-					// TTL would be rounded up to a millisecond on the way out.
-					require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
-					mr.SetTTL(entryKey("a"), 500*time.Microsecond)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-				})
-
-				t.Run("an entry past the expiry it carries is a miss while redis still holds it", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := read.new(t)
-
-					err := c.SetMany(ctx, []enginecache.Item{
-						{Key: "a", Value: []byte("value"), TTL: time.Minute},
-					})
-					require.NoError(t, err)
-
-					// Only the router's clock moves, as when it runs ahead of the
-					// node's: the bytes in hand have outlived their entry. That is a
-					// miss, never an error.
-					clockFor(mr).advance(2 * time.Minute)
-
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-					require.True(t, mr.Exists(entryKey("a")))
-				})
-
-				t.Run("a legacy entry that expires between the read and the TTL lookup is a miss", func(t *testing.T) {
-					t.Parallel()
-
-					c, mr := newTestRedisCacheWithHook(t, expirePTTL{})
-
-					require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
-					mr.SetTTL(entryKey("a"), time.Minute)
-
-					// The GET found the value and the PTTL then found nothing, so the
-					// bytes in hand have already outlived their entry. That is a miss,
-					// never an error.
-					results, err := c.GetMany(ctx, []string{"a"})
-					require.NoError(t, err)
-					require.NotContains(t, results, "a")
-				})
-			})
-
+			c, _ := newCache(t)
+
+			results, err := c.GetMany(ctx, nil)
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
+			require.Nil(t, results)
 		})
-	}
+
+		t.Run("empty keys is an error", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			results, err := c.GetMany(ctx, []string{})
+			require.ErrorIs(t, err, enginecache.ErrNoKeys)
+			require.Nil(t, results)
+		})
+
+		t.Run("misses are absent from the map, never an error", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			results, err := c.GetMany(ctx, []string{"a", "b", "c"})
+			require.NoError(t, err)
+
+			// Nothing found means an empty map rather than a nil one or a map
+			// of zero Items, so a caller can range over it without checking.
+			require.NotNil(t, results)
+			require.Empty(t, results)
+		})
+
+		t.Run("reads through the prefix", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			// Written straight to redis, bypassing SetMany. The expiry has to be
+			// set by hand too, a key without one is never served.
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
+			mr.SetTTL(entryKey("a"), time.Minute)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Minute, ClientTTL: time.Minute},
+			}, results)
+		})
+
+		t.Run("entries are keyed and named by what the caller asked with, not the prefixed key", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// The namespace is this cache's business. A caller that never saw
+			// the prefix should not have to strip it back off, from either the
+			// map key or the Item.
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Contains(t, results, "a")
+			require.NotContains(t, results, entryKey("a"))
+			require.Equal(t, "a", results["a"].Key)
+		})
+
+		t.Run("an unprefixed key is not visible", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			require.NoError(t, mr.Set("a", "value"))
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+		})
+
+		t.Run("only the keys that were found come back", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "hit-1", Value: []byte("1"), TTL: time.Minute},
+				{Key: "hit-2", Value: []byte("2"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// The misses are interleaved, so an implementation that lined the
+			// map up with the key order rather than the keys themselves would
+			// mislabel the hits.
+			results, err := c.GetMany(ctx, []string{"miss-1", "hit-1", "miss-2", "hit-2", "miss-3"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"hit-1": {Key: "hit-1", Value: []byte("1"), TTL: time.Minute},
+				"hit-2": {Key: "hit-2", Value: []byte("2"), TTL: time.Minute},
+			}, results)
+		})
+
+		t.Run("a repeated key yields the one entry", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// Asking twice is not an error, it just cannot produce two entries
+			// under the one key.
+			results, err := c.GetMany(ctx, []string{"a", "b", "a"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"a": {Key: "a", Value: []byte("value"), TTL: time.Minute},
+			}, results)
+		})
+
+		t.Run("a cached empty value is not a miss", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "empty", Value: []byte{}, TTL: time.Minute},
+				{Key: "nil", Value: nil, TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			results, err := c.GetMany(ctx, []string{"empty", "nil", "missing"})
+			require.NoError(t, err)
+
+			require.Contains(t, results, "empty")
+			require.Empty(t, results["empty"].Value)
+
+			require.Contains(t, results, "nil")
+			require.Empty(t, results["nil"].Value)
+
+			// Only presence in the map separates a cached empty value from a
+			// real miss, never the value itself.
+			require.NotContains(t, results, "missing")
+		})
+
+		t.Run("reports a failure to reach redis", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+			mr.Close()
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.ErrorContains(t, err, "connection refused")
+			// There is no partial read to salvage.
+			require.Nil(t, results)
+		})
+
+		t.Run("one failed key fails the whole batch", func(t *testing.T) {
+			t.Parallel()
+
+			// Read with a pipeline, as on a cluster: a hash where a string is
+			// expected, so GET returns WRONGTYPE. The leading miss makes
+			// redis.Nil the error Exec reports, so the per-command failure is
+			// only caught while reading the results.
+			c, mr := newTestPipelinedRedisCache(t)
+			mr.HSet(entryKey("wrong-type"), "field", "value")
+
+			results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
+			require.Error(t, err)
+			require.ErrorContains(t, err, "wrong-type")
+			require.Nil(t, results)
+		})
+
+		t.Run("a key of another type is a miss to an MGET", func(t *testing.T) {
+			t.Parallel()
+
+			// MGET answers nil for a key that holds no string, so on a single
+			// node it is a miss, not this cache's to serve, and left in place.
+			c, mr := newTestRedisCacheWithHook(t)
+			mr.HSet(entryKey("wrong-type"), "field", "value")
+
+			results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
+			require.NoError(t, err)
+			require.Empty(t, results)
+			require.True(t, mr.Exists(entryKey("wrong-type")))
+		})
+	})
+
+	t.Run("TTL", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("before expiry is a hit", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			fastForward(mr, 30*time.Second)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Contains(t, results, "a")
+		})
+
+		t.Run("past expiry is a miss", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// Redis owns expiry, so the key is gone without a sweep here.
+			fastForward(mr, 2*time.Minute)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+			require.Empty(t, mr.Keys())
+		})
+
+		t.Run("expiry only drops the expired keys", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "short", Value: []byte("1"), TTL: time.Minute},
+				{Key: "long", Value: []byte("2"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			fastForward(mr, 2*time.Minute)
+
+			results, err := c.GetMany(ctx, []string{"short", "long"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "short")
+			require.Contains(t, results, "long")
+		})
+
+		t.Run("a hit reports the lifetime it has left", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			fastForward(mr, 20*time.Second)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Contains(t, results, "a")
+			require.Equal(t, 40*time.Second, results["a"].TTL)
+		})
+
+		t.Run("the reported TTL shrinks as the entry ages", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// What is reported is what the entry has left, not what it was
+			// stored with, so the same key answers differently over time.
+			first, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, time.Minute, first["a"].TTL)
+
+			fastForward(mr, 20*time.Second)
+
+			second, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.Equal(t, 40*time.Second, second["a"].TTL)
+		})
+
+		t.Run("each key reports its own remaining lifetime", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "short", Value: []byte("1"), TTL: time.Minute},
+				{Key: "long", Value: []byte("2"), TTL: time.Hour},
+			})
+			require.NoError(t, err)
+
+			fastForward(mr, 30*time.Second)
+
+			results, err := c.GetMany(ctx, []string{"short", "long"})
+			require.NoError(t, err)
+			require.Equal(t, map[string]enginecache.Item{
+				"short": {Key: "short", Value: []byte("1"), TTL: 30 * time.Second},
+				"long":  {Key: "long", Value: []byte("2"), TTL: time.Hour - 30*time.Second},
+			}, results)
+		})
+
+		t.Run("a miss reports no TTL", func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newCache(t)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+		})
+
+		t.Run("a key with no expiry is not a hit", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			// SetMany refuses an item without a TTL, so a key sitting in the
+			// namespace with no expiry was put there by something else and is
+			// not this cache's to serve.
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+
+			// Reported as a miss, but left where it was found.
+			require.Equal(t, []string{entryKey("a")}, mr.Keys())
+		})
+
+		t.Run("a sub-millisecond remainder is not a hit", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			// PTTL answers in whole milliseconds, so anything shorter rounds
+			// down to nothing left. Seeded by hand because a SetMany of this
+			// TTL would be rounded up to a millisecond on the way out.
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
+			mr.SetTTL(entryKey("a"), 500*time.Microsecond)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+		})
+
+		t.Run("an entry past the expiry it carries is a miss while redis still holds it", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newCache(t)
+
+			err := c.SetMany(ctx, []enginecache.Item{
+				{Key: "a", Value: []byte("value"), TTL: time.Minute},
+			})
+			require.NoError(t, err)
+
+			// Only the router's clock moves, as when it runs ahead of the
+			// node's: the bytes in hand have outlived their entry. That is a
+			// miss, never an error.
+			clockFor(mr).advance(2 * time.Minute)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+			require.True(t, mr.Exists(entryKey("a")))
+		})
+
+		t.Run("a legacy entry that expires between the read and the TTL lookup is a miss", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newTestRedisCacheWithHook(t, expirePTTL{})
+
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
+			mr.SetTTL(entryKey("a"), time.Minute)
+
+			// The GET found the value and the PTTL then found nothing, so the
+			// bytes in hand have already outlived their entry. That is a miss,
+			// never an error.
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+		})
+	})
 
 	t.Run("context cancellation", func(t *testing.T) {
 		t.Parallel()
@@ -1031,7 +1026,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("GetMany on a cancelled context", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			cancelledCtx := cancelled()
 
@@ -1043,7 +1038,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("GetMany on an expired deadline", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			expiredCtx := expired(t)
 
@@ -1055,7 +1050,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("SetMany on a cancelled context stores nothing", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			cancelledCtx := cancelled()
 
@@ -1070,7 +1065,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("SetMany on an expired deadline stores nothing", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			expiredCtx := expired(t)
 
@@ -1087,7 +1082,7 @@ func TestRedisCache(t *testing.T) {
 			liveCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			t.Cleanup(cancel)
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(liveCtx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
