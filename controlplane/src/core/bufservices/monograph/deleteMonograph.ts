@@ -1,5 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   DeleteMonographRequest,
   DeleteMonographResponse,
@@ -13,6 +14,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 
 export function deleteMonograph(
   opts: RouterOptions,
@@ -27,7 +29,9 @@ export function deleteMonograph(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    return await opts.db.transaction(async (tx) => {
+    const deletedGraphs: FederatedGraphDTO[] = [];
+
+    const result = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
@@ -68,7 +72,7 @@ export function deleteMonograph(
       const deletedContracts = await contractRepo.deleteContractGraphs(graph.id);
       await fedGraphRepo.delete(graph.targetId);
 
-      const deletedGraphs: FederatedGraphDTO[] = [graph, ...deletedContracts];
+      deletedGraphs.push(graph, ...deletedContracts);
 
       for (const deletedGraph of deletedGraphs) {
         const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
@@ -102,5 +106,15 @@ export function deleteMonograph(
         },
       };
     });
+
+    for (const deletedGraph of deletedGraphs) {
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_DELETED,
+        authContext,
+        graph: { id: deletedGraph.id, name: deletedGraph.name, namespace: deletedGraph.namespace, type: 'monograph' },
+      });
+    }
+
+    return result;
   });
 }

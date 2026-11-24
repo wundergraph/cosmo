@@ -53,13 +53,16 @@ import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 @traced
 export class OrganizationRepository {
   protected billing: BillingRepository;
+  private defaultBillingPlanId: string | undefined;
 
   constructor(
     private logger: FastifyBaseLogger,
     private db: PostgresJsDatabase<typeof schema>,
-    private defaultBillingPlanId?: string,
+    defaultBillingPlanId?: string,
   ) {
     this.billing = new BillingRepository(db);
+    // Most callers pass no plan, so an organization without a billing row still falls back to the server's DEFAULT_PLAN.
+    this.defaultBillingPlanId = defaultBillingPlanId ?? process.env.DEFAULT_PLAN;
   }
 
   public async createOrganization(input: {

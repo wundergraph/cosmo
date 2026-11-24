@@ -15,6 +15,8 @@ enum OrganizationEventName {
   VALIDATE_CONFIG = 3;
   PROPOSAL_STATE_UPDATED = 4;
   ORGANIZATION_GOVERNANCE_UPDATED = 5;
+  GRAPH_CREATED = 6;
+  GRAPH_DELETED = 7;
 }
 
 message GraphSchemaUpdatedMeta {

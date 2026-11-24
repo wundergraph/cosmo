@@ -18,6 +18,7 @@ import { CompositionService } from '../../services/CompositionService.js';
 import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 
 export function createFederatedGraph(
   opts: RouterOptions,
@@ -188,6 +189,17 @@ export function createFederatedGraph(
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: federatedGraph.namespaceId,
       targetNamespaceDisplayName: federatedGraph.namespace,
+    });
+
+    sendGraphLifecycle(opts, {
+      eventName: OrganizationEventName.GRAPH_CREATED,
+      authContext,
+      graph: {
+        id: federatedGraph.id,
+        name: federatedGraph.name,
+        namespace: federatedGraph.namespace,
+        type: 'federated',
+      },
     });
 
     const subgraphs = await subgraphRepo.listByFederatedGraph({

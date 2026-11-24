@@ -87,6 +87,7 @@ export const SetupTest = async function ({
   setupBilling,
   organizationId,
   enableSplitConfigLoadingByDefault = true,
+  billingDefaultPlanId,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -98,6 +99,7 @@ export const SetupTest = async function ({
   };
   organizationId?: UUID;
   enableSplitConfigLoadingByDefault?: boolean;
+  billingDefaultPlanId?: string;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -175,6 +177,7 @@ export const SetupTest = async function ({
         clientSecret: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
+      billingDefaultPlanId,
       admissionWebhookJWTSecret: 'secret',
       keycloakApiUrl: apiUrl,
       blobStorage,
@@ -341,8 +344,11 @@ export const SetupTest = async function ({
     }
   }
 
-  if (setupBilling) {
+  if (setupBilling || billingDefaultPlanId) {
     await seedBilling(queryConnection);
+  }
+
+  if (setupBilling) {
     await billingRepository.insertPlan(setupBilling.plan, users.adminAliceCompanyA.organizationId);
   }
 
