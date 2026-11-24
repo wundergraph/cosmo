@@ -1462,14 +1462,13 @@ describe('@cacheTag tests', () => {
       ] satisfies Array<CacheTagConfiguration>);
     });
 
-    test('that a reference that a key does not select as a leaf field is rejected', () => {
+    test('that a reference that no key selects is rejected', () => {
       const { errors } = normalizeSubgraphFailure(
         createSubgraphWithDefaultName(`
           type Query { product: Product }
-          type Product 
+          type Product
               @key(fields: "upc")
               @key(fields: "name")
-              @cacheTag(format: "{$key.name}")
               @cacheTag(format: "{$key.price}") {
             upc: ID!
             name: String!
@@ -1480,18 +1479,61 @@ describe('@cacheTag tests', () => {
       );
       expect(errors).toStrictEqual([
         invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
-          undefinedCacheTagKeyFieldErrorMessage({ fieldSets: ['upc'], reference: 'name' }),
-        ]),
-        invalidDirectiveError(CACHE_TAG, 'Product', '2nd', [
           undefinedCacheTagKeyFieldErrorMessage({ fieldSets: ['upc', 'name'], reference: 'price' }),
         ]),
       ]);
     });
 
+    /* The router can fetch Product from this subgraph through either key,
+     * and "$key" takes its values from the key used.
+     * A fetch through "upc" has no "name", so "{$key.name}" would have no value.
+     */
+    test('that a reference that only some keys select is rejected', () => {
+      const { errors } = normalizeSubgraphFailure(
+        createSubgraphWithDefaultName(`
+          type Query { product: Product }
+          type Product
+              @key(fields: "upc")
+              @key(fields: "name")
+              @cacheTag(format: "{$key.name}") {
+            upc: ID!
+            name: String!
+          }
+        `),
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(CACHE_TAG, 'Product', FIRST_ORDINAL, [
+          undefinedCacheTagKeyFieldErrorMessage({ fieldSets: ['upc'], reference: 'name' }),
+        ]),
+      ]);
+    });
+
+    test('that a reference that every key selects is accepted', () => {
+      expect(
+        getCacheTagConfigurations(
+          createSubgraph(
+            'a',
+            `
+            type Query { product: Product }
+            type Product
+                @key(fields: "upc name")
+                @key(fields: "name")
+                @cacheTag(format: "{$key.name}") {
+              upc: ID!
+              name: String!
+            }
+          `,
+          ),
+          'Product',
+        ),
+      ).toStrictEqual([{ format: '{$key.name}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
+    });
+
     /* A subgraph declares an unresolvable key to send the entity to the subgraphs that resolve it by that key.
      * The router never fetches the entity from this subgraph through that key, so a reference need not be in it.
      */
-    test('that a reference must be selected only by every resolvable key', () => {
+    test('that a reference need not be selected by an unresolvable key', () => {
       expect(
         getCacheTagConfigurations(
           createSubgraph(
