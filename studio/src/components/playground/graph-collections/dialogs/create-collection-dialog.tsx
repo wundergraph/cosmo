@@ -81,6 +81,8 @@ export const CreateCollectionDialog = ({
               <Input
                 id="graph-collection-name"
                 autoFocus
+                // Name and scope are locked while saving, so a late refusal always matches the form.
+                disabled={isPending}
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value);
@@ -102,6 +104,7 @@ export const CreateCollectionDialog = ({
               <div className="space-y-2">
                 <span className="text-sm font-medium">Who can see it</span>
                 <RadioGroup
+                  disabled={isPending}
                   value={scope}
                   onValueChange={(value) => {
                     setScope(value as 'private' | 'team');

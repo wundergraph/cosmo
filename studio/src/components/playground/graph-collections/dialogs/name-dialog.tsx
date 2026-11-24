@@ -71,6 +71,7 @@ export const NameDialog = ({
             <Input
               id="graph-collection-name"
               autoFocus
+              disabled={isPending}
               value={name}
               onChange={(event) => {
                 setName(event.target.value);

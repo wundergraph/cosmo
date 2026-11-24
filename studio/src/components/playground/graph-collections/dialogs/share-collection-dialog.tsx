@@ -51,6 +51,7 @@ export const ShareCollectionDialog = ({
 
   const [needsNewName, setNeedsNewName] = useState(() => teamNameTaken(collections, collection.name, collection.id));
   const [name, setName] = useState(collection.name);
+  const [savedName, setSavedName] = useState(collection.name);
   const [serverError, setServerError] = useState<string>();
 
   const trimmed = name.trim();
@@ -76,14 +77,21 @@ export const ShareCollectionDialog = ({
       return;
     }
 
-    if (!needsNewName || trimmed === collection.name) {
+    if (!needsNewName || trimmed === savedName) {
       shareNow();
       return;
     }
 
     rename.mutate(
       { id: collection.id, name: trimmed, federatedGraphId },
-      collectionMutationHandlers('Could not rename the collection', shareNow, setServerError),
+      collectionMutationHandlers(
+        'Could not rename the collection',
+        () => {
+          setSavedName(trimmed);
+          shareNow();
+        },
+        setServerError,
+      ),
     );
   };
 
@@ -112,6 +120,7 @@ export const ShareCollectionDialog = ({
               <Input
                 id="graph-collection-share-name"
                 autoFocus
+                disabled={isPending}
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value);
