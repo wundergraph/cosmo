@@ -38,7 +38,6 @@ import { Switch } from '../ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { OperationContentDialog } from './operation-content';
-import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
@@ -46,13 +45,13 @@ const Override = ({
   changeType,
   path,
   operationHash,
-  isAdminOrDeveloper,
+  canManageOverrides,
   refresh,
 }: {
   changeType: string;
   path?: string;
   operationHash: string;
-  isAdminOrDeveloper: boolean;
+  canManageOverrides: boolean;
   refresh?: () => void;
 }) => {
   const router = useRouter();
@@ -120,7 +119,7 @@ const Override = ({
               {path ? 'Open in Explorer' : 'Cannot open in explorer. Path to type unavailable'}
             </TooltipContent>
           </Tooltip>
-          {isAdminOrDeveloper && (
+          {canManageOverrides && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="table-action text-destructive" size="icon-sm">
@@ -175,8 +174,6 @@ export const overrideParams = {
 
 export const ConfigureOverride = () => {
   const graphContext = useContext(GraphContext);
-  const checkUserAccess = useCheckUserAccess();
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
   const [{ override: operationHash, overrideName: operationName }, setOverride] = useQueryStates(overrideParams);
 
@@ -195,6 +192,8 @@ export const ConfigureOverride = () => {
       enabled: !!operationHash,
     },
   );
+
+  const canManageOverrides = data?.canManageOverrides ?? false;
 
   const invalidateOverrides = () => {
     const key = createConnectQueryKey({
@@ -266,7 +265,7 @@ export const ConfigureOverride = () => {
   } else {
     content = (
       <div className="relative flex flex-1 flex-col">
-        {isAdminOrDeveloper && (
+        {canManageOverrides && (
           <>
             <div className="flex w-full flex-row items-center justify-between rounded-lg border px-4 py-3 shadow-sm">
               <div className="flex flex-col gap-y-2">
@@ -323,7 +322,7 @@ export const ConfigureOverride = () => {
                       key={i}
                       {...c}
                       operationHash={operationHash}
-                      isAdminOrDeveloper={isAdminOrDeveloper}
+                      canManageOverrides={canManageOverrides}
                       refresh={() => {
                         refetch();
                         invalidateOverrides();
