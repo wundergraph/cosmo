@@ -875,6 +875,7 @@ export class FederationFactory {
     if (!existingData) {
       this.namedInputValueTypeNames.add(targetData.namedTypeName);
       inputValueDataByValueName.set(targetData.name, targetData);
+      this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
       return;
     }
     addNewObjectValueMapEntries(

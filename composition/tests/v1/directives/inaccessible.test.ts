@@ -766,6 +766,50 @@ describe('@inaccessible tests', () => {
     );
   });
 
+  test('that an Input field that only one subgraph defines can reference an @inaccessible type if it is declared @inaccessible #1', () => {
+    const { federatedGraphClientSchema, warnings } = federateSubgraphsSuccess(
+      [fan, fao],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        input Input {
+          id: ID!
+        }
+
+        type Query {
+          field(input: Input!): String!
+        }
+      `,
+      ),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an Input field that only one subgraph defines can reference an @inaccessible type if it is declared @inaccessible #2', () => {
+    const { federatedGraphClientSchema, warnings } = federateSubgraphsSuccess(
+      [fao, fan],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        input Input {
+          id: ID!
+        }
+
+        type Query {
+          field(input: Input!): String!
+        }
+      `,
+      ),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that a field argument can be declared @inaccessible if the field is also declared @inaccessible #1.1', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fac, fad], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
@@ -1462,6 +1506,35 @@ const fam: Subgraph = {
     input Input {
       id: ID!
       name: String! = "name" @inaccessible
+    }
+  `),
+};
+
+const fan: Subgraph = {
+  name: 'fan',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field(input: Input!): String!
+    }
+
+    input Input {
+      id: ID!
+    }
+  `),
+};
+
+const fao: Subgraph = {
+  name: 'fao',
+  url: '',
+  definitions: parse(`
+    input Hidden @inaccessible {
+      value: String
+    }
+
+    input Input {
+      id: ID!
+      secret: Hidden @inaccessible
     }
   `),
 };
