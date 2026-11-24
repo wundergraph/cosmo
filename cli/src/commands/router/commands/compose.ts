@@ -39,6 +39,7 @@ import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 import {
   featureFlagsDir,
   getRouterConfigOutputFile,
+  isRouterConfigPrintedToStdout,
   mapperFile,
   printCompositionErrors,
   printCompositionWarnings,
@@ -402,14 +403,6 @@ export default (_: BaseCommandOptions) => {
 
   return command;
 };
-
-/**
- * The router config is printed to stdout only if no destination is provided. Split configs are always written
- * to a directory.
- */
-function isRouterConfigPrintedToStdout(options: { out?: string; splitConfigsEnabled?: boolean }): boolean {
-  return !options.out && !options.splitConfigsEnabled;
-}
 
 /**
  * Returns the contract tag options for the provided exclude and include tags, or undefined if

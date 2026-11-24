@@ -175,6 +175,14 @@ async function fetchFileContentFromCdn(url: URL, token: string, graphSignKey?: s
   return body;
 }
 
+/**
+ * The router config is printed to stdout only if no destination is provided. Split configs are always written
+ * to a directory.
+ */
+export function isRouterConfigPrintedToStdout(options: { out?: string; splitConfigsEnabled?: boolean }): boolean {
+  return !options.out && !options.splitConfigsEnabled;
+}
+
 type CompositionDiagnosticsParams = {
   warnings: Array<Warning>;
   json?: boolean;
