@@ -6,13 +6,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { pino } from 'pino';
 import { z } from 'zod';
 
 import * as schema from '../db/schema.js';
 import type { FeatureIds } from '../types/index.js';
 import { NewBillingPlan } from '../db/models.js';
-import { OrganizationRepository } from '../core/repositories/OrganizationRepository.js';
 import defaultBilling from './billing.json' with { type: 'json' };
 
 const billingSchema = z.object({
@@ -72,17 +70,6 @@ const seedBilling = async () => {
       .execute();
 
     console.log('Synced billing plan', id);
-  }
-
-  // Organizations created before the plans existed get the default plan's features too.
-  const defaultPlan = process.env.DEFAULT_PLAN;
-  if (defaultPlan) {
-    const orgRepo = new OrganizationRepository(pino(), db, defaultPlan);
-    const organizations = await db.select({ id: schema.organizations.id }).from(schema.organizations).execute();
-    for (const organization of organizations) {
-      await orgRepo.applyPlanFeatures({ organizationId: organization.id, planId: defaultPlan });
-    }
-    console.log(`Applied plan ${defaultPlan} to ${organizations.length} organizations`);
   }
 
   console.log('Seed completed');
