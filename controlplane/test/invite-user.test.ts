@@ -1,3 +1,4 @@
+import { uid } from 'uid';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
@@ -51,6 +52,42 @@ describe('InviteUser', () => {
 
     const existing = pendingInvitationsResponse.pendingInvitations.find((inv) => inv.email === adminJimCompanyB!.email);
     expect(existing).toBeDefined();
+  });
+
+  test('that a person invited before they ever signed in is never asked for a password', async (testContext) => {
+    const {
+      authenticator,
+      client,
+      keycloakClient,
+      mailerClient,
+      realm,
+      server,
+      users: { adminAliceCompanyA },
+    } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
+    spy.mockImplementation(vi.fn());
+
+    authenticator.changeUserWithSuppliedContext(adminAliceCompanyA!);
+
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    const developer = orgGroupsResponse.groups.find((g) => g.name === 'developer');
+    expect(developer).toBeDefined();
+
+    const email = `${uid(8)}@wg.com`;
+    const inviteUserResponse = await client.inviteUser({ email, groups: [developer!.groupId] });
+
+    expect(inviteUserResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0].receiverEmail).toBe(email);
+
+    await keycloakClient.authenticateClient();
+    const invitedUser = await keycloakClient.findUserByEmail({ email, realm });
+    expect(invitedUser?.requiredActions).toEqual([]);
+
+    const credentials = await keycloakClient.client.users.getCredentials({ id: invitedUser!.id!, realm });
+    expect(credentials).toEqual([]);
   });
 
   test('that an organization developer cannot invite other users to the organization', async (testContext) => {

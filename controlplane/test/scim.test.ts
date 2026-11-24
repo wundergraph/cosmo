@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Client } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Keycloak from '../src/core/services/Keycloak.js';
+import Mailer from '../src/core/services/Mailer.js';
 import { afterAllSetup, beforeAllSetup, TestAuthenticator, UserTestData } from '../src/core/test-util.js';
 import { AuthContext } from '../src/types/index.js';
 import { SetupKeycloak, SetupTest } from './test-util.js';
@@ -16,6 +17,7 @@ describe('Scim server v2.0', () => {
   let userTestData: UserTestData & AuthContext;
   let otherOrgUserTestData: (UserTestData & AuthContext) | undefined;
   let keycloakClient: Keycloak;
+  let mailerClient: Mailer;
   let server: any;
   let client: Client<typeof PlatformService>;
   let authenticator: TestAuthenticator;
@@ -33,6 +35,7 @@ describe('Scim server v2.0', () => {
     userTestData = setupDetails.users.adminAliceCompanyA;
     otherOrgUserTestData = setupDetails.users.adminJimCompanyB;
     keycloakClient = setupDetails.keycloakClient;
+    mailerClient = setupDetails.mailerClient;
     realmName = setupDetails.realm;
     server = setupDetails.server;
     client = setupDetails.client;
@@ -115,7 +118,7 @@ describe('Scim server v2.0', () => {
 
   test('that when a user does not exists an invitation is sent', async () => {
     const email = uid(8) + '@wg.com';
-    const spy = vi.spyOn(keycloakClient, 'executeActionsEmail');
+    const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
 
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
@@ -296,7 +299,7 @@ describe('Scim server v2.0', () => {
   });
 
   test('that an error is returned if the user is already part of the organization', async () => {
-    const spy = vi.spyOn(keycloakClient, 'executeActionsEmail');
+    const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
 
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {

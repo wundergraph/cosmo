@@ -117,7 +117,6 @@ export class UserInviteService {
           email: input.email,
           firstName: input.firstName,
           lastName: input.lastName,
-          isPasswordTemp: true,
         });
 
         await userRepo.addUser({ id: keycloakUserId, email: input.email });
@@ -141,7 +140,6 @@ export class UserInviteService {
       if (pendingInv) {
         // Resend invitation
         await this.#sendInvitation({
-          orgRepo,
           orgInvitationRepo,
           pendingInvitation: pendingInv,
           organizationId: organization.id,
@@ -188,7 +186,6 @@ export class UserInviteService {
       });
 
       await this.#sendInvitation({
-        orgRepo,
         orgInvitationRepo,
         organizationId: organization.id,
         organizationName: organization.name,
@@ -203,7 +200,6 @@ export class UserInviteService {
   }
 
   async #sendInvitation({
-    orgRepo,
     orgInvitationRepo,
     pendingInvitation,
     organizationId,
@@ -212,7 +208,6 @@ export class UserInviteService {
     userId,
     receiverEmail,
   }: {
-    orgRepo: OrganizationRepository;
     orgInvitationRepo: OrganizationInvitationRepository;
     pendingInvitation?: OrganizationInvitationDTO;
     organizationId: string;
@@ -221,33 +216,21 @@ export class UserInviteService {
     userId: string;
     receiverEmail: string;
   }) {
-    const memberships = await orgRepo.memberships({ userId });
-    if (memberships.length === 0) {
-      // If the user memberships are empty, that means the user has not logged in until now,
-      // so we send the user a mail form Keycloak
-      await this.keycloak.executeActionsEmail({
-        realm: this.keycloakRealm,
-        userID: userId,
-        redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
-      });
-    } else {
-      // The user has already logged in, so we send our custom org invitation email
-      if (!this.mailer) {
-        return;
-      }
-
-      if (pendingInvitation?.lastSentAt && pendingInvitation.lastSentAt.getTime() + 1000 * 60 * 30 > Date.now()) {
-        // We are not sending the invitation more than once every 30 minutes
-        return;
-      }
-
-      await this.mailer.sendInviteEmail({
-        inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
-        organizationName,
-        receiverEmail,
-        invitedBy,
-      });
+    if (!this.mailer) {
+      return;
     }
+
+    if (pendingInvitation?.lastSentAt && pendingInvitation.lastSentAt.getTime() + 1000 * 60 * 30 > Date.now()) {
+      // We are not sending the invitation more than once every 30 minutes
+      return;
+    }
+
+    await this.mailer.sendInviteEmail({
+      inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
+      organizationName,
+      receiverEmail,
+      invitedBy,
+    });
 
     await orgInvitationRepo.updateLastSentToNow({ organizationId, userId });
   }

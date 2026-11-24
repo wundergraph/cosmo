@@ -530,7 +530,6 @@ export const addKeycloakUser = async ({
             firstName: 'Test',
             lastName: 'User',
             realm: realmName,
-            isPasswordTemp: false,
             password: 'wunder@123',
             id: userTestData.userId,
           });

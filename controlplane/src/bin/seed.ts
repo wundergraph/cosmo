@@ -87,7 +87,6 @@ try {
       realm,
       email: user.email,
       password: user.password,
-      isPasswordTemp: false,
     });
 
     console.log(`User created with id ${keycloakUserID}, email "${user.email}"`);

@@ -1,5 +1,4 @@
 import KeycloakAdminClient, { NetworkError } from '@keycloak/keycloak-admin-client';
-import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
@@ -127,7 +126,6 @@ export default class Keycloak {
     email,
     realm,
     password,
-    isPasswordTemp,
     groups,
     firstName,
     lastName,
@@ -136,7 +134,6 @@ export default class Keycloak {
     email: string;
     realm?: string;
     password?: string;
-    isPasswordTemp: boolean;
     groups?: string[];
     firstName?: string;
     lastName?: string;
@@ -150,14 +147,17 @@ export default class Keycloak {
       groups,
       firstName,
       lastName,
-      credentials: [
-        {
-          type: 'password',
-          // must follow the password policy on keycloak
-          value: password || uid(12) + '@123',
-          temporary: isPasswordTemp,
-        },
-      ],
+      // A user without a password signs in through an identity provider, which never asks for one.
+      credentials: password
+        ? [
+            {
+              type: 'password',
+              // must follow the password policy on keycloak
+              value: password,
+              temporary: false,
+            },
+          ]
+        : undefined,
       id,
     });
     return createUserResp.id;
@@ -264,24 +264,6 @@ export default class Keycloak {
       realm: realm || this.realm,
       id: userID,
       roles,
-    });
-  }
-
-  public async executeActionsEmail({
-    realm,
-    userID,
-    redirectURI,
-  }: {
-    realm?: string;
-    userID: string;
-    redirectURI: string;
-  }) {
-    await this.client.users.executeActionsEmail({
-      id: userID,
-      actions: [RequiredActionAlias.UPDATE_PASSWORD],
-      redirectUri: redirectURI,
-      realm: realm || this.realm,
-      clientId: this.clientId,
     });
   }
 
