@@ -27,6 +27,8 @@ import { PageHeader } from './head';
 import { LayoutProps } from './layout';
 import { NavLink, SideNav } from './sidenav';
 import { TitleLayout } from './title-layout';
+import { EmbedLayout } from './embed-layout';
+import { useIsEmbedded } from '@/hooks/use-is-embedded';
 import { FaGripfire } from 'react-icons/fa';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
@@ -348,15 +350,23 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
 };
 
-export const getDashboardLayout = (
-  page: React.ReactNode,
-  title: string,
-  subtitle: React.ReactNode,
-  items?: React.ReactNode,
-  toolbar?: React.ReactNode,
-  breadcrumbs?: React.ReactNode[],
-  noPadding?: boolean,
-) => {
+interface DashboardPageProps {
+  page: React.ReactNode;
+  title: string;
+  subtitle: React.ReactNode;
+  items?: React.ReactNode;
+  toolbar?: React.ReactNode;
+  breadcrumbs?: React.ReactNode[];
+  noPadding?: boolean;
+}
+
+const DashboardPage = ({ page, title, subtitle, items, toolbar, breadcrumbs, noPadding }: DashboardPageProps) => {
+  const isEmbedded = useIsEmbedded();
+
+  if (isEmbedded) {
+    return <EmbedLayout toolbar={toolbar}>{page}</EmbedLayout>;
+  }
+
   return (
     <DashboardLayout>
       <PageHeader title={`Dashboard | ${title}`}>
@@ -372,5 +382,27 @@ export const getDashboardLayout = (
         </TitleLayout>
       </PageHeader>
     </DashboardLayout>
+  );
+};
+
+export const getDashboardLayout = (
+  page: React.ReactNode,
+  title: string,
+  subtitle: React.ReactNode,
+  items?: React.ReactNode,
+  toolbar?: React.ReactNode,
+  breadcrumbs?: React.ReactNode[],
+  noPadding?: boolean,
+) => {
+  return (
+    <DashboardPage
+      page={page}
+      title={title}
+      subtitle={subtitle}
+      items={items}
+      toolbar={toolbar}
+      breadcrumbs={breadcrumbs}
+      noPadding={noPadding}
+    />
   );
 };

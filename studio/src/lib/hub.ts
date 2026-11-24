@@ -1,9 +1,21 @@
 import { buildUrl } from '@/lib/build-url';
 
 /**
- * Hub's page that launches a sandbox from a Cosmo federated graph. Undefined when Studio has no Hub URL,
- * including the unreplaced placeholder a Docker image keeps when the variable is not set.
+ * Undefined when Studio has no Hub URL, including the unreplaced placeholder a Docker image keeps when the
+ * variable is not set.
  */
+const parseHubUrl = (hubUrl: string | undefined): URL | undefined => {
+  if (!hubUrl || !/^https?:\/\//.test(hubUrl) || !URL.canParse(hubUrl)) {
+    return undefined;
+  }
+
+  return new URL(hubUrl.endsWith('/') ? hubUrl : `${hubUrl}/`);
+};
+
+/** The origin Hub frames Studio from, the only one Studio posts messages to. */
+export const hubOrigin = (hubUrl: string | undefined): string | undefined => parseHubUrl(hubUrl)?.origin;
+
+/** Hub's page that launches a sandbox from a Cosmo federated graph. */
 export const hubLaunchUrl = ({
   hubUrl,
   graph,
@@ -16,10 +28,10 @@ export const hubLaunchUrl = ({
   /** The Cosmo organization's slug, so Hub knows which organization to set up. */
   organization?: string;
 }): string | undefined => {
-  if (!hubUrl || !/^https?:\/\//.test(hubUrl) || !URL.canParse(hubUrl)) {
+  const hub = parseHubUrl(hubUrl);
+  if (!hub) {
     return undefined;
   }
 
-  const launchPage = new URL('launch', hubUrl.endsWith('/') ? hubUrl : `${hubUrl}/`).toString();
-  return buildUrl(launchPage, { graph, namespace, organization });
+  return buildUrl(new URL('launch', hub).toString(), { graph, namespace, organization });
 };

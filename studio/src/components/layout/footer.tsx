@@ -1,8 +1,14 @@
 import Link from 'next/link';
 import { Logo } from '../logo';
+import { useIsEmbedded } from '@/hooks/use-is-embedded';
 
 export const Footer = () => {
+  const isEmbedded = useIsEmbedded();
   const currentYear = new Date().getFullYear();
+
+  if (isEmbedded) {
+    return null;
+  }
 
   const footerLinks = [
     {

@@ -125,9 +125,9 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
               </PostHogFeatureFlagProvider>
             </QueryClientProvider>
           </ThemeProvider>
+          <Footer />
         </NuqsAdapter>
       </PostHogProvider>
-      <Footer />
     </>
   );
 }

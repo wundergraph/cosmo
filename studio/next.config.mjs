@@ -1,6 +1,7 @@
 import withMarkdoc from '@markdoc/next.js';
 import { withSentryConfig } from '@sentry/nextjs';
 import pkg from './package.json' with { type: 'json' };
+import { securityHeaders } from './security-headers.mjs';
 
 const isPreview = process.env.VERCEL_ENV === 'preview';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -140,25 +141,13 @@ const config = {
     version: pkg.version,
   },
   async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: debugCSP ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
-            value: lightweightCspHeader.replace(/\n/g, ''),
-          },
-        ],
+    return securityHeaders({
+      csp: {
+        key: debugCSP ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
+        value: lightweightCspHeader.replace(/\n/g, ''),
       },
-    ];
+      hubUrl: process.env.NEXT_PUBLIC_HUB_URL,
+    });
   },
   async rewrites() {
     return [
