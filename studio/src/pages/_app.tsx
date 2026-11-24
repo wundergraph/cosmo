@@ -2,6 +2,7 @@ import { AppProvider } from '@/components/app-provider';
 import { Layout } from '@/components/layout/layout';
 import { MarkdownLayout } from '@/components/layout/markdown-layout';
 import { ThemeProvider } from '@/components/theme-provider';
+import { useEmbedTheme } from '@/hooks/use-embed-theme';
 import ErrorFallback from '@/components/error-fallback';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -30,6 +31,8 @@ import { NuqsAdapter } from 'nuqs/adapters/next/pages';
 const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+  const embedTheme = useEmbedTheme();
+
   useEffect(() => {
     // https://github.com/TanStack/query/pull/4805
     focusManager.setEventListener((handleFocus: any) => {
@@ -117,7 +120,7 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     <>
       <PostHogProvider client={posthog}>
         <NuqsAdapter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem forcedTheme={embedTheme}>
             <QueryClientProvider client={queryClient}>
               <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
                 <OnboardingProvider>
