@@ -674,6 +674,50 @@ export class SchemaCheckRepository {
     }));
   }
 
+  /**
+   * Returns `null` for every checked subgraph that did not exist when the check ran.
+   */
+  public async getCheckedSubgraphTargets({
+    checkId,
+  }: {
+    checkId: string;
+  }): Promise<({ targetId: string; namespaceId: string } | null)[]> {
+    const checkedSubgraphs = await this.db
+      .select({
+        isNew: schema.schemaCheckSubgraphs.isNew,
+        targetId: schema.targets.id,
+        namespaceId: schema.targets.namespaceId,
+      })
+      .from(schema.schemaCheckSubgraphs)
+      .leftJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.schemaCheckSubgraphs.subgraphId))
+      .leftJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
+      .where(eq(schema.schemaCheckSubgraphs.schemaCheckId, checkId));
+
+    return checkedSubgraphs.map(({ isNew, targetId, namespaceId }) =>
+      !isNew && targetId && namespaceId ? { targetId, namespaceId } : null,
+    );
+  }
+
+  public getBreakingChangesOfOperation({ checkId, operationHash }: { checkId: string; operationHash: string }) {
+    return this.db
+      .selectDistinct({
+        changeType: schema.schemaCheckChangeAction.changeType,
+        path: schema.schemaCheckChangeAction.path,
+      })
+      .from(schema.schemaCheckChangeActionOperationUsage)
+      .innerJoin(
+        schema.schemaCheckChangeAction,
+        eq(schema.schemaCheckChangeAction.id, schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId),
+      )
+      .where(
+        and(
+          eq(schema.schemaCheckChangeAction.schemaCheckId, checkId),
+          eq(schema.schemaCheckChangeAction.isBreaking, true),
+          eq(schema.schemaCheckChangeActionOperationUsage.hash, operationHash),
+        ),
+      );
+  }
+
   public getProposedSchemaOfCheckedSubgraph({
     checkId,
     checkedSubgraphId,
@@ -806,17 +850,12 @@ export class SchemaCheckRepository {
       baseSubgraphName: string;
     }[] = [];
 
+    // Record every checked subgraph before linking the check to a federated graph. Check approvers can only find the
+    // check through a federated graph, so they always see the complete set of subgraphs, even if the check stops early.
+    const recordedSubgraphs = [];
     for (const s of subgraphs) {
       const subgraph = await subgraphRepo.byName(s.name, namespace.name);
       const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
-
-      const graphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph?.labels || s.labels,
-        namespaceId: namespace.id,
-      });
-
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
-
       const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
         data: {
           schemaCheckId: schemaCheckID,
@@ -830,6 +869,16 @@ export class SchemaCheckRepository {
           isFeatureSubgraph: subgraph?.isFeatureSubgraph ?? false,
         },
       });
+      recordedSubgraphs.push({ s, subgraph, newSchemaSDL, schemaCheckSubgraphId });
+    }
+
+    for (const { s, subgraph, newSchemaSDL, schemaCheckSubgraphId } of recordedSubgraphs) {
+      const graphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph?.labels || s.labels,
+        namespaceId: namespace.id,
+      });
+
+      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
 
       if (subgraph) {
         const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: subgraph.id });
