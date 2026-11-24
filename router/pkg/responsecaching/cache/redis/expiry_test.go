@@ -108,6 +108,45 @@ func TestRedisCacheEntryExpiry(t *testing.T) {
 		require.Equal(t, writeLease, results[item.Key].TTL)
 	})
 
+	t.Run("an extension failing midway leaves the header short of the key", func(t *testing.T) {
+		t.Parallel()
+
+		c, mr := newTestRedisCache(t)
+		item := enginecache.Item{Key: "a", Value: []byte("1"), TTL: time.Minute}
+		require.NoError(t, c.SetMany(ctx, []enginecache.Item{item}))
+		before, err := mr.Get(entryKey(item.Key))
+		require.NoError(t, err)
+
+		// PEXPIREAT rejects an expiry that isn't a number, after the identity
+		// check passed: the header must not carry the expiry it never got.
+		far := time.Now().Add(24 * time.Hour).UnixMilli()
+		err = c.client.Eval(ctx, extendOwn, []string{entryKey(item.Key)}, before[:identityLen], "never", encodeExpiry(far)).Err()
+		require.Error(t, err)
+
+		after, err := mr.Get(entryKey(item.Key))
+		require.NoError(t, err)
+		require.Equal(t, before, after)
+
+		results, err := c.GetMany(ctx, []string{item.Key})
+		require.NoError(t, err)
+		require.LessOrEqual(t, results[item.Key].TTL, mr.TTL(entryKey(item.Key)))
+		require.LessOrEqual(t, results[item.Key].ClientTTL, mr.TTL(entryKey(item.Key)))
+	})
+
+	t.Run("an extension to the past deletes the entry and leaves nothing behind", func(t *testing.T) {
+		t.Parallel()
+
+		c, mr := newTestRedisCache(t)
+		item := enginecache.Item{Key: "a", Value: []byte("1"), TTL: time.Minute}
+		require.NoError(t, c.SetMany(ctx, []enginecache.Item{item}))
+		stored, err := mr.Get(entryKey(item.Key))
+		require.NoError(t, err)
+
+		past := time.Now().Add(-time.Second).UnixMilli()
+		require.NoError(t, c.client.Eval(ctx, extendOwn, []string{entryKey(item.Key)}, stored[:identityLen], past, encodeExpiry(past)).Err())
+		require.False(t, mr.Exists(entryKey(item.Key)))
+	})
+
 	t.Run("a legacy entry is read with a PTTL for it alone", func(t *testing.T) {
 		t.Parallel()
 

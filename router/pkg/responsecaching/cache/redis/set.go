@@ -104,10 +104,18 @@ return redis.call('UNLINK', KEYS[1])
 // it, over the one the header carries, so a read sees the lifetime redis
 // keeps. SETRANGE leaves the key's TTL alone. 16 is identityLen - 1, 17 is
 // identityLen.
+//
+// The TTL goes first: redis doesn't undo a script's earlier writes when a
+// later call fails, so a failure in between leaves the header on the lease,
+// short of the key, never past it. A PEXPIREAT in the past deletes the key,
+// and a SETRANGE then would recreate it with no TTL, hence the EXISTS.
 const extendOwn = `
 if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
-redis.call('SETRANGE', KEYS[1], 17, ARGV[3])
-return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
+local extended = redis.call('PEXPIREAT', KEYS[1], ARGV[2])
+if redis.call('EXISTS', KEYS[1]) == 1 then
+  redis.call('SETRANGE', KEYS[1], 17, ARGV[3])
+end
+return extended
 `
 
 // SetMany implements caching.SetMany.
