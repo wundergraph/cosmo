@@ -22,7 +22,7 @@ import type {
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import type { HubAiSettingsDTO, PlainMessage } from '../types/index.js';
+import type { PlainMessage } from '../types/index.js';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
@@ -3121,13 +3121,3 @@ export const graphResourceOwners = pgTable(
     };
   },
 );
-
-// The organization's Hub AI settings, as a HubAiSettings message. A row means Cosmo manages them and Hub mirrors them.
-export const hubAiSettings = pgTable('hub_ai_settings', {
-  organizationId: uuid('organization_id')
-    .notNull()
-    .primaryKey()
-    .references(() => organizations.id, { onDelete: 'cascade' }),
-  settings: json('settings').$type<HubAiSettingsDTO>().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});

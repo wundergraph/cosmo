@@ -40,7 +40,6 @@ export interface RouterOptions {
   keycloakClient: Keycloak;
   platformWebhooks: IPlatformWebhookService;
   webhookProxyUrl?: string;
-  hubApiUrl?: string;
   webBaseUrl: string;
   githubApp?: App;
   slack: { clientID?: string; clientSecret?: string };

@@ -126,10 +126,6 @@ export const envVariables = z
     WEBHOOK_SECRET: z.string().optional(),
     WEBHOOK_PROXY_URL: z.string().url().optional(),
     /**
-     * Hub's backend, whose AI model list the Hub AI settings pick from
-     */
-    HUB_API_URL: z.string().url().optional(),
-    /**
      * GitHub Integration
      */
     GITHUB_APP_CLIENT_ID: z.string().optional(),
