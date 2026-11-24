@@ -20,3 +20,7 @@ runs:
         working_directory: ${{ inputs.working-directory }}
         install_args: --locked ${{ inputs.tools }}
         monorepo: false
+
+    # Fail when a go.mod needs a newer Go than mise.toml, instead of a silent download.
+    - run: echo "GOTOOLCHAIN=local" >> "$GITHUB_ENV"
+      shell: bash

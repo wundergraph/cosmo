@@ -9,9 +9,6 @@ config_roots = ["helm", "infrastructure", "router"]
 lockfile = true
 idiomatic_version_file_enable_tools = ["node", "pnpm"]
 
-[env]
-GOTOOLCHAIN = "local"
-
 [tools]
 go = "1.26.11"
 bun = "1.4.5"
