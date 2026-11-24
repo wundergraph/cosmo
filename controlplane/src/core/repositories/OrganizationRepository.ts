@@ -95,6 +95,7 @@ export class OrganizationRepository {
       org.billing = {
         plan: this.defaultBillingPlanId,
       };
+      await this.applyPlanFeatures({ organizationId: org.id, planId: this.defaultBillingPlanId });
     }
 
     if (input.enableSplitConfigLoading !== false) {
@@ -694,6 +695,26 @@ export class OrganizationRepository {
         target: [organizationFeatures.organizationId, organizationFeatures.feature],
         set: feature,
       });
+  }
+
+  /**
+   * Gives the organization every feature of the plan as a row of its own. Every feature check reads these rows,
+   * including the ones that never fall back to the default plan.
+   */
+  public async applyPlanFeatures(input: { organizationId: string; planId: string }) {
+    const plan = await this.billing.getPlanById(input.planId);
+    if (!plan) {
+      return;
+    }
+
+    for (const planFeature of plan.features) {
+      await this.updateFeature({
+        organizationId: input.organizationId,
+        id: planFeature.id,
+        enabled: true,
+        limit: planFeature.limit ?? null,
+      });
+    }
   }
 
   public async isFeatureEnabled(id: string, featureId: FeatureIds) {
