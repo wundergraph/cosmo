@@ -135,11 +135,13 @@ export interface MonographSchemaUpdate {
       id: string;
       name: string;
       namespace: string;
+      composedSchemaVersionId?: string;
     };
     organization: {
       id: string;
       slug: string;
     };
+    errors?: boolean;
     actor_id?: string;
   };
 }
@@ -180,11 +182,37 @@ export interface OrganizationGovernanceUpdated {
   };
 }
 
+/** A federated graph or a monograph as the graph lifecycle events name it. */
+export type LifecycleGraph = {
+  id: string;
+  name: string;
+  namespace: string;
+  type: 'federated' | 'monograph';
+};
+
+/**
+ * Organization-wide events without a graph filter: a graph was created or deleted. `api_key_name` names the
+ * API key that made the change, so a receiver can tell its own changes apart.
+ */
+export interface GraphLifecycleEvent {
+  eventName: OrganizationEventName.GRAPH_CREATED | OrganizationEventName.GRAPH_DELETED;
+  payload: {
+    graph: LifecycleGraph;
+    organization: {
+      id: string;
+      slug: string;
+    };
+    actor_id: string;
+    api_key_name?: string;
+  };
+}
+
 type OrganizationEventData =
   | FederatedGraphSchemaUpdate
   | MonographSchemaUpdate
   | ProposalStateUpdated
-  | OrganizationGovernanceUpdated;
+  | OrganizationGovernanceUpdated
+  | GraphLifecycleEvent;
 
 type LintIssueResponse = z.infer<typeof lintIssueSchema>;
 export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
@@ -304,7 +332,9 @@ export class OrganizationWebhookService {
           };
           break;
         }
-        case OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED: {
+        case OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED:
+        case OrganizationEventName.GRAPH_CREATED:
+        case OrganizationEventName.GRAPH_DELETED: {
           // Organization-wide event without a graph filter.
           meta = { case: undefined };
           break;
@@ -576,7 +606,7 @@ export class OrganizationWebhookService {
     }
   }
 
-  private async sendEvent(eventData: OrganizationEventData, configs: Config[], actorId: string) {
+  private async sendEvent(eventData: OrganizationEventData, configs: Config[], actorId: string, deliveryId: string) {
     const eventName = OrganizationEventName[eventData.eventName];
     const logger = this.logger.child({ eventName });
 
@@ -603,6 +633,7 @@ export class OrganizationWebhookService {
       await this.#sendWebhookRequest(
         config.url,
         config.key,
+        deliveryId,
         data,
         {
           organizationId: this.organizationId,
@@ -621,6 +652,7 @@ export class OrganizationWebhookService {
   async #sendWebhookRequest<TResponse = any>(
     endpoint: string,
     secretKey: string | undefined,
+    deliveryId: string,
     data: unknown,
     deliveryInfo: WebhookDeliveryInfo,
     logger: pino.Logger,
@@ -650,7 +682,7 @@ export class OrganizationWebhookService {
     // need the response to overwrite lint issues and any other data that we need updated from the check extension
     let res: AxiosResponse | undefined;
     try {
-      res = await makeWebhookRequest<any, TResponse>(this.httpClient, data, endpoint, secretKey);
+      res = await makeWebhookRequest<any, TResponse>(this.httpClient, data, endpoint, secretKey, deliveryId);
       deliveryInfo.responseStatusCode = res.status;
       deliveryInfo.responseHeaders = res.headers;
       deliveryInfo.responseBody = JSON.stringify(res.data);
@@ -697,7 +729,8 @@ export class OrganizationWebhookService {
   async send(eventData: OrganizationEventData, actorId: string) {
     try {
       const configs = await this.getOrganizationConfigs(eventData.eventName);
-      await this.sendEvent(eventData, configs, actorId);
+      // One id per event, shared by every endpoint and every retry, so a receiver can drop duplicates.
+      await this.sendEvent(eventData, configs, actorId, v4());
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
       logger.error(e, 'Could not send webhook event');
@@ -850,6 +883,7 @@ export class OrganizationWebhookService {
     const response = await this.#sendWebhookRequest<unknown>(
       sceConfig.endpoint,
       sceConfig.secretKey,
+      v4(),
       payload,
       deliveryInfo,
       this.logger,

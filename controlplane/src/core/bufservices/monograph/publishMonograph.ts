@@ -180,6 +180,9 @@ export function publishMonograph(
       );
 
     for (const graph of updatedFederatedGraphs) {
+      const hasErrors =
+        compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
+        deploymentErrors.some((error) => error.federatedGraphName === graph.name);
       orgWebhooks.send(
         {
           eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
@@ -188,11 +191,13 @@ export function publishMonograph(
               id: graph.id,
               name: graph.name,
               namespace: graph.namespace,
+              composedSchemaVersionId: graph.composedSchemaVersionId,
             },
             organization: {
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
+            errors: hasErrors,
             actor_id: authContext.userId,
           },
         },

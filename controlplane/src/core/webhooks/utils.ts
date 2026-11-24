@@ -6,10 +6,15 @@ export const makeWebhookRequest = <Data = any, TResponse = any>(
   data: Data,
   url: string,
   signatureKey?: string,
+  deliveryId?: string,
 ) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+
+  if (deliveryId) {
+    headers['X-Cosmo-Delivery-Id'] = deliveryId;
+  }
 
   if (signatureKey) {
     const dataString = JSON.stringify(data);

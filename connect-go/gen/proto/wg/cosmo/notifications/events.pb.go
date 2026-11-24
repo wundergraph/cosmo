@@ -81,6 +81,8 @@ const (
 	OrganizationEventName_VALIDATE_CONFIG                 OrganizationEventName = 3
 	OrganizationEventName_PROPOSAL_STATE_UPDATED          OrganizationEventName = 4
 	OrganizationEventName_ORGANIZATION_GOVERNANCE_UPDATED OrganizationEventName = 5
+	OrganizationEventName_GRAPH_CREATED                   OrganizationEventName = 6
+	OrganizationEventName_GRAPH_DELETED                   OrganizationEventName = 7
 )
 
 // Enum value maps for OrganizationEventName.
@@ -91,6 +93,8 @@ var (
 		3: "VALIDATE_CONFIG",
 		4: "PROPOSAL_STATE_UPDATED",
 		5: "ORGANIZATION_GOVERNANCE_UPDATED",
+		6: "GRAPH_CREATED",
+		7: "GRAPH_DELETED",
 	}
 	OrganizationEventName_value = map[string]int32{
 		"FEDERATED_GRAPH_SCHEMA_UPDATED":  0,
@@ -98,6 +102,8 @@ var (
 		"VALIDATE_CONFIG":                 3,
 		"PROPOSAL_STATE_UPDATED":          4,
 		"ORGANIZATION_GOVERNANCE_UPDATED": 5,
+		"GRAPH_CREATED":                   6,
+		"GRAPH_DELETED":                   7,
 	}
 )
 
@@ -342,13 +348,15 @@ const file_wg_cosmo_notifications_events_proto_rawDesc = "" +
 	"\x15USER_REGISTER_SUCCESS\x10\x00\x12\x17\n" +
 	"\x13APOLLO_MIGRATE_INIT\x10\x01\x12\x1a\n" +
 	"\x16APOLLO_MIGRATE_SUCCESS\x10\x02\x12\x17\n" +
-	"\x13USER_DELETE_SUCCESS\x10\x03*\xaf\x01\n" +
+	"\x13USER_DELETE_SUCCESS\x10\x03*\xd5\x01\n" +
 	"\x15OrganizationEventName\x12\"\n" +
 	"\x1eFEDERATED_GRAPH_SCHEMA_UPDATED\x10\x00\x12\x1c\n" +
 	"\x18MONOGRAPH_SCHEMA_UPDATED\x10\x01\x12\x13\n" +
 	"\x0fVALIDATE_CONFIG\x10\x03\x12\x1a\n" +
 	"\x16PROPOSAL_STATE_UPDATED\x10\x04\x12#\n" +
-	"\x1fORGANIZATION_GOVERNANCE_UPDATED\x10\x05B\xed\x01\n" +
+	"\x1fORGANIZATION_GOVERNANCE_UPDATED\x10\x05\x12\x11\n" +
+	"\rGRAPH_CREATED\x10\x06\x12\x11\n" +
+	"\rGRAPH_DELETED\x10\aB\xed\x01\n" +
 	"\x1acom.wg.cosmo.notificationsB\vEventsProtoP\x01ZHgithub.com/wundergraph/cosmo/connect-go/gen/proto/wg/cosmo/notifications\xa2\x02\x03WCN\xaa\x02\x16Wg.Cosmo.Notifications\xca\x02\x16Wg\\Cosmo\\Notifications\xe2\x02\"Wg\\Cosmo\\Notifications\\GPBMetadata\xea\x02\x18Wg::Cosmo::Notificationsb\x06proto3"
 
 var (

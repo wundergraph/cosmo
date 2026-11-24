@@ -1,5 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   DeleteFederatedGraphRequest,
   DeleteFederatedGraphResponse,
@@ -12,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 
 export function deleteFederatedGraph(
   opts: RouterOptions,
@@ -24,7 +26,9 @@ export function deleteFederatedGraph(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    return opts.db.transaction(async (tx) => {
+    const deletedGraphs: FederatedGraphDTO[] = [];
+
+    const result = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const auditLogRepo = new AuditLogRepository(tx);
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
@@ -62,7 +66,7 @@ export function deleteFederatedGraph(
       const deletedContracts = await contractRepo.deleteContractGraphs(federatedGraph.id);
       await fedGraphRepo.delete(federatedGraph.targetId);
 
-      const deletedGraphs: FederatedGraphDTO[] = [federatedGraph, ...deletedContracts];
+      deletedGraphs.push(federatedGraph, ...deletedContracts);
 
       for (const deletedGraph of deletedGraphs) {
         const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
@@ -92,5 +96,15 @@ export function deleteFederatedGraph(
         },
       };
     });
+
+    for (const deletedGraph of deletedGraphs) {
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_DELETED,
+        authContext,
+        graph: { id: deletedGraph.id, name: deletedGraph.name, namespace: deletedGraph.namespace, type: 'federated' },
+      });
+    }
+
+    return result;
   });
 }

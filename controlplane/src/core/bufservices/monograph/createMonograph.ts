@@ -1,5 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   CreateMonographRequest,
   CreateMonographResponse,
@@ -22,7 +23,8 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import type { PlainMessage } from '../../../types/index.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
+import type { AuthContext, PlainMessage } from '../../../types/index.js';
 
 export function createMonograph(
   opts: RouterOptions,
@@ -32,7 +34,9 @@ export function createMonograph(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateMonographResponse>>(ctx, logger, async () => {
-    return await opts.db.transaction(async (tx) => {
+    let created: { authContext: AuthContext; graph: { id: string; name: string; namespace: string } } | undefined;
+
+    const result = await opts.db.transaction(async (tx) => {
       req.namespace = req.namespace || DefaultNamespace;
 
       const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -203,11 +207,28 @@ export function createMonograph(
         targetNamespaceDisplayName: graph.namespace,
       });
 
+      created = { authContext, graph };
+
       return {
         response: {
           code: EnumStatusCode.OK,
         },
       };
     });
+
+    if (created) {
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_CREATED,
+        authContext: created.authContext,
+        graph: {
+          id: created.graph.id,
+          name: created.graph.name,
+          namespace: created.graph.namespace,
+          type: 'monograph',
+        },
+      });
+    }
+
+    return result;
   });
 }
