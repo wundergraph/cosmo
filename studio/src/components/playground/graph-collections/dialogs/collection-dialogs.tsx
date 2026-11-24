@@ -89,6 +89,7 @@ export const CollectionDialogs = ({
           collections={collections}
           federatedGraphId={federatedGraphId}
           onClose={closeDialog}
+          onRenamed={() => onChanged()}
           onDone={onDone}
         />
       );

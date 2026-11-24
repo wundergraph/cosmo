@@ -67,16 +67,18 @@ afterEach(() => cleanup());
 describe('Share dialog', () => {
   const renderShare = (target: GraphCollection, collections: GraphCollection[]) => {
     const onDone = vi.fn();
+    const onRenamed = vi.fn();
     render(
       <ShareCollectionDialog
         collection={target}
         collections={collections}
         federatedGraphId="graph-1"
         onClose={vi.fn()}
+        onRenamed={onRenamed}
         onDone={onDone}
       />,
     );
-    return { onDone };
+    return { onDone, onRenamed };
   };
 
   test('shares straight away when no team collection has the name', () => {
@@ -150,13 +152,14 @@ describe('Share dialog', () => {
 
   test('does not share when the rename fails', () => {
     const privateOnboarding = collection('private-2', 'Onboarding', false);
-    const { onDone } = renderShare(privateOnboarding, [team, privateOnboarding]);
+    const { onDone, onRenamed } = renderShare(privateOnboarding, [team, privateOnboarding]);
 
     type('Name', 'Onboarding v2');
     fireEvent.click(button('Rename and share'));
     respond(renameGraphCollection, EnumStatusCode.ERR, 'Something broke');
 
     expect(mutation(shareGraphCollection).mutate).not.toHaveBeenCalled();
+    expect(onRenamed).not.toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith({ description: 'Something broke', duration: 3000 });
     expect(onDone).not.toHaveBeenCalled();
   });
@@ -197,6 +200,20 @@ describe('Share dialog', () => {
     expect(errorText('graph-collection-share-name-error')).toBe(
       'A team collection named "Onboarding v2" already exists.',
     );
+  });
+
+  test('refreshes the list as soon as the rename is saved, before the share fails', () => {
+    const privateOnboarding = collection('private-2', 'Onboarding', false);
+    const { onDone, onRenamed } = renderShare(privateOnboarding, [team, privateOnboarding]);
+
+    type('Name', 'Onboarding v2');
+    fireEvent.click(button('Rename and share'));
+    respond(renameGraphCollection, EnumStatusCode.OK);
+    expect(onRenamed).toHaveBeenCalledTimes(1);
+
+    respond(shareGraphCollection, EnumStatusCode.ERR, 'Something broke');
+    expect(onRenamed).toHaveBeenCalledTimes(1);
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   test('renames again on retry when the earlier rename went through but the share failed', () => {

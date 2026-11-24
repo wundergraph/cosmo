@@ -39,8 +39,7 @@ export function shareGraphCollection(
     if (collectionWithGraph!.collection.privateToUserId === null) {
       return {
         response: {
-          code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: 'This collection is already shared with the team',
+          code: EnumStatusCode.OK,
         },
       };
     }
@@ -59,13 +58,13 @@ export function shareGraphCollection(
       throw new UnauthorizedError();
     }
 
-    const result = await repo.shareCollection(req.id, req.federatedGraphId);
+    const result = await repo.shareCollection(req.id, collection.name, req.federatedGraphId);
     if (!result.ok) {
       if (result.error instanceof NameConflictError) {
         return {
           response: {
-            code: EnumStatusCode.ERR_ALREADY_EXISTS,
-            details: `A team collection named "${collection.name}" already exists on this graph. Rename this collection before sharing it.`,
+            code: result.error.code,
+            details: `${result.error.message} Rename this collection before sharing it.`,
           },
         };
       }

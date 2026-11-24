@@ -375,7 +375,7 @@ describe('Graph Collections', () => {
 
       // Every write, handed a real collection id but the wrong graph.
       await repo.renameCollection(collection.id, 'Hijacked', graphBId);
-      await repo.shareCollection(collection.id, graphBId);
+      await repo.shareCollection(collection.id, collection.name, graphBId);
       await repo.deleteCollection(collection.id, graphBId);
 
       const list = await client.getGraphCollections({ federatedGraphName: graphA, namespace: 'default' });
@@ -1109,7 +1109,7 @@ describe('Graph Collections', () => {
       expect(bobList.collections[0].createdByEmail).toBe(users.adminAliceCompanyA.email);
     });
 
-    test('Sharing is one-way and cannot be repeated', async () => {
+    test('Sharing a collection that is already shared returns OK and leaves it shared', async () => {
       const { client, server } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
 
@@ -1129,7 +1129,7 @@ describe('Graph Collections', () => {
       );
 
       const again = await client.shareGraphCollection({ federatedGraphId, id: created.id });
-      expect(again.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(again.response?.code).toBe(EnumStatusCode.OK);
 
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       expect(list.collections[0].isTeamScoped).toBe(true);

@@ -3,9 +3,11 @@ import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import postgres from 'postgres';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { validate as isValidUuid } from 'uuid';
 import * as schema from '../../db/schema.js';
 import { graphCollectionOperations, graphCollections, users } from '../../db/schema.js';
+import { ServiceError } from '../errors/errors.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
@@ -57,11 +59,13 @@ const computeContentHash = (query: string, variables?: string | null): string =>
     .update(`${query}\n${variables ?? ''}`)
     .digest('hex');
 
-/** Another team collection on the graph already has this name, ignoring case. */
-export class NameConflictError extends Error {
-  constructor() {
-    super('A team collection on this graph already has this name.');
-    this.name = 'NameConflictError';
+/**
+ * Another team collection on the graph already has this name, ignoring case.
+ * It carries the status code and message a handler returns for it.
+ */
+export class NameConflictError extends ServiceError {
+  constructor(name: string) {
+    super(EnumStatusCode.ERR_ALREADY_EXISTS, `A team collection named "${name}" already exists on this graph.`);
   }
 }
 
@@ -252,7 +256,7 @@ export class GraphCollectionsRepository {
       return { ok: true, id: row.id };
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return { ok: false, error: new NameConflictError() };
+        return { ok: false, error: new NameConflictError(data.name) };
       }
       throw e;
     }
@@ -276,7 +280,7 @@ export class GraphCollectionsRepository {
         );
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return { ok: false, error: new NameConflictError() };
+        return { ok: false, error: new NameConflictError(name) };
       }
       throw e;
     }
@@ -289,7 +293,7 @@ export class GraphCollectionsRepository {
    * `NameConflictError` when a team collection on the graph already has this
    * name (ignoring case), in which case nothing changes.
    */
-  public async shareCollection(id: string, federatedGraphId: string): Promise<CollectionWriteResult> {
+  public async shareCollection(id: string, name: string, federatedGraphId: string): Promise<CollectionWriteResult> {
     try {
       await this.db
         .update(graphCollections)
@@ -303,7 +307,7 @@ export class GraphCollectionsRepository {
         );
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return { ok: false, error: new NameConflictError() };
+        return { ok: false, error: new NameConflictError(name) };
       }
       throw e;
     }

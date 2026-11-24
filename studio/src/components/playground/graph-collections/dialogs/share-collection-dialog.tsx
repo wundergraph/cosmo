@@ -67,6 +67,7 @@ export const ShareCollectionDialog = ({
   collections,
   federatedGraphId,
   onClose,
+  onRenamed,
   onDone,
 }: {
   collection: GraphCollection;
@@ -74,6 +75,8 @@ export const ShareCollectionDialog = ({
   collections: GraphCollection[];
   federatedGraphId: string;
   onClose: () => void;
+  /** Refreshes the list once the rename is saved, since the share after it can still fail. */
+  onRenamed: () => void;
   onDone: () => void;
 }) => {
   const share = useMutation(shareGraphCollection);
@@ -117,6 +120,7 @@ export const ShareCollectionDialog = ({
         'Could not rename the collection',
         () => {
           dispatch({ type: 'RENAMED', name: trimmed });
+          onRenamed();
           shareNow();
         },
         (details) => dispatch({ type: 'RENAME_REFUSED', details }),

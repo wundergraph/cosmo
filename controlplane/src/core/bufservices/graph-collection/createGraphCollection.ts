@@ -70,8 +70,8 @@ export function createGraphCollection(
       if (created.error instanceof NameConflictError) {
         return {
           response: {
-            code: EnumStatusCode.ERR_ALREADY_EXISTS,
-            details: `A team collection named "${name}" already exists on this graph.`,
+            code: created.error.code,
+            details: created.error.message,
           },
           id: '',
         };

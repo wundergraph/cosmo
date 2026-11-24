@@ -18,17 +18,14 @@
 
 ### Expected failures
 
-- **A repository method that can fail in an expected way returns a result
-  object, not a string sentinel.** Use
-  `{ ok: true; …data } | { ok: false; error: Error }`. Each expected failure is
-  a named `Error` subclass, e.g. `NameConflictError` in
-  `GraphCollectionsRepository.ts`. Do not return values like `'name_taken'` or
-  `'ok'`.
-- **A handler maps a failure to a specific status code only after checking the
-  error's class.** Inside one `if (!result.ok)` block, return
-  `ERR_ALREADY_EXISTS` when `result.error instanceof NameConflictError`, and
-  `ERR` otherwise. A plain `!result.ok` check would report any new kind of
-  failure as the specific one. See `createGraphCollection.ts`.
+- **Return expected failures as a result object, not a string sentinel.**
+  Prefer `{ ok: true; … } | { ok: false; error }` over values like
+  `'name_taken'`. Give each kind of failure its own error class, which can
+  carry its status code and message so callers don't repeat them.
+- **Check the error's class before mapping it to a specific status code.**
+  Any other failure gets a generic `ERR`, so a new kind of failure is never
+  reported as an existing one. `GraphCollectionsRepository.ts` and the
+  graph-collection handlers show the pattern.
 
 ## Studio (`studio/`)
 
