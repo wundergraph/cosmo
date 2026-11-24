@@ -37,11 +37,18 @@ const packageJson = z.object({
 
 export type PackageJson = z.infer<typeof packageJson>;
 
-const pluginShape = z.object({
-  name: z.string().regex(/^[a-z][\da-z-]*$/, 'name must be a lowercase command name'),
-  description: z.string(),
-  register: z.custom<WgcPlugin['register']>((value) => typeof value === 'function', 'register must be a function'),
-});
+const pluginShape = z
+  .object({
+    name: z.string().regex(/^[a-z][\da-z-]*$/, 'name must be a lowercase command name'),
+    description: z.string(),
+    register: z
+      .custom<WgcPlugin['register']>((value) => typeof value === 'function', 'register must be a function')
+      .optional(),
+    hooks: z.custom<WgcPlugin['hooks']>((value) => typeof value === 'function', 'hooks must be a function').optional(),
+  })
+  .refine((plugin) => plugin.register !== undefined || plugin.hooks !== undefined, {
+    message: 'a plugin must register commands, hooks or both',
+  });
 
 const pluginModule = z.object({ default: pluginShape });
 

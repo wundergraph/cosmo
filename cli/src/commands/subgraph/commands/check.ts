@@ -11,6 +11,7 @@ import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
+import { commandHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { limitMaxValue } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -70,6 +71,14 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    const hookInput = {
+      subgraph: name,
+      namespace: options.namespace || 'default',
+      schemaPath: schemaFile,
+      delete: Boolean(options.delete),
+    };
+    await runBeforeHooks('subgraph check', hookInput);
+
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
     let vcsContext: VCSContext | undefined;
 
@@ -107,6 +116,7 @@ export default (opts: BaseCommandOptions) => {
       rowLimit: limit,
       shouldOutputJson: options.json || !!outFile,
       outFile,
+      afterHooks: (result) => commandHooks.runAfter('subgraph check', hookInput, result),
     });
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {

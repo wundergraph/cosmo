@@ -8,6 +8,7 @@ import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { runAfterHooks, runBeforeHooks } from '../../../../core/plugins/hooks.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -52,6 +53,14 @@ export default (opts: BaseCommandOptions) => {
         );
       }
     }
+
+    const hookInput = {
+      graph: name,
+      namespace: options.namespace || 'default',
+      routingUrl: options.routingUrl,
+      labelMatchers: options.labelMatcher ?? [],
+    };
+    await runBeforeHooks('federated-graph create', hookInput);
 
     const spinner = ora('Federated Graph is being created...').start();
 
@@ -140,6 +149,7 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
+        await runAfterHooks('federated-graph create', hookInput, { created: false });
         process.exitCode = 1;
         return;
       }
@@ -168,6 +178,8 @@ export default (opts: BaseCommandOptions) => {
       }
       console.log(compositionWarningsTable.toString());
     }
+
+    await runAfterHooks('federated-graph create', hookInput, { created: true });
   });
 
   return command;

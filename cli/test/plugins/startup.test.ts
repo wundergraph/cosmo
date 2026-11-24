@@ -142,7 +142,7 @@ describe('attachPlugins', () => {
       ok: false,
       error: {
         code: 'COMMAND_FAILED',
-        message: `${entry} is not a wgc plugin. Its default export must be a WgcPlugin: ✖ register must be a function\n  → at default.register`,
+        message: `${entry} is not a wgc plugin. Its default export must be a WgcPlugin: ✖ a plugin must register commands, hooks or both\n  → at default`,
         input: entry,
       },
     });

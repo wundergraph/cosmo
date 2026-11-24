@@ -6,6 +6,7 @@ import Table from 'cli-table3';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { runAfterHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -31,6 +32,9 @@ export default (opts: BaseCommandOptions) => {
         return;
       }
     }
+
+    const hookInput = { subgraph: name, namespace: options.namespace || 'default' };
+    await runBeforeHooks('subgraph delete', hookInput);
 
     const spinner = ora(`The subgraph "${name}" is being deleted...`).start();
 
@@ -58,7 +62,8 @@ export default (opts: BaseCommandOptions) => {
         spinner.fail(`Failed to delete subgraph "${name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
-        break;
+        await runAfterHooks('subgraph delete', hookInput, { deleted: false });
+        return;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
         spinner.fail(`The subgraph "${name}" was deleted but with composition errors.`);
@@ -128,6 +133,7 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
+        await runAfterHooks('subgraph delete', hookInput, { deleted: false });
         process.exitCode = 1;
         return;
       }
@@ -156,6 +162,8 @@ export default (opts: BaseCommandOptions) => {
       }
       console.log(compositionWarningsTable.toString());
     }
+
+    await runAfterHooks('subgraph delete', hookInput, { deleted: true });
   });
 
   return command;

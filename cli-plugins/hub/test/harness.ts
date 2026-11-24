@@ -240,7 +240,7 @@ export const runWgc = async (
   const hubPlugin = createHubPlugin(runtime);
   const program = new Command('wgc').exitOverride();
   const hub = program.command(hubPlugin.name).description(hubPlugin.description);
-  hubPlugin.register(hub, context);
+  hubPlugin.register?.(hub, context);
 
   process.exitCode = 0;
   await program.parseAsync(['node', 'wgc', ...args]);

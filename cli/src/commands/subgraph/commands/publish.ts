@@ -16,6 +16,7 @@ import { SubgraphPublishStatsSchema, SubgraphType } from '@wundergraph/cosmo-con
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
+import { runAfterHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -111,6 +112,14 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    const hookInput = {
+      subgraph: name,
+      namespace: options.namespace || 'default',
+      schemaPath: schemaFile,
+      routingUrl: options.routingUrl,
+    };
+    await runBeforeHooks('subgraph publish', hookInput);
+
     const spinner = ora('Subgraph is being published...').start();
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
@@ -138,6 +147,8 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
+    const compositionErrorsOf = () => resp.compositionErrors.map((error) => error.message);
+
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed(resp?.hasChanged === false ? 'No new changes to publish.' : 'Subgraph published successfully.');
@@ -152,6 +163,7 @@ export default (opts: BaseCommandOptions) => {
         spinner.fail(`Failed to publish subgraph "${name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
+        await runAfterHooks('subgraph publish', hookInput, { published: false, changed: false, compositionErrors: [] });
         process.exitCode = 1;
         return;
       }
@@ -192,6 +204,11 @@ export default (opts: BaseCommandOptions) => {
         console.log(compositionErrorsTable.toString());
 
         if (options.failOnCompositionError) {
+          await runAfterHooks('subgraph publish', hookInput, {
+            published: true,
+            changed: true,
+            compositionErrors: compositionErrorsOf(),
+          });
           // Only composition errors were displayed at this point, warnings come after switch
           printTruncationWarning({
             displayedErrorCounts: create(SubgraphPublishStatsSchema, {
@@ -232,6 +249,7 @@ export default (opts: BaseCommandOptions) => {
         console.log(deploymentErrorsTable.toString());
 
         if (options.failOnAdmissionWebhookError) {
+          await runAfterHooks('subgraph publish', hookInput, { published: true, changed: true, compositionErrors: [] });
           // Only deployment errors were displayed at this point, warnings come after switch
           printTruncationWarning({
             displayedErrorCounts: create(SubgraphPublishStatsSchema, {
@@ -251,6 +269,7 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
+        await runAfterHooks('subgraph publish', hookInput, { published: false, changed: false, compositionErrors: [] });
         process.exitCode = 1;
         return;
       }
@@ -292,6 +311,13 @@ export default (opts: BaseCommandOptions) => {
     });
 
     printTruncationWarning({ displayedErrorCounts, totalErrorCounts: resp.counts });
+
+    await runAfterHooks('subgraph publish', hookInput, {
+      published: true,
+      changed: resp.hasChanged !== false,
+      compositionErrors:
+        resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? compositionErrorsOf() : [],
+    });
   });
 
   return command;

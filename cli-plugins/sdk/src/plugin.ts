@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import { CallerKind } from './caller.js';
 import { Credentials } from './credentials.js';
+import type { CommandHooks } from './hooks.js';
 import { Output } from './output.js';
 import { Prompts } from './prompts.js';
 
@@ -31,11 +32,13 @@ export interface PluginContext {
 }
 
 export interface WgcPlugin {
-  /** The top-level command the plugin owns, e.g. `hub` for `wgc hub …`. */
+  /** The plugin's name and, when it registers commands, the top-level command it owns, e.g. `hub` for `wgc hub …`. */
   name: string;
   description: string;
   /** Adds subcommands to `command`, which wgc has already named and attached to the program. */
-  register(command: Command, context: PluginContext): void;
+  register?(command: Command, context: PluginContext): void;
+  /** Hooks core commands such as `wgc subgraph check`; wgc calls it only when one of them runs. */
+  hooks?(hooks: CommandHooks, context: PluginContext): void;
 }
 
 export const definePlugin = (plugin: WgcPlugin): WgcPlugin => plugin;

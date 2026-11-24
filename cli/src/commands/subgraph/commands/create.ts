@@ -14,6 +14,7 @@ import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
+import { runAfterHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -72,6 +73,9 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
+    const hookInput = { subgraph: name, namespace: options.namespace || 'default', routingUrl: options.routingUrl };
+    await runBeforeHooks('subgraph create', hookInput);
+
     const spinner = ora('Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
@@ -98,14 +102,14 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.response?.code === EnumStatusCode.OK) {
       spinner.succeed('Subgraph was created successfully.');
+      await runAfterHooks('subgraph create', hookInput, { created: true });
     } else {
       spinner.fail('Failed to create subgraph.');
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
+      await runAfterHooks('subgraph create', hookInput, { created: false });
       process.exitCode = 1;
-      // eslint-disable-next-line no-useless-return
-      return;
     }
   });
 

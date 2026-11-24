@@ -9,6 +9,9 @@ import type {
   LintIssue,
   SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { HookJson } from '@wundergraph/wgc-plugin-sdk';
+import { verdictsJson } from './core/plugins/hooks.js';
+import type { HookOutcome } from './core/plugins/hooks.js';
 
 export type JsonCheckSchemaOutputDescriptor = {
   status: 'error' | 'success';
@@ -48,6 +51,8 @@ export type JsonCheckSchemaOutputDescriptor = {
   exceededRowLimit?: boolean;
   rowLimit: number;
   operationUsageStats?: CheckOperationUsageStats;
+  /** What each plugin hooking the check found, keyed by plugin. */
+  plugins?: { [plugin: string]: { [key: string]: HookJson } };
 };
 
 export class JsonCheckSchemaOutputBuilder {
@@ -196,6 +201,13 @@ export class JsonCheckSchemaOutputBuilder {
 
   setExtensionError(message: string): this {
     this.data.extensions = { message };
+    return this;
+  }
+
+  setPlugins(outcome: HookOutcome): this {
+    if (outcome.verdicts.length > 0) {
+      this.data.plugins = verdictsJson(outcome);
+    }
     return this;
   }
 

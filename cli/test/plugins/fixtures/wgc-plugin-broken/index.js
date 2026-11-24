@@ -1,1 +1,1 @@
-export default { name: 'broken', description: 'Has no register function' };
+export default { name: 'broken', description: 'Registers neither commands nor hooks' };

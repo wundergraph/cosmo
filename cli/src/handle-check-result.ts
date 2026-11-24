@@ -7,8 +7,26 @@ import Table from 'cli-table3';
 import { program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
+import type { HookableCommands } from '@wundergraph/wgc-plugin-sdk';
 import { config } from './core/config.js';
+import { failedSummary, renderVerdicts } from './core/plugins/hooks.js';
+import type { HookOutcome } from './core/plugins/hooks.js';
 import { JsonCheckSchemaOutputBuilder } from './json-check-schema-output-builder.js';
+
+export type CosmoCheckResult = HookableCommands['subgraph check']['result'];
+
+const noHooks = (): Promise<HookOutcome> => Promise.resolve({ failed: false, verdicts: [] });
+
+/** Each breaking change and error that fails Cosmo's check, one line each. */
+const checkProblems = (response: CheckSubgraphSchemaResponse): string[] => [
+  ...response.breakingChanges.map((change) => `breaking change: ${change.message}`),
+  ...response.composedSchemaBreakingChanges.map(
+    (change) => `breaking change in ${change.federatedGraphName}: ${change.message}`,
+  ),
+  ...response.compositionErrors.map((error) => `composition error: ${error.message}`),
+  ...response.lintErrors.map((issue) => `lint error: ${issue.message}`),
+  ...response.graphPruneErrors.map((issue) => `graph pruning error: ${issue.message}`),
+];
 
 // operationUsageStats is required — caller must guard with `if (response.operationUsageStats)` before calling
 const handleTrafficCheck = (
@@ -336,7 +354,7 @@ const handleOkResult = ({
   rowLimit: number;
   shouldOutputJson?: boolean;
   studioCheckDestination: string;
-}): { success: boolean } => {
+}): { success: boolean; verdictLine: boolean; finalStatement: string; trailer: string } => {
   let success = false;
   let finalStatement = '';
 
@@ -378,7 +396,7 @@ const handleOkResult = ({
         `\nDetected no changes.\nDetected no lint issues.\nDetected no graph pruning issues.\n\n${studioCheckDestination}\n`,
       );
     }
-    return { success: true };
+    return { success: true, verdictLine: false, finalStatement: '', trailer: '' };
   }
 
   if (!shouldOutputJson) {
@@ -465,33 +483,59 @@ const handleOkResult = ({
     }
   }
 
-  // Finalise json state, then print text output if not in JSON mode
   jsonBuilder.setStatus(success).setMessage(finalStatement);
 
-  if (!shouldOutputJson) {
-    if (success) {
-      console.log(
-        '\n' +
-          logSymbols.success +
-          pc.green(` Schema check passed. ${finalStatement}`) +
-          '\n\n' +
-          studioCheckDestination +
-          moreEntriesAvailableMessage +
-          '\n',
-      );
-    } else {
-      program.error(
-        '\n' +
-          logSymbols.error +
-          pc.red(
-            ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}${moreEntriesAvailableMessage}\n`,
-          ) +
-          '\n',
-      );
+  return { success, verdictLine: true, finalStatement, trailer: studioCheckDestination + moreEntriesAvailableMessage };
+};
+
+const printVerdicts = (plugins: HookOutcome): void => {
+  if (plugins.verdicts.length > 0) {
+    console.log(`\n${renderVerdicts(plugins)}`);
+  }
+};
+
+/**
+ * Prints the plugins' verdicts and the one verdict of the whole check: Cosmo's check and every plugin hooking it must
+ * pass. A failed check exits through `program.error`.
+ */
+const finishCheck = ({
+  cosmoPassed,
+  plugins,
+  verdictLine,
+  finalStatement,
+  trailer,
+}: {
+  cosmoPassed: boolean;
+  plugins: HookOutcome;
+  verdictLine: boolean;
+  finalStatement: string;
+  trailer: string;
+}): boolean => {
+  printVerdicts(plugins);
+
+  if (cosmoPassed && !plugins.failed) {
+    if (verdictLine || plugins.verdicts.length > 0) {
+      console.log('\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n\n' + trailer + '\n');
     }
+    return true;
   }
 
-  return { success };
+  if (cosmoPassed) {
+    program.error(
+      '\n' +
+        logSymbols.error +
+        pc.red(` Schema check failed. Cosmo's check passed, but ${failedSummary(plugins)}\n${trailer}\n`) +
+        '\n',
+    );
+  }
+  program.error(
+    '\n' +
+      logSymbols.error +
+      pc.red(
+        ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${trailer}\n`,
+      ) +
+      '\n',
+  );
 };
 
 export const handleCheckResult = async ({
@@ -499,33 +543,48 @@ export const handleCheckResult = async ({
   rowLimit,
   shouldOutputJson,
   outFile,
+  afterHooks = noHooks,
 }: {
   response: CheckSubgraphSchemaResponse;
   rowLimit: number;
   shouldOutputJson?: boolean;
   outFile?: string;
+  /** Runs the plugins hooking `subgraph check` on Cosmo's verdict; their verdicts join the check's. */
+  afterHooks?: (result: CosmoCheckResult) => Promise<HookOutcome>;
 }): Promise<boolean> => {
   const jsonBuilder = new JsonCheckSchemaOutputBuilder(EnumStatusCode.ERR, rowLimit, outFile);
 
+  let checkUrl: string | undefined;
   let studioCheckDestination = '';
   if (response.checkId && response.checkedFederatedGraphs.length > 0) {
-    const url = `${config.webURL}/${encodeURIComponent(
+    checkUrl = `${config.webURL}/${encodeURIComponent(
       response.checkedFederatedGraphs[0].organizationSlug,
     )}/${encodeURIComponent(response.checkedFederatedGraphs[0].namespace)}/graph/${encodeURIComponent(response.checkedFederatedGraphs[0].name)}/checks/${encodeURIComponent(response.checkId)}`;
-    jsonBuilder.setUrl(url);
-    studioCheckDestination = `${pc.bold('Open in studio')}: ${url}`;
+    jsonBuilder.setUrl(checkUrl);
+    studioCheckDestination = `${pc.bold('Open in studio')}: ${checkUrl}`;
   }
+
+  const failedEarly = async (problem: string): Promise<HookOutcome> => {
+    const plugins = await afterHooks({ passed: false, checkUrl, problems: [problem] });
+    jsonBuilder.setPlugins(plugins);
+    return plugins;
+  };
 
   switch (response.response?.code) {
     case EnumStatusCode.OK: {
-      const { success } = handleOkResult({ response, jsonBuilder, rowLimit, shouldOutputJson, studioCheckDestination });
+      const checked = handleOkResult({ response, jsonBuilder, rowLimit, shouldOutputJson, studioCheckDestination });
+      const plugins = await afterHooks({ passed: checked.success, checkUrl, problems: checkProblems(response) });
+      const success = checked.success && !plugins.failed;
+      jsonBuilder.setPlugins(plugins);
       if (shouldOutputJson) {
-        await jsonBuilder.write();
+        await jsonBuilder.setStatus(success).write();
+        return success;
       }
-      return success;
+      return finishCheck({ cosmoPassed: checked.success, plugins, ...checked });
     }
     case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
       const message = 'Error: Proposal match failed';
+      const plugins = await failedEarly(`${message}: ${response.proposalMatchMessage}`);
       if (shouldOutputJson) {
         await jsonBuilder
           .setCode(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL)
@@ -536,6 +595,7 @@ export const handleCheckResult = async ({
       } else {
         console.log(pc.red(message));
         console.log(pc.red(response.proposalMatchMessage));
+        printVerdicts(plugins);
         console.log(
           logSymbols.error +
             pc.red(
@@ -548,6 +608,7 @@ export const handleCheckResult = async ({
     case EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA: {
       const message =
         'Check has failed early because the schema could not be built. Please ensure that the schema is valid GraphQL and try again.';
+      const plugins = await failedEarly(response.response?.details || message);
       if (shouldOutputJson) {
         await jsonBuilder
           .setCode(EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA)
@@ -561,12 +622,14 @@ export const handleCheckResult = async ({
         if (response.response?.details) {
           console.log(pc.red(pc.bold(response.response?.details)));
         }
+        printVerdicts(plugins);
       }
       program.error(logSymbols.error + pc.red(' Schema check failed.'));
       break;
     }
     default: {
       const message = 'Failed to perform the check operation.';
+      const plugins = await failedEarly(response.response?.details || message);
       if (shouldOutputJson) {
         await jsonBuilder
           .setCode(EnumStatusCode.ERR)
@@ -582,6 +645,7 @@ export const handleCheckResult = async ({
       if (response.response?.details && !shouldOutputJson) {
         console.log(pc.red(pc.bold(response.response?.details)));
       }
+      printVerdicts(plugins);
 
       program.error(logSymbols.error + pc.red(' Schema check failed.'));
     }

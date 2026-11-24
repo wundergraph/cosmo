@@ -5,6 +5,7 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { runAfterHooks, runBeforeHooks } from '../../../../core/plugins/hooks.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -25,6 +26,9 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const hookInput = { graph: name, namespace: options.namespace || 'default' };
+    await runBeforeHooks('federated-graph delete', hookInput);
+
     const spinner = ora('Federated Graph is being deleted...').start();
     const resp = await opts.client.platform.deleteFederatedGraph(
       {
@@ -38,14 +42,14 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.response?.code === EnumStatusCode.OK) {
       spinner.succeed(`Federated Graph was deleted successfully.`);
+      await runAfterHooks('federated-graph delete', hookInput, { deleted: true });
     } else {
       spinner.fail(`Failed to delete federated graph.`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
+      await runAfterHooks('federated-graph delete', hookInput, { deleted: false });
       process.exitCode = 1;
-      // eslint-disable-next-line no-useless-return
-      return;
     }
   });
 

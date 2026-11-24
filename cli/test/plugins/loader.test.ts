@@ -101,13 +101,13 @@ describe('plugin shape validation', () => {
     });
   });
 
-  test('a default export without register is rejected with the reason', async () => {
+  test('a default export with neither register nor hooks is rejected with the reason', async () => {
     const entry = join(fixturesDir, 'wgc-plugin-broken', 'index.js');
     const loaded = await loadPlugin(entry);
 
     expect(loaded.success).toBe(false);
     expect(!loaded.success && loaded.errors[0].message).toBe(
-      `${entry} is not a wgc plugin. Its default export must be a WgcPlugin: ✖ register must be a function\n  → at default.register`,
+      `${entry} is not a wgc plugin. Its default export must be a WgcPlugin: ✖ a plugin must register commands, hooks or both\n  → at default`,
     );
   });
 
