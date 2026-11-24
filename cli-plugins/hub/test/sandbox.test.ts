@@ -20,7 +20,7 @@ const sandboxRow = (name: string, routerStatus: string) => ({
 });
 
 describe('wgc hub sandbox list', () => {
-  test('lists the sandboxes of the schema in sandbox.yaml', async () => {
+  test('lists the sandboxes of the graph in wundergraph.yaml', async () => {
     hub = await startFakeHub({
       tools: {
         list_sandboxes: () => ({
@@ -28,11 +28,11 @@ describe('wgc hub sandbox list', () => {
         }),
       },
     });
-    const dir = await tempRepo({ 'sandbox.yaml': 'schema: shop\nsubgraphs:\n  - name: a\n    schema: a.graphql\n' });
+    const dir = await tempRepo({ 'wundergraph.yaml': 'graph: shop\n' });
 
     const run = await runWgc(['hub', 'sandbox', 'list'], { hubUrl: hub.url, cwd: dir, output: 'text' });
 
-    expect(hub.toolCalls()).toEqual([{ name: 'list_sandboxes', arguments: { schema: 'shop' } }]);
+    expect(hub.toolCalls()).toEqual([{ name: 'list_sandboxes', arguments: { graph: 'shop', namespace: 'default' } }]);
     expect(run.stdout).toBe(
       [
         'shop/shop-nithin   live   https://shop-nithin.sandbox.wundergraph.dev/graphql',
@@ -42,13 +42,38 @@ describe('wgc hub sandbox list', () => {
     );
   });
 
-  test('without --schema or sandbox.yaml exits 2 with the fix', async () => {
+  test('in CI, asks for an OIDC token for the audience in HUB_OIDC_AUDIENCE', async () => {
+    hub = await startFakeHub({ tools: { list_sandboxes: () => ({ structuredContent: { sandboxes: [] } }) } });
+    const dir = await tempRepo({ 'wundergraph.yaml': 'graph: shop\n' });
+
+    const run = await runWgc(['hub', 'sandbox', 'list', '--json'], {
+      hubUrl: hub.url,
+      cwd: dir,
+      caller: 'ci',
+      env: {
+        HUB_OIDC_AUDIENCE: 'hub-staging',
+        GITHUB_ACTIONS: 'true',
+        ACTIONS_ID_TOKEN_REQUEST_URL: `${hub.url}/oidc`,
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'runner-token',
+      },
+      loginToken: '',
+    });
+
+    expect(run.exitCode).toBe(0);
+    expect(hub.requests[0]).toEqual({
+      path: '/oidc?audience=hub-staging',
+      authorization: 'bearer runner-token',
+      body: {},
+    });
+  });
+
+  test('without --schema or wundergraph.yaml exits 2 with the fix', async () => {
     const run = await runWgc(['hub', 'sandbox', 'list', '--json'], { cwd: await tempRepo({}) });
 
     expect(run.exitCode).toBe(2);
     expect(run.json()).toMatchObject({
       ok: false,
-      error: { remediation: 'Pass `--schema <slug>`, or run `wgc hub init` to create sandbox.yaml.' },
+      error: { remediation: 'Pass `--schema <slug>`, or run `wgc hub init` to create wundergraph.yaml.' },
     });
   });
 });

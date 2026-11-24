@@ -19,8 +19,8 @@ export interface SandboxOptions {
 export const withSandboxOptions = (command: Command): Command =>
   command
     .option('--sandbox <schema/sandbox>', 'Target sandbox (default: WGC_SANDBOX, then .wgc/link.json)')
-    .option('--config <path>', 'Path to sandbox.yaml (default: the nearest one in this or a parent directory)')
-    .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: sandbox.yaml `audience` or hub)')
+    .option('--config <path>', 'Path to wundergraph.yaml, next to which the link lives (default: the nearest one)')
+    .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: HUB_OIDC_AUDIENCE or hub)')
     .option('--json', 'Machine-readable output');
 
 /** Leads the help with real examples and ends it with the docs page, e.g. `withExamples(cmd, [...], 'status')`. */
@@ -49,7 +49,7 @@ export const openSandboxSession = async (
     return selection;
   }
 
-  const audience = await resolveAudience(cwd, options);
+  const audience = resolveAudience(options, dependencies.runtime.env);
   return ok({ hub: connectHub(dependencies.context, audience), selection: selection.data, directory });
 };
 

@@ -28,7 +28,7 @@ const runLink = async (sandbox: string | undefined, options: LinkOptions, depend
   }
 
   const cwd = runtime.cwd();
-  const hub = connectHub(context, await resolveAudience(cwd, options));
+  const hub = connectHub(context, resolveAudience(options, runtime.env));
   const found = await hub.callTool(hubTools.getSandbox, { sandbox }, hubResults.getSandbox);
   if (!found.success) {
     output.fail(toFailure(found));
@@ -62,8 +62,8 @@ export const linkCommands = (dependencies: HubDependencies): Command[] => [
     new Command('link')
       .description('Link this directory to a sandbox (.wgc/link.json, gitignored)')
       .argument('[sandbox]', 'Sandbox as <schema>/<sandbox>')
-      .option('--config <path>', 'Path to sandbox.yaml; the link goes next to it')
-      .option('--audience <audience>', 'OIDC audience Hub expects from CI')
+      .option('--config <path>', 'Path to wundergraph.yaml; the link goes next to it')
+      .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: HUB_OIDC_AUDIENCE or hub)')
       .option('--no-input', 'Never prompt')
       .option('--json', 'Machine-readable output'),
     ['wgc hub link shop/shop-nithin', 'wgc hub link shop/shop-nithin --json'],
@@ -71,7 +71,7 @@ export const linkCommands = (dependencies: HubDependencies): Command[] => [
   ).action((sandbox: string | undefined, options: LinkOptions) => runLink(sandbox, options, dependencies)),
   new Command('unlink')
     .description('Remove the link between this directory and its sandbox')
-    .option('--config <path>', 'Path to sandbox.yaml; the link sits next to it')
+    .option('--config <path>', 'Path to wundergraph.yaml; the link sits next to it')
     .option('--json', 'Machine-readable output')
     .action((options: LinkOptions) => runUnlink(options, dependencies)),
 ];

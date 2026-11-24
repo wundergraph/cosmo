@@ -148,12 +148,12 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "required": [
-      "sandbox_yaml",
+      "wundergraph_yaml",
       "router_version",
       "sources"
     ],
     "properties": {
-      "sandbox_yaml": {
+      "wundergraph_yaml": {
         "type": "string"
       },
       "router_version": {

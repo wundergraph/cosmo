@@ -4,7 +4,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { failWith, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import { sandboxFileName } from './sandbox-config.js';
+import { locateConfig } from '@wundergraph/wgc-plugin-sdk/config';
 
 export const linkFilePath = path.join('.wgc', 'link.json');
 
@@ -15,30 +15,13 @@ const linkShape = z.object({ sandbox: z.string() });
 
 export type SandboxLink = z.infer<typeof linkShape>;
 
-/** `--config` wins; otherwise the nearest sandbox.yaml in the cwd or a parent directory. */
-export const locateSandboxConfig = (cwd: string, configFlag: string | undefined): string | undefined => {
-  if (configFlag !== undefined) {
-    return path.resolve(cwd, configFlag);
-  }
+/** `--config` wins; otherwise the nearest wundergraph.yaml in the cwd or a parent directory. */
+export const locateProjectConfig = (cwd: string, configFlag: string | undefined): string | undefined =>
+  configFlag === undefined ? locateConfig(cwd) : path.resolve(cwd, configFlag);
 
-  let directory = cwd;
-  while (true) {
-    const candidate = path.join(directory, sandboxFileName);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-
-    const parent = path.dirname(directory);
-    if (parent === directory) {
-      return undefined;
-    }
-    directory = parent;
-  }
-};
-
-/** The directory that holds `.wgc/link.json`: next to sandbox.yaml, or the cwd without one. */
+/** The directory that holds `.wgc/link.json`: next to wundergraph.yaml, or the cwd without one. */
 export const projectDirectory = (cwd: string, configFlag: string | undefined): string => {
-  const config = locateSandboxConfig(cwd, configFlag);
+  const config = locateProjectConfig(cwd, configFlag);
   return config === undefined ? cwd : path.dirname(config);
 };
 
