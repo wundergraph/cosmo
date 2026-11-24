@@ -36,6 +36,8 @@ describe('Scim server v2.0', () => {
     otherOrgUserTestData = setupDetails.users.adminJimCompanyB;
     keycloakClient = setupDetails.keycloakClient;
     mailerClient = setupDetails.mailerClient;
+    // The test server has no SMTP server to send Cosmo's invitation email to.
+    vi.spyOn(mailerClient, 'sendInviteEmail').mockResolvedValue();
     realmName = setupDetails.realm;
     server = setupDetails.server;
     client = setupDetails.client;
@@ -118,8 +120,8 @@ describe('Scim server v2.0', () => {
 
   test('that when a user does not exists an invitation is sent', async () => {
     const email = uid(8) + '@wg.com';
-    const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
-    spy.mockImplementation(vi.fn());
+    const spy = vi.mocked(mailerClient.sendInviteEmail);
+    spy.mockClear();
 
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
@@ -163,8 +165,6 @@ describe('Scim server v2.0', () => {
 
     expect(exists).toBe(true);
     expect(spy).toHaveBeenCalledOnce();
-
-    spy.mockReset();
   });
 
   test('that adding an existing user from another organization, invites the user', async () => {
@@ -299,8 +299,8 @@ describe('Scim server v2.0', () => {
   });
 
   test('that an error is returned if the user is already part of the organization', async () => {
-    const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
-    spy.mockImplementation(vi.fn());
+    const spy = vi.mocked(mailerClient.sendInviteEmail);
+    spy.mockClear();
 
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
@@ -333,8 +333,6 @@ describe('Scim server v2.0', () => {
 
     expect(createUserResp.status).toBe(400);
     expect(spy).not.toHaveBeenCalled();
-
-    spy.mockReset();
   });
 
   test('that an user can be updated after accepting the organization invitation', async () => {

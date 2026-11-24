@@ -203,6 +203,7 @@ export const SetupTest = async function ({
   const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
   await server.register(ScimController, {
     organizationRepository,
+    mailer: mailerClient,
     userRepository,
     apiKeyRepository,
     authenticator: apiKeyAuth,
