@@ -54,6 +54,7 @@ const EmbedSessionPage: NextPageWithLayout = () => {
   return <Loader fullscreen />;
 };
 
+EmbedSessionPage.ownsSession = true;
 EmbedSessionPage.getLayout = (page) => <div className="flex min-h-screen bg-background">{page}</div>;
 
 export default EmbedSessionPage;

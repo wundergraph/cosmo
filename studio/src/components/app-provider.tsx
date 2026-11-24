@@ -14,7 +14,7 @@ import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
 import { useIsEmbedded } from '@/hooks/use-is-embedded';
-import { embedSessionPath, postToHub } from '@/lib/embed';
+import { postToHub } from '@/lib/embed';
 import { EmbedLayout } from '@/components/layout/embed-layout';
 import { EmptyState } from '@/components/empty-state';
 
@@ -23,7 +23,7 @@ const sessionQueryClient = new QueryClient();
 export const UserContext = createContext<User | undefined>(undefined);
 export const SessionClientContext = createContext<QueryClient>(sessionQueryClient);
 
-const publicPaths = ['/login', '/signup', '/login-method-restricted', embedSessionPath];
+const publicPaths = ['/login', '/signup', '/login-method-restricted'];
 
 // The /session endpoint returns the same shape as the platform LoginMethod proto
 // message (plain JSON), so reuse the generated type instead of duplicating it.
@@ -258,7 +258,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations' &&
-        router.pathname !== embedSessionPath &&
         // match onboarding URL `/onboarding/1` etc
         !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname) &&
         !shouldSeeInvitationsJoinPage({ router, invitations: data.invitations })
