@@ -25,9 +25,7 @@ const {
   organizationName,
   organizationSlug,
   databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
+  databaseTls,
 } = getConfig();
 
 const keycloakClient = new Keycloak({
@@ -58,10 +56,7 @@ try {
 
   // Create database connection. TLS is optionally.
   const connectionConfig = await buildDatabaseConnectionConfig({
-    tls:
-      databaseTlsCa || databaseTlsCert || databaseTlsKey
-        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-        : undefined,
+    tls: databaseTls,
   });
   const queryConnection = postgres(databaseConnectionUrl, {
     ...connectionConfig,

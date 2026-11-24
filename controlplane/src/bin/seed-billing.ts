@@ -13,17 +13,14 @@ import { BillingRepository } from '../core/repositories/BillingRepository.js';
 import billingConfig from './billing.json' with { type: 'json' };
 import { getConfig } from './get-config.js';
 
-const { databaseConnectionUrl, databaseTlsCa, databaseTlsCert, databaseTlsKey } = getConfig();
+const { databaseConnectionUrl, databaseTls } = getConfig();
 
 const config = process.argv[2]
   ? JSON.parse(readFileSync(path.resolve(process.cwd(), process.argv[2]), 'utf8'))
   : billingConfig;
 
 const connectionConfig = await buildDatabaseConnectionConfig({
-  tls:
-    databaseTlsCa || databaseTlsCert || databaseTlsKey
-      ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-      : undefined,
+  tls: databaseTls,
 });
 const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig, max: 1 });
 

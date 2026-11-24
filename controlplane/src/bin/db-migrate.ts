@@ -8,6 +8,7 @@ import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import { BillingRepository } from '../core/repositories/BillingRepository.js';
 import * as schema from '../db/schema.js';
 import billingConfig from './billing.json' with { type: 'json' };
+import { getConfig } from './get-config.js';
 
 const DB_URL = process.env.DB_URL;
 
@@ -15,16 +16,7 @@ if (!DB_URL) {
   throw new Error('DB_URL environment variable is not set or empty');
 }
 
-const connectionConfig = {
-  tls:
-    process.env.DB_TLS_CA || process.env.DB_TLS_CERT || process.env.DB_TLS_KEY
-      ? {
-          ca: process.env.DB_TLS_CA,
-          cert: process.env.DB_TLS_CERT,
-          key: process.env.DB_TLS_KEY,
-        }
-      : undefined,
-};
+const connectionConfig = { tls: getConfig().databaseTls };
 
 console.log(`Migrating database`);
 
