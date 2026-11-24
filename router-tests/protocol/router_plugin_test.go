@@ -71,6 +71,35 @@ func TestRouterPlugin(t *testing.T) {
 		})
 	})
 
+	// The courses plugin uses google.protobuf wrapper types for nullable scalars.
+	// descriptionPreview gets the nullable description through its resolver context.
+	t.Run("Should send wrapper typed context fields to a field resolver", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+				Path:    "../../router/plugins",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { courses { id descriptionPreview(maxLength: 5) } }`,
+			})
+			require.Equal(t, `{"data":{"courses":[{"id":"1","descriptionPreview":"Learn"},{"id":"2","descriptionPreview":"Maste"},{"id":"3","descriptionPreview":"Build"}]}}`, response.Body)
+
+			response = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { course(id: 1) { descriptionPreview } }`,
+			})
+			require.Equal(t, `{"data":{"course":{"descriptionPreview":"Learn the basics of TypeScript"}}}`, response.Body)
+
+			// A new course has no description, so the context field is null.
+			response = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { addCourse(title: "Rust Basics", instructorId: 3) { title descriptionPreview(maxLength: 5) } }`,
+			})
+			require.Equal(t, `{"data":{"addCourse":{"title":"Rust Basics","descriptionPreview":null}}}`, response.Body)
+		})
+	})
+
 	t.Run("Should restart plugin if it exits for projects", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{

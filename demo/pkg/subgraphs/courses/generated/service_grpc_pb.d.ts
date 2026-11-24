@@ -17,6 +17,7 @@ interface ICoursesServiceService extends grpc.ServiceDefinition<grpc.UntypedServ
     queryKillCoursesService: ICoursesServiceService_IQueryKillCoursesService;
     queryLessons: ICoursesServiceService_IQueryLessons;
     queryThrowErrorCourses: ICoursesServiceService_IQueryThrowErrorCourses;
+    resolveCourseDescriptionPreview: ICoursesServiceService_IResolveCourseDescriptionPreview;
 }
 
 interface ICoursesServiceService_ILookupEmployeeById extends grpc.MethodDefinition<service_pb.LookupEmployeeByIdRequest, service_pb.LookupEmployeeByIdResponse> {
@@ -91,6 +92,15 @@ interface ICoursesServiceService_IQueryThrowErrorCourses extends grpc.MethodDefi
     responseSerialize: grpc.serialize<service_pb.QueryThrowErrorCoursesResponse>;
     responseDeserialize: grpc.deserialize<service_pb.QueryThrowErrorCoursesResponse>;
 }
+interface ICoursesServiceService_IResolveCourseDescriptionPreview extends grpc.MethodDefinition<service_pb.ResolveCourseDescriptionPreviewRequest, service_pb.ResolveCourseDescriptionPreviewResponse> {
+    path: "/service.CoursesService/ResolveCourseDescriptionPreview";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<service_pb.ResolveCourseDescriptionPreviewRequest>;
+    requestDeserialize: grpc.deserialize<service_pb.ResolveCourseDescriptionPreviewRequest>;
+    responseSerialize: grpc.serialize<service_pb.ResolveCourseDescriptionPreviewResponse>;
+    responseDeserialize: grpc.deserialize<service_pb.ResolveCourseDescriptionPreviewResponse>;
+}
 
 export const CoursesServiceService: ICoursesServiceService;
 
@@ -103,6 +113,7 @@ export interface ICoursesServiceServer extends grpc.UntypedServiceImplementation
     queryKillCoursesService: grpc.handleUnaryCall<service_pb.QueryKillCoursesServiceRequest, service_pb.QueryKillCoursesServiceResponse>;
     queryLessons: grpc.handleUnaryCall<service_pb.QueryLessonsRequest, service_pb.QueryLessonsResponse>;
     queryThrowErrorCourses: grpc.handleUnaryCall<service_pb.QueryThrowErrorCoursesRequest, service_pb.QueryThrowErrorCoursesResponse>;
+    resolveCourseDescriptionPreview: grpc.handleUnaryCall<service_pb.ResolveCourseDescriptionPreviewRequest, service_pb.ResolveCourseDescriptionPreviewResponse>;
 }
 
 export interface ICoursesServiceClient {
@@ -130,6 +141,9 @@ export interface ICoursesServiceClient {
     queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
     queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
     queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
+    resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
+    resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
+    resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class CoursesServiceClient extends grpc.Client implements ICoursesServiceClient {
@@ -158,4 +172,7 @@ export class CoursesServiceClient extends grpc.Client implements ICoursesService
     public queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
     public queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
     public queryThrowErrorCourses(request: service_pb.QueryThrowErrorCoursesRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.QueryThrowErrorCoursesResponse) => void): grpc.ClientUnaryCall;
+    public resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
+    public resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
+    public resolveCourseDescriptionPreview(request: service_pb.ResolveCourseDescriptionPreviewRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.ResolveCourseDescriptionPreviewResponse) => void): grpc.ClientUnaryCall;
 }

@@ -181,6 +181,28 @@ function deserialize_service_QueryThrowErrorCoursesResponse(buffer_arg) {
   return service_pb.QueryThrowErrorCoursesResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_service_ResolveCourseDescriptionPreviewRequest(arg) {
+  if (!(arg instanceof service_pb.ResolveCourseDescriptionPreviewRequest)) {
+    throw new Error('Expected argument of type service.ResolveCourseDescriptionPreviewRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_service_ResolveCourseDescriptionPreviewRequest(buffer_arg) {
+  return service_pb.ResolveCourseDescriptionPreviewRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_service_ResolveCourseDescriptionPreviewResponse(arg) {
+  if (!(arg instanceof service_pb.ResolveCourseDescriptionPreviewResponse)) {
+    throw new Error('Expected argument of type service.ResolveCourseDescriptionPreviewResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_service_ResolveCourseDescriptionPreviewResponse(buffer_arg) {
+  return service_pb.ResolveCourseDescriptionPreviewResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 
 // Service definition for CoursesService
 var CoursesServiceService = exports.CoursesServiceService = {
@@ -272,6 +294,17 @@ lookupEmployeeById: {
     requestDeserialize: deserialize_service_QueryThrowErrorCoursesRequest,
     responseSerialize: serialize_service_QueryThrowErrorCoursesResponse,
     responseDeserialize: deserialize_service_QueryThrowErrorCoursesResponse,
+  },
+  resolveCourseDescriptionPreview: {
+    path: '/service.CoursesService/ResolveCourseDescriptionPreview',
+    requestStream: false,
+    responseStream: false,
+    requestType: service_pb.ResolveCourseDescriptionPreviewRequest,
+    responseType: service_pb.ResolveCourseDescriptionPreviewResponse,
+    requestSerialize: serialize_service_ResolveCourseDescriptionPreviewRequest,
+    requestDeserialize: deserialize_service_ResolveCourseDescriptionPreviewRequest,
+    responseSerialize: serialize_service_ResolveCourseDescriptionPreviewResponse,
+    responseDeserialize: deserialize_service_ResolveCourseDescriptionPreviewResponse,
   },
 };
 
