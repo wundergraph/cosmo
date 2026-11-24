@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { create } from '@bufbuild/protobuf';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
+import type { OptionValues } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
@@ -18,6 +19,7 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
 import { runAfterHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
+import { forEachConfigSubgraph, readConfigSubgraphs } from '../../../core/repo-config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -25,10 +27,14 @@ export default (opts: BaseCommandOptions) => {
     "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
   command.argument(
-    '<name>',
-    'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
+    '[name]',
+    'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph. With --config, only this subgraph of the file.',
   );
-  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
+  command.option(
+    '--config [path]',
+    'Publish every subgraph wundergraph.yaml lists, in its namespace, each with its schema and routing_url (default: the nearest wundergraph.yaml).',
+  );
+  command.option('--schema <path-to-schema>', 'The schema file to upload to the subgraph. Required without --config.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
@@ -82,7 +88,7 @@ export default (opts: BaseCommandOptions) => {
     '50',
   );
 
-  command.action(async (name, options) => {
+  const publishOne = async (name: string, options: OptionValues) => {
     const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
@@ -318,6 +324,27 @@ export default (opts: BaseCommandOptions) => {
       compositionErrors:
         resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? compositionErrorsOf() : [],
     });
+  };
+
+  command.action(async (name: string | undefined, options: OptionValues) => {
+    if (options.config === undefined) {
+      if (name === undefined || options.schema === undefined) {
+        program.error(
+          "missing required argument 'name' or option '--schema <path-to-schema>' (or pass --config to publish every subgraph of wundergraph.yaml)",
+        );
+      }
+      await publishOne(name, options);
+      return;
+    }
+    const subgraphs = await readConfigSubgraphs(options.config, name);
+    await forEachConfigSubgraph(subgraphs, (subgraph) =>
+      publishOne(subgraph.name, {
+        ...options,
+        schema: subgraph.schemaFile,
+        namespace: options.namespace || subgraph.namespace,
+        routingUrl: options.routingUrl ?? subgraph.routingUrl,
+      }),
+    );
   });
 
   return command;

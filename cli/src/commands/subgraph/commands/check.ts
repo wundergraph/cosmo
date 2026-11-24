@@ -13,13 +13,34 @@ import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
 import { commandHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { limitMaxValue } from '../../../constants.js';
+import { forEachConfigSubgraph, readConfigSubgraphs } from '../../../core/repo-config.js';
+
+interface CheckOptions {
+  namespace?: string;
+  schema?: string;
+  delete?: boolean;
+  skipTrafficCheck?: boolean;
+  label: string[];
+  disableResolvabilityValidation?: boolean;
+  limit: string;
+  json?: boolean;
+  out?: string;
+  config?: string | true;
+}
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description(
     'Checks for breaking changes and composition errors across all connected federated graphs, including feature flag compositions; also runs when the target is a feature subgraph.',
   );
-  command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
+  command.argument(
+    '[name]',
+    'The name of the subgraph on which the check operation is to be performed. With --config, only this subgraph of the file.',
+  );
+  command.option(
+    '--config [path]',
+    'Check every subgraph wundergraph.yaml lists, in its namespace, each with its schema (default: the nearest wundergraph.yaml).',
+  );
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
@@ -41,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('-o, --out [string]', 'Destination file for the json output.');
 
-  command.action(async (name, options) => {
+  const checkOne = async (name: string, options: CheckOptions) => {
     let schemaFile;
     let outFile;
 
@@ -121,9 +142,27 @@ export default (opts: BaseCommandOptions) => {
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;
-      // eslint-disable-next-line no-useless-return
+    }
+  };
+
+  command.action(async (name: string | undefined, options: CheckOptions) => {
+    if (options.config === undefined) {
+      if (name === undefined) {
+        program.error(
+          "missing required argument 'name' (or pass --config to check every subgraph of wundergraph.yaml)",
+        );
+      }
+      await checkOne(name, options);
       return;
     }
+    const subgraphs = await readConfigSubgraphs(options.config, name);
+    await forEachConfigSubgraph(subgraphs, (subgraph) =>
+      checkOne(subgraph.name, {
+        ...options,
+        schema: subgraph.schemaFile,
+        namespace: options.namespace || subgraph.namespace,
+      }),
+    );
   });
 
   return command;
