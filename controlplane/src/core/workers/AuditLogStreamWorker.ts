@@ -2,7 +2,7 @@ import { ConnectionOptions, Queue, Worker } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
-import { sendToHec, toHecEvent } from '../audit-log-stream/splunk-hec.js';
+import { sendAuditLogs } from '../audit-log-stream/deliver.js';
 import { AuditLogStreamRepository, isAuditLogStreamingEnabled } from '../repositories/AuditLogStreamRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
@@ -71,10 +71,7 @@ export async function deliverAuditLogs(input: {
       return;
     }
 
-    const error = await sendToHec(
-      config,
-      logs.map((log) => toHecEvent(log, config)),
-    );
+    const error = await sendAuditLogs(config, logs);
     if (error) {
       logger.warn({ organizationId: config.organizationId, err: error }, 'Failed to stream audit logs');
       await repo.recordError(config.organizationId, error);
@@ -100,15 +97,15 @@ export async function deliverAllAuditLogs(input: {
 }) {
   const { repo, orgRepo, logger } = input;
 
-  const configs = await repo.listEnabled();
-  for (const config of configs) {
+  const organizationIds = await repo.listEnabledOrganizationIds();
+  for (const organizationId of organizationIds) {
     try {
-      if (!(await isAuditLogStreamingEnabled(orgRepo, config.organizationId))) {
+      if (!(await isAuditLogStreamingEnabled(orgRepo, organizationId))) {
         continue;
       }
-      await deliverAuditLogs({ repo, organizationId: config.organizationId, logger });
+      await deliverAuditLogs({ repo, organizationId, logger });
     } catch (err: unknown) {
-      logger.error({ organizationId: config.organizationId, err }, 'Audit log stream delivery failed');
+      logger.error({ organizationId, err }, 'Audit log stream delivery failed');
     }
   }
 }
