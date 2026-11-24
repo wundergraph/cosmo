@@ -15,6 +15,18 @@ export interface BearerRequest {
   gitlabTokenVariable: string;
 }
 
+export interface CosmoTokenRequest extends BearerRequest {
+  /** Hub's API base, which trades the job's OIDC token for a Cosmo access token at `POST /ci/cosmo-token`. */
+  hubUrl: string;
+}
+
+/** A Cosmo access token that lets one CI job manage the subgraphs of its graph's namespace until it expires. */
+export interface CosmoToken {
+  token: string;
+  expiresAt: string;
+  namespace: string;
+}
+
 export interface Credentials {
   /**
    * The CI job's OIDC token when running in GitHub Actions or GitLab CI, else the `wgc auth login` token,
@@ -23,9 +35,13 @@ export interface Credentials {
   resolveBearer(request: BearerRequest, target: URL): Promise<Result<Bearer>>;
   /** The CI job's OIDC token, or undefined outside a CI job that offers one. */
   ciOidcToken(request: BearerRequest): Promise<Result<string | undefined>>;
+  /** In a CI job, the Cosmo access token Hub gives the job for its OIDC token; undefined outside CI. */
+  cosmoToken(request: CosmoTokenRequest): Promise<Result<CosmoToken | undefined>>;
 }
 
 const githubTokenResponse = z.object({ value: z.string().min(1) });
+const cosmoTokenResponse = z.object({ token: z.string().min(1), expiresAt: z.string(), namespace: z.string() });
+const hubErrorResponse = z.object({ error: z.string() });
 
 export const createCredentials = ({
   env,
@@ -93,8 +109,42 @@ export const createCredentials = ({
     });
   };
 
+  const cosmoToken = async ({ hubUrl, ...request }: CosmoTokenRequest): Promise<Result<CosmoToken | undefined>> => {
+    const ci = await ciOidcToken(request);
+    if (!ci.success || ci.data === undefined) {
+      return ci.success ? ok(undefined) : ci;
+    }
+
+    const target = new URL('ci/cosmo-token', hubUrl.endsWith('/') ? hubUrl : `${hubUrl}/`);
+    const allowed = await authorizeTarget(ci.data, target);
+    if (!allowed.success) {
+      return allowed;
+    }
+
+    let response: Response;
+    try {
+      response = await fetchImpl(target, { method: 'POST', headers: { authorization: `Bearer ${ci.data}` } });
+    } catch (error: unknown) {
+      return failure(`Could not reach Hub at ${target.origin} for a Cosmo access token.`, error as Error);
+    }
+    const body: unknown = await response.json().catch(() => undefined);
+    if (!response.ok) {
+      const reason = hubErrorResponse.safeParse(body);
+      return failure(
+        `Hub gave this CI job no Cosmo access token (HTTP ${response.status})` +
+          (reason.success ? `: ${reason.data.error}` : '.'),
+      );
+    }
+    const parsed = cosmoTokenResponse.safeParse(body);
+    if (!parsed.success) {
+      return failure('Hub answered without a Cosmo access token.');
+    }
+    return ok(parsed.data);
+  };
+
   return {
     ciOidcToken,
+    cosmoToken,
     async resolveBearer(request, target) {
       const bearer = await findBearer(request);
       if (!bearer.success) {

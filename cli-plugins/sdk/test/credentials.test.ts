@@ -79,4 +79,65 @@ describe('createCredentials', () => {
     });
     expect(asked).toEqual(['wg_orbstack_pat_s3cret https://hub.example/mcp']);
   });
+
+  describe('cosmoToken', () => {
+    const hubUrl = 'https://hub.example/';
+    const githubJob = {
+      GITHUB_ACTIONS: 'true',
+      ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.example/req?api-version=2.0',
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req-token',
+    };
+
+    test('in a CI job, trades the job token at Hub for a Cosmo access token', async () => {
+      const calls: string[] = [];
+      const credentials = createCredentials({
+        env: githubJob,
+        loginToken: () => Promise.resolve('login'),
+        fetchImpl: (input, init) => {
+          calls.push(`${init?.method ?? 'GET'} ${String(input)} ${new Headers(init?.headers).get('authorization')}`);
+          if (String(input).startsWith('https://token.example/')) {
+            return Promise.resolve(Response.json({ value: 'gh-oidc' }));
+          }
+          return Promise.resolve(
+            Response.json(
+              { token: 'cosmo_ci_abc', expiresAt: '2026-11-24T10:10:00.000Z', namespace: 'prod' },
+              { status: 201 },
+            ),
+          );
+        },
+      });
+
+      expect(await credentials.cosmoToken({ ...request, hubUrl })).toEqual({
+        success: true,
+        data: { token: 'cosmo_ci_abc', expiresAt: '2026-11-24T10:10:00.000Z', namespace: 'prod' },
+      });
+      expect(calls).toEqual([
+        'GET https://token.example/req?api-version=2.0&audience=hub bearer req-token',
+        'POST https://hub.example/ci/cosmo-token Bearer gh-oidc',
+      ]);
+    });
+
+    test('outside a CI job, asks Hub for nothing', async () => {
+      const credentials = createCredentials({
+        env: {},
+        loginToken: () => Promise.resolve('login'),
+        fetchImpl: () => Promise.reject(new Error('no request expected')),
+      });
+
+      expect(await credentials.cosmoToken({ ...request, hubUrl })).toEqual({ success: true, data: undefined });
+    });
+
+    test('reports why Hub refused the job', async () => {
+      const credentials = createCredentials({
+        env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gl-oidc' },
+        loginToken: () => Promise.resolve(undefined),
+        fetchImpl: () => Promise.resolve(Response.json({ error: 'CI identity token rejected' }, { status: 401 })),
+      });
+
+      expect(await credentials.cosmoToken({ ...request, hubUrl })).toEqual({
+        success: false,
+        errors: [new Error('Hub gave this CI job no Cosmo access token (HTTP 401): CI identity token rejected')],
+      });
+    });
+  });
 });
