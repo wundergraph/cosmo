@@ -14,7 +14,7 @@ func TestFederationContextDataSourceMetadata(t *testing.T) {
 			{ContextName: "account", Provider: &nodev1.ContextProvider_Abstract{Abstract: &nodev1.AbstractContextProvider{TypeName: "Account", ConcreteTypeNames: []string{"Member", "Team"}}}},
 			{ContextName: "unset"},
 		},
-		ContextArguments: []*nodev1.ContextArgument{{ContextName: "account", TypeName: "Wallet", FieldName: "quote", ArgumentName: "locale", ArgumentType: "String", ContextSelection: "{ locale }"}},
+		ContextArguments: []*nodev1.ContextArgument{{ContextName: "account", TypeName: "Wallet", FieldName: "quote", ArgumentName: "locale", ContextSelection: "{ locale }"}},
 		Requires:         []*nodev1.RequiredField{{TypeName: "Wallet", FieldName: "quote", SelectionSet: "currency"}},
 	}
 	var loader Loader
@@ -23,7 +23,7 @@ func TestFederationContextDataSourceMetadata(t *testing.T) {
 		{ContextName: "member", Provider: plan.ConcreteContextProvider{TypeName: "Member"}},
 		{ContextName: "account", Provider: plan.AbstractContextProvider{TypeName: "Account", ConcreteTypeNames: []string{"Member", "Team"}}},
 	}, meta.ContextProviders)
-	require.Equal(t, []plan.ContextArgument{{ContextName: "account", TypeName: "Wallet", FieldName: "quote", ArgumentName: "locale", ArgumentType: "String", ContextSelection: "{ locale }"}}, meta.ContextArguments)
+	require.Equal(t, []plan.ContextArgument{{ContextName: "account", TypeName: "Wallet", FieldName: "quote", ArgumentName: "locale", ContextSelection: "{ locale }"}}, meta.ContextArguments)
 	require.Len(t, meta.Requires, 1)
 	require.Empty(t, loader.dataSourceMetaData(&nodev1.DataSourceConfiguration{}).ContextArguments)
 }

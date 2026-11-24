@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { toJson } from '@bufbuild/protobuf';
-import { ContextProviderSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { ContextArgumentSchema, ContextProviderSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { normalizeSubgraphFromString } from '@wundergraph/composition';
 import { buildRouterConfig, Input, SubgraphKind } from '../src';
 
@@ -48,7 +48,15 @@ describe('Router compatibility version tests', () => {
       { contextName: 'account', abstract: { typeName: 'Account', concreteTypeNames: ['Member'] } },
       { contextName: 'member', concrete: { typeName: 'Member' } },
     ]);
-    expect(datasource.contextArguments.map((argument) => argument.contextSelection.trim())).toEqual(['{\n  plan\n}']);
+    expect(datasource.contextArguments.map((argument) => toJson(ContextArgumentSchema, argument))).toEqual([
+      {
+        typeName: 'Wallet',
+        fieldName: 'quote',
+        argumentName: 'plan',
+        contextName: 'member',
+        contextSelection: '{\n  plan\n}',
+      },
+    ]);
   });
 
   test('that "1" is a valid router compatibility version', () => {

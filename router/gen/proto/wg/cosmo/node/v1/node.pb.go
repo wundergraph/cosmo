@@ -1383,7 +1383,6 @@ type ContextArgument struct {
 	TypeName         string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
 	FieldName        string                 `protobuf:"bytes,3,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
 	ArgumentName     string                 `protobuf:"bytes,4,opt,name=argument_name,json=argumentName,proto3" json:"argument_name,omitempty"`
-	ArgumentType     string                 `protobuf:"bytes,5,opt,name=argument_type,json=argumentType,proto3" json:"argument_type,omitempty"`
 	ContextSelection string                 `protobuf:"bytes,6,opt,name=context_selection,json=contextSelection,proto3" json:"context_selection,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -1443,13 +1442,6 @@ func (x *ContextArgument) GetFieldName() string {
 func (x *ContextArgument) GetArgumentName() string {
 	if x != nil {
 		return x.ArgumentName
-	}
-	return ""
-}
-
-func (x *ContextArgument) GetArgumentType() string {
-	if x != nil {
-		return x.ArgumentType
 	}
 	return ""
 }
@@ -5382,14 +5374,13 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\bconcrete\x18\x02 \x01(\v2).wg.cosmo.node.v1.ConcreteContextProviderH\x00R\bconcrete\x12G\n" +
 	"\babstract\x18\x03 \x01(\v2).wg.cosmo.node.v1.AbstractContextProviderH\x00R\babstractB\n" +
 	"\n" +
-	"\bprovider\"\xe7\x01\n" +
+	"\bprovider\"\xc2\x01\n" +
 	"\x0fContextArgument\x12!\n" +
 	"\fcontext_name\x18\x01 \x01(\tR\vcontextName\x12\x1b\n" +
 	"\ttype_name\x18\x02 \x01(\tR\btypeName\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x03 \x01(\tR\tfieldName\x12#\n" +
-	"\rargument_name\x18\x04 \x01(\tR\fargumentName\x12#\n" +
-	"\rargument_type\x18\x05 \x01(\tR\fargumentType\x12+\n" +
+	"\rargument_name\x18\x04 \x01(\tR\fargumentName\x12+\n" +
 	"\x11context_selection\x18\x06 \x01(\tR\x10contextSelection\"\xf2\x02\n" +
 	"\x1aEntityCachingConfiguration\x12j\n" +
 	"\x1bentity_cache_configurations\x18\x01 \x03(\v2*.wg.cosmo.node.v1.EntityCacheConfigurationR\x19entityCacheConfigurations\x12v\n" +

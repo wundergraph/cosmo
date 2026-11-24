@@ -51,7 +51,6 @@ export type ContextArgument = {
   typeName: string;
   fieldName: string;
   argumentName: string;
-  argumentType: string;
   contextSelection: string;
 };
 
@@ -301,7 +300,6 @@ export function collectContexts(schema: GraphQLSchema, federatedTypeName = (name
             typeName: federatedTypeName(type.name),
             fieldName: field.name,
             argumentName: arg.name,
-            argumentType: String(arg.type),
             contextSelection: print(selectionSet),
           });
         } catch (error) {

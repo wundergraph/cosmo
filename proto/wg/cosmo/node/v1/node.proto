@@ -110,7 +110,6 @@ message ContextArgument {
   string type_name = 2;
   string field_name = 3;
   string argument_name = 4;
-  string argument_type = 5;
   string context_selection = 6;
 }
 

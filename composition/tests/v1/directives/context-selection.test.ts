@@ -77,12 +77,12 @@ test('serializes an interface binding in a v1 router config', () => {
   expect(result.configurationDataByTypeName.get('Account')?.contextProviders).toEqual([
     { kind: 'abstract', contextName: 'account', typeName: 'Account', concreteTypeNames: ['Member'] },
   ]);
-  expect(result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0]).toMatchObject({
+  expect(result.configurationDataByTypeName.get('Wallet')?.contextArguments?.[0]).toEqual({
     contextName: 'account',
     typeName: 'Wallet',
     fieldName: 'quote',
     argumentName: 'locale',
-    argumentType: 'String',
+    contextSelection: '{\n  locale\n}',
   });
   expect(result.warnings).toHaveLength(0);
 });

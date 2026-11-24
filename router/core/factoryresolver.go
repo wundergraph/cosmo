@@ -651,7 +651,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		out.ContextProviders = append(out.ContextProviders, plan.ContextProvider{ContextName: provider.ContextName, Provider: source})
 	}
 	for _, binding := range in.ContextArguments {
-		out.ContextArguments = append(out.ContextArguments, plan.ContextArgument{ContextName: binding.ContextName, TypeName: binding.TypeName, FieldName: binding.FieldName, ArgumentName: binding.ArgumentName, ArgumentType: binding.ArgumentType, ContextSelection: binding.ContextSelection})
+		out.ContextArguments = append(out.ContextArguments, plan.ContextArgument{ContextName: binding.ContextName, TypeName: binding.TypeName, FieldName: binding.FieldName, ArgumentName: binding.ArgumentName, ContextSelection: binding.ContextSelection})
 	}
 	for _, keyConfiguration := range in.Keys {
 		var conditions []plan.KeyCondition
