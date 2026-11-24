@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { afterAll, afterEach, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import Keycloak from '../src/core/services/Keycloak.js';
 import { SetupTest } from './test-util.js';
 import { TEST_DIRECT_GRANT_CLIENT_ID } from './keycloak-test-utils.js';
 
@@ -75,6 +77,76 @@ describe('initializeCosmoUser', () => {
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.OK);
   });
 
+  test('that the user registered webhook includes the signup details stored in Keycloak', async (testContext) => {
+    const { client, server, keycloakClient, realm, platformWebhooks } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
+    const userEmail = randomUUID() + '@wg.com';
+    const keycloakUserId = await createKeycloakUser(keycloakClient, realm, userEmail, {
+      company_name: ['Acme Inc.'],
+      use_case: ['migrating_from_apollo'],
+      current_setup: ['rest_to_graphql'],
+    });
+
+    const { access_token: token } = await signIn(userEmail, 'wunder@123');
+    const response = await client.initializeCosmoUser({ token });
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    expect(platformWebhooks.sentEvents).toEqual([
+      {
+        eventName: PlatformEventName.USER_REGISTER_SUCCESS,
+        eventPayload: {
+          user_id: keycloakUserId,
+          user_email: userEmail,
+          user_first_name: 'Fake',
+          user_last_name: 'User',
+          utm_source: undefined,
+          utm_medium: undefined,
+          utm_campaign: undefined,
+          utm_content: undefined,
+          utm_term: undefined,
+          company_name: 'Acme Inc.',
+          use_case: 'migrating_from_apollo',
+          current_setup: 'rest_to_graphql',
+        },
+      },
+    ]);
+  });
+
+  test('that the user registered webhook is still sent when the signup details lookup fails', async (testContext) => {
+    const { client, server, keycloakClient, realm, platformWebhooks } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
+    const userEmail = randomUUID() + '@wg.com';
+    const keycloakUserId = await createKeycloakUser(keycloakClient, realm, userEmail, {
+      company_name: ['Acme Inc.'],
+    });
+    vi.spyOn(keycloakClient, 'getUserAttributes').mockRejectedValueOnce(new Error('Keycloak unavailable'));
+
+    const { access_token: token } = await signIn(userEmail, 'wunder@123');
+    const response = await client.initializeCosmoUser({ token });
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    expect(platformWebhooks.sentEvents).toEqual([
+      {
+        eventName: PlatformEventName.USER_REGISTER_SUCCESS,
+        eventPayload: {
+          user_id: keycloakUserId,
+          user_email: userEmail,
+          user_first_name: 'Fake',
+          user_last_name: 'User',
+          utm_source: undefined,
+          utm_medium: undefined,
+          utm_campaign: undefined,
+          utm_content: undefined,
+          utm_term: undefined,
+        },
+      },
+    ]);
+  });
+
   test('that a user that does not exists in Cosmo is initialized correctly', async (testContext) => {
     const { client, server, keycloakClient, realm } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());
@@ -127,6 +199,25 @@ describe('initializeCosmoUser', () => {
     expect(keycloakGroups[0].path).toBe(`/${orgMemberships[0].slug}/admin`);
   });
 });
+
+async function createKeycloakUser(
+  keycloakClient: Keycloak,
+  realm: string,
+  email: string,
+  attributes?: Record<string, string[]>,
+) {
+  const { id } = await keycloakClient.client.users.create({
+    email,
+    enabled: true,
+    emailVerified: true,
+    firstName: 'Fake',
+    lastName: 'User',
+    realm,
+    attributes,
+    credentials: [{ type: 'password', value: 'wunder@123', temporary: false }],
+  });
+  return id;
+}
 
 type AuthResponse = {
   access_token: string;

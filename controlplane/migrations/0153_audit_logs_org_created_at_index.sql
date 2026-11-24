@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "auditlogs_org_created_at_id_idx" ON "audit_logs" USING btree ("organization_id","created_at","id");--> statement-breakpoint
+DROP INDEX IF EXISTS "auditlogs_organization_idx";

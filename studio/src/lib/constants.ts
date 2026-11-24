@@ -280,6 +280,13 @@ export const roles = [
     displayName: 'Viewer',
     description: 'Grants readonly access to the selected subgraphs.',
   },
+  {
+    key: 'subgraph-check-approver',
+    category: 'subgraph',
+    displayName: 'Check Approver',
+    description:
+      'Allows forcing checks to succeed and overriding breaking changes for the selected subgraphs. Only takes effect together with read access to the federated graph.',
+  },
 ];
 
 export type OrganizationRole = (typeof roles)[number]['key'];

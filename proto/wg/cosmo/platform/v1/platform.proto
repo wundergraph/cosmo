@@ -731,6 +731,7 @@ message GetCheckSummaryResponse {
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
   repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 16;
+  bool can_approve_checks = 17;
 }
 
 message GetCheckOperationsRequest {
@@ -762,6 +763,8 @@ message GetCheckOperationsResponse {
   int32 totalOperationsCount = 6;
   bool doAllOperationsHaveIgnoreAllOverride = 7;
   bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
+  bool can_approve_checks = 9;
+  bool can_ignore_operations = 10;
 }
 
 message GetOperationContentRequest {
@@ -1885,6 +1888,7 @@ message CreateOperationOverridesRequest {
   string operation_hash = 3;
   string operation_name = 4;
   repeated OverrideChange changes = 5;
+  optional string check_id = 6;
 }
 
 message CreateOperationOverridesResponse {
@@ -1907,6 +1911,7 @@ message RemoveOperationOverridesRequest {
   string namespace = 2;
   string operation_hash = 3;
   repeated OverrideChange changes = 4;
+  optional string check_id = 5;
 }
 
 message RemoveOperationOverridesResponse {
@@ -1933,6 +1938,7 @@ message GetOperationOverridesResponse {
   Response response = 1;
   repeated OverrideChange changes = 2;
   bool ignore_all = 3;
+  bool can_manage_overrides = 4;
 }
 
 message GetAllOverridesRequest {
@@ -2381,6 +2387,31 @@ message GetFieldUsageResponse {
   repeated RequestSeriesItem request_series = 2;
   repeated ClientWithOperations clients = 3;
   FieldUsageMeta meta = 4;
+}
+
+message GetGraphFieldUsageRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional int32 range = 3; // range in hours, must be positive, 24 when neither range nor dateRange is set
+  optional DateRange dateRange = 4; // takes precedence over range, an invalid dateRange is an error and never falls back to range
+}
+
+message GetGraphFieldUsageResponse {
+  message Subgraph {
+    string subgraphId = 1;
+    string subgraphName = 2;
+    int64 requestCount = 3; // requests this subgraph resolved the field in
+  }
+  message Field {
+    string typeName = 1;
+    string fieldName = 2;
+    int64 requestCount = 3;
+    repeated Subgraph subgraphs = 4; // a request resolved by several subgraphs counts for each of them, deleted or unresolvable subgraphs are left out but stay in requestCount
+  }
+  Response response = 1;
+  repeated Field fields = 2; // only fields that were used in the window, in no defined order
+  optional DateRange dateRange = 3; // the window that was queried, after the analytics retention limit
+  optional int32 analyticsRetentionInDays = 4; // the longest window the organization's plan allows
 }
 
 message CreateNamespaceRequest {
@@ -3746,6 +3777,53 @@ message FinishOnboardingResponse {
   string finishedAt = 3;
 }
 
+message AuditLogStreamConfig {
+  // Splunk HTTP Event Collector URL, e.g. https://splunk.example.com:8088
+  string endpoint = 1;
+  // Last four characters of the HEC token. The full token is never returned.
+  string token_suffix = 2;
+  optional string index = 3;
+  optional string source = 4;
+  string sourcetype = 5;
+  bool enabled = 6;
+  optional string last_success_at = 7;
+  optional string last_error = 8;
+  optional string last_error_at = 9;
+}
+
+message GetAuditLogStreamConfigRequest {}
+
+message GetAuditLogStreamConfigResponse {
+  Response response = 1;
+  optional AuditLogStreamConfig config = 2;
+}
+
+message UpsertAuditLogStreamConfigRequest {
+  string endpoint = 1;
+  // Required when creating. When updating, leave empty to keep the stored token.
+  optional string token = 2;
+  optional string index = 3;
+  optional string source = 4;
+  optional string sourcetype = 5;
+  bool enabled = 6;
+}
+
+message UpsertAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
+message DeleteAuditLogStreamConfigRequest {}
+
+message DeleteAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
+message TestAuditLogStreamConfigRequest {}
+
+message TestAuditLogStreamConfigResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3970,6 +4048,15 @@ service PlatformService {
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
+  // GetAuditLogStreamConfig returns the organization's audit log stream (Splunk HEC) configuration
+  rpc GetAuditLogStreamConfig(GetAuditLogStreamConfigRequest) returns (GetAuditLogStreamConfigResponse) {}
+  // UpsertAuditLogStreamConfig creates or updates the organization's audit log stream configuration
+  rpc UpsertAuditLogStreamConfig(UpsertAuditLogStreamConfigRequest) returns (UpsertAuditLogStreamConfigResponse) {}
+  // DeleteAuditLogStreamConfig removes the organization's audit log stream configuration
+  rpc DeleteAuditLogStreamConfig(DeleteAuditLogStreamConfigRequest) returns (DeleteAuditLogStreamConfigResponse) {}
+  // TestAuditLogStreamConfig sends a single test event to the configured collector
+  rpc TestAuditLogStreamConfig(TestAuditLogStreamConfigRequest) returns (TestAuditLogStreamConfigResponse) {}
+
   // DeleteUser deletes the user
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
@@ -4066,6 +4153,10 @@ service PlatformService {
   }
 
   rpc GetFieldUsage(GetFieldUsageRequest) returns (GetFieldUsageResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetGraphFieldUsage(GetGraphFieldUsageRequest) returns (GetGraphFieldUsageResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 

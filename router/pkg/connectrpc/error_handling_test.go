@@ -124,6 +124,196 @@ func TestErrorHandling(t *testing.T) {
 				}
 			]`,
 		},
+		{
+			name:       "gRPC subgraph NotFound in wrapped mode",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'users'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "rpc error: code = NotFound desc = user not found",
+									"extensions": {"code": "NotFound"}
+								}
+							],
+							"statusCode": 200
+						}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeNotFound,
+			expectedErrorContains: "GraphQL operation failed",
+			expectedMetadata: map[string]string{
+				MetaKeyErrorClassification: ErrorClassificationCritical,
+			},
+		},
+		{
+			// The outer response's missing scopes describe this router's authorizer, not the
+			// subgraph's, so they can't say whether the subgraph's caller was authenticated.
+			name:       "Wrapped subgraph field authorization error stays unknown",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'users'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "Unauthorized to load field 'Query.secret'.",
+									"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+								}
+							],
+							"statusCode": 200
+						}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeUnknown,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "gRPC subgraph error that is not a gRPC status",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "failed to dial subgraph",
+						"extensions": {"code": "Internal"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeInternal,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "gRPC subgraph NotFound in pass-through mode",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "rpc error: code = NotFound desc = user not found",
+						"extensions": {"code": "NotFound"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeNotFound,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "Upper snake case status code",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "user not found",
+						"extensions": {"code": "NOT_FOUND"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeNotFound,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "gRPC spelling of canceled",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "request canceled",
+						"extensions": {"code": "CANCELLED"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeCanceled,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "Field authorization without a token",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Unauthorized to load field 'Query.me', Reason: not authenticated.",
+						"path": ["me"],
+						"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeUnauthenticated,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "Field authorization with missing scopes",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Unauthorized to load field 'Query.me', Reason: missing required scopes.",
+						"path": ["me"],
+						"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+					}
+				],
+				"data": null,
+				"extensions": {
+					"authorization": {
+						"missingScopes": [
+							{"coordinate": {"typeName": "Query", "fieldName": "me"}, "required": [["read:me"]]}
+						],
+						"actualScopes": []
+					}
+				}
+			}`,
+			expectedConnectCode:   connect.CodePermissionDenied,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "Errors with different codes stay unknown",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "user not found",
+						"extensions": {"code": "NotFound"}
+					},
+					{
+						"message": "Unauthorized to load field 'Query.me', Reason: missing required scopes.",
+						"extensions": {"code": "UNAUTHORIZED_FIELD_OR_TYPE"}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeUnknown,
+			expectedErrorContains: "GraphQL operation failed",
+		},
+		{
+			name:       "Wrapped subgraph error with a mix of codes stays unknown",
+			httpStatus: http.StatusOK,
+			graphqlResponse: `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'users'.",
+						"extensions": {
+							"errors": [
+								{"message": "a", "extensions": {"code": "NotFound"}},
+								{"message": "b", "extensions": {"code": "DOWNSTREAM_SERVICE_ERROR"}}
+							]
+						}
+					}
+				],
+				"data": null
+			}`,
+			expectedConnectCode:   connect.CodeUnknown,
+			expectedErrorContains: "GraphQL operation failed",
+		},
 
 		// GraphQL NON-CRITICAL Errors (with partial data)
 		{

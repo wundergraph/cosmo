@@ -30,3 +30,6 @@ go.work.sum
 
 # Claude Code
 .claude/worktrees/
+
+# Go module cache used by the release workflows
+/.gomodcache/

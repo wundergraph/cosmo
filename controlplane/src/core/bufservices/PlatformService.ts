@@ -4,6 +4,7 @@ import type { RouterOptions } from '../routes.js';
 import { getAnalyticsView } from './analytics/getAnalyticsView.js';
 import { getDashboardAnalyticsView } from './analytics/getDashboardAnalyticsView.js';
 import { getFieldUsage } from './analytics/getFieldUsage.js';
+import { getGraphFieldUsage } from './analytics/getGraphFieldUsage.js';
 import { getGraphMetrics } from './analytics/getGraphMetrics.js';
 import { getMetricsErrorRate } from './analytics/getMetricsErrorRate.js';
 import { getOperationContent } from './analytics/getOperationContent.js';
@@ -99,6 +100,10 @@ import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
 import { createOrganizationWebhookConfig } from './notification/createOrganizationWebhookConfig.js';
 import { deleteIntegration } from './notification/deleteIntegration.js';
+import { getAuditLogStreamConfig } from './audit-log-stream/getAuditLogStreamConfig.js';
+import { upsertAuditLogStreamConfig } from './audit-log-stream/upsertAuditLogStreamConfig.js';
+import { deleteAuditLogStreamConfig } from './audit-log-stream/deleteAuditLogStreamConfig.js';
+import { testAuditLogStreamConfig } from './audit-log-stream/testAuditLogStreamConfig.js';
 import { deleteOrganizationWebhookConfig } from './notification/deleteOrganizationWebhookConfig.js';
 import { getOrganizationIntegrations } from './notification/getOrganizationIntegrations.js';
 import { getOrganizationWebhookConfigs } from './notification/getOrganizationWebhookConfigs.js';
@@ -464,6 +469,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return deleteIntegration(opts, req, ctx);
     },
 
+    getAuditLogStreamConfig: (req, ctx) => {
+      return getAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    upsertAuditLogStreamConfig: (req, ctx) => {
+      return upsertAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    deleteAuditLogStreamConfig: (req, ctx) => {
+      return deleteAuditLogStreamConfig(opts, req, ctx);
+    },
+
+    testAuditLogStreamConfig: (req, ctx) => {
+      return testAuditLogStreamConfig(opts, req, ctx);
+    },
+
     createOIDCProvider: (req, ctx) => {
       return createOIDCProvider(opts, req, ctx);
     },
@@ -678,6 +699,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFieldUsage: (req, ctx) => {
       return getFieldUsage(opts, req, ctx);
+    },
+
+    getGraphFieldUsage: (req, ctx) => {
+      return getGraphFieldUsage(opts, req, ctx);
     },
 
     getOperationContent: (req, ctx) => {

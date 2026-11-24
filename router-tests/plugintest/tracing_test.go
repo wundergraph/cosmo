@@ -3,19 +3,21 @@ package plugintest
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	"github.com/wundergraph/cosmo/router-plugin/httpclient"
 	"github.com/wundergraph/cosmo/router-plugin/tracing"
 	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -615,30 +617,17 @@ func TestTracing(t *testing.T) {
 			traceParentHeader := "00-" + traceId + "-00f067aa0ba902b7-01"
 			baggageValue := "key1=value1,key2=value2"
 
+			// The handler runs outside of the test goroutine, so it only records the headers.
+			// The assertions run in the test goroutine after the request is done.
+			receivedHeaders := make(chan http.Header, 1)
 			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//Jaeger
-				require.Contains(t, r.Header.Get("Uber-Trace-Id"), "4bf92f3577b34da6a3ce929d0e0e4736")
-
-				// B3
-				require.Contains(t, r.Header.Get("B3"), traceId)
-				require.Equal(t, traceId, r.Header.Get("X-B3-Traceid"))
-				require.NotEmpty(t, r.Header.Get("X-B3-Spanid"))
-				require.Equal(t, "1", r.Header.Get("X-B3-Sampled"))
-
-				// Datadog
-				require.NotEmpty(t, r.Header.Get("X-Datadog-Parent-Id"))
-				require.Equal(t, "11803532876627986230", r.Header.Get("X-Datadog-Trace-Id"))
-				require.Equal(t, "1", r.Header.Get("X-Datadog-Sampling-Priority"))
-
-				// Traceparent
-				require.Contains(t, r.Header.Get("Traceparent"), traceId)
-
-				// Baggage
-				require.Contains(t, r.Header.Get("Baggage"), baggageValue)
+				select {
+				case receivedHeaders <- r.Header.Clone():
+				default:
+				}
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`{"message":"success"}`))
-				require.NoError(t, err)
+				_, _ = w.Write([]byte(`{"message":"success"}`))
 			}))
 			defer mockServer.Close()
 
@@ -660,8 +649,9 @@ func TestTracing(t *testing.T) {
 
 			runner := func(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
 				client := httpclient.New(httpclient.WithTracing(), httpclient.WithBaseURL(mockServer.URL))
-				_, err := client.Get(ctx, "/test")
-				require.NoError(t, err)
+				if _, err := client.Get(ctx, "/test"); err != nil {
+					return nil, err
+				}
 
 				response := &plugin.QueryRunResponse{
 					Run: &plugin.Result{
@@ -685,6 +675,38 @@ func TestTracing(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 			require.Len(t, exporter.GetSpans().Snapshots(), 2)
+
+			// If we reach this point, we have already received the headers.
+			// If the channel has no entry, the test implementation is incorrect.
+			var headers http.Header
+			select {
+			case headers = <-receivedHeaders:
+			default:
+				require.Fail(t, "the external service should receive one request")
+			}
+
+			// Jaeger
+			require.Contains(t, headers.Get("Uber-Trace-Id"), traceId)
+
+			// B3
+			require.Contains(t, headers.Get("B3"), traceId)
+			require.Equal(t, traceId, headers.Get("X-B3-Traceid"))
+			require.NotEmpty(t, headers.Get("X-B3-Spanid"))
+			require.Equal(t, "1", headers.Get("X-B3-Sampled"))
+
+			// Datadog
+			require.NotEmpty(t, headers.Get("X-Datadog-Parent-Id"))
+			require.Equal(t, "11803532876627986230", headers.Get("X-Datadog-Trace-Id"))
+			require.Equal(t, "1", headers.Get("X-Datadog-Sampling-Priority"))
+
+			// Traceparent
+			require.Contains(t, headers.Get("Traceparent"), traceId)
+
+			// Baggage stores its members in a map, so the order of the members can change.
+			propagatedBaggage, err := baggage.Parse(headers.Get("Baggage"))
+			require.NoError(t, err)
+			require.Equal(t, "value1", propagatedBaggage.Member("key1").Value())
+			require.Equal(t, "value2", propagatedBaggage.Member("key2").Value())
 		})
 	})
 

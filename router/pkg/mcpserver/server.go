@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -90,6 +92,9 @@ type Options struct {
 	OmitToolNamePrefix bool
 	// OmitToolTitlePrefix removes the "Execute operation " prefix from MCP tool titles.
 	OmitToolTitlePrefix bool
+	// ManifestOperations returns the current operations of a manifest by key. When set,
+	// operations are loaded from it instead of OperationsDir.
+	ManifestOperations func() map[string]string
 	// OutputSchemaEnabled declares an output schema on each operation tool and
 	// adds structured content to successful tool results (MCP structured tool
 	// output). Increases tools/list and result payload sizes.
@@ -135,6 +140,7 @@ type GraphQLSchemaServer struct {
 	server                    *mcp.Server
 	graphName                 string
 	operationsDir             string
+	manifestOperations        func() map[string]string
 	listenAddr                string
 	logger                    *zap.Logger
 	httpClient                *http.Client
@@ -148,9 +154,8 @@ type GraphQLSchemaServer struct {
 	omitToolTitlePrefix       bool
 	outputSchemaEnabled       bool
 	stateless                 bool
-	operationsManager         *OperationsManager
+	operationsManager         atomic.Pointer[OperationsManager]
 	schemaCompiler            *SchemaCompiler
-	registeredTools           []string
 	corsConfig                cors.Config
 	cancel                    context.CancelFunc
 	oauthConfig               *config.MCPOAuthConfiguration
@@ -160,6 +165,15 @@ type GraphQLSchemaServer struct {
 	promptToQueryClient       PromptToQueryClient
 	schemaVersionIDMu         sync.RWMutex
 	schemaVersionID           string
+
+	// rebuildMu serializes rebuilds and guards the fields below.
+	rebuildMu       sync.Mutex
+	schema          *ast.Document
+	fieldConfigs    []*nodev1.FieldConfiguration
+	registeredTools []string
+	toolScopes      map[string][][]string
+	// The generic manifest store may contain a candidate rejected by MCP.
+	acceptedManifest map[string]string
 }
 
 type graphqlRequest struct {
@@ -353,6 +367,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 				Algorithm:         jwks.Algorithm,
 				KeyId:             jwks.KeyId,
 				Audiences:         jwks.Audiences,
+				Issuers:           jwks.Issuers,
 				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
 					Enabled:  jwks.RefreshUnknownKID.Enabled,
 					MaxWait:  jwks.RefreshUnknownKID.MaxWait,
@@ -422,6 +437,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
+		manifestOperations:        options.ManifestOperations,
 		listenAddr:                options.ListenAddr,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
@@ -434,6 +450,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		omitToolTitlePrefix:       options.OmitToolTitlePrefix,
 		outputSchemaEnabled:       options.OutputSchemaEnabled,
 		stateless:                 options.Stateless,
+		schemaCompiler:            NewSchemaCompiler(options.Logger),
 		corsConfig:                options.CorsConfig,
 		cancel:                    cancel,
 		oauthConfig:               options.OAuthConfig,
@@ -498,6 +515,13 @@ func WithGraphName(graphName string) func(*Options) {
 func WithOperationsDir(operationsDir string) func(*Options) {
 	return func(o *Options) {
 		o.OperationsDir = operationsDir
+	}
+}
+
+// WithManifestOperations sets the function that returns the current manifest operations
+func WithManifestOperations(manifestOperations func() map[string]string) func(*Options) {
+	return func(o *Options) {
+		o.ManifestOperations = manifestOperations
 	}
 }
 
@@ -692,12 +716,33 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		return fmt.Errorf("server is not started")
 	}
 
-	s.schemaCompiler = NewSchemaCompiler(s.logger)
-	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
-	s.setSchemaVersionID(schemaVersionID)
+	s.rebuildMu.Lock()
+	defer s.rebuildMu.Unlock()
 
-	if s.operationsDir != "" {
-		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
+	manifest := s.acceptedManifest
+	if s.manifestOperations != nil && s.operationsManager.Load() == nil {
+		manifest = maps.Clone(s.manifestOperations())
+	}
+	if err := s.rebuild(schema, fieldConfigs, manifest); err != nil {
+		return err
+	}
+	s.schema = schema
+	s.fieldConfigs = fieldConfigs
+	s.setSchemaVersionID(schemaVersionID)
+	return nil
+}
+
+// rebuild prepares all fallible work before publishing replacement MCP state.
+// The caller must hold rebuildMu.
+func (s *GraphQLSchemaServer) rebuild(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration, manifest map[string]string) error {
+	operationsManager := NewOperationsManager(schema, s.logger, s.excludeMutations)
+
+	if s.manifestOperations != nil {
+		if err := operationsManager.LoadOperationsFromManifest(manifest); err != nil {
+			return fmt.Errorf("failed to load manifest operations: %w", err)
+		}
+	} else if s.operationsDir != "" {
+		if err := operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
 			return fmt.Errorf("failed to load operations: %w", err)
 		}
 	}
@@ -705,22 +750,36 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	// Compute per-tool scope requirements from @requiresScopes directives.
 	// Only meaningful when OAuth is enabled; the scope extractor feeds the
 	// auth middleware, which is only constructed alongside oauthConfig.
+	var scopeExtractor *ScopeExtractor
 	if s.oauthConfig != nil && len(fieldConfigs) > 0 {
 		maxScopeCombinations := s.oauthConfig.MaxScopeCombinations
-		if err := s.operationsManager.ComputeToolScopes(fieldConfigs, maxScopeCombinations); err != nil {
-			return fmt.Errorf("failed to compute tool scopes: %w", err)
+		if err := operationsManager.ComputeToolScopes(fieldConfigs, maxScopeCombinations); err != nil {
+			return err
 		}
-		s.authMiddleware.SetScopeExtractor(NewScopeExtractor(fieldConfigs, schema, maxScopeCombinations))
+		scopeExtractor = NewScopeExtractor(fieldConfigs, schema, maxScopeCombinations)
 	}
 
-	s.server.RemoveTools(s.registeredTools...)
-	s.registeredTools = nil
-
-	if err := s.registerTools(); err != nil {
+	if err := s.registerTools(operationsManager, scopeExtractor); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
 	}
-
+	s.acceptedManifest = manifest
 	return nil
+}
+
+// ManifestUpdated rebuilds the tools from the current manifest operations. It only logs
+// errors, so a bad manifest does not affect graph reloads.
+func (s *GraphQLSchemaServer) ManifestUpdated() {
+	s.rebuildMu.Lock()
+	defer s.rebuildMu.Unlock()
+
+	// The first Reload loads the manifest.
+	if s.schema == nil || s.manifestOperations == nil {
+		return
+	}
+
+	if err := s.rebuild(s.schema, s.fieldConfigs, maps.Clone(s.manifestOperations())); err != nil {
+		s.logger.Error("Failed to rebuild MCP tools after manifest update", zap.Error(err))
+	}
 }
 
 // Stop gracefully shuts down the MCP server
@@ -747,8 +806,22 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	return nil
 }
 
-// registerTools registers all tools for the MCP server
-func (s *GraphQLSchemaServer) registerTools() error {
+// registerTools prepares and publishes tools for the candidate operations manager.
+// Tools that keep their name are replaced in place and tools that disappeared are removed afterwards,
+// so clients never see a missing tool for an operation that stays. The caller must hold
+// rebuildMu.
+func (s *GraphQLSchemaServer) registerTools(operationsManager *OperationsManager, scopeExtractor *ScopeExtractor) error {
+	type toolRegistration struct {
+		tool    *mcp.Tool
+		handler mcp.ToolHandler
+	}
+	var registrations []toolRegistration
+	var toolNames []string
+	addTool := func(tool *mcp.Tool, handler mcp.ToolHandler) {
+		registrations = append(registrations, toolRegistration{tool: tool, handler: handler})
+		toolNames = append(toolNames, tool.Name)
+	}
+
 	// Only register the schema tool if exposeSchema is enabled
 	if s.exposeSchema {
 		// Create a schema with empty properties since get_schema takes no input
@@ -767,8 +840,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(tool, s.handleGetGraphQLSchema())
-		s.registeredTools = append(s.registeredTools, "get_schema")
+		addTool(tool, s.handleGetGraphQLSchema())
 	}
 
 	// Only register the execute_graphql tool if enableArbitraryOperations is enabled
@@ -806,8 +878,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(tool, s.handleExecuteGraphQL())
-		s.registeredTools = append(s.registeredTools, "execute_graphql")
+		addTool(tool, s.handleExecuteGraphQL())
 	}
 
 	if s.promptToQueryClient != nil {
@@ -836,12 +907,11 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(generateQueryTool, s.handleGenerateQuery())
-		s.registeredTools = append(s.registeredTools, "generate_query")
+		addTool(generateQueryTool, s.handleGenerateQuery())
 	}
 
 	// Get operations filtered by the excludeMutations setting
-	operations := s.operationsManager.GetFilteredOperations()
+	operations := operationsManager.GetFilteredOperations()
 
 	graphqlOperationNames := make([]string, 0, len(operations))
 
@@ -855,18 +925,13 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 
 		if len(op.JSONSchema) > 0 {
-			// Validate the JSON schema before compiling it
-			if err := s.schemaCompiler.ValidateJSONSchema(op.JSONSchema); err != nil {
-				s.logger.Error("invalid schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
-				continue
-			}
-
-			// Now compile the validated schema
+			// Compilation also validates the schema.
 			schemaName := fmt.Sprintf("schema-%s.json", op.Name)
 			compiledSchema, err = s.schemaCompiler.CompileJSONSchema(op.JSONSchema, schemaName)
 			if err != nil {
+				if operationsManager.fromManifest {
+					return fmt.Errorf("failed to compile input schema for operation %q: %w", op.Name, err)
+				}
 				s.logger.Error("failed to compile schema for operation",
 					zap.String("operation", op.Name),
 					zap.Error(err))
@@ -880,7 +945,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			compiledSchema: compiledSchema,
 		}
 
-		// Convert the operation name to snake_case for consistent tool naming
 		operationToolName := strcase.ToSnake(op.Name)
 
 		// Use the operation description directly if provided, otherwise generate a default description
@@ -894,23 +958,16 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(s.registeredTools, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+		}
+		if slices.Contains(toolNames, toolName) || slices.Contains(reservedToolNames, toolName) {
 			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
-				zap.String("conflicting_tool", operationToolName),
+				zap.String("conflicting_tool", toolName),
 			)
 			continue
 		}
-		// Parse JSON schema into map for the official SDK
-		var inputSchema any
-		if len(op.JSONSchema) > 0 {
-			if err := json.Unmarshal(op.JSONSchema, &inputSchema); err != nil {
-				s.logger.Error("failed to parse JSON schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
-				continue
-			}
-		} else {
+		var inputSchema any = op.JSONSchema
+		if len(op.JSONSchema) == 0 {
 			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
 
@@ -919,7 +976,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		// registered without an output schema.
 		var outputSchema any
 		if s.outputSchemaEnabled {
-			if outputJSONSchema, err := buildResponseSchema(&op.Document, s.operationsManager.GetSchema()); err != nil {
+			if outputJSONSchema, err := buildResponseSchema(&op.Document, operationsManager.GetSchema()); err != nil {
 				s.logger.Warn("failed to build output schema for operation; registering tool without output schema",
 					zap.String("operation", op.Name),
 					zap.Error(err))
@@ -949,19 +1006,12 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(tool, s.handleOperation(handler))
-
-		s.registeredTools = append(s.registeredTools, toolName)
+		addTool(tool, s.handleOperation(handler))
 
 		// Record per-tool scope requirements for auth middleware enforcement
 		if len(op.RequiredScopes) > 0 {
 			toolScopes[toolName] = op.RequiredScopes
 		}
-	}
-
-	// Update auth middleware with per-tool scopes (thread-safe)
-	if s.authMiddleware != nil {
-		s.authMiddleware.SetToolScopes(toolScopes)
 	}
 
 	getOperationInfoTool := &mcp.Tool{
@@ -984,11 +1034,61 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		},
 	}
 
-	s.server.AddTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
+	addTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
 
-	s.registeredTools = append(s.registeredTools, "get_operation_info")
+	// No fallible preparation remains. Publish the manager and auth state only
+	// after the entire candidate is ready to register.
+	s.operationsManager.Store(operationsManager)
+	if s.authMiddleware != nil {
+		s.authMiddleware.SetScopeExtractor(scopeExtractor)
+		s.authMiddleware.SetToolScopes(transitionToolScopes(s.toolScopes, toolScopes))
+	}
+
+	for _, registration := range registrations {
+		s.server.AddTool(registration.tool, registration.handler)
+	}
+
+	var removedTools []string
+	for _, name := range s.registeredTools {
+		if !slices.Contains(toolNames, name) {
+			removedTools = append(removedTools, name)
+		}
+	}
+	if len(removedTools) > 0 {
+		s.server.RemoveTools(removedTools...)
+	}
+
+	s.registeredTools = toolNames
+	s.toolScopes = toolScopes
+
+	if s.authMiddleware != nil {
+		s.authMiddleware.SetToolScopes(toolScopes)
+	}
 
 	return nil
+}
+
+// transitionToolScopes returns the scopes to enforce until a tool swap completes. A call
+// to a tool that keeps its name may reach its old or its new handler, so the caller must
+// satisfy one scope group of each. Tools that are about to be removed keep their scopes.
+func transitionToolScopes(oldScopes, newScopes map[string][][]string) map[string][][]string {
+	transition := make(map[string][][]string, len(oldScopes)+len(newScopes))
+	maps.Copy(transition, oldScopes)
+	for name, newGroups := range newScopes {
+		oldGroups, ok := oldScopes[name]
+		if !ok {
+			transition[name] = newGroups
+			continue
+		}
+		var groups [][]string
+		for _, oldGroup := range oldGroups {
+			for _, newGroup := range newGroups {
+				groups = append(groups, slices.Concat(oldGroup, newGroup))
+			}
+		}
+		transition[name] = groups
+	}
+	return transition
 }
 
 func (s *GraphQLSchemaServer) setSchemaVersionID(schemaVersionID string) {
@@ -1086,6 +1186,16 @@ func (s *GraphQLSchemaServer) handleGenerateQuery() func(ctx context.Context, re
 // handleOperation handles a specific operation
 func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// A reload can replace the handler after HTTP authorization. Check the
+		// captured operation's requirements, not the mutable per-tool scope map.
+		if s.oauthConfig != nil && s.oauthConfig.Enabled && len(handler.operation.RequiredScopes) > 0 {
+			claims, ok := GetClaimsFromContext(ctx)
+			tokenScopes, err := extractScopes(claims)
+			if !ok || err != nil || !satisfiesAnyGroup(toSet(tokenScopes), handler.operation.RequiredScopes) {
+				return toolError("Authorization error: insufficient scopes for operation"), nil
+			}
+		}
+
 		// Log authenticated user if OAuth is enabled
 		if claims, ok := GetClaimsFromContext(ctx); ok {
 			s.logger.Debug("operation called by authenticated user",
@@ -1124,7 +1234,7 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			return nil, fmt.Errorf("input validation failed: operationName is required")
 		}
 
-		targetOp := s.operationsManager.GetOperation(input.OperationName)
+		targetOp := s.operationsManager.Load().GetOperation(input.OperationName)
 		if targetOp == nil {
 			return nil, fmt.Errorf("operation '%s' not found or excluded by configuration", input.OperationName)
 		}
@@ -1330,7 +1440,7 @@ func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, r
 func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Get the schema from the operations manager
-		schema := s.operationsManager.GetSchema()
+		schema := s.operationsManager.Load().GetSchema()
 		if schema == nil {
 			return nil, fmt.Errorf("GraphQL schema is not available")
 		}
@@ -1414,8 +1524,8 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 	}
 
 	// Include all scopes from per-tool @requiresScopes extraction
-	if s.operationsManager != nil {
-		for _, op := range s.operationsManager.GetOperations() {
+	if operationsManager := s.operationsManager.Load(); operationsManager != nil {
+		for _, op := range operationsManager.GetOperations() {
 			for _, andGroup := range op.RequiredScopes {
 				for _, scope := range andGroup {
 					scopesSet[scope] = true

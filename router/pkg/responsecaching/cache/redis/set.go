@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -36,14 +37,33 @@ local now = t[1] * 1000 + math.floor(t[2] / 1000)
 return redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - ARGV[1])
 `
 
+// invalidatedMember holds, at minus its score, when the tag was last
+// invalidated, router clock, ms. Negative: the prune leaves it, the walk skips it.
+const invalidatedMember = "\x00invalidated"
+
+// invalidationSkew is how far apart routers' clocks may be: a write whose fetch
+// began up to this long after an invalidation is dropped as well.
+const invalidationSkew = time.Second
+
+// reservedMember reports a tag set's bookkeeping member. No cache key starts
+// with a NUL byte.
+func reservedMember(member string) bool { return strings.HasPrefix(member, "\x00") }
+
 // addMember adds ARGV[1] to KEYS[1] expiring ARGV[2] ms from now, or raises it
-// there, and returns the walk count held by ARGV[3]. GT: a write landing out
+// there, and returns the walk count held by ARGV[3]. A write whose fetch began
+// at ARGV[5] ms, at or before the invalidation held by ARGV[4], give or take
+// ARGV[6] ms of clock skew, read what that invalidation dropped: it returns -1
+// like a marked member, unlisted. GT: a write landing out
 // of order never lowers a member's score, which would let the prune drop it
 // while a newer entry is alive. A mark stays: only a walk removes it, after
 // deleting its entry, so a write that never lands can't take with it the
 // walk's duty to delete what came before. A marked member returns -1: the walk
 // will drop it, so the write's entry is unlisted.
 const addMember = `
+if tonumber(ARGV[5]) > 0 then
+  local inv = redis.call('ZSCORE', KEYS[1], ARGV[4])
+  if inv and -tonumber(inv) + ARGV[6] >= tonumber(ARGV[5]) then return -1 end
+end
 local s = redis.call('ZSCORE', KEYS[1], ARGV[1])
 if s and tonumber(s) < 0 then return -1 end
 local t = redis.call('TIME')
@@ -110,12 +130,17 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 			return fmt.Errorf("%w: key %q", caching.ErrMissingTTL, item.Key)
 		}
 	}
+	// Encoded before anything is sent, so a bad item stores nothing.
+	writes, err := newWrites(items)
+	if err != nil {
+		return err
+	}
 	// Nothing sent yet, so nothing to finish.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	writes, err := c.indexAndStore(ctx, items)
+	writes, err = c.indexAndStore(ctx, items, writes)
 	if writes == nil {
 		return err
 	}
@@ -129,17 +154,16 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 // commands are sent concurrently, so a SET can land after a whole walk. The
 // walk count in round trip 2 catches that. It returns no writes if nothing
 // was sent.
-func (c *RedisCache) indexAndStore(ctx context.Context, items []caching.Item) ([]write, error) {
+func (c *RedisCache) indexAndStore(ctx context.Context, items []caching.Item, writes []write) ([]write, error) {
 	pipe := c.client.Pipeline()
 	c.queuePrunes(ctx, pipe, items)
 
-	writes := newWrites(items)
 	for i := range writes {
 		writes[i].adds, writes[i].index = c.queueIndex(ctx, pipe, writes[i].item)
 	}
 	for i := range writes {
 		w := &writes[i]
-		w.set = pipe.Set(ctx, c.entryKey(w.item.Key), encode(w.header, w.item), leased(w.item))
+		w.set = pipe.Set(ctx, c.entryKey(w.item.Key), w.entry, leased(w.item))
 	}
 
 	cmds, err := pipe.Exec(ctx)
@@ -175,7 +199,7 @@ func (c *RedisCache) queueIndex(ctx context.Context, pipe redis.Pipeliner, item 
 	cmds := make([]redis.Cmder, 0, len(item.Tags)*3)
 	for _, tag := range item.Tags {
 		tagKey := c.tagKey(tag)
-		add := pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl, walksMember)
+		add := pipe.Eval(ctx, addMember, []string{tagKey}, item.Key, ttl, walksMember, invalidatedMember, item.FetchedAt.UnixMilli(), invalidationSkew.Milliseconds())
 		adds = append(adds, add)
 		cmds = append(cmds, add, pipe.ExpireNX(ctx, tagKey, tagTTL), pipe.ExpireGT(ctx, tagKey, tagTTL))
 	}
@@ -310,22 +334,30 @@ type write struct {
 	last bool
 	// header starts the stored entry and identifies this write.
 	header []byte
+	// entry is header, then the encoded item.
+	entry []byte
 	// unconfirmed is whether a lift didn't find its member live, so the entry
 	// was removed or keeps its lease.
 	unconfirmed bool
 }
 
-// newWrites returns a write per item, each with its own header.
-func newWrites(items []caching.Item) []write {
+// newWrites returns a write per item, each with its own header, or the first
+// item that fails to encode.
+func newWrites(items []caching.Item) ([]write, error) {
 	last := make(map[string]int, len(items))
 	for i, item := range items {
 		last[item.Key] = i
 	}
 	writes := make([]write, len(items))
 	for i, item := range items {
-		writes[i] = write{item: item, last: last[item.Key] == i, header: newHeader()}
+		header := newHeader()
+		entry, err := encode(header, item)
+		if err != nil {
+			return nil, err
+		}
+		writes[i] = write{item: item, last: last[item.Key] == i, header: header, entry: entry}
 	}
-	return writes
+	return writes, nil
 }
 
 // finishes reports whether the write has rounds 2 and 3: tagged, and the
@@ -391,8 +423,12 @@ func newHeader() []byte {
 	return h
 }
 
-func encode(header []byte, item caching.Item) []byte {
-	return append(slices.Clip(header), caching.EncodeItem(item)...)
+func encode(header []byte, item caching.Item) ([]byte, error) {
+	encoded, err := caching.EncodeItem(item)
+	if err != nil {
+		return nil, err
+	}
+	return append(slices.Clip(header), encoded...), nil
 }
 
 // entryBody is a stored entry without its header. One written before headers

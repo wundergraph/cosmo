@@ -124,9 +124,10 @@ func TestResponseCacheSubgraphs(t *testing.T) {
 			second := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: moodQuery})
 			require.EqualValues(t, 1, xEnv.SubgraphRequestCount.Mood.Load())
 
-			maxAge := maxAgeOf(t, second.Response.Header.Get("Cache-Control"))
-			require.Greater(t, maxAge, 60, "all's minute would have been the lifetime otherwise")
-			require.LessOrEqual(t, maxAge, 300)
+			// public with no max-age: the stored life is for shared caches.
+			sMaxAge := sMaxAgeFrom(t, second.Response.Header.Get("Cache-Control"))
+			require.Greater(t, sMaxAge, 60, "all's minute would have been the lifetime otherwise")
+			require.LessOrEqual(t, sMaxAge, 300)
 		})
 	})
 

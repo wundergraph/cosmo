@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -3771,6 +3773,176 @@ func TestAudienceValidation(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
 		})
+	})
+}
+
+func TestIssuerValidation(t *testing.T) {
+	t.Parallel()
+
+	const (
+		issuerA = "https://issuer-a.example.com"
+		issuerB = "https://issuer-b.example.com"
+	)
+
+	statusFor := func(t *testing.T, cfg []authentication.JWKSConfig, token string) int {
+		t.Helper()
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         testutils.ConfigureAuthWithJwksConfig(t, cfg),
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		var status int
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{core.WithAccessController(accessController)},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			status = res.StatusCode
+		})
+		return status
+	}
+
+	httpCases := []struct {
+		name    string
+		issuers []string
+		claims  map[string]any
+		want    int
+	}{
+		{"accepts a configured issuer", []string{issuerA}, map[string]any{"iss": issuerA}, http.StatusOK},
+		{"accepts any of several configured issuers", []string{issuerA, issuerB}, map[string]any{"iss": issuerB}, http.StatusOK},
+		{"rejects an issuer sharing the same JWKS", []string{issuerA}, map[string]any{"iss": issuerB}, http.StatusUnauthorized},
+		{"rejects a token without iss", []string{issuerA}, map[string]any{}, http.StatusUnauthorized},
+		{"rejects a non-string iss", []string{issuerA}, map[string]any{"iss": 123}, http.StatusUnauthorized},
+		{"accepts any issuer when none configured", nil, map[string]any{"iss": issuerB}, http.StatusOK},
+	}
+
+	for _, tc := range httpCases {
+		t.Run("with http based configuration: "+tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			authServer, err := jwks.NewServer(t)
+			require.NoError(t, err)
+			t.Cleanup(authServer.Close)
+
+			token, err := authServer.Token(tc.claims)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.want, statusFor(t, []authentication.JWKSConfig{{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 5 * time.Second,
+				Issuers:         tc.issuers,
+			}}, token))
+		})
+	}
+
+	t.Run("with secret based configuration: rejects a mismatched issuer", func(t *testing.T) {
+		t.Parallel()
+
+		secret, kid := "example secret that is long enough", "givenKID"
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{"iss": issuerB})
+
+		assert.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{{
+			Secret:    secret,
+			Algorithm: string(jwkset.AlgHS256),
+			KeyId:     kid,
+			Issuers:   []string{issuerA},
+		}}, token))
+	})
+
+	t.Run("an issuer mismatch does not fall through to another entry", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		token, err := authServer.Token(map[string]any{"iss": issuerB})
+		require.NoError(t, err)
+
+		// Entry 1 holds the signing key but trusts only issuer A. Entry 2 trusts
+		// issuer B but has no matching key, so the token must be rejected.
+		assert.Equal(t, http.StatusUnauthorized, statusFor(t, []authentication.JWKSConfig{
+			{URL: authServer.JWKSURL(), RefreshInterval: 5 * time.Second, Issuers: []string{issuerA}},
+			{Secret: "another secret that is long enough", Algorithm: string(jwkset.AlgHS256), KeyId: "other", Issuers: []string{issuerB}},
+		}, token))
+	})
+}
+
+// countingProxy forwards to target and counts requests, so a test can tell
+// whether a provider fetched its key set again.
+func countingProxy(t *testing.T, target string) (string, *atomic.Int64) {
+	t.Helper()
+	hits := &atomic.Int64{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		res, err := http.Get(target)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer res.Body.Close()
+		w.WriteHeader(res.StatusCode)
+		_, _ = io.Copy(w, res.Body)
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL, hits
+}
+
+func TestIssuerRoutingSkipsOtherProviders(t *testing.T) {
+	t.Parallel()
+
+	const (
+		publicIssuer   = "https://public.example.com/"
+		internalIssuer = "https://internal.example.com/"
+	)
+
+	publicServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(publicServer.Close)
+
+	internalServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(internalServer.Close)
+
+	publicURL, publicHits := countingProxy(t, publicServer.JWKSURL())
+
+	refresh := authentication.RefreshUnknownKIDConfig{
+		Enabled:  true,
+		Interval: time.Hour,
+		Burst:    5,
+		MaxWait:  2 * time.Minute,
+	}
+	// The public provider comes first and would refresh for the unknown kid
+	// if the token's issuer did not route it straight to the internal one.
+	cfg := []authentication.JWKSConfig{
+		{URL: publicURL, RefreshInterval: time.Hour, RefreshUnknownKID: refresh, Issuers: []string{publicIssuer}},
+		{URL: internalServer.JWKSURL(), RefreshInterval: time.Hour, RefreshUnknownKID: refresh, Issuers: []string{internalIssuer}},
+	}
+
+	token, err := internalServer.Token(map[string]any{"iss": internalIssuer})
+	require.NoError(t, err)
+
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:         testutils.ConfigureAuthWithJwksConfig(t, cfg),
+		AuthenticationRequired: true,
+	})
+	require.NoError(t, err)
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithAccessController(accessController)},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		baseline := publicHits.Load()
+		header := http.Header{"Authorization": []string{"Bearer " + token}}
+		for range 3 {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			require.NoError(t, res.Body.Close())
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+		}
+		assert.Equal(t, baseline, publicHits.Load(), "the public provider fetched its JWKS again for a token it does not own")
 	})
 }
 

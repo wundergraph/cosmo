@@ -4,13 +4,16 @@ import z from 'zod';
 
 export type { SubmitHandler } from 'react-hook-form';
 
-export interface UseZodForm<TFieldValues extends FieldValues = FieldValues> extends UseFormProps<TFieldValues> {
-  schema: z.ZodSchema<any>;
+export interface UseZodForm<Input extends FieldValues, Output extends FieldValues = Input>
+  extends Omit<UseFormProps<Input, unknown, Output>, 'resolver'> {
+  schema: z.ZodType<Output, Input>;
 }
 
-export const useZodForm = <TFieldValues extends FieldValues = FieldValues>(props: UseZodForm<TFieldValues>) => {
+export const useZodForm = <Input extends FieldValues, Output extends FieldValues = Input>(
+  props: UseZodForm<Input, Output>,
+) => {
   const { schema, ...formProps } = props;
-  return useForm<TFieldValues>({
+  return useForm<Input, unknown, Output>({
     resolver: zodResolver(schema),
     reValidateMode: 'onChange',
     ...formProps,

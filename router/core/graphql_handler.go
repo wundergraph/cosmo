@@ -22,6 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/caching"
@@ -124,7 +125,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		headerPropagation:                        opts.HeaderPropagation,
 		responseCacheStore:                       opts.ResponseCache,
 		responseCacheInvalidation:                opts.ResponseCacheInvalidation,
-		responseCacheTagHeader:                   opts.ResponseCacheTagHeader,
+		responseCacheTagHeader:                   newCacheTagHeader(opts.ResponseCacheTagHeader, opts.ResponseCacheMetrics),
 		responseCacheSettings:                    opts.ResponseCacheSettings,
 		responseCacheErrorHandler:                newResponseCacheErrorHandler(opts.Log, opts.ResponseCacheMetrics),
 	}
@@ -202,7 +203,7 @@ type GraphQLHandler struct {
 	responseCacheStore        caching.Cache
 	responseCacheErrorHandler func(error)
 	responseCacheInvalidation config.ResponseCacheInvalidationConfig
-	responseCacheTagHeader    config.ResponseCacheTagHeaderConfig
+	responseCacheTagHeader    cacheTagHeader
 	responseCacheSettings     *ResponseCacheSettings
 
 	enableCacheResponseHeaders      bool
@@ -262,32 +263,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	resolveCtx = h.configureRateLimiting(resolveCtx, reqCtx.operation.opType)
 
-	if h.responseCacheStore != nil && h.responseCacheSettings != nil {
-		store := selectCacheStore(h.responseCacheStore, reqCtx.cacheControl)
-		if store != nil {
-			cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
-			cacheOpts.Store = store
-			cacheOpts.OnError = h.responseCacheErrorHandler
-			cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
-				CacheTag: h.responseCacheInvalidation.CacheTag,
-				Subgraph: h.responseCacheInvalidation.Subgraph,
-				Type:     h.responseCacheInvalidation.Type,
-			}
-			if resolveCtx.TracingOptions.Enable {
-				_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
-				// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
-				cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
-					return synchronous && resolveCtx.SubgraphErrors() == nil
-				})
-			}
-			resolveCtx.SetResponseCache(cacheOpts)
-		}
-	}
-	if h.responseCacheStore != nil && reqCtx.cacheControl != nil && reqCtx.cacheControl.NoCache {
-		// The leader of a shared flight may answer from the cache,
-		// so a no-cache request resolves on its own.
-		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
-	}
+	h.configureResponseCache(resolveCtx, reqCtx)
 
 	if reqCtx.customFieldValueRenderer != nil {
 		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
@@ -417,11 +393,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			switch {
+			case errors.Is(err, context.Canceled):
 				reqCtx.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
-				return
-			} else if errors.Is(err, ErrUnauthorized) {
+			case errors.Is(err, ErrUnauthorized):
 				trackFinalResponseError(resolveCtx.Context(), err)
 				writeRequestErrors(writeRequestErrorsParams{
 					request:           r,
@@ -431,19 +407,24 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					logger:            reqCtx.logger,
 					headerPropagation: h.headerPropagation,
 				})
-				return
+			case getErrorType(err) == errorTypeDeliveryGuarantee:
+				// The subscription was rejected before it started, e.g. because the client asked
+				// for a guarantee this field can't serve or presented a cursor that no longer
+				// resumes. The reason, including its code, belongs in the response.
+				trackFinalResponseError(resolveCtx.Context(), err)
+				h.WriteTerminalError(resolveCtx, err, p.Response.Response, writer)
+			default:
+				reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusInternalServerError,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
 			}
-
-			reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackFinalResponseError(resolveCtx.Context(), err)
-			writeRequestErrors(writeRequestErrorsParams{
-				request:           r,
-				writer:            w,
-				statusCode:        http.StatusInternalServerError,
-				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
-				logger:            reqCtx.logger,
-				headerPropagation: h.headerPropagation,
-			})
 			return
 		}
 	case *plan.DeferResponsePlan:
@@ -482,7 +463,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				reqCtx.logger.Debug("context canceled: unable to resolve defer response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
 				return
-			} else if errors.Is(err, ErrUnauthorized) {
+			}
+			// Once a part is on the wire, an error response would land inside the
+			// multipart stream. Leave it unterminated so the client sees it as incomplete.
+			if dw, ok := writer.(*HttpDeferWriter); ok && dw.Committed() {
+				reqCtx.logger.Error("unable to resolve defer response after streaming started", zap.Error(err))
+				trackFinalResponseError(resolveCtx.Context(), err)
+				return
+			}
+			if errors.Is(err, ErrUnauthorized) {
 				trackFinalResponseError(resolveCtx.Context(), err)
 				writeRequestErrors(writeRequestErrorsParams{
 					request:           r,
@@ -563,6 +552,10 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context, opType Oper
 // per-update contract in the resolver. Terminal subscription failures should
 // call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	if writer, ok := w.(interface{ Reset() }); ok {
+		// The writer may hold partial, unflushed JSON. Clear it before writing the error response.
+		writer.Reset()
+	}
 	h.writeError(ctx, err, res, w, false)
 }
 
@@ -637,6 +630,24 @@ func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolv
 			response.Extensions = &Extensions{
 				Authorization: buf.Bytes(),
 			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
+		}
+	case errorTypeDeliveryGuarantee:
+		guaranteeErr, ok := errors.AsType[*datasource.DeliveryGuaranteeError](err)
+		if !ok {
+			response.Errors[0].Message = "Internal server error"
+			break
+		}
+		supported := make([]string, 0, len(guaranteeErr.Supported))
+		for _, g := range guaranteeErr.Supported {
+			supported = append(supported, string(g))
+		}
+		response.Errors[0].Message = guaranteeErr.Message
+		response.Errors[0].Extensions = &Extensions{
+			Code:        guaranteeErr.Code,
+			CosmoCursor: &CosmoCursorExtension{Supported: supported},
 		}
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
@@ -771,5 +782,39 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
+	}
+}
+
+// configureResponseCache hands a request's resolve context the response cache,
+// as the request's Cache-Control allows.
+func (h *GraphQLHandler) configureResponseCache(resolveCtx *resolve.Context, reqCtx *requestContext) {
+	cacheControl := reqCtx.cacheControl
+	// The graph mux sets settings with the store, or fails to build.
+	if h.responseCacheStore == nil {
+		return
+	}
+	if store := selectCacheStore(h.responseCacheStore, cacheControl); store != nil {
+		cacheOpts := h.responseCacheSettings.options(reqCtx.expressionContext, h.responseCacheErrorHandler)
+		cacheOpts.Store = store
+		cacheOpts.OnError = h.responseCacheErrorHandler
+		cacheOpts.Invalidation = resolve.ResponseCacheTagIndexOptions{
+			CacheTag: h.responseCacheInvalidation.CacheTag,
+			Subgraph: h.responseCacheInvalidation.Subgraph,
+			Type:     h.responseCacheInvalidation.Type,
+		}
+		cacheOpts.OnlyIfCached = requestOnlyIfCached(cacheControl)
+		if resolveCtx.TracingOptions.Enable {
+			_, synchronous := reqCtx.operation.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan)
+			// Reads resolveCtx when called: header propagation below replaces it with a copy that collects the subgraph errors.
+			cacheOpts.TraceDetails = h.responseCacheTraceDetailsFunc(func() bool {
+				return synchronous && resolveCtx.SubgraphErrors() == nil
+			})
+		}
+		resolveCtx.SetResponseCache(cacheOpts)
+	}
+	if requestRevalidates(cacheControl) || requestOnlyIfCached(cacheControl) {
+		// The leader of a shared flight may answer from the cache, or refuse
+		// to fetch, so such a request resolves on its own.
+		resolveCtx.ExecutionOptions.DisableInboundRequestDeduplication = true
 	}
 }

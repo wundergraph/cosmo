@@ -143,6 +143,7 @@
       "Content-Length",
       "Content-Type"
     ],
+    "ExposeHeaders": null,
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -183,11 +184,14 @@
         "Enabled": false
       },
       "Subgraphs": null
-    }
+    },
+    "Watch": false,
+    "WatchInterval": 1000000000
   },
   "CacheControl": {
     "Enabled": false,
     "Value": "",
+    "MissingNoStore": false,
     "Subgraphs": null
   },
   "MCP": {
@@ -203,7 +207,9 @@
       }
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "ObjectPath": "",
+      "PollInterval": 10000000000
     },
     "Session": {
       "Stateless": true
@@ -295,7 +301,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 60000000000,
+      "RequestHeaderReadTimeout": 0,
+      "IdleTimeout": 0,
+      "WriteTimeout": 0
     },
     "Subgraphs": null
   },
@@ -470,7 +480,13 @@
       "Enabled": false,
       "Name": "Cache-Tag",
       "Delimiter": ",",
-      "MaxBytes": 16384
+      "Tiers": [
+        "subgraph",
+        "type",
+        "cache_tag"
+      ],
+      "MaxBytes": 16384,
+      "OnOverflow": "truncate"
     },
     "All": {
       "Enabled": true,
@@ -512,6 +528,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 10000
+    },
     "OperationNameLengthLimit": 512
   },
   "EngineExecutionConfiguration": {
@@ -543,7 +562,7 @@
     "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
-    "EnableNetPoll": true,
+    "EnableNetPoll": false,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -759,11 +778,25 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": false
     }
+  },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "legacy"
   },
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
+    }
   },
   "Plugins": {
     "Enabled": false,

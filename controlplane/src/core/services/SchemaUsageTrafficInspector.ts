@@ -11,6 +11,7 @@ import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { traced } from '../tracing.js';
+import { QUERY_MAX_EXECUTION_TIME_SECONDS } from '../plugins/clickhouse.js';
 
 export enum FieldTypeChangeCategory {
   /**
@@ -170,6 +171,10 @@ export interface InspectorOperationResult {
 
 @traced
 export class SchemaUsageTrafficInspector {
+  // Shared across all inspect() calls on this instance. Callers may inspect several compositions concurrently
+  // with the same inspector, so a per-call limiter would multiply the number of in-flight ClickHouse queries.
+  private readonly limit = pLimit(5);
+
   constructor(private client: ClickHouseClient) {}
 
   /**
@@ -183,10 +188,8 @@ export class SchemaUsageTrafficInspector {
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    const limit = pLimit(5);
-
     const tasks = changes.map((change) =>
-      limit(async () => {
+      this.limit(async () => {
         try {
           const where: string[] = [];
           const params: Record<string, string | number | boolean> = {
@@ -207,7 +210,9 @@ export class SchemaUsageTrafficInspector {
                 return `'${escaped}'`;
               })
               .join(',');
-            where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
+
+            where.push(`hasAll(Path, [${escapedPath}])`);
+            where.push(`Path = [${escapedPath}]`);
           }
           if (change.namedType) {
             params.namedType = change.namedType;
@@ -251,6 +256,9 @@ export class SchemaUsageTrafficInspector {
               OrganizationID = {organizationId:String} AND
               ${where.join(' AND ')}
             GROUP BY OperationHash
+            -- Stop on the server once the HTTP client has given up (see the client timeout), instead of
+            -- keeping the CPU busy and slowing down the queries that follow.
+            SETTINGS max_execution_time = ${QUERY_MAX_EXECUTION_TIME_SECONDS}, timeout_before_checking_execution_speed = 0
           `;
 
           const res: {

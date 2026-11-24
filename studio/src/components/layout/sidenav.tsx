@@ -130,7 +130,7 @@ const Organizations = () => {
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: Partial<NavLink>[];
-  isBannerDisplayed?: boolean;
+  bannerCount?: number;
 }
 
 export const SideNav = (props: SideNavLayoutProps) => {
@@ -142,8 +142,9 @@ export const SideNav = (props: SideNavLayoutProps) => {
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside
         className={cn('relative z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4', {
-          'lg:h-[calc(100vh-32px)]': props.isBannerDisplayed,
-          'lg:h-screen': !props.isBannerDisplayed,
+          'lg:h-[calc(100vh-64px)]': props.bannerCount === 2,
+          'lg:h-[calc(100vh-32px)]': props.bannerCount === 1,
+          'lg:h-screen': !props.bannerCount,
         })}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-y-4 px-4 lg:gap-y-6 lg:px-0">

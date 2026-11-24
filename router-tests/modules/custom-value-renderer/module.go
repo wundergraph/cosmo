@@ -1,9 +1,11 @@
 package custom_value_renderer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -24,6 +26,7 @@ func (m *RouterCustomValueRendererModule) Provision(ctx *core.ModuleContext) err
 }
 
 type CustomTestValueRenderer struct {
+	failNextNumber atomic.Bool
 }
 
 func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value resolve.FieldValue, out io.Writer) (err error) {
@@ -31,6 +34,9 @@ func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value r
 	case "String":
 		_, err = out.Write([]byte(`"xxx"`))
 	case "Int", "Float":
+		if c.failNextNumber.Swap(false) {
+			return errors.New("failed to render number")
+		}
 		_, err = out.Write([]byte(`123`))
 	}
 
@@ -43,8 +49,10 @@ func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value r
 }
 
 func (m *RouterCustomValueRendererModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
-	if ctx.Request().Header.Get("X-Custom-Value-Renderer") != "" {
-		ctx.SetCustomFieldValueRenderer(&CustomTestValueRenderer{})
+	if mode := ctx.Request().Header.Get("X-Custom-Value-Renderer"); mode != "" {
+		renderer := &CustomTestValueRenderer{}
+		renderer.failNextNumber.Store(mode == "fail-once")
+		ctx.SetCustomFieldValueRenderer(renderer)
 	}
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }

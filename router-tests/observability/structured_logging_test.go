@@ -752,7 +752,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
+					EnableNetPoll:          false,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -871,7 +871,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
+					EnableNetPoll:          false,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -1003,7 +1003,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
+					EnableNetPoll:          false,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
@@ -1139,7 +1139,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					},
 				}),
 				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
+					EnableNetPoll:          false,
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),

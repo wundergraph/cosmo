@@ -8,7 +8,18 @@ Release the full monorepo with all packages and services can be done by triggeri
    - `latest`: Only when the workflow was triggered on the default branch, the `latest` tag will be created.
    - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
    - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
-   - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
+   - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release, and for the router also on every push to `main`.
+
+   Releases never set the `main` tag, for any image.
+
+   On every push to `main`, the same workflow builds the router image (and its `nonroot` variant) and tags it with:
+   - `main`: The most recent push to `main`. Only the router gets this tag. Releases no longer update the `main` tag of other images. Their old `main` tags stay in the registry, frozen at each image's last release, and are stale.
+   - `short-sha`: The short SHA of the pushed commit, e.g. `sha-d7f7524`. Use it to pull the image for a specific commit.
+
+   Push builds run one at a time and a build never cancels another one. They normally run in push order, but GitHub does not guarantee the order of waiting runs, so in rare cases `main` can be one commit behind until the next push. GitHub keeps only one waiting run, so if three or more commits land while a build runs, the commits in between get no image. The `chore(release): Publish [skip ci]` commits do not start a push build. Pushes never set `latest` or a version tag. Only releases do.
+
+   A release runs on the commit that was the head of `main` when the release started. A push usually built that commit already, so the release replaces its `sha-<short-sha>` image with the release image. The two images have the same code but a different version string and build date. If the push build is still running, the build that finishes last owns the tag.
+
 2. After the release, you can validate the release by:
    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
    2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)

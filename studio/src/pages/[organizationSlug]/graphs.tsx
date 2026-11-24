@@ -97,11 +97,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
   });
 
   return (
-    <FederatedGraphsCards
-      graphs={graphs}
-      refetch={refetch}
-      hasStaleMetrics={data?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA}
-    />
+    <FederatedGraphsCards graphs={graphs} hasStaleMetrics={data?.response?.code === EnumStatusCode.WARN_PARTIAL_DATA} />
   );
 };
 

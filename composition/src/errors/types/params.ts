@@ -116,3 +116,26 @@ export type InvalidEntityReturnTypeErrorParams = {
   fieldCoords: string;
   returnTypeName: string;
 };
+
+export type InvalidCacheTagArgumentTypeErrorParams = {
+  reference: string;
+  typeString: string;
+};
+
+export type UndefinedCacheTagInputFieldErrorMessageParams = {
+  fieldName: FieldName;
+  inputObjectName: TypeName;
+  reference: string;
+};
+
+export type InvalidCacheTagReferenceErrorMessageParams = {
+  reference: string;
+  typeReference: string;
+  untraversableReference: string;
+};
+
+export type UnavailableCacheTagReferenceErrorMessageParams = {
+  coords: string;
+  reference: string;
+  subgraphName: SubgraphName;
+};
