@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
@@ -99,9 +100,13 @@ return redis.call('UNLINK', KEYS[1])
 `
 
 // extendOwn sets KEYS[1] to expire at ARGV[2], in ms, if it still holds the
-// write headed ARGV[1]. 16 is headerLen - 1.
+// write headed ARGV[1], and writes ARGV[3], that expiry as the header encodes
+// it, over the one the header carries, so a read sees the lifetime redis
+// keeps. SETRANGE leaves the key's TTL alone. 16 is identityLen - 1, 17 is
+// identityLen.
 const extendOwn = `
 if redis.call('GETRANGE', KEYS[1], 0, 16) ~= ARGV[1] then return 0 end
+redis.call('SETRANGE', KEYS[1], 17, ARGV[3])
 return redis.call('PEXPIREAT', KEYS[1], ARGV[2])
 `
 
@@ -131,7 +136,7 @@ func (c *RedisCache) SetMany(ctx context.Context, items []caching.Item) error {
 		}
 	}
 	// Encoded before anything is sent, so a bad item stores nothing.
-	writes, err := newWrites(items)
+	writes, err := newWrites(items, c.now())
 	if err != nil {
 		return err
 	}
@@ -233,7 +238,7 @@ func (c *RedisCache) checkListings(ctx context.Context, writes []write) (map[int
 		}
 		switch {
 		case !w.indexed():
-			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.header)
+			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.identity())
 		case w.extends():
 			ttl := w.item.TTL.Milliseconds()
 			tagTTL := tagLifetime(w.item).Milliseconds()
@@ -262,10 +267,10 @@ func (c *RedisCache) extendConfirmed(ctx context.Context, writes []write, lifts 
 		at, ok := earliestLift(cmds)
 		switch {
 		case ok:
-			pipe.Eval(ctx, extendOwn, []string{c.entryKey(w.item.Key)}, w.header, at)
+			pipe.Eval(ctx, extendOwn, []string{c.entryKey(w.item.Key)}, w.identity(), at, encodeExpiry(at))
 		case anyLiftMissed(cmds):
 			w.unconfirmed = true
-			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.header)
+			pipe.Eval(ctx, unlinkOwn, []string{c.entryKey(w.item.Key)}, w.identity())
 		default:
 			w.unconfirmed = true
 		}
@@ -341,16 +346,16 @@ type write struct {
 	unconfirmed bool
 }
 
-// newWrites returns a write per item, each with its own header, or the first
-// item that fails to encode.
-func newWrites(items []caching.Item) ([]write, error) {
+// newWrites returns a write per item, each with its own header expiring when
+// the item is first SET to, as of now, or the first item that fails to encode.
+func newWrites(items []caching.Item, now time.Time) ([]write, error) {
 	last := make(map[string]int, len(items))
 	for i, item := range items {
 		last[item.Key] = i
 	}
 	writes := make([]write, len(items))
 	for i, item := range items {
-		header := newHeader()
+		header := newHeader(now.Add(leased(item)))
 		entry, err := encode(header, item)
 		if err != nil {
 			return nil, err
@@ -385,6 +390,10 @@ func (w write) indexed() bool {
 	})
 }
 
+// identity is the part of the header that tells this write's entry from any
+// other: the marker and the token, not the expiry, which extendOwn rewrites.
+func (w write) identity() []byte { return w.header[:identityLen] }
+
 // stored reports whether the write's entry is known stored and reachable.
 func (w write) stored() bool { return w.last && w.set.Err() == nil && w.indexed() && !w.unconfirmed }
 
@@ -409,18 +418,38 @@ func tagLifetime(item caching.Item) time.Duration {
 }
 
 // An entry is headerLen bytes of header, then caching.EncodeItem's encoding.
-// The header is headerMarker, never a first byte of that encoding, then a
-// random token, so separate writes of identical items differ.
+// The header is headerMarker, then a random token, so separate writes of
+// identical items differ, then when the entry expires as unix ms, big-endian.
+// GetMany takes an entry's remaining lifetime from there, so it reads with a
+// GET, or one MGET for the lot, rather than a GET and a PTTL per key.
+//
+// headerMarker is never a first byte of caching.EncodeItem's encoding, nor
+// legacyHeaderMarker, which headed entries before they carried their expiry:
+// legacyHeaderLen bytes of marker and token. Those, and entries written before
+// any header, are still read, with a PTTL for their lifetime.
 const (
-	headerMarker byte = 0
-	headerLen    int  = 17
+	headerMarker byte = 0xff
+	// identityLen is the marker and the token, what unlinkOwn and extendOwn
+	// compare to tell a write's own entry.
+	identityLen int = 17
+	expiryLen   int = 8
+	headerLen   int = identityLen + expiryLen
+
+	legacyHeaderMarker byte = 0
+	legacyHeaderLen    int  = 17
 )
 
-func newHeader() []byte {
+func newHeader(expiresAt time.Time) []byte {
 	h := make([]byte, headerLen)
 	h[0] = headerMarker
-	_, _ = rand.Read(h[1:])
+	_, _ = rand.Read(h[1:identityLen])
+	copy(h[identityLen:], encodeExpiry(expiresAt.UnixMilli()))
 	return h
+}
+
+// encodeExpiry is an expiry in unix ms as the header carries it.
+func encodeExpiry(ms int64) []byte {
+	return binary.BigEndian.AppendUint64(make([]byte, 0, expiryLen), uint64(ms))
 }
 
 func encode(header []byte, item caching.Item) ([]byte, error) {
@@ -431,11 +460,17 @@ func encode(header []byte, item caching.Item) ([]byte, error) {
 	return append(slices.Clip(header), encoded...), nil
 }
 
-// entryBody is a stored entry without its header. One written before headers
-// has none.
-func entryBody(stored []byte) []byte {
-	if len(stored) >= headerLen && stored[0] == headerMarker {
-		return stored[headerLen:]
+// readEntry splits a stored entry into its body and the expiry its header
+// carries. hasExpiry is false for an entry whose header carries none, or that
+// has no header: its lifetime is redis' to tell.
+func readEntry(stored []byte) (body []byte, expiresAt time.Time, hasExpiry bool) {
+	switch {
+	case len(stored) >= headerLen && stored[0] == headerMarker:
+		ms := binary.BigEndian.Uint64(stored[identityLen:headerLen])
+		return stored[headerLen:], time.UnixMilli(int64(ms)), true
+	case len(stored) >= legacyHeaderLen && stored[0] == legacyHeaderMarker:
+		return stored[legacyHeaderLen:], time.Time{}, false
+	default:
+		return stored, time.Time{}, false
 	}
-	return stored
 }

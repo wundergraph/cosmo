@@ -109,7 +109,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 		first, err := mr.ZScore(tagIndexKey("declared:users"), "v1:a")
 		require.NoError(t, err)
 
-		mr.FastForward(time.Second)
+		fastForward(mr, time.Second)
 		item.TTL = 2 * time.Minute
 		require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
 
@@ -293,7 +293,7 @@ func TestRedisCacheTagIndex(t *testing.T) {
 func elapse(t *testing.T, mr *miniredis.Miniredis, d time.Duration) {
 	t.Helper()
 	mr.SetTime(redisNow(t, mr).Add(d))
-	mr.FastForward(d)
+	fastForward(mr, d)
 }
 
 // redisNow is the server's clock, which scores and prunes go by.
