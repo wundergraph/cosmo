@@ -61,6 +61,19 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
     return;
   }
 
+  // In CI, the job's OIDC identity earns the control plane credential.
+  const { useCiIdentityForCosmo } = await import('../../core/ci-oidc.js');
+  const ciIdentity = await useCiIdentityForCosmo();
+  if (!ciIdentity.success) {
+    if (!showErrorMessage) {
+      return;
+    }
+    program.error(pc.red(ciIdentity.errors.map((error) => error.message).join('; ')));
+  }
+  if (config.apiKey) {
+    return;
+  }
+
   if (!userConfig.organizationSlug) {
     if (!showErrorMessage) {
       return;

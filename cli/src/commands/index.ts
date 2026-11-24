@@ -144,15 +144,6 @@ program.hook('preAction', async () => {
   await checkForUpdates();
 });
 
-// In CI without COSMO_API_KEY, the job's OIDC token becomes the control plane Bearer.
-program.hook('preAction', async () => {
-  const { useCiOidcTokenForCosmo } = await import('../core/ci-oidc.js');
-  const ciOidc = await useCiOidcTokenForCosmo();
-  if (!ciOidc.success) {
-    console.error(`Warning: ${ciOidc.errors.map((error) => error.message).join('; ')}`);
-  }
-});
-
 // Hook to capture command usage
 program.hook('preAction', (thisCommand, actionCommand) => {
   const commandPath = actionCommand.name();

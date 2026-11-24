@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { useCiOidcTokenForCosmo } from '../src/core/ci-oidc.js';
+import { useCiIdentityForCosmo } from '../src/core/ci-oidc.js';
 import { config } from '../src/core/config.js';
 
 interface TokenRequest {
@@ -42,7 +42,8 @@ describe('CI OIDC for the control plane', () => {
     const github = await startFakeGithubTokenEndpoint(200);
     server = github.server;
 
-    const result = await useCiOidcTokenForCosmo({
+    const result = await useCiIdentityForCosmo({
+      deploymentKind: 'cosmo-cloud',
       env: { ACTIONS_ID_TOKEN_REQUEST_URL: github.url, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token' },
     });
 
@@ -55,7 +56,8 @@ describe('CI OIDC for the control plane', () => {
     const github = await startFakeGithubTokenEndpoint(200);
     server = github.server;
 
-    await useCiOidcTokenForCosmo({
+    await useCiIdentityForCosmo({
+      deploymentKind: 'cosmo-cloud',
       env: {
         ACTIONS_ID_TOKEN_REQUEST_URL: github.url,
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
@@ -71,7 +73,8 @@ describe('CI OIDC for the control plane', () => {
     server = github.server;
     config.apiKey = 'cosmo_api_key';
 
-    const result = await useCiOidcTokenForCosmo({
+    const result = await useCiIdentityForCosmo({
+      deploymentKind: 'cosmo-cloud',
       env: { ACTIONS_ID_TOKEN_REQUEST_URL: github.url, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token' },
     });
 
@@ -81,14 +84,17 @@ describe('CI OIDC for the control plane', () => {
   });
 
   test('uses the GitLab COSMO_ID_TOKEN entry', async () => {
-    const result = await useCiOidcTokenForCosmo({ env: { GITLAB_CI: 'true', COSMO_ID_TOKEN: 'gitlab-oidc-token' } });
+    const result = await useCiIdentityForCosmo({
+      deploymentKind: 'cosmo-cloud',
+      env: { GITLAB_CI: 'true', COSMO_ID_TOKEN: 'gitlab-oidc-token' },
+    });
 
     expect(result).toEqual({ success: true, data: 'ci-oidc' });
     expect(config.apiKey).toBe('gitlab-oidc-token');
   });
 
   test('changes nothing outside CI', async () => {
-    const result = await useCiOidcTokenForCosmo({ env: {} });
+    const result = await useCiIdentityForCosmo({ deploymentKind: 'cosmo-cloud', env: {} });
 
     expect(result).toEqual({ success: true, data: 'none' });
     expect(config.apiKey).toBeUndefined();
@@ -98,7 +104,8 @@ describe('CI OIDC for the control plane', () => {
     const github = await startFakeGithubTokenEndpoint(403);
     server = github.server;
 
-    const result = await useCiOidcTokenForCosmo({
+    const result = await useCiIdentityForCosmo({
+      deploymentKind: 'cosmo-cloud',
       env: { ACTIONS_ID_TOKEN_REQUEST_URL: github.url, ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token' },
     });
 
@@ -107,5 +114,91 @@ describe('CI OIDC for the control plane', () => {
       'GitHub Actions refused the OIDC token request (HTTP 403).',
     );
     expect(config.apiKey).toBeUndefined();
+  });
+
+  describe('in a Hub deployment', () => {
+    const originalHubUrl = config.hubURL;
+    const originalAudience = config.hubOidcAudience;
+
+    beforeEach(() => {
+      config.hubURL = 'https://hub.example';
+      config.hubOidcAudience = 'wundergraph-hub';
+    });
+
+    afterEach(() => {
+      config.hubURL = originalHubUrl;
+      config.hubOidcAudience = originalAudience;
+    });
+
+    const githubJob = {
+      ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.example/req?api-version=2.0',
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
+    };
+
+    test('uses the Cosmo access token Hub gives for the job token, never the job token itself', async () => {
+      const requests: string[] = [];
+      const result = await useCiIdentityForCosmo({
+        deploymentKind: 'hub',
+        env: githubJob,
+        fetchImpl: (input, init) => {
+          const url = new URL(String(input));
+          requests.push(
+            `${init?.method ?? 'GET'} ${url.origin}${url.pathname} ${url.searchParams.get('audience') ?? ''}`,
+          );
+          if (url.origin === 'https://token.example') {
+            return Promise.resolve(Response.json({ value: 'github-oidc-token' }));
+          }
+          return Promise.resolve(
+            Response.json(
+              { token: 'cosmo_ci_scoped', expiresAt: '2026-11-24T10:10:00.000Z', namespace: 'prod' },
+              { status: 201 },
+            ),
+          );
+        },
+      });
+
+      expect(result).toEqual({ success: true, data: 'hub' });
+      expect(config.apiKey).toBe('cosmo_ci_scoped');
+      expect(requests).toEqual([
+        'GET https://token.example/req wundergraph-hub',
+        'POST https://hub.example/ci/cosmo-token ',
+      ]);
+    });
+
+    test('reads the GitLab HUB_ID_TOKEN entry', async () => {
+      let sentBearer: string | null = null;
+      await useCiIdentityForCosmo({
+        deploymentKind: 'hub',
+        env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gitlab-oidc-token' },
+        fetchImpl: (_input, init) => {
+          sentBearer = new Headers(init?.headers).get('authorization');
+          return Promise.resolve(
+            Response.json({ token: 'cosmo_ci_scoped', expiresAt: '2026-11-24T10:10:00.000Z', namespace: 'prod' }),
+          );
+        },
+      });
+
+      expect(sentBearer).toBe('Bearer gitlab-oidc-token');
+      expect(config.apiKey).toBe('cosmo_ci_scoped');
+    });
+
+    test('reports why Hub refused the job and leaves no credential', async () => {
+      const result = await useCiIdentityForCosmo({
+        deploymentKind: 'hub',
+        env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gitlab-oidc-token' },
+        fetchImpl: () =>
+          Promise.resolve(Response.json({ error: 'The repository is not connected to a graph' }, { status: 403 })),
+      });
+
+      expect(result).toEqual({
+        success: false,
+        errors: [
+          new Error(
+            'Hub gave this CI job no Cosmo access token (HTTP 403): The repository is not connected to a graph',
+          ),
+        ],
+      });
+      expect(config.apiKey).toBeUndefined();
+    });
   });
 });
