@@ -4,11 +4,11 @@ import {
   shareGraphCollection,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { GraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useReducer } from 'react';
 import {
   collectionMutationHandlers,
   MAX_COLLECTION_NAME_LENGTH,
-  teamNameTaken,
+  teamNameConflict,
   teamNameTakenMessage,
 } from '@/lib/graph-collections';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,36 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+
+type ShareState = {
+  /** Whether the dialog asks for a new name, because a team collection already uses this one. */
+  needsNewName: boolean;
+  /** The name in the field. */
+  name: string;
+  /** The name as last saved. A rename can succeed and the share then fail, so it can differ from `collection.name`. */
+  savedName: string;
+  /** The server's refusal, shown until the name changes. */
+  serverError?: string;
+};
+
+type ShareAction =
+  | { type: 'SET_VALUE'; value: string }
+  | { type: 'RENAMED'; name: string }
+  | { type: 'RENAME_REFUSED'; details: string }
+  | { type: 'SHARE_REFUSED'; name: string };
+
+const shareReducer = (state: ShareState, action: ShareAction): ShareState => {
+  switch (action.type) {
+    case 'SET_VALUE':
+      return { ...state, name: action.value, serverError: undefined };
+    case 'RENAMED':
+      return { ...state, savedName: action.name };
+    case 'RENAME_REFUSED':
+      return { ...state, serverError: action.details };
+    case 'SHARE_REFUSED':
+      return { ...state, needsNewName: true, serverError: teamNameTakenMessage(action.name) };
+  }
+};
 
 /**
  * Confirms promoting a private collection to team scope.
@@ -49,25 +79,24 @@ export const ShareCollectionDialog = ({
   const share = useMutation(shareGraphCollection);
   const rename = useMutation(renameGraphCollection);
 
-  const [needsNewName, setNeedsNewName] = useState(() => teamNameTaken(collections, collection.name, collection.id));
-  const [name, setName] = useState(collection.name);
-  const [savedName, setSavedName] = useState(collection.name);
-  const [serverError, setServerError] = useState<string>();
+  const [{ needsNewName, name, savedName, serverError }, dispatch] = useReducer(shareReducer, undefined, () => ({
+    needsNewName: teamNameConflict(collections, collection.name, collection.id) !== undefined,
+    name: collection.name,
+    savedName: collection.name,
+  }));
 
   const trimmed = name.trim();
-  const clash =
-    needsNewName && teamNameTaken(collections, trimmed, collection.id) ? teamNameTakenMessage(trimmed) : undefined;
-  const error = clash ?? serverError;
+  const nameConflict = needsNewName ? teamNameConflict(collections, trimmed, collection.id) : undefined;
+  const error = nameConflict ?? serverError;
   const isPending = share.isPending || rename.isPending;
 
   const shareNow = () =>
     share.mutate(
       { id: collection.id, federatedGraphId },
       // The list was out of date: someone took the name since it loaded.
-      collectionMutationHandlers('Could not share the collection', onDone, () => {
-        setNeedsNewName(true);
-        setServerError(teamNameTakenMessage(trimmed));
-      }),
+      collectionMutationHandlers('Could not share the collection', onDone, () =>
+        dispatch({ type: 'SHARE_REFUSED', name: trimmed }),
+      ),
     );
 
   const submit = (event: FormEvent) => {
@@ -87,10 +116,10 @@ export const ShareCollectionDialog = ({
       collectionMutationHandlers(
         'Could not rename the collection',
         () => {
-          setSavedName(trimmed);
+          dispatch({ type: 'RENAMED', name: trimmed });
           shareNow();
         },
-        setServerError,
+        (details) => dispatch({ type: 'RENAME_REFUSED', details }),
       ),
     );
   };
@@ -122,10 +151,7 @@ export const ShareCollectionDialog = ({
                 autoFocus
                 disabled={isPending}
                 value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  setServerError(undefined);
-                }}
+                onChange={(event) => dispatch({ type: 'SET_VALUE', value: event.target.value })}
                 maxLength={MAX_COLLECTION_NAME_LENGTH}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'graph-collection-share-name-error' : undefined}

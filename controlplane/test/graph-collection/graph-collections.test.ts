@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphCollectionSortBy } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -1251,6 +1251,53 @@ describe('Graph Collections', () => {
       expect(list.collections).toHaveLength(3);
     });
 
+    test('A write that fails for a reason other than a name conflict returns ERR, not ERR_ALREADY_EXISTS', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      const existing = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: false,
+      });
+      expect(existing.response?.code).toBe(EnumStatusCode.OK);
+
+      const failure = { ok: false as const, error: new Error('Something else went wrong') };
+      const spies = [
+        vi.spyOn(GraphCollectionsRepository.prototype, 'createCollection').mockResolvedValue(failure),
+        vi.spyOn(GraphCollectionsRepository.prototype, 'renameCollection').mockResolvedValue(failure),
+        vi.spyOn(GraphCollectionsRepository.prototype, 'shareCollection').mockResolvedValue(failure),
+      ];
+      onTestFinished(() => {
+        for (const spy of spies) {
+          spy.mockRestore();
+        }
+      });
+
+      const created = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Checkout',
+        teamScoped: true,
+      });
+      expect(created.response?.code).toBe(EnumStatusCode.ERR);
+      expect(created.response?.details).toBe('Could not create the collection.');
+
+      const renamed = await client.renameGraphCollection({ federatedGraphId, id: existing.id, name: 'Checkout' });
+      expect(renamed.response?.code).toBe(EnumStatusCode.ERR);
+      expect(renamed.response?.details).toBe('Could not rename the collection.');
+
+      const shared = await client.shareGraphCollection({ federatedGraphId, id: existing.id });
+      expect(shared.response?.code).toBe(EnumStatusCode.ERR);
+      expect(shared.response?.details).toBe('Could not share the collection.');
+    });
+
     test('Renaming a team collection to a taken team name is refused and leaves it unchanged', async () => {
       const { client, server } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
@@ -1281,7 +1328,7 @@ describe('Graph Collections', () => {
       expect(list.collections.find((c) => c.id === other.id)?.name).toBe('Checkout');
     });
 
-    test('A team collection can be renamed to a different casing of its own name', async () => {
+    test('A team collection can be renamed to its own name with the first letter capitalized', async () => {
       const { client, server } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
 
@@ -1439,7 +1486,7 @@ describe('Graph Collections', () => {
       }
     });
 
-    test('A team name taken by one member is refused to another member of the organization', async () => {
+    test('A team collection name taken by one member is refused to another member of the organization', async () => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, enableMultiUsers: true });
       onTestFinished(() => server.close());
 

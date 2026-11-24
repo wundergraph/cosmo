@@ -11,7 +11,7 @@ import {
   resolveDeepLinkedCollection,
   resolveDeepLinkedOperation,
   suggestOperationName,
-  teamNameTaken,
+  teamNameConflict,
   TabBindings,
   updateBindingHash,
 } from '@/lib/graph-collections';
@@ -350,19 +350,19 @@ describe('operation save validation', () => {
 
 describe('team name clash', () => {
   const collection = (id: string, name: string, isTeamScoped: boolean) =>
-    ({ id, name, isTeamScoped }) as Parameters<typeof teamNameTaken>[0][number];
+    ({ id, name, isTeamScoped }) as Parameters<typeof teamNameConflict>[0][number];
 
   const collections = [collection('team-1', 'Onboarding', true), collection('private-1', 'Checkout', false)];
 
   it('finds a team collection with the same name, ignoring case and surrounding space', () => {
-    expect(teamNameTaken(collections, '  onboarding ')).toBe(true);
+    expect(teamNameConflict(collections, '  onboarding ')).toBe('A team collection named "onboarding" already exists.');
   });
 
   it('ignores private collections', () => {
-    expect(teamNameTaken(collections, 'Checkout')).toBe(false);
+    expect(teamNameConflict(collections, 'Checkout')).toBeUndefined();
   });
 
   it('ignores the collection being renamed', () => {
-    expect(teamNameTaken(collections, 'ONBOARDING', 'team-1')).toBe(false);
+    expect(teamNameConflict(collections, 'ONBOARDING', 'team-1')).toBeUndefined();
   });
 });

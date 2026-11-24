@@ -1,11 +1,6 @@
 import { useMutation } from '@connectrpc/connect-query';
 import { createGraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import {
-  collectionMutationHandlers,
-  MAX_COLLECTION_NAME_LENGTH,
-  teamNameTaken,
-  teamNameTakenMessage,
-} from '@/lib/graph-collections';
+import { collectionMutationHandlers, MAX_COLLECTION_NAME_LENGTH, teamNameConflict } from '@/lib/graph-collections';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,7 +13,30 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio';
 import { GraphCollection } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useReducer } from 'react';
+
+type CreateState = {
+  name: string;
+  scope: 'private' | 'team';
+  /** The server's refusal, shown until the name or scope changes. */
+  serverError?: string;
+};
+
+type CreateAction =
+  | { type: 'SET_VALUE'; value: string }
+  | { type: 'SET_SCOPE'; scope: CreateState['scope'] }
+  | { type: 'REFUSED'; details: string };
+
+const createReducer = (state: CreateState, action: CreateAction): CreateState => {
+  switch (action.type) {
+    case 'SET_VALUE':
+      return { ...state, name: action.value, serverError: undefined };
+    case 'SET_SCOPE':
+      return { ...state, scope: action.scope, serverError: undefined };
+    case 'REFUSED':
+      return { ...state, serverError: action.details };
+  }
+};
 
 /**
  * Creating a collection, with its scope chosen up front.
@@ -44,13 +62,11 @@ export const CreateCollectionDialog = ({
   onDone: () => void;
 }) => {
   const { mutate, isPending } = useMutation(createGraphCollection);
-  const [name, setName] = useState('');
-  const [scope, setScope] = useState<'private' | 'team'>('private');
-  const [serverError, setServerError] = useState<string>();
+  const [{ name, scope, serverError }, dispatch] = useReducer(createReducer, { name: '', scope: 'private' });
 
   const trimmed = name.trim();
-  const clash = scope === 'team' && teamNameTaken(collections, trimmed) ? teamNameTakenMessage(trimmed) : undefined;
-  const error = clash ?? serverError;
+  const nameConflict = scope === 'team' ? teamNameConflict(collections, trimmed) : undefined;
+  const error = nameConflict ?? serverError;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -61,7 +77,9 @@ export const CreateCollectionDialog = ({
 
     mutate(
       { federatedGraphName, namespace, name: trimmed, teamScoped: scope === 'team' },
-      collectionMutationHandlers('Could not create the collection', onDone, setServerError),
+      collectionMutationHandlers('Could not create the collection', onDone, (details) =>
+        dispatch({ type: 'REFUSED', details }),
+      ),
     );
   };
 
@@ -84,10 +102,7 @@ export const CreateCollectionDialog = ({
                 // Name and scope are locked while saving, so a late refusal always matches the form.
                 disabled={isPending}
                 value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  setServerError(undefined);
-                }}
+                onChange={(event) => dispatch({ type: 'SET_VALUE', value: event.target.value })}
                 maxLength={MAX_COLLECTION_NAME_LENGTH}
                 placeholder="Cart operations"
                 aria-invalid={!!error}
@@ -106,10 +121,7 @@ export const CreateCollectionDialog = ({
                 <RadioGroup
                   disabled={isPending}
                   value={scope}
-                  onValueChange={(value) => {
-                    setScope(value as 'private' | 'team');
-                    setServerError(undefined);
-                  }}
+                  onValueChange={(value) => dispatch({ type: 'SET_SCOPE', scope: value as CreateState['scope'] })}
                 >
                   <div className="flex items-start gap-x-2">
                     <RadioGroupItem value="private" id="graph-collection-scope-private" className="mt-0.5" />

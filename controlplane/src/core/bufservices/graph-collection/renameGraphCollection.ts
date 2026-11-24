@@ -7,7 +7,7 @@ import {
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
+import { GraphCollectionsRepository, NameConflictError } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { validateCollectionName } from '../../util/graph-collection/validation.js';
@@ -53,11 +53,20 @@ export function renameGraphCollection(
     }
 
     const result = await repo.renameCollection(req.id, name, req.federatedGraphId);
-    if (result === 'name_taken') {
+    if (!result.ok) {
+      if (result.error instanceof NameConflictError) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_ALREADY_EXISTS,
+            details: `A team collection named "${name}" already exists on this graph.`,
+          },
+        };
+      }
+
       return {
         response: {
-          code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: `A team collection named "${name}" already exists on this graph.`,
+          code: EnumStatusCode.ERR,
+          details: 'Could not rename the collection.',
         },
       };
     }

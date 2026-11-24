@@ -199,6 +199,54 @@ describe('Share dialog', () => {
     );
   });
 
+  test('renames again on retry when the earlier rename went through but the share failed', () => {
+    // The list does not know that someone has since shared a "Scratch".
+    renderShare(privateScratch, [privateScratch]);
+
+    fireEvent.click(button('Share with team'));
+    respond(shareGraphCollection, EnumStatusCode.ERR_ALREADY_EXISTS);
+
+    type('Name', 'Scratch 2');
+    fireEvent.click(button('Rename and share'));
+    respond(renameGraphCollection, EnumStatusCode.OK);
+    respond(shareGraphCollection, EnumStatusCode.ERR, 'Something broke');
+
+    // The collection is now called "Scratch 2", so going back to "Scratch" is a rename.
+    type('Name', 'Scratch');
+    fireEvent.click(button('Rename and share'));
+
+    expect(mutation(renameGraphCollection).mutate.mock.calls.map(([request]) => request)).toEqual([
+      { id: 'private-1', name: 'Scratch 2', federatedGraphId: 'graph-1' },
+      { id: 'private-1', name: 'Scratch', federatedGraphId: 'graph-1' },
+    ]);
+    expect(mutation(shareGraphCollection).mutate).toHaveBeenCalledTimes(2);
+  });
+
+  test('shares without renaming on retry when the name in the field is already saved', () => {
+    renderShare(privateScratch, [privateScratch]);
+
+    fireEvent.click(button('Share with team'));
+    respond(shareGraphCollection, EnumStatusCode.ERR_ALREADY_EXISTS);
+
+    type('Name', 'Scratch 2');
+    fireEvent.click(button('Rename and share'));
+    respond(renameGraphCollection, EnumStatusCode.OK);
+    respond(shareGraphCollection, EnumStatusCode.ERR, 'Something broke');
+
+    fireEvent.click(button('Rename and share'));
+
+    expect(mutation(renameGraphCollection).mutate).toHaveBeenCalledTimes(1);
+    expect(mutation(shareGraphCollection).mutate).toHaveBeenCalledTimes(3);
+  });
+
+  test('locks the name while saving', () => {
+    mutation(shareGraphCollection).isPending = true;
+    const privateOnboarding = collection('private-2', 'Onboarding', false);
+    renderShare(privateOnboarding, [team, privateOnboarding]);
+
+    expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(true);
+  });
+
   test('reports other share failures as a toast', () => {
     const { onDone } = renderShare(privateScratch, [privateScratch]);
 
@@ -314,6 +362,14 @@ describe('Create dialog', () => {
     choosePrivate();
     expect(errorText('graph-collection-name-error')).toBeUndefined();
   });
+
+  test('locks the name and scope while saving', () => {
+    mutation(createGraphCollection).isPending = true;
+    renderCreate([]);
+
+    expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getAllByRole('radio').map((radio) => (radio as HTMLButtonElement).disabled)).toEqual([true, true]);
+  });
 });
 
 describe('Rename dialog', () => {
@@ -385,5 +441,12 @@ describe('Rename dialog', () => {
 
     type('Name', 'Onboarding 2');
     expect(errorText('graph-collection-name-error')).toBeUndefined();
+  });
+
+  test('locks the name while saving', () => {
+    mutation(renameGraphCollection).isPending = true;
+    renderRename(team, [team]);
+
+    expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(true);
   });
 });

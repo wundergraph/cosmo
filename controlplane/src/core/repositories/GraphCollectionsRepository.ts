@@ -57,6 +57,18 @@ const computeContentHash = (query: string, variables?: string | null): string =>
     .update(`${query}\n${variables ?? ''}`)
     .digest('hex');
 
+/** Another team collection on the graph already has this name, ignoring case. */
+export class NameConflictError extends Error {
+  constructor() {
+    super('A team collection on this graph already has this name.');
+    this.name = 'NameConflictError';
+  }
+}
+
+export type CollectionWriteResult<T extends object = Record<never, never>> =
+  | ({ ok: true } & T)
+  | { ok: false; error: Error };
+
 /** A write broke `gc_unique_team_name`: another team collection on the graph has this name. */
 const isTeamNameConflict = (e: unknown): boolean =>
   e instanceof postgres.PostgresError && e.code === '23505' && e.constraint_name === 'gc_unique_team_name';
@@ -224,7 +236,7 @@ export class GraphCollectionsRepository {
     name: string;
     userId: string;
     teamScoped?: boolean;
-  }): Promise<{ id: string } | 'name_taken'> {
+  }): Promise<CollectionWriteResult<{ id: string }>> {
     try {
       const [row] = await this.db
         .insert(graphCollections)
@@ -237,20 +249,20 @@ export class GraphCollectionsRepository {
         })
         .returning({ id: graphCollections.id });
 
-      return { id: row.id };
+      return { ok: true, id: row.id };
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return 'name_taken';
+        return { ok: false, error: new NameConflictError() };
       }
       throw e;
     }
   }
 
   /**
-   * Returns `'name_taken'` when the collection is team-scoped and another team
-   * collection on the graph already has this name (ignoring case).
+   * Fails with a `NameConflictError` when the collection is team-scoped and
+   * another team collection on the graph already has this name (ignoring case).
    */
-  public async renameCollection(id: string, name: string, federatedGraphId: string): Promise<'ok' | 'name_taken'> {
+  public async renameCollection(id: string, name: string, federatedGraphId: string): Promise<CollectionWriteResult> {
     try {
       await this.db
         .update(graphCollections)
@@ -264,20 +276,20 @@ export class GraphCollectionsRepository {
         );
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return 'name_taken';
+        return { ok: false, error: new NameConflictError() };
       }
       throw e;
     }
 
-    return 'ok';
+    return { ok: true };
   }
 
   /**
-   * Promotes a private collection to team scope. Returns `'name_taken'` when a
-   * team collection on the graph already has this name (ignoring case), in
-   * which case nothing changes.
+   * Promotes a private collection to team scope. Fails with a
+   * `NameConflictError` when a team collection on the graph already has this
+   * name (ignoring case), in which case nothing changes.
    */
-  public async shareCollection(id: string, federatedGraphId: string): Promise<'ok' | 'name_taken'> {
+  public async shareCollection(id: string, federatedGraphId: string): Promise<CollectionWriteResult> {
     try {
       await this.db
         .update(graphCollections)
@@ -291,12 +303,12 @@ export class GraphCollectionsRepository {
         );
     } catch (e) {
       if (isTeamNameConflict(e)) {
-        return 'name_taken';
+        return { ok: false, error: new NameConflictError() };
       }
       throw e;
     }
 
-    return 'ok';
+    return { ok: true };
   }
 
   public async deleteCollection(id: string, federatedGraphId: string): Promise<void> {

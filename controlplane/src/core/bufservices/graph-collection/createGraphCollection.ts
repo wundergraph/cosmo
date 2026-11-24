@@ -8,7 +8,7 @@ import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
+import { GraphCollectionsRepository, NameConflictError } from '../../repositories/GraphCollectionsRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -66,11 +66,21 @@ export function createGraphCollection(
       userId: authContext.userId,
       teamScoped: req.teamScoped,
     });
-    if (created === 'name_taken') {
+    if (!created.ok) {
+      if (created.error instanceof NameConflictError) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_ALREADY_EXISTS,
+            details: `A team collection named "${name}" already exists on this graph.`,
+          },
+          id: '',
+        };
+      }
+
       return {
         response: {
-          code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: `A team collection named "${name}" already exists on this graph.`,
+          code: EnumStatusCode.ERR,
+          details: 'Could not create the collection.',
         },
         id: '',
       };

@@ -7,6 +7,7 @@ import {
   GraphCollectionSortBy,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
+import { z } from 'zod';
 import { toast } from '@/components/ui/use-toast';
 
 export const MAX_COLLECTION_NAME_LENGTH = 100;
@@ -351,18 +352,32 @@ export const reportFailure = (fallback: string, details?: string) => {
 };
 
 /**
- * Whether another team collection already uses `name`. Mirrors the
- * controlplane's `gc_unique_team_name` index (case-insensitive, team scope
- * only), so a clash can be shown before the request. The server stays the
- * source of truth for a list that is out of date.
+ * A team collection name that no other team collection in `collections` uses.
+ * Mirrors the controlplane's `gc_unique_team_name` index (case-insensitive,
+ * team scope only), so a clash can be shown before the request. The server
+ * stays the source of truth for a list that is out of date.
  */
-export const teamNameTaken = (
+const teamCollectionNameSchema = (
+  collections: Pick<GraphCollection, 'id' | 'name' | 'isTeamScoped'>[],
+  exceptId?: string,
+) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (name) =>
+        !collections.some((c) => c.isTeamScoped && c.id !== exceptId && c.name.toLowerCase() === name.toLowerCase()),
+      { error: (issue) => teamNameTakenMessage(String(issue.input)) },
+    );
+
+/** The message to show when another team collection already uses `name`, otherwise `undefined`. */
+export const teamNameConflict = (
   collections: Pick<GraphCollection, 'id' | 'name' | 'isTeamScoped'>[],
   name: string,
   exceptId?: string,
-) => {
-  const wanted = name.trim().toLowerCase();
-  return collections.some((c) => c.isTeamScoped && c.id !== exceptId && c.name.toLowerCase() === wanted);
+): string | undefined => {
+  const parsed = teamCollectionNameSchema(collections, exceptId).safeParse(name);
+  return parsed.success ? undefined : parsed.error.issues[0].message;
 };
 
 export const teamNameTakenMessage = (name: string) => `A team collection named "${name.trim()}" already exists.`;
