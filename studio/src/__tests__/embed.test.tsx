@@ -156,6 +156,38 @@ describe('EmbedLayout', () => {
     ]);
   });
 
+  test('makes room for all of an open dialog and goes back to the content height when it closes', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private callback: () => void) {}
+        observe() {
+          this.callback();
+        }
+        disconnect() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.getAttribute('role') === 'dialog' ? new DOMRect(0, -100, 800, 500) : new DOMRect(0, 0, 800, 300);
+    });
+    const postMessage = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
+
+    render(<EmbedLayout>members</EmbedLayout>);
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    Object.defineProperty(dialog, 'offsetHeight', { value: 500 });
+    document.body.append(dialog);
+    await waitFor(() => expect(postMessage).toHaveBeenCalledTimes(2));
+    dialog.remove();
+    await waitFor(() => expect(postMessage).toHaveBeenCalledTimes(3));
+
+    expect(postMessage.mock.calls).toEqual([
+      [{ source: 'cosmo-studio', type: 'height', height: 300 }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 532 }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 300 }, hubOrigin],
+    ]);
+  });
+
   test('posts nothing without a Hub URL', () => {
     vi.stubEnv('NEXT_PUBLIC_HUB_URL', '');
     vi.stubGlobal(
