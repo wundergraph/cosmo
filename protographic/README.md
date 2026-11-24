@@ -59,6 +59,8 @@ const protoOutput = compileGraphQLToProto(
 );
 ```
 
+> **Warning**: Protographic generated wrapper types until now. If you regenerate an existing schema with the default, the wrapper fields change to proto3 `optional` fields. The two are not wire-compatible, so a service that was built from the old proto cannot read the new messages. To keep the wrapper types, set `useWrapperTypes: true` (`--legacy-wrapper-types` in the CLI).
+
 ### Using proto.lock.json for Deterministic Field Ordering
 
 Protographic supports deterministic field ordering for Protocol Buffer files through a lock file mechanism. This ensures backward compatibility across schema changes:
