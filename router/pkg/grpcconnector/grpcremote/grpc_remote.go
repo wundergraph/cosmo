@@ -29,16 +29,20 @@ type RemoteGRPCProviderConfig struct {
 	// into the metadata of outgoing gRPC calls so that remote gRPC subgraph
 	// services can continue the trace. If nil, no trace context is propagated.
 	Propagator propagation.TextMapPropagator
+	// UnaryInterceptors are additional unary client interceptors for outgoing gRPC calls,
+	// e.g. a circuit breaker. They run in the given order, before the trace context is injected.
+	UnaryInterceptors []grpc.UnaryClientInterceptor
 }
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
-	logger     *zap.Logger
-	endpoint   string
-	tlsConfig  *tls.Config
-	propagator propagation.TextMapPropagator
+	logger            *zap.Logger
+	endpoint          string
+	tlsConfig         *tls.Config
+	propagator        propagation.TextMapPropagator
+	unaryInterceptors []grpc.UnaryClientInterceptor
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
@@ -59,10 +63,11 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 	}
 
 	return &RemoteGRPCProvider{
-		logger:     config.Logger,
-		endpoint:   config.Endpoint,
-		tlsConfig:  config.TLSConfig,
-		propagator: config.Propagator,
+		logger:            config.Logger,
+		endpoint:          config.Endpoint,
+		tlsConfig:         config.TLSConfig,
+		propagator:        config.Propagator,
+		unaryInterceptors: config.UnaryInterceptors,
 	}, nil
 }
 
@@ -88,6 +93,10 @@ func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 		}
 		opts := []grpc.DialOption{
 			transportCreds,
+		}
+
+		if len(g.unaryInterceptors) > 0 {
+			opts = append(opts, grpc.WithChainUnaryInterceptor(g.unaryInterceptors...))
 		}
 
 		// When a propagator is configured, inject the OpenTelemetry trace context
