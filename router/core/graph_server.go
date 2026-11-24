@@ -103,9 +103,10 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		connectionMetrics       *rmetric.ConnectionMetrics
 		instanceData            InstanceData
-		connector               *grpcconnector.Connector
-		circuitBreakerManager   *circuit.Manager
-		headerPropagation       *HeaderPropagation
+		// pluginProviders holds every gRPC provider this server started, keyed by what it runs, so the base graph and its feature flags share one plugin process.
+		pluginProviders       *grpcconnector.Connector
+		circuitBreakerManager *circuit.Manager
+		headerPropagation     *HeaderPropagation
 	}
 )
 
@@ -218,6 +219,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: response.Config.GetVersion(),
 		graphMuxList:            make(map[string]*graphMux, 1),
+		pluginProviders:         grpcconnector.NewConnector(),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
@@ -1297,7 +1299,7 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	err = s.setupConnector(s.graphServerCtx, setupConnectorOpts{
+	connector, err := s.setupConnector(s.graphServerCtx, setupConnectorOpts{
 		config:                        opts.EngineConfig,
 		configSubgraphs:               opts.ConfigSubgraphs,
 		telemetryAttributeExpressions: telemetryAttExpressions,
@@ -1327,7 +1329,7 @@ func (s *graphServer) buildGraphMux(
 		baseURL:          s.baseURL,
 		baseTripper:      s.baseTransport,
 		subgraphTrippers: subgraphTippers,
-		pluginHost:       s.connector,
+		pluginHost:       connector,
 		logger:           s.logger,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
@@ -1820,8 +1822,30 @@ type setupConnectorOpts struct {
 	perSubgraphTLS                map[string]*tls.Config
 }
 
-func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpts) error {
-	s.connector = grpcconnector.NewConnector()
+func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpts) (*grpcconnector.Connector, error) {
+	connector := grpcconnector.NewConnector()
+
+	useProvider := func(subgraphName string, key string, create func() (grpcconnector.ClientProvider, error)) error {
+		provider, ok := s.pluginProviders.GetClientProvider(key)
+		if !ok {
+			created, err := create()
+			if err != nil {
+				return err
+			}
+
+			if err := s.pluginProviders.RegisterClientProvider(key, created); err != nil {
+				return err
+			}
+
+			if err := created.Start(ctx); err != nil {
+				return fmt.Errorf("failed to start plugin for subgraph %s: %w", subgraphName, err)
+			}
+
+			provider = created
+		}
+
+		return connector.RegisterClientProvider(subgraphName, provider)
+	}
 
 	for _, dsConfig := range opts.config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
@@ -1839,32 +1863,33 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 		}
 
 		if sg == nil {
-			return fmt.Errorf("subgraph %s not found", dsConfig.Id)
+			return nil, fmt.Errorf("subgraph %s not found", dsConfig.Id)
 		}
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
-			// Resolve per-subgraph gRPC TLS config, falling back to the default.
-			var grpcTLS *tls.Config
-			if sgTLS, ok := opts.perSubgraphTLS[sg.Name]; ok {
-				grpcTLS = sgTLS
-			} else {
-				grpcTLS = opts.defaultClientTLS
-			}
+			err := useProvider(sg.Name, fmt.Sprintf("remote:%s:%s", sg.Name, sg.RoutingUrl), func() (grpcconnector.ClientProvider, error) {
+				// Resolve per-subgraph gRPC TLS config, falling back to the default.
+				var grpcTLS *tls.Config
+				if sgTLS, ok := opts.perSubgraphTLS[sg.Name]; ok {
+					grpcTLS = sgTLS
+				} else {
+					grpcTLS = opts.defaultClientTLS
+				}
 
-			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:     s.logger,
-				Endpoint:   sg.RoutingUrl,
-				TLSConfig:  grpcTLS,
-				Propagator: s.compositePropagator,
+				remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
+					Logger:     s.logger,
+					Endpoint:   sg.RoutingUrl,
+					TLSConfig:  grpcTLS,
+					Propagator: s.compositePropagator,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
+				}
+				return remoteProvider, nil
 			})
 			if err != nil {
-				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
-			}
-
-			err = s.connector.RegisterClientProvider(sg.Name, remoteProvider)
-			if err != nil {
-				return fmt.Errorf("failed to register standalone plugin: %w", err)
+				return nil, err
 			}
 
 			continue
@@ -1897,55 +1922,53 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				imgRef.GetReference(),
 			)
 
-			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
-				Logger:             s.logger,
-				ImageRef:           ref,
-				RegistryToken:      s.graphApiToken,
-				RegistryInsecure:   s.plugins.Registry.Insecure,
-				StartupConfig:      startupConfig,
-				Tracer:             tracer,
-				GetTraceAttributes: getTraceAttributes,
-				DialOptions:        s.grpcPluginDialOptions,
+			err := useProvider(sg.Name, "oci:"+ref, func() (grpcconnector.ClientProvider, error) {
+				grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
+					Logger:             s.logger,
+					ImageRef:           ref,
+					RegistryToken:      s.graphApiToken,
+					RegistryInsecure:   s.plugins.Registry.Insecure,
+					StartupConfig:      startupConfig,
+					Tracer:             tracer,
+					GetTraceAttributes: getTraceAttributes,
+					DialOptions:        s.grpcPluginDialOptions,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
+				}
+				return grpcPlugin, nil
 			})
 			if err != nil {
-				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
-			}
-
-			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-			if err != nil {
-				return fmt.Errorf("failed to register grpc plugin: %w", err)
+				return nil, err
 			}
 		} else {
 			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
 			if err != nil {
-				return fmt.Errorf("failed to get plugin path: %w", err)
+				return nil, fmt.Errorf("failed to get plugin path: %w", err)
 			}
 
-			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
-				Logger:             s.logger,
-				PluginName:         pluginConfig.GetName(),
-				PluginPath:         pluginPath,
-				StartupConfig:      startupConfig,
-				Tracer:             tracer,
-				GetTraceAttributes: getTraceAttributes,
-				DialOptions:        s.grpcPluginDialOptions,
+			err = useProvider(sg.Name, "plugin:"+pluginPath, func() (grpcconnector.ClientProvider, error) {
+				grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
+					Logger:             s.logger,
+					PluginName:         pluginConfig.GetName(),
+					PluginPath:         pluginPath,
+					StartupConfig:      startupConfig,
+					Tracer:             tracer,
+					GetTraceAttributes: getTraceAttributes,
+					DialOptions:        s.grpcPluginDialOptions,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+				}
+				return grpcPlugin, nil
 			})
 			if err != nil {
-				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-			}
-
-			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-			if err != nil {
-				return fmt.Errorf("failed to register grpc plugin: %w", err)
+				return nil, err
 			}
 		}
 	}
 
-	if err := s.connector.Run(ctx); err != nil {
-		return fmt.Errorf("failed to run plugin host: %w", err)
-	}
-
-	return nil
+	return connector, nil
 }
 
 func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpccommon.GRPCStartupParams {
@@ -2152,9 +2175,9 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		subgraphTransport.CloseIdleConnections()
 	}
 
-	if s.connector != nil {
+	if s.pluginProviders != nil {
 		s.logger.Debug("Stopping old plugins")
-		if err := s.connector.StopAllProviders(); err != nil {
+		if err := s.pluginProviders.StopAllProviders(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

@@ -19,6 +19,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
@@ -838,5 +839,52 @@ func TestRouterPluginWithHeaderForwarding(t *testing.T) {
 			}
 			require.NotZero(t, pluginSpans, "expected at least one plugin gRPC span alongside header propagation")
 		})
+	})
+}
+
+func TestRouterPluginSharedAcrossFeatureFlags(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+		ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+			routerConfig.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{
+				ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{
+					"myff": {
+						Version:      routerConfig.Version + "-myff",
+						EngineConfig: routerConfig.EngineConfig,
+						Subgraphs:    routerConfig.Subgraphs,
+					},
+				},
+			}
+		},
+		LogObservation: testenv.LogObservationConfig{
+			Enabled:  true,
+			LogLevel: zapcore.DebugLevel,
+		},
+		Plugins: testenv.PluginConfig{
+			Enabled: true,
+			Path:    "../../router/plugins",
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		baseResponse := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `query { project(id: 1) { id } }`,
+		})
+		require.Equal(t, `{"data":{"project":{"id":"1"}}}`, baseResponse.Body)
+
+		flagResponse := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query:  `query { project(id: 1) { id } }`,
+			Header: http.Header{"X-Feature-Flag": []string{"myff"}},
+		})
+		require.Equal(t, `{"data":{"project":{"id":"1"}}}`, flagResponse.Body)
+
+		projectsProcesses := 0
+		for _, entry := range xEnv.Observer().FilterMessage("plugin started").All() {
+			path, _ := entry.ContextMap()["path"].(string)
+			if strings.Contains(path, "/projects/bin/") {
+				projectsProcesses++
+			}
+		}
+		require.Equal(t, 1, projectsProcesses, "the base graph and the feature flag share one projects plugin process")
 	})
 }

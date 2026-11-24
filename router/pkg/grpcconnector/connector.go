@@ -1,7 +1,6 @@
 package grpcconnector
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -70,19 +69,5 @@ func (h *Connector) stopProvider(providerName string) error {
 	}
 
 	delete(h.clientMap, providerName)
-	return nil
-}
-
-func (h *Connector) Run(ctx context.Context) error {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	for subgraphName, provider := range h.clientMap {
-		err := provider.Start(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to start plugin for subgraph %s: %w", subgraphName, err)
-		}
-	}
-
 	return nil
 }
