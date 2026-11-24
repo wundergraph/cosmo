@@ -1,9 +1,10 @@
 import type { ContractTagOptions } from '@wundergraph/composition';
 import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { Config, SubgraphMetaData } from './types.js';
+import type { WundergraphConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import { SubgraphMetaData } from './types.js';
 
 export type HandleRouterConfigParams = {
-  config: Config;
+  config: WundergraphConfig;
   inputFileLocation: string;
   options: any;
   routerConfig: RouterConfig;

@@ -27,44 +27,42 @@ In development, you aim to test your schema changes as quickly as possible, bypa
 
 ### 1. Add your subgraphs
 
-In order to compose locally, we need to create a `compose.yaml` file that includes all the subgraphs you wish to include and compose into a federated graph. The information you are required to provide is as follows:
+In order to compose locally, we need to create a `wundergraph.yaml` file that includes all the subgraphs you wish to include and compose into a federated graph. The information you are required to provide is as follows:
 
 <CodeGroup>
-  ```yaml compose.yaml
-  version: 1
+  ```yaml wundergraph.yaml
+  graph: my-graph
   subgraphs:
     - name: subgraph-a
       routing_url: http://localhost:4001/graphql
-      # a) Specify a schema to introspect by file OR
+      # a) Read the schema from a file OR
       schema:
         file: ../schemas/subgraph-a.graphqls
     - name: subgraph-b
       routing_url: http://localhost:4002/graphql
-      # b) Specify introspection to introspect on a running subgraph
-      introspection:
-        url: http://localhost:4002/graphql
-        headers:
-          Authorization: 'Bearer YOUR_TOKEN_HERE'
+      # b) Run a command that prints the schema, such as introspecting a running subgraph
+      schema:
+        command: wgc subgraph introspect --routing-url http://localhost:4002/graphql --header "Authorization=Bearer YOUR_TOKEN_HERE"
   ```
 </CodeGroup>
 
 | Property | Description | Required |
 |----------|-------------|----------|
+| graph | The name of the federated graph | true |
 | name | The unique name of the subgraph | true |
 | routing_url | The unique url (endpoint) of the subgraph (typically ends with `/graphql`) | true |
-| introspection.url | Required if you want to dynamically introspect a running subgraph server | false |
-| introspection.headers | Headers to pass on the introspection request | false |
-| schema.file | Path to the subgraph GraphQL schema | false |
+| schema.file | Path to the subgraph GraphQL schema | one of `schema.file` or `schema.command` |
+| schema.command | A command that prints the subgraph GraphQL schema, run in the directory of `wundergraph.yaml` | one of `schema.file` or `schema.command` |
 
 ### 2. Generate the Router config
 
 After you have configured everything, you can generate the static router config as follows:
 
 ```bash
-wgc router compose -i compose.yaml -o router.json
+wgc router compose -o router.json
 ```
 
-This command introspects all your subgraphs and produces a `router.json` that can be passed to the router in the next step.
+This command reads every subgraph schema and produces a `router.json` that can be passed to the router in the next step.
 
 ### 3. Run the config with the router
 

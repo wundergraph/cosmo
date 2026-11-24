@@ -10,7 +10,7 @@ if [ ! -f router ]; then
 fi
 
 # Compose the schema
-wgc router compose -i graph.yaml -o config.json
+wgc router compose -o config.json
 
 # Start the router
 ./router

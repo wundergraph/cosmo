@@ -1,11 +1,10 @@
-version: 1
-
+graph: nats-subscription-filter
 subgraphs:
   - name: base
-    routing_url: http://localhost:4001/graphql
     schema:
       file: ./base.graphqls
+    routing_url: http://localhost:4001/graphql
   - name: subscriptions
-    routing_url: http://localhost:4002/graphql
     schema:
       file: ./subscriptions.graphqls
+    routing_url: http://localhost:4002/graphql

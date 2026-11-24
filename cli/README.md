@@ -191,10 +191,10 @@ npx wgc subgraph check products -n production --schema ./schemas/products.graphq
 
 - **Generate Router Configuration locally**:
 
-Composition Configuration (graph.yaml):
+Composition Configuration (wundergraph.yaml):
 
 ```yaml
-version: 1
+graph: shop
 subgraphs:
   - name: products
     routing_url: http://localhost:4001/graphql
@@ -205,7 +205,7 @@ subgraphs:
 Generate CMD:
 
 ```bash
-npx wgc router compose -i graph.yaml -o config.json
+npx wgc router compose -o config.json
 ```
 
 - **Run Router**:

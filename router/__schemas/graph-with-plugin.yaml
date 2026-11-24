@@ -1,23 +1,37 @@
-version: 1
+graph: schemas-with-plugin
 subgraphs:
   - name: employees
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4001/graphql
     routing_url: http://localhost:4001/graphql
   - name: family
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4002/graphql
     routing_url: http://localhost:4002/graphql
   - name: hobbies
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4003/graphql
     routing_url: http://localhost:4003/graphql
   - name: products
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4004/graphql
     routing_url: http://localhost:4004/graphql
   - name: availability
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4007/graphql
     routing_url: http://localhost:4007/graphql
   - name: mood
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4008/graphql
     routing_url: http://localhost:4008/graphql
   - name: countries
+    schema:
+      command: ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts subgraph introspect --routing-url http://localhost:4009/graphql
     routing_url: http://localhost:4009/graphql
   - name: employeeUpdates
     schema:
       file: ../../demo/pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
   - name: hello-world
-    plugin:
-      version: 0.0.1
-      path: ../plugins/hello-world
+    kind: plugin
+    path: ../plugins/hello-world
+    version: 0.0.1

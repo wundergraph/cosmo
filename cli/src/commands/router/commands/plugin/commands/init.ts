@@ -3,13 +3,14 @@ import { access, mkdir, rename, rm, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { Command, program } from 'commander';
-import { resolve } from 'pathe';
+import { basename, resolve } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
 import { toJsonString } from '@bufbuild/protobuf';
 import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
+import { configFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import PluginTemplates from '../templates/plugin.js';
@@ -187,7 +188,10 @@ export default (opts: BaseCommandOptions) => {
 
         // Write router config to the project root
         await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfigYaml);
-        await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphYaml, { originalPluginName }));
+        await writeFile(
+          resolve(projectDir, configFileName),
+          pupa(ProjectTemplates.wundergraphYaml, { projectName: basename(projectDir), originalPluginName }),
+        );
         await writeFile(resolve(projectDir, 'Makefile'), pupa(ProjectTemplates.makefile, { originalPluginName }));
         await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(

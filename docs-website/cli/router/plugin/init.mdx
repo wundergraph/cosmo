@@ -44,7 +44,7 @@ This command creates a new plugin directory with the specified name and scaffold
 
 When `--project` is provided, a minimal router project is created in the project directory with:
 
-- Router configuration files in the project root (`config.yaml`, `graph.yaml`)
+- The router configuration (`config.yaml`) and `wundergraph.yaml`, which lists the plugin as a subgraph for `wgc router compose`, in the project root
 - Project-level files (`README.md`, `Makefile`, `.gitignore`)
 - The plugin located at `<project>/<name>`
 
@@ -60,7 +60,7 @@ my-project/
 ├── README.md                 # Project documentation
 ├── Makefile                  # Project Makefile
 ├── config.yaml               # Router configuration
-├── graph.yaml                # Supergraph configuration
+├── wundergraph.yaml          # Supergraph configuration
 ├── .gitignore
 └── my-plugin/                # Your plugin directory
     ├── README.md
@@ -87,7 +87,7 @@ my-project/
 ├── README.md                 # Project documentation
 ├── Makefile                  # Project Makefile
 ├── config.yaml               # Router configuration
-├── graph.yaml                # Supergraph configuration
+├── wundergraph.yaml          # Supergraph configuration
 ├── .gitignore
 └── my-plugin/                # Your plugin directory
     ├── README.md

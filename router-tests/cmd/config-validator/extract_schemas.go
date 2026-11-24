@@ -39,13 +39,13 @@ type ConfigSubgraph struct {
 }
 
 type CosmoGraph struct {
-	Version   int
+	Graph     string
 	Subgraphs []CosmoSubgraph
 }
 
 type CosmoSubgraph struct {
 	Name       string
-	RoutingURL string `yaml:"routing_url"`
+	RoutingURL string `yaml:"routing_url,omitempty"`
 	Schema     Schema
 }
 
@@ -113,7 +113,7 @@ func main() {
 
 func createYaml(orgPath string, cfgPath string) {
 	cosmoGraph := CosmoGraph{
-		Version:   1,
+		Graph:     filepath.Base(orgPath),
 		Subgraphs: make([]CosmoSubgraph, 0),
 	}
 

@@ -11,16 +11,16 @@ icon: layer-group
 ## Usage
 
 ```bash
-npx wgc router compose -i <path-to-input-file>
+npx wgc router compose [-i <path-to-wundergraph.yaml>]
 ```
 
 ## Description
 
-The `npx wgc router compose` command allows you to compose subgraphs and build a router execution config locally without a connection to the control plane.
+The `npx wgc router compose` command allows you to compose subgraphs and build a router execution config locally without a connection to the control plane. It reads the subgraphs from `wundergraph.yaml`, the repository config that `wgc` and its plugins share.
 
 ## Options
 
-* `-i, --input`: The path to the input config file that contains information about your subgraphs.
+* `-i, --input`: The path to the `wundergraph.yaml` to compose. Defaults to the `wundergraph.yaml` in the current directory or its nearest parent.
 
 * `-o, --out` : Destination file for the router config. Prints to standard output if not provided.
 
@@ -46,30 +46,44 @@ Yields an error if supplied without any included or excluded tags.
 
 ## Input file structure
 
-```bash
-version: 1
+```yaml wundergraph.yaml
+graph: shop
 subgraphs:
-  # You can either provide schema file or introspection. File takes precedence
   - name: employees
     routing_url: http://localhost:4001/graphql
     schema:
       file: ./employees.graphql
     subscription:
-      url: http://localhost:4001/sse #Optional, defaults to routing_url
+      url: http://localhost:4001/sse # Optional, defaults to routing_url
       protocol: sse # Optional, defaults to ws (websockets)
       websocket_subprotocol: graphql-ws # Optional, defaults to auto.
       # Available options are auto, graphql-ws, graphql-transport-ws
   - name: family
     routing_url: http://localhost:4002/graphql
-    introspection:
-      url: http://localhost:4002/graphql
-      headers:
-        Authorization: 'Bearer YOUR_TOKEN_HERE'
+    schema:
+      # Any command that prints the SDL to standard output
+      command: npx wgc subgraph introspect --routing-url http://localhost:4002/graphql --header "Authorization=Bearer YOUR_TOKEN_HERE"
+  - name: inventory
+    kind: grpc
+    routing_url: dns:///localhost:4011
+    schema:
+      file: ./inventory/schema.graphql
+    proto: ./inventory/service.proto
+    mapping: ./inventory/mapping.json
+  - name: payments
+    kind: plugin
+    path: ./plugins/payments
+    version: 0.0.1
 ```
+
+Every path is relative to the directory of `wundergraph.yaml`.
+A subgraph takes its SDL from `schema.file`, or from the standard output of `schema.command`, which runs through a shell in that directory.
+`compose` needs a `routing_url` for every subgraph except an event-driven graph.
+A plugin subgraph is named after its directory: `compose` reads `src/schema.graphql`, `generated/service.proto` and `generated/mapping.json` under its `path`.
 
 ## Feature flags (optional)
 
-You can define feature flags in the input file so the composed router config includes alternate subgraphs when a flag is active. Each flag lists one or more `feature_graphs` that describe the replacement subgraph to serve when the flag is enabled (e.g. via the `X-Feature-Flag` header). For an overview of how the router uses feature flags, see [Feature Flags](/router/feature-flags).
+You can define feature flags in `wundergraph.yaml` so the composed router config includes alternate subgraphs when a flag is active. Each flag lists one or more `feature_graphs` that describe the replacement subgraph to serve when the flag is enabled (e.g. via the `X-Feature-Flag` header). For an overview of how the router uses feature flags, see [Feature Flags](/router/feature-flags).
 
 ```yaml
 feature_flags:
@@ -80,6 +94,7 @@ feature_flags:
         routing_url: https://api.example.com/checkout-canary/graphql
         schema:
           file: feature-flag_checkout.graphql
+graph: shop
 subgraphs:
   - name: checkout
     routing_url: https://api.example.com/checkout/graphql
@@ -108,19 +123,19 @@ This is the local equivalent of a contract graph created with [`wgc contract cre
 Use it to test a contract with your router without a control plane connection.
 
 ```bash
-npx wgc router compose -i graph.yaml --exclude internal experimental -o router.json
+npx wgc router compose --exclude internal experimental -o router.json
 ```
 
 Compose a contract that excludes all schema elements tagged `internal` or `experimental`.
 
 ```bash
-npx wgc router compose -i graph.yaml --include public -o router.json
+npx wgc router compose --include public -o router.json
 ```
 
 Compose a contract that includes only the schema elements tagged `public`.
 
 ```bash
-npx wgc router compose -i graph.yaml --include public --exclude internal --disable-base-contract --contract-feature-flag-names ff1 ff2 -o router.json
+npx wgc router compose --include public --exclude internal --disable-base-contract --contract-feature-flag-names ff1 ff2 -o router.json
 ```
 
 Compose a contract for feature flags "ff1" and "ff2" (but not the base federated graph) that includes only the schema elements tagged `public` but excludes any nested schema elements tagged 'internal.
@@ -132,16 +147,16 @@ Compose a contract for feature flags "ff1" and "ff2" (but not the base federated
 ## Examples
 
 ```bash
-npx wgc router compose -i graph.yaml
+npx wgc router compose
 ```
 
-Compose subgraphs mentioned in the input file graph.yaml
+Compose the subgraphs in the nearest `wundergraph.yaml` and print the router config.
 
 ```bash
-npx wgc router compose -i graph.yaml -o router.json
+npx wgc router compose -i services/wundergraph.yaml -o router.json
 ```
 
-Compose subgraphs mentioned in graph.yaml and write it to `router.json`
+Compose the subgraphs in `services/wundergraph.yaml` and write the router config to `router.json`.
 
 ## Notes
 

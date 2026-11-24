@@ -1,0 +1,26 @@
+graph: router-simple
+subgraphs:
+  - name: employees
+    schema:
+      command: wgc subgraph introspect --routing-url https://employees-api.fly.dev/graphql
+    routing_url: https://employees-api.fly.dev/graphql
+  - name: family
+    schema:
+      command: wgc subgraph introspect --routing-url https://family-api.fly.dev/graphql
+    routing_url: https://family-api.fly.dev/graphql
+  - name: hobbies
+    schema:
+      command: wgc subgraph introspect --routing-url https://hobbies-api.fly.dev/graphql
+    routing_url: https://hobbies-api.fly.dev/graphql
+  - name: products
+    schema:
+      command: wgc subgraph introspect --routing-url https://product-api.fly.dev/graphql
+    routing_url: https://product-api.fly.dev/graphql
+  - name: availability
+    schema:
+      command: wgc subgraph introspect --routing-url https://availability-api.fly.dev/graphql
+    routing_url: https://availability-api.fly.dev/graphql
+  - name: mood
+    schema:
+      command: wgc subgraph introspect --routing-url https://mood-api.fly.dev/graphql
+    routing_url: https://mood-api.fly.dev/graphql
