@@ -11,6 +11,7 @@ import { OrganizationLoginMethodRepository } from '../repositories/OrganizationL
 import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
+import CiAccessTokenAuthenticator, { ciAccessTokenPrefix } from './CiAccessTokenAuthenticator.js';
 import CiOidcAuthenticator from './CiOidcAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
@@ -37,6 +38,7 @@ export class Authentication implements Authenticator {
     private keyAuth: ApiKeyAuthenticator,
     private accessTokenAuth: AccessTokenAuthenticator,
     private ciOidcAuth: CiOidcAuthenticator,
+    private ciAccessTokenAuth: CiAccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
     private oidcRepo: OidcRepository,
@@ -78,6 +80,9 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
+        if (token.startsWith(ciAccessTokenPrefix)) {
+          return await this.ciAccessTokenAuth.authenticate(token);
+        }
         if (token.toLowerCase().startsWith('cosmo')) {
           return await this.keyAuth.authenticate(token);
         }

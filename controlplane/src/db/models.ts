@@ -73,7 +73,8 @@ export type AuditableType =
   | 'namespace_sso_mapping'
   | 'organization_login_methods'
   | 'graph_collection'
-  | 'graph_collection_operation';
+  | 'graph_collection_operation'
+  | 'ci_access_token';
 
 export type AuditTargetType =
   | 'organization'
@@ -129,6 +130,7 @@ export type AuditLogFullAction =
   | 'group.members_moved'
   | 'group.hub_permissions_updated'
   | 'organization.hub_ai_settings_updated'
+  | 'ci_access_token.created'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'

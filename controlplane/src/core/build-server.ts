@@ -19,6 +19,7 @@ import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
 import AuthController from './controllers/auth.js';
 import ScimController from './controllers/scim.js';
+import CiAccessTokenController from './controllers/ci-access-token.js';
 import GitHubWebhookController from './controllers/github.js';
 import StripeWebhookController from './controllers/stripe.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
@@ -31,6 +32,7 @@ import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
+import CiAccessTokenAuthenticator from './services/CiAccessTokenAuthenticator.js';
 import CiOidcAuthenticator, {
   ciIssuers,
   CiOidcOptions,
@@ -339,11 +341,13 @@ export default async function build(opts: BuildConfig) {
     requireGithubAppInstallation: opts.ciOidc?.requireGithubAppInstallation ?? !!opts.githubApp?.clientId,
     keysOf: opts.ciOidc?.keysOf,
   });
+  const ciAccessTokenAuth = new CiAccessTokenAuthenticator(opts.auth.secret, organizationRepository);
   const authenticator = new Authentication(
     webAuth,
     apiKeyAuth,
     accessTokenAuth,
     ciOidcAuth,
+    ciAccessTokenAuth,
     graphKeyAuth,
     organizationRepository,
     oidcRepository,
@@ -610,6 +614,12 @@ export default async function build(opts: BuildConfig) {
     keycloakRealm: opts.keycloak.realm,
     platformWebhooks,
     defaultBillingPlanId: opts.defaultBillingPlanId,
+  });
+
+  await fastify.register(CiAccessTokenController, {
+    authenticator,
+    ciAccessTokenAuth,
+    db: fastify.db,
   });
 
   await fastify.register(ScimController, {
