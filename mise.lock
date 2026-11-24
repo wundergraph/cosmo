@@ -193,6 +193,16 @@ url = "https://dl.google.com/go/go1.26.11.darwin-amd64.tar.gz"
 checksum = "sha256:394baae971332f2bc783d6e2004ae57101479bd3b06ed8209a3fe3570d4ce498"
 url = "https://dl.google.com/go/go1.26.11.darwin-amd64.tar.gz"
 
+[[tools."go:github.com/go-delve/delve/cmd/dlv"]]
+version = "1.27.2"
+backend = "go:github.com/go-delve/delve/cmd/dlv"
+specifiers = ["1.27.2"]
+
+[[tools."go:golang.org/x/tools/gopls"]]
+version = "0.23.0"
+backend = "go:golang.org/x/tools/gopls"
+specifiers = ["0.23.0"]
+
 [[tools.golangci-lint]]
 version = "2.14.0"
 backend = "aqua:golangci/golangci-lint"
