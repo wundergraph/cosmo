@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   afterAll,
@@ -13,6 +14,7 @@ import {
   onTestFinished,
   type Mock,
 } from 'vitest';
+import { federatedGraphPersistedOperations } from '../src/db/schema.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
@@ -448,6 +450,193 @@ describe('Persisted operations', (ctx) => {
       });
       expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
       expect(blobStorage.keys().length).toBe(0);
+    });
+
+    test('Should reject an ID registered with a different body by another client until all registrations are deleted', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publish = (clientName: string, contents: string) =>
+        client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName,
+          operations: [{ id: 'shared', contents }],
+        });
+      const readManifest = async () => {
+        const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+        return JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      };
+
+      // The same ID and body can be registered by several clients
+      for (const clientName of ['client-a', 'client-b']) {
+        const response = await publish(clientName, 'query { hello }');
+        expect(response.response?.code).toBe(EnumStatusCode.OK);
+        expect(response.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      }
+      const original = await readManifest();
+      expect(original.operations).toEqual({ shared: 'query { hello }' });
+
+      const conflict = await publish('client-c', 'query { __typename }');
+      expect(conflict.response?.code).toBe(EnumStatusCode.OK);
+      expect(conflict.operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+      expect(conflict.operations[0].hash).toBe(crypto.createHash('sha256').update('query { hello }').digest('hex'));
+      expect((await readManifest()).revision).toBe(original.revision);
+      expect(blobStorage.keys().some((key) => key.endsWith('/client-c/shared.json'))).toBe(false);
+
+      // The ID stays reserved while any client registers it
+      const deletedOperation = await client.deletePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'client-a',
+        operationId: 'shared',
+      });
+      expect(deletedOperation.response?.code).toBe(EnumStatusCode.OK);
+      expect((await publish('client-c', 'query { __typename }')).operations[0].status).toBe(
+        PublishedOperationStatus.CONFLICT,
+      );
+
+      const deletedClient = await client.deleteClient({ fedGraphName, namespace: 'default', clientName: 'client-b' });
+      expect(deletedClient.response?.code).toBe(EnumStatusCode.OK);
+      expect((await publish('client-c', 'query { __typename }')).operations[0].status).toBe(
+        PublishedOperationStatus.CREATED,
+      );
+      expect((await readManifest()).operations).toEqual({ shared: 'query { __typename }' });
+    });
+
+    test('Should reject an ID registered with a different body by a registration without stored contents', async (testContext) => {
+      const { client, server, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const user = users.adminAliceCompanyA;
+      const graph = await new FederatedGraphRepository(server.log, server.db, user.organizationId).byName(
+        fedGraphName,
+        'default',
+      );
+      const repo = new OperationsRepository(server.db, graph!.id);
+      const clientId = await repo.registerClient('legacy', user.userId);
+      // Registrations made before operation contents were stored in the database have no contents
+      await server.db.insert(federatedGraphPersistedOperations).values({
+        federatedGraphId: graph!.id,
+        clientId,
+        operationId: 'shared',
+        hash: crypto.createHash('sha256').update('query { hello }').digest('hex'),
+        filePath: `${graph!.id}/legacy/shared.json`,
+        createdById: user.userId,
+      });
+
+      const publish = (contents: string) =>
+        client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: [{ id: 'shared', contents }],
+        });
+
+      expect((await publish('query { __typename }')).operations[0].status).toBe(PublishedOperationStatus.CONFLICT);
+      expect((await publish('query { hello }')).operations[0].status).toBe(PublishedOperationStatus.CREATED);
+    });
+
+    test('Should reject a conflicting ID and accept identical entries within a request', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const response = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'batch-client',
+        operations: [
+          { id: 'shared', contents: 'query { hello }' },
+          { id: 'shared', contents: 'query { __typename }' },
+          { id: 'shared', contents: 'query { hello }' },
+        ],
+      });
+      expect(response.response?.code).toBe(EnumStatusCode.OK);
+      expect(response.operations.map((op) => op.status)).toEqual([
+        PublishedOperationStatus.CREATED,
+        PublishedOperationStatus.CONFLICT,
+        PublishedOperationStatus.CREATED,
+      ]);
+
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: 'query { hello }' });
+    });
+
+    test('Should register only one body when clients publish the same ID concurrently', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      // Hold both uploads until both requests have passed their initial conflict check,
+      // so that the conflict can only be detected when registering the operations
+      const putObject = blobStorage.putObject.bind(blobStorage);
+      let uploading = 0;
+      let release!: () => void;
+      const bothUploading = new Promise<void>((resolve) => (release = resolve));
+      const putObjectSpy = vi.spyOn(blobStorage, 'putObject').mockImplementation(async (params) => {
+        if (params.key.endsWith('/shared.json')) {
+          if (++uploading === 2) {
+            release();
+          }
+          await bothUploading;
+        }
+        return putObject(params);
+      });
+      testContext.onTestFinished(() => putObjectSpy.mockRestore());
+
+      const bodies = ['query { hello }', 'query { __typename }'];
+      const responses = await Promise.all(
+        bodies.map((contents, i) =>
+          client.publishPersistedOperations({
+            fedGraphName,
+            namespace: 'default',
+            clientName: `client-${i}`,
+            operations: [{ id: 'shared', contents }],
+          }),
+        ),
+      );
+
+      expect(responses.map((r) => r.response?.code)).toEqual([EnumStatusCode.OK, EnumStatusCode.OK]);
+      const statuses = responses.map((r) => r.operations[0].status);
+      expect(statuses.toSorted()).toEqual(
+        [PublishedOperationStatus.CREATED, PublishedOperationStatus.CONFLICT].toSorted(),
+      );
+
+      const winner = statuses.indexOf(PublishedOperationStatus.CREATED);
+      const key = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'))!;
+      const manifest = JSON.parse(await new Response((await blobStorage.getObject({ key })).stream).text());
+      expect(manifest.operations).toEqual({ shared: bodies[winner] });
+    });
+
+    test('Should allow different graphs to register the same ID with different bodies', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      for (const contents of ['query { hello }', 'query { __typename }']) {
+        const fedGraphName = genID('fedGraph');
+        await setupFederatedGraph(fedGraphName, client);
+
+        const response = await client.publishPersistedOperations({
+          fedGraphName,
+          namespace: 'default',
+          clientName: 'web',
+          operations: [{ id: 'shared', contents }],
+        });
+        expect(response.response?.code).toBe(EnumStatusCode.OK);
+        expect(response.operations[0].status).toBe(PublishedOperationStatus.CREATED);
+      }
     });
   });
 
