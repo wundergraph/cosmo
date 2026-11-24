@@ -19,7 +19,6 @@ import {
   PiKey,
   PiLockKey,
   PiReceipt,
-  PiSparkle,
   PiUserGear,
   PiUsers,
   PiWebhooksLogo,
@@ -244,11 +243,6 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           title: 'Audit log',
           href: basePath + '/audit-log',
           icon: <AiOutlineAudit className="size-4" />,
-        },
-        {
-          title: 'Hub AI',
-          href: basePath + '/hub-ai',
-          icon: <PiSparkle className="size-4" />,
         },
         {
           title: 'Login Methods',
