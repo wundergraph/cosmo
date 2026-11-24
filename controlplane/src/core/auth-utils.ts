@@ -188,16 +188,21 @@ export default class AuthUtils {
     };
   }
 
+  // The login and the callback must build the same string, or the token exchange fails, so values are encoded once.
   getRedirectUri({ redirectURL, sso }: { redirectURL?: string; sso?: string }) {
-    if (redirectURL && sso) {
-      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}&ssoSlug=${sso}`;
-    } else if (redirectURL) {
-      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}`;
-    } else if (sso) {
-      return `${this.opts.oauth.redirectUri}?ssoSlug=${sso}`;
-    } else {
+    if (!redirectURL && !sso) {
       return this.opts.oauth.redirectUri;
     }
+
+    const url = new URL(this.opts.oauth.redirectUri);
+    if (redirectURL) {
+      url.searchParams.set('redirectURL', redirectURL);
+    }
+    if (sso) {
+      url.searchParams.set('ssoSlug', sso);
+    }
+
+    return url.toString();
   }
 
   async handleLoginRequest(options: {

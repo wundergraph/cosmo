@@ -87,7 +87,6 @@ export const SetupTest = async function ({
   setupBilling,
   organizationId,
   enableSplitConfigLoadingByDefault = true,
-  hubApiUrl,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -99,7 +98,6 @@ export const SetupTest = async function ({
   };
   organizationId?: UUID;
   enableSplitConfigLoadingByDefault?: boolean;
-  hubApiUrl?: string;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -177,7 +175,6 @@ export const SetupTest = async function ({
         clientSecret: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
-      hubApiUrl,
       admissionWebhookJWTSecret: 'secret',
       keycloakApiUrl: apiUrl,
       blobStorage,

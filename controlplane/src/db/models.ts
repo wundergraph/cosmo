@@ -129,7 +129,6 @@ export type AuditLogFullAction =
   | 'group.deleted'
   | 'group.members_moved'
   | 'group.hub_permissions_updated'
-  | 'organization.hub_ai_settings_updated'
   | 'ci_access_token.created'
   | 'graph_token.created'
   | 'graph_token.deleted'

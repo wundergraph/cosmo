@@ -664,27 +664,6 @@ export const updateOrganizationGroupHubPermissions = PlatformService.method.upda
 export const getHubGovernance = PlatformService.method.getHubGovernance;
 
 /**
- * GetHubAiSettings returns the Hub AI settings Cosmo manages for the organization
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetHubAiSettings
- */
-export const getHubAiSettings = PlatformService.method.getHubAiSettings;
-
-/**
- * UpdateHubAiSettings sets the Hub AI settings Cosmo manages, or hands them back to Hub
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateHubAiSettings
- */
-export const updateHubAiSettings = PlatformService.method.updateHubAiSettings;
-
-/**
- * GetHubAiModels returns the models Hub offers for its AI settings
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetHubAiModels
- */
-export const getHubAiModels = PlatformService.method.getHubAiModels;
-
-/**
  * GetGraphResourceOwners returns the explicit owners of the subgraphs, types and overrides of a federated graph
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphResourceOwners

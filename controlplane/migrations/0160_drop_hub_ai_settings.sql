@@ -1,0 +1,1 @@
+DROP TABLE "hub_ai_settings";

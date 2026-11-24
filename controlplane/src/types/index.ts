@@ -368,22 +368,6 @@ export interface HubPermissionGrantDTO {
   tags: string[];
 }
 
-export interface HubAgentAllowanceDTO {
-  restricted: boolean;
-  entries: string[];
-}
-
-export interface HubAiSettingsDTO {
-  agentsDisabled: boolean;
-  defaultModel: string;
-  modelOverrides: { target: string; model: string }[];
-  monthlyCapUsd?: number;
-  memberMonthlyCapUsd?: number;
-  repositories: HubAgentAllowanceDTO;
-  hosts: HubAgentAllowanceDTO;
-  agentHiddenTags: string[];
-}
-
 export interface GraphResourceOwnerDTO {
   federatedGraphId: string;
   resourceKind: GraphResourceKind;

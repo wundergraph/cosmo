@@ -4,6 +4,7 @@ import { useOnboarding } from './use-onboarding';
 import { useQuery } from '@connectrpc/connect-query';
 import { getOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { useIsEmbedded } from './use-is-embedded';
 
 /**
  * Manages the initial navigation to onboarding wizard and evaluates
@@ -13,6 +14,7 @@ export const useOnboardingNavigation = () => {
   const { enabled, setOnboarding, skipped, currentStep } = useOnboarding();
   const { data, isError, isPending } = useQuery(getOnboarding);
   const initialRedirect = useRef<boolean>(false);
+  const isEmbedded = useIsEmbedded();
 
   const initialLoadSuccess = useMemo(() => {
     if (isPending) return null;
@@ -38,6 +40,10 @@ export const useOnboardingNavigation = () => {
     function handleNavigationToOnboarding() {
       // Do not redirect if feature flag is off
       if (!enabled) {
+        return;
+      }
+      // Inside Hub's frame the onboarding pages, which have no organization in the URL, cannot load
+      if (isEmbedded) {
         return;
       }
       // Do not redirect if user initiated invitation accept from the initial
@@ -74,6 +80,6 @@ export const useOnboardingNavigation = () => {
       initialRedirect.current = true;
       Router.replace(pathWithParams);
     },
-    [data, enabled, initialLoadSuccess, skipped, currentStep],
+    [data, enabled, initialLoadSuccess, skipped, currentStep, isEmbedded],
   );
 };

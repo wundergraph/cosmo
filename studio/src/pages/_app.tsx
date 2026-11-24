@@ -106,6 +106,12 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   }
 
   const getLayout = Component.getLayout ?? ((page) => <Layout>{page}</Layout>);
+  const content = (
+    <TooltipProvider>
+      <Toaster />
+      {getLayout(<Component {...pageProps} />)}
+    </TooltipProvider>
+  );
 
   return (
     <>
@@ -115,19 +121,14 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
             <QueryClientProvider client={queryClient}>
               <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
                 <OnboardingProvider>
-                  <AppProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      {getLayout(<Component {...pageProps} />)}
-                    </TooltipProvider>
-                  </AppProvider>
+                  {Component.ownsSession ? content : <AppProvider>{content}</AppProvider>}
                 </OnboardingProvider>
               </PostHogFeatureFlagProvider>
             </QueryClientProvider>
           </ThemeProvider>
+          <Footer />
         </NuqsAdapter>
       </PostHogProvider>
-      <Footer />
     </>
   );
 }

@@ -13,6 +13,10 @@ import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
+import { useIsEmbedded } from '@/hooks/use-is-embedded';
+import { postToHub } from '@/lib/embed';
+import { EmbedLayout } from '@/components/layout/embed-layout';
+import { EmptyState } from '@/components/empty-state';
 
 const sessionQueryClient = new QueryClient();
 
@@ -106,7 +110,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-const fetchSession = async () => {
+export const fetchSession = async (): Promise<Session | null> => {
   try {
     const response = await fetch(process.env.NEXT_PUBLIC_COSMO_CP_URL + '/v1/auth/session', {
       method: 'GET',
@@ -137,6 +141,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
   const isNewUser = router.query.onboarding === 'true';
+  // Embedded in Hub, the organization comes from the URL and the org cookie stays the user's own choice.
+  const isEmbedded = useIsEmbedded();
 
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
   // as well as being able to access the cookie on the server.
@@ -156,11 +162,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
 
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady || isEmbedded) return;
     if (currentOrgSlug && typeof currentOrgSlug === 'string') {
       setOrgSlugCookie(currentOrgSlug);
     }
-  }, [currentOrgSlug, router, setOrgSlugCookie]);
+  }, [currentOrgSlug, router, setOrgSlugCookie, isEmbedded]);
 
   const { data, error, isFetching } = useQuery<Session | null, UnauthorizedError | Error>(
     {
@@ -174,12 +180,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     sessionQueryClient,
   );
 
+  const isEmbeddedOrganizationMissing =
+    isEmbedded &&
+    !!data &&
+    !data.organizations.some((org) => org.slug === currentOrgSlug && org.loginMethodAllowed !== false);
+
   useEffect(() => {
     if (isFetching || !router.isReady) return;
     if (error && error instanceof UnauthorizedError && !publicPaths.includes(router.pathname)) {
+      if (isEmbedded) {
+        postToHub({ source: 'cosmo-studio', type: 'unauthorized' });
+        return;
+      }
+
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
       router.replace(`/login?redirectURL=${encodeURIComponent(redirectURL)}`);
     } else if (data && !error) {
+      if (isEmbeddedOrganizationMissing) {
+        return;
+      }
+
       // Orgs accessible with the current login method (treat missing field as allowed).
       const accessibleOrganizations = data.organizations.filter((org) => org.loginMethodAllowed !== false);
 
@@ -192,7 +212,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Prefer the cookie-selected org if it is accessible; otherwise fall back to first accessible.
-      const currentOrg = accessibleOrganizations.find((org) => org.slug === cookieOrgSlug);
+      const currentOrg = accessibleOrganizations.find(
+        (org) => org.slug === (isEmbedded ? currentOrgSlug : cookieOrgSlug),
+      );
 
       const organization = currentOrg || accessibleOrganizations[0];
 
@@ -245,7 +267,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser, analyticsConsented]);
+  }, [
+    router,
+    data,
+    isFetching,
+    error,
+    cookieOrgSlug,
+    isNewUser,
+    analyticsConsented,
+    isEmbedded,
+    currentOrgSlug,
+    isEmbeddedOrganizationMissing,
+  ]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {
@@ -282,6 +315,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     queryClient.resetQueries();
   }, [queryResetCounter, queryClient]);
+
+  if (isEmbeddedOrganizationMissing) {
+    return (
+      <EmbedLayout>
+        <EmptyState
+          title="You are not a member of this Cosmo organization"
+          description="Ask an admin of the organization in Cosmo to invite you."
+        />
+      </EmbedLayout>
+    );
+  }
 
   if (!transport) {
     return (

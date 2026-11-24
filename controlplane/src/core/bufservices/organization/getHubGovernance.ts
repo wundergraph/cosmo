@@ -9,7 +9,6 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { GraphResourceOwnerRepository } from '../../repositories/GraphResourceOwnerRepository.js';
-import { HubAiSettingsRepository } from '../../repositories/HubAiSettingsRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
@@ -36,7 +35,6 @@ export function getHubGovernance(
     const groups = await orgGroupRepo.forOrganization(authContext.organizationId);
     const explicitOwners = await ownerRepo.explicitOwnersForOrganization();
     const derivedSubgraphOwners = await ownerRepo.subgraphOwnersFromGroupRules();
-    const aiSettings = await new HubAiSettingsRepository(opts.db).byOrganization(authContext.organizationId);
 
     return {
       response: {
@@ -61,7 +59,6 @@ export function getHubGovernance(
         hubPermissions: group.hubPermissions,
       })),
       owners: [...explicitOwners, ...derivedSubgraphOwners],
-      aiSettings,
     };
   });
 }

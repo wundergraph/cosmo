@@ -19,7 +19,6 @@ import {
   PiKey,
   PiLockKey,
   PiReceipt,
-  PiSparkle,
   PiUserGear,
   PiUsers,
   PiWebhooksLogo,
@@ -28,6 +27,8 @@ import { PageHeader } from './head';
 import { LayoutProps } from './layout';
 import { NavLink, SideNav } from './sidenav';
 import { TitleLayout } from './title-layout';
+import { EmbedLayout } from './embed-layout';
+import { useIsEmbedded } from '@/hooks/use-is-embedded';
 import { FaGripfire } from 'react-icons/fa';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
@@ -246,11 +247,6 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           icon: <AiOutlineAudit className="size-4" />,
         },
         {
-          title: 'Hub AI',
-          href: basePath + '/hub-ai',
-          icon: <PiSparkle className="size-4" />,
-        },
-        {
           title: 'Login Methods',
           href: basePath + `/login-methods`,
           icon: <PiLockKey className="size-4" />,
@@ -354,15 +350,25 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
 };
 
-export const getDashboardLayout = (
-  page: React.ReactNode,
-  title: string,
-  subtitle: React.ReactNode,
-  items?: React.ReactNode,
-  toolbar?: React.ReactNode,
-  breadcrumbs?: React.ReactNode[],
-  noPadding?: boolean,
-) => {
+interface DashboardPageProps {
+  page: React.ReactNode;
+  title: string;
+  subtitle: React.ReactNode;
+  items?: React.ReactNode;
+  toolbar?: React.ReactNode;
+  breadcrumbs?: React.ReactNode[];
+  noPadding?: boolean;
+}
+
+const DashboardPage = ({ page, title, subtitle, items, toolbar, breadcrumbs, noPadding }: DashboardPageProps) => {
+  const isEmbedded = useIsEmbedded();
+  const user = useUser();
+
+  // Hub takes a posted height as a signed-in page, so the page waits for the session.
+  if (isEmbedded) {
+    return user ? <EmbedLayout toolbar={toolbar}>{page}</EmbedLayout> : null;
+  }
+
   return (
     <DashboardLayout>
       <PageHeader title={`Dashboard | ${title}`}>
@@ -378,5 +384,27 @@ export const getDashboardLayout = (
         </TitleLayout>
       </PageHeader>
     </DashboardLayout>
+  );
+};
+
+export const getDashboardLayout = (
+  page: React.ReactNode,
+  title: string,
+  subtitle: React.ReactNode,
+  items?: React.ReactNode,
+  toolbar?: React.ReactNode,
+  breadcrumbs?: React.ReactNode[],
+  noPadding?: boolean,
+) => {
+  return (
+    <DashboardPage
+      page={page}
+      title={title}
+      subtitle={subtitle}
+      items={items}
+      toolbar={toolbar}
+      breadcrumbs={breadcrumbs}
+      noPadding={noPadding}
+    />
   );
 };
