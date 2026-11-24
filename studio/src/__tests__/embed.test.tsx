@@ -4,6 +4,7 @@ import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppProvider } from '@/components/app-provider';
 import { EmbedLayout } from '@/components/layout/embed-layout';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { useUser } from '@/hooks/use-user';
 import { embedLoginUrl, embedSessionTarget } from '@/lib/embed';
 
@@ -243,6 +244,33 @@ describe('AppProvider embedded in Hub', () => {
     await waitFor(() => expect(screen.getByTestId('organization').textContent).toBe('globex'));
     expect(document.cookie).toContain('cosmo_org=acme');
     expect(router.current.replace).not.toHaveBeenCalled();
+  });
+
+  test('tells Hub only that the session is missing, with no page height first', async () => {
+    respondWithSession(401);
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private callback: () => void) {}
+        observe() {
+          this.callback();
+        }
+        disconnect() {}
+      },
+    );
+    const postMessage = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
+
+    render(
+      <NuqsTestingAdapter searchParams="?embed=1">
+        <QueryClientProvider client={new QueryClient()}>
+          <AppProvider>{getDashboardLayout(<span>members</span>, 'Members', '')}</AppProvider>
+        </QueryClientProvider>
+      </NuqsTestingAdapter>,
+    );
+
+    await waitFor(() => expect(postMessage).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(postMessage.mock.calls).toEqual([[{ source: 'cosmo-studio', type: 'unauthorized' }, hubOrigin]]);
   });
 
   test('says so when the user is not a member of the organization in the URL', async () => {

@@ -362,9 +362,11 @@ interface DashboardPageProps {
 
 const DashboardPage = ({ page, title, subtitle, items, toolbar, breadcrumbs, noPadding }: DashboardPageProps) => {
   const isEmbedded = useIsEmbedded();
+  const user = useUser();
 
+  // Hub takes a posted height as a signed-in page, so the page waits for the session.
   if (isEmbedded) {
-    return <EmbedLayout toolbar={toolbar}>{page}</EmbedLayout>;
+    return user ? <EmbedLayout toolbar={toolbar}>{page}</EmbedLayout> : null;
   }
 
   return (
