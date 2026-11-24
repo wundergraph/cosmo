@@ -180,7 +180,7 @@ export type ProposalTarget = z.output<typeof proposalTargetShape>;
 
 /** Result shapes per tool, each with the arguments the commands send. */
 export const hubResults = {
-  /** `{ from, name, idempotency_key }`: `from` is a schema slug or `<schema>/<sandbox>` */
+  /** `{ graph, namespace, name, idempotency_key }`, or `{ from, name, idempotency_key }` with `from` as `<schema>/<sandbox>` */
   launchSandbox: z
     .object({
       ...sandboxRowShape.shape,
@@ -195,9 +195,9 @@ export const hubResults = {
     })),
   /** `{ sandbox }`, where a schema slug alone exports the schema */
   exportSandboxConfig: z
-    .object({ sandbox_yaml: z.string(), router_version: z.string(), sources: z.array(z.string()) })
+    .object({ wundergraph_yaml: z.string(), router_version: z.string(), sources: z.array(z.string()) })
     .transform((config) => ({
-      sandboxYaml: config.sandbox_yaml,
+      wundergraphYaml: config.wundergraph_yaml,
       routerVersion: config.router_version,
       sources: config.sources,
     })),

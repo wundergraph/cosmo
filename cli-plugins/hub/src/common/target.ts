@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
 import { failWith, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import { locateSandboxConfig } from './link.js';
-import { defaultAudience, loadSandboxConfig, sandboxFileName } from './sandbox-config.js';
-import type { LoadedSandboxConfig } from './sandbox-config.js';
+import { configFileName, loadConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import type { LoadedConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import { locateProjectConfig } from './link.js';
+
+const defaultAudience = 'hub';
 
 export interface TargetOptions {
   config?: string;
@@ -14,30 +16,39 @@ export interface TargetOptions {
 export interface Target {
   schema: string;
   audience: string;
-  /** Absent when `--schema` was given and there is no sandbox.yaml. */
-  config: LoadedSandboxConfig | undefined;
+  /** Absent when `--schema` was given and there is no wundergraph.yaml. */
+  config: LoadedConfig | undefined;
 }
 
-/** sandbox.yaml from `--config` or the nearest parent directory; a missing file is a usage error. */
-const loadProjectConfig = (cwd: string, configFlag: string | undefined): Promise<Result<LoadedSandboxConfig>> => {
-  const located = locateSandboxConfig(cwd, configFlag);
+/** wundergraph.yaml from `--config` or the nearest parent directory; a missing file is a usage error. */
+export const loadProjectConfig = (cwd: string, configFlag: string | undefined): Promise<Result<LoadedConfig>> => {
+  const located = locateProjectConfig(cwd, configFlag);
   if (located === undefined) {
     return Promise.resolve(
       failWith({
         kind: 'usage',
-        message: `${sandboxFileName} not found in ${cwd} or any parent directory.`,
+        message: `${configFileName} not found in ${cwd} or any parent directory.`,
         remediation: 'Run `wgc hub init` to create one, or pass --config <path>.',
       }),
     );
   }
-  return loadSandboxConfig(located);
+  return loadConfig(located);
 };
 
-/** Reads the Hub schema slug from `--schema` or sandbox.yaml; sandbox.yaml is optional only with `--schema`. */
-export const resolveTarget = async (cwd: string, options: TargetOptions): Promise<Result<Target>> => {
-  const located = locateSandboxConfig(cwd, options.config);
+/** The audience Hub expects: `--audience`, else HUB_OIDC_AUDIENCE, else `hub`. */
+export const resolveAudience = (options: { audience?: string }, env: NodeJS.ProcessEnv): string =>
+  options.audience || env.HUB_OIDC_AUDIENCE || defaultAudience;
+
+/** Reads the graph from `--schema` or wundergraph.yaml; wundergraph.yaml is optional only with `--schema`. */
+export const resolveTarget = async (
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  options: TargetOptions,
+): Promise<Result<Target>> => {
+  const audience = resolveAudience(options, env);
+  const located = locateProjectConfig(cwd, options.config);
   if (options.schema && (located === undefined || !existsSync(located))) {
-    return ok({ schema: options.schema, audience: options.audience ?? defaultAudience, config: undefined });
+    return ok({ schema: options.schema, audience, config: undefined });
   }
 
   const loaded = await loadProjectConfig(cwd, options.config);
@@ -48,27 +59,9 @@ export const resolveTarget = async (cwd: string, options: TargetOptions): Promis
     return failWith({
       kind: 'usage',
       message: `No Hub schema given and ${loaded.errors[0].message}`,
-      remediation: 'Pass `--schema <slug>`, or run `wgc hub init` to create sandbox.yaml.',
+      remediation: `Pass \`--schema <slug>\`, or run \`wgc hub init\` to create ${configFileName}.`,
     });
   }
 
-  const { config } = loaded.data;
-  return ok({
-    schema: options.schema ?? config.schema,
-    audience: options.audience ?? config.audience ?? defaultAudience,
-    config: loaded.data,
-  });
-};
-
-/** The audience Hub expects: `--audience`, else sandbox.yaml's, else the default. Never fails on a missing file. */
-export const resolveAudience = async (cwd: string, options: TargetOptions): Promise<string> => {
-  if (options.audience) {
-    return options.audience;
-  }
-  const located = locateSandboxConfig(cwd, options.config);
-  if (located === undefined) {
-    return defaultAudience;
-  }
-  const loaded = await loadSandboxConfig(located);
-  return loaded.success ? (loaded.data.config.audience ?? defaultAudience) : defaultAudience;
+  return ok({ schema: options.schema ?? loaded.data.config.graph, audience, config: loaded.data });
 };

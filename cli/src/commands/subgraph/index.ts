@@ -33,6 +33,10 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(UnlinkSubgraph(opts));
 
   command.hook('preAction', async (thisCmd) => {
+    // Introspection only talks to the subgraph, so `schema.command` in wundergraph.yaml can run it without a login.
+    if (thisCmd.args[0] === 'introspect') {
+      return;
+    }
     await checkAuth();
   });
 

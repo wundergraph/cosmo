@@ -2,20 +2,14 @@ import { access, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
+import { configFileName, lockFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import { runModuleTests, workspaceTestsDirectory } from '../behaviour-tests.js';
 import type { ModuleOutcome } from '../behaviour-tests.js';
 import { buildRouter } from '../build.js';
-import { lockFileName, readLock, writeLock } from '../lock.js';
-import {
-  describeRouterSource,
-  manifestFileName,
-  parseRouterCandidate,
-  readManifest,
-  writeManifest,
-} from '../manifest.js';
 import { lockMatches, resolvePins } from '../pins.js';
+import { describeRouterSource, parseRouterCandidate } from '../sources.js';
 import type { System } from '../system.js';
-import { workspacePaths } from '../workspace.js';
+import { readLock, readRouterWorkspace, workspacePaths, writeLock, writeConfig } from '../workspace.js';
 import { askToAccept, routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -125,27 +119,31 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       )
       .argument('<candidate>', 'A router release (0.299.0), release candidate (0.300.0-rc.1) or commit SHA.')
       .requiredOption('--config <router.yaml>', 'The router config the tests run the candidate with.')
-      .option('--check', 'Only build and test the candidate. Never changes forge.yaml, forge.lock or the binary.')
+      .option(
+        '--check',
+        `Only build and test the candidate. Never changes ${configFileName}, ${lockFileName} or the binary.`,
+      )
       .option('--yes', 'Adopt the candidate without asking when the tests pass.')
       .option(
         '--test <command>',
-        'A test command to run as well as the module tests. Defaults to `test` in forge.yaml.',
+        `A test command to run as well as the module tests. Defaults to \`router.test\` in ${configFileName}.`,
       ),
   ).action(async (candidate: string, options: UpgradeOptions) => {
     const { system, context } = dependencies;
     const output = context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { config, router } = read.data;
     const candidateSource = parseRouterCandidate(candidate);
     if (!candidateSource.success) {
       return output.fail(toFailure(candidateSource));
     }
 
-    const testCommand = options.test ?? manifest.data.test;
+    const testCommand = options.test ?? router.test;
 
     const configPath = path.resolve(dependencies.cwd(), options.config);
     if (!(await fileExists(configPath))) {
@@ -160,16 +158,16 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     if (!current.success) {
       return output.fail(toFailure(current));
     }
-    if (!lockMatches(manifest.data, current.data)) {
+    if (!lockMatches(router, current.data)) {
       return output.fail({
-        message: `${lockFileName} does not pin what ${manifestFileName} asks for.`,
+        message: `${lockFileName} does not pin what ${configFileName} asks for.`,
         input: lockFileName,
         remediation: 'Run `wgc forge lock` to review and pin the module changes before evaluating a router.',
       });
     }
-    const candidateManifest = { ...manifest.data, router: candidateSource.data };
+    const candidateRouter = { ...router, source: candidateSource.data };
     const candidateLock = await resolvePins({
-      manifest: candidateManifest,
+      router: candidateRouter,
       previous: current.data,
       system,
       output,
@@ -178,10 +176,10 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
       return output.fail(toFailure(candidateLock));
     }
 
-    const paths = workspacePaths(workspace, manifest.data);
+    const paths = workspacePaths(workspace, router);
     const built = await buildRouter({
       workspace,
-      manifest: candidateManifest,
+      router: candidateRouter,
       lock: candidateLock.data,
       buildDirectory: paths.candidateBuildDirectory,
       binaryPath: paths.candidateBinary,
@@ -203,7 +201,7 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     const environment = { FORGE_ROUTER_BINARY: paths.candidateBinary, FORGE_ROUTER_CONFIG: configPath };
     const modules = await runModuleTests({
       workspace,
-      manifest: candidateManifest,
+      router: candidateRouter,
       lock: candidateLock.data,
       buildDirectory: paths.candidateBuildDirectory,
       env: environment,
@@ -283,7 +281,7 @@ export const registerRouterUpgrade = (command: Command, dependencies: ForgeDepen
     await mkdir(path.dirname(paths.binary), { recursive: true });
     await rename(paths.candidateBinary, paths.binary);
     await writeLock(workspace, candidateLock.data);
-    await writeManifest(workspace, candidateManifest);
+    await writeConfig(workspace, { ...config, router: candidateRouter });
 
     output.result({ ...report, adopted: true, binary: paths.binary }, () =>
       renderReport(`Upgraded to router ${report.candidate.source}. Binary: ${paths.binary}`),

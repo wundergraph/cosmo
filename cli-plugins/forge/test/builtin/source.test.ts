@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fromJsonString } from '@bufbuild/protobuf';
@@ -9,11 +9,11 @@ import { createFakeSystem, createWorkspace, lockForReleaseA, read, runForge, ver
 const template = fileURLToPath(new URL('../../gomodules/sources/rest', import.meta.url));
 const fromTemplate = (file: string): Promise<string> => readFile(path.join(template, file), 'utf8');
 
-const manifest = `version: 1
+const config = `graph: shop
+subgraphs: []
 router:
   release: 0.299.0
-binary: bin/router
-modules: []
+  binary: bin/router
 `;
 
 const sdl = `type Query {
@@ -47,7 +47,7 @@ const skipped = [
 const url = 'https://catalog.example.com/openapi.yaml';
 
 const sourceWorkspace = (files: Record<string, string> = {}) =>
-  createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...files });
+  createWorkspace({ 'wundergraph.yaml': config, 'wundergraph.lock': lockForReleaseA, ...files });
 
 const catalogSystem = async () =>
   createFakeSystem({ documents: { [url]: await fromTemplate('testdata/openapi.yaml') } });
@@ -72,7 +72,6 @@ describe('wgc forge source add <openapi>', () => {
           mapping: './modules/catalog/generated/mapping.json',
           sdl,
         },
-        graph: 'graph.yaml',
         operations: [
           { field: 'catalogItem', request: 'GET /v1/items/{id}' },
           { field: 'items', request: 'GET /v1/items' },
@@ -145,23 +144,76 @@ describe('wgc forge source add <openapi>', () => {
     ]);
   });
 
-  test('registers the module in forge.yaml and the subgraph in the graph file', async () => {
+  test('registers the module and the grpc subgraph in wundergraph.yaml', async () => {
     const workspace = await sourceWorkspace();
 
     await runForge(['source', 'add', url], { workspace, system: await catalogSystem() });
 
-    expect(await read(workspace, 'forge.yaml')).toBe(
-      manifest.replace('modules: []\n', 'modules:\n  - path: ./modules/catalog\n'),
-    );
-    expect(await read(workspace, 'graph.yaml')).toBe(`version: 1
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(`graph: shop
 subgraphs:
   - name: catalog
+    kind: grpc
+    schema:
+      file: modules/catalog/schema.graphql
+    proto: modules/catalog/generated/service.proto
+    mapping: modules/catalog/generated/mapping.json
     routing_url: dns:///127.0.0.1:4011
-    grpc:
-      schema_file: modules/catalog/schema.graphql
-      proto_file: modules/catalog/generated/service.proto
-      mapping_file: modules/catalog/generated/mapping.json
+router:
+  release: 0.299.0
+  modules:
+    - path: ./modules/catalog
+  binary: bin/router
 `);
+  });
+
+  test('one run adds the module and the subgraph next to the existing subgraphs and check policy', async () => {
+    const existing = `graph: shop
+subgraphs:
+  - name: orders
+    schema:
+      file: services/orders/schema.graphql
+    routing_url: http://localhost:4001/graphql
+router:
+  release: 0.299.0
+check:
+  rules:
+    pagination.forward-connection: error
+  exceptions:
+    - rule: pagination.forward-connection
+      coordinate: Query.auditEvents
+      reason: Predates the pagination convention.
+`;
+    const workspace = await sourceWorkspace({ 'wundergraph.yaml': existing });
+
+    const run = await runForge(['source', 'add', url], { workspace, system: await catalogSystem() });
+
+    expect(run.exitCode).toBe(0);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(`graph: shop
+subgraphs:
+  - name: orders
+    schema:
+      file: services/orders/schema.graphql
+    routing_url: http://localhost:4001/graphql
+  - name: catalog
+    kind: grpc
+    schema:
+      file: modules/catalog/schema.graphql
+    proto: modules/catalog/generated/service.proto
+    mapping: modules/catalog/generated/mapping.json
+    routing_url: dns:///127.0.0.1:4011
+router:
+  release: 0.299.0
+  modules:
+    - path: ./modules/catalog
+check:
+  rules:
+    pagination.forward-connection: error
+  exceptions:
+    - rule: pagination.forward-connection
+      coordinate: Query.auditEvents
+      reason: Predates the pagination convention.
+`);
+    expect((await readdir(workspace)).sort()).toEqual(['modules', 'wundergraph.lock', 'wundergraph.yaml']);
   });
 
   test('the next build compiles the module into the router binary', async () => {
@@ -223,14 +275,14 @@ subgraphs:
 
     expect(run.stdout).toBe(
       [
-        'Created ./modules/catalog from api/openapi.yaml and added it to forge.yaml and graph.yaml.',
+        'Created ./modules/catalog from api/openapi.yaml and added the module and the subgraph to wundergraph.yaml.',
         '  2 field(s)',
         '    catalogItem  GET /v1/items/{id}',
         '    items  GET /v1/items',
         '  4 skipped',
         ...skipped.map((entry) => `    ${entry.subject}: ${entry.reason}`),
         '  The router serves the subgraph to itself on 127.0.0.1:4011. No plugin executable is started.',
-        'Next: `wgc forge build`, then `wgc router compose -i graph.yaml -o config.json`.',
+        'Next: `wgc forge build`.',
         '',
       ].join('\n'),
     );
@@ -250,13 +302,13 @@ subgraphs:
 
     expect(JSON.parse(sameName.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
-      message: 'graph.yaml already has a subgraph named catalog.',
+      message: 'wundergraph.yaml already has a subgraph named catalog.',
       input: '--name catalog',
       remediation: 'Pass another --name.',
     });
     expect(JSON.parse(sameAddress.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
-      message: 'Another subgraph in graph.yaml is already served on 127.0.0.1:4011.',
+      message: 'Another subgraph in wundergraph.yaml is already served on 127.0.0.1:4011.',
       input: '--listen 127.0.0.1:4011',
       remediation: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
     });
@@ -525,7 +577,7 @@ describe('wgc forge source add resolves the server of an OpenAPI description', (
       input: 'openapi.json',
       remediation,
     });
-    expect(await read(relative, 'forge.yaml')).toBe(manifest);
+    expect(await read(relative, 'wundergraph.yaml')).toBe(config);
   });
 });
 
@@ -587,7 +639,7 @@ paths:
       input: 'openapi.yaml',
       remediation: 'The description needs at least one GET operation with an application/json response for status 200.',
     });
-    expect(await read(workspace, 'forge.yaml')).toBe(manifest);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(config);
   });
 
   test('a URL that does not answer', async () => {

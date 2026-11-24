@@ -13,9 +13,9 @@ afterEach(async () => {
 const getSandboxTool = () => ({ get_sandbox: () => ({ structuredContent: hubSandbox() }) });
 
 describe('wgc hub link', () => {
-  test('writes .wgc/link.json next to sandbox.yaml and gitignores it; linking again changes nothing', async () => {
+  test('writes .wgc/link.json next to wundergraph.yaml and gitignores it; linking again changes nothing', async () => {
     hub = await startFakeHub({ tools: getSandboxTool() });
-    const dir = await tempRepo({ 'sandbox.yaml': 'schema: shop\n', 'api/.keep': '' });
+    const dir = await tempRepo({ 'wundergraph.yaml': 'graph: shop\n', 'api/.keep': '' });
     const cwd = path.join(dir, 'api');
 
     const first = await runWgc(['hub', 'link', 'shop/shop-nithin'], { hubUrl: hub.url, cwd, output: 'text' });

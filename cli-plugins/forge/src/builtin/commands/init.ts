@@ -2,25 +2,26 @@ import { access, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
+import {
+  configFileName,
+  configSchema,
+  defaultRouterBinary,
+  lockFileName,
+  routerSourceSchema,
+} from '@wundergraph/wgc-plugin-sdk/config';
+import type { RouterConfig, RouterSource, WundergraphConfig } from '@wundergraph/wgc-plugin-sdk/config';
 import type { Command } from 'commander';
 import type { FileAction } from '../guidance.js';
 import { ignoreGeneratedFiles, writeGuidance } from '../guidance.js';
-import { lockFileName, readLock, writeLock } from '../lock.js';
-import {
-  defaultBinaryPath,
-  manifestFileName,
-  parseRouterCandidate,
-  readManifest,
-  routerSourceSchema,
-  writeManifest,
-} from '../manifest.js';
-import type { Manifest, RouterSource } from '../manifest.js';
 import { resolvePins } from '../pins.js';
 import { latestRouterRelease } from '../resolve.js';
+import { parseRouterCandidate } from '../sources.js';
+import { readConfig, readLock, writeConfig, writeLock } from '../workspace.js';
 import { routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
 interface InitOptions extends CommonOptions {
+  graph?: string;
   release?: string;
   rc?: string;
   commit?: string;
@@ -56,6 +57,15 @@ const requestedRouter = (options: InitOptions): Result<RouterSource | undefined>
   return { success: true, data: parsed.data };
 };
 
+/** The directory name as a graph name: letters, digits, `-` and `_`, starting with a letter or digit. */
+const graphNameOf = (directory: string): string => {
+  const name = path
+    .basename(directory)
+    .replaceAll(/[^\w-]+/g, '-')
+    .replaceAll(/^[^\dA-Za-z]+|-+$/g, '');
+  return name === '' ? 'graph' : name;
+};
+
 const fileExists = async (filePath: string): Promise<boolean> => {
   try {
     await access(filePath);
@@ -70,9 +80,13 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
     command
       .command('init')
       .description(
-        'Initialize a workspace in the current or named directory: select the router release, create forge.yaml and forge.lock, and add agent guidance. Safe to run again.',
+        `Add a router to ${configFileName} in the current or named directory, creating the file when there is none, write ${lockFileName}, and add agent guidance. Safe to run again.`,
       )
-      .argument('[directory]', 'The workspace directory. Defaults to the current directory.')
+      .argument(
+        '[directory]',
+        `The directory of ${configFileName}. Defaults to the nearest one, then the current directory.`,
+      )
+      .option('--graph <name>', `The federated graph of a new ${configFileName}. Defaults to the directory name.`)
       .option('--release <version>', 'The router release to build, e.g. 0.299.0. Defaults to the latest release.')
       .option('--rc <version>', 'A router release candidate to build, e.g. 0.300.0-rc.1.')
       .option('--commit <sha>', 'A router commit to build.'),
@@ -87,25 +101,39 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
       return output.fail(toFailure(requested));
     }
 
-    await mkdir(workspace, { recursive: true });
-
-    let manifest: Manifest;
-    if (await fileExists(path.join(workspace, manifestFileName))) {
-      const existing = await readManifest(workspace);
+    let config: WundergraphConfig;
+    let configAction: FileAction;
+    if (await fileExists(path.join(workspace, configFileName))) {
+      const existing = await readConfig(workspace);
       if (!existing.success) {
         return output.fail(toFailure(existing));
       }
-      manifest = existing.data;
-      files.push({ path: manifestFileName, action: 'kept' });
+      config = existing.data;
+      configAction = config.router === undefined ? 'updated' : 'kept';
     } else {
-      let router = requested.data;
-      if (router === undefined) {
+      const graph = options.graph ?? graphNameOf(workspace);
+      const parsed = configSchema.safeParse({ graph });
+      if (!parsed.success) {
+        return output.fail({
+          message: `"${graph}" is not a valid graph name.`,
+          input: options.graph === undefined ? 'the directory name' : `--graph ${graph}`,
+          remediation: 'Pass --graph with letters, digits, `-` and `_`, for example --graph shop.',
+        });
+      }
+      config = parsed.data;
+      configAction = 'created';
+    }
+
+    let router: RouterConfig;
+    if (config.router === undefined) {
+      let source = requested.data;
+      if (source === undefined) {
         output.progress({ step: 'find-latest-release', message: 'Finding the latest router release' });
         const latest = await latestRouterRelease(system);
         if (!latest.success) {
           return output.fail(toFailure(latest));
         }
-        router = { release: latest.data };
+        source = { release: latest.data };
 
         if (context.prompts.canPrompt && options.json !== true) {
           const answer = await context.prompts.text('Router release to build:', latest.data);
@@ -113,13 +141,16 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
           if (!selected.success) {
             return output.fail(toFailure(selected));
           }
-          router = selected.data;
+          source = selected.data;
         }
       }
-      manifest = { version: 1, router, binary: defaultBinaryPath, modules: [] };
-      await writeManifest(workspace, manifest);
-      files.push({ path: manifestFileName, action: 'created' });
+      router = { source, modules: [], binary: defaultRouterBinary };
+      await mkdir(workspace, { recursive: true });
+      await writeConfig(workspace, { ...config, router });
+    } else {
+      router = config.router;
     }
+    files.push({ path: configFileName, action: configAction });
 
     const previous = await readLock(workspace);
     if (!previous.success) {
@@ -128,7 +159,7 @@ export const registerInit = (command: Command, dependencies: ForgeDependencies):
 
     let lock = previous.data;
     if (lock === undefined) {
-      const resolved = await resolvePins({ manifest, previous: undefined, system, output });
+      const resolved = await resolvePins({ router, previous: undefined, system, output });
       if (!resolved.success) {
         return output.fail(toFailure(resolved));
       }

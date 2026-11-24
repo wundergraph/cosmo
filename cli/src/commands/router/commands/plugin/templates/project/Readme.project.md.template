@@ -16,7 +16,7 @@ This project sets up a complete environment for developing and testing Cosmo Rou
 ```
 project-root/
 ├── plugins/          # Contains all the plugins
-├── graph.yaml        # Supergraph configuration
+├── wundergraph.yaml  # Supergraph configuration
 ├── config.json       # Composed supergraph (generated)
 ├── config.yaml       # Router configuration
 ├── release/          # Router binary location
@@ -40,7 +40,7 @@ The Makefile automates the entire workflow with these commands:
 - `make build`: Builds the plugin from your source code with debug symbols enabled
 - `make generate`: Generates Go code from your GraphQL schema without compilation
 - `make test`: Validates your implementation with integration tests
-- `make compose`: Composes your supergraph from the configuration in `graph.yaml`
+- `make compose`: Composes your supergraph from the configuration in `wundergraph.yaml`
 - `make start`: Starts the Cosmo Router with your plugin
 
 ### Quick Start

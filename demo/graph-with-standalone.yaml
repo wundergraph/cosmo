@@ -1,40 +1,41 @@
-version: 1
+graph: demo-with-standalone
 subgraphs:
   - name: employees
-    routing_url: http://localhost:4001/graphql
     schema:
       file: ./pkg/subgraphs/employees/subgraph/schema.graphqls
+    routing_url: http://localhost:4001/graphql
   - name: family
-    routing_url: http://localhost:4002/graphql
     schema:
       file: ./pkg/subgraphs/family/subgraph/schema.graphqls
+    routing_url: http://localhost:4002/graphql
   - name: hobbies
-    routing_url: http://localhost:4003/graphql
     schema:
       file: ./pkg/subgraphs/hobbies/subgraph/schema.graphqls
+    routing_url: http://localhost:4003/graphql
   - name: products
-    routing_url: http://localhost:4004/graphql
     schema:
       file: ./pkg/subgraphs/products/subgraph/schema.graphqls
+    routing_url: http://localhost:4004/graphql
   - name: test1
-    routing_url: http://localhost:4006/graphql
     schema:
       file: ./pkg/subgraphs/test1/subgraph/schema.graphqls
+    routing_url: http://localhost:4006/graphql
   - name: availability
-    routing_url: http://localhost:4007/graphql
     schema:
       file: ./pkg/subgraphs/availability/subgraph/schema.graphqls
+    routing_url: http://localhost:4007/graphql
   - name: mood
-    routing_url: http://localhost:4008/graphql
     schema:
       file: ./pkg/subgraphs/mood/subgraph/schema.graphqls
+    routing_url: http://localhost:4008/graphql
   - name: countries
-    routing_url: http://localhost:4009/graphql
     schema:
       file: ./pkg/subgraphs/countries/subgraph/schema.graphqls
+    routing_url: http://localhost:4009/graphql
   - name: projects
+    kind: grpc
+    schema:
+      file: ./pkg/subgraphs/projects/src/schema.graphql
+    proto: ./pkg/subgraphs/projects/generated/service.proto
+    mapping: ./pkg/subgraphs/projects/generated/mapping.json
     routing_url: dns:///localhost:4011
-    grpc:
-      schema_file: ./pkg/subgraphs/projects/src/schema.graphql
-      proto_file: ./pkg/subgraphs/projects/generated/service.proto
-      mapping_file: ./pkg/subgraphs/projects/generated/mapping.json

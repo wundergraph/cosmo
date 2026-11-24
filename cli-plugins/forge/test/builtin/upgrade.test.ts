@@ -1,3 +1,5 @@
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
 import {
@@ -12,27 +14,37 @@ import {
   versionB,
 } from './harness.js';
 
-const manifest = `version: 1
+const config = `graph: shop
+subgraphs:
+  - name: products
+    schema:
+      file: products.graphql
+    routing_url: http://localhost:4001/graphql
 router:
   release: 0.299.0
-binary: bin/router
-test: go test ./e2e/...
-modules: []
+  binary: bin/router
+  test: go test ./e2e/...
+check:
+  rules:
+    pagination.forward-connection: error
+mocks:
+  Product:
+    name: Desk
 `;
 
 const workingBinary = `router ${versionA}`;
 
 const upgradeWorkspace = () =>
   createWorkspace({
-    'forge.yaml': manifest,
-    'forge.lock': lockForReleaseA,
+    'wundergraph.yaml': config,
+    'wundergraph.lock': lockForReleaseA,
     'bin/router': workingBinary,
     'router.yaml': "version: '1'\n",
   });
 
 const expectNothingChanged = async (workspace: string) => {
-  expect(await read(workspace, 'forge.yaml')).toBe(manifest);
-  expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
+  expect(await read(workspace, 'wundergraph.yaml')).toBe(config);
+  expect(await read(workspace, 'wundergraph.lock')).toBe(lockForReleaseA);
   expect(await read(workspace, 'bin/router')).toBe(workingBinary);
 };
 
@@ -148,7 +160,7 @@ describe('wgc forge router upgrade --check', () => {
     await expectNothingChanged(workspace);
   });
 
-  test('--test overrides the command from forge.yaml', async () => {
+  test('--test overrides router.test in wundergraph.yaml', async () => {
     const workspace = await upgradeWorkspace();
     const system = createFakeSystem();
 
@@ -180,21 +192,49 @@ describe('wgc forge router upgrade', () => {
     .replace('a'.repeat(40), commitB)
     .replace(versionA, versionB);
 
-  test('--yes adopts a candidate that passes: binary, forge.lock and forge.yaml move together', async () => {
-    const workspace = await upgradeWorkspace();
+  test('--yes adopts a candidate that passes: binary, wundergraph.lock and router.release move together', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      'bin/router': workingBinary,
+    });
+    const routerConfigDirectory = await createWorkspace({ 'router.yaml': "version: '1'\n" });
+    const routerConfig = `${routerConfigDirectory}/router.yaml`;
 
-    const run = await runForge(['router', 'upgrade', '--config', 'router.yaml', '--yes', '0.300.0'], { workspace });
+    const run = await runForge(['router', 'upgrade', '--config', routerConfig, '--yes', '0.300.0'], { workspace });
 
-    expect(JSON.parse(run.stdout)).toMatchObject({
-      ok: true,
-      data: {
-        adopted: true,
-        binary: `${workspace}/bin/router`,
-      },
+    expect(run.exitCode).toBe(0);
+    expect(JSON.parse(run.stdout).data).toEqual({
+      candidate: { source: 'release 0.300.0', version: versionB, commit: commitB },
+      current: { source: 'release 0.299.0', version: versionA, commit: 'a'.repeat(40) },
+      dependencyChanges: [{ module: routerModule, from: versionA, to: versionB }],
+      modules: [],
+      tests: { command: 'go test ./e2e/...', passed: true },
+      adopted: true,
+      binary: `${workspace}/bin/router`,
     });
     expect(await read(workspace, 'bin/router')).toBe(`router ${versionB}`);
-    expect(await read(workspace, 'forge.lock')).toBe(upgradedLock);
-    expect(await read(workspace, 'forge.yaml')).toBe(manifest.replace('release: 0.299.0', 'release: 0.300.0'));
+    expect(await read(workspace, 'wundergraph.lock')).toBe(upgradedLock);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(`graph: shop
+subgraphs:
+  - name: products
+    schema:
+      file: products.graphql
+    routing_url: http://localhost:4001/graphql
+router:
+  release: 0.300.0
+  binary: bin/router
+  test: go test ./e2e/...
+check:
+  rules:
+    pagination.forward-connection: error
+mocks:
+  Product:
+    name: Desk
+`);
+    const workspaceFiles = await readdir(workspace, { recursive: true });
+    expect(workspaceFiles.filter((file) => path.basename(file) === 'router.yaml')).toEqual([]);
+    expect(await readdir(routerConfigDirectory)).toEqual(['router.yaml']);
   });
 
   test('--yes does not adopt a candidate whose tests fail', async () => {
@@ -236,7 +276,7 @@ describe('wgc forge router upgrade', () => {
     expect(run.stdout).toBe(
       `Upgraded to router release 0.300.0. Binary: ${workspace}/bin/router\n  1 dependency change(s)\n    ${routerModule} ${versionA} -> ${versionB}\n  0 module(s)\n`,
     );
-    expect(await read(workspace, 'forge.lock')).toBe(upgradedLock);
+    expect(await read(workspace, 'wundergraph.lock')).toBe(upgradedLock);
   });
 
   test('a person who declines keeps everything as it was', async () => {
@@ -257,13 +297,13 @@ describe('wgc forge router upgrade', () => {
 describe("wgc forge router upgrade runs every module's Go behaviour tests", () => {
   const metrics = 'github.com/acme/router-metrics';
 
-  const manifestWithModules = `version: 1
+  const configWithModules = `graph: shop
 router:
   release: 0.299.0
-binary: bin/router
-modules:
-  - path: ./modules/request-id
-  - go: ${metrics}
+  binary: bin/router
+  modules:
+    - path: ./modules/request-id
+    - go: ${metrics}
 `;
 
   const lockWithModules = lockForReleaseA.replace(
@@ -279,8 +319,8 @@ modules:
 
   const moduleWorkspace = (files: Record<string, string> = {}) =>
     createWorkspace({
-      'forge.yaml': manifestWithModules,
-      'forge.lock': lockWithModules,
+      'wundergraph.yaml': configWithModules,
+      'wundergraph.lock': lockWithModules,
       'bin/router': workingBinary,
       'router.yaml': "version: '1'\n",
       'modules/request-id/go.mod': 'module forge.local/request-id\n\ngo 1.26.0\n',
@@ -288,8 +328,8 @@ modules:
     });
 
   const expectNothingChanged = async (workspace: string) => {
-    expect(await read(workspace, 'forge.yaml')).toBe(manifestWithModules);
-    expect(await read(workspace, 'forge.lock')).toBe(lockWithModules);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(configWithModules);
+    expect(await read(workspace, 'wundergraph.lock')).toBe(lockWithModules);
     expect(await read(workspace, 'bin/router')).toBe(workingBinary);
   };
 

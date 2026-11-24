@@ -10,14 +10,13 @@ import { resolveAudience } from '../common/target.js';
 import { formatAge, parseDuration } from '../common/time.js';
 
 interface OperationOptions {
-  config?: string;
   audience?: string;
   json?: boolean;
   timeout?: string;
 }
 
-const connect = async (options: OperationOptions, dependencies: HubDependencies) =>
-  connectHub(dependencies.context, await resolveAudience(dependencies.runtime.cwd(), options));
+const connect = (options: OperationOptions, dependencies: HubDependencies) =>
+  connectHub(dependencies.context, resolveAudience(options, dependencies.runtime.env));
 
 /** Streams the steps of an operation until it finishes; Ctrl-C detaches and leaves it running. */
 const runFollow = async (
@@ -43,7 +42,7 @@ const runFollow = async (
     deadline = new Date(runtime.now().getTime() + timeoutMs);
   }
 
-  const hub = await connect(options, dependencies);
+  const hub = connect(options, dependencies);
   const fetched = await fetchOperation(hub, operationId);
   if (!fetched.success) {
     output.fail(toFailure(fetched));
@@ -71,7 +70,7 @@ const runFollow = async (
 
 const runCancel = async (operationId: string, options: OperationOptions, dependencies: HubDependencies) => {
   const output = dependencies.context.output({ json: options.json });
-  const hub = await connect(options, dependencies);
+  const hub = connect(options, dependencies);
 
   const fetched = await fetchOperation(hub, operationId);
   if (!fetched.success) {
@@ -139,8 +138,7 @@ const runList = async (options: SandboxOptions, dependencies: HubDependencies) =
 
 const withHubOptions = (command: Command): Command =>
   command
-    .option('--config <path>', 'Path to sandbox.yaml, for its OIDC audience')
-    .option('--audience <audience>', 'OIDC audience Hub expects from CI')
+    .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: HUB_OIDC_AUDIENCE or hub)')
     .option('--json', 'Machine-readable output');
 
 export const operationCommand = (dependencies: HubDependencies): Command =>

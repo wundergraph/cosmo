@@ -9,7 +9,7 @@ import {
   print,
 } from 'graphql';
 import type { FieldDefinitionNode, GraphQLField, GraphQLOutputType, GraphQLSchema } from 'graphql';
-import type { LoadedSubgraph } from '../graph.js';
+import type { LoadedSubgraph } from './subgraphs.js';
 import type { Finding } from './findings.js';
 
 export const paginationRule = 'pagination.forward-connection';

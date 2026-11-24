@@ -21,7 +21,7 @@ const examples: Record<string, string[]> = {
   add: ['wgc forge add github.com/acme/mod/headers@v1.2.0', 'wgc forge add ./modules/auth --json'],
   lock: ['wgc forge lock', 'wgc forge lock --yes --json'],
   build: ['wgc forge build', 'wgc forge build --json'],
-  check: ['wgc forge check', 'wgc forge check --graph graph.yaml --json'],
+  check: ['wgc forge check', 'wgc forge check --json'],
   upgrade: ['wgc forge upgrade', 'wgc forge upgrade channel nightly'],
   'router upgrade': [
     'wgc forge router upgrade 0.300.0 --config router.yaml --check',

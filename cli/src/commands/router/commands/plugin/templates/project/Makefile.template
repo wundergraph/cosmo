@@ -10,7 +10,7 @@ start:
 	./release/router
 
 compose: install-wgc
-	wgc router compose -i graph.yaml -o config.json
+	wgc router compose -o config.json
 
 download: install-wgc
 	@if [ ! -f release/router ]; then \

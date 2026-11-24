@@ -1,10 +1,10 @@
-version: 1
+graph: cosmo
 subgraphs:
   - name: subgraph-a
-    routing_url: http://localhost:14001/graphql
     schema:
       file: ../../subgraph-a.graphqls
+    routing_url: http://localhost:14001/graphql
   - name: subgraph-b
-    routing_url: http://localhost:14002/graphql
     schema:
       file: ../../subgraph-b.graphqls
+    routing_url: http://localhost:14002/graphql

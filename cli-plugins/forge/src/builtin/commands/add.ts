@@ -3,12 +3,11 @@ import path from 'node:path';
 import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
+import type { LockedModule, ModuleSource } from '@wundergraph/wgc-plugin-sdk/config';
 import { readLocalModuleName } from '../build.js';
-import { readLock, writeLock } from '../lock.js';
-import type { LockedModule } from '../lock.js';
-import { describeModuleSource, isLocalModule, readManifest, sameSource, writeManifest } from '../manifest.js';
-import type { ModuleSource } from '../manifest.js';
 import { describePinChange, diffPins, resolvePins, sameModule } from '../pins.js';
+import { describeModuleSource, isLocalModule, sameSource } from '../sources.js';
+import { readLock, readRouterWorkspace, writeLock, writeConfig } from '../workspace.js';
 import { askToAccept, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -91,10 +90,11 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
     const output = context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { config, router } = read.data;
     const previous = await readLock(workspace);
     if (!previous.success) {
       return output.fail(toFailure(previous));
@@ -105,12 +105,12 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
       return output.fail(toFailure(module));
     }
 
-    const registered = manifest.data.modules.find((existing) => sameModule(existing, module.data));
+    const registered = router.modules.find((existing) => sameModule(existing, module.data));
     const modules =
       registered === undefined
-        ? [...manifest.data.modules, module.data]
-        : manifest.data.modules.map((existing) => (existing === registered ? module.data : existing));
-    const updated = { ...manifest.data, modules };
+        ? [...router.modules, module.data]
+        : router.modules.map((existing) => (existing === registered ? module.data : existing));
+    const updated = { ...router, modules };
 
     // Dropping the old pin makes a re-added branch or versionless package resolve again.
     const keptPins =
@@ -120,7 +120,7 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
             ...previous.data,
             modules: previous.data.modules.filter((locked) => !sameModule(locked.source, registered)),
           };
-    const lock = await resolvePins({ manifest: updated, previous: keptPins, system, output });
+    const lock = await resolvePins({ router: updated, previous: keptPins, system, output });
     if (!lock.success) {
       return output.fail(toFailure(lock));
     }
@@ -129,7 +129,7 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
     const result = { added: module.data, ...pinSummary(pinned) };
 
     if (registered === undefined) {
-      await writeManifest(workspace, updated);
+      await writeConfig(workspace, { ...config, router: updated });
       await writeLock(workspace, lock.data);
       return output.result(result, () =>
         isLocalModule(module.data)
@@ -167,7 +167,7 @@ export const registerAdd = (command: Command, dependencies: ForgeDependencies): 
       return output.result({ ...result, changes, written: false }, () => 'Kept the current selection.');
     }
 
-    await writeManifest(workspace, updated);
+    await writeConfig(workspace, { ...config, router: updated });
     await writeLock(workspace, lock.data);
     output.result(
       { ...result, changes, written: true },

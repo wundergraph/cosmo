@@ -1,9 +1,13 @@
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'pathe';
 import { Command } from 'commander';
 import semver from 'semver';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { fromJsonString } from '@bufbuild/protobuf';
+import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import ComposeCommand from '../../src/commands/router/commands/compose.js';
 import InitPluginCommand from '../../src/commands/router/commands/plugin/commands/init.js';
 import { GO_TOOL_VERSIONS } from '../../src/commands/router/commands/plugin/toolchain.js';
 import { Client } from '../../src/core/client/client.js';
@@ -24,10 +28,10 @@ describe('router plugin init', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  const runInit = (name: string) => {
+  const runInit = (name: string, ...args: string[]) => {
     const program = new Command();
     program.addCommand(InitPluginCommand({ client: {} as Client }));
-    return program.parseAsync(['init', name, '-d', dir], { from: 'user' });
+    return program.parseAsync(['init', name, '-d', dir, ...args], { from: 'user' });
   };
 
   test('scaffolds a Go plugin that targets the same Go version as router-plugin', async () => {
@@ -56,5 +60,36 @@ describe('router plugin init', () => {
     expect(semver.minVersion(goTool.range)!.version).toBe(pluginGoVersion);
 
     expect(await readFile(join(pluginDir, 'src', 'main.go'), 'utf8')).toContain('HelloWorldService');
+  });
+
+  test('writes a wundergraph.yaml that lists the plugin and composes from the project root', async () => {
+    await runInit('hello-world', '-p', 'my-shop');
+
+    const projectDir = join(dir, 'my-shop');
+    expect(await readFile(join(projectDir, 'wundergraph.yaml'), 'utf8')).toBe(
+      `graph: my-shop
+subgraphs:
+  # Add your other subgraphs here
+  - name: hello-world
+    kind: plugin
+    path: plugins/hello-world
+    version: 0.0.1
+`,
+    );
+    expect(existsSync(join(projectDir, 'graph.yaml'))).toBe(false);
+    expect(await readFile(join(projectDir, 'Makefile'), 'utf8')).toContain('\twgc router compose -o config.json\n');
+
+    vi.spyOn(process, 'cwd').mockReturnValue(projectDir);
+    try {
+      const program = new Command();
+      program.addCommand(ComposeCommand({ client: {} as Client }));
+      await program.parseAsync(['compose', '-o', join(projectDir, 'config.json')], { from: 'user' });
+    } finally {
+      vi.restoreAllMocks();
+    }
+    const routerConfig = fromJsonString(RouterConfigSchema, await readFile(join(projectDir, 'config.json'), 'utf8'));
+    expect(routerConfig.subgraphs.map(({ name, routingUrl }) => ({ name, routingUrl }))).toEqual([
+      { name: 'hello-world', routingUrl: 'http://localhost:3000/plugin/0' },
+    ]);
   });
 });

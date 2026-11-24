@@ -1,6 +1,6 @@
 import { federateSubgraphs, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
-import type { LoadedSubgraph } from '../graph.js';
-import type { CheckPolicy } from '../manifest.js';
+import type { CheckPolicy } from '@wundergraph/wgc-plugin-sdk/config';
+import type { LoadedSubgraph } from './subgraphs.js';
 import type { ExceptedFinding, Finding, Severity } from './findings.js';
 import { lintRules } from './lint-rules.js';
 import { checkPagination, paginationRule } from './pagination.js';

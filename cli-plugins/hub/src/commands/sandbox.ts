@@ -4,16 +4,16 @@ import path from 'node:path';
 import { Command } from 'commander';
 import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Output, Result, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
+import { configFileName, loadConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import type { LoadedConfig, WundergraphConfig } from '@wundergraph/wgc-plugin-sdk/config';
 import { announceOperation, asGroup, openSandboxSession, withExamples, withSandboxOptions } from '../common/command.js';
 import type { SandboxOptions } from '../common/command.js';
 import { hubResults, hubTools, logSources, logWaitSeconds } from '../common/contract.js';
 import type { LogLine, LogSource } from '../common/contract.js';
 import { connectHub } from '../common/hub.js';
-import { describeLinkWrite, linkFilePath, locateSandboxConfig, writeLink } from '../common/link.js';
+import { describeLinkWrite, linkFilePath, locateProjectConfig, writeLink } from '../common/link.js';
 import { fetchOperation, followOperation, operationFailure, reportUnfinished } from '../common/operation.js';
 import type { HubDependencies } from '../common/runtime.js';
-import { defaultAudience, loadSandboxConfig, sandboxFileName } from '../common/sandbox-config.js';
-import type { LoadedSandboxConfig } from '../common/sandbox-config.js';
 import { resolveAudience, resolveTarget } from '../common/target.js';
 import { formatAge } from '../common/time.js';
 
@@ -29,16 +29,16 @@ interface LaunchOptions {
   input?: boolean;
 }
 
-/** sandbox.yaml as found, or as written from a Hub graph with `--init-from-graph`. */
+/** wundergraph.yaml as found, or as written from a Hub graph with `--init-from-graph`. */
 const prepareConfig = async (
   options: LaunchOptions,
   dependencies: HubDependencies,
   output: Output,
-): Promise<Result<LoadedSandboxConfig>> => {
+): Promise<Result<LoadedConfig>> => {
   const cwd = dependencies.runtime.cwd();
-  const located = locateSandboxConfig(cwd, options.config);
+  const located = locateProjectConfig(cwd, options.config);
   if (located !== undefined && existsSync(located)) {
-    return loadSandboxConfig(located);
+    return loadConfig(located);
   }
 
   const graph = options.initFromGraph;
@@ -47,34 +47,34 @@ const prepareConfig = async (
       kind: 'usage',
       message:
         located === undefined
-          ? `${sandboxFileName} not found in ${cwd} or any parent directory.`
-          : `No ${sandboxFileName} at ${located}.`,
+          ? `${configFileName} not found in ${cwd} or any parent directory.`
+          : `No ${configFileName} at ${located}.`,
       remediation: `Run \`wgc hub sandbox launch --init-from-graph <graph>\` to create one, or pass --config <path>.`,
     });
   }
 
-  const hub = connectHub(dependencies.context, await resolveAudience(cwd, options));
+  const hub = connectHub(dependencies.context, resolveAudience(options, dependencies.runtime.env));
   const exported = await hub.callTool(hubTools.exportSandboxConfig, { sandbox: graph }, hubResults.exportSandboxConfig);
   if (!exported.success) {
     return exported;
   }
 
-  const target = located ?? path.join(cwd, sandboxFileName);
-  await writeFile(target, exported.data.sandboxYaml);
+  const target = located ?? path.join(cwd, configFileName);
+  await writeFile(target, exported.data.wundergraphYaml);
   const { routerVersion, sources } = exported.data;
   output.message(
-    `Created ${sandboxFileName} (router ${routerVersion}, ${sources.length} sources from graph ${graph})\n`,
+    `Created ${configFileName} (router ${routerVersion}, ${sources.length} sources from graph ${graph})\n`,
     { event: 'config_created', path: target, router_version: routerVersion, graph },
   );
-  return loadSandboxConfig(target);
+  return loadConfig(target);
 };
 
-/** What the launch copies: the schema of sandbox.yaml, or the sandbox `--from` names within it or as `<schema>/<sandbox>`. */
-const launchSource = (schema: string, from: string | undefined): string => {
+/** What the launch copies: the Cosmo graph of wundergraph.yaml, or the sandbox `--from` names in it or as `<schema>/<sandbox>`. */
+const launchSource = (config: WundergraphConfig, from: string | undefined): Record<string, ToolArgument> => {
   if (from === undefined) {
-    return schema;
+    return { graph: config.graph, namespace: config.namespace };
   }
-  return from.includes('/') ? from : `${schema}/${from}`;
+  return { from: from.includes('/') ? from : `${config.graph}/${from}` };
 };
 
 const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies): Promise<void> => {
@@ -88,14 +88,14 @@ const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies):
   }
 
   const { config, dir } = prepared.data;
-  const name = options.name ?? `${config.schema}-${runtime.env.USER ?? 'sandbox'}`;
+  const name = options.name ?? `${config.graph}-${runtime.env.USER ?? 'sandbox'}`;
   output.message(`Launching sandbox "${name}"`);
 
-  const hub = connectHub(context, options.audience ?? config.audience ?? defaultAudience);
+  const hub = connectHub(context, resolveAudience(options, runtime.env));
   const launched = await hub.callTool(
     hubTools.launchSandbox,
     {
-      from: launchSource(config.schema, options.from),
+      ...launchSource(config, options.from),
       name,
       idempotency_key: options.idempotencyKey ?? runtime.newIdempotencyKey(),
     },
@@ -168,14 +168,19 @@ interface ListOptions {
 
 const runList = async (options: ListOptions, dependencies: HubDependencies): Promise<void> => {
   const output = dependencies.context.output({ json: options.json });
-  const target = await resolveTarget(dependencies.runtime.cwd(), options);
+  const target = await resolveTarget(dependencies.runtime.cwd(), dependencies.runtime.env, options);
   if (!target.success) {
     output.fail(toFailure(target));
     return;
   }
 
   const hub = connectHub(dependencies.context, target.data.audience);
-  const listed = await hub.callTool(hubTools.listSandboxes, { schema: target.data.schema }, hubResults.listSandboxes);
+  const { config, schema } = target.data;
+  const scope: Record<string, ToolArgument> =
+    options.schema === undefined && config !== undefined
+      ? { graph: config.config.graph, namespace: config.config.namespace }
+      : { schema };
+  const listed = await hub.callTool(hubTools.listSandboxes, scope, hubResults.listSandboxes);
   if (!listed.success) {
     output.fail(toFailure(listed));
     return;
@@ -183,7 +188,7 @@ const runList = async (options: ListOptions, dependencies: HubDependencies): Pro
 
   output.result(listed.data, (data) => {
     if (data.sandboxes.length === 0) {
-      return `No sandboxes in ${target.data.schema}. Launch one with \`wgc hub sandbox launch\`.`;
+      return `No sandboxes in ${schema}. Launch one with \`wgc hub sandbox launch\`.`;
     }
     return data.sandboxes
       .map((sandbox) => `${sandbox.address}   ${sandbox.routerStatus}   ${sandbox.endpointUrl}`)
@@ -313,8 +318,8 @@ const runHistory = async (options: SandboxOptions, dependencies: HubDependencies
 
 const withConfigOptions = (command: Command): Command =>
   command
-    .option('--config <path>', 'Path to sandbox.yaml (default: the nearest one in this or a parent directory)')
-    .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: sandbox.yaml `audience` or hub)')
+    .option('--config <path>', 'Path to wundergraph.yaml (default: the nearest one in this or a parent directory)')
+    .option('--audience <audience>', 'OIDC audience Hub expects from CI (default: HUB_OIDC_AUDIENCE or hub)')
     .option('--json', 'Machine-readable output');
 
 export const sandboxCommand = (dependencies: HubDependencies): Command =>
@@ -323,13 +328,13 @@ export const sandboxCommand = (dependencies: HubDependencies): Command =>
       withExamples(
         withConfigOptions(
           new Command('launch')
-            .description('Launch a sandbox from the schema in sandbox.yaml and link this directory to it')
-            .option('--name <name>', 'Sandbox name (default: <schema>-<user>)')
+            .description('Launch a sandbox from the graph in wundergraph.yaml and link this directory to it')
+            .option('--name <name>', 'Sandbox name (default: <graph>-<user>)')
             .option(
               '--from <sandbox>',
               'Copy this sandbox instead of the schema: a name in the schema or <schema>/<sandbox>',
             )
-            .option('--init-from-graph <graph>', 'Create sandbox.yaml from this Hub graph when there is none')
+            .option('--init-from-graph <graph>', 'Create wundergraph.yaml from this Hub graph when there is none')
             .option('--detach', 'Return once Hub accepted the launch; watch it with `wgc hub operation watch`')
             .option('--idempotency-key <key>', 'Repeat a launch safely: Hub returns the first launch for the same key')
             .option('--no-input', 'Never prompt'),
@@ -343,7 +348,7 @@ export const sandboxCommand = (dependencies: HubDependencies): Command =>
         withConfigOptions(
           new Command('list')
             .description('List the sandboxes of the schema')
-            .option('--schema <slug>', 'Hub schema slug (default: sandbox.yaml `schema`)'),
+            .option('--schema <slug>', 'Hub schema slug (default: wundergraph.yaml `graph`)'),
         ),
         ['wgc hub sandbox list', 'wgc hub sandbox list --schema shop --json'],
         'sandbox/list',

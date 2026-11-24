@@ -3,10 +3,8 @@ import path from 'node:path';
 import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
+import { configFileName, lockFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import { localModuleName } from '../catalog.js';
-import { defaultGraphFile, readGraphFile, writeGraphFile } from '../graph.js';
-import { lockFileName, readLock } from '../lock.js';
-import { manifestFileName, readManifest, sameSource, writeManifest } from '../manifest.js';
 import { generateProtoSource, generateSource, sourceFiles, writeSourceModule } from '../source/generate.js';
 import type { GeneratedSource } from '../source/generate.js';
 import { openApiTitle, readOpenApi } from '../source/openapi.js';
@@ -14,8 +12,9 @@ import { readProto } from '../source/proto.js';
 import { parseRenames, renameProtoSource, renameSource } from '../source/rename.js';
 import type { Rename } from '../source/rename.js';
 import type { Skipped } from '../source/model.js';
+import { sameSource } from '../sources.js';
 import type { System } from '../system.js';
-import { modulesDirectory } from '../workspace.js';
+import { modulesDirectory, readLock, readRouterWorkspace, writeConfig } from '../workspace.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -191,8 +190,8 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
           'file, every unary RPC becomes a field: on Query when its name starts with a reading verb such as Get or',
           'List, or when it has no side effects, and on Mutation otherwise. The module runs inside the router',
           'process: it serves the subgraph on --listen and the router reaches it there as a gRPC subgraph, so',
-          `there is no plugin executable and no bridge service. The subgraph is added to ${defaultGraphFile}, the input`,
-          'of `wgc router compose`. --rename changes only GraphQL names, and the module still calls the',
+          `there is no plugin executable and no bridge service. The subgraph is added to ${configFileName} as a`,
+          'grpc subgraph next to the module. --rename changes only GraphQL names, and the module still calls the',
           'same REST operations or RPCs with the same fields. Postgres URLs are not supported yet.',
         ].join('\n'),
       ),
@@ -201,10 +200,11 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     const output = context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { config, router } = read.data;
     const lock = await readLock(workspace);
     if (!lock.success) {
       return output.fail(toFailure(lock));
@@ -248,25 +248,17 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
       });
     }
 
-    const graphFile = manifest.data.check?.graph ?? defaultGraphFile;
-    const graphPath = path.resolve(workspace, graphFile);
-    const graph = await readGraphFile(graphPath);
-    if (!graph.success) {
-      return output.fail(toFailure(graph));
-    }
-
     const routingUrl = `dns:///${options.listen}`;
-    const subgraphs = graph.data?.subgraphs ?? [];
-    if (subgraphs.some((subgraph) => subgraph.name === name)) {
+    if (config.subgraphs.some((subgraph) => subgraph.name === name)) {
       return output.fail({
-        message: `${graphFile} already has a subgraph named ${name}.`,
+        message: `${configFileName} already has a subgraph named ${name}.`,
         input: `--name ${name}`,
         remediation: 'Pass another --name.',
       });
     }
-    if (subgraphs.some((subgraph) => subgraph.routing_url === routingUrl)) {
+    if (config.subgraphs.some((subgraph) => subgraph.kind !== 'plugin' && subgraph.routing_url === routingUrl)) {
       return output.fail({
-        message: `Another subgraph in ${graphFile} is already served on ${options.listen}.`,
+        message: `Another subgraph in ${configFileName} is already served on ${options.listen}.`,
         input: `--listen ${options.listen}`,
         remediation: 'Pass --listen with a free address, for example --listen 127.0.0.1:4012.',
       });
@@ -284,27 +276,24 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
     }
 
     const moduleSource = { path: written.data };
-    if (!manifest.data.modules.some((module) => sameSource(module, moduleSource))) {
-      await writeManifest(workspace, { ...manifest.data, modules: [...manifest.data.modules, moduleSource] });
-    }
-
-    const moduleDirectory = path.relative(path.dirname(graphPath), path.join(workspace, modulesDirectory, name));
-    const fileInGraph = (file: string): string => path.join(moduleDirectory, file).split(path.sep).join('/');
-    await writeGraphFile(graphPath, {
-      ...graph.data,
-      version: graph.data?.version ?? 1,
+    const modules = router.modules.some((module) => sameSource(module, moduleSource))
+      ? router.modules
+      : [...router.modules, moduleSource];
+    const fileInModule = (file: string): string => path.posix.join(modulesDirectory, name, file);
+    await writeConfig(workspace, {
+      ...config,
       subgraphs: [
-        ...subgraphs,
+        ...config.subgraphs,
         {
           name,
+          kind: 'grpc',
+          schema: { file: fileInModule(sourceFiles.schema) },
+          proto: fileInModule(sourceFiles.proto),
+          mapping: fileInModule(sourceFiles.mapping),
           routing_url: routingUrl,
-          grpc: {
-            schema_file: fileInGraph(sourceFiles.schema),
-            proto_file: fileInGraph(sourceFiles.proto),
-            mapping_file: fileInGraph(sourceFiles.mapping),
-          },
         },
       ],
+      router: { ...router, modules },
     });
 
     output.result(
@@ -319,20 +308,19 @@ export const registerSource = (command: Command, dependencies: ForgeDependencies
           mapping: `${written.data}/${sourceFiles.mapping}`,
           sdl: generated.data.sdl,
         },
-        graph: graphFile,
         operations: described.data.operations,
         skipped: described.data.skipped,
         execution: { process: 'router', transport: 'grpc over loopback tcp', listenAddr: options.listen },
       },
       (data) =>
         [
-          `Created ${data.module.path} from ${location} and added it to ${manifestFileName} and ${graphFile}.`,
+          `Created ${data.module.path} from ${location} and added the module and the subgraph to ${configFileName}.`,
           `  ${data.operations.length} field(s)`,
           ...data.operations.map((operation) => `    ${operation.field}  ${operation.request}`),
           `  ${data.skipped.length} skipped`,
           ...data.skipped.map((skipped) => `    ${skipped.subject}: ${skipped.reason}`),
           `  The router serves the subgraph to itself on ${options.listen}. No plugin executable is started.`,
-          `Next: \`wgc forge build\`, then \`wgc router compose -i ${graphFile} -o config.json\`.`,
+          'Next: `wgc forge build`.',
         ].join('\n'),
     );
   });

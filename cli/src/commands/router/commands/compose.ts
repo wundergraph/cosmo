@@ -12,12 +12,23 @@ import {
   type RouterSubgraph,
   SubgraphKind,
 } from '@wundergraph/cosmo-shared';
+import {
+  configFileName,
+  loadConfig,
+  locateConfig,
+  type FeatureFlag,
+  type GrpcSubgraph,
+  type PluginSubgraph,
+  type SchemaSource,
+  type SchemaSubgraph,
+  type Subgraph,
+  type WundergraphConfig,
+} from '@wundergraph/wgc-plugin-sdk/config';
 import { Command, program } from 'commander';
+import { execa } from 'execa';
 import { parse } from 'graphql';
-import * as yaml from 'js-yaml';
-import { basename, dirname, join, resolve } from 'pathe';
+import { join, resolve } from 'pathe';
 import pc from 'picocolors';
-import semver from 'semver';
 
 import {
   FeatureFlagRouterExecutionConfigSchema,
@@ -32,11 +43,12 @@ import {
   type ContractTagOptions,
   FederationSuccess,
   newContractTagOptionsFromArrays,
+  normalizeSubgraphFromString,
   ROUTER_COMPATIBILITY_VERSION_ONE,
 } from '@wundergraph/composition';
 import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+import { composeSubgraphs } from '../../../utils.js';
 import {
   featureFlagsDir,
   getRouterConfigOutputFile,
@@ -46,18 +58,15 @@ import {
 } from '../utils.js';
 import { HandleRouterConfigParams } from './types/params.js';
 import {
-  Config,
-  ConfigSubgraph,
-  GRPCSubgraphConfig,
   GRPCSubgraphMetadata,
-  StandardSubgraphConfig,
   StandardSubgraphMetaData,
   SubgraphMetaData,
-  SubgraphPluginConfig,
   SubgraphPluginMetadata,
 } from './types/types.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
+
+type FeatureGraph = FeatureFlag['feature_graphs'][number];
 
 function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetaData, index: number): RouterSubgraph {
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
@@ -216,7 +225,10 @@ export default (_: BaseCommandOptions) => {
   command.description(
     'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
   );
-  command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
+  command.option(
+    '-i, --input <path-to-input>',
+    `The ${configFileName} to compose. Defaults to the ${configFileName} in the current directory or its nearest parent.`,
+  );
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option(
@@ -243,17 +255,22 @@ export default (_: BaseCommandOptions) => {
   );
 
   command.action(async (options) => {
-    const inputFile = resolve(options.input);
-    const inputFileLocation = dirname(inputFile);
-
-    if (!existsSync(inputFile)) {
+    const inputFile = options.input ? resolve(options.input) : locateConfig(process.cwd());
+    if (!inputFile) {
       program.error(
-        pc.red(pc.bold(`The input file '${pc.bold(inputFile)}' does not exist. Please check the path and try again.`)),
+        pc.red(
+          pc.bold(
+            `No ${configFileName} in ${process.cwd()} or any parent directory. Create one or pass --input <path>.`,
+          ),
+        ),
       );
     }
 
-    const fileContent = (await readFile(inputFile)).toString();
-    const config = yaml.load(fileContent) as Config;
+    const loaded = await loadConfig(inputFile);
+    if (!loaded.success) {
+      program.error(pc.red(pc.bold(loaded.errors.map((error) => error.message).join('\n'))));
+    }
+    const { config, dir: inputFileLocation } = loaded.data;
 
     const validFeatureFlagNames = new Set<string>(config.feature_flags?.map((ff) => ff.name));
     const contractTagOptions = toContractTagOptions(options.exclude, options.include);
@@ -311,9 +328,8 @@ export default (_: BaseCommandOptions) => {
 
     const subgraphs: SubgraphMetaData[] = [];
 
-    for (const [index, subgraphConfig] of config.subgraphs.entries()) {
-      const metadata = await toSubgraphMetadata(inputFileLocation, index, subgraphConfig, subgraphs);
-      subgraphs.push(metadata);
+    for (const subgraphConfig of config.subgraphs) {
+      subgraphs.push(await toSubgraphMetadata(inputFileLocation, subgraphConfig));
     }
 
     const result = composeSubgraphs(
@@ -442,235 +458,116 @@ function toTags(value: unknown, optionName: string): Array<string> {
   return [...new Set(tags)];
 }
 
-function toSubgraphMetadata(
-  inputFileLocation: string,
-  index: number,
-  subgraphConfig: ConfigSubgraph,
-  subgraphs: SubgraphMetaData[],
-): Promise<SubgraphMetaData> {
-  if ('plugin' in subgraphConfig) {
-    return toSubgraphMetadataPlugin(inputFileLocation, subgraphConfig, subgraphs);
+function toSubgraphMetadata(inputFileLocation: string, subgraph: Subgraph): Promise<SubgraphMetaData> {
+  switch (subgraph.kind) {
+    case 'plugin': {
+      return toSubgraphMetadataPlugin(inputFileLocation, subgraph);
+    }
+    case 'grpc': {
+      return toSubgraphMetadataGRPC(inputFileLocation, subgraph);
+    }
+    case 'schema': {
+      return toSubgraphMetadataStandard(inputFileLocation, subgraph);
+    }
   }
-
-  if ('grpc' in subgraphConfig) {
-    return toSubgraphMetadataGRPC(inputFileLocation, subgraphConfig);
-  }
-
-  return toSubgraphMetadataStandard(inputFileLocation, index, subgraphConfig, subgraphs);
 }
 
-async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
-  validateGRPCSubgraph(inputFileLocation, s);
+function readSubgraphFile(inputFileLocation: string, file: string, subgraphName: string): Promise<string> {
+  const filePath = resolve(inputFileLocation, file);
+  if (!existsSync(filePath)) {
+    program.error(
+      pc.red(
+        pc.bold(
+          `The file '${file}' of subgraph '${subgraphName}' does not exist. Please check the path and try again.`,
+        ),
+      ),
+    );
+  }
+  return readFile(filePath, 'utf8');
+}
 
-  const mappingFileContent = await readFile(resolve(inputFileLocation, s.grpc.mapping_file), 'utf8');
-  const mapping = fromJsonString(GRPCMappingSchema, mappingFileContent);
+/** Reads the SDL from its file, or runs its command through a shell in the config directory and takes its stdout. */
+async function readSchema(inputFileLocation: string, source: SchemaSource, subgraphName: string): Promise<string> {
+  if ('file' in source) {
+    return readSubgraphFile(inputFileLocation, source.file, subgraphName);
+  }
 
-  const protoSchemaFileContent = await readFile(resolve(inputFileLocation, s.grpc.proto_file), 'utf8');
-  const sdl = await readFile(resolve(inputFileLocation, s.grpc.schema_file), 'utf8');
+  const result = await execa(source.command, { cwd: inputFileLocation, shell: true, reject: false });
+  if (result.failed) {
+    program.error(
+      pc.red(
+        pc.bold(
+          `The schema command of subgraph '${subgraphName}' failed: ${source.command}\n${result.stderr || result.message}`,
+        ),
+      ),
+    );
+  }
+  return result.stdout;
+}
+
+async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GrpcSubgraph): Promise<GRPCSubgraphMetadata> {
+  const mapping = fromJsonString(GRPCMappingSchema, await readSubgraphFile(inputFileLocation, s.mapping, s.name));
 
   return {
     kind: SubgraphKind.GRPC,
     name: s.name,
-    sdl,
+    sdl: await readSubgraphFile(inputFileLocation, s.schema.file, s.name),
     routingUrl: s.routing_url,
-    protoSchema: protoSchemaFileContent,
+    protoSchema: await readSubgraphFile(inputFileLocation, s.proto, s.name),
     mapping,
   };
 }
 
-async function toSubgraphMetadataPlugin(
-  inputFileLocation: string,
-  s: SubgraphPluginConfig,
-  subgraphs: SubgraphMetaData[],
-): Promise<SubgraphPluginMetadata> {
-  const pluginName = basename(s.plugin.path);
-  if (subgraphs.some((sg) => sg.kind === SubgraphKind.Plugin && sg.name === pluginName)) {
-    program.error(
-      pc.red(
-        pc.bold(`A plugin with the name '${pc.bold(pluginName)}' is already registered. Plugin names must be unique.`),
-      ),
-    );
-  }
-
-  validateSubgraphPlugin(inputFileLocation, s);
-
-  // Check if a plugin with the same name already exists
-  const mappingFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'mapping.json');
-  const mappingFile = await readFile(mappingFilePath, 'utf8');
-  const schemaFilePath = resolve(inputFileLocation, s.plugin.path, 'src', 'schema.graphql');
-  const sdl = await readFile(schemaFilePath, 'utf8');
-  const protoSchemaFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'service.proto');
-  const protoSchema = await readFile(protoSchemaFilePath, 'utf8');
+async function toSubgraphMetadataPlugin(inputFileLocation: string, s: PluginSubgraph): Promise<SubgraphPluginMetadata> {
+  const mappingFile = await readSubgraphFile(inputFileLocation, join(s.path, 'generated', 'mapping.json'), s.name);
 
   return {
     kind: SubgraphKind.Plugin,
-    name: pluginName,
-    protoSchema,
-    version: s.plugin.version,
-    sdl,
+    name: s.name,
+    protoSchema: await readSubgraphFile(inputFileLocation, join(s.path, 'generated', 'service.proto'), s.name),
+    version: s.version,
+    sdl: await readSubgraphFile(inputFileLocation, join(s.path, 'src', 'schema.graphql'), s.name),
     mapping: fromJsonString(GRPCMappingSchema, mappingFile),
   };
 }
 
+/** An event-driven graph has no routing URL; every other subgraph must say where the router reaches it. */
+function routingUrlOf(s: SchemaSubgraph | FeatureGraph, sdl: string): string {
+  if (s.routing_url !== undefined) {
+    return normalizeURL(s.routing_url);
+  }
+
+  const normalization = normalizeSubgraphFromString({ sdlString: sdl, noLocation: true });
+  if (normalization.success && normalization.isEventDrivenGraph) {
+    return '';
+  }
+
+  program.error(
+    pc.red(pc.bold(`Subgraph '${s.name}' has no routing_url. Set routing_url to where the router reaches it.`)),
+  );
+}
+
 async function toSubgraphMetadataStandard(
   inputFileLocation: string,
-  index: number,
-  s: StandardSubgraphConfig,
-  subgraphs: SubgraphMetaData[],
+  s: SchemaSubgraph | FeatureGraph,
 ): Promise<StandardSubgraphMetaData> {
-  // The subgraph name is required
-  if (!s.name) {
-    program.error(
-      pc.red(
-        pc.bold(`The subgraph name is required for subgraph at index ${index}. Please provide a name and try again.`),
-      ),
-    );
-  }
-
-  const url = s.introspection?.url ?? s.routing_url;
-
-  // Check if a subgraph with the same name already exists
-  if (subgraphs.some((sg) => sg.name === s.name)) {
-    program.error(
-      pc.red(
-        pc.bold(`A subgraph with the name '${pc.bold(s.name)}' is already registered. Subgraph names must be unique.`),
-      ),
-    );
-  }
-
-  let schemaSDL = '';
-
-  // The GraphQL schema is provided in the input file
-  if (s.schema?.file) {
-    const schemaFile = resolve(inputFileLocation, s.schema.file);
-    schemaSDL = (await readFile(schemaFile)).toString();
-  } else {
-    // The GraphQL schema is not provided in the input file, so we need to introspect it
-    try {
-      const result = await introspectSubgraph({
-        subgraphURL: url,
-        additionalHeaders: Object.entries(s.introspection?.headers ?? {}).map(([key, value]) => ({
-          key,
-          value,
-        })),
-        rawIntrospection: s.introspection?.raw,
-      });
-
-      if (!result.success) {
-        program.error(`Could not introspect subgraph ${s.name}, URL: ${url}: ${result.errorMessage ?? 'failed'}`);
-      }
-
-      schemaSDL = result.sdl;
-    } catch (e: any) {
-      program.error(`Could not introspect subgraph ${s.name}, URL: ${url}: ${e.message}`);
-    }
-  }
+  const sdl = await readSchema(inputFileLocation, s.schema, s.name);
+  const routingUrl = routingUrlOf(s, sdl);
 
   return {
     kind: SubgraphKind.Standard,
     name: s.name,
-    sdl: schemaSDL,
-    subscriptionUrl: s.subscription?.url || s.routing_url,
+    sdl,
+    subscriptionUrl: s.subscription?.url || (s.routing_url ?? ''),
     subscriptionProtocol: s.subscription?.protocol || 'ws',
-    websocketSubprotocol: s.subscription?.protocol === 'ws' ? (s.subscription?.websocketSubprotocol ?? 'auto') : 'auto',
-    routingUrl: normalizeURL(s.routing_url),
+    websocketSubprotocol:
+      s.subscription?.protocol === 'ws' ? (s.subscription?.websocket_subprotocol ?? 'auto') : 'auto',
+    routingUrl,
   };
 }
 
-function validateGRPCSubgraph(inputFileLocation: string, s: GRPCSubgraphConfig) {
-  if (!s.name) {
-    program.error(
-      pc.red(pc.bold(`The subgraph name is missing in the input file. Please check the name and try again.`)),
-    );
-  }
-
-  if (!s.routing_url) {
-    program.error(
-      pc.red(pc.bold(`The routing URL is missing in the input file. Please check the routing URL and try again.`)),
-    );
-  }
-
-  if (!s.grpc.schema_file) {
-    program.error(
-      pc.red(pc.bold(`The schema file is missing in the input file. Please check the schema file and try again.`)),
-    );
-  }
-
-  if (!s.grpc.proto_file) {
-    program.error(
-      pc.red(pc.bold(`The proto file is missing in the input file. Please check the proto file and try again.`)),
-    );
-  }
-
-  if (!s.grpc.mapping_file) {
-    program.error(
-      pc.red(pc.bold(`The mapping file is missing in the input file. Please check the mapping file and try again.`)),
-    );
-  }
-
-  if (!existsSync(resolve(inputFileLocation, s.grpc.schema_file))) {
-    program.error(
-      pc.red(
-        pc.bold(
-          `The schema file '${pc.bold(s.grpc.schema_file)}' does not exist. Please check the path and try again.`,
-        ),
-      ),
-    );
-  }
-
-  if (!existsSync(resolve(inputFileLocation, s.grpc.proto_file))) {
-    program.error(
-      pc.red(
-        pc.bold(`The proto file '${pc.bold(s.grpc.proto_file)}' does not exist. Please check the path and try again.`),
-      ),
-    );
-  }
-
-  if (!existsSync(resolve(inputFileLocation, s.grpc.mapping_file))) {
-    program.error(
-      pc.red(
-        pc.bold(
-          `The mapping file '${pc.bold(s.grpc.mapping_file)}' does not exist. Please check the path and try again.`,
-        ),
-      ),
-    );
-  }
-}
-
-function validateSubgraphPlugin(inputFileLocation: string, s: SubgraphPluginConfig) {
-  if (!s.plugin.path) {
-    program.error(
-      pc.red(pc.bold(`The plugin path is missing in the input file. Please check the path and try again.`)),
-    );
-  }
-  if (!existsSync(resolve(inputFileLocation, s.plugin.path))) {
-    program.error(
-      pc.red(
-        pc.bold(`The plugin path '${pc.bold(s.plugin.path)}' does not exist. Please check the path and try again.`),
-      ),
-    );
-  }
-
-  if (!s.plugin.version) {
-    program.error(
-      pc.red(pc.bold(`The plugin version is missing in the input file. Please check the version and try again.`)),
-    );
-  }
-
-  // Check if valid semver
-  if (!semver.valid(s.plugin.version)) {
-    program.error(
-      pc.red(
-        pc.bold(
-          `The plugin version '${pc.bold(s.plugin.version)}' is not a valid semver. Please check the version and try again.`,
-        ),
-      ),
-    );
-  }
-}
-
 async function buildFeatureFlagsConfig(
-  config: Config,
+  config: WundergraphConfig,
   inputFileLocation: string,
   subgraphs: SubgraphMetaData[],
   options: any,
@@ -683,72 +580,21 @@ async function buildFeatureFlagsConfig(
 
   for (const ff of config.feature_flags ?? []) {
     const featureSubgraphs: StandardSubgraphMetaData[] = [];
-    const standardSubgraphs = config.subgraphs.filter(
-      (ss) => !('plugin' in ss) && !('grpc' in ss),
-    ) as StandardSubgraphConfig[];
 
-    // Process each subgraph for this feature flag
-    for (const s of standardSubgraphs) {
-      // Check if this subgraph is overridden by a feature graph
-      const featureSubgraph = ff.feature_graphs.find((ffs) => ffs.subgraph_name === s.name);
+    for (const s of config.subgraphs) {
+      if (s.kind !== 'schema') {
+        continue;
+      }
 
-      if (featureSubgraph) {
-        // This subgraph is overridden by a feature graph
-        const url = featureSubgraph.introspection?.url ?? featureSubgraph.routing_url;
-        let schemaSDL = '';
+      const featureGraph = ff.feature_graphs.find((graph) => graph.subgraph_name === s.name);
+      if (featureGraph) {
+        featureSubgraphs.push(await toSubgraphMetadataStandard(inputFileLocation, featureGraph));
+        continue;
+      }
 
-        if (featureSubgraph.schema?.file) {
-          const schemaFile = resolve(inputFileLocation, featureSubgraph.schema.file);
-          schemaSDL = await readFile(schemaFile, 'utf8');
-        } else {
-          try {
-            const result = await introspectSubgraph({
-              subgraphURL: url,
-              additionalHeaders: Object.entries(featureSubgraph.introspection?.headers ?? {}).map(([key, value]) => ({
-                key,
-                value,
-              })),
-              rawIntrospection: featureSubgraph.introspection?.raw,
-            });
-
-            if (!result.success) {
-              program.error(
-                `Could not introspect feature-graph subgraph ${featureSubgraph.name}, URL: ${url}: ${
-                  result.errorMessage ?? 'failed'
-                }`,
-              );
-            }
-
-            schemaSDL = result.sdl;
-          } catch (e: any) {
-            program.error(
-              `Could not introspect feature-graph subgraph ${featureSubgraph.name}, URL: ${url}: ${e.message}`,
-            );
-          }
-        }
-
-        featureSubgraphs.push({
-          kind: SubgraphKind.Standard,
-          name: featureSubgraph.name,
-          sdl: schemaSDL,
-          routingUrl: featureSubgraph.routing_url,
-          subscriptionUrl: featureSubgraph.subscription?.url || featureSubgraph.routing_url,
-          subscriptionProtocol: featureSubgraph.subscription?.protocol || 'ws',
-          websocketSubprotocol:
-            featureSubgraph.subscription?.protocol === 'ws'
-              ? featureSubgraph.subscription?.websocketSubprotocol || 'auto'
-              : 'auto',
-        });
-      } else {
-        // Use the base subgraph as is
-        // Find the corresponding metadata in the original subgraphs array
-        const originalSubgraph = subgraphs.find(
-          (sub) => sub.kind === SubgraphKind.Standard && sub.name === s.name,
-        ) as StandardSubgraphMetaData;
-
-        if (originalSubgraph) {
-          featureSubgraphs.push(originalSubgraph);
-        }
+      const originalSubgraph = subgraphs.find((sub) => sub.kind === SubgraphKind.Standard && sub.name === s.name);
+      if (originalSubgraph?.kind === SubgraphKind.Standard) {
+        featureSubgraphs.push(originalSubgraph);
       }
     }
 

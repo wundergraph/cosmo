@@ -19,10 +19,11 @@ afterEach(async () => {
   hub = undefined;
 });
 
-const sandboxYaml = `schema: shop
+const wundergraphYaml = `graph: shop
 subgraphs:
   - name: accounts
-    schema: accounts.graphql
+    schema:
+      file: accounts.graphql
 `;
 
 const launchSteps = (statuses: string[]) => [
@@ -63,7 +64,7 @@ describe('wgc hub sandbox launch', () => {
     hub = await startFakeHub({
       tools: launchTools(hubOperation({ status: 'succeeded', steps: launchSteps(allSucceeded) })),
     });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml, 'services/accounts/.keep': '' });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml, 'services/accounts/.keep': '' });
 
     const run = await runWgc(['hub', 'sandbox', 'launch'], {
       hubUrl: hub.url,
@@ -100,7 +101,10 @@ describe('wgc hub sandbox launch', () => {
     });
     expect(await readFile(path.join(dir, '.gitignore'), 'utf8')).toBe('.wgc/\n');
     expect(hub.toolCalls()).toEqual([
-      { name: 'launch_sandbox', arguments: { from: 'shop', name: 'shop-nithin', idempotency_key: 'generated-key' } },
+      {
+        name: 'launch_sandbox',
+        arguments: { graph: 'shop', namespace: 'default', name: 'shop-nithin', idempotency_key: 'generated-key' },
+      },
       { name: 'get_operation', arguments: { operationId: 'op_7Kq2' } },
       { name: 'get_operation', arguments: { operationId: 'op_7Kq2' } },
     ]);
@@ -110,7 +114,7 @@ describe('wgc hub sandbox launch', () => {
     hub = await startFakeHub({
       tools: launchTools(hubOperation({ status: 'succeeded', steps: launchSteps(allSucceeded) }), 'shop-agent'),
     });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml, '.gitignore': 'node_modules\n' });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml, '.gitignore': 'node_modules\n' });
 
     const run = await runWgc(
       ['hub', 'sandbox', 'launch', '--name', 'shop-agent', '--from', 'shop-nithin', '--idempotency-key', 'k-1'],
@@ -142,7 +146,7 @@ describe('wgc hub sandbox launch', () => {
     expect(await readFile(path.join(dir, '.gitignore'), 'utf8')).toBe('node_modules\n.wgc/\n');
   });
 
-  test('without sandbox.yaml a non-interactive run exits 2 with the flag to pass', async () => {
+  test('without wundergraph.yaml a non-interactive run exits 2 with the flag to pass', async () => {
     const dir = await tempRepo({});
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--no-input'], { cwd: dir, output: 'text' });
@@ -150,17 +154,17 @@ describe('wgc hub sandbox launch', () => {
     expect(run.exitCode).toBe(2);
     expect(run.stdout).toBe('');
     expect(run.stderr).toBe(
-      `error: sandbox.yaml not found in ${dir} or any parent directory.\n` +
+      `error: wundergraph.yaml not found in ${dir} or any parent directory.\n` +
         'Run `wgc hub sandbox launch --init-from-graph <graph>` to create one, or pass --config <path>.\n',
     );
   });
 
-  test('--init-from-graph writes sandbox.yaml from the Hub graph before launching', async () => {
+  test("--init-from-graph writes Hub's wundergraph_yaml to wundergraph.yaml before launching", async () => {
     hub = await startFakeHub({
       tools: {
         export_sandbox_config: () => ({
           structuredContent: {
-            sandbox_yaml: sandboxYaml,
+            wundergraph_yaml: wundergraphYaml,
             router_version: '0.214.0',
             sources: ['accounts', 'catalog', 'orders'],
           },
@@ -178,11 +182,11 @@ describe('wgc hub sandbox launch', () => {
 
     expect(run.exitCode).toBe(0);
     expect(run.stderr.split('\n').slice(0, 3)).toEqual([
-      'Created sandbox.yaml (router 0.214.0, 3 sources from graph shop)',
+      'Created wundergraph.yaml (router 0.214.0, 3 sources from graph shop)',
       '',
       'Launching sandbox "shop-nithin"',
     ]);
-    expect(await readFile(path.join(dir, 'sandbox.yaml'), 'utf8')).toBe(sandboxYaml);
+    expect(await readFile(path.join(dir, 'wundergraph.yaml'), 'utf8')).toBe(wundergraphYaml);
     expect(hub.toolCalls()[0]).toEqual({ name: 'export_sandbox_config', arguments: { sandbox: 'shop' } });
   });
 
@@ -203,7 +207,7 @@ describe('wgc hub sandbox launch', () => {
         }),
       },
     });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml });
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--name', 'shop-nithin'], {
       hubUrl: hub.url,
@@ -235,7 +239,7 @@ describe('wgc hub sandbox launch', () => {
         },
       },
     });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml });
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--name', 'shop-nithin'], {
       hubUrl: hub.url,
@@ -261,7 +265,7 @@ describe('wgc hub sandbox launch', () => {
 
   test('--detach returns the operation at once and still links the directory', async () => {
     hub = await startFakeHub({ tools: launchTools(hubOperation({ status: 'succeeded' })) });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml });
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--name', 'shop-nithin', '--detach'], {
       hubUrl: hub.url,
@@ -296,7 +300,7 @@ describe('wgc hub sandbox launch', () => {
         }),
       ),
     });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml });
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--name', 'shop-nithin', '--json'], {
       hubUrl: hub.url,
@@ -318,7 +322,7 @@ describe('wgc hub sandbox launch', () => {
 
   test('exits 4 with the login command when not signed in', async () => {
     hub = await startFakeHub({ tools: {} });
-    const dir = await tempRepo({ 'sandbox.yaml': sandboxYaml });
+    const dir = await tempRepo({ 'wundergraph.yaml': wundergraphYaml });
 
     const run = await runWgc(['hub', 'sandbox', 'launch', '--name', 'x'], {
       hubUrl: hub.url,

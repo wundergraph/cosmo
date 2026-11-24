@@ -1,0 +1,7 @@
+graph: {projectName}
+subgraphs:
+  # Add your other subgraphs here
+  - name: {originalPluginName}
+    kind: plugin
+    path: plugins/{originalPluginName}
+    version: 0.0.1

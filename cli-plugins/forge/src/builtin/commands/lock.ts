@@ -1,8 +1,9 @@
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
-import { lockFileName, readLock, renderLock, writeLock } from '../lock.js';
-import { describeRouterSource, manifestFileName, readManifest, sameSource } from '../manifest.js';
+import { configFileName, lockFileName, renderLock } from '@wundergraph/wgc-plugin-sdk/config';
 import { describePinChange, diffPins, resolvePins } from '../pins.js';
+import { describeRouterSource, sameSource } from '../sources.js';
+import { readLock, readRouterWorkspace, writeLock } from '../workspace.js';
 import { askToAccept, moduleSummaries, routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -15,7 +16,7 @@ export const registerLock = (command: Command, dependencies: ForgeDependencies):
     command
       .command('lock')
       .description(
-        'Reconcile edits to the module list in forge.yaml: preview the changes to forge.lock, keep unaffected pins, and apply the accepted changes.',
+        `Reconcile edits to the router modules in ${configFileName}: preview the changes to ${lockFileName}, keep unaffected pins, and apply the accepted changes.`,
       )
       .option('--yes', 'Apply the previewed changes without asking.'),
   ).action(async (options: LockOptions) => {
@@ -23,25 +24,26 @@ export const registerLock = (command: Command, dependencies: ForgeDependencies):
     const output = context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { router } = read.data;
     const previous = await readLock(workspace);
     if (!previous.success) {
       return output.fail(toFailure(previous));
     }
 
-    if (previous.data !== undefined && !sameSource(previous.data.router.source, manifest.data.router)) {
+    if (previous.data !== undefined && !sameSource(previous.data.router.source, router.source)) {
       const pinned = describeRouterSource(previous.data.router.source);
       return output.fail({
-        message: `${manifestFileName} selects router ${describeRouterSource(manifest.data.router)}, but ${lockFileName} pins router ${pinned}.`,
-        input: `${manifestFileName}: router`,
-        remediation: `Restore router ${pinned} in ${manifestFileName}, then run \`wgc forge router upgrade --config <router.yaml> <candidate>\` to change the router.`,
+        message: `${configFileName} selects router ${describeRouterSource(router.source)}, but ${lockFileName} pins router ${pinned}.`,
+        input: `${configFileName}: router`,
+        remediation: `Restore router ${pinned} in ${configFileName}, then run \`wgc forge router upgrade --config <router.yaml> <candidate>\` to change the router.`,
       });
     }
 
-    const lock = await resolvePins({ manifest: manifest.data, previous: previous.data, system, output });
+    const lock = await resolvePins({ router, previous: previous.data, system, output });
     if (!lock.success) {
       return output.fail(toFailure(lock));
     }
@@ -61,8 +63,8 @@ export const registerLock = (command: Command, dependencies: ForgeDependencies):
     if (acceptance === 'needs-yes') {
       return output.fail({
         kind: 'confirmation',
-        message: `${lockFileName} needs changes to match ${manifestFileName}. Nothing was written.\n${preview}`,
-        input: manifestFileName,
+        message: `${lockFileName} needs changes to match ${configFileName}. Nothing was written.\n${preview}`,
+        input: configFileName,
         remediation: 'Review the changes, then run `wgc forge lock --yes` to apply them.',
         next: ['wgc forge lock --yes'],
         data: { ...summary, written: false },

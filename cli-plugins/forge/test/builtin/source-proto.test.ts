@@ -7,11 +7,11 @@ import { createWorkspace, lockForReleaseA, read, runForge, versionA } from './ha
 const template = fileURLToPath(new URL('../../gomodules/sources/grpc', import.meta.url));
 const fromTemplate = (file: string): Promise<string> => readFile(path.join(template, file), 'utf8');
 
-const manifest = `version: 1
+const config = `graph: shop
+subgraphs: []
 router:
   release: 0.299.0
-binary: bin/router
-modules: []
+  binary: bin/router
 `;
 
 const sdl = `type Query {
@@ -62,8 +62,8 @@ const skipped = [
 
 const protoWorkspace = async (files: Record<string, string> = {}) =>
   createWorkspace({
-    'forge.yaml': manifest,
-    'forge.lock': lockForReleaseA,
+    'wundergraph.yaml': config,
+    'wundergraph.lock': lockForReleaseA,
     'protos/payroll.proto': await fromTemplate('testdata/payroll.proto'),
     ...files,
   });
@@ -99,7 +99,6 @@ describe('wgc forge source add <proto>', () => {
           mapping: './modules/payroll/generated/mapping.json',
           sdl,
         },
-        graph: 'graph.yaml',
         operations: [
           { field: 'Query.salary', request: '/payroll.v1.PayrollService/GetSalary' },
           { field: 'Query.listSalaries', request: '/payroll.v1.PayrollService/ListSalaries' },
@@ -148,22 +147,25 @@ describe('wgc forge source add <proto>', () => {
     );
   });
 
-  test('registers the module in forge.yaml and the subgraph in the graph file', async () => {
+  test('registers the module and the grpc subgraph in wundergraph.yaml', async () => {
     const workspace = await protoWorkspace();
 
     await runForge(['source', 'add', 'protos/payroll.proto'], { workspace });
 
-    expect(await read(workspace, 'forge.yaml')).toBe(
-      manifest.replace('modules: []\n', 'modules:\n  - path: ./modules/payroll\n'),
-    );
-    expect(await read(workspace, 'graph.yaml')).toBe(`version: 1
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(`graph: shop
 subgraphs:
   - name: payroll
+    kind: grpc
+    schema:
+      file: modules/payroll/schema.graphql
+    proto: modules/payroll/generated/service.proto
+    mapping: modules/payroll/generated/mapping.json
     routing_url: dns:///127.0.0.1:4011
-    grpc:
-      schema_file: modules/payroll/schema.graphql
-      proto_file: modules/payroll/generated/service.proto
-      mapping_file: modules/payroll/generated/mapping.json
+router:
+  release: 0.299.0
+  modules:
+    - path: ./modules/payroll
+  binary: bin/router
 `);
   });
 
@@ -186,7 +188,7 @@ subgraphs:
 
     expect(run.stdout).toBe(
       [
-        'Created ./modules/payroll from protos/payroll.proto and added it to forge.yaml and graph.yaml.',
+        'Created ./modules/payroll from protos/payroll.proto and added the module and the subgraph to wundergraph.yaml.',
         '  4 field(s)',
         '    Query.salary  /payroll.v1.PayrollService/GetSalary',
         '    Query.listSalaries  /payroll.v1.PayrollService/ListSalaries',
@@ -195,7 +197,7 @@ subgraphs:
         '  2 skipped',
         ...skipped.map((entry) => `    ${entry.subject}: ${entry.reason}`),
         '  The router serves the subgraph to itself on 127.0.0.1:4011. No plugin executable is started.',
-        'Next: `wgc forge build`, then `wgc router compose -i graph.yaml -o config.json`.',
+        'Next: `wgc forge build`.',
         '',
       ].join('\n'),
     );
@@ -518,7 +520,7 @@ enum PayFrequency {
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({ code: 'COMMAND_FAILED', ...error });
-    expect(await read(workspace, 'forge.yaml')).toBe(manifest);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(config);
   });
 });
 
@@ -538,7 +540,7 @@ describe('wgc forge source add rejects a proto file it cannot generate', () => {
       remediation:
         'Copy the definitions orders.proto uses from common/money.proto into it, or pass one file that holds the whole service.',
     });
-    expect(await read(workspace, 'forge.yaml')).toBe(manifest);
+    expect(await read(workspace, 'wundergraph.yaml')).toBe(config);
   });
 
   test('a file without a service', async () => {

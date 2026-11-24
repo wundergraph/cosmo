@@ -1,10 +1,11 @@
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
 import type { Prompts } from '@wundergraph/wgc-plugin-sdk';
+import { configFileName, lockFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import { catalog, createModule } from '../catalog.js';
 import type { CatalogEntry } from '../catalog.js';
-import { lockFileName, readLock } from '../lock.js';
-import { readManifest, sameSource, writeManifest } from '../manifest.js';
+import { sameSource } from '../sources.js';
+import { readLock, readRouterWorkspace, writeConfig } from '../workspace.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -123,10 +124,11 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
     }
 
     const workspace = workspaceOf(dependencies, options);
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { config, router } = read.data;
     const lock = await readLock(workspace);
     if (!lock.success) {
       return output.fail(toFailure(lock));
@@ -145,14 +147,15 @@ export const registerCreate = (command: Command, dependencies: ForgeDependencies
     }
 
     const source = { path: created.data };
-    if (!manifest.data.modules.some((module) => sameSource(module, source))) {
-      await writeManifest(workspace, { ...manifest.data, modules: [...manifest.data.modules, source] });
+    if (!router.modules.some((module) => sameSource(module, source))) {
+      await writeConfig(workspace, { ...config, router: { ...router, modules: [...router.modules, source] } });
     }
 
     output.result({ module: moduleName, path: created.data, from: { kind, id: entry.id } }, (data) =>
-      [`Created ${data.path} from ${kind} ${entry.id} and added it to forge.yaml.`, 'Next: `wgc forge build`.'].join(
-        '\n',
-      ),
+      [
+        `Created ${data.path} from ${kind} ${entry.id} and added it to ${configFileName}.`,
+        'Next: `wgc forge build`.',
+      ].join('\n'),
     );
   });
 };
