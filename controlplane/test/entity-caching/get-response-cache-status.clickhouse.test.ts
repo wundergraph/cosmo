@@ -53,7 +53,9 @@ type TestClient = Awaited<ReturnType<typeof SetupTest>>['client'];
 
 let dbname = '';
 const chDatabase = `response_cache_status_test_${randomUUID().replaceAll('-', '')}`;
-const chClient = new ClickHouseClient({ dsn: `${CLICKHOUSE_URL}?database=${chDatabase}`, logger: pino() });
+const chDsn = new URL(CLICKHOUSE_URL);
+chDsn.searchParams.set('database', chDatabase);
+const chClient = new ClickHouseClient({ dsn: chDsn.toString(), logger: pino() });
 
 // The project client appends a FORMAT clause and parses JSON, so it cannot send DDL, which returns an empty body.
 function runStatement(statement: string) {
@@ -231,6 +233,7 @@ describe('GetResponseCacheStatus against ClickHouse', () => {
     // Each rejected point keeps all but one identifier, so a leaked row still matches this filter.
     const rows = await chClient.queryPromise<{
       bucket: number;
+      organizationId: string;
       federatedGraphId: string;
       subgraphId: string;
       cacheStatus: string;
@@ -240,6 +243,7 @@ describe('GetResponseCacheStatus against ClickHouse', () => {
       `
       SELECT
         toUnixTimestamp(Timestamp) AS bucket,
+        OrganizationID AS organizationId,
         FederatedGraphID AS federatedGraphId,
         SubgraphID AS subgraphId,
         CacheStatus AS cacheStatus,
@@ -249,7 +253,7 @@ describe('GetResponseCacheStatus against ClickHouse', () => {
       WHERE OrganizationID = {organizationId:String}
         OR FederatedGraphID = {federatedGraphId:String}
         OR SubgraphID IN ({targetSubgraphId:String}, {otherSubgraphId:String})
-      GROUP BY Timestamp, FederatedGraphID, SubgraphID, CacheStatus
+      GROUP BY Timestamp, OrganizationID, FederatedGraphID, SubgraphID, CacheStatus
       `,
       {
         organizationId,
@@ -261,6 +265,7 @@ describe('GetResponseCacheStatus against ClickHouse', () => {
 
     const row = (bucket: number, { subgraphId }: RowTarget, cacheStatus: string, fetches: number, points = 0) => ({
       bucket: bucket / 1000,
+      organizationId,
       federatedGraphId,
       subgraphId,
       cacheStatus,
@@ -408,7 +413,7 @@ describe('GetResponseCacheStatus against ClickHouse', () => {
       .soft(sumFetches(unalignedEnd.subgraphs), 'the count must match the reported end')
       .toBe(effectiveEnd === b ? 5n : 12n);
 
-    expect.soft(sumFetches(empty.subgraphs), '[B, B) must be empty although bucket B has fetches').toBe(0n);
+    expect.soft(empty.subgraphs, '[B, B) must return no subgraphs although bucket B has fetches').toEqual([]);
     expect
       .soft([empty.interval?.start, empty.interval?.end], '[B, B) must be reported as an empty interval at B')
       .toEqual([new Date(b).toISOString(), new Date(b).toISOString()]);
