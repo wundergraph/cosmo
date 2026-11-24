@@ -19,10 +19,7 @@ export interface Target {
 }
 
 /** sandbox.yaml from `--config` or the nearest parent directory; a missing file is a usage error. */
-export const loadProjectConfig = (
-  cwd: string,
-  configFlag: string | undefined,
-): Promise<Result<LoadedSandboxConfig>> => {
+const loadProjectConfig = (cwd: string, configFlag: string | undefined): Promise<Result<LoadedSandboxConfig>> => {
   const located = locateSandboxConfig(cwd, configFlag);
   if (located === undefined) {
     return Promise.resolve(

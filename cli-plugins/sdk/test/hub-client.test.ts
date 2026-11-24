@@ -127,24 +127,6 @@ describe('createHubClient', () => {
     });
   });
 
-  test('pushSchema posts to /ci/schema-push', async () => {
-    const hub = fakeHub({});
-    const request = {
-      sandboxYaml: 'schema: shop\n',
-      subgraphs: [{ name: 'a', sdl: 'type Query { a: Int }' }],
-      sha: 'abc',
-    };
-
-    const result = await client(hub.fetchImpl).pushSchema(
-      request,
-      z.object({ accepted: z.boolean(), compositionErrors: z.array(z.string()) }),
-    );
-
-    expect(result).toEqual({ success: true, data: { accepted: true, compositionErrors: [] } });
-    expect(hub.calls[0].url).toBe('https://hub.example/ci/schema-push');
-    expect(JSON.parse(hub.calls[0].body)).toEqual(request);
-  });
-
   test('postJson posts to a plain Hub endpoint and reads its answer', async () => {
     const hub = fakeHub({});
 

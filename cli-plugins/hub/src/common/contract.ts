@@ -231,19 +231,6 @@ export const hubResults = {
   describeCurrentAccess: z.object({ organizationSlug: z.string() }),
 };
 
-/** The JSON answer of `POST /ci/schema-push`, which CI calls with `{ sandboxYaml, subgraphs, sha }`. */
-export const schemaPushResult = z.discriminatedUnion('target', [
-  z.object({
-    target: z.literal('sandbox'),
-    sandboxName: z.string(),
-    endpointUrl: z.string(),
-    hubUrl: z.string(),
-    passed: z.number(),
-    failed: z.number(),
-  }),
-  z.object({ target: z.literal('schema'), graphSlug: z.string() }),
-]);
-
 /** Hub's answer to `POST /ci/subgraph-check`: the pull request sandbox the checked SDL went to, if the run has one. */
 export const subgraphCheckAnswer = z.union([
   z.object({ pullRequest: z.null() }),

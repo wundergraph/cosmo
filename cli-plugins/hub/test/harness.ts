@@ -63,11 +63,9 @@ const asHubAnswers = (tool: string, outcome: ToolOutcome): ToolOutcome => {
 /** Speaks MCP JSON-RPC on `/mcp`, answers `ci` on its `/ci/*` paths and plays GitHub's OIDC token endpoint on `/oidc`. */
 export const startFakeHub = async ({
   tools = {},
-  schemaPush = {},
   ci = {},
 }: {
   tools?: Record<string, (args: { [key: string]: Json }) => ToolOutcome>;
-  schemaPush?: Json;
   /** Status and body per `/ci/*` path, e.g. `{ '/ci/subgraph-check': { status: 200, body: { pullRequest: null } } }`. */
   ci?: Record<string, { status: number; body: Json }>;
 }): Promise<FakeHub> => {
@@ -89,10 +87,6 @@ export const startFakeHub = async ({
     const body = JSON.parse(await readBody(request));
     requests.push({ path: url.pathname, authorization: request.headers.authorization, body });
 
-    if (url.pathname === '/ci/schema-push') {
-      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(schemaPush));
-      return;
-    }
     const ciAnswer = ci[url.pathname];
     if (ciAnswer) {
       response.writeHead(ciAnswer.status, { 'content-type': 'application/json' }).end(JSON.stringify(ciAnswer.body));

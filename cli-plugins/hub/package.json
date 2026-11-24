@@ -1,7 +1,7 @@
 {
   "name": "@wundergraph/wgc-plugin-hub",
   "version": "0.1.0",
-  "description": "wgc commands for WunderGraph Hub sandboxes, collections and schema pushes",
+  "description": "wgc commands for WunderGraph Hub sandboxes and collections, and Hub-aware subgraph check and publish",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

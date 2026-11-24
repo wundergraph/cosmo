@@ -8,12 +8,6 @@ const protocolVersion = '2025-06-18';
 
 export type ToolArgument = string | number | boolean | null | ToolArgument[] | { [key: string]: ToolArgument };
 
-export interface SchemaPushRequest {
-  sandboxYaml: string;
-  subgraphs: Array<{ name: string; sdl: string }>;
-  sha: string;
-}
-
 export interface CallOptions {
   /** Aborts the request, e.g. when the user detaches from a long poll with Ctrl-C. */
   signal?: AbortSignal;
@@ -27,8 +21,6 @@ export interface HubClient {
     schema: z.ZodType<T>,
     options?: CallOptions,
   ): Promise<Result<T>>;
-  /** Posts a schema push from CI to `POST /ci/schema-push`. */
-  pushSchema<T>(request: SchemaPushRequest, schema: z.ZodType<T>): Promise<Result<T>>;
   /** Posts JSON to one of Hub's plain HTTP endpoints, such as `ci/subgraph-check`, and validates the answer. */
   postJson<T>(path: string, body: Record<string, ToolArgument>, schema: z.ZodType<T>): Promise<Result<T>>;
 }
@@ -265,22 +257,6 @@ export const createHubClient = ({
       const typed = schema.safeParse(payload);
       if (!typed.success) {
         return failure(`Hub tool ${name} returned an unexpected shape: ${typed.error.message}`);
-      }
-      return ok(typed.data);
-    },
-
-    async pushSchema(request, schema) {
-      const sent = await post('ci/schema-push', request, undefined);
-      if (!sent.success) {
-        return sent;
-      }
-      const json = parseJson(sent.data.text);
-      if (!json.success) {
-        return json;
-      }
-      const typed = schema.safeParse(json.data);
-      if (!typed.success) {
-        return failure(`Hub returned an unexpected schema push result: ${typed.error.message}`);
       }
       return ok(typed.data);
     },

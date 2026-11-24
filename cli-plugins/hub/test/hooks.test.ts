@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { FakeHub, githubActionsEnv, hubHooks, startFakeHub, tempRepo } from './harness.js';
+import { FakeHub, githubActionsEnv, hubHooks, runWgc, startFakeHub, tempRepo } from './harness.js';
 
 let hub: FakeHub | undefined;
 afterEach(async () => {
@@ -184,5 +184,11 @@ describe('the hub plugin hooking wgc subgraph publish', () => {
 
     expect(await publish(hub.url, false)).toBeUndefined();
     expect(hub.requests).toEqual([]);
+  });
+});
+
+describe('wgc hub schema push', () => {
+  test('is gone', async () => {
+    await expect(runWgc(['hub', 'schema', 'push'])).rejects.toMatchObject({ code: 'commander.unknownCommand' });
   });
 });
