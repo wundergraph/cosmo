@@ -959,19 +959,28 @@ func (SortDirection) EnumDescriptor() ([]byte, []int) {
 type ResponseCacheStatus int32
 
 const (
-	ResponseCacheStatus_HIT  ResponseCacheStatus = 0
-	ResponseCacheStatus_MISS ResponseCacheStatus = 1
+	ResponseCacheStatus_UNKNOWN       ResponseCacheStatus = 0
+	ResponseCacheStatus_HIT           ResponseCacheStatus = 1
+	ResponseCacheStatus_PARTIAL_HIT   ResponseCacheStatus = 2
+	ResponseCacheStatus_NOT_CACHEABLE ResponseCacheStatus = 3
+	ResponseCacheStatus_MISS          ResponseCacheStatus = 4
 )
 
 // Enum value maps for ResponseCacheStatus.
 var (
 	ResponseCacheStatus_name = map[int32]string{
-		0: "HIT",
-		1: "MISS",
+		0: "UNKNOWN",
+		1: "HIT",
+		2: "PARTIAL_HIT",
+		3: "NOT_CACHEABLE",
+		4: "MISS",
 	}
 	ResponseCacheStatus_value = map[string]int32{
-		"HIT":  0,
-		"MISS": 1,
+		"UNKNOWN":       0,
+		"HIT":           1,
+		"PARTIAL_HIT":   2,
+		"NOT_CACHEABLE": 3,
+		"MISS":          4,
 	}
 )
 
@@ -34412,7 +34421,7 @@ func (x *ResponseCacheStatusCount) GetCacheStatus() ResponseCacheStatus {
 	if x != nil {
 		return x.CacheStatus
 	}
-	return ResponseCacheStatus_HIT
+	return ResponseCacheStatus_UNKNOWN
 }
 
 func (x *ResponseCacheStatusCount) GetTotalFetches() int64 {
@@ -34428,7 +34437,8 @@ type SubgraphResponseCacheStatus struct {
 	SubgraphName   string                      `protobuf:"bytes,2,opt,name=subgraphName,proto3" json:"subgraphName,omitempty"`
 	TotalFetches   int64                       `protobuf:"varint,3,opt,name=totalFetches,proto3" json:"totalFetches,omitempty"`
 	NonDeltaPoints int64                       `protobuf:"varint,4,opt,name=nonDeltaPoints,proto3" json:"nonDeltaPoints,omitempty"`
-	Statuses       []*ResponseCacheStatusCount `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	CoverageCount  int32                       `protobuf:"varint,5,opt,name=coverageCount,proto3" json:"coverageCount,omitempty"`
+	Statuses       []*ResponseCacheStatusCount `protobuf:"bytes,6,rep,name=statuses,proto3" json:"statuses,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -34487,6 +34497,13 @@ func (x *SubgraphResponseCacheStatus) GetTotalFetches() int64 {
 func (x *SubgraphResponseCacheStatus) GetNonDeltaPoints() int64 {
 	if x != nil {
 		return x.NonDeltaPoints
+	}
+	return 0
+}
+
+func (x *SubgraphResponseCacheStatus) GetCoverageCount() int32 {
+	if x != nil {
+		return x.CoverageCount
 	}
 	return 0
 }
@@ -39999,15 +40016,16 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"_dateRange\"\x8b\x01\n" +
 	"\x18ResponseCacheStatusCount\x12K\n" +
 	"\vcacheStatus\x18\x01 \x01(\x0e2).wg.cosmo.platform.v1.ResponseCacheStatusR\vcacheStatus\x12\"\n" +
-	"\ftotalFetches\x18\x02 \x01(\x03R\ftotalFetches\"\xf9\x01\n" +
+	"\ftotalFetches\x18\x02 \x01(\x03R\ftotalFetches\"\x9f\x02\n" +
 	"\x1bSubgraphResponseCacheStatus\x12\x1e\n" +
 	"\n" +
 	"subgraphId\x18\x01 \x01(\tR\n" +
 	"subgraphId\x12\"\n" +
 	"\fsubgraphName\x18\x02 \x01(\tR\fsubgraphName\x12\"\n" +
 	"\ftotalFetches\x18\x03 \x01(\x03R\ftotalFetches\x12&\n" +
-	"\x0enonDeltaPoints\x18\x04 \x01(\x03R\x0enonDeltaPoints\x12J\n" +
-	"\bstatuses\x18\x05 \x03(\v2..wg.cosmo.platform.v1.ResponseCacheStatusCountR\bstatuses\"\x90\x02\n" +
+	"\x0enonDeltaPoints\x18\x04 \x01(\x03R\x0enonDeltaPoints\x12$\n" +
+	"\rcoverageCount\x18\x05 \x01(\x05R\rcoverageCount\x12J\n" +
+	"\bstatuses\x18\x06 \x03(\v2..wg.cosmo.platform.v1.ResponseCacheStatusCountR\bstatuses\"\x90\x02\n" +
 	"\x1eGetResponseCacheStatusResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12;\n" +
 	"\binterval\x18\x02 \x01(\v2\x1f.wg.cosmo.platform.v1.DateRangeR\binterval\x12$\n" +
@@ -40114,10 +40132,13 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x06ERRORS\x10\x02*\"\n" +
 	"\rSortDirection\x12\a\n" +
 	"\x03ASC\x10\x00\x12\b\n" +
-	"\x04DESC\x10\x01*(\n" +
-	"\x13ResponseCacheStatus\x12\a\n" +
-	"\x03HIT\x10\x00\x12\b\n" +
-	"\x04MISS\x10\x012\xe8\xde\x01\n" +
+	"\x04DESC\x10\x01*Y\n" +
+	"\x13ResponseCacheStatus\x12\v\n" +
+	"\aUNKNOWN\x10\x00\x12\a\n" +
+	"\x03HIT\x10\x01\x12\x0f\n" +
+	"\vPARTIAL_HIT\x10\x02\x12\x11\n" +
+	"\rNOT_CACHEABLE\x10\x03\x12\b\n" +
+	"\x04MISS\x10\x042\xe8\xde\x01\n" +
 	"\x0fPlatformService\x12\x85\x01\n" +
 	"\x16CreatePlaygroundScript\x123.wg.cosmo.platform.v1.CreatePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.CreatePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
 	"\x16DeletePlaygroundScript\x123.wg.cosmo.platform.v1.DeletePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.DeletePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +

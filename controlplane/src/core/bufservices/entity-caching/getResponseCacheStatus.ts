@@ -16,6 +16,8 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 
+const BUCKET_SECONDS = 5 * 60;
+
 export function getResponseCacheStatus(
   opts: RouterOptions,
   req: GetResponseCacheStatusRequest,
@@ -57,14 +59,31 @@ export function getResponseCacheStatus(
       throw new UnauthorizedError();
     }
 
+    // An explicit range that does not parse must fail, not silently fall back to the default range.
+    if (
+      req.dateRange &&
+      (Number.isNaN(Date.parse(req.dateRange.start)) || Number.isNaN(Date.parse(req.dateRange.end)))
+    ) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid date range',
+        },
+        coverageCount: 0,
+        subgraphs: [],
+      };
+    }
+
     // Use provided range/dateRange or fall back to default
     const analyticsRetention = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
       featureId: 'analytics-retention',
     });
 
+    const retentionDays = analyticsRetention?.limit ?? 7;
+    const retentionCutoff = Math.floor((Date.now() - retentionDays * 24 * 60 * 60 * 1000) / 1000);
     const { range, dateRange } = validateDateRanges({
-      limit: analyticsRetention?.limit ?? 7,
+      limit: retentionDays,
       range: req.dateRange ? undefined : deafultRangeInHoursForGetOperations,
       dateRange: req.dateRange,
     });
@@ -80,28 +99,48 @@ export function getResponseCacheStatus(
       };
     }
 
-    const [start, end] = getDateRange(isoDateRangeToTimestamps(dateRange, range));
+    const [requestedStart, requestedEnd] = getDateRange(isoDateRangeToTimestamps(dateRange, range));
+    // Rounding the start down must not reach before the retention cutoff, so round it up there instead.
+    let start = Math.floor(requestedStart / BUCKET_SECONDS) * BUCKET_SECONDS;
+    if (start < retentionCutoff) {
+      start = Math.ceil(requestedStart / BUCKET_SECONDS) * BUCKET_SECONDS;
+    }
+    const end = Math.max(start, Math.ceil(requestedEnd / BUCKET_SECONDS) * BUCKET_SECONDS);
 
     // The table is a SummingMergeTree, so one key can span several rows until the engine merges them: always sum.
+    // The inner query sums each bucket and drops buckets with no data, so coverageCount counts only the buckets in
+    // which a subgraph was observed, once each, across all of its cache statuses.
     const rows = await opts.chClient.queryPromise<{
       subgraphId: string;
       cacheStatus: string;
       totalFetches: string;
       nonDeltaPoints: string;
+      coverageCount: string;
     }>(
       `
       SELECT
-        SubgraphID AS subgraphId,
-        CacheStatus AS cacheStatus,
-        sum(TotalFetches) AS totalFetches,
-        sum(NonDeltaPoints) AS nonDeltaPoints
-      FROM ${opts.chClient.database}.subgraph_response_cache_status_5_30
-      WHERE Timestamp >= toDateTime({start:UInt32})
-        AND Timestamp <= toDateTime({end:UInt32})
-        AND OrganizationID = {organizationId:String}
-        AND FederatedGraphID = {federatedGraphId:String}
-      GROUP BY SubgraphID, CacheStatus
-      ORDER BY SubgraphID, CacheStatus
+        subgraphId,
+        cacheStatus,
+        sum(bucketFetches) AS totalFetches,
+        sum(bucketNonDeltaPoints) AS nonDeltaPoints,
+        any(subgraphBuckets) AS coverageCount
+      FROM (
+        SELECT
+          SubgraphID AS subgraphId,
+          CacheStatus AS cacheStatus,
+          sum(TotalFetches) AS bucketFetches,
+          sum(NonDeltaPoints) AS bucketNonDeltaPoints,
+          uniqExact(Timestamp) OVER (PARTITION BY SubgraphID) AS subgraphBuckets
+        FROM ${opts.chClient.database}.subgraph_response_cache_status_5_30
+        WHERE Timestamp >= toDateTime({start:UInt32})
+          AND Timestamp < toDateTime({end:UInt32})
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
+        GROUP BY SubgraphID, CacheStatus, Timestamp
+        HAVING bucketFetches > 0 OR bucketNonDeltaPoints > 0
+      )
+      GROUP BY subgraphId, cacheStatus
+      ORDER BY subgraphId, cacheStatus
       `,
       {
         start,
@@ -124,6 +163,7 @@ export function getResponseCacheStatus(
           totalFetches: BigInt(0),
           nonDeltaPoints: BigInt(0),
           statuses: [],
+          coverageCount: Number(row.coverageCount),
         };
 
         bySubgraph.set(row.subgraphId, subgraph);
@@ -156,11 +196,20 @@ export function getResponseCacheStatus(
 }
 
 function getCacheStatus(status: string): ResponseCacheStatus {
-  switch (status) {
-    case 'hit': {
+  switch (status.toUpperCase()) {
+    case 'HIT': {
       return ResponseCacheStatus.HIT;
+    }
+    case 'PARTIAL_HIT': {
+      return ResponseCacheStatus.PARTIAL_HIT;
+    }
+    case 'NOT_CACHEABLE': {
+      return ResponseCacheStatus.NOT_CACHEABLE;
+    }
+    case 'MISS': {
+      return ResponseCacheStatus.MISS;
     }
   }
 
-  return ResponseCacheStatus.MISS;
+  return ResponseCacheStatus.UNKNOWN;
 }

@@ -81,13 +81,19 @@ describe('GetResponseCacheStatus', () => {
     const wgcComposedId = '0';
 
     (chClient.queryPromise as Mock).mockResolvedValue([
-      { subgraphId: deltaId, cacheStatus: 'hit', totalFetches: '9007199254740993', nonDeltaPoints: '2' },
-      { subgraphId: deltaId, cacheStatus: 'miss', totalFetches: '2', nonDeltaPoints: '4' },
+      {
+        subgraphId: deltaId,
+        cacheStatus: 'hit',
+        totalFetches: '9007199254740993',
+        nonDeltaPoints: '2',
+        coverageCount: '3',
+      },
+      { subgraphId: deltaId, cacheStatus: 'miss', totalFetches: '2', nonDeltaPoints: '4', coverageCount: '3' },
       // The router exports cumulative: no fetches are counted, but the subgraph must still be returned.
-      { subgraphId: cumulativeId, cacheStatus: 'hit', totalFetches: '0', nonDeltaPoints: '12' },
-      { subgraphId: idleId, cacheStatus: 'miss', totalFetches: '0', nonDeltaPoints: '0' },
-      { subgraphId: deletedId, cacheStatus: 'hit', totalFetches: '4', nonDeltaPoints: '0' },
-      { subgraphId: wgcComposedId, cacheStatus: 'miss', totalFetches: '5', nonDeltaPoints: '0' },
+      { subgraphId: cumulativeId, cacheStatus: 'hit', totalFetches: '0', nonDeltaPoints: '12', coverageCount: '2' },
+      { subgraphId: idleId, cacheStatus: 'miss', totalFetches: '0', nonDeltaPoints: '0', coverageCount: '0' },
+      { subgraphId: deletedId, cacheStatus: 'hit', totalFetches: '4', nonDeltaPoints: '0', coverageCount: '1' },
+      { subgraphId: wgcComposedId, cacheStatus: 'miss', totalFetches: '5', nonDeltaPoints: '0', coverageCount: '1' },
     ]);
 
     const calledAt = Date.now();
@@ -115,6 +121,7 @@ describe('GetResponseCacheStatus', () => {
     // A JavaScript number cannot hold this sum, so it fails if the counts are added as numbers.
     expect(delta.totalFetches).toBe(9_007_199_254_740_995n);
     expect(delta.nonDeltaPoints).toBe(6n);
+    expect(delta.coverageCount).toBe(3);
     const deltaStatuses = delta.statuses.map(({ cacheStatus, totalFetches }) => ({ cacheStatus, totalFetches }));
     expect(deltaStatuses).toHaveLength(2);
     expect(deltaStatuses).toEqual(
