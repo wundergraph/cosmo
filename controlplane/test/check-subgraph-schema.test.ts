@@ -19,7 +19,7 @@ import {
 } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
-import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
+import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -1490,6 +1490,157 @@ type Category {
   });
 
   describe('Federated graph schema breaking changes', () => {
+    describe('@inaccessible enum values', () => {
+      let client: Awaited<ReturnType<typeof SetupTest>>['client'];
+
+      beforeEach(async () => {
+        const setup = await SetupTest({ dbname, chClient });
+        client = setup.client;
+        return () => setup.server.close();
+      });
+
+      test('Should not report a breaking change when adding an @inaccessible enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B }'],
+          'type Query { letter: Letter } enum Letter { A B C @inaccessible }',
+        );
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
+      test('Should report a composed breaking change when removing @inaccessible from an enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B C }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+
+      test('Should report a composed breaking change when an @inaccessible enum value hides one another subgraph exposes', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          [
+            'type Query { letter: Letter } enum Letter { A B C }',
+            'type Query { otherLetter: Letter } enum Letter { A B }',
+          ],
+          'type Query { otherLetter: Letter } enum Letter { A B C @inaccessible }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+
+      test('Should report a composed breaking change when adding @inaccessible to an exposed enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B C }'],
+          'type Query { letter: Letter } enum Letter { A B C @inaccessible }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+
+      test('Should not report a breaking change when removing an @inaccessible enum value', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { letter: Letter } enum Letter { A B C @inaccessible }'],
+          'type Query { letter: Letter } enum Letter { A B }',
+        );
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
+      test('Should report a composed breaking change when removing an @inaccessible enum value exposes one another subgraph defines', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          [
+            'type Query { letter: Letter } enum Letter { A B C }',
+            'type Query { otherLetter: Letter } enum Letter { A B C @inaccessible }',
+          ],
+          'type Query { otherLetter: Letter } enum Letter { A B }',
+        );
+
+        expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual(['Letter.C']);
+      });
+    });
+
+    describe('@inaccessible fields, arguments and input fields', () => {
+      let client: Awaited<ReturnType<typeof SetupTest>>['client'];
+
+      beforeEach(async () => {
+        const setup = await SetupTest({ dbname, chClient });
+        client = setup.client;
+        return () => setup.server.close();
+      });
+
+      test.each([
+        {
+          element: 'field',
+          published: 'type Query { a: String b: String }',
+          checked: 'type Query { a: String b: String @inaccessible }',
+          path: 'Query.b',
+        },
+        {
+          element: 'argument',
+          published: 'type Query { a(x: Int): String }',
+          checked: 'type Query { a(x: Int @inaccessible): String }',
+          path: 'Query.a.x',
+        },
+        {
+          element: 'input field',
+          published: 'type Query { a(in: In): String } input In { x: Int y: Int }',
+          checked: 'type Query { a(in: In): String } input In { x: Int y: Int @inaccessible }',
+          path: 'In.y',
+        },
+      ])(
+        'Should report a composed breaking change when adding @inaccessible to an exposed $element',
+        async ({ published, checked, path }) => {
+          const checkResp = await checkAgainstLastPublishedSubgraph(client, [published], checked);
+
+          expect(checkResp.composedSchemaBreakingChanges.map((c) => c.path)).toStrictEqual([path]);
+        },
+      );
+
+      test.each([
+        {
+          change: 'removing @inaccessible from a field',
+          published: 'type Query { a: String b: String @inaccessible }',
+          checked: 'type Query { a: String b: String }',
+        },
+        {
+          change: 'removing an @inaccessible field',
+          published: 'type Query { a: String b: String @inaccessible }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible type',
+          published: 'type Query { a: String t: T @inaccessible } type T @inaccessible { x: Int }',
+          checked: 'type Query { a: String }',
+        },
+        {
+          change: 'removing an @inaccessible argument',
+          published: 'type Query { a(x: Int @inaccessible): String }',
+          checked: 'type Query { a: String }',
+        },
+      ])('Should not report a breaking change when $change', async ({ published, checked }) => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(client, [published], checked);
+
+        expect([...checkResp.breakingChanges, ...checkResp.composedSchemaBreakingChanges]).toStrictEqual([]);
+      });
+
+      test('Should report removing @inaccessible from a field as a non breaking change', async () => {
+        const checkResp = await checkAgainstLastPublishedSubgraph(
+          client,
+          ['type Query { a: String b: String @inaccessible }'],
+          'type Query { a: String b: String }',
+        );
+
+        expect(checkResp.nonBreakingChanges.map((c) => c.path)).toContain('Query.b.inaccessible');
+      });
+    });
+
     test('Should detect breaking change when subgraph B makes federated field nullable that was required from subgraph A', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
@@ -3662,3 +3813,33 @@ type Category {
     });
   });
 });
+
+async function checkAgainstLastPublishedSubgraph(
+  client: Awaited<ReturnType<typeof SetupTest>>['client'],
+  publishedSchemas: string[],
+  checkedSchema: string,
+) {
+  const label = genUniqueLabel();
+  await createFederatedGraph(client, genID('fedGraph'), DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8081');
+
+  let checkedSubgraphName = '';
+  for (const [i, schema] of publishedSchemas.entries()) {
+    checkedSubgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      checkedSubgraphName,
+      DEFAULT_NAMESPACE,
+      schema,
+      [label],
+      `http://localhost:${8082 + i}`,
+    );
+  }
+
+  const checkResp = await client.checkSubgraphSchema({
+    subgraphName: checkedSubgraphName,
+    namespace: DEFAULT_NAMESPACE,
+    schema: Buffer.from(checkedSchema),
+  });
+  expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+  return checkResp;
+}

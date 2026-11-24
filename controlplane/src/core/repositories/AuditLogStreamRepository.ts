@@ -2,6 +2,7 @@ import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { auditLogs, auditLogStreamConfigs, organizations } from '../../db/schema.js';
+import { AuditLogStreamDestination, auditLogStreamDestinationSchema } from '../audit-log-stream/destination.js';
 import type { OrganizationRepository } from './OrganizationRepository.js';
 
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
@@ -17,31 +18,32 @@ export async function isAuditLogStreamingEnabled(orgRepo: OrganizationRepository
   return !!feature?.enabled;
 }
 
-export type AuditLogStreamConfig = typeof auditLogStreamConfigs.$inferSelect;
-type AuditLogStreamConfigInput = Pick<
-  typeof auditLogStreamConfigs.$inferInsert,
-  'organizationId' | 'endpoint' | 'token' | 'index' | 'source' | 'sourcetype' | 'enabled'
->;
+export type AuditLogStreamConfig = typeof auditLogStreamConfigs.$inferSelect & AuditLogStreamDestination;
 
 export class AuditLogStreamRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public get(organizationId: string) {
-    return this.db.query.auditLogStreamConfigs.findFirst({
+  public async get(organizationId: string) {
+    const row = await this.db.query.auditLogStreamConfigs.findFirst({
       where: eq(auditLogStreamConfigs.organizationId, organizationId),
     });
+    return row && { ...row, ...auditLogStreamDestinationSchema.parse(row) };
   }
 
   /**
-   * Creates or replaces the organization's config. Leaving out the token keeps the stored one, and only updates an
-   * existing config, so a config deleted in the meantime is never recreated without a token. Returns whether a config
+   * Creates or replaces the organization's config. Leaving out the secret keeps the stored one, and only updates an
+   * existing config, so a config deleted in the meantime is never recreated without a secret. Returns whether a config
    * was saved. Any previous error is cleared, so a fixed config doesn't show the old error.
    */
-  public async upsert(input: Omit<AuditLogStreamConfigInput, 'token'> & { token?: string }) {
-    const { organizationId, token, ...fields } = input;
+  public async upsert(
+    input: AuditLogStreamDestination & { organizationId: string; secret?: string; enabled: boolean },
+  ) {
+    const { organizationId, secret, enabled } = input;
+    const { kind, settings } = auditLogStreamDestinationSchema.parse(input);
+    const fields = { kind, settings, enabled };
     const set = { ...fields, lastError: null, lastErrorAt: null, updatedAt: new Date() };
 
-    if (token === undefined) {
+    if (secret === undefined) {
       const updated = await this.db
         .update(auditLogStreamConfigs)
         .set(set)
@@ -53,8 +55,8 @@ export class AuditLogStreamRepository {
 
     await this.db
       .insert(auditLogStreamConfigs)
-      .values({ organizationId, token, ...fields })
-      .onConflictDoUpdate({ target: auditLogStreamConfigs.organizationId, set: { ...set, token } })
+      .values({ organizationId, secret, ...fields })
+      .onConflictDoUpdate({ target: auditLogStreamConfigs.organizationId, set: { ...set, secret } })
       .execute();
     return true;
   }
@@ -65,16 +67,16 @@ export class AuditLogStreamRepository {
       .where(eq(auditLogStreamConfigs.organizationId, organizationId))
       .returning()
       .execute();
-    return deleted[0];
+    return deleted[0] && { ...deleted[0], ...auditLogStreamDestinationSchema.parse(deleted[0]) };
   }
 
   /**
-   * Lists the enabled configs of organizations that are not deactivated. A deactivated organization's cursor stays in
-   * place, so its backlog is delivered once it is reactivated.
+   * Skips deactivated organizations. A deactivated organization's cursor stays in place, so its backlog is delivered
+   * once it is reactivated.
    */
-  public async listEnabled() {
+  public async listEnabledOrganizationIds() {
     const rows = await this.db
-      .select({ config: auditLogStreamConfigs })
+      .select({ organizationId: auditLogStreamConfigs.organizationId })
       .from(auditLogStreamConfigs)
       .innerJoin(organizations, eq(organizations.id, auditLogStreamConfigs.organizationId))
       .where(
@@ -84,7 +86,7 @@ export class AuditLogStreamRepository {
         ),
       )
       .execute();
-    return rows.map((r) => r.config);
+    return rows.map((r) => r.organizationId);
   }
 
   /**

@@ -4,6 +4,7 @@ import {
   DeleteAuditLogStreamConfigRequest,
   DeleteAuditLogStreamConfigResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { destinationDisplayName } from '../../audit-log-stream/deliver.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { AuditLogStreamRepository } from '../../repositories/AuditLogStreamRepository.js';
@@ -39,7 +40,7 @@ export function deleteAuditLogStreamConfig(
         action: 'deleted',
         actorId: authContext.userId,
         auditableType: 'audit_log_stream_config',
-        auditableDisplayName: config.endpoint,
+        auditableDisplayName: destinationDisplayName(config),
         actorDisplayName: authContext.userDisplayName,
         apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',

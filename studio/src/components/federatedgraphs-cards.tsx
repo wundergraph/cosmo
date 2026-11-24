@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useFireworks } from '@/hooks/use-fireworks';
 import { docsBaseURL } from '@/lib/constants';
 import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
@@ -25,7 +24,7 @@ import { Card } from './ui/card';
 import { CLI } from './ui/cli';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { MigrationDialog } from './migration-dialog';
+import { MigrateFromApolloCard } from './migrate-from-apollo-card';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useOnboarding } from '@/hooks/use-onboarding';
@@ -43,11 +42,6 @@ const fallbackData = [
   },
 ];
 
-const MigrationSuccess = () => {
-  useFireworks(true);
-  return null;
-};
-
 export const RunRouterCommand = ({
   open,
   setOpen,
@@ -57,12 +51,10 @@ export const RunRouterCommand = ({
   triggerLabel,
   triggerClassName,
   hint,
-}: {
+}: ({ token: string; graphName?: string } | { token?: undefined; graphName: string }) & {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  graphName: string;
   namespace?: string;
-  token?: string;
   triggerLabel?: string;
   triggerClassName?: string;
   hint?: string;
@@ -211,19 +203,7 @@ export const RunRouterCommand = ({
   );
 };
 
-export const Empty = ({
-  refetch,
-  setIsMigrationSuccess,
-  setToken,
-  isMigrating,
-  setIsMigrating,
-}: {
-  refetch: () => void;
-  setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
-  setToken: Dispatch<SetStateAction<string | undefined>>;
-  isMigrating: boolean;
-  setIsMigrating: Dispatch<SetStateAction<boolean>>;
-}) => {
+export const Empty = () => {
   const checkUserAccess = useCheckUserAccess();
   const {
     namespace: { name: namespace },
@@ -293,15 +273,7 @@ export const Empty = ({
                 ) : (
                   <span className="text-sm font-bold">OR</span>
                 )}
-                <MigrationDialog
-                  refetch={refetch}
-                  setIsMigrationSuccess={setIsMigrationSuccess}
-                  isEmptyState={true}
-                  compact={displayOnboardingEmptyState}
-                  setToken={setToken}
-                  isMigrating={isMigrating}
-                  setIsMigrating={setIsMigrating}
-                />
+                <MigrateFromApolloCard compact={displayOnboardingEmptyState} />
               </>
             )}
           </div>
@@ -522,68 +494,23 @@ function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished:
 
 export const FederatedGraphsCards = ({
   graphs,
-  refetch,
   hasStaleMetrics,
 }: {
   graphs?: FederatedGraph[];
-  refetch: () => void;
   hasStaleMetrics: boolean;
 }) => {
-  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
-  const [token, setToken] = useState<string | undefined>();
-  const [isMigrating, setIsMigrating] = useState(false);
-  const checkUserAccess = useCheckUserAccess();
-
-  useEffect(() => {
-    if (isMigrationSuccess) {
-      const to = setTimeout(setIsMigrating, 1500, false);
-      return () => clearTimeout(to);
-    }
-  }, [isMigrationSuccess]);
-
   if (!graphs || graphs.length === 0)
     return (
       <div className="flex flex-col items-center gap-y-8">
-        <Empty
-          refetch={refetch}
-          setIsMigrationSuccess={setIsMigrationSuccess}
-          setToken={setToken}
-          isMigrating={isMigrating}
-          setIsMigrating={setIsMigrating}
-        />
+        <Empty />
       </div>
     );
 
   return (
-    <>
-      {isMigrationSuccess && token && (
-        <>
-          <MigrationSuccess />
-          <RunRouterCommand
-            open={isMigrationSuccess}
-            setOpen={setIsMigrationSuccess}
-            graphName={graphs[graphs.length - 1].name}
-            token={token}
-            hint="The Graph API Token which is scoped to the migrated
-                federated graph is generated. Please store it safely for future
-                use."
-          />
-        </>
-      )}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {graphs.map((graph, graphIndex) => {
-          return <GraphCard key={graphIndex.toString()} graph={graph} hasStaleMetrics={hasStaleMetrics} />;
-        })}
-        {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
-          <MigrationDialog
-            refetch={refetch}
-            setIsMigrationSuccess={setIsMigrationSuccess}
-            setToken={setToken}
-            isMigrating={isMigrating}
-            setIsMigrating={setIsMigrating}
-          />
-        )}
-      </div>
-    </>
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {graphs.map((graph, graphIndex) => {
+        return <GraphCard key={graphIndex.toString()} graph={graph} hasStaleMetrics={hasStaleMetrics} />;
+      })}
+    </div>
   );
 };
