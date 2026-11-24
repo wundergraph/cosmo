@@ -1,19 +1,8 @@
+import path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { createWorkspace, lockForReleaseA, runForge } from './harness.js';
+import { createWorkspace, runForge } from './harness.js';
 
-const manifest = (check: string) => `version: 1
-router:
-  release: 0.299.0
-modules: []
-${check}`;
-
-const blockingPagination = `check:
-  rules:
-    pagination.forward-connection: error
-`;
-
-const graph = `version: 1
-subgraphs:
+const subgraphs = `subgraphs:
   - name: orders
     routing_url: http://localhost:4001/graphql
     schema:
@@ -22,6 +11,16 @@ subgraphs:
     routing_url: http://localhost:4002/graphql
     schema:
       file: services/returns/schema.graphql
+`;
+
+const config = (check: string, graphSubgraphs = subgraphs) => `graph: shop
+${graphSubgraphs}router:
+  release: 0.299.0
+${check}`;
+
+const blockingPagination = `check:
+  rules:
+    pagination.forward-connection: error
 `;
 
 const orders = `type Query {
@@ -87,9 +86,7 @@ type Return {
 
 const checkWorkspace = (returns: string, check = blockingPagination) =>
   createWorkspace({
-    'forge.yaml': manifest(check),
-    'forge.lock': lockForReleaseA,
-    'graph.yaml': graph,
+    'wundergraph.yaml': config(check),
     'services/orders/schema.graphql': orders,
     'services/returns/schema.graphql': returns,
   });
@@ -125,8 +122,9 @@ describe('wgc forge check', () => {
       error: {
         code: 'CHECK_FAILED',
         message: 'The check found 1 blocking finding(s).',
-        input: `${workspace}/graph.yaml`,
-        remediation: 'Repair each finding, or record an approved exception under `check.exceptions` in forge.yaml.',
+        input: 'wundergraph.yaml: subgraphs',
+        remediation:
+          'Repair each finding, or record an approved exception under `check.exceptions` in wundergraph.yaml.',
       },
       data: {
         complete: true,
@@ -256,23 +254,23 @@ describe('wgc forge check', () => {
     expect(run.exitCode).toBe(3);
     const { error, data } = JSON.parse(run.stdout);
     expect(error.message).toBe('The check is incomplete: the graph does not compose.');
+    expect(error.input).toBe('wundergraph.yaml: subgraphs');
     expect(error.remediation).toBe('Fix the composition errors, then run the check again.');
     expect(data.complete).toBe(false);
     expect(data.compositionErrors.join('\n')).toContain('Missing');
   });
 
-  test('without a graph file there is nothing to check, which is a failure', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest(''), 'forge.lock': lockForReleaseA });
+  test('without subgraphs there is nothing to check, which is a failure', async () => {
+    const workspace = await createWorkspace({ 'wundergraph.yaml': config('', 'subgraphs: []\n') });
 
     const run = await runForge(['check'], { workspace });
 
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
-      message: `There is no graph to check: ${workspace}/graph.yaml does not exist.`,
-      input: `${workspace}/graph.yaml`,
-      remediation:
-        'List the subgraphs and their schema files in the graph file, in the input format of `wgc router compose`, or pass --graph <file>.',
+      message: 'There is no graph to check: wundergraph.yaml lists no subgraphs.',
+      input: 'wundergraph.yaml: subgraphs',
+      remediation: 'List the subgraphs and their schemas under `subgraphs` in wundergraph.yaml.',
     });
   });
 
@@ -283,8 +281,8 @@ describe('wgc forge check', () => {
 
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
-      message: 'forge.yaml sets a rule that does not exist: pagination.offset.',
-      input: 'forge.yaml: check.rules.pagination.offset',
+      message: 'wundergraph.yaml sets a rule that does not exist: pagination.offset.',
+      input: 'wundergraph.yaml: check.rules.pagination.offset',
       remediation: 'Run `wgc forge check --help` to list the rules.',
     });
   });
@@ -311,9 +309,10 @@ describe('wgc forge check', () => {
       'ORDER_DEFINITIONS',
     ];
     const workspace = await createWorkspace({
-      'forge.yaml': manifest(`check:\n  rules:\n${rules.map((rule) => `    ${rule}: error\n`).join('')}`),
-      'forge.lock': lockForReleaseA,
-      'graph.yaml': 'version: 1\nsubgraphs:\n  - name: kitchen\n    schema:\n      file: kitchen.graphql\n',
+      'wundergraph.yaml': config(
+        `check:\n  rules:\n${rules.map((rule) => `    ${rule}: error\n`).join('')}`,
+        'subgraphs:\n  - name: kitchen\n    schema:\n      file: kitchen.graphql\n',
+      ),
       'kitchen.graphql': `type Query {
   zebra: String @deprecated
   apple: typeUser
@@ -383,5 +382,153 @@ interface NodeInterface {
       'ORDER_DEFINITIONS EnumColor',
       'ORDER_DEFINITIONS InterfaceNode',
     ]);
+  });
+
+  test('a schema command runs in the directory of wundergraph.yaml, and its findings point at the command', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config(
+        '',
+        `subgraphs:
+  - name: orders
+    schema:
+      file: services/orders/schema.graphql
+  - name: returns
+    schema:
+      command: cat sdl/returns.graphql
+`,
+      ),
+      'services/orders/schema.graphql': orders,
+      'sdl/returns.graphql': offsetReturns,
+    });
+
+    const run = await runForge(['check'], { workspace: path.join(workspace, 'services'), caller: 'human' });
+
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).toBe(
+      [
+        'WARN  FIELD_NAMES_SHOULD_BE_CAMEL_CASE  Return.refund_reason',
+        '      cat sdl/returns.graphql:8:3',
+        '      Field "refund_reason" should be in camelCase.',
+        '0 error(s), 1 warning(s), 0 exception(s) in 2 subgraph(s).',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  test('--dir names the directory of wundergraph.yaml from anywhere else', async () => {
+    const workspace = await createWorkspace({
+      'graph/wundergraph.yaml': config(
+        blockingPagination,
+        `subgraphs:
+  - name: orders
+    schema:
+      file: services/orders/schema.graphql
+  - name: returns
+    schema:
+      command: cat sdl/returns.graphql
+`,
+      ),
+      'graph/services/orders/schema.graphql': orders,
+      'graph/sdl/returns.graphql': offsetReturns,
+    });
+
+    const run = await runForge(['check', '--dir', 'graph'], { workspace });
+
+    expect(run.exitCode).toBe(3);
+    expect(JSON.parse(run.stdout).data.findings).toEqual([
+      { ...camelCaseFinding, location: { file: 'cat sdl/returns.graphql', line: 8, column: 3 } },
+      {
+        ...paginationFinding,
+        location: { file: 'cat sdl/returns.graphql', line: 2, column: 3 },
+      },
+    ]);
+  });
+
+  test('a plugin subgraph is checked from the schema in its directory', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config(
+        '',
+        `subgraphs:
+  - name: payments
+    kind: plugin
+    path: plugins/payments
+    version: 0.0.1
+`,
+      ),
+      'plugins/payments/src/schema.graphql': 'type Query {\n  payment_total: Int\n}\n',
+    });
+
+    const run = await runForge(['check'], { workspace });
+
+    expect(run.exitCode).toBe(0);
+    expect(JSON.parse(run.stdout).data).toEqual({
+      complete: true,
+      compositionErrors: [],
+      findings: [
+        {
+          rule: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+          severity: 'warn',
+          coordinate: 'Query.payment_total',
+          message: 'Field "payment_total" should be in camelCase.',
+          location: { file: 'plugins/payments/src/schema.graphql', line: 2, column: 3 },
+        },
+      ],
+      exceptions: [],
+      summary: { errors: 0, warnings: 1, exceptions: 0, subgraphs: 1 },
+    });
+  });
+
+  test('a schema command that fails stops the check with its exit code and output', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config(
+        '',
+        `subgraphs:
+  - name: returns
+    schema:
+      command: echo "returns service is down" >&2; exit 7
+`,
+      ),
+    });
+
+    const run = await runForge(['check'], { workspace });
+
+    expect(run.exitCode).toBe(1);
+    expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
+      message:
+        'The schema command `echo "returns service is down" >&2; exit 7` of subgraph returns exited with code 7:\nreturns service is down',
+      input: 'wundergraph.yaml: subgraphs returns',
+      remediation: 'Fix the command, which runs in the directory of wundergraph.yaml and must print the subgraph SDL.',
+    });
+  });
+
+  test('a missing schema file names the subgraph', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config(''),
+      'services/orders/schema.graphql': orders,
+    });
+
+    const run = await runForge(['check'], { workspace });
+
+    expect(run.exitCode).toBe(1);
+    expect(JSON.parse(run.stdout).error).toEqual({
+      code: 'COMMAND_FAILED',
+      message: 'The schema file services/returns/schema.graphql of subgraph returns does not exist.',
+      input: 'wundergraph.yaml: subgraphs returns',
+      remediation: 'Correct the path, which is relative to wundergraph.yaml.',
+    });
+  });
+
+  test('a wundergraph.yaml without a router section is checked', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': `graph: shop\n${subgraphs}`,
+      'services/orders/schema.graphql': orders,
+      'services/returns/schema.graphql': connectionReturns,
+    });
+
+    const run = await runForge(['check'], { workspace });
+
+    expect(run.exitCode).toBe(0);
+    expect(JSON.parse(run.stdout).data.summary).toEqual({ errors: 0, warnings: 0, exceptions: 0, subgraphs: 2 });
   });
 });

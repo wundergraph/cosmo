@@ -7,8 +7,8 @@ import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import type { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import { compileGraphQLToMapping, compileGraphQLToProto, validateGraphQLSDL } from '@wundergraph/protographic';
+import type { LockedRouter } from '@wundergraph/wgc-plugin-sdk/config';
 import { localModuleName } from '../catalog.js';
-import type { LockedRouter } from '../lock.js';
 import { routerModule } from '../resolve.js';
 import { modulesDirectory } from '../workspace.js';
 import { pascalName, renderSdl } from './model.js';

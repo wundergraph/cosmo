@@ -11,19 +11,23 @@ import {
   versionA,
 } from './harness.js';
 
-const manifest = `version: 1
+const config = `graph: shop
 router:
   release: 0.299.0
-binary: bin/router
-modules:
-  - path: ./modules/request-id
+  binary: bin/router
+  modules:
+    - path: ./modules/request-id
 `;
 
 const localModule = { 'modules/request-id/go.mod': 'module forge.local/request-id\n\ngo 1.26.0\n' };
 
 describe('wgc forge build', () => {
   test('generates the build module, compiles, and reports the binary path', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
     const system = createFakeSystem();
 
     const run = await runForge(['build'], { workspace, system });
@@ -67,7 +71,11 @@ func main() {
   });
 
   test('reports one progress event per real step, in order', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
 
     const run = await runForge(['build'], { workspace });
 
@@ -79,40 +87,51 @@ func main() {
     ]);
   });
 
-  test('builds from the pins in forge.lock without resolving anything', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
+  test('builds from the pins in wundergraph.lock without resolving anything', async () => {
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
     const system = createFakeSystem();
 
     await runForge(['build'], { workspace, system });
 
     expect(system.commands.filter((command) => command.startsWith('git ls-remote'))).toEqual([]);
-    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
+    expect(await read(workspace, 'wundergraph.lock')).toBe(lockForReleaseA);
   });
 
-  test('a missing or out of date forge.lock is refused, because a build never changes pins', async () => {
-    const withRemote = manifest.replace('modules:\n', 'modules:\n  - go: github.com/acme/mod\n    version: v1.2.0\n');
-    const missing = await createWorkspace({ 'forge.yaml': manifest, ...localModule });
-    const stale = await createWorkspace({ 'forge.yaml': withRemote, 'forge.lock': lockForReleaseA, ...localModule });
+  test('a missing or out of date wundergraph.lock is refused, because a build never changes pins', async () => {
+    const withRemote = config.replace(
+      '  modules:\n',
+      '  modules:\n    - go: github.com/acme/mod\n      version: v1.2.0\n',
+    );
+    const missing = await createWorkspace({ 'wundergraph.yaml': config, ...localModule });
+    const stale = await createWorkspace({
+      'wundergraph.yaml': withRemote,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
 
     const expected = {
       ok: false,
       error: {
         code: 'COMMAND_FAILED',
-        message: 'forge.lock does not pin what forge.yaml asks for, and a build never changes pins.',
-        input: 'forge.lock',
+        message: 'wundergraph.lock does not pin what wundergraph.yaml asks for, and a build never changes pins.',
+        input: 'wundergraph.lock',
         remediation: 'Run `wgc forge lock` to review and pin the changes, then build again.',
       },
     };
     expect(JSON.parse((await runForge(['build'], { workspace: missing })).stdout)).toEqual(expected);
     expect(JSON.parse((await runForge(['build'], { workspace: stale })).stdout)).toEqual(expected);
-    await expect(read(missing, 'forge.lock')).rejects.toThrow('ENOENT');
-    expect(await read(stale, 'forge.lock')).toBe(lockForReleaseA);
+    await expect(read(missing, 'wundergraph.lock')).rejects.toThrow('ENOENT');
+    expect(await read(stale, 'wundergraph.lock')).toBe(lockForReleaseA);
   });
 
   test('a failed compile keeps the working binary and does not write pins', async () => {
     const workspace = await createWorkspace({
-      'forge.yaml': manifest,
-      'forge.lock': lockForReleaseA,
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
       ...localModule,
       'bin/router': 'the working router',
     });
@@ -131,14 +150,14 @@ func main() {
       },
     });
     expect(await read(workspace, 'bin/router')).toBe('the working router');
-    expect(await read(workspace, 'forge.lock')).toBe(lockForReleaseA);
+    expect(await read(workspace, 'wundergraph.lock')).toBe(lockForReleaseA);
     expect(run.progress.map((event) => event.step)).not.toContain('place-binary');
   });
 
   test('a module that needs a newer router than the pinned one is a conflict naming it and both versions', async () => {
     const workspace = await createWorkspace({
-      'forge.yaml': manifest,
-      'forge.lock': lockForReleaseA,
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
       ...localModule,
       'bin/router': 'the working router',
     });
@@ -169,16 +188,16 @@ func main() {
 
   test('two entries that pin one module at different versions are a conflict before Go runs', async () => {
     const workspace = await createWorkspace({
-      'forge.yaml': `version: 1
+      'wundergraph.yaml': `graph: shop
 router:
   release: 0.299.0
-modules:
-  - go: github.com/acme/mod/headers
-    version: v1.2.0
-  - go: github.com/acme/mod/auth
-    version: v1.3.0
+  modules:
+    - go: github.com/acme/mod/headers
+      version: v1.2.0
+    - go: github.com/acme/mod/auth
+      version: v1.3.0
 `,
-      'forge.lock': lockForReleaseA.replace(
+      'wundergraph.lock': lockForReleaseA.replace(
         'modules: []',
         `modules:
   - source:
@@ -208,42 +227,65 @@ modules:
       code: 'COMMAND_FAILED',
       message:
         'Module github.com/acme/mod is pinned at two versions, v1.2.0 and v1.3.0. A router is built with one version of each module.',
-      input: 'forge.yaml: modules github.com/acme/mod',
+      input: 'wundergraph.yaml: router.modules github.com/acme/mod',
       remediation:
-        'Use the same version or ref for every entry of github.com/acme/mod in forge.yaml, then run `wgc forge lock`.',
+        'Use the same version or ref for every entry of github.com/acme/mod in wundergraph.yaml, then run `wgc forge lock`.',
     });
   });
 
-  test('a local module directory without go.mod names the manifest entry', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA });
+  test('a local module directory without go.mod names the router.modules entry', async () => {
+    const workspace = await createWorkspace({ 'wundergraph.yaml': config, 'wundergraph.lock': lockForReleaseA });
 
     const run = await runForge(['build'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
       message: 'Local module ./modules/request-id has no go.mod.',
-      input: 'forge.yaml: modules path ./modules/request-id',
+      input: 'wundergraph.yaml: router.modules path ./modules/request-id',
       remediation: 'Create the module with `wgc forge create`, or run `go mod init` in ./modules/request-id.',
     });
   });
 
-  test('without a workspace the failure says how to create one', async () => {
+  test('without a wundergraph.yaml the failure says how to add a router', async () => {
     const workspace = await createWorkspace();
 
     const run = await runForge(['build'], { workspace });
 
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'COMMAND_FAILED',
-      message: `No forge.yaml in ${workspace}.`,
-      input: `${workspace}/forge.yaml`,
-      remediation: 'Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+      message: `No wundergraph.yaml in ${workspace}.`,
+      input: `${workspace}/wundergraph.yaml`,
+      remediation:
+        'Run `wgc forge init` to add a router to wundergraph.yaml here, or pass --dir <directory of wundergraph.yaml>.',
     });
+  });
+
+  test('a wundergraph.yaml without a router section says how to select a release', async () => {
+    const workspace = await createWorkspace({ 'wundergraph.yaml': 'graph: shop\nsubgraphs: []\n' });
+
+    const run = await runForge(['build'], { workspace });
+
+    expect(run.exitCode).toBe(1);
+    expect(JSON.parse(run.stdout)).toEqual({
+      ok: false,
+      error: {
+        code: 'COMMAND_FAILED',
+        message: `wundergraph.yaml in ${workspace} has no \`router\` section.`,
+        input: 'wundergraph.yaml: router',
+        remediation: 'Run `wgc forge init` to select a router release.',
+      },
+    });
+    await expect(read(workspace, '.forge/bin/router')).rejects.toThrow('ENOENT');
   });
 });
 
 describe('output for the caller', () => {
   test('a person at a terminal reads text: progress lines on stderr and a summary on stdout', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
 
     const run = await runForge(['build'], { workspace, caller: 'human' });
 
@@ -253,7 +295,11 @@ describe('output for the caller', () => {
   });
 
   test('--json gives a person the same JSON an agent gets', async () => {
-    const workspace = await createWorkspace({ 'forge.yaml': manifest, 'forge.lock': lockForReleaseA, ...localModule });
+    const workspace = await createWorkspace({
+      'wundergraph.yaml': config,
+      'wundergraph.lock': lockForReleaseA,
+      ...localModule,
+    });
 
     const run = await runForge(['build', '--json'], { workspace, caller: 'human' });
 
@@ -273,10 +319,10 @@ describe('output for the caller', () => {
     expect(run.stderr).toBe(
       [
         'error COMMAND_FAILED',
-        `  No forge.yaml in ${workspace}.`,
-        '  Run `wgc forge init` to create a Forge workspace here, or pass --dir <workspace>.',
+        `  No wundergraph.yaml in ${workspace}.`,
+        '  Run `wgc forge init` to add a router to wundergraph.yaml here, or pass --dir <directory of wundergraph.yaml>.',
         '',
-        `  Input ${workspace}/forge.yaml`,
+        `  Input ${workspace}/wundergraph.yaml`,
         '',
       ].join('\n'),
     );

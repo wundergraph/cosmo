@@ -1,42 +1,41 @@
 import type { Output, Result } from '@wundergraph/wgc-plugin-sdk';
-import type { Lock, LockedModule, LockedRouter } from './lock.js';
-import { describeModuleSource, describeRouterSource, isGitModule, isLocalModule, sameSource } from './manifest.js';
-import type { Manifest, ModuleSource } from './manifest.js';
+import type { Lock, LockedModule, LockedRouter, ModuleSource, RouterConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import { describeModuleSource, describeRouterSource, isGitModule, isLocalModule, sameSource } from './sources.js';
 import { resolveModule, resolveRouter } from './resolve.js';
 import type { System } from './system.js';
 
 /**
- * Works out the pins for a manifest. Pins already in `previous` for an unchanged source are kept, so only an
+ * Works out the pins for the router section of wundergraph.yaml. Pins already in `previous` for an unchanged source are kept, so only an
  * explicit re-add moves a branch or a versionless package forward.
  */
 export const resolvePins = async ({
-  manifest,
+  router,
   previous,
   system,
   output,
 }: {
-  manifest: Manifest;
+  router: RouterConfig;
   previous: Lock | undefined;
   system: System;
   output: Output;
 }): Promise<Result<Lock>> => {
-  const routerSubject = `router ${describeRouterSource(manifest.router)}`;
-  let router: LockedRouter;
-  if (previous && sameSource(previous.router.source, manifest.router)) {
-    router = previous.router;
-    output.progress({ step: 'resolve-router', subject: routerSubject, message: `Pinned at ${router.version}` });
+  const routerSubject = `router ${describeRouterSource(router.source)}`;
+  let lockedRouter: LockedRouter;
+  if (previous && sameSource(previous.router.source, router.source)) {
+    lockedRouter = previous.router;
+    output.progress({ step: 'resolve-router', subject: routerSubject, message: `Pinned at ${lockedRouter.version}` });
   } else {
     output.progress({ step: 'resolve-router', subject: routerSubject, message: 'Resolving the commit and Go version' });
-    const resolved = await resolveRouter(system, manifest.router);
+    const resolved = await resolveRouter(system, router.source);
     if (!resolved.success) {
       return resolved;
     }
-    router = resolved.data;
-    output.progress({ step: 'resolve-router', subject: routerSubject, message: `Resolved to ${router.version}` });
+    lockedRouter = resolved.data;
+    output.progress({ step: 'resolve-router', subject: routerSubject, message: `Resolved to ${lockedRouter.version}` });
   }
 
   const modules: LockedModule[] = [];
-  for (const source of manifest.modules) {
+  for (const source of router.modules) {
     const subject = describeModuleSource(source);
     if (isLocalModule(source)) {
       output.progress({ step: 'resolve-module', subject, message: 'Local module, built from disk and not pinned' });
@@ -59,16 +58,16 @@ export const resolvePins = async ({
     output.progress({ step: 'resolve-module', subject, message: `Resolved to ${resolved.data.version}` });
   }
 
-  return { success: true, data: { version: 1, router, modules } };
+  return { success: true, data: { version: 1, router: lockedRouter, modules } };
 };
 
-/** True when `lock` pins exactly the router and remote modules `manifest` asks for. */
-export const lockMatches = (manifest: Manifest, lock: Lock | undefined): lock is Lock => {
-  if (lock === undefined || !sameSource(lock.router.source, manifest.router)) {
+/** True when `lock` pins exactly the router and remote modules the router section asks for. */
+export const lockMatches = (router: RouterConfig, lock: Lock | undefined): lock is Lock => {
+  if (lock === undefined || !sameSource(lock.router.source, router.source)) {
     return false;
   }
 
-  const remoteModules = manifest.modules.filter((source) => !isLocalModule(source));
+  const remoteModules = router.modules.filter((source) => !isLocalModule(source));
   if (remoteModules.length !== lock.modules.length) {
     return false;
   }

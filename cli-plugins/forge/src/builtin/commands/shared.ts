@@ -1,8 +1,9 @@
 import path from 'node:path';
 import type { PluginContext } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
-import type { Lock } from '../lock.js';
-import { describeRouterSource } from '../manifest.js';
+import { configFileName, locateConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import type { Lock } from '@wundergraph/wgc-plugin-sdk/config';
+import { describeRouterSource } from '../sources.js';
 import type { System } from '../system.js';
 
 export interface ForgeDependencies {
@@ -41,11 +42,20 @@ export const askToAccept = async (
 
 export const withCommonOptions = (command: Command): Command =>
   command
-    .option('--dir <path>', 'The Forge workspace directory. Defaults to the current directory.')
+    .option(
+      '--dir <path>',
+      `The directory of ${configFileName}. Defaults to the nearest one at or above the current directory.`,
+    )
     .option('--json', 'Print the result as JSON and progress as NDJSON events on stderr.');
 
-export const workspaceOf = (dependencies: ForgeDependencies, options: CommonOptions): string =>
-  path.resolve(dependencies.cwd(), options.dir ?? '.');
+/** The directory of wundergraph.yaml: `--dir`, else the nearest one at or above the current directory, else that directory. */
+export const workspaceOf = (dependencies: ForgeDependencies, options: CommonOptions): string => {
+  if (options.dir !== undefined) {
+    return path.resolve(dependencies.cwd(), options.dir);
+  }
+  const located = locateConfig(dependencies.cwd());
+  return located === undefined ? dependencies.cwd() : path.dirname(located);
+};
 
 export const routerSummary = (lock: Lock) => ({
   source: describeRouterSource(lock.router.source),

@@ -1,10 +1,9 @@
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Command } from 'commander';
+import { configFileName, lockFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import { buildRouter } from '../build.js';
-import { lockFileName, readLock } from '../lock.js';
-import { manifestFileName, readManifest } from '../manifest.js';
 import { lockMatches } from '../pins.js';
-import { workspacePaths } from '../workspace.js';
+import { readLock, readRouterWorkspace, workspacePaths } from '../workspace.js';
 import { moduleSummaries, routerSummary, withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
 
@@ -26,26 +25,27 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
     const output = context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const read = await readRouterWorkspace(workspace);
+    if (!read.success) {
+      return output.fail(toFailure(read));
     }
+    const { router } = read.data;
     const lock = await readLock(workspace);
     if (!lock.success) {
       return output.fail(toFailure(lock));
     }
-    if (!lockMatches(manifest.data, lock.data)) {
+    if (!lockMatches(router, lock.data)) {
       return output.fail({
-        message: `${lockFileName} does not pin what ${manifestFileName} asks for, and a build never changes pins.`,
+        message: `${lockFileName} does not pin what ${configFileName} asks for, and a build never changes pins.`,
         input: lockFileName,
         remediation: 'Run `wgc forge lock` to review and pin the changes, then build again.',
       });
     }
 
-    const paths = workspacePaths(workspace, manifest.data);
+    const paths = workspacePaths(workspace, router);
     const built = await buildRouter({
       workspace,
-      manifest: manifest.data,
+      router,
       lock: lock.data,
       buildDirectory: paths.buildDirectory,
       binaryPath: paths.binary,
@@ -57,7 +57,7 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
       return output.fail(toFailure(built));
     }
 
-    const localModules = manifest.data.modules.length - lock.data.modules.length;
+    const localModules = router.modules.length - lock.data.modules.length;
     output.result(
       {
         binary: built.data.binary,
@@ -66,7 +66,7 @@ export const registerBuild = (command: Command, dependencies: ForgeDependencies)
         localModules,
       },
       (data) =>
-        `Built ${data.binary}\n  router ${data.router.source} (${data.router.version}), ${manifest.data.modules.length} module(s)`,
+        `Built ${data.binary}\n  router ${data.router.source} (${data.router.version}), ${router.modules.length} module(s)`,
     );
   });
 };

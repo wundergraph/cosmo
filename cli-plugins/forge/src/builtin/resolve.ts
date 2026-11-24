@@ -4,10 +4,16 @@ import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
 import semver from 'semver';
 import { z } from 'zod';
+import type {
+  GitModuleSource,
+  GoModuleSource,
+  LockedModule,
+  LockedRouter,
+  RemoteModuleSource,
+  RouterSource,
+} from '@wundergraph/wgc-plugin-sdk/config';
 import { lastLines } from './failure.js';
-import type { LockedModule, LockedRouter } from './lock.js';
-import { describeRouterSource, isGitModule } from './manifest.js';
-import type { GitModuleSource, GoModuleSource, RemoteModuleSource, RouterSource } from './manifest.js';
+import { describeRouterSource, isGitModule } from './sources.js';
 import type { System } from './system.js';
 
 export const routerModule = 'github.com/wundergraph/cosmo/router';

@@ -1,17 +1,13 @@
-import path from 'node:path';
 import { toFailure } from '@wundergraph/wgc-plugin-sdk';
+import { configFileName } from '@wundergraph/wgc-plugin-sdk/config';
 import type { Command } from 'commander';
 import { checkGraph, ruleIds } from '../check/check.js';
 import type { CheckReport } from '../check/check.js';
 import type { ExceptedFinding, Finding } from '../check/findings.js';
-import { defaultGraphFile, loadGraph } from '../graph.js';
-import { manifestFileName, readManifest } from '../manifest.js';
+import { loadSubgraphs } from '../check/subgraphs.js';
+import { readConfig } from '../workspace.js';
 import { withCommonOptions, workspaceOf } from './shared.js';
 import type { CommonOptions, ForgeDependencies } from './shared.js';
-
-interface CheckOptions extends CommonOptions {
-  graph?: string;
-}
 
 const indent = '      ';
 
@@ -54,17 +50,13 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
     command
       .command('check')
       .description(
-        'Check the graph against the API design rules. Exits 3 on a blocking finding or when the graph does not compose.',
-      )
-      .option(
-        '--graph <file>',
-        `The graph file, in the input format of \`wgc router compose\`. Defaults to \`check.graph\` in ${manifestFileName}, then ${defaultGraphFile}.`,
+        `Check the subgraphs of ${configFileName} against the API design rules. Exits 3 on a blocking finding or when the graph does not compose.`,
       )
       .addHelpText(
         'after',
         [
           '',
-          `Rules are set under \`check.rules\` in ${manifestFileName} as <rule>: error | warn | off.`,
+          `Rules are set under \`check.rules\` in ${configFileName} as <rule>: error | warn | off.`,
           'A finding of an `error` rule blocks. Approved exceptions go under `check.exceptions` as',
           '{ rule, coordinate, reason } and are reported apart from the open findings.',
           '',
@@ -72,30 +64,26 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
           ...ruleIds().map((id) => `  ${id}`),
         ].join('\n'),
       ),
-  ).action(async (options: CheckOptions) => {
+  ).action(async (options: CommonOptions) => {
     const output = dependencies.context.output({ json: options.json });
     const workspace = workspaceOf(dependencies, options);
 
-    const manifest = await readManifest(workspace);
-    if (!manifest.success) {
-      return output.fail(toFailure(manifest));
+    const config = await readConfig(workspace);
+    if (!config.success) {
+      return output.fail(toFailure(config));
     }
-    const policy = manifest.data.check ?? {};
+    const policy = config.data.check ?? {};
 
     const unknownRule = Object.keys(policy.rules ?? {}).find((rule) => !ruleIds().includes(rule));
     if (unknownRule !== undefined) {
       return output.fail({
-        message: `${manifestFileName} sets a rule that does not exist: ${unknownRule}.`,
-        input: `${manifestFileName}: check.rules.${unknownRule}`,
+        message: `${configFileName} sets a rule that does not exist: ${unknownRule}.`,
+        input: `${configFileName}: check.rules.${unknownRule}`,
         remediation: 'Run `wgc forge check --help` to list the rules.',
       });
     }
 
-    const graphPath =
-      options.graph === undefined
-        ? path.resolve(workspace, policy.graph ?? defaultGraphFile)
-        : path.resolve(dependencies.cwd(), options.graph);
-    const subgraphs = await loadGraph(graphPath);
+    const subgraphs = await loadSubgraphs(workspace, config.data.subgraphs, dependencies.system);
     if (!subgraphs.success) {
       return output.fail(toFailure(subgraphs));
     }
@@ -107,7 +95,7 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
         {
           kind: 'findings',
           message: 'The check is incomplete: the graph does not compose.',
-          input: graphPath,
+          input: `${configFileName}: subgraphs`,
           remediation: 'Fix the composition errors, then run the check again.',
           data: report,
         },
@@ -120,8 +108,8 @@ export const registerCheck = (command: Command, dependencies: ForgeDependencies)
         {
           kind: 'findings',
           message: `The check found ${report.summary.errors} blocking finding(s).`,
-          input: graphPath,
-          remediation: `Repair each finding, or record an approved exception under \`check.exceptions\` in ${manifestFileName}.`,
+          input: `${configFileName}: subgraphs`,
+          remediation: `Repair each finding, or record an approved exception under \`check.exceptions\` in ${configFileName}.`,
           data: report,
         },
         renderReport,

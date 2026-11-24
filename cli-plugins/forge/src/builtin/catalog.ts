@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { failWith } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
-import type { LockedRouter } from './lock.js';
+import type { LockedRouter } from '@wundergraph/wgc-plugin-sdk/config';
 import { routerModule } from './resolve.js';
 import { modulesDirectory } from './workspace.js';
 

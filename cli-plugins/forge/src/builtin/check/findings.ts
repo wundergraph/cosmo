@@ -20,7 +20,7 @@ export interface Finding {
   reference?: { coordinate: string; file: string };
 }
 
-/** A finding the team has approved in forge.yaml, reported apart from the open ones. */
+/** A finding the team has approved in wundergraph.yaml, reported apart from the open ones. */
 export interface ExceptedFinding extends Finding {
   reason: string;
 }

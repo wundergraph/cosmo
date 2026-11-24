@@ -1,11 +1,10 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { Output, Result } from '@wundergraph/wgc-plugin-sdk';
+import type { Lock, RouterConfig } from '@wundergraph/wgc-plugin-sdk/config';
 import { readLocalModuleName } from './build.js';
 import { lastLines } from './failure.js';
-import type { Lock } from './lock.js';
-import { isLocalModule } from './manifest.js';
-import type { Manifest } from './manifest.js';
+import { isLocalModule } from './sources.js';
 import type { CommandOutcome, System } from './system.js';
 
 /** Behaviour tests a team keeps in the workspace for a module live in `tests/<Go package path>`. */
@@ -18,7 +17,7 @@ export type ModuleOutcome =
 
 export interface ModuleTestRequest {
   workspace: string;
-  manifest: Manifest;
+  router: RouterConfig;
   lock: Lock;
   /** The generated build module of the router under test, which selects the router version the tests compile against. */
   buildDirectory: string;
@@ -28,11 +27,11 @@ export interface ModuleTestRequest {
   output: Output;
 }
 
-/** The Go package each registered module is imported as, local modules first by forge.yaml order. */
-const registeredPackages = async ({ workspace, manifest, lock }: ModuleTestRequest): Promise<Result<string[]>> => {
+/** The Go package each registered module is imported as, local modules first in wundergraph.yaml order. */
+const registeredPackages = async ({ workspace, router, lock }: ModuleTestRequest): Promise<Result<string[]>> => {
   const packages: string[] = [];
 
-  for (const source of manifest.modules) {
+  for (const source of router.modules) {
     if (!isLocalModule(source)) {
       continue;
     }
