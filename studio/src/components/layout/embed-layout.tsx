@@ -54,8 +54,9 @@ export const EmbedLayout = ({ toolbar, children }: { toolbar?: ReactNode; childr
 
   return (
     <div ref={contentRef} className="flex flex-col gap-y-4 bg-background py-4 font-sans antialiased">
-      {toolbar && <div className="flex justify-end">{toolbar}</div>}
-      <div className="px-4 lg:px-8">{children}</div>
+      {/* Hub's page already has the side margins, so the frame's content runs edge to edge. */}
+      {toolbar && <div className="flex justify-end [&>*]:!px-0">{toolbar}</div>}
+      {children}
     </div>
   );
 };
