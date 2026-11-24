@@ -66,7 +66,9 @@ export interface AfterHookEvent<N extends HookableCommand> extends BeforeHookEve
 }
 
 /** Resolves to undefined when the hook has nothing to add, e.g. outside the setting it serves. */
-export type BeforeHook<N extends HookableCommand> = (event: BeforeHookEvent<N>) => Promise<HookContribution | undefined>;
+export type BeforeHook<N extends HookableCommand> = (
+  event: BeforeHookEvent<N>,
+) => Promise<HookContribution | undefined>;
 
 export type AfterHook<N extends HookableCommand> = (event: AfterHookEvent<N>) => Promise<HookContribution | undefined>;
 
