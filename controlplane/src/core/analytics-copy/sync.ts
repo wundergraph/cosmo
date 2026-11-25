@@ -127,9 +127,12 @@ export function scramSha256Verifier(password: string): string {
  * stream was closed, so the source connection would stall and its transaction could never roll back. `pipeline`
  * closes every stream it was given when one fails, so the source is piped into a relay that `pipeline` may close.
  */
-async function streamCopy(readable: Readable, openWritable: () => Promise<Writable>): Promise<void> {
+export async function streamCopy(readable: Readable, openWritable: () => Promise<Writable>): Promise<void> {
   const relay = new PassThrough();
   readable.on('error', (error) => relay.destroy(error));
+  // Until pipeline listens to the relay, a source error would otherwise be raised as an uncaught error.
+  // pipeline still sees the error, because the relay is already destroyed with it.
+  relay.on('error', () => {});
   readable.pipe(relay);
   try {
     await pipeline(relay, await openWritable());

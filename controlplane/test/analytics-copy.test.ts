@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Readable, Writable } from 'node:stream';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { copiedColumns, resolvePolicy } from '../src/core/analytics-copy/policy.js';
@@ -10,6 +11,7 @@ import {
   PolicyDriftError,
   syncAnalyticsCopy,
   type SyncAnalyticsCopyOptions,
+  streamCopy,
   type SyncAnalyticsCopyResult,
 } from '../src/core/analytics-copy/sync.js';
 import { RunMigration } from '../src/core/migrate.js';
@@ -258,7 +260,11 @@ describe('Analytics copy sync', () => {
     } finally {
       await target.unsafe('DROP EVENT TRIGGER reject_users');
       await target.unsafe('DROP FUNCTION public.reject_users()');
-      await source`DELETE FROM users WHERE email LIKE 'bulk-%'`;
+      // No row references the bulk users, so skip the foreign key checks, which would take seconds.
+      await source.begin(async (sql) => {
+        await sql`SET LOCAL session_replication_role = replica`;
+        await sql`DELETE FROM users WHERE email LIKE 'bulk-%'`;
+      });
     }
   });
 
@@ -270,5 +276,19 @@ describe('Analytics copy sync', () => {
     } finally {
       await target`UPDATE analytics.sync_info SET snapshot_at = ${snapshotAt}`;
     }
+  });
+});
+
+describe('Analytics copy streaming', () => {
+  test('A source error while the target COPY is still opening rejects the copy instead of being uncaught', async () => {
+    const readable = new Readable({ read() {} });
+    const sourceError = new Error('source failed');
+    const openWritable = () =>
+      new Promise<Writable>((resolve) => {
+        readable.destroy(sourceError);
+        setTimeout(() => resolve(new Writable({ write: (_chunk, _encoding, callback) => callback() })), 10);
+      });
+
+    await expect(streamCopy(readable, openWritable)).rejects.toThrow('source failed');
   });
 });
