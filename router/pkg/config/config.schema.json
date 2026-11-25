@@ -1591,7 +1591,7 @@
                 "grpc_service": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of request metrics (count, duration and gRPC status code) for remote gRPC subgraphs. Failed requests are also logged at error level. The default value is false."
+                  "description": "Enable the collection of request metrics (count, duration and gRPC status code) for remote gRPC services. Failed requests are also logged at error level. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
