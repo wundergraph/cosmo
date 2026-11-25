@@ -26,7 +26,7 @@ import { OnboardingProvider } from '@/components/onboarding/onboarding-provider'
 import { NuqsAdapter } from 'nuqs/adapters/next/pages';
 import { PosthogConsentSync } from '@/components/posthog-consent-sync';
 import { OsanoProvider } from '@/components/osano-provider';
-import { HubspotTrackingScript } from '@/hooks/hubspot-tracking-script';
+import { HubspotTrackingScript } from '@/components/hubspot-tracking-script';
 
 const queryClient = new QueryClient();
 
@@ -42,38 +42,39 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     });
   }, []);
 
-  if (pageProps.markdoc) {
-    return (
-      <MarkdownLayout>
-        <Component {...pageProps} />
-      </MarkdownLayout>
-    );
-  }
-
   const getLayout = Component.getLayout ?? ((page) => <Layout>{page}</Layout>);
 
   return (
     <OsanoProvider>
-      <PostHogProvider client={posthog}>
-        <NuqsAdapter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <QueryClientProvider client={queryClient}>
-              <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
-                <OnboardingProvider>
-                  <AppProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      {getLayout(<Component {...pageProps} />)}
-                    </TooltipProvider>
-                  </AppProvider>
-                </OnboardingProvider>
-              </PostHogFeatureFlagProvider>
-            </QueryClientProvider>
-          </ThemeProvider>
-        </NuqsAdapter>
-      </PostHogProvider>
+      {pageProps.markdoc ? (
+        <MarkdownLayout>
+          <Component {...pageProps} />
+        </MarkdownLayout>
+      ) : (
+        <>
+          <PostHogProvider client={posthog}>
+            <NuqsAdapter>
+              <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                <QueryClientProvider client={queryClient}>
+                  <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
+                    <OnboardingProvider>
+                      <AppProvider>
+                        <TooltipProvider>
+                          <Toaster />
+                          {getLayout(<Component {...pageProps} />)}
+                        </TooltipProvider>
+                      </AppProvider>
+                    </OnboardingProvider>
+                  </PostHogFeatureFlagProvider>
+                </QueryClientProvider>
+              </ThemeProvider>
+            </NuqsAdapter>
+          </PostHogProvider>
 
-      <Footer />
+          <Footer />
+        </>
+      )}
+
       <PosthogConsentSync />
       <HubspotTrackingScript />
     </OsanoProvider>

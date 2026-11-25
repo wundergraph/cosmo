@@ -1,9 +1,7 @@
-import { PropsWithChildren, createContext, useEffect, useState, useCallback, useRef } from 'react';
-import { uid } from 'uid';
+import { PropsWithChildren, createContext, useEffect, useMemo, useRef, useState } from 'react';
 
 interface OsanoContextValue {
   consent: OsanoConsent;
-  subscribe(callback: (consent: OsanoConsent) => void): () => void;
 }
 
 export const OsanoContext = createContext<OsanoContextValue | null>(null);
@@ -19,16 +17,7 @@ export const DefaultOsanoConsent: OsanoConsent = {
 
 export function OsanoProvider({ children }: PropsWithChildren) {
   const osanoOnInitializedIsHooked = useRef(false);
-  const osanoContentSavedSubscriptions = useRef<Record<string, (consent: OsanoConsent) => void>>({});
-
   const [consent, setConsent] = useState(DefaultOsanoConsent);
-  const subscribe = useCallback<OsanoContextValue['subscribe']>((callback) => {
-    const id = uid(11);
-    osanoContentSavedSubscriptions.current[id] = callback;
-    return () => {
-      delete osanoContentSavedSubscriptions.current[id];
-    };
-  }, []);
 
   useEffect(() => {
     function onOsanoInitialized(consent: OsanoConsent | undefined) {
@@ -42,13 +31,9 @@ export function OsanoProvider({ children }: PropsWithChildren) {
       window.Osano.cm?.on('osano-cm-ui-changed', onOsanoUiChanged);
     }
 
+    // Consumers react to the consent state through useOsanoConsentSaved, so storing it is the only delivery.
     function onOsanoConsentSaved(consent: OsanoConsent) {
       setConsent(consent);
-
-      // window.Osano.cm?.on('osano-cm-ui-changed', onOsanoUiChanged)
-      for (const callback of Object.values(osanoContentSavedSubscriptions.current)) {
-        callback(consent);
-      }
     }
 
     function onOsanoUiChanged(component: string, stateChange: 'hide' | 'show') {
@@ -57,11 +42,13 @@ export function OsanoProvider({ children }: PropsWithChildren) {
       }
     }
 
-    if (!osanoOnInitializedIsHooked.current) {
+    if (!osanoOnInitializedIsHooked.current && window.Osano) {
       osanoOnInitializedIsHooked.current = true;
       window.Osano('onInitialized', onOsanoInitialized);
     }
   }, []);
 
-  return <OsanoContext.Provider value={{ consent, subscribe }}>{children}</OsanoContext.Provider>;
+  const value = useMemo(() => ({ consent }), [consent]);
+
+  return <OsanoContext.Provider value={value}>{children}</OsanoContext.Provider>;
 }

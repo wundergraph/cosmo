@@ -1,17 +1,12 @@
-import { useContext, useEffect } from 'react';
-import { OsanoContext } from '@/components/osano-provider';
+import { useEffect, useRef } from 'react';
+import { useOsanoConsent } from '@/hooks/use-osano-consent';
 
 export function useOsanoConsentSaved(callback: (consent: OsanoConsent) => void) {
-  const context = useContext(OsanoContext);
-  useEffect(() => {
-    if (context?.consent) {
-      // Beside the callback, we should trigger the consent sync when Osano is loaded
-      callback?.(context.consent);
-    }
+  const consent = useOsanoConsent();
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
-    const unsubscribe = context?.subscribe(callback);
-    return () => {
-      unsubscribe?.();
-    };
-  }, [context, callback]);
+  useEffect(() => {
+    callbackRef.current(consent);
+  }, [consent]);
 }
