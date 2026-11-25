@@ -166,6 +166,25 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
 	})
 
+	t.Run("sets the negotiated media type for a subscribe once response", func(t *testing.T) {
+		for _, tc := range []struct {
+			accept      string
+			contentType string
+		}{
+			{accept: graphqlResponseMime, contentType: "application/graphql-response+json; charset=utf-8"},
+			{accept: jsonContent, contentType: ""},
+		} {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/graphql?"+WgSubscribeOnceParam, nil)
+			req.Header.Set("Accept", tc.accept)
+
+			_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.contentType, recorder.Header().Get("Content-Type"), tc.accept)
+		}
+	})
+
 	t.Run("sets and clears a deadline for every SSE write and flush", func(t *testing.T) {
 		recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
 		req := httptest.NewRequest(http.MethodPost, "/graphql", nil)

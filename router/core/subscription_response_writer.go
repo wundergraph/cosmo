@@ -248,6 +248,10 @@ func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {
 // setSubscriptionHeaders sets the headers for the subscription response. Only used for non-websocket subscriptions.
 func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http.ResponseWriter) {
 	if wgParams.SubscribeOnce {
+		// The single response is plain JSON. Only set the media type when the client negotiated it
+		if wgParams.UseGraphQLResponseJSON {
+			w.Header().Set("Content-Type", jsonResponseContentType(true))
+		}
 		return
 	}
 
