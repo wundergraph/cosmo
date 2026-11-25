@@ -1,11 +1,13 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import { traced } from '../tracing.js';
+import { makeWebhookRequest } from './utils.js';
 
 @traced
 export class RedeliverWebhookService {
@@ -37,7 +39,7 @@ export class RedeliverWebhookService {
         eventName: originalDelivery.eventName,
         payload: originalDelivery.payload,
         createdById: actorId,
-        requestHeaders: originalDelivery.requestHeaders,
+        requestHeaders: {},
         originalDeliveryId: originalDelivery.id,
       };
 
@@ -53,10 +55,13 @@ export class RedeliverWebhookService {
         },
       });
 
+      this.httpClient.interceptors.request.use((request) => {
+        deliveryInfo.requestHeaders = request.headers;
+        return request;
+      });
+
       try {
-        const res = await this.httpClient.post(originalDelivery.endpoint, JSON.parse(originalDelivery.payload), {
-          headers: originalDelivery.requestHeaders,
-        });
+        const res = await this.post(originalDelivery);
 
         deliveryInfo.responseStatusCode = res.status;
         deliveryInfo.responseHeaders = res.headers;
@@ -87,5 +92,35 @@ export class RedeliverWebhookService {
       logger.child({ message: e.message });
       logger.error(`Could not send webhook event`);
     }
+  }
+
+  // Organization webhooks are signed again with the webhook's current secret and keep their delivery id, like a first delivery.
+  private async post(originalDelivery: typeof schema.webhookDeliveries.$inferSelect) {
+    const data = JSON.parse(originalDelivery.payload);
+
+    if (originalDelivery.type !== 'webhook') {
+      return this.httpClient.post(originalDelivery.endpoint, data, { headers: originalDelivery.requestHeaders });
+    }
+
+    const [config] = await this.db
+      .select({ key: schema.organizationWebhooks.key })
+      .from(schema.organizationWebhooks)
+      .where(
+        and(
+          eq(schema.organizationWebhooks.organizationId, this.organizationId),
+          eq(schema.organizationWebhooks.endpoint, originalDelivery.endpoint),
+        ),
+      )
+      .limit(1);
+
+    const deliveryId = originalDelivery.requestHeaders['X-Cosmo-Delivery-Id'];
+
+    return makeWebhookRequest(
+      this.httpClient,
+      data,
+      originalDelivery.endpoint,
+      config?.key ?? undefined,
+      typeof deliveryId === 'string' ? deliveryId : undefined,
+    );
   }
 }
