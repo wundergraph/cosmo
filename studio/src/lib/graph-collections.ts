@@ -7,6 +7,7 @@ import {
   GraphCollectionSortBy,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
+import { z } from 'zod';
 import { toast } from '@/components/ui/use-toast';
 
 export const MAX_COLLECTION_NAME_LENGTH = 100;
@@ -351,14 +352,57 @@ export const reportFailure = (fallback: string, details?: string) => {
 };
 
 /**
+ * A team collection name that no other team collection in `collections` uses.
+ * Mirrors the controlplane's `gc_unique_team_name` index (case-insensitive,
+ * team scope only), so a clash can be shown before the request. The server
+ * stays the source of truth for a list that is out of date.
+ */
+const teamCollectionNameSchema = (
+  collections: Pick<GraphCollection, 'id' | 'name' | 'isTeamScoped'>[],
+  exceptId?: string,
+) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (name) =>
+        !collections.some((c) => c.isTeamScoped && c.id !== exceptId && c.name.toLowerCase() === name.toLowerCase()),
+      { error: (issue) => teamNameTakenMessage(String(issue.input)) },
+    );
+
+/** The message to show when another team collection already uses `name`, otherwise `undefined`. */
+export const teamNameConflict = (
+  collections: Pick<GraphCollection, 'id' | 'name' | 'isTeamScoped'>[],
+  name: string,
+  exceptId?: string,
+): string | undefined => {
+  const parsed = teamCollectionNameSchema(collections, exceptId).safeParse(name);
+  return parsed.success ? undefined : parsed.error.issues[0].message;
+};
+
+export const teamNameTakenMessage = (name: string) => `A team collection named "${name.trim()}" already exists.`;
+
+/**
  * The callbacks every collections mutation passes to `mutate`.
  *
  * A transport failure and an application error have to reach the same toast,
  * and `onDone` must run only for an OK response, or a dialog closes over a
  * mutation that did not happen.
+ *
+ * `onNameTaken`, when given, receives a team name clash instead of the toast,
+ * so the dialog can show it beside the name field.
  */
-export const collectionMutationHandlers = (failure: string, onDone: () => void) => ({
+export const collectionMutationHandlers = (
+  failure: string,
+  onDone: () => void,
+  onNameTaken?: (details: string) => void,
+) => ({
   onSuccess: ({ response }: { response?: { code: EnumStatusCode; details?: string } }) => {
+    if (response?.code === EnumStatusCode.ERR_ALREADY_EXISTS && onNameTaken) {
+      onNameTaken(response.details ?? failure);
+      return;
+    }
+
     if (response?.code !== EnumStatusCode.OK) {
       reportFailure(failure, response?.details);
       return;

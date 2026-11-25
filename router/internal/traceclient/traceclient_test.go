@@ -269,6 +269,117 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Equal(t, 1, store.ttlb, "time to last byte should be recorded once the body is read")
 	})
 
+	t.Run("records the connection used by each fetch", func(t *testing.T) {
+		var serverSeenAddrs []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			serverSeenAddrs = append(serverSeenAddrs, r.RemoteAddr)
+			_, _ = w.Write([]byte("ok"))
+		}))
+		defer server.Close()
+
+		base := &http.Transport{}
+		defer base.CloseIdleConnections()
+		rt := NewTraceInjectingRoundTripper(
+			base,
+			&metric.NoopConnectionMetricStore{},
+			func(ctx context.Context, req *http.Request) (*expr.Context, string) {
+				return &expr.Context{}, "employees"
+			},
+		)
+
+		fetch := func() expr.Connection {
+			ctx := WithClientTraceResults(context.Background())
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, http.NoBody)
+			require.NoError(t, err)
+			resp, err := rt.RoundTrip(req)
+			require.NoError(t, err)
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+			return ClientTraceResultsFromContext(ctx).Connection
+		}
+
+		first := fetch()
+		second := fetch()
+
+		require.NotEmpty(t, first.LocalAddr)
+		require.Equal(t, server.Listener.Addr().String(), first.RemoteAddr)
+		require.False(t, first.Reused)
+
+		require.Equal(t, first.LocalAddr, second.LocalAddr, "both fetches should share the pooled connection")
+		require.Equal(t, first.RemoteAddr, second.RemoteAddr)
+		require.True(t, second.Reused)
+		require.True(t, second.WasIdle)
+
+		require.Equal(t, []string{first.LocalAddr, second.LocalAddr}, serverSeenAddrs, "the local address should match what the subgraph sees")
+	})
+
+	t.Run("leaves the connection empty when no connection was acquired", func(t *testing.T) {
+		results, _, _ := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+		})
+
+		require.Zero(t, results.Connection)
+	})
+
+	t.Run("clears the connection of a previous attempt when a retry acquires none", func(t *testing.T) {
+		// Retry attempts share the fetch's results container. The second
+		// attempt never gets a connection, so the first attempt's connection
+		// must not stay visible.
+		attempt := 0
+		rt := NewTraceInjectingRoundTripper(
+			&hookFiringRoundTripper{fire: func(ct *httptrace.ClientTrace) {
+				attempt++
+				ct.GetConn("subgraph.local:443")
+				if attempt == 1 {
+					ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+				}
+			}},
+			&metric.NoopConnectionMetricStore{},
+			func(ctx context.Context, req *http.Request) (*expr.Context, string) {
+				return &expr.Context{}, "employees"
+			},
+		)
+
+		ctx := WithClientTraceResults(context.Background())
+		roundTrip := func() expr.Connection {
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://subgraph.local/graphql", http.NoBody)
+			require.NoError(t, err)
+			resp, err := rt.RoundTrip(req)
+			require.NoError(t, err)
+			_ = resp.Body.Close()
+			return ClientTraceResultsFromContext(ctx).Connection
+		}
+
+		require.Equal(t, expr.Connection{Reused: true, WasIdle: true, IdleTime: time.Second}, roundTrip())
+		require.Zero(t, roundTrip(), "an attempt without GotConn must not expose the previous attempt's connection")
+	})
+
+	t.Run("drops the acquired connection when the transport retries inside one RoundTrip and acquires none", func(t *testing.T) {
+		// net/http can retry inside a single RoundTrip, firing GetConn again on
+		// the same trace. The second attempt never gets a connection.
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+			ct.GetConn("subgraph.local:443")
+		})
+
+		require.Zero(t, results.Connection)
+		require.Zero(t, results.ConnectionAcquireDuration)
+		require.Equal(t, 0, store.acquire)
+	})
+
+	t.Run("reports the connection of the last attempt when the transport retries inside one RoundTrip", func(t *testing.T) {
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{})
+		})
+
+		require.Zero(t, results.Connection, "the retry dialed a fresh connection")
+		require.Equal(t, 1, store.acquire)
+	})
+
 	t.Run("records connection phase timings without racing concurrent httptrace callbacks", func(t *testing.T) {
 		var wg sync.WaitGroup
 

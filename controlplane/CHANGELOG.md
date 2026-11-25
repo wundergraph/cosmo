@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.269.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.268.0...controlplane@0.269.0) (2026-11-25)
+
+### Features
+
+* make public collection names unique ([#3582](https://github.com/wundergraph/cosmo/issues/3582)) ([1a072ba](https://github.com/wundergraph/cosmo/commit/1a072ba78c80cfd7ac704b2a36e6d5a18dd48891)) (@JivusAyrus)
+
 ## [0.268.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.267.0...controlplane@0.268.0) (2026-11-24)
 
 ### Features

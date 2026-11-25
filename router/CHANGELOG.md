@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.378.1](https://github.com/wundergraph/cosmo/compare/router@0.378.0...router@0.378.1) (2026-11-25)
+
+### Bug Fixes
+
+* **router:** apply custom field renderers to WebSocket operations ([#3568](https://github.com/wundergraph/cosmo/issues/3568)) ([4ed3e63](https://github.com/wundergraph/cosmo/commit/4ed3e638f575d39f0212cdf4bf8470646f9de9a4)) (@fiam)
+
 ## [0.378.0](https://github.com/wundergraph/cosmo/compare/router@0.377.0...router@0.378.0) (2026-11-24)
 
 ### Features

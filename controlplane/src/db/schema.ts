@@ -2684,6 +2684,11 @@ export const graphCollections = pgTable(
         t.federatedGraphId,
         t.privateToUserId,
       ),
+      // Team-scoped names are unique per graph, ignoring case. Private
+      // collections are excluded, so users can name their own freely.
+      uniqueTeamName: uniqueIndex('gc_unique_team_name')
+        .on(t.federatedGraphId, sql`lower(${t.name})`)
+        .where(sql`${t.privateToUserId} IS NULL`),
     };
   },
 );
