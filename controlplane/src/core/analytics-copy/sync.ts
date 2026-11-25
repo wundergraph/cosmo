@@ -291,30 +291,29 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         await dst.unsafe(`ALTER ROLE ${user} SET search_path = ${quoteIdent(ANALYTICS_SCHEMA)}`);
       }
 
-      // Views in other schemas that read the copy would be dropped with it, so refuse to swap while any exist.
-      const dependentViews = await dst<{ name: string }[]>`
-        SELECT DISTINCT format('%I.%I', vn.nspname, v.relname) AS name
-        FROM pg_depend d
-        JOIN pg_rewrite r ON r.oid = d.objid
-        JOIN pg_class v ON v.oid = r.ev_class
-        JOIN pg_namespace vn ON vn.oid = v.relnamespace
-        JOIN pg_class t ON t.oid = d.refobjid
-        JOIN pg_namespace tn ON tn.oid = t.relnamespace
-        WHERE d.classid = 'pg_rewrite'::regclass
-          AND d.refclassid = 'pg_class'::regclass
-          AND tn.nspname = ${ANALYTICS_SCHEMA}
-          AND vn.nspname <> ${ANALYTICS_SCHEMA}
-        ORDER BY 1`;
-      if (dependentViews.length > 0) {
-        throw new Error(
-          `Views outside the ${ANALYTICS_SCHEMA} schema read the copy and would be dropped with it: ${dependentViews.map((v) => v.name).join(', ')}`,
-        );
-      }
-
-      // Swap the new copy in. Dropping the old schema waits for running queries, so do not wait forever.
-      // CASCADE drops views inside the analytics schema; they are not part of the copy.
+      // Swap the new copy in. Dropping the old copy waits for running queries, so do not wait forever.
+      // Nothing is dropped with CASCADE: PostgreSQL refuses the drop while any other object, such as a view or a
+      // foreign key, depends on the old copy. The job therefore never deletes an object that it did not create.
       await dst.unsafe(`SET LOCAL lock_timeout = '60s'`);
-      await dst.unsafe(`DROP SCHEMA IF EXISTS ${quoteIdent(ANALYTICS_SCHEMA)} CASCADE`);
+      // With an empty search path, PostgreSQL names every dependent object with its schema in the error.
+      await dst.unsafe(`SET LOCAL search_path = ''`);
+      const liveTables = await dst<{ name: string }[]>`
+        SELECT format('%I.%I', schemaname, tablename) AS name FROM pg_tables WHERE schemaname = ${ANALYTICS_SCHEMA}`;
+      try {
+        if (liveTables.length > 0) {
+          await dst.unsafe(`DROP TABLE ${liveTables.map((t) => t.name).join(', ')} RESTRICT`);
+        }
+        await dst.unsafe(`DROP SCHEMA IF EXISTS ${quoteIdent(ANALYTICS_SCHEMA)} RESTRICT`);
+      } catch (error) {
+        const { code, detail } = error as { code?: string; detail?: string };
+        // 2BP01 is dependent_objects_still_exist.
+        if (code === '2BP01') {
+          throw new Error(
+            `Other objects depend on the ${ANALYTICS_SCHEMA} copy, so it was not replaced. Drop them first: ${detail}`,
+          );
+        }
+        throw error;
+      }
       await dst.unsafe(`ALTER SCHEMA ${quoteIdent(STAGING_SCHEMA)} RENAME TO ${quoteIdent(ANALYTICS_SCHEMA)}`);
 
       return { snapshotAt, tables, unclassifiedColumns, readonlyUserCreated };

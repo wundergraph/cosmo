@@ -174,18 +174,42 @@ describe('Analytics copy sync', () => {
     expect(await copiedUserCount()).toBe(before);
   });
 
-  test('A run fails and leaves the copy unchanged when a view in another schema reads the copy', async () => {
-    await target`CREATE VIEW public.user_ids AS SELECT id FROM analytics.users`;
-    try {
-      const before = await copiedUserCount();
-      await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-4@example.com`})`;
+  test.each([
+    {
+      object: 'a view in another schema reads the copy',
+      create: 'CREATE VIEW public.user_ids AS SELECT id FROM analytics.users',
+      drop: 'DROP VIEW public.user_ids',
+      name: 'public.user_ids',
+    },
+    {
+      object: 'a table in another schema has a foreign key to the copy',
+      create: 'CREATE TABLE public.user_refs (user_id uuid REFERENCES analytics.users (id))',
+      drop: 'DROP TABLE public.user_refs',
+      name: 'public.user_refs',
+    },
+    {
+      object: 'a view inside the analytics schema reads the copy',
+      create: 'CREATE VIEW analytics.user_ids AS SELECT id FROM analytics.users',
+      drop: 'DROP VIEW analytics.user_ids',
+      name: 'analytics.user_ids',
+    },
+  ])(
+    'A run fails and leaves the copy and the dependent object unchanged when $object',
+    async ({ create, drop, name }) => {
+      await target.unsafe(create);
+      try {
+        const before = await copiedUserCount();
+        await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-${randomUUID()}@example.com`})`;
 
-      await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow('public.user_ids');
-      expect(await copiedUserCount()).toBe(before);
-    } finally {
-      await target`DROP VIEW public.user_ids`;
-    }
-  });
+        await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow(name);
+        expect(await copiedUserCount()).toBe(before);
+        const [{ exists }] = await target`SELECT to_regclass(${name}) IS NOT NULL AS exists`;
+        expect(exists).toBe(true);
+      } finally {
+        await target.unsafe(drop);
+      }
+    },
+  );
 
   test('A run fails and leaves the copy unchanged when the copy holds a newer snapshot than the run', async () => {
     const [{ snapshotAt }] = await target`SELECT snapshot_at AS "snapshotAt" FROM analytics.sync_info`;
