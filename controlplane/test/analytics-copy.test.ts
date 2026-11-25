@@ -5,7 +5,11 @@ import { copiedColumns, resolvePolicy } from '../src/core/analytics-copy/policy.
 import {
   ANALYTICS_READER_ROLE,
   ANALYTICS_SCHEMA,
+  DependentObjectsError,
+  NewerSnapshotError,
+  PolicyDriftError,
   syncAnalyticsCopy,
+  type SyncAnalyticsCopyOptions,
   type SyncAnalyticsCopyResult,
 } from '../src/core/analytics-copy/sync.js';
 import { RunMigration } from '../src/core/migrate.js';
@@ -27,6 +31,21 @@ describe('Analytics copy sync', () => {
   const marker = `do-not-copy-${randomUUID()}`;
 
   let firstRun: SyncAnalyticsCopyResult;
+
+  const sync = async (options: Partial<SyncAnalyticsCopyOptions> = {}) => {
+    const result = await syncAnalyticsCopy({ source, target, logger: silent, ...options });
+    if (!result.ok) {
+      throw result.error;
+    }
+    return result;
+  };
+  const failedSync = async (options: Partial<SyncAnalyticsCopyOptions> = {}) => {
+    const result = await syncAnalyticsCopy({ source, target, logger: silent, ...options });
+    if (result.ok) {
+      throw new Error('Expected the sync to fail');
+    }
+    return result.error;
+  };
 
   const userId = randomUUID();
   const organizationId = randomUUID();
@@ -63,7 +82,7 @@ describe('Analytics copy sync', () => {
       INSERT INTO targets (name, type, labels, organization_id, created_by, readme, namespace_id)
       VALUES (${marker}, 'subgraph', ${[marker]}, ${organizationId}, ${userId}, ${marker}, ${namespaceId})`;
 
-    firstRun = await syncAnalyticsCopy({ source, target, readonlyUser, logger: silent });
+    firstRun = await sync({ readonlyUser });
   });
 
   const copiedUserCount = async () => {
@@ -153,7 +172,7 @@ describe('Analytics copy sync', () => {
     const newUserId = randomUUID();
     await source`INSERT INTO users (id, email) VALUES (${newUserId}, ${`${marker}-2@example.com`})`;
 
-    const result = await syncAnalyticsCopy({ source, target, readonlyUser, logger: silent });
+    const result = await sync({ readonlyUser });
     expect(result.readonlyUserCreated).toBe(false);
 
     const users = await target`SELECT id FROM analytics.users`;
@@ -170,7 +189,9 @@ describe('Analytics copy sync', () => {
     const before = await copiedUserCount();
     await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-3@example.com`})`;
 
-    await expect(syncAnalyticsCopy({ source, target, policy, logger: silent })).rejects.toThrow('users.nickname');
+    const error = await failedSync({ policy });
+    expect(error).toBeInstanceOf(PolicyDriftError);
+    expect((error as PolicyDriftError).missing).toEqual(['users.nickname']);
     expect(await copiedUserCount()).toBe(before);
   });
 
@@ -201,7 +222,9 @@ describe('Analytics copy sync', () => {
         const before = await copiedUserCount();
         await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-${randomUUID()}@example.com`})`;
 
-        await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow(name);
+        const error = await failedSync();
+        expect(error).toBeInstanceOf(DependentObjectsError);
+        expect(error.message).toContain(name);
         expect(await copiedUserCount()).toBe(before);
         const [{ exists }] = await target`SELECT to_regclass(${name}) IS NOT NULL AS exists`;
         expect(exists).toBe(true);
@@ -211,11 +234,39 @@ describe('Analytics copy sync', () => {
     },
   );
 
+  test('A run fails without hanging when the target rejects rows after the source has sent more than fits in a socket buffer', async () => {
+    // Make every row of the next copy of users fail, so the target COPY fails while the source is still streaming.
+    await target.unsafe(`
+      CREATE FUNCTION public.reject_users() RETURNS event_trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF EXISTS (SELECT FROM pg_event_trigger_ddl_commands() WHERE object_identity = 'analytics_staging.users') THEN
+          ALTER TABLE analytics_staging.users ADD CONSTRAINT reject_every_row CHECK (false);
+        END IF;
+      END $$`);
+    await target.unsafe(
+      `CREATE EVENT TRIGGER reject_users ON ddl_command_end WHEN TAG IN ('CREATE TABLE') EXECUTE FUNCTION public.reject_users()`,
+    );
+    await source`INSERT INTO users (id, email) SELECT gen_random_uuid(), 'bulk-' || g || '@example.com' FROM generate_series(1, 300000) g`;
+    try {
+      const before = await copiedUserCount();
+      // A rejected row is not an expected failure, so it is thrown.
+      await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow('reject_every_row');
+      expect(await copiedUserCount()).toBe(before);
+      // The source connection is usable again, so its transaction has rolled back.
+      const [{ one }] = await source`SELECT 1 AS one`;
+      expect(one).toBe(1);
+    } finally {
+      await target.unsafe('DROP EVENT TRIGGER reject_users');
+      await target.unsafe('DROP FUNCTION public.reject_users()');
+      await source`DELETE FROM users WHERE email LIKE 'bulk-%'`;
+    }
+  });
+
   test('A run fails and leaves the copy unchanged when the copy holds a newer snapshot than the run', async () => {
     const [{ snapshotAt }] = await target`SELECT snapshot_at AS "snapshotAt" FROM analytics.sync_info`;
     await target`UPDATE analytics.sync_info SET snapshot_at = now() + interval '1 hour'`;
     try {
-      await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow('newer snapshot');
+      expect(await failedSync()).toBeInstanceOf(NewerSnapshotError);
     } finally {
       await target`UPDATE analytics.sync_info SET snapshot_at = ${snapshotAt}`;
     }

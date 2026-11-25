@@ -38,11 +38,16 @@ const readonlyUser = readonlyUserName ? { name: readonlyUserName, password: read
 try {
   const start = performance.now();
   const result = await syncAnalyticsCopy({ source, target, readonlyUser });
-  const rows = result.tables.reduce((sum, table) => sum + table.rows, 0);
-  console.log(
-    `Analytics copy of ${result.snapshotAt.toISOString()} finished: ${result.tables.length} tables, ${rows} rows ` +
-      `in ${((performance.now() - start) / 1000).toFixed(1)} seconds`,
-  );
+  if (result.ok) {
+    const rows = result.tables.reduce((sum, table) => sum + table.rows, 0);
+    console.log(
+      `Analytics copy of ${result.snapshotAt.toISOString()} finished: ${result.tables.length} tables, ${rows} rows ` +
+        `in ${((performance.now() - start) / 1000).toFixed(1)} seconds`,
+    );
+  } else {
+    console.error(`Analytics copy not replaced: ${result.error.message}`);
+    process.exitCode = 1;
+  }
 } finally {
   await source.end({ timeout: 5 });
   await target.end({ timeout: 5 });

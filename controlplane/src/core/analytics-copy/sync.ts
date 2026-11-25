@@ -1,5 +1,5 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
-import type { Writable } from 'node:stream';
+import { PassThrough, type Readable, type Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type postgres from 'postgres';
 import { copiedColumns, resolvePolicy, type AnalyticsCopyPolicy } from './policy.js';
@@ -44,6 +44,46 @@ export interface SyncAnalyticsCopyResult {
   readonlyUserCreated: boolean;
 }
 
+/** A run that failed for an expected reason. The analytics database still holds the previous copy. */
+export class AnalyticsCopyError extends Error {}
+
+/** The policy names tables or columns that the source database lacks. */
+export class PolicyDriftError extends AnalyticsCopyError {
+  constructor(readonly missing: string[]) {
+    super(`The analytics copy policy names tables or columns that the source lacks: ${missing.join(', ')}`);
+  }
+}
+
+/** Another run holds the lock on the analytics database. */
+export class SyncInProgressError extends AnalyticsCopyError {
+  constructor() {
+    super('Another analytics sync is writing the analytics database');
+  }
+}
+
+/** The analytics database already holds a snapshot newer than the one this run read. */
+export class NewerSnapshotError extends AnalyticsCopyError {
+  constructor(
+    readonly liveSnapshotAt: Date,
+    readonly snapshotAt: Date,
+  ) {
+    super(
+      `The analytics database already holds a newer snapshot (${liveSnapshotAt.toISOString()}) than this run (${snapshotAt.toISOString()})`,
+    );
+  }
+}
+
+/** Objects that the job did not create, such as views or foreign keys, depend on the copy. */
+export class DependentObjectsError extends AnalyticsCopyError {
+  constructor(readonly detail: string) {
+    super(`Other objects depend on the ${ANALYTICS_SCHEMA} copy, so it was not replaced. Drop them first: ${detail}`);
+  }
+}
+
+export type SyncAnalyticsCopyOutcome =
+  | ({ ok: true } & SyncAnalyticsCopyResult)
+  | { ok: false; error: AnalyticsCopyError };
+
 interface SourceColumn {
   tableName: string;
   columnName: string;
@@ -81,13 +121,48 @@ export function scramSha256Verifier(password: string): string {
 }
 
 /**
+ * Streams a source `COPY ... TO STDOUT` into a target `COPY ... FROM STDIN`.
+ *
+ * When the target fails, the rest of the source rows must still be read: postgres.js does not cancel a COPY whose
+ * stream was closed, so the source connection would stall and its transaction could never roll back. `pipeline`
+ * closes every stream it was given when one fails, so the source is piped into a relay that `pipeline` may close.
+ */
+async function streamCopy(readable: Readable, openWritable: () => Promise<Writable>): Promise<void> {
+  const relay = new PassThrough();
+  readable.on('error', (error) => relay.destroy(error));
+  readable.pipe(relay);
+  try {
+    await pipeline(relay, await openWritable());
+  } catch (error) {
+    readable.unpipe(relay);
+    readable.resume();
+    throw error;
+  }
+}
+
+/**
  * Replaces the `analytics` schema of the target database with a fresh copy of the source database.
  * Only the columns that the policy labels `copy` are read from the source.
  *
  * All source tables are read in one repeatable-read transaction, so the copy is a consistent snapshot.
  * The target is rebuilt in one transaction, so readers see either the old or the new copy, never a mix.
+ *
+ * Expected failures come back as `{ ok: false, error }` after both transactions have rolled back. Other errors,
+ * such as a lost connection, are thrown.
  */
-export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Promise<SyncAnalyticsCopyResult> {
+export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Promise<SyncAnalyticsCopyOutcome> {
+  try {
+    return { ok: true, ...(await copySnapshot(options)) };
+  } catch (error) {
+    // Expected failures are thrown inside the transactions so that both roll back, and returned once they have.
+    if (error instanceof AnalyticsCopyError) {
+      return { ok: false, error };
+    }
+    throw error;
+  }
+}
+
+async function copySnapshot(options: SyncAnalyticsCopyOptions): Promise<SyncAnalyticsCopyResult> {
   const { source, target, readonlyUser, logger = console } = options;
   const policy = options.policy ?? resolvePolicy();
   const plan = copiedColumns(policy);
@@ -161,7 +236,7 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
       }
     }
     if (missing.length > 0) {
-      throw new Error(`The analytics copy policy names tables or columns that the source lacks: ${missing.join(', ')}`);
+      throw new PolicyDriftError(missing);
     }
 
     const unclassifiedColumns: string[] = [];
@@ -181,7 +256,7 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         { locked: boolean }[]
       >`SELECT pg_try_advisory_xact_lock(${SYNC_LOCK_ID}) AS locked`;
       if (!locked) {
-        throw new Error('Another analytics sync is writing the analytics database');
+        throw new SyncInProgressError();
       }
       await dst`SET LOCAL DateStyle = 'ISO'`;
 
@@ -193,9 +268,7 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
           `SELECT snapshot_at AS "snapshotAt" FROM ${liveSyncInfo}`,
         );
         if (live && live.snapshotAt > snapshotAt) {
-          throw new Error(
-            `The analytics database already holds a newer snapshot (${live.snapshotAt.toISOString()}) than this run (${snapshotAt.toISOString()})`,
-          );
+          throw new NewerSnapshotError(live.snapshotAt, snapshotAt);
         }
       }
 
@@ -217,15 +290,7 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         const readable = await src
           .unsafe(`COPY (SELECT ${columnList} FROM ${quoteIdent(SOURCE_SCHEMA)}.${quoteIdent(table)}) TO STDOUT`)
           .readable();
-        let writable: Writable;
-        try {
-          writable = await dst.unsafe(`COPY ${qualifiedTarget} (${columnList}) FROM STDIN`).writable();
-        } catch (error) {
-          // The source transaction can only roll back after its COPY has finished, so read and discard the rest.
-          readable.resume();
-          throw error;
-        }
-        await pipeline(readable, writable);
+        await streamCopy(readable, () => dst.unsafe(`COPY ${qualifiedTarget} (${columnList}) FROM STDIN`).writable());
 
         // Recreate the primary key and plain btree indexes whose columns were all copied, so joins stay fast.
         // The primary key comes first, so an ordinary index on the same columns cannot take its place.
@@ -308,9 +373,7 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         const { code, detail } = error as { code?: string; detail?: string };
         // 2BP01 is dependent_objects_still_exist.
         if (code === '2BP01') {
-          throw new Error(
-            `Other objects depend on the ${ANALYTICS_SCHEMA} copy, so it was not replaced. Drop them first: ${detail}`,
-          );
+          throw new DependentObjectsError(detail ?? '');
         }
         throw error;
       }
