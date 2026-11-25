@@ -10,6 +10,7 @@ import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
 import UpdateProposalStatusCommand from '../src/commands/proposal/commands/update-status.js';
 import { Client } from '../src/core/client/client.js';
+import { getJsonOutput } from './utils.js';
 
 function createMockTransport(
   response: MessageInitShape<typeof UpdateProposalResponseSchema>,
@@ -42,23 +43,6 @@ async function runUpdateStatus(
     ['update-status', 'my-proposal', '--federation-graph', 'my-graph', '--status', 'approved', ...args],
     { from: 'user' },
   );
-}
-
-function getJsonOutput(logSpy: MockInstance<typeof console.log>) {
-  const call = logSpy.mock.calls.find(([arg]) => {
-    try {
-      JSON.parse(String(arg));
-      return true;
-    } catch {
-      return false;
-    }
-  });
-
-  if (!call) {
-    throw new Error('No JSON output found in console.log calls');
-  }
-
-  return JSON.parse(String(call[0]));
 }
 
 describe('update proposal status', () => {
