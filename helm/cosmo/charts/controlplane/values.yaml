@@ -320,6 +320,24 @@ jobs:
     additionalLabels: {}
     # -- Cron schedule (default: 1st of every month at 2AM UTC)
     schedule: '0 2 1 * *'
+  # -- Scheduled CronJob that copies the database, without PII, secrets and customer content, into a separate analytics database
+  analyticsDatabaseSync:
+    # -- Enables the analytics database sync CronJob
+    enabled: false
+    # -- Adds additional labels to the job
+    additionalLabels: {}
+    # -- Cron schedule (default: every hour)
+    schedule: '0 * * * *'
+    # -- Connection URL of the analytics database. The `analytics` schema in it is replaced on every run.
+    databaseUrl: ''
+    # -- When connecting to the analytics database over TLS. Accept a cert in PEM format (as one-line with \n) or file.
+    databaseTlsCa: ''
+    databaseTlsCert: ''
+    databaseTlsKey: ''
+    # -- Name of the shared read-only login. The job creates it when it does not exist. Leave empty to skip.
+    readonlyUser: ''
+    # -- Password the read-only login is created with. An existing login keeps its password.
+    readonlyPassword: ''
   deleteInactiveOrgs:
     # -- Enables the job to be run
     enabled: true
