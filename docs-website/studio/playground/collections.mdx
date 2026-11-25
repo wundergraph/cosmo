@@ -30,6 +30,14 @@ Collections are grouped by scope in the panel, private first.
 
 Creating a team collection requires write access to the graph. Without it, the scope choice is not offered and every collection you create is private.
 
+## Collection names
+
+Team collection names are unique per graph. The comparison ignores case, so `Onboarding` and `onboarding` count as the same name.
+
+Private collection names do not have to be unique. A private collection can share its name with a team collection or with another private collection.
+
+Creating or renaming a team collection with a name that is already taken is refused with `A team collection named "<name>" already exists.` The dialog shows this as you type.
+
 ## Creating a collection
 
 <Steps>
@@ -37,7 +45,7 @@ Creating a team collection requires write access to the graph. Without it, the s
     The New collection dialog opens.
   </Step>
   <Step title="Give the collection a name">
-    Names are up to 100 characters and do not have to be unique.
+    Names are up to 100 characters. Team collection names must be unique on the graph. See [collection names](#collection-names).
   </Step>
   <Step title="Choose who can see it">
     Private keeps it to yourself. Team shares it with everyone who can see the graph, and cannot be undone.
@@ -116,6 +124,8 @@ Open the collection's menu and choose **Share with team**. Everyone who can view
 
 Sharing cannot be undone. A shared collection cannot be made private again.
 
+If a team collection on the graph already has the same name, the dialog asks for a new name. Sharing then renames the collection and shares it in one step.
+
 ## Finding an operation
 
 Search filters collections and their operations by name as you type. A collection whose own name matches keeps all of its operations. A collection matched only through an operation shows just the operations that matched.
@@ -150,6 +160,7 @@ Whoever opens the link still needs access. A link to a private collection, or to
 
 Both collections and operations have **Rename** and **Delete** in their menus.
 
+- Renaming a team collection follows the [naming rule](#collection-names). A name already taken by another team collection is refused.
 - Renaming an operation changes its label in the panel. It does not change the operation name inside the document.
 - Deleting a collection deletes the operations inside it. The confirmation says how many will go with it, and whether the collection is shared with your team.
 

@@ -7,7 +7,7 @@ import {
 import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
+import { GraphCollectionsRepository, NameConflictError } from '../../repositories/GraphCollectionsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { resolveCollectionAccess } from '../../util/graph-collection/permissions.js';
@@ -39,8 +39,7 @@ export function shareGraphCollection(
     if (collectionWithGraph!.collection.privateToUserId === null) {
       return {
         response: {
-          code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: 'This collection is already shared with the team',
+          code: EnumStatusCode.OK,
         },
       };
     }
@@ -59,7 +58,24 @@ export function shareGraphCollection(
       throw new UnauthorizedError();
     }
 
-    await repo.shareCollection(req.id, req.federatedGraphId);
+    const result = await repo.shareCollection(req.id, collection.name, req.federatedGraphId);
+    if (!result.ok) {
+      if (result.error instanceof NameConflictError) {
+        return {
+          response: {
+            code: result.error.code,
+            details: `${result.error.message} Rename this collection before sharing it.`,
+          },
+        };
+      }
+
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Could not share the collection.',
+        },
+      };
+    }
 
     // Irreversible: a shared collection cannot be made private again.
     await new AuditLogRepository(opts.db).addAuditLog({
