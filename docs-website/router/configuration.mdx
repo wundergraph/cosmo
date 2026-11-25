@@ -3063,7 +3063,7 @@ Accept: application/graphql-response+json, application/json;q=0.9
 `text/event-stream` and `multipart/mixed` still take precedence for subscriptions and `@defer` when the client asks for them.
 
 <Warning>
-  Clients that send `application/graphql-response+json` in their `Accept` header get 4xx status codes for request errors, even with `status_codes: legacy`.
+  When the router selects `application/graphql-response+json`, request errors get 4xx status codes, even with `status_codes: legacy`. A client that sends it in its `Accept` header but prefers `application/json` keeps the configured status codes.
 </Warning>
 
 ### Example YAML Configuration
