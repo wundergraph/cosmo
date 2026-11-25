@@ -241,3 +241,30 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.ErrorIs(t, resolveCtx.Context().Err(), context.Canceled)
 	})
 }
+
+func TestAcceptsGraphQLResponseJSON(t *testing.T) {
+	tests := []struct {
+		name   string
+		accept string
+		want   bool
+	}{
+		{name: "no Accept header", accept: "", want: false},
+		{name: "wildcard", accept: "*/*", want: false},
+		{name: "application/json", accept: "application/json", want: false},
+		{name: "graphql-response+json", accept: "application/graphql-response+json", want: true},
+		{name: "spec recommended header", accept: "application/graphql-response+json, application/json;q=0.9", want: true},
+		{name: "json first with equal q-value", accept: "application/json, application/graphql-response+json", want: false},
+		{name: "json preferred by q-value", accept: "application/graphql-response+json;q=0.5, application/json", want: false},
+		{name: "json types preferred over streaming", accept: "text/event-stream, application/json;q=0.5, application/graphql-response+json;q=0.8", want: true},
+		{name: "case insensitive", accept: "Application/GraphQL-Response+JSON", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &http.Request{URL: &url.URL{}, Header: http.Header{}}
+			if tt.accept != "" {
+				r.Header.Set("Accept", tt.accept)
+			}
+			assert.Equal(t, tt.want, acceptsGraphQLResponseJSON(r))
+		})
+	}
+}

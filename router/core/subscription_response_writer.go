@@ -22,6 +22,7 @@ const (
 	multipartBoundary    = "graphql"
 	multipartMime        = "multipart/mixed"
 	jsonContent          = "application/json"
+	graphqlResponseMime  = "application/graphql-response+json"
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
 	subscriptionSpec     = "subscriptionSpec=1.0"
@@ -280,6 +281,8 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 		useSse       = q.Has(WgSseParam)
 		bestType     = ""
 		bestQ        = -1.0 // Default to lowest possible q-value
+		bestJSONType = ""
+		bestJSONQ    = -1.0
 	)
 
 	for _, acceptHeader := range elements {
@@ -291,27 +294,34 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 			}
 		}
 
-		// We also have an exception where we prioritize json over higher priority media types
-		if preferJson && strings.EqualFold(mediaType, jsonContent) {
-			bestType = mediaType
-			break
-		}
-
 		// Find the media type with the highest q-value. If none is provided, it will default to the first option
 		// in the header, per https://www.rfc-editor.org/rfc/rfc9110.html#name-accept
 		if qValue > bestQ {
 			bestQ = qValue
 			bestType = mediaType
 		}
+
+		// The best of the two JSON media types, used instead of bestType when json is preferred
+		if (mediaType == jsonContent || mediaType == graphqlResponseMime) && qValue > bestJSONQ {
+			bestJSONQ = qValue
+			bestJSONType = mediaType
+		}
 	}
+
+	// We also have an exception where we prioritize json over higher priority media types
+	if preferJson && bestJSONType != "" {
+		bestType = bestJSONType
+	}
+
 	subscribeOnce := q.Has(WgSubscribeOnceParam)
 	useSse = useSse || bestType == sseMimeType
 	useMultipart = bestType == multipartMime
 
 	return SubscriptionParams{
-		UseSse:        useSse,
-		SubscribeOnce: subscribeOnce,
-		UseMultipart:  useMultipart,
+		UseSse:                 useSse,
+		SubscribeOnce:          subscribeOnce,
+		UseMultipart:           useMultipart,
+		UseGraphQLResponseJSON: bestType == graphqlResponseMime,
 	}
 }
 
@@ -319,6 +329,23 @@ type SubscriptionParams struct {
 	UseSse        bool
 	SubscribeOnce bool
 	UseMultipart  bool
+	// UseGraphQLResponseJSON is true when the client prefers application/graphql-response+json.
+	// Responses then use that media type and the status codes of the GraphQL over HTTP spec.
+	UseGraphQLResponseJSON bool
+}
+
+// acceptsGraphQLResponseJSON reports whether a non-streaming response to r should use
+// application/graphql-response+json instead of application/json.
+func acceptsGraphQLResponseJSON(r *http.Request) bool {
+	return NegotiateSubscriptionParams(r, true).UseGraphQLResponseJSON
+}
+
+// jsonResponseContentType returns the Content-Type header of a non-streaming GraphQL response.
+func jsonResponseContentType(useGraphQLResponseJSON bool) string {
+	if useGraphQLResponseJSON {
+		return graphqlResponseMime + "; charset=utf-8"
+	}
+	return jsonContent + "; charset=utf-8"
 }
 
 func GetWriterPrefix(sse bool, multipart bool, firstMessage bool) string {

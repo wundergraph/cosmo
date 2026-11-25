@@ -271,7 +271,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch p := reqCtx.operation.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", jsonResponseContentType(acceptsGraphQLResponseJSON(r)))
 		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		if h.enableResponseHeaderPropagation {

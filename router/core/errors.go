@@ -299,7 +299,7 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 		}
 	} else {
 		// Regular request
-		params.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		params.writer.Header().Set("Content-Type", jsonResponseContentType(wgRequestParams.UseGraphQLResponseJSON))
 		if params.statusCode != 0 {
 			params.writer.WriteHeader(params.statusCode)
 		}
@@ -384,9 +384,14 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error. The status code of classified errors depends on
-// the configured status codes, see graphql_over_http.status_codes.
+// the configured status codes, see graphql_over_http.status_codes. Clients that accept
+// application/graphql-response+json always get the status codes of the spec.
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, statusCodes config.GraphQLOverHTTPStatusCodes) {
 	requestLogger.Debug("operation error", zap.Error(err))
+
+	if acceptsGraphQLResponseJSON(r) {
+		statusCodes = config.GraphQLOverHTTPStatusCodesSeptember2026
+	}
 
 	var reportErr ReportError
 	var httpErr HttpError
