@@ -375,7 +375,7 @@ describe('Graph Collections', () => {
 
       // Every write, handed a real collection id but the wrong graph.
       await repo.renameCollection(collection.id, 'Hijacked', graphBId);
-      await repo.shareCollection(collection.id, collection.name, graphBId);
+      await repo.shareCollection(collection.id, 'Cart', graphBId);
       await repo.deleteCollection(collection.id, graphBId);
 
       const list = await client.getGraphCollections({ federatedGraphName: graphA, namespace: 'default' });
