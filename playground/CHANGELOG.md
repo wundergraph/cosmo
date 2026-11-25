@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.18.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.17.2...@wundergraph/playground@0.18.0) (2026-11-18)
+
+### Features
+
+* keep defer analysis across edits that leave the measured fields alone ([#3443](https://github.com/wundergraph/cosmo/issues/3443)) ([243300d](https://github.com/wundergraph/cosmo/commit/243300da850ee83d5ba997182c6106aef6d5a143)) (@gausie)
+
+## [0.17.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.17.1...@wundergraph/playground@0.17.2) (2026-11-12)
+
+### Bug Fixes
+
+* migrate all packages to Zod v4 ([#3511](https://github.com/wundergraph/cosmo/issues/3511)) ([68cc6a9](https://github.com/wundergraph/cosmo/commit/68cc6a9631b45ba4614963299dbc1186c661bdff)) (@comatory)
+
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.17.0...@wundergraph/playground@0.17.1) (2026-11-09)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.16.0...@wundergraph/playground@0.17.0) (2026-10-28)
+
+### Features
+
+* measure defer advisor root field latency and surface in the panel ([#3427](https://github.com/wundergraph/cosmo/issues/3427)) ([2d49f63](https://github.com/wundergraph/cosmo/commit/2d49f63735fecd8fd7d9967f9fa8954f239b7277)) (@gausie)
+* show defer advisor latencies as pills in the query editor ([#3428](https://github.com/wundergraph/cosmo/issues/3428)) ([66dcfe3](https://github.com/wundergraph/cosmo/commit/66dcfe37adf55d3cdc7a92ef5e997e248f881981)) (@gausie)
+
 ## [0.16.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.15.0...@wundergraph/playground@0.16.0) (2026-10-23)
 
 ### Features

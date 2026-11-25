@@ -68,6 +68,7 @@ const {
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
   OPENAI_API_KEY,
+  APOLLO_API_URL,
   COMPOSITION_MIN_THREADS,
   COMPOSITION_MAX_THREADS,
   REDIS_HOST,
@@ -108,6 +109,7 @@ const options: BuildConfig = {
     maxThreads: COMPOSITION_MAX_THREADS,
   },
   openaiAPIKey: OPENAI_API_KEY,
+  apolloAPIURL: APOLLO_API_URL,
   keycloak: {
     realm: KC_REALM,
     loginRealm: KC_LOGIN_REALM,

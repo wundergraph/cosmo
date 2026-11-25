@@ -12,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -25,6 +25,8 @@ import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
 import { createDeferAdvisorPlugin } from './defer-advisor/defer-advisor-plugin';
+import { DeferProvider } from './defer-advisor/defer-context';
+import { DeferPillsSync } from './defer-advisor/defer-pills-sync';
 import { DeferStatusBadge } from './defer-status-badge';
 import { readDeferStream } from '@/lib/defer-stream';
 import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, DeferStatus } from './types';
@@ -636,11 +638,7 @@ export const Playground = (input: {
 
   const [result, setResult] = useState<OperationResult>(initialResult);
 
-  // Memoised: GraphiQL needs stable plugin objects, so headers live in a ref rather than in the
-  // plugin's dependencies. The ref is written where the headers are edited, not in an effect.
-  const latestHeaders = useRef(headers);
   const onEditHeaders = useCallback((value: string) => {
-    latestHeaders.current = value;
     setHeaders(value);
   }, []);
 
@@ -649,8 +647,8 @@ export const Playground = (input: {
     () => [
       explorerPlugin({ showAttribution: false }),
       // A blank header pane means no headers, not a JSON parse error.
-      createDeferAdvisorPlugin(url, () =>
-        prepareHeaders(JSON.parse(latestHeaders.current.trim() || '{}'), input.scripts),
+      createDeferAdvisorPlugin(url, (rawHeaders) =>
+        prepareHeaders(JSON.parse(rawHeaders.trim() || '{}'), input.scripts),
       ),
     ],
     [url, input.scripts],
@@ -788,23 +786,23 @@ export const Playground = (input: {
             forcedTheme: input.theme,
           }}
         >
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            // Makes GraphiQL's introspection query ask for deprecated input fields and arguments.
-            // They are excluded by default, so an input object with only deprecated fields would
-            // come back empty and fail schema building.
-            inputValueDeprecation
-            onEditQuery={setQuery}
-            defaultHeaders={`{
+          <DeferProvider>
+            <GraphiQL
+              shouldPersistHeaders
+              showPersistHeadersSettings={false}
+              fetcher={fetcher}
+              inputValueDeprecation
+              onEditQuery={setQuery}
+              defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}
-            onEditHeaders={onEditHeaders}
-            onTabChange={setTabsState}
-            plugins={plugins}
-            forcedTheme={input.theme}
-          />
+              onEditHeaders={onEditHeaders}
+              onTabChange={setTabsState}
+              plugins={plugins}
+              forcedTheme={input.theme}
+              toolbar={{ additionalComponent: DeferPillsSync }}
+            />
+          </DeferProvider>
           {isMounted && <PlaygroundPortal />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>

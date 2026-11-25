@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.133.4",
+  "version": "0.135.0",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/src/index.js",
@@ -44,8 +44,8 @@
     "@bufbuild/protobuf": "catalog:",
     "@connectrpc/connect": "catalog:",
     "@connectrpc/connect-node": "catalog:",
-    "@graphql-tools/utils": "11.0.0",
-    "@modelcontextprotocol/sdk": "1.26.0",
+    "@graphql-tools/utils": "catalog:",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@octokit/rest": "22.0.0",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
@@ -66,8 +66,8 @@
     "fs-extra": "11.3.0",
     "graphql": "catalog:",
     "https-proxy-agent": "7.0.5",
-    "inquirer": "9.2.7",
-    "js-yaml": "4.3.1",
+    "inquirer": "9.3.8",
+    "js-yaml": "4.3.2",
     "jwt-decode": "3.1.2",
     "lodash-es": "catalog:",
     "log-symbols": "6.0.0",
@@ -82,7 +82,7 @@
     "semver": "7.7.1",
     "tar": "7.5.21",
     "trieve-ts-sdk": "0.0.80",
-    "undici": "6.27.0",
+    "undici": "6.29.1",
     "zod": "catalog:"
   },
   "devDependencies": {

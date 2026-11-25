@@ -13,6 +13,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -443,4 +444,43 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	// The rest of the values are set to the defaults
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
+}
+
+func TestApplyCosmoCloudTraceSamplingLimit(t *testing.T) {
+	t.Parallel()
+
+	core, logs := observer.New(zap.WarnLevel)
+	traceConfig := &rtrace.Config{
+		Sampler: 1,
+		Exporters: []*rtrace.ExporterConfig{
+			{Endpoint: "https://otel-collector.example.com"},
+			{Endpoint: otelconfig.DefaultEndpoint()},
+			{Endpoint: otelconfig.DefaultEndpoint(), Exporter: otelconfig.ExporterOTLPGRPC},
+			{Endpoint: otelconfig.DefaultEndpoint(), SamplingRate: new(0.05)},
+			{Endpoint: otelconfig.DefaultEndpoint(), Disabled: true},
+		},
+	}
+	applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
+
+	assert.Equal(t, 1.0, traceConfig.Sampler)
+	assert.Nil(t, traceConfig.Exporters[0].SamplingRate)
+	assert.Nil(t, traceConfig.Exporters[4].SamplingRate)
+	// Every Cosmo Cloud exporter above the limit is lowered to it, and lower rates are kept.
+	for i, want := range map[int]float64{1: 0.1, 2: 0.1, 3: 0.05} {
+		require.NotNil(t, traceConfig.Exporters[i].SamplingRate)
+		assert.Equal(t, want, *traceConfig.Exporters[i].SamplingRate)
+	}
+	assert.Equal(t, 2, logs.Len())
+
+	// With a global rate below the limit, the exporter rate is still lowered for the traces sampled
+	// upstream, without a warning.
+	traceConfig = &rtrace.Config{
+		Sampler:   0.05,
+		Exporters: []*rtrace.ExporterConfig{{Endpoint: otelconfig.DefaultEndpoint()}},
+	}
+	applyCosmoCloudTraceSamplingLimit(zap.New(core), traceConfig, 0.1)
+
+	require.NotNil(t, traceConfig.Exporters[0].SamplingRate)
+	assert.Equal(t, 0.1, *traceConfig.Exporters[0].SamplingRate)
+	assert.Equal(t, 2, logs.Len())
 }

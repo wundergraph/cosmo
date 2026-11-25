@@ -4,7 +4,7 @@ import { DeferAdvisorPluginContent } from './defer-advisor-plugin-content';
 
 export const createDeferAdvisorPlugin = (
   routingUrl: string,
-  getHeaders: () => Record<string, string>,
+  getHeaders: (rawHeaders: string) => Record<string, string>,
 ): GraphiQLPlugin => ({
   title: 'Defer Advisor',
   icon: DeferAdvisorIcon,

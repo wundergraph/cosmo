@@ -110,7 +110,7 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return p.conn.Close()
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, _ datasource.DeliveryGuarantee, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
 		return datasource.NewError("subscription event not supported by redis provider", nil)

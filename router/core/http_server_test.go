@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"go.uber.org/zap"
 )
@@ -349,4 +352,99 @@ func TestServer_DrainThenShutdown_NoEOFForKeepAliveClient(t *testing.T) {
 	errsMu.Lock()
 	defer errsMu.Unlock()
 	assert.Zero(t, failures, "first error: %v", firstErr)
+}
+
+func TestNewServer_Timeouts(t *testing.T) {
+	t.Parallel()
+
+	newTestServer := func(t *testing.T, opts httpServerOptions) *server {
+		t.Helper()
+		logger := zap.NewNop()
+		opts.addr = "127.0.0.1:0"
+		opts.logger = logger
+		opts.healthcheck = health.New(&health.Options{Logger: logger})
+		opts.healthCheckPath = "/health"
+		opts.livenessCheckPath = "/health/live"
+		opts.readinessCheckPath = "/health/ready"
+		srv, err := newServer(&opts)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = srv.listener.Close() })
+		return srv
+	}
+
+	t.Run("unset read timeout falls back to the default", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{})
+		require.Equal(t, defaultServerReadTimeout, srv.httpServer.ReadTimeout)
+		require.Zero(t, srv.httpServer.ReadHeaderTimeout)
+		require.Zero(t, srv.httpServer.IdleTimeout)
+		require.Zero(t, srv.httpServer.WriteTimeout)
+	})
+
+	t.Run("configured timeouts are applied", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{
+			readTimeout:       30 * time.Second,
+			readHeaderTimeout: 5 * time.Second,
+			idleTimeout:       2 * time.Minute,
+			writeTimeout:      3 * time.Minute,
+		})
+		require.Equal(t, 30*time.Second, srv.httpServer.ReadTimeout)
+		require.Equal(t, 5*time.Second, srv.httpServer.ReadHeaderTimeout)
+		require.Equal(t, 2*time.Minute, srv.httpServer.IdleTimeout)
+		require.Equal(t, 3*time.Minute, srv.httpServer.WriteTimeout)
+	})
+
+	t.Run("negative timeouts fall back instead of disabling", func(t *testing.T) {
+		t.Parallel()
+		srv := newTestServer(t, httpServerOptions{
+			readTimeout:       -time.Second,
+			readHeaderTimeout: -time.Second,
+			idleTimeout:       -time.Second,
+			writeTimeout:      -time.Second,
+		})
+		require.Equal(t, defaultServerReadTimeout, srv.httpServer.ReadTimeout)
+		require.Zero(t, srv.httpServer.ReadHeaderTimeout)
+		require.Zero(t, srv.httpServer.IdleTimeout)
+		require.Zero(t, srv.httpServer.WriteTimeout)
+	})
+}
+
+// TestNewServer_NegativeTimeoutsFromEnv verifies that negative timeouts set through environment
+// variables, which skip the config JSON schema validation, don't disable the server timeouts.
+func TestNewServer_NegativeTimeoutsFromEnv(t *testing.T) {
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_REQUEST_HEADER_READ_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_IDLE_TIMEOUT", "-1s")
+	t.Setenv("TRAFFIC_SHAPING_ROUTER_WRITE_TIMEOUT", "-1s")
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("version: \"1\"\n"), 0o600))
+
+	cfg, err := config.LoadConfig([]string{configPath})
+	require.NoError(t, err)
+	trafficConfig := cfg.Config.TrafficShaping.Router
+	require.Equal(t, -time.Second, trafficConfig.RequestReadTimeout)
+
+	logger := zap.NewNop()
+	srv, err := newServer(&httpServerOptions{
+		addr:               "127.0.0.1:0",
+		logger:             logger,
+		healthcheck:        health.New(&health.Options{Logger: logger}),
+		healthCheckPath:    "/health",
+		livenessCheckPath:  "/health/live",
+		readinessCheckPath: "/health/ready",
+		readTimeout:        trafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  trafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        trafficConfig.IdleTimeout,
+		writeTimeout:       trafficConfig.WriteTimeout,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = srv.listener.Close() })
+
+	require.Equal(t, defaultServerReadTimeout, srv.httpServer.ReadTimeout)
+	// Zero makes net/http fall back to ReadTimeout for the header and idle timeouts.
+	require.Zero(t, srv.httpServer.ReadHeaderTimeout)
+	require.Zero(t, srv.httpServer.IdleTimeout)
+	require.Zero(t, srv.httpServer.WriteTimeout)
 }

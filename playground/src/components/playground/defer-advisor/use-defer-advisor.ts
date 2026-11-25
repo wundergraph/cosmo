@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { ProbeRequest, probeRootFields } from './probe';
+import { useDefer } from './defer-context';
 
 type Options = {
   query: string;
@@ -8,61 +9,33 @@ type Options = {
   getRequest: () => ProbeRequest;
 };
 
-type State = {
-  latencies: Record<string, number> | null;
-  probeFailures: Record<string, string>;
-  error: string | null;
-  running: boolean;
-};
-
-type Action =
-  | { type: 'started'; variablesError: string | null }
-  | { type: 'succeeded'; latencies: Record<string, number>; probeFailures: Record<string, string> }
-  | { type: 'failed'; message: string }
-  | { type: 'cleared' }
-  | { type: 'reset' };
-
-const initialState: State = { latencies: null, probeFailures: {}, error: null, running: false };
-
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case 'started':
-      return { ...state, running: true, error: action.variablesError };
-    case 'succeeded':
-      return { ...state, latencies: action.latencies, probeFailures: action.probeFailures, running: false };
-    case 'failed':
-      return { ...state, latencies: null, error: action.message, running: false };
-    case 'cleared':
-      return { ...state, latencies: null, probeFailures: {}, error: null };
-    case 'reset':
-      return initialState;
-  }
-};
-
-// Everything the panel needs to run and show a probe.
 export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
-  const [{ latencies, probeFailures, error, running }, dispatch] = useReducer(reducer, initialState);
+  const store = useDefer();
+  const { latencies, probeFailures, error, running } = useSyncExternalStore(store.subscribe, () => store.snapshot);
+
   // Bumped when the query or URL changes, so a probe of the old input cannot write its numbers onto the new one.
   const runId = useRef(0);
 
-  // The cleanup also runs on unmount, so a probe still in flight cannot set state on a closed panel.
+  // The cleanup also runs on unmount. The store outlives the panel, so a probe
+  // still in flight would otherwise write its numbers after the panel is gone.
   const probeAbort = useRef<AbortController | null>(null);
   useEffect(() => {
-    runId.current += 1;
-    dispatch({ type: 'reset' });
+    store.invalidateIfUrlChanged(routingUrl);
+    store.setRunning(false);
     return () => {
       runId.current += 1;
       probeAbort.current?.abort();
     };
-  }, [query, routingUrl]);
+  }, [store, query, routingUrl]);
 
   const analyse = async () => {
     const id = ++runId.current;
     const abort = new AbortController();
     probeAbort.current = abort;
+    let tabId: string | undefined;
     try {
       const request = getRequest();
-      dispatch({ type: 'started', variablesError: request.variablesError ?? null });
+      tabId = store.startAnalysis({ routingUrl, query, variablesError: request.variablesError });
       const results = await probeRootFields(routingUrl, query, request, abort.signal);
       if (id !== runId.current) {
         return;
@@ -76,15 +49,15 @@ export const useDeferAdvisor = ({ query, routingUrl, getRequest }: Options) => {
           failures[name] = result.reason;
         }
       }
-      dispatch({ type: 'succeeded', latencies: measured, probeFailures: failures });
+      store.finishAnalysis(measured, failures, tabId);
     } catch (err) {
       if (id === runId.current) {
-        dispatch({ type: 'failed', message: err instanceof Error ? err.message : 'Analysis failed' });
+        store.failAnalysis(err instanceof Error ? err.message : 'Analysis failed', tabId);
       }
     }
   };
 
-  const clear = () => dispatch({ type: 'cleared' });
+  const clear = () => store.clear();
 
   return { latencies, probeFailures, error, running, analyse, clear };
 };

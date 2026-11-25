@@ -6,7 +6,6 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
-  CACHE_TAG,
   CONTEXT,
   FROM_CONTEXT,
   overrideDirectiveLabelArgumentWarning,
@@ -15,7 +14,6 @@ import {
   unsupportedDirectiveWarning,
 } from '../../../src';
 import {
-  CACHE_TAG_DIRECTIVE,
   CONTEXT_DIRECTIVE,
   CONTEXT_FIELD_VALUE_SCALAR,
   FROM_CONTEXT_DIRECTIVE,
@@ -25,36 +23,6 @@ import {
 } from '../utils/utils';
 
 describe('Unsupported directives test', () => {
-  test('that defining @cacheTag produces a warning', () => {
-    const a = createSubgraph(
-      'a',
-      `
-      type Query {
-        a: ID @cacheTag(format: "test")
-      }
-      `,
-    );
-    const { schema, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(`
-      ${SCHEMA_QUERY_DEFINITION}
-      
-      ${CACHE_TAG_DIRECTIVE}
-      
-      type Query {
-        a: ID @cacheTag(format: "test")
-      }
-    `),
-    );
-    expect(warnings).toHaveLength(1);
-    expect(warnings).toStrictEqual([
-      unsupportedDirectiveWarning({
-        directiveName: CACHE_TAG,
-        subgraphName: 'a',
-      }),
-    ]);
-  });
-
   test('that defining @context produces a warning', () => {
     const a = createSubgraph(
       'a',

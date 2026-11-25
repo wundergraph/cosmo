@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.166.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.165.0...@wundergraph/cosmo-connect@0.166.0) (2026-11-24)
+
+### Features
+
+* add subgraph-scoped check approver role ([#3532](https://github.com/wundergraph/cosmo/issues/3532)) ([9d9009a](https://github.com/wundergraph/cosmo/commit/9d9009a3a39289960d04d48dda3824a006092dcd)) (@JivusAyrus)
+
+## [0.165.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.164.0...@wundergraph/cosmo-connect@0.165.0) (2026-11-18)
+
+### Features
+
+* **controlplane:** stream audit logs to Splunk HEC ([#3539](https://github.com/wundergraph/cosmo/issues/3539)) ([51d4eed](https://github.com/wundergraph/cosmo/commit/51d4eedcf52ea67405eba9d617ceca61cfaa787b)) (@gausie)
+
+## [0.164.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.163.0...@wundergraph/cosmo-connect@0.164.0) (2026-11-13)
+
+### Features
+
+* **controlplane:** add deliveryGuarantees to proto and controlplane ([#3434](https://github.com/wundergraph/cosmo/issues/3434)) ([5a5f8c3](https://github.com/wundergraph/cosmo/commit/5a5f8c3f157dd2cce655705908647045112cee92)) (@dkorittki)
+
+## [0.163.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.162.0...@wundergraph/cosmo-connect@0.163.0) (2026-10-29)
+
+### Features
+
+* **controlplane:** add GetGraphFieldUsage rpc for per-field request counts of a graph ([#3351](https://github.com/wundergraph/cosmo/issues/3351)) ([01f68b7](https://github.com/wundergraph/cosmo/commit/01f68b7068774876e6eaf47336436044cba031e1)) (@iliya-i)
+
 ## [0.162.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.161.0...@wundergraph/cosmo-connect@0.162.0) (2026-10-27)
 
 ### Features

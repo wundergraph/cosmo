@@ -1434,6 +1434,7 @@ export class OrganizationRepository {
       requests: 30,
       // Boolean features
       ai: false,
+      'audit-log-streaming': false,
       [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID]: false,
       'cache-warmer': false,
       oidc: false,

@@ -25,8 +25,8 @@ import (
 
 	fastjson "github.com/wundergraph/astjson"
 
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -116,26 +116,24 @@ type OperationProcessorOptions struct {
 	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache                         bool
-	PersistedOpsNormalizationCache                         *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache                                     *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                                        *ristretto.Cache[uint64, ComplexityCacheEntry]
-	VariablesNormalizationCache                            *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	RemapVariablesCache                                    *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	ValidationCache                                        *ristretto.Cache[uint64, bool]
-	OperationHashCache                                     *ristretto.Cache[uint64, string]
 	ParseKitPoolSize                                       int
 	IntrospectionEnabled                                   bool
 	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError       bool
+	AllowInt64VariableValues                               bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	AllowStringLiteralsForEnums                            bool
 	ComplexityLimits                                       *config.ComplexityLimits
 	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	NormalizationLimits                                    astnormalization.Limits
 	OperationNameLengthLimit                               int
 	EnableDefer                                            bool
 	ValidateInlineArguments                                config.ValidateInlineArguments
+
+	// Caches is required.
+	Caches *OperationCaches
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -145,6 +143,7 @@ type OperationProcessor struct {
 	maxOperationSizeInBytes  int64
 	persistedOperationClient *persistedoperation.Client
 	operationCache           *OperationCache
+	caches                   *OperationCaches
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
 	introspectionEnabled     bool
@@ -217,7 +216,7 @@ type OperationKit struct {
 	// background, and custom IDs can keep their ID while their body changes, so
 	// every persisted operation lookup, cache key and variable metadata check in
 	// this request must read this snapshot instead of the live store.
-	persistedOperationManifest *pqlmanifest.Manifest
+	persistedOperationManifest *operationmanifest.Manifest
 }
 
 type GraphQLRequest struct {
@@ -504,6 +503,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
+			kind:       errorKindPersistedQueryNotConfigured,
 		}
 	}
 	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
@@ -705,6 +705,7 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration",
 				statusCode: http.StatusOK,
+				kind:       errorKindNoIntrospection,
 			}
 		}
 	}
@@ -750,6 +751,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -757,6 +759,7 @@ func (o *OperationKit) Parse() error {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidOperationName,
 		}
 	}
 
@@ -767,11 +770,13 @@ func (o *OperationKit) Parse() error {
 			return &httpGraphqlError{
 				message:    "operation name is required when multiple operations are defined",
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		} else {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 				statusCode: http.StatusOK,
+				kind:       errorKindInvalidOperationName,
 			}
 		}
 	}
@@ -1497,6 +1502,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 				extensionCode: invalidVarErr.ExtensionCode,
 				message:       invalidVarErr.Error(),
 				statusCode:    http.StatusOK,
+				kind:          errorKindInvalidVariables,
 			}
 			if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
 				graphqlErr.statusCode = http.StatusBadRequest
@@ -1506,6 +1512,7 @@ func (o *OperationKit) ValidateOperationVariables(skipLoader bool, remapVariable
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
+			kind:       errorKindInvalidVariables,
 		}
 	}
 	return nil
@@ -1680,14 +1687,16 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError       bool
+	allowInt64VariableValues                               bool
 	relaxSubgraphOperationFieldSelectionMergingNullability bool
 	allowStringLiteralsForEnums                            bool
 	enableDefer                                            bool
 	validateInlineArguments                                config.ValidateInlineArguments
+	normalizationLimits                                    astnormalization.Limits
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
-	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments)
+	normalizationOptions := buildNormalizationOptions(options.enableDefer, options.validateInlineArguments, options.normalizationLimits)
 
 	return &parseKit{
 		i:                   i,
@@ -1709,14 +1718,16 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 				SkipNullVariablesError: options.apolloRouterCompatibilityFlags.SkipNullVariablesError.Enabled,
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
+			AllowInt64Values:                options.allowInt64VariableValues,
 		}),
 		inlineArgumentsIncludePersisted: options.validateInlineArguments.IncludePersistedOperations,
 		operationValidator:              createOperationValidator(options),
 	}
 }
 
-func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments) []astnormalization.Option {
+func buildNormalizationOptions(enableDefer bool, validateInlineArguments config.ValidateInlineArguments, limits astnormalization.Limits) []astnormalization.Option {
 	opts := []astnormalization.Option{
+		astnormalization.WithLimits(limits),
 		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 		astnormalization.WithInlineFragmentSpreads(),
 		astnormalization.WithRemoveFragmentDefinitions(),
@@ -1763,11 +1774,15 @@ func createOperationValidator(options *parseKitOptions) *astvalidation.Operation
 	return astvalidation.DefaultOperationValidator(opts...)
 }
 
-func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
+func NewOperationProcessor(opts OperationProcessorOptions) (*OperationProcessor, error) {
+	if opts.Caches == nil {
+		return nil, errors.New("operation processor: Caches is required")
+	}
 	if opts.ParseKitPoolSize <= 0 {
 		opts.ParseKitPoolSize = 1
 	}
 	processor := &OperationProcessor{
+		caches:                   opts.Caches,
 		executor:                 opts.Executor,
 		maxOperationSizeInBytes:  opts.MaxOperationSizeInBytes,
 		persistedOperationClient: opts.PersistedOperationClient,
@@ -1783,34 +1798,37 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
+			allowInt64VariableValues:                               opts.AllowInt64VariableValues,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 			allowStringLiteralsForEnums:                            opts.AllowStringLiteralsForEnums,
 			validateInlineArguments:                                opts.ValidateInlineArguments,
+			normalizationLimits:                                    opts.NormalizationLimits,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
 		processor.parseKits[i] = createParseKit(i, processor.parseKitOptions)
 	}
-	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache ||
-		opts.VariablesNormalizationCache != nil || opts.RemapVariablesCache != nil {
+	caches := opts.Caches
+	if caches.Normalization != nil || caches.Validation != nil || caches.ComplexityCalculation != nil || caches.OperationHash != nil || opts.EnablePersistedOperationsCache ||
+		caches.VariablesNormalization != nil || caches.RemapVariables != nil {
 		processor.operationCache = &OperationCache{
-			normalizationCache:          opts.NormalizationCache,
-			validationCache:             opts.ValidationCache,
-			complexityCache:             opts.QueryDepthCache,
-			operationHashCache:          opts.OperationHashCache,
-			variablesNormalizationCache: opts.VariablesNormalizationCache,
-			remapVariablesCache:         opts.RemapVariablesCache,
+			normalizationCache:          caches.Normalization,
+			validationCache:             caches.Validation,
+			complexityCache:             caches.ComplexityCalculation,
+			operationHashCache:          caches.OperationHash,
+			variablesNormalizationCache: caches.VariablesNormalization,
+			remapVariablesCache:         caches.RemapVariables,
 		}
 	}
 	if opts.EnablePersistedOperationsCache {
 		processor.operationCache.automaticPersistedOperationCacheTtl = float64(opts.AutomaticPersistedOperationCacheTtl)
 		processor.operationCache.persistedOperationVariableNames = map[string]persistedOperationVariableNames{}
 		processor.operationCache.persistedOperationVariableNamesLock = &sync.RWMutex{}
-		processor.operationCache.persistedOperationNormalizationCache = opts.PersistedOpsNormalizationCache
+		processor.operationCache.persistedOperationNormalizationCache = caches.PersistedOperation
 	}
 
-	return processor
+	return processor, nil
 }
 
 func (p *OperationProcessor) getKit() *parseKit {
@@ -1842,6 +1860,9 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 				message:    fmt.Sprintf("request body too large, max size is %d bytes", p.maxOperationSizeInBytes),
 				statusCode: http.StatusRequestEntityTooLarge,
 			}
+		}
+		if isNetTimeoutError(err) {
+			return nil, newRequestBodyTimeoutError()
 		}
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}

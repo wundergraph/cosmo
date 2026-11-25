@@ -68,6 +68,50 @@ core.ModuleInfo{
 
 In this example, the module `myModule` has a priority of 1, meaning it will be loaded before modules with higher priority values.
 
+### Access the execution config
+
+Call `core.ExecutionConfigFromContext` in a request hook to read the schema and subgraph routing information for the graph serving that request. The router selects the base graph or a feature-flag graph before the hook runs. The request keeps that snapshot even if the router reloads its config before the request finishes.
+
+```go
+func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+    cfg := core.ExecutionConfigFromContext(ctx.Request().Context())
+    ctx.SetCustomFieldValueRenderer(m.rendererFor(cfg))
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+The returned pointer is **stable for the lifetime of a graph instance**. All requests served by that instance receive the same pointer. The base graph and each feature-flag graph have distinct pointers. A reload preserves the pointer for a reused graph. Rebuilding a graph creates a new pointer even if its config is identical.
+
+The module’s `rendererFor` method can use the pointer as a process-local cache key and parse `cfg.Schema()` on a cache miss. Bound the cache so retired snapshots can be collected.
+
+| Accessor | Returns |
+| --- | --- |
+| `Schema()` | The composed router SDL, including custom directives preserved by composition and inaccessible elements. |
+| `ClientSchema()` | The SDL used for validation and introspection. It falls back to `Schema()` when the config omits a separate client schema. Both accessors return SDL before the router adds runtime introspection definitions. |
+| `Subgraphs()` | Subgraphs in config order, with each subgraph’s `ID`, `Name`, and effective `RoutingURL`, including local routing overrides. Modules can modify the returned slice. |
+
+To expose a custom field directive to modules, import it with `@link` and include it with `@composeDirective` in the subgraph schema. This subgraph records which team owns its schema and its `Query.stock` field.
+
+```graphql
+schema
+  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@composeDirective"])
+  @link(url: "https://example.com/ownership/v1.0", import: ["@owner"])
+  @composeDirective(name: "@owner")
+  @owner(team: "platform") {
+  query: Query
+}
+
+directive @owner(team: String!) on SCHEMA | FIELD_DEFINITION
+
+type Query {
+  stock: Int! @owner(team: "inventory")
+}
+```
+
+A module can parse `cfg.Schema()` and read `@owner(team: "inventory")` from the `Query.stock` field definition.
+
+Outside a graph request, `ExecutionConfigFromContext` returns `nil`. Its accessors are safe to call on a nil pointer. `Schema()` and `ClientSchema()` return an empty string, and `Subgraphs()` returns a nil slice.
+
 ### Access the GraphQL operation
 
 During the client request, you have access to the actual GraphQL operation. Simply call:
@@ -211,6 +255,59 @@ func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext
   A more complex example including tests is accessible at
   https://github.com/wundergraph/cosmo/tree/main/router/cmd/custom
 </Info>
+
+### Add custom metrics
+
+`core.ModuleContext` exposes the router's OpenTelemetry meter providers in the `Provision` hook:
+
+- `PrometheusMeterProvider`: instruments are served on the router's [Prometheus](/router/metrics-and-monitoring) endpoint.
+- `OTLPMeterProvider`: instruments are exported through the router's [OTLP exporters](/router/open-telemetry).
+
+The two providers are independent. Create an instrument from each provider whose exporter you want to use. Both providers are always set. If an exporter is disabled, instruments created from its provider are not exported.
+
+Module instruments follow the same telemetry configuration as the router's own metrics, including `exclude_metrics`, `exclude_metric_labels` and `exclude_scope_info`.
+
+The following module counts subgraph requests per subgraph and tenant. The tenant is read from a request header in `Middleware`, stored on the request context, and read again for every subgraph request.
+
+```go
+type MetricsModule struct {
+	promCounter metric.Int64Counter
+	otlpCounter metric.Int64Counter
+}
+
+func (m *MetricsModule) Provision(ctx *core.ModuleContext) error {
+	var err error
+	m.promCounter, err = ctx.PrometheusMeterProvider.Meter("my-module").
+		Int64Counter("module.subgraph.requests")
+	if err != nil {
+		return err
+	}
+	m.otlpCounter, err = ctx.OTLPMeterProvider.Meter("my-module").
+		Int64Counter("module.subgraph.requests")
+	return err
+}
+
+func (m *MetricsModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	ctx.Set("tenant", ctx.Request().Header.Get("X-Tenant"))
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+
+func (m *MetricsModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	attrs := metric.WithAttributes(
+		attribute.String("subgraph", ctx.ActiveSubgraph(req).Name),
+		attribute.String("tenant", ctx.GetString("tenant")),
+	)
+	m.promCounter.Add(req.Context(), 1, attrs)
+	m.otlpCounter.Add(req.Context(), 1, attrs)
+	return req, nil
+}
+```
+
+In Prometheus, this counter is exported as `module_subgraph_requests_total`.
+
+<Warning>
+  Every distinct combination of attribute values creates a new time series. Do not use unbounded values such as user IDs or request IDs as attributes.
+</Warning>
 
 ### Access authentication information
 

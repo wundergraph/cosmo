@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.30.2
+	github.com/wundergraph/graphql-go-tools/v2 v2.33.0
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.46.0
@@ -85,9 +85,10 @@ require (
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/go-arena v1.3.0
+	go.opentelemetry.io/proto/otlp v1.11.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.15.0
 )
@@ -124,7 +125,6 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
-	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -139,7 +139,6 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/petermattis/goid v0.0.0-20260113132338-7c7de50cc741 // indirect
-	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -165,7 +164,6 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.46.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect

@@ -31,7 +31,7 @@ const GroupsToolbar = () => {
     <Toolbar className="w-auto">
       <CreateGroupDialog
         onGroupCreated={async (group) => {
-          await queryClient.refetchQueries({ queryKey, exact: true });
+          await queryClient.refetchQueries({ queryKey });
           await router.replace({
             pathname: router.pathname,
             query: {
