@@ -1,4 +1,4 @@
-import { identify, resetTracking } from '@/lib/track';
+import { identify } from '@/lib/track';
 import type { NextRouter } from 'next/router';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
@@ -8,11 +8,11 @@ import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
-import { useAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import JoinInvitationsPage from '@/pages/account/join';
+import { useOsanoConsent } from '@/hooks/use-osano-consent';
 
 const sessionQueryClient = new QueryClient();
 
@@ -114,8 +114,7 @@ const fetchSession = async () => {
       credentials: 'include',
     });
     if (response.status === 200) {
-      const body = await response.json();
-      return body;
+      return await response.json();
     } else if (response.status === 401) {
       throw new UnauthorizedError();
     }
@@ -151,7 +150,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
 
   // identify() skips PostHog while opted out, so re-run it once consent is granted.
-  const analyticsConsented = useAnalyticsConsent();
+  const analyticsConsented = useOsanoConsent();
 
   const [user, setUser] = useState<User>();
 
