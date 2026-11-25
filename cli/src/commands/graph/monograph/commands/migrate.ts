@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
+import { refuseWithoutTerminal } from '../../../../core/prompt.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 
@@ -12,6 +13,10 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the monograph to migrate.');
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
   command.action(async (name, options) => {
+    refuseWithoutTerminal(
+      `Migrating the monograph "${name}" is irreversible and needs confirmation in an interactive terminal.`,
+    );
+
     const inquiry = await inquirer.prompt({
       name: 'confirmMigration',
       type: 'confirm',

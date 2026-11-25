@@ -2,6 +2,7 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
+import { refuseWithoutTerminal } from '../../../core/prompt.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 
@@ -12,6 +13,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
+      refuseWithoutTerminal(
+        `Deleting the namespace "${name}" needs confirmation. Re-run with --force to delete it without a prompt.`,
+      );
+
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',

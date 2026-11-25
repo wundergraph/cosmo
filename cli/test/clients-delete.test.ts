@@ -94,6 +94,10 @@ const successPreview = {
   },
 };
 
+function setStdinIsTTY(value: boolean) {
+  Object.defineProperty(process.stdin, 'isTTY', { value, configurable: true });
+}
+
 const successDelete = {
   response: { code: EnumStatusCode.OK },
   client: successPreview.client,
@@ -113,6 +117,7 @@ describe('stdout', () => {
       throw new Error('process.exit');
     });
     promptMock.mockReset();
+    setStdinIsTTY(true);
   });
 
   afterEach(() => {
@@ -237,6 +242,57 @@ describe('stdout', () => {
 
     expect(promptMock).not.toHaveBeenCalled();
     expect(deleteCalled).toBe(true);
+  });
+
+  test('refuses without a terminal when operations exist and --force is missing', async () => {
+    let deleteCalled = false;
+    setStdinIsTTY(false);
+
+    await expect(
+      runDelete({
+        previewResponse: {
+          ...successPreview,
+          persistedOperationsCount: 2,
+        },
+        deleteResponse: successDelete,
+        onDeleteClient: () => {
+          deleteCalled = true;
+        },
+      }),
+    ).rejects.toThrow('process.exit');
+
+    expect(promptMock).not.toHaveBeenCalled();
+    expect(deleteCalled).toBe(false);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Client 'web' has 2 persisted operation(s). Re-run with --force to delete it without a prompt.",
+      ),
+    );
+  });
+
+  test('deletes without a terminal when --force is given', async () => {
+    let deleteCalled = false;
+    setStdinIsTTY(false);
+
+    await runDelete({
+      previewResponse: {
+        ...successPreview,
+        persistedOperationsCount: 2,
+      },
+      deleteResponse: {
+        ...successDelete,
+        deletedOperationsCount: 2,
+      },
+      args: ['--force'],
+      onDeleteClient: () => {
+        deleteCalled = true;
+      },
+    });
+
+    expect(promptMock).not.toHaveBeenCalled();
+    expect(deleteCalled).toBe(true);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Deleted 2 related persisted operation(s).'));
   });
 
   test('fails on preview rpc error', async () => {

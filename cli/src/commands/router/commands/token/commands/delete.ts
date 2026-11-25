@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import inquirer from 'inquirer';
+import { refuseWithoutTerminal } from '../../../../../core/prompt.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { deleteRouterToken } from '../../../../../core/router-token.js';
 
@@ -16,6 +17,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
+      refuseWithoutTerminal(
+        `Deleting the router token "${name}" needs confirmation. Re-run with --force to delete it without a prompt.`,
+      );
+
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',
