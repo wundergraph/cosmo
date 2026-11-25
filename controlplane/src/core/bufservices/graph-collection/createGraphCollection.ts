@@ -8,7 +8,7 @@ import type { PlainMessage } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { GraphCollectionsRepository } from '../../repositories/GraphCollectionsRepository.js';
+import { GraphCollectionsRepository, NameConflictError } from '../../repositories/GraphCollectionsRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -60,12 +60,32 @@ export function createGraphCollection(
     }
 
     const repo = new GraphCollectionsRepository(logger, opts.db, authContext.organizationId);
-    const id = await repo.createCollection({
+    const created = await repo.createCollection({
       federatedGraphId: federatedGraph.id,
       name,
       userId: authContext.userId,
       teamScoped: req.teamScoped,
     });
+    if (!created.ok) {
+      if (created.error instanceof NameConflictError) {
+        return {
+          response: {
+            code: created.error.code,
+            details: created.error.message,
+          },
+          id: '',
+        };
+      }
+
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Could not create the collection.',
+        },
+        id: '',
+      };
+    }
+    const { id } = created;
 
     await new AuditLogRepository(opts.db).addAuditLog({
       organizationId: authContext.organizationId,

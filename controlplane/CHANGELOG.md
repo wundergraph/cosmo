@@ -4,6 +4,61 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.269.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.268.0...controlplane@0.269.0) (2026-11-25)
+
+### Features
+
+* make public collection names unique ([#3582](https://github.com/wundergraph/cosmo/issues/3582)) ([1a072ba](https://github.com/wundergraph/cosmo/commit/1a072ba78c80cfd7ac704b2a36e6d5a18dd48891)) (@JivusAyrus)
+
+## [0.268.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.267.0...controlplane@0.268.0) (2026-11-24)
+
+### Features
+
+* add subgraph-scoped check approver role ([#3532](https://github.com/wundergraph/cosmo/issues/3532)) ([9d9009a](https://github.com/wundergraph/cosmo/commit/9d9009a3a39289960d04d48dda3824a006092dcd)) (@JivusAyrus)
+
+## [0.267.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.2...controlplane@0.267.0) (2026-11-23)
+
+### Features
+
+* **cli:** add wgc audit-log stream commands ([#3540](https://github.com/wundergraph/cosmo/issues/3540)) ([d6e0fe8](https://github.com/wundergraph/cosmo/commit/d6e0fe858c42b5b8e2cf5d3de56a09f3ac516b3d)) (@gausie)
+* **studio:** move Apollo migration into a tab on the create graph page ([#3566](https://github.com/wundergraph/cosmo/issues/3566)) ([d5e5b72](https://github.com/wundergraph/cosmo/commit/d5e5b72d99e2ffcb1dd6ce74004524be786e978d)) (@gausie)
+
+### Bug Fixes
+
+* **controlplane:** don't flag [@inaccessible](https://github.com/inaccessible) enum value changes as breaking [ENG-10075] ([#3563](https://github.com/wundergraph/cosmo/issues/3563)) ([0739615](https://github.com/wundergraph/cosmo/commit/0739615fa85cad58527c84bf64ffb6ecadd460bf)) (@gausie)
+* **controlplane:** don't flag removing schema-only definitions as breaking ([#3564](https://github.com/wundergraph/cosmo/issues/3564)) ([f1b457d](https://github.com/wundergraph/cosmo/commit/f1b457d62edd0e76c38546a4847af6a3b4858a17)) (@gausie)
+* **controlplane:** judge [@inaccessible](https://github.com/inaccessible) changes by what clients can see ([#3573](https://github.com/wundergraph/cosmo/issues/3573)) ([9d5f2a4](https://github.com/wundergraph/cosmo/commit/9d5f2a421ec69242a0dd06ceb20faf3694cb1b78)) (@gausie)
+
+## [0.266.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.1...controlplane@0.266.2) (2026-11-19)
+
+### Bug Fixes
+
+* **controlplane:** stop sending the whole schema to ClickHouse in graph pruning checks [COSMO-550] ([#3561](https://github.com/wundergraph/cosmo/issues/3561)) ([2743106](https://github.com/wundergraph/cosmo/commit/2743106bdd0f5080c8cdefcfa18e94f10e4f0abc)) (@gausie)
+
+## [0.266.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.266.0...controlplane@0.266.1) (2026-11-19)
+
+### Bug Fixes
+
+* stop check-extension validation at the first schema mismatch ([#3520](https://github.com/wundergraph/cosmo/issues/3520)) ([7b9fbfe](https://github.com/wundergraph/cosmo/commit/7b9fbfe5adc4a00d4cb86315b071ca6a1c80ad7d)) (@comatory)
+
+## [0.266.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.265.1...controlplane@0.266.0) (2026-11-18)
+
+### Features
+
+* **controlplane:** stream audit logs to Splunk HEC ([#3539](https://github.com/wundergraph/cosmo/issues/3539)) ([51d4eed](https://github.com/wundergraph/cosmo/commit/51d4eedcf52ea67405eba9d617ceca61cfaa787b)) (@gausie)
+
+### Bug Fixes
+
+* **controlplane:** stop storing plaintext API keys ([#3453](https://github.com/wundergraph/cosmo/issues/3453)) ([fbc6878](https://github.com/wundergraph/cosmo/commit/fbc68784d8550c0d25167b0bac208c33b9b78f8f)) (@gausie)
+
+### Performance Improvements
+
+* **controlplane:** index audit logs by organization and creation time ([#3538](https://github.com/wundergraph/cosmo/issues/3538)) ([92d0a68](https://github.com/wundergraph/cosmo/commit/92d0a68bfec3acb18933e81fab2c66eda396d3ce)) (@gausie)
+
+## [0.265.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.265.0...controlplane@0.265.1) (2026-11-16)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.265.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.264.0...controlplane@0.265.0) (2026-11-13)
 
 ### Features

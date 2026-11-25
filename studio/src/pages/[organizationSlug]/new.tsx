@@ -1,15 +1,27 @@
 import { CreateGraphForm } from '@/components/create-graph';
 import { FullscreenLayout } from '@/components/layout/fullscreen-layout';
+import { MigrateFromApolloForm } from '@/components/migrate-from-apollo-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NextPageWithLayout } from '@/lib/page';
 import { HomeIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
-import { useState } from 'react';
+import { parseAsStringLiteral, useQueryState } from 'nuqs';
+import { SiApollographql } from 'react-icons/si';
+
+const tabs = ['federated', 'monograph', 'apollo'] as const;
+
+const tabParser = parseAsStringLiteral(tabs).withDefault('federated');
+
+const titles: Record<(typeof tabs)[number], string> = {
+  federated: 'Create Federated Graph',
+  monograph: 'Create Monograph',
+  apollo: 'Migrate from Apollo',
+};
 
 const NewGraphPage: NextPageWithLayout = () => {
-  const [isMonograph, setIsMonograph] = useState(false);
+  const [tab, setTab] = useQueryState('tab', tabParser);
 
   return (
     <div>
@@ -21,24 +33,22 @@ const NewGraphPage: NextPageWithLayout = () => {
         </Button>
       </div>
       <div className="mx-auto my-8 max-w-screen-sm px-4 md:px-0">
-        <Tabs
-          onValueChange={(v) => {
-            setIsMonograph(v !== 'federated');
-          }}
-          defaultValue="federated"
-          className="mb-4 w-max"
-        >
+        <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof tabs)[number])} className="mb-4 w-max">
           <TabsList>
             <TabsTrigger value="federated">Federated Graph</TabsTrigger>
             <TabsTrigger value="monograph">Monograph</TabsTrigger>
+            <TabsTrigger value="apollo" className="gap-x-2">
+              <SiApollographql className="size-4" />
+              Migrate from Apollo
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <Card>
           <CardHeader>
-            <CardTitle>{isMonograph ? 'Create Monograph' : 'Create Federated Graph'}</CardTitle>
+            <CardTitle>{titles[tab]}</CardTitle>
           </CardHeader>
           <CardContent>
-            <CreateGraphForm isMonograph={isMonograph} />
+            {tab === 'apollo' ? <MigrateFromApolloForm /> : <CreateGraphForm isMonograph={tab === 'monograph'} />}
           </CardContent>
         </Card>
       </div>

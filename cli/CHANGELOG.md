@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.135.0](https://github.com/wundergraph/cosmo/compare/wgc@0.134.0...wgc@0.135.0) (2026-11-24)
+
+### Features
+
+* add json output to compose command ([#3581](https://github.com/wundergraph/cosmo/issues/3581)) ([358f556](https://github.com/wundergraph/cosmo/commit/358f55663f37ed41e359082913ebd6837e15de34)) (@alepane21)
+
+## [0.134.0](https://github.com/wundergraph/cosmo/compare/wgc@0.133.13...wgc@0.134.0) (2026-11-23)
+
+### Features
+
+* **cli:** add wgc audit-log stream commands ([#3540](https://github.com/wundergraph/cosmo/issues/3540)) ([d6e0fe8](https://github.com/wundergraph/cosmo/commit/d6e0fe858c42b5b8e2cf5d3de56a09f3ac516b3d)) (@gausie)
+
+## [0.133.13](https://github.com/wundergraph/cosmo/compare/wgc@0.133.12...wgc@0.133.13) (2026-11-18)
+
+### Bug Fixes
+
+* **deps:** address wgc security advisories ([#3552](https://github.com/wundergraph/cosmo/issues/3552)) ([9c5cdcb](https://github.com/wundergraph/cosmo/commit/9c5cdcbb2a2c3cff282fff3db940306b5710563d)) (@comatory)
+
+## [0.133.12](https://github.com/wundergraph/cosmo/compare/wgc@0.133.11...wgc@0.133.12) (2026-11-16)
+
+**Note:** Version bump only for package wgc
+
 ## [0.133.11](https://github.com/wundergraph/cosmo/compare/wgc@0.133.10...wgc@0.133.11) (2026-11-13)
 
 **Note:** Version bump only for package wgc

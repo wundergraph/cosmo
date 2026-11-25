@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
+import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
 import { createAPIKeyTestRBACEvaluator, createTestGroup, createTestRBACEvaluator } from '../src/core/test-util.js';
 
 describe('RBAC Evaluator', () => {
@@ -37,6 +38,7 @@ describe('RBAC Evaluator', () => {
     expect(rbac.canDeleteFederatedGraph(fakeTarget())).toBe(false);
     expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
     expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
+    expect(rbac.canApproveCheck(fakeTarget(), [fakeTarget()])).toBe(false);
     expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
     expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
     expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
@@ -500,6 +502,99 @@ describe('RBAC Evaluator', () => {
     });
   });
 
+  describe('canApproveCheck', () => {
+    test('Graph writers can approve any check, including checks of new subgraphs', () => {
+      const graph = fakeTarget();
+
+      for (const group of [
+        orgAdmin,
+        orgDeveloper,
+        createTestGroup({ role: 'graph-admin', resources: [graph.targetId] }),
+      ]) {
+        const rbac = createTestRBACEvaluator(group);
+        expect(rbac.canApproveCheck(graph, [fakeTarget(), null])).toBe(true);
+        expect(rbac.canApproveCheck(graph, [])).toBe(true);
+      }
+    });
+
+    test('Check approver with read access can approve checks of its subgraphs', () => {
+      const graph = fakeTarget();
+      const subgraph1 = fakeTarget();
+      const subgraph2 = fakeTarget();
+      const rbac = createTestRBACEvaluator(graphViewer, approver(subgraph1, subgraph2));
+
+      expect(rbac.canApproveCheck(graph, [subgraph1])).toBe(true);
+      expect(rbac.canApproveCheck(graph, [subgraph1, subgraph2])).toBe(true);
+    });
+
+    test('Check approver cannot approve when any checked subgraph is not granted or does not exist', () => {
+      const graph = fakeTarget();
+      const subgraph = fakeTarget();
+      const rbac = createTestRBACEvaluator(graphViewer, approver(subgraph));
+
+      expect(rbac.canApproveCheck(graph, [subgraph, fakeTarget()])).toBe(false);
+      expect(rbac.canApproveCheck(graph, [fakeTarget()])).toBe(false);
+      expect(rbac.canApproveCheck(graph, [subgraph, null])).toBe(false);
+      expect(rbac.canApproveCheck(graph, [])).toBe(false);
+    });
+
+    test('Check approver needs read access to the federated graph', () => {
+      const subgraph = fakeTarget();
+      const rbac = createTestRBACEvaluator(approver(subgraph));
+
+      expect(rbac.canApproveCheck(fakeTarget(), [subgraph])).toBe(false);
+      expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
+      expect(rbac.hasNamespaceReadAccess(fakeNamespace())).toBe(false);
+      expect(rbac.hasSubGraphReadAccess(subgraph)).toBe(false);
+    });
+
+    test('Check approver granted on a namespace can approve checks of the subgraphs in it', () => {
+      const ns1 = fakeNamespace();
+      const rbac = createTestRBACEvaluator(
+        graphViewer,
+        createTestGroup({ role: 'subgraph-check-approver', namespaces: [ns1.id] }),
+      );
+
+      expect(rbac.canApproveCheck(fakeTarget(), [fakeTarget({ namespace: ns1.id })])).toBe(true);
+      expect(rbac.canApproveCheck(fakeTarget(), [fakeTarget({ namespace: ns1.id }), fakeTarget()])).toBe(false);
+    });
+
+    test('Check approver cannot approve checks of subgraphs outside the IdP namespaces', () => {
+      const ns1 = fakeNamespace();
+      const graph = fakeTarget({ namespace: ns1.id });
+      const rbac = new RBACEvaluator(
+        [graphViewer, createTestGroup({ role: 'subgraph-check-approver' })],
+        undefined,
+        false,
+        {
+          kind: 'restricted',
+          namespaceIds: new Set([ns1.id]),
+        },
+      );
+
+      expect(rbac.canApproveCheck(graph, [fakeTarget({ namespace: ns1.id })])).toBe(true);
+      expect(rbac.canApproveCheck(graph, [fakeTarget()])).toBe(false);
+    });
+
+    test('Other subgraph roles on every checked subgraph do not grant approval', () => {
+      const graph = fakeTarget();
+      const subgraph = fakeTarget();
+
+      for (const role of ['subgraph-admin', 'subgraph-publisher', 'subgraph-checker', 'subgraph-viewer']) {
+        const rbac = createTestRBACEvaluator(graphViewer, createTestGroup({ role, resources: [subgraph.targetId] }));
+        expect(rbac.canApproveCheck(graph, [subgraph])).toBe(false);
+      }
+    });
+
+    test('Namespace and graph viewer roles do not grant approval', () => {
+      const subgraph = fakeTarget();
+
+      for (const group of [orgViewer, namespaceAdmin, namespaceViewer, graphViewer]) {
+        expect(createTestRBACEvaluator(group).canApproveCheck(fakeTarget(), [subgraph])).toBe(false);
+      }
+    });
+  });
+
   describe('subgraph-admin', () => {
     test('Should have write access to every graph', () => {
       const rbac = createTestRBACEvaluator(subgraphAdmin);
@@ -884,6 +979,10 @@ function fakeNamespace(id?: string) {
 
 function fakeFeatureFlag(namespace?: string) {
   return { namespaceId: namespace ?? randomUUID() };
+}
+
+function approver(...subgraphs: { targetId: string }[]) {
+  return createTestGroup({ role: 'subgraph-check-approver', resources: subgraphs.map((s) => s.targetId) });
 }
 
 function fakeTarget(input?: { id?: string; namespace?: string; userId?: string }) {

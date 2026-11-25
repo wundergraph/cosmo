@@ -14,6 +14,7 @@ import {
   unique,
   index,
   json,
+  jsonb,
   real,
 } from 'drizzle-orm/pg-core';
 import { AxiosHeaderValue } from 'axios';
@@ -22,6 +23,7 @@ import type {
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { AuditLogStreamDestination } from '../core/audit-log-stream/destination.js';
 import type { PlainMessage } from '../types/index.js';
 import { FeatureIds } from '../types/index.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
@@ -1497,6 +1499,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'subgraph-publisher',
   'subgraph-checker',
   'subgraph-viewer',
+  'subgraph-check-approver',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -2161,11 +2164,41 @@ export const auditLogs = pgTable(
   },
   (t) => {
     return {
-      organizationIdIndex: index('auditlogs_organization_idx').on(t.organizationId),
+      // Serves the Audit Log page, which filters by organization and date and sorts by date, from the index alone.
+      // Also covers lookups by organization only, so it replaces the single-column index.
+      organizationCreatedAtIdIndex: index('auditlogs_org_created_at_id_idx').on(t.organizationId, t.createdAt, t.id),
       createdAtIndex: index('auditlogs_created_at_idx').on(t.createdAt),
     };
   },
 );
+
+export const auditLogStreamKindEnum = pgEnum('audit_log_stream_kind', [
+  'splunk_hec',
+] as const satisfies readonly AuditLogStreamDestination['kind'][]);
+
+/**
+ * Where an organization's audit logs are streamed. One per organization.
+ */
+export const auditLogStreamConfigs = pgTable('audit_log_stream_configs', {
+  organizationId: uuid('organization_id')
+    .notNull()
+    .primaryKey()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  kind: auditLogStreamKindEnum('kind').notNull(),
+  settings: jsonb('settings').$type<AuditLogStreamDestination['settings']>().notNull(),
+  secret: text('secret').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  // The (created_at, id) of the last audit log delivered. Delivery resumes after this point.
+  cursorCreatedAt: timestamp('cursor_created_at', { withTimezone: true }).notNull().defaultNow(),
+  cursorId: uuid('cursor_id'),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  lastErrorAt: timestamp('last_error_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});
 
 export const graphCompositions = pgTable(
   'graph_compositions', // graphcomp
@@ -2651,6 +2684,11 @@ export const graphCollections = pgTable(
         t.federatedGraphId,
         t.privateToUserId,
       ),
+      // Team-scoped names are unique per graph, ignoring case. Private
+      // collections are excluded, so users can name their own freely.
+      uniqueTeamName: uniqueIndex('gc_unique_team_name')
+        .on(t.federatedGraphId, sql`lower(${t.name})`)
+        .where(sql`${t.privateToUserId} IS NULL`),
     };
   },
 );

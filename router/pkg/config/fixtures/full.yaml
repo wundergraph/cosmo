@@ -36,6 +36,8 @@ router_registration: true
 graphql_path: /graphql
 dev_mode: false
 tls:
+  watch: true
+  watch_interval: 5s
   server:
     enabled: false
   client:
@@ -120,6 +122,8 @@ mcp:
       instructions: 'Use the operation tools to interact with the graph.'
   storage:
     provider_id: mcp
+    object_path: mcp/manifest.json
+    poll_interval: 30s
   output_schema:
     enabled: true
 
@@ -306,6 +310,11 @@ traffic_shaping:
     max_header_bytes: 4MiB
     decompression_enabled: false
     response_compression_min_size: 4KiB
+    # Client-facing HTTP server timeouts
+    request_read_timeout: 30s
+    request_header_read_timeout: 5s
+    idle_timeout: 90s
+    write_timeout: 2m
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -620,6 +629,8 @@ security:
     max_estimated_limit: 1000
     estimated_list_size: 10
     expose_headers: false
+  normalization_limits:
+    max_selections: 20000
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:
@@ -682,9 +693,17 @@ split_config_poller:
 
 router_config_path: 'latest.json'
 
+graphql_over_http:
+  status_codes: September2026
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
+
+backwards_compatibility:
+  persisted_operations:
+    allow_mismatched_sha256_ids: false
+  variables_validation:
+    allow_int64_values: false
 
 apollo_compatibility_flags:
   enable_all: false

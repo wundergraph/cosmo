@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -60,6 +61,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -162,22 +164,25 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	// muxes reused across a reload keep the transports they were built with.
 	traceDialer := r.connectionTraceDialer()
 
-	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(
-		r.logger,
-		&r.tls.settings.Client,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
-	}
+	// Watched TLS configs share reload callbacks. Otherwise, preserve file reloading
+	// on graph rebuilds without accumulating registrations in the router.
+	defaultClientTLS, perSubgraphTLS := r.tls.defaultClientTLS, r.tls.perSubgraphTLS
+	defaultGRPCClientTLS, perSubgraphGRPCTLS := r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS
+	if !r.tls.settings.Watch {
+		var (
+			reloaders certReloaders
+			err       error
+		)
 
-	// Build gRPC subgraph client TLS configs
-	defaultGRPCClientTLS, perSubgraphGRPCTLS, err := buildSubgraphGRPCTLSConfigs(
-		r.logger,
-		&r.tls.settings.ClientGRPC,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		defaultClientTLS, perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&reloaders, r.logger, &r.tls.settings.Client)
+		if err != nil {
+			return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+		}
+
+		defaultGRPCClientTLS, perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&reloaders, r.logger, &r.tls.settings.ClientGRPC)
+		if err != nil {
+			return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		}
 	}
 
 	// Base transport
@@ -1060,18 +1065,25 @@ func (s *graphServer) buildGraphMux(
 	// Currently, we only support custom attributes from the context for OTLP metrics
 	b := buildAttributesMap(s.metricConfig.Attributes)
 
+	resolved := make([]routerconfig.Subgraph, len(subgraphs))
+	for i, sg := range subgraphs {
+		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
+	}
+	executionConfig := routerconfig.NewExecutionConfig(
+		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
+
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
+				executionConfig:               executionConfig,
+				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
 				metricSetAttributes:           b,
@@ -1085,7 +1097,9 @@ func (s *graphServer) buildGraphMux(
 				r:                             r,
 			})
 
-			r = r.WithContext(withRequestContext(r.Context(), reqContext))
+			ctx := withRequestContext(withSubgraphResolver(r.Context(), subgraphResolver), reqContext)
+			r = r.WithContext(ctx)
+			reqContext.request = r
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -1396,10 +1410,14 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
+		NormalizationLimits: astnormalization.Limits{
+			MaxSelections: s.securityConfiguration.NormalizationLimits.MaxSelections,
+		},
 		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		AllowInt64VariableValues:                               s.backwardsCompatibility.VariablesValidation.AllowInt64Values,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		AllowStringLiteralsForEnums:                            s.engineExecutionConfiguration.AllowStringLiteralsForEnums,
 		EnableDefer:                                            s.engineExecutionConfiguration.EnableDefer,
@@ -1558,33 +1576,35 @@ func (s *graphServer) buildGraphMux(
 				Workers:        manifestWarmup.Workers,
 				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 				Timeout:        manifestWarmup.Timeout,
-				Source:         NewManifestWarmupSource(pqlStore),
+				Source:         NewManifestWarmupSource(s.persistedOperationClient),
 				AfterOperation: manifestAfterOperation,
 			}
+
+			// Subscribe before the warmup so a manifest the poller loads during it
+			// is re-warmed, and a load from before this graph mux is not. Every mux
+			// subscribes, and the subscription ends with the mux.
+			manifestUpdates := pqlStore.Subscribe(graphMuxCtx)
 
 			err = WarmupCaches(graphMuxCtx, manifestWarmupConfig)
 			if err != nil {
 				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
 			}
 
-			// Re-warm when the manifest is updated by the poller.
-			// The store handles coalescing — if a re-warm is already running or pending,
-			// new signals are dropped. The worker always reads the latest manifest.
-			pqlStore.SetOnUpdate(func() {
-				rewarmConfig := &CacheWarmupConfig{
-					Log:            s.logger,
-					Processor:      manifestProcessor,
-					Workers:        manifestWarmup.Workers,
-					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
-					Timeout:        manifestWarmup.Timeout,
-					Source:         NewManifestWarmupSource(pqlStore),
-					AfterOperation: manifestAfterOperation,
+			// Re-warm when the poller loads a new manifest. The store coalesces
+			// signals that arrive while a re-warm is running, and the source always
+			// reads the latest manifest. The loop ends with this graph mux.
+			go func() {
+				for {
+					select {
+					case <-graphMuxCtx.Done():
+						return
+					case <-manifestUpdates:
+						if rewarmErr := WarmupCaches(graphMuxCtx, manifestWarmupConfig); rewarmErr != nil {
+							s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
+						}
+					}
 				}
-
-				if rewarmErr := WarmupCaches(graphMuxCtx, rewarmConfig); rewarmErr != nil {
-					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
-				}
-			})
+			}()
 		}
 	}
 
@@ -1732,6 +1752,7 @@ func (s *graphServer) buildGraphMux(
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
 		WaitForCacheWrites:                     waitForCacheWrites,
+		GraphQLOverHTTPStatusCodes:             s.graphqlOverHTTP.StatusCodes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1855,13 +1876,20 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				grpcMeterProviders = append(grpcMeterProviders, s.promMeterProvider)
 			}
 
+			// The circuits are shared with the HTTP subgraphs and are looked up by subgraph name on every call
+			var unaryInterceptors []grpc.UnaryClientInterceptor
+			if s.circuitBreakerManager != nil {
+				unaryInterceptors = append(unaryInterceptors, circuit.NewUnaryClientInterceptor(sg.Name, s.circuitBreakerManager, s.logger))
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:         s.logger,
-				Endpoint:       sg.RoutingUrl,
-				TLSConfig:      grpcTLS,
-				Propagator:     s.compositePropagator,
-				SubgraphName:   sg.Name,
-				MeterProviders: grpcMeterProviders,
+				Logger:            s.logger,
+				Endpoint:          sg.RoutingUrl,
+				TLSConfig:         grpcTLS,
+				Propagator:        s.compositePropagator,
+				SubgraphName:      sg.Name,
+				MeterProviders:    grpcMeterProviders,
+				UnaryInterceptors: unaryInterceptors,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)

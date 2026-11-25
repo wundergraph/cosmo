@@ -186,7 +186,9 @@
         "Enabled": false
       },
       "Subgraphs": null
-    }
+    },
+    "Watch": false,
+    "WatchInterval": 1000000000
   },
   "CacheControl": {
     "Enabled": false,
@@ -207,7 +209,9 @@
       }
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "ObjectPath": "",
+      "PollInterval": 10000000000
     },
     "Session": {
       "Stateless": true
@@ -299,7 +303,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 60000000000,
+      "RequestHeaderReadTimeout": 0,
+      "IdleTimeout": 0,
+      "WriteTimeout": 0
     },
     "Subgraphs": null
   },
@@ -521,6 +529,9 @@
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
+    },
+    "NormalizationLimits": {
+      "MaxSelections": 10000
     },
     "OperationNameLengthLimit": 512
   },
@@ -774,9 +785,20 @@
       "Enabled": false
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "legacy"
+  },
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
+    }
   },
   "Plugins": {
     "Enabled": false,

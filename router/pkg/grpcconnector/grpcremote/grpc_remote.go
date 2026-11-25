@@ -39,18 +39,22 @@ type RemoteGRPCProviderConfig struct {
 	// logged. The router adds the OTLP and Prometheus providers when
 	// metrics.otlp.grpc_service and metrics.prometheus.grpc_service are enabled.
 	MeterProviders []metric.MeterProvider
+	// UnaryInterceptors are additional unary client interceptors for outgoing gRPC calls,
+	// e.g. a circuit breaker. They run in the given order, before the trace context is injected.
+	UnaryInterceptors []grpc.UnaryClientInterceptor
 }
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
-	logger         *zap.Logger
-	endpoint       string
-	tlsConfig      *tls.Config
-	propagator     propagation.TextMapPropagator
-	subgraphName   string
-	meterProviders []metric.MeterProvider
+	logger            *zap.Logger
+	endpoint          string
+	tlsConfig         *tls.Config
+	propagator        propagation.TextMapPropagator
+	subgraphName      string
+	meterProviders    []metric.MeterProvider
+	unaryInterceptors []grpc.UnaryClientInterceptor
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
@@ -71,12 +75,13 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 	}
 
 	return &RemoteGRPCProvider{
-		logger:         config.Logger,
-		endpoint:       config.Endpoint,
-		tlsConfig:      config.TLSConfig,
-		propagator:     config.Propagator,
-		subgraphName:   config.SubgraphName,
-		meterProviders: config.MeterProviders,
+		logger:            config.Logger,
+		endpoint:          config.Endpoint,
+		tlsConfig:         config.TLSConfig,
+		propagator:        config.Propagator,
+		subgraphName:      config.SubgraphName,
+		meterProviders:    config.MeterProviders,
+		unaryInterceptors: config.UnaryInterceptors,
 	}, nil
 }
 
@@ -102,6 +107,10 @@ func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 		}
 		opts := []grpc.DialOption{
 			transportCreds,
+		}
+
+		if len(g.unaryInterceptors) > 0 {
+			opts = append(opts, grpc.WithChainUnaryInterceptor(g.unaryInterceptors...))
 		}
 
 		// When a propagator is configured, inject the OpenTelemetry trace context

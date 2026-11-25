@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.190.0](https://github.com/wundergraph/cosmo/compare/studio@0.189.0...studio@0.190.0) (2026-11-25)
+
+### Features
+
+* make public collection names unique ([#3582](https://github.com/wundergraph/cosmo/issues/3582)) ([1a072ba](https://github.com/wundergraph/cosmo/commit/1a072ba78c80cfd7ac704b2a36e6d5a18dd48891)) (@JivusAyrus)
+
+### Bug Fixes
+
+* show a new group and open its sheet right after creating it ([#3588](https://github.com/wundergraph/cosmo/issues/3588)) ([6e4c022](https://github.com/wundergraph/cosmo/commit/6e4c0224720220c837227a3d986f4c7b4761a575)) (@JivusAyrus)
+
+## [0.189.0](https://github.com/wundergraph/cosmo/compare/studio@0.188.0...studio@0.189.0) (2026-11-24)
+
+### Features
+
+* add subgraph-scoped check approver role ([#3532](https://github.com/wundergraph/cosmo/issues/3532)) ([9d9009a](https://github.com/wundergraph/cosmo/commit/9d9009a3a39289960d04d48dda3824a006092dcd)) (@JivusAyrus)
+
+## [0.188.0](https://github.com/wundergraph/cosmo/compare/studio@0.187.0...studio@0.188.0) (2026-11-23)
+
+### Features
+
+* **studio:** move Apollo migration into a tab on the create graph page ([#3566](https://github.com/wundergraph/cosmo/issues/3566)) ([d5e5b72](https://github.com/wundergraph/cosmo/commit/d5e5b72d99e2ffcb1dd6ce74004524be786e978d)) (@gausie)
+
+## [0.187.0](https://github.com/wundergraph/cosmo/compare/studio@0.186.10...studio@0.187.0) (2026-11-19)
+
+### Features
+
+* **studio:** add an export audit logs dialog for Splunk streaming ([#3541](https://github.com/wundergraph/cosmo/issues/3541)) ([b0e0dee](https://github.com/wundergraph/cosmo/commit/b0e0dee38ce5445b1be050e27c979d27ec1e9471)) (@gausie)
+
+## [0.186.10](https://github.com/wundergraph/cosmo/compare/studio@0.186.9...studio@0.186.10) (2026-11-19)
+
+### Bug Fixes
+
+* **studio:** upgrade Next.js to 15.5.29 for security advisories ([#3555](https://github.com/wundergraph/cosmo/issues/3555)) ([71859d5](https://github.com/wundergraph/cosmo/commit/71859d533e4da4d01edd31cb901bcc3c9037d991)) (@thisisnithin)
+
+## [0.186.9](https://github.com/wundergraph/cosmo/compare/studio@0.186.8...studio@0.186.9) (2026-11-18)
+
+**Note:** Version bump only for package studio
+
+## [0.186.8](https://github.com/wundergraph/cosmo/compare/studio@0.186.7...studio@0.186.8) (2026-11-16)
+
+**Note:** Version bump only for package studio
+
 ## [0.186.7](https://github.com/wundergraph/cosmo/compare/studio@0.186.6...studio@0.186.7) (2026-11-13)
 
 **Note:** Version bump only for package studio

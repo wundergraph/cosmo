@@ -31,6 +31,7 @@ export const ChangesTable = ({
   operationHash,
   operationName,
   hasIgnoreAll,
+  canApproveChecks,
 }: {
   changes: SchemaChange[];
   caption?: React.ReactNode;
@@ -39,6 +40,7 @@ export const ChangesTable = ({
   operationHash?: string;
   operationName?: string;
   hasIgnoreAll?: boolean;
+  canApproveChecks: boolean;
 }) => {
   const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
   const { checkId, slug } = useCheckParams();
@@ -62,6 +64,7 @@ export const ChangesTable = ({
               key={i}
               {...c}
               hasIgnoreAll={hasIgnoreAll}
+              canApproveChecks={canApproveChecks}
               operationHash={operationHash}
               operationName={operationName}
               openUsage={openUsage}
@@ -94,6 +97,7 @@ const Row = ({
   offset,
   checkId,
   slug,
+  canApproveChecks,
 }: {
   changeType: string;
   message: string;
@@ -108,6 +112,7 @@ const Row = ({
   offset: number;
   checkId: string;
   slug: string;
+  canApproveChecks: boolean;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const { toast } = useToast();
@@ -192,13 +197,14 @@ const Row = ({
               <div>
                 <Switch
                   checked={hasOverride}
-                  disabled={creatingOverrides || removingOverrides}
+                  disabled={!canApproveChecks || creatingOverrides || removingOverrides}
                   onCheckedChange={() =>
                     hasOverride
                       ? removeOverrides({
                           graphName: graphContext?.graph?.name,
                           namespace: graphContext?.graph?.namespace,
                           operationHash,
+                          checkId,
                           changes: [
                             {
                               changeType,
@@ -211,6 +217,7 @@ const Row = ({
                           namespace: graphContext?.graph?.namespace,
                           operationHash,
                           operationName,
+                          checkId,
                           changes: [
                             {
                               changeType,

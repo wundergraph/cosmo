@@ -255,7 +255,9 @@
           "Enabled": true
         }
       }
-    }
+    },
+    "Watch": true,
+    "WatchInterval": 5000000000
   },
   "CacheControl": {
     "Enabled": true,
@@ -281,7 +283,9 @@
       }
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "ObjectPath": "mcp/manifest.json",
+      "PollInterval": 30000000000
     },
     "Session": {
       "Stateless": true
@@ -562,7 +566,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
       "DecompressionEnabled": false,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 30000000000,
+      "RequestHeaderReadTimeout": 5000000000,
+      "IdleTimeout": 90000000000,
+      "WriteTimeout": 120000000000
     },
     "Subgraphs": {
       "products": {
@@ -1034,6 +1042,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 20000
+    },
     "OperationNameLengthLimit": 2000
   },
   "EngineExecutionConfiguration": {
@@ -1317,9 +1328,20 @@
       "Enabled": true
     }
   },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "September2026"
+  },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
+    }
   },
   "Plugins": {
     "Enabled": true,
