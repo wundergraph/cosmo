@@ -53,7 +53,7 @@ func TestProviderAdapterStreamSubscribe(t *testing.T) {
 		}).Once()
 
 		p := newTestAdapter(t, consumer)
-		require.NoError(t, p.Subscribe(ctx, subConf, updater))
+		require.NoError(t, p.Subscribe(ctx, subConf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 		waitForGoroutine(t, &p.closeWg)
 
 		require.Equal(t, [][]byte{[]byte(`{"id":13}`)}, delivered)
@@ -80,7 +80,7 @@ func TestProviderAdapterStreamSubscribe(t *testing.T) {
 		updater := datasource.NewMockSubscriptionEventUpdater(t)
 
 		p := newTestAdapter(t, consumer)
-		require.NoError(t, p.Subscribe(ctx, subConf, updater))
+		require.NoError(t, p.Subscribe(ctx, subConf, datasource.DeliveryGuaranteeAtMostOnce, updater))
 		waitForGoroutine(t, &p.closeWg)
 	})
 }
