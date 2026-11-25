@@ -123,7 +123,7 @@ describe('Publish feature subgraph tests', () => {
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${basePluginName}" is a plugin, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc router plugin publish' command.`,
+      `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${basePluginName}" is a plugin, please use the 'feature-subgraph create' command to create the feature subgraph first, then publish it using the 'router plugin publish' command.`,
     );
   });
 
@@ -157,7 +157,7 @@ describe('Publish feature subgraph tests', () => {
 
     expect(publishPluginResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishPluginResponse.response?.details).toBe(
-      `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+      `Subgraph ${pluginName} is a plugin. Please use the 'router plugin publish' command to publish the plugin.`,
     );
   });
 
@@ -522,7 +522,7 @@ describe('Publish feature subgraph tests', () => {
     // Should fail with specific error about GRPC services
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      `Cannot create a feature subgraph with a grpc service base subgraph using this command. Since the base subgraph "${baseGrpcServiceName}" is a grpc service, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc grpc-service publish' command.`,
+      `The base subgraph "${baseGrpcServiceName}" is a grpc service, so the feature subgraph needs its generated proto files. Please publish it with 'feature-subgraph publish ${featureSubgraphName} --schema <schema> --generated <folder>', where the folder is what 'grpc-service generate ${featureSubgraphName} --input <schema> --output <folder>' writes.`,
     );
 
     // Verify the feature subgraph was NOT created
@@ -530,6 +530,40 @@ describe('Publish feature subgraph tests', () => {
       name: featureSubgraphName,
     });
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+  });
+
+  test('that a feature subgraph of a grpc service base is created and published in one step with its generated proto files', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName = genID('featureSubgraph');
+
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
+      labels: [genUniqueLabel('grpc-service')],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      baseSubgraphName: baseGrpcServiceName,
+      isFeatureSubgraph: true,
+      labels: [],
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
+      schema: 'type Query { grpcServiceHello: String }',
+      type: SubgraphType.GRPC_SERVICE,
+      proto: { schema: grpcProtoSchema, mappings: grpcProtoMappings, lock: grpcProtoLock },
+    });
+    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({ name: featureSubgraphName });
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
   });
 
   test('that a feature subgraph cannot be published with a GRPC service base subgraph using wgc fs publish after creation', async (testContext) => {
@@ -571,7 +605,7 @@ describe('Publish feature subgraph tests', () => {
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      `Subgraph ${featureSubgraphName} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
+      `Feature subgraph ${featureSubgraphName} is a grpc service. Please publish it with 'feature-subgraph publish ${featureSubgraphName} --schema <schema> --generated <folder>', where the folder is what 'grpc-service generate ${featureSubgraphName} --input <schema> --output <folder>' writes.`,
     );
   });
 

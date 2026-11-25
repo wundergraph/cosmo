@@ -200,8 +200,10 @@ export function publishFederatedSubgraph(
 
       if (req.type !== undefined && subgraph.type !== formatSubgraphType(req.type)) {
         const subgraphTypeMessages: Record<string, string> = {
-          grpc_plugin: `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
-          grpc_service: `Subgraph ${subgraph.name} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
+          grpc_plugin: `Subgraph ${subgraph.name} is a plugin. Please use the 'router plugin publish' command to publish the plugin.`,
+          grpc_service: subgraph.isFeatureSubgraph
+            ? `Feature subgraph ${subgraph.name} is a grpc service. Please publish it with 'feature-subgraph publish ${subgraph.name} --schema <schema> --generated <folder>', where the folder is what 'grpc-service generate ${subgraph.name} --input <schema> --output <folder>' writes.`
+            : `Subgraph ${subgraph.name} is a grpc service. Please use the 'grpc-service publish' command to publish the grpc service.`,
         };
 
         const errorMessage =
@@ -280,7 +282,7 @@ export function publishFederatedSubgraph(
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${req.baseSubgraphName}" is a plugin, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc router plugin publish' command.`,
+                details: `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${req.baseSubgraphName}" is a plugin, please use the 'feature-subgraph create' command to create the feature subgraph first, then publish it using the 'router plugin publish' command.`,
               },
               compositionErrors: [],
               deploymentErrors: [],
@@ -289,11 +291,11 @@ export function publishFederatedSubgraph(
             };
           }
 
-          if (baseSubgraph.type === 'grpc_service') {
+          if (baseSubgraph.type === 'grpc_service' && !req.proto) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Cannot create a feature subgraph with a grpc service base subgraph using this command. Since the base subgraph "${req.baseSubgraphName}" is a grpc service, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc grpc-service publish' command.`,
+                details: `The base subgraph "${req.baseSubgraphName}" is a grpc service, so the feature subgraph needs its generated proto files. Please publish it with 'feature-subgraph publish ${req.name} --schema <schema> --generated <folder>', where the folder is what 'grpc-service generate ${req.name} --input <schema> --output <folder>' writes.`,
               },
               compositionErrors: [],
               deploymentErrors: [],

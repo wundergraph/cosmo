@@ -7,14 +7,18 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { getBaseHeaders } from '../../../core/config.js';
+import { commandName, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
-  command.description('Creates a feature subgraph on the control plane.');
+  command.description(
+    'Creates a feature subgraph on the control plane.' +
+      ` When the base subgraph is a gRPC service, publish the feature subgraph with '${commandName} feature-subgraph publish <name> --schema <schema> --generated <folder>',` +
+      ` where the folder is what '${commandName} grpc-service generate <name> --input <schema> --output <folder>' writes.`,
+  );
   command.argument('<name>', 'The name of the feature subgraph to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature subgraph.');
   command.option(

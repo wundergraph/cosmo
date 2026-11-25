@@ -10,18 +10,25 @@ import { websocketSubprotocolDescription } from '../../../constants.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
-import { getBaseHeaders } from '../../../core/config.js';
+import { commandName, getBaseHeaders } from '../../../core/config.js';
+import { readGeneratedProto } from '../../../core/grpc-generated.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
   command.description(
-    "Publishes a feature subgraph on the control plane. If the feature subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.",
+    "Publishes a feature subgraph on the control plane. If the feature subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema." +
+      `\nA feature subgraph of a gRPC service subgraph also needs --generated, the folder that '${commandName} grpc-service generate' writes from the schema.`,
   );
   command.argument(
     '<name>',
     'The name of the feature subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your feature subgraph.',
   );
   command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the feature subgraph.');
+  command.option(
+    '--generated <path-to-generated-folder>',
+    `The folder with the proto schema, mapping and lock files that '${commandName} grpc-service generate' writes.` +
+      ' Required when the base subgraph is a gRPC service.',
+  );
   command.option('-n, --namespace [string]', 'The namespace of the feature subgraph.');
   command.option(
     '-r, --routing-url <url>',
@@ -90,6 +97,8 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
+    const proto = options.generated ? await readGeneratedProto(options.generated) : undefined;
+
     const spinner = ora('Feature Subgraph is being published...');
     if (!shouldOutputJson) {
       spinner.start();
@@ -114,8 +123,8 @@ export default (opts: BaseCommandOptions) => {
         websocketSubprotocol: options.websocketSubprotocol
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
-        // passing Standard type to the backend, because the users have to use the 'wgc router plugin publish' command to publish the plugin
-        type: SubgraphType.STANDARD,
+        type: proto ? SubgraphType.GRPC_SERVICE : SubgraphType.STANDARD,
+        proto,
       },
       {
         headers: getBaseHeaders(),

@@ -118,13 +118,13 @@ export function publishFederatedSubgraphs(
     )) {
       if (subgraph.type === 'grpc_plugin') {
         typeErrors.push(
-          `Subgraph "${subgraph.name}" is a plugin. Please use the 'wgc router plugin publish' command to publish it.`,
+          `Subgraph "${subgraph.name}" is a plugin. Please use the 'router plugin publish' command to publish it.`,
         );
         continue;
       }
       if (subgraph.type === 'grpc_service') {
         typeErrors.push(
-          `Subgraph "${subgraph.name}" is a grpc service. Please use the 'wgc grpc-service publish' command to publish it.`,
+          `Subgraph "${subgraph.name}" is a grpc service. Please use the 'grpc-service publish' command to publish it.`,
         );
         continue;
       }

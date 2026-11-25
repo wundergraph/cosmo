@@ -600,7 +600,7 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toContain(
-        `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+        `Subgraph ${pluginName} is a plugin. Please use the 'router plugin publish' command to publish the plugin.`,
       );
     });
 
@@ -939,7 +939,7 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toContain(
-        `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+        `Subgraph ${pluginName} is a plugin. Please use the 'router plugin publish' command to publish the plugin.`,
       );
     });
 
@@ -965,7 +965,7 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toContain(
-        `Subgraph ${grpcServiceName} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
+        `Subgraph ${grpcServiceName} is a grpc service. Please use the 'grpc-service publish' command to publish the grpc service.`,
       );
     });
 
