@@ -486,6 +486,11 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		return nil
 	}
 
+	// Retry attempts of one fetch share the results container. Clear the
+	// connection so an attempt that never acquired one cannot leave a previous
+	// attempt's connection visible.
+	results.Connection = expr.Connection{}
+
 	connectionGet, connectionAcquired, _, durations := trace.snapshot()
 
 	// The transport can fail before it ever asks the pool for a connection,

@@ -321,6 +321,39 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Zero(t, results.Connection)
 	})
 
+	t.Run("clears the connection of a previous attempt when a retry acquires none", func(t *testing.T) {
+		// Retry attempts share the fetch's results container. The second
+		// attempt never gets a connection, so the first attempt's connection
+		// must not stay visible.
+		attempt := 0
+		rt := NewTraceInjectingRoundTripper(
+			&hookFiringRoundTripper{fire: func(ct *httptrace.ClientTrace) {
+				attempt++
+				ct.GetConn("subgraph.local:443")
+				if attempt == 1 {
+					ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+				}
+			}},
+			&metric.NoopConnectionMetricStore{},
+			func(ctx context.Context, req *http.Request) (*expr.Context, string) {
+				return &expr.Context{}, "employees"
+			},
+		)
+
+		ctx := WithClientTraceResults(context.Background())
+		roundTrip := func() expr.Connection {
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://subgraph.local/graphql", http.NoBody)
+			require.NoError(t, err)
+			resp, err := rt.RoundTrip(req)
+			require.NoError(t, err)
+			_ = resp.Body.Close()
+			return ClientTraceResultsFromContext(ctx).Connection
+		}
+
+		require.Equal(t, expr.Connection{Reused: true, WasIdle: true, IdleTime: time.Second}, roundTrip())
+		require.Zero(t, roundTrip(), "an attempt without GotConn must not expose the previous attempt's connection")
+	})
+
 	t.Run("records connection phase timings without racing concurrent httptrace callbacks", func(t *testing.T) {
 		var wg sync.WaitGroup
 
