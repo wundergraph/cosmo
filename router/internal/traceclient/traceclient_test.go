@@ -354,6 +354,32 @@ func TestTraceInjectingRoundTripper(t *testing.T) {
 		require.Zero(t, roundTrip(), "an attempt without GotConn must not expose the previous attempt's connection")
 	})
 
+	t.Run("drops the acquired connection when the transport retries inside one RoundTrip and acquires none", func(t *testing.T) {
+		// net/http can retry inside a single RoundTrip, firing GetConn again on
+		// the same trace. The second attempt never gets a connection.
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+			ct.GetConn("subgraph.local:443")
+		})
+
+		require.Zero(t, results.Connection)
+		require.Zero(t, results.ConnectionAcquireDuration)
+		require.Equal(t, 0, store.acquire)
+	})
+
+	t.Run("reports the connection of the last attempt when the transport retries inside one RoundTrip", func(t *testing.T) {
+		results, _, store := roundTripThroughHooks(t, true, func(ct *httptrace.ClientTrace) {
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{Reused: true, WasIdle: true, IdleTime: time.Second})
+			ct.GetConn("subgraph.local:443")
+			ct.GotConn(httptrace.GotConnInfo{})
+		})
+
+		require.Zero(t, results.Connection, "the retry dialed a fresh connection")
+		require.Equal(t, 1, store.acquire)
+	})
+
 	t.Run("records connection phase timings without racing concurrent httptrace callbacks", func(t *testing.T) {
 		var wg sync.WaitGroup
 

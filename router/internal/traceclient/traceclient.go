@@ -69,10 +69,8 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 				Time:     time.Now(),
 				HostPort: hostPort,
 			}
-			// GetConn starts a new transport attempt. Keep wroteFirstByte for the
-			// existing time-to-first-request-byte metric, but reset the
-			// first-to-last request span so retries never pair timestamps from
-			// different attempts.
+			// GetConn starts a new transport attempt
+			c.ConnectionAcquired = nil
 			c.attemptFirstByte = time.Time{}
 			c.wroteRequest = time.Time{}
 			c.durations.TimeToLastRequestByte = 0
