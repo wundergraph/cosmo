@@ -1128,6 +1128,13 @@
       "when": 1795503069422,
       "tag": "0160_drop_hub_ai_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 161,
+      "version": "7",
+      "when": 1795613326178,
+      "tag": "0161_hub_view_logs",
+      "breakpoints": true
     }
   ]
 }

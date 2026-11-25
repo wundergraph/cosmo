@@ -1,0 +1,1 @@
+ALTER TYPE "public"."hub_permission" ADD VALUE 'view_logs' BEFORE 'view_hidden_schema';

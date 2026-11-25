@@ -59,3 +59,12 @@ test('that the hidden schema role saves its tags and no other role does', () => 
   expect(hubRulesFromGrants(grants).map((rule) => rule.role)).toEqual(['hub-agent-runner', 'hub-hidden-schema-viewer']);
   expect(hiddenSchemaTagsFromGrants(grants)).toEqual(['pii', 'internal']);
 });
+
+test('that the log viewer role saves view_logs and loads back from it', () => {
+  const rules = [create(UpdateOrganizationGroupRequest_GroupRuleSchema, { role: 'hub-log-viewer' })];
+
+  const grants = grantsFromHubRules(rules, []);
+
+  expect(grants.map((grant) => grant.permission)).toEqual(['view_logs']);
+  expect(hubRulesFromGrants(grants).map((rule) => rule.role)).toEqual(['hub-log-viewer']);
+});

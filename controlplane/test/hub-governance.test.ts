@@ -113,14 +113,24 @@ describe('Hub governance', () => {
       'run_agents',
       'share_sandbox',
       'view_audit_log',
+      'view_logs',
     ]);
     expect(
       groupsByName
         .get('developer')
         ?.hubPermissions.map((grant) => grant.permission)
         .sort(),
-    ).toEqual(['approve', 'create_sandbox', 'edit_sandbox', 'open_portals', 'propose', 'run_agents', 'share_sandbox']);
-    expect(groupsByName.get('viewer')?.hubPermissions).toEqual([]);
+    ).toEqual([
+      'approve',
+      'create_sandbox',
+      'edit_sandbox',
+      'open_portals',
+      'propose',
+      'run_agents',
+      'share_sandbox',
+      'view_logs',
+    ]);
+    expect(groupsByName.get('viewer')?.hubPermissions.map((grant) => grant.permission)).toEqual(['view_logs']);
     expect(groupsByName.get(ownerGroup.name)?.rules[0].role).toBe('subgraph-admin');
 
     expect(governance.owners.map((owner) => ({ ...owner, $typeName: undefined }))).toEqual([
@@ -168,6 +178,23 @@ describe('Hub governance', () => {
       hubPermissions: [],
     });
     expect(developerResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+  });
+
+  test('a group granted view_logs keeps it', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
+
+    const group = await createOrganizationGroup(client, genID('team'));
+
+    const updateResponse = await client.updateOrganizationGroupHubPermissions({
+      groupId: group.groupId,
+      hubPermissions: [{ permission: 'view_logs', namespaces: [], resources: [] }],
+    });
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const governance = await client.getHubGovernance({});
+    const grants = governance.groups.find((g) => g.groupId === group.groupId)?.hubPermissions;
+    expect(grants?.map((grant) => grant.permission)).toEqual(['view_logs']);
   });
 
   test('view_hidden_schema grants keep normalized tags and other grants drop them', async (testContext) => {

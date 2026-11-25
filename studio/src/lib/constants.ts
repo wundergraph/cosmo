@@ -329,6 +329,12 @@ export const roles = [
     description: 'View the audit log.',
   },
   {
+    key: 'hub-log-viewer',
+    category: 'hub',
+    displayName: 'Log viewer',
+    description: 'View sandbox logs.',
+  },
+  {
     key: 'hub-hidden-schema-viewer',
     category: 'hub',
     displayName: 'See schema hidden from agents',

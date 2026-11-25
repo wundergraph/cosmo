@@ -11,6 +11,7 @@ const editorHubPermissions: HubPermission[] = [
   'approve',
   'run_agents',
   'open_portals',
+  'view_logs',
 ];
 
 // Seeded for the groups every organization starts with, keyed by group name.
@@ -18,7 +19,7 @@ const editorHubPermissions: HubPermission[] = [
 export const defaultHubPermissionsByGroupName: Record<string, readonly HubPermission[]> = {
   admin: allHubPermissions.filter((permission) => permission !== 'view_hidden_schema'),
   developer: editorHubPermissions,
-  viewer: [],
+  viewer: ['view_logs'],
 };
 
 export function parseHubPermission(value: string): HubPermission | undefined {

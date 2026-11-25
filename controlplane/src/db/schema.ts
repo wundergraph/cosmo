@@ -3063,6 +3063,7 @@ export const hubPermissionEnum = pgEnum('hub_permission', [
   'manage_egress_credentials',
   'manage_integrations',
   'view_audit_log',
+  'view_logs',
   'view_hidden_schema',
 ] as const);
 

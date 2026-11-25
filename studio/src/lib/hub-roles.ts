@@ -18,6 +18,7 @@ const hubRolePermissions: Record<string, readonly string[]> = {
   'hub-egress-manager': ['approve_egress', 'manage_egress_credentials'],
   'hub-integration-manager': ['manage_integrations'],
   'hub-audit-viewer': ['view_audit_log'],
+  'hub-log-viewer': ['view_logs'],
   [hiddenSchemaRole]: ['view_hidden_schema'],
 };
 
