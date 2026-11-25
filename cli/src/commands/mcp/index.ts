@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { BaseCommandOptions } from '../../core/types/types.js';
+import { checkAuth } from '../auth/utils.js';
 import {
   registerListSubgraphsTool,
   registerSubgraphVerifySchemaChangesTool,
@@ -20,6 +21,10 @@ import {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('mcp');
   command.description('Start the Cosmo MCP server');
+
+  command.hook('preAction', async () => {
+    await checkAuth();
+  });
 
   command.action(async () => {
     // Create an MCP server

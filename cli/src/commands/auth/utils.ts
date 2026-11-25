@@ -79,9 +79,7 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
       return;
     }
 
-    program.error(
-      pc.red(`Organization slug is not set. Please run \`${commandName} auth login\` to set the organization slug.`),
-    );
+    program.error(pc.red(`Not authenticated. Run \`${commandName} auth login\` or set COSMO_API_KEY.`));
   }
 
   // Access token is present and does not expire in the next 60 seconds
