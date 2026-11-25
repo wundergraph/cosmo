@@ -11,6 +11,7 @@ import {
   PolicyDriftError,
   syncAnalyticsCopy,
   type SyncAnalyticsCopyOptions,
+  type SyncAnalyticsCopyOutcome,
   streamCopy,
   type SyncAnalyticsCopyResult,
 } from '../src/core/analytics-copy/sync.js';
@@ -235,6 +236,37 @@ describe('Analytics copy sync', () => {
       }
     },
   );
+
+  test('A run that waits to drop the old copy fails, and keeps the view, when another session creates a view on the copy meanwhile', async () => {
+    const other = postgres(`${serverUrl}/${targetDb}`, { max: 1, onnotice: () => {} });
+    try {
+      let run: Promise<SyncAnalyticsCopyOutcome> | undefined;
+      await other.begin(async (sql) => {
+        // Reading the copy holds a lock that makes the run wait before it drops the old copy.
+        await sql`SELECT count(*) FROM analytics.users`;
+        run = syncAnalyticsCopy({ source, target, logger: silent });
+        for (let attempt = 0; ; attempt++) {
+          const [{ waiting }] = await sql`
+            SELECT EXISTS (SELECT FROM pg_locks WHERE relation = 'analytics.users'::regclass AND NOT granted) AS waiting`;
+          if (waiting) {
+            break;
+          }
+          expect(attempt).toBeLessThan(100);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        await sql`CREATE VIEW public.late_user_ids AS SELECT id FROM analytics.users`;
+      });
+
+      const result = await run!;
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.error).toBeInstanceOf(DependentObjectsError);
+      const [{ exists }] = await other`SELECT to_regclass('public.late_user_ids') IS NOT NULL AS exists`;
+      expect(exists).toBe(true);
+    } finally {
+      await other`DROP VIEW IF EXISTS public.late_user_ids`;
+      await other.end({ timeout: 5 });
+    }
+  });
 
   test('A run fails without hanging when the target rejects rows after the source has sent more than fits in a socket buffer', async () => {
     // Make every row of the next copy of users fail, so the target COPY fails while the source is still streaming.
