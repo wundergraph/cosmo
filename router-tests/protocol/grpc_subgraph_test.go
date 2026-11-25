@@ -1079,26 +1079,31 @@ func TestGRPCSubgraph(t *testing.T) {
 			sum, ok := requests.Data.(metricdata.Sum[int64])
 			require.True(t, ok)
 			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("wg.subgraph.name", "projects")))
-			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, attribute.String("rpc.grpc.status_code", "OK")))
-			require.NotNil(t, testutils.GetMetricByName(scope, "router.grpc.service.request.duration_milliseconds"))
+			okStatus := attribute.Int("rpc.grpc.status_code", 0)
+			require.True(t, testutils.HasDataPointWithAttribute(sum.DataPoints, okStatus))
+			duration := testutils.GetMetricByName(scope, "router.grpc.service.request.duration_milliseconds")
+			require.NotNil(t, duration)
+			histogram, ok := duration.Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+			require.True(t, testutils.HasHistogramDataPointWithAttribute(histogram.DataPoints, okStatus))
 		}
 
 		requirePrometheusMetrics := func(t *testing.T, families map[string]*io_prometheus_client.MetricFamily) {
 			t.Helper()
 
-			requests, ok := families["router_grpc_service_requests_total"]
-			require.True(t, ok, "missing router_grpc_service_requests_total")
-			require.NotEmpty(t, requests.GetMetric())
-
-			labels := map[string]string{}
-			for _, l := range requests.GetMetric()[0].GetLabel() {
-				labels[l.GetName()] = l.GetValue()
+			for _, name := range []string{"router_grpc_service_requests_total", "router_grpc_service_request_duration_milliseconds"} {
+				family := families[name]
+				require.NotNil(t, family, "missing %s", name)
+				require.NotEmpty(t, family.GetMetric())
+				for _, m := range family.GetMetric() {
+					labels := map[string]string{}
+					for _, l := range m.GetLabel() {
+						labels[l.GetName()] = l.GetValue()
+					}
+					require.Equal(t, "projects", labels["wg_subgraph_name"])
+					require.Equal(t, "0", labels["rpc_grpc_status_code"])
+				}
 			}
-			require.Equal(t, "projects", labels["wg_subgraph_name"])
-			require.Equal(t, "OK", labels["rpc_grpc_status_code"])
-
-			_, ok = families["router_grpc_service_request_duration_milliseconds"]
-			require.True(t, ok, "missing router_grpc_service_request_duration_milliseconds")
 		}
 
 		t.Run("disabled by default", func(t *testing.T) {

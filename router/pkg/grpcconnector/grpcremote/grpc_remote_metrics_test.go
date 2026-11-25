@@ -54,11 +54,11 @@ func collectCounter(t *testing.T, reader *sdkmetric.ManualReader) []metricdata.D
 	return nil
 }
 
-func attrValue(t *testing.T, attrs attribute.Set, key string) string {
+func attrValue(t *testing.T, attrs attribute.Set, key string) attribute.Value {
 	t.Helper()
 	v, ok := attrs.Value(attribute.Key(key))
 	require.True(t, ok, "missing attribute %s", key)
-	return v.AsString()
+	return v
 }
 
 func TestMetricsUnaryClientInterceptorRecordsSuccess(t *testing.T) {
@@ -75,9 +75,9 @@ func TestMetricsUnaryClientInterceptorRecordsSuccess(t *testing.T) {
 	points := collectCounter(t, reader)
 	require.Len(t, points, 1)
 	assert.Equal(t, int64(1), points[0].Value)
-	assert.Equal(t, "user-subgraph", attrValue(t, points[0].Attributes, attrSubgraphName))
-	assert.Equal(t, codes.OK.String(), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
-	assert.Equal(t, "/service/Method", attrValue(t, points[0].Attributes, attrRPCMethod))
+	assert.Equal(t, attribute.StringValue("user-subgraph"), attrValue(t, points[0].Attributes, attrSubgraphName))
+	assert.Equal(t, attribute.IntValue(int(codes.OK)), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
+	assert.Equal(t, attribute.StringValue("/service/Method"), attrValue(t, points[0].Attributes, attrRPCMethod))
 
 	assert.Zero(t, logs.Len(), "successful requests must not log errors")
 }
@@ -97,14 +97,16 @@ func TestMetricsUnaryClientInterceptorRecordsTransportFailure(t *testing.T) {
 	points := collectCounter(t, reader)
 	require.Len(t, points, 1)
 	assert.Equal(t, int64(1), points[0].Value)
-	assert.Equal(t, codes.Unavailable.String(), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
+	assert.Equal(t, attribute.IntValue(int(codes.Unavailable)), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
 
 	require.Equal(t, 1, logs.Len(), "failed requests must log at error level")
 	entry := logs.All()[0]
 	assert.Equal(t, "remote gRPC subgraph request failed", entry.Message)
-	fields := entry.ContextMap()
-	assert.Equal(t, "user-subgraph", fields["subgraph_name"])
-	assert.Equal(t, codes.Unavailable.String(), fields["grpc_status_code"])
+	assert.Equal(t, map[string]any{
+		"subgraph_name":    "user-subgraph",
+		"rpc_method":       "/service/Method",
+		"grpc_status_code": codes.Unavailable.String(),
+	}, entry.ContextMap())
 }
 
 func TestMetricsUnaryClientInterceptorRecordsNonStatusError(t *testing.T) {
@@ -122,7 +124,7 @@ func TestMetricsUnaryClientInterceptorRecordsNonStatusError(t *testing.T) {
 
 	points := collectCounter(t, reader)
 	require.Len(t, points, 1)
-	assert.Equal(t, codes.Unknown.String(), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
+	assert.Equal(t, attribute.IntValue(int(codes.Unknown)), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
 	assert.Equal(t, 1, logs.Len())
 }
 
@@ -139,7 +141,7 @@ func TestMetricsStreamClientInterceptorRecordsCreationFailure(t *testing.T) {
 
 	points := collectCounter(t, reader)
 	require.Len(t, points, 1)
-	assert.Equal(t, codes.DeadlineExceeded.String(), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
+	assert.Equal(t, attribute.IntValue(int(codes.DeadlineExceeded)), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
 	assert.Equal(t, 1, logs.Len())
 }
 
@@ -189,7 +191,7 @@ func TestMetricsRecordedOnAllMeterProviders(t *testing.T) {
 		points := collectCounter(t, reader)
 		require.Len(t, points, 1)
 		assert.Equal(t, int64(1), points[0].Value)
-		assert.Equal(t, codes.Unavailable.String(), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
+		assert.Equal(t, attribute.IntValue(int(codes.Unavailable)), attrValue(t, points[0].Attributes, attrGRPCStatusCode))
 	}
 
 	assert.Equal(t, 1, logs.Len(), "a failure must be logged once, not once per meter provider")

@@ -84,7 +84,7 @@ func (m *grpcClientMetrics) record(ctx context.Context, method string, elapsed t
 
 	attrs := metric.WithAttributes(
 		attribute.String(attrSubgraphName, m.subgraphName),
-		attribute.String(attrGRPCStatusCode, code.String()),
+		attribute.Int(attrGRPCStatusCode, int(code)),
 		attribute.String(attrRPCMethod, method),
 	)
 	elapsedMs := float64(elapsed) / float64(time.Millisecond)
@@ -98,7 +98,6 @@ func (m *grpcClientMetrics) record(ctx context.Context, method string, elapsed t
 			zap.String("subgraph_name", m.subgraphName),
 			zap.String("rpc_method", method),
 			zap.String("grpc_status_code", code.String()),
-			zap.Error(err),
 		)
 	}
 }

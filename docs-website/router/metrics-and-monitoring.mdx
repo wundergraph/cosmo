@@ -425,7 +425,7 @@ telemetry:
 
 ### gRPC Service Metrics
 
-These metrics cover requests from the router to [gRPC services](/router/gRPC/grpc-services) that run as standalone remote subgraphs. They are off by default and are enabled separately for OTLP and Prometheus. When enabled for either exporter, the router also logs every failed request at error level with the subgraph name, RPC method and gRPC status code.
+These metrics cover requests from the router to [gRPC services](/router/gRPC/grpc-services) that run as standalone remote subgraphs. They are off by default and are enabled separately for OTLP and Prometheus. Enabling either exporter’s gRPC service metrics also enables error-level logging for failed RPCs. Each entry includes the subgraph name, RPC method and gRPC status name (for example, `Unavailable`). The router omits the raw error message from this log entry.
 
 <CodeGroup>
 ```yaml config.yaml
@@ -450,7 +450,7 @@ In Prometheus, dots in attribute names are replaced with underscores, for exampl
 
 * `wg.subgraph.name`: The name of the subgraph.
 * `rpc.method`: The full gRPC method name in the form `/<package>.<Service>/<Method>`.
-* `rpc.grpc.status_code`: The gRPC status code of the response, for example `OK`, `Unavailable` or `DeadlineExceeded`. Errors that carry no gRPC status are reported as `Unknown`.
+* `rpc.grpc.status_code` is the numeric gRPC status code. Examples include `0` (OK), `4` (DeadlineExceeded) and `14` (Unavailable). Errors without a gRPC status use `2` (Unknown). In Prometheus, filter unavailable requests with `rpc_grpc_status_code="14"`.
 
 ## Custom Attributes
 
