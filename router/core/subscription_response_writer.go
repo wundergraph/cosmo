@@ -262,6 +262,8 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 		}
 	} else if wgParams.UseSse {
 		w.Header().Set("Content-Type", sseMimeType)
+	} else if wgParams.UseGraphQLResponseJSON {
+		w.Header().Set("Content-Type", jsonResponseContentType(true))
 	}
 
 	w.Header().Set("Cache-Control", "no-cache")

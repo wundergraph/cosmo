@@ -166,22 +166,25 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
 	})
 
-	t.Run("sets the negotiated media type for a subscribe once response", func(t *testing.T) {
+	t.Run("sets the negotiated media type for a non-streamed response", func(t *testing.T) {
 		for _, tc := range []struct {
+			query       string
 			accept      string
 			contentType string
 		}{
+			{query: WgSubscribeOnceParam, accept: graphqlResponseMime, contentType: "application/graphql-response+json; charset=utf-8"},
+			{query: WgSubscribeOnceParam, accept: jsonContent, contentType: ""},
 			{accept: graphqlResponseMime, contentType: "application/graphql-response+json; charset=utf-8"},
 			{accept: jsonContent, contentType: ""},
 		} {
 			recorder := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/graphql?"+WgSubscribeOnceParam, nil)
+			req := httptest.NewRequest(http.MethodPost, "/graphql?"+tc.query, nil)
 			req.Header.Set("Accept", tc.accept)
 
 			_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.contentType, recorder.Header().Get("Content-Type"), tc.accept)
+			assert.Equal(t, tc.contentType, recorder.Header().Get("Content-Type"), "query %q, accept %q", tc.query, tc.accept)
 		}
 	})
 
