@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { sql } from 'drizzle-orm';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
@@ -195,6 +198,57 @@ describe('Hub governance', () => {
     const governance = await client.getHubGovernance({});
     const grants = governance.groups.find((g) => g.groupId === group.groupId)?.hubPermissions;
     expect(grants?.map((grant) => grant.permission)).toEqual(['view_logs']);
+  });
+
+  test('the view_logs backfill grants it to the default developer and viewer groups only', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
+
+    const customGroup = await createOrganizationGroup(client, genID('team'));
+    const setGrants = async (groupId: string, permissions: string[]) => {
+      const response = await client.updateOrganizationGroupHubPermissions({
+        groupId,
+        hubPermissions: permissions.map((permission) => ({ permission, namespaces: [], resources: [] })),
+      });
+      expect(response.response?.code).toBe(EnumStatusCode.OK);
+    };
+
+    const groupsBefore = (await client.getHubGovernance({})).groups;
+    const developerId = groupsBefore.find((group) => group.name === 'developer')!.groupId;
+    const viewerId = groupsBefore.find((group) => group.name === 'viewer')!.groupId;
+
+    await setGrants(developerId, ['create_sandbox', 'propose']);
+    await setGrants(viewerId, []);
+    await setGrants(customGroup.groupId, ['propose']);
+
+    const migration = readFileSync(join(process.cwd(), 'migrations/0162_hub_view_logs_backfill.sql'), 'utf8');
+    const runMigration = async () => {
+      for (const statement of migration.split('--> statement-breakpoint')) {
+        await server.db.execute(sql.raw(statement));
+      }
+    };
+
+    const permissionsByName = async () => {
+      const { groups } = await client.getHubGovernance({});
+      return Object.fromEntries(
+        groups
+          .filter((group) => ['developer', 'viewer', customGroup.name].includes(group.name))
+          .map((group) => [group.name, group.hubPermissions.map((grant) => grant.permission)]),
+      );
+    };
+
+    await runMigration();
+
+    const expected = {
+      developer: ['create_sandbox', 'propose', 'view_logs'],
+      viewer: ['view_logs'],
+      [customGroup.name]: ['propose'],
+    };
+    expect(await permissionsByName()).toEqual(expected);
+
+    await runMigration();
+
+    expect(await permissionsByName()).toEqual(expected);
   });
 
   test('view_hidden_schema grants keep normalized tags and other grants drop them', async (testContext) => {
