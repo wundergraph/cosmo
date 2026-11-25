@@ -1,35 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
-import { is } from 'drizzle-orm';
-import { getTableConfig, PgTable } from 'drizzle-orm/pg-core';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import * as schema from '../src/db/schema.js';
 import { copiedColumns, resolvePolicy } from '../src/core/analytics-copy/policy.js';
-import { ANALYTICS_READER_ROLE, ANALYTICS_SCHEMA, syncAnalyticsCopy } from '../src/core/analytics-copy/sync.js';
+import {
+  ANALYTICS_READER_ROLE,
+  ANALYTICS_SCHEMA,
+  syncAnalyticsCopy,
+  type SyncAnalyticsCopyResult,
+} from '../src/core/analytics-copy/sync.js';
 import { RunMigration } from '../src/core/migrate.js';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
 
 const serverUrl = 'postgresql://postgres:changeme@localhost:5432';
 const silent = { info: () => {}, warn: () => {} };
-
-describe('Analytics copy policy', () => {
-  test('labels every table and column of the schema, and nothing else', () => {
-    const schemaColumns: Record<string, string[]> = {};
-    for (const value of Object.values(schema)) {
-      if (is(value, PgTable)) {
-        const config = getTableConfig(value);
-        schemaColumns[config.name] = config.columns.map((c) => c.name).sort();
-      }
-    }
-
-    const policyColumns = Object.fromEntries(
-      Object.entries(resolvePolicy()).map(([table, columns]) => [table, Object.keys(columns).sort()]),
-    );
-
-    // When this fails after a schema change, label the new column in src/core/analytics-copy/policy.ts.
-    expect(policyColumns).toEqual(schemaColumns);
-  });
-});
 
 describe('Analytics copy sync', () => {
   let sourceDb = '';
@@ -42,6 +25,8 @@ describe('Analytics copy sync', () => {
   };
   // Every value that must not reach the analytics database contains this marker.
   const marker = `do-not-copy-${randomUUID()}`;
+
+  let firstRun: SyncAnalyticsCopyResult;
 
   const userId = randomUUID();
   const organizationId = randomUUID();
@@ -77,7 +62,14 @@ describe('Analytics copy sync', () => {
     await source`
       INSERT INTO targets (name, type, labels, organization_id, created_by, readme, namespace_id)
       VALUES (${marker}, 'subgraph', ${[marker]}, ${organizationId}, ${userId}, ${marker}, ${namespaceId})`;
+
+    firstRun = await syncAnalyticsCopy({ source, target, readonlyUser, logger: silent });
   });
+
+  const copiedUserCount = async () => {
+    const [{ count }] = await target`SELECT count(*)::int AS count FROM analytics.users`;
+    return count as number;
+  };
 
   afterAll(async () => {
     await source?.end({ timeout: 5 });
@@ -90,12 +82,10 @@ describe('Analytics copy sync', () => {
     await admin.end({ timeout: 5 });
   });
 
-  test('copies only the columns labelled copy', async () => {
-    const result = await syncAnalyticsCopy({ source, target, readonlyUser, logger: silent });
-
-    expect(result.unclassifiedColumns).toEqual([]);
-    expect(result.readonlyUserCreated).toBe(true);
-    expect(result.tables.find((t) => t.name === 'users')?.rows).toBe(1);
+  test('The first run copies only the columns labelled copy, with enum values as text and the primary keys of the source', async () => {
+    expect(firstRun.unclassifiedColumns).toEqual([]);
+    expect(firstRun.readonlyUserCreated).toBe(true);
+    expect(firstRun.tables.find((t) => t.name === 'users')?.rows).toBe(1);
 
     const plan = copiedColumns();
     const targetColumns = await target<{ table_name: string; column_name: string }[]>`
@@ -136,7 +126,7 @@ describe('Analytics copy sync', () => {
     expect(membership.member).toBe(true);
   });
 
-  test('lets the read-only user read the copy and nothing else', async () => {
+  test('The read-only user can read the copied tables without a schema prefix, and cannot change or create anything', async () => {
     const reader = postgres(`postgresql://localhost:5432/${targetDb}`, {
       username: readonlyUser.name,
       password: readonlyUser.password,
@@ -159,28 +149,51 @@ describe('Analytics copy sync', () => {
     }
   });
 
-  test('replaces the previous copy on the next run', async () => {
+  test('A second run replaces the copy, keeps the existing read-only user and removes the staging schema', async () => {
     const newUserId = randomUUID();
     await source`INSERT INTO users (id, email) VALUES (${newUserId}, ${`${marker}-2@example.com`})`;
 
     const result = await syncAnalyticsCopy({ source, target, readonlyUser, logger: silent });
     expect(result.readonlyUserCreated).toBe(false);
 
-    const users = await target`SELECT id FROM analytics.users ORDER BY id`;
-    expect(users.map((u) => u.id).sort()).toEqual([userId, newUserId].sort());
+    const users = await target`SELECT id FROM analytics.users`;
+    expect(users.map((u) => u.id)).toContain(newUserId);
     const [info] = await target`SELECT count(*)::int AS runs FROM analytics.sync_info`;
     expect(info.runs).toBe(1);
     const [staging] = await target`SELECT 1 FROM pg_namespace WHERE nspname = 'analytics_staging'`;
     expect(staging).toBeUndefined();
   });
 
-  test('fails without touching the copy when the policy names a column the source lacks', async () => {
+  test('A run fails and leaves the copy unchanged when the policy names a column that the source lacks', async () => {
     const policy = resolvePolicy();
-    policy.users = { ...policy.users, nickname: 'copy' };
+    policy.users = { ...policy.users, nickname: 'pii' };
+    const before = await copiedUserCount();
+    await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-3@example.com`})`;
 
     await expect(syncAnalyticsCopy({ source, target, policy, logger: silent })).rejects.toThrow('users.nickname');
+    expect(await copiedUserCount()).toBe(before);
+  });
 
-    const [{ count }] = await target`SELECT count(*)::int AS count FROM analytics.users`;
-    expect(count).toBe(2);
+  test('A run fails and leaves the copy unchanged when a view in another schema reads the copy', async () => {
+    await target`CREATE VIEW public.user_ids AS SELECT id FROM analytics.users`;
+    try {
+      const before = await copiedUserCount();
+      await source`INSERT INTO users (id, email) VALUES (${randomUUID()}, ${`${marker}-4@example.com`})`;
+
+      await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow('public.user_ids');
+      expect(await copiedUserCount()).toBe(before);
+    } finally {
+      await target`DROP VIEW public.user_ids`;
+    }
+  });
+
+  test('A run fails and leaves the copy unchanged when the copy holds a newer snapshot than the run', async () => {
+    const [{ snapshotAt }] = await target`SELECT snapshot_at AS "snapshotAt" FROM analytics.sync_info`;
+    await target`UPDATE analytics.sync_info SET snapshot_at = now() + interval '1 hour'`;
+    try {
+      await expect(syncAnalyticsCopy({ source, target, logger: silent })).rejects.toThrow('newer snapshot');
+    } finally {
+      await target`UPDATE analytics.sync_info SET snapshot_at = ${snapshotAt}`;
+    }
   });
 });

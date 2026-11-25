@@ -1,3 +1,5 @@
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
+import type { Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type postgres from 'postgres';
 import { copiedColumns, resolvePolicy, type AnalyticsCopyPolicy } from './policy.js';
@@ -60,6 +62,25 @@ export function quoteIdent(name: string): string {
 }
 
 /**
+ * Returns the SCRAM-SHA-256 verifier that PostgreSQL stores for a password. `CREATE ROLE` accepts the verifier in
+ * place of the password, so the plaintext password never appears in SQL that the server might log.
+ */
+export function scramSha256Verifier(password: string): string {
+  // PostgreSQL normalizes passwords with SASLprep, which leaves printable ASCII unchanged. Other characters could
+  // normalize differently, so they are refused rather than producing a verifier that never matches.
+  if (!/^[\u0020-\u007E]+$/.test(password)) {
+    throw new Error('The read-only password must consist of printable ASCII characters');
+  }
+  const salt = randomBytes(16);
+  const iterations = 4096;
+  const saltedPassword = pbkdf2Sync(password, salt, iterations, 32, 'sha256');
+  const clientKey = createHmac('sha256', saltedPassword).update('Client Key').digest();
+  const storedKey = createHash('sha256').update(clientKey).digest();
+  const serverKey = createHmac('sha256', saltedPassword).update('Server Key').digest();
+  return `SCRAM-SHA-256$${iterations}:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}`;
+}
+
+/**
  * Replaces the `analytics` schema of the target database with a fresh copy of the source database.
  * Only the columns that the policy labels `copy` are read from the source.
  *
@@ -70,9 +91,11 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
   const { source, target, readonlyUser, logger = console } = options;
   const policy = options.policy ?? resolvePolicy();
   const plan = copiedColumns(policy);
-  const tableNames = [...plan.keys()];
+  const tableNames = Object.keys(policy);
 
   return await source.begin('isolation level repeatable read read only', async (src) => {
+    // COPY writes dates in the session's DateStyle. ISO dates read back the same whatever the target's DateStyle is.
+    await src`SET LOCAL DateStyle = 'ISO'`;
     const [{ snapshotAt }] = await src<{ snapshotAt: Date }[]>`SELECT now() AS "snapshotAt"`;
 
     const sourceColumns = await src<SourceColumn[]>`
@@ -125,13 +148,13 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
     // The policy must match the source. A missing table or column means the policy and the
     // database schema have drifted apart, so stop instead of copying a partial snapshot.
     const missing: string[] = [];
-    for (const [table, columns] of plan) {
+    for (const [table, labels] of Object.entries(policy)) {
       const existing = columnsByTable.get(table);
       if (!existing) {
         missing.push(table);
         continue;
       }
-      for (const column of columns) {
+      for (const column of Object.keys(labels)) {
         if (!existing.has(column)) {
           missing.push(`${table}.${column}`);
         }
@@ -160,6 +183,21 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
       if (!locked) {
         throw new Error('Another analytics sync is writing the analytics database');
       }
+      await dst`SET LOCAL DateStyle = 'ISO'`;
+
+      // A run that started earlier but got the lock later must not replace a newer copy with an older one.
+      const [{ liveSyncInfo }] = await dst<{ liveSyncInfo: string | null }[]>`
+        SELECT to_regclass(${`${quoteIdent(ANALYTICS_SCHEMA)}.sync_info`})::text AS "liveSyncInfo"`;
+      if (liveSyncInfo) {
+        const [live] = await dst.unsafe<{ snapshotAt: Date }[]>(
+          `SELECT snapshot_at AS "snapshotAt" FROM ${liveSyncInfo}`,
+        );
+        if (live && live.snapshotAt > snapshotAt) {
+          throw new Error(
+            `The analytics database already holds a newer snapshot (${live.snapshotAt.toISOString()}) than this run (${snapshotAt.toISOString()})`,
+          );
+        }
+      }
 
       await dst.unsafe(`DROP SCHEMA IF EXISTS ${quoteIdent(STAGING_SCHEMA)} CASCADE`);
       await dst.unsafe(`CREATE SCHEMA ${quoteIdent(STAGING_SCHEMA)}`);
@@ -179,12 +217,23 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         const readable = await src
           .unsafe(`COPY (SELECT ${columnList} FROM ${quoteIdent(SOURCE_SCHEMA)}.${quoteIdent(table)}) TO STDOUT`)
           .readable();
-        const writable = await dst.unsafe(`COPY ${qualifiedTarget} (${columnList}) FROM STDIN`).writable();
+        let writable: Writable;
+        try {
+          writable = await dst.unsafe(`COPY ${qualifiedTarget} (${columnList}) FROM STDIN`).writable();
+        } catch (error) {
+          // The source transaction can only roll back after its COPY has finished, so read and discard the rest.
+          readable.resume();
+          throw error;
+        }
         await pipeline(readable, writable);
 
         // Recreate the primary key and plain btree indexes whose columns were all copied, so joins stay fast.
+        // The primary key comes first, so an ordinary index on the same columns cannot take its place.
+        const indexes = sourceIndexes
+          .filter((i) => i.tableName === table)
+          .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
         const indexed = new Set<string>();
-        for (const index of sourceIndexes.filter((i) => i.tableName === table)) {
+        for (const index of indexes) {
           const key = index.columns.join(',');
           if (indexed.has(key) || !index.columns.every((c) => columns.includes(c))) {
             continue;
@@ -198,7 +247,9 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
           );
         }
 
-        const [{ rows }] = await dst.unsafe<{ rows: number }[]>(`SELECT count(*)::int AS rows FROM ${qualifiedTarget}`);
+        // count(*) is a bigint, which postgres.js returns as a string.
+        const [count] = await dst.unsafe<{ rows: string }[]>(`SELECT count(*) AS rows FROM ${qualifiedTarget}`);
+        const rows = Number(count.rows);
         tables.push({ name: table, rows });
         logger.info(`Copied ${rows} rows of ${table}`);
       }
@@ -208,27 +259,28 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
       );
       await dst`INSERT INTO ${dst(STAGING_SCHEMA)}.sync_info (snapshot_at, finished_at) VALUES (${snapshotAt}, clock_timestamp())`;
 
-      await dst.unsafe(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${ANALYTICS_READER_ROLE}') THEN
-            CREATE ROLE ${quoteIdent(ANALYTICS_READER_ROLE)} NOLOGIN;
-          END IF;
-        END
-        $$`);
-      await dst.unsafe(`GRANT USAGE ON SCHEMA ${quoteIdent(STAGING_SCHEMA)} TO ${quoteIdent(ANALYTICS_READER_ROLE)}`);
-      await dst.unsafe(
-        `GRANT SELECT ON ALL TABLES IN SCHEMA ${quoteIdent(STAGING_SCHEMA)} TO ${quoteIdent(ANALYTICS_READER_ROLE)}`,
-      );
+      // Creating roles needs CREATEROLE, so the reader role is only created when a read-only user is configured.
+      // An existing reader role, for example one that an administrator created, always gets access to the new copy.
+      const [{ readerRoleExists }] = await dst<{ readerRoleExists: boolean }[]>`
+        SELECT EXISTS (SELECT FROM pg_roles WHERE rolname = ${ANALYTICS_READER_ROLE}) AS "readerRoleExists"`;
+      if (!readerRoleExists && readonlyUser) {
+        await dst.unsafe(`CREATE ROLE ${quoteIdent(ANALYTICS_READER_ROLE)} NOLOGIN`);
+      }
+      if (readerRoleExists || readonlyUser) {
+        await dst.unsafe(`GRANT USAGE ON SCHEMA ${quoteIdent(STAGING_SCHEMA)} TO ${quoteIdent(ANALYTICS_READER_ROLE)}`);
+        await dst.unsafe(
+          `GRANT SELECT ON ALL TABLES IN SCHEMA ${quoteIdent(STAGING_SCHEMA)} TO ${quoteIdent(ANALYTICS_READER_ROLE)}`,
+        );
+      }
 
       let readonlyUserCreated = false;
       if (readonlyUser) {
         const user = quoteIdent(readonlyUser.name);
         const [exists] = await dst`SELECT 1 FROM pg_roles WHERE rolname = ${readonlyUser.name}`;
         if (!exists) {
-          // CREATE ROLE takes no bind parameters, so let the server quote the name and the password.
+          // CREATE ROLE takes no bind parameters, so let the server quote the name and the password verifier.
           const [{ statement }] = await dst<{ statement: string }[]>`
-            SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', ${readonlyUser.name}::text, ${readonlyUser.password}::text) AS statement`;
+            SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', ${readonlyUser.name}::text, ${scramSha256Verifier(readonlyUser.password)}::text) AS statement`;
           await dst.unsafe(statement);
           readonlyUserCreated = true;
           logger.info(`Created the read-only user ${readonlyUser.name}`);
@@ -239,8 +291,28 @@ export async function syncAnalyticsCopy(options: SyncAnalyticsCopyOptions): Prom
         await dst.unsafe(`ALTER ROLE ${user} SET search_path = ${quoteIdent(ANALYTICS_SCHEMA)}`);
       }
 
+      // Views in other schemas that read the copy would be dropped with it, so refuse to swap while any exist.
+      const dependentViews = await dst<{ name: string }[]>`
+        SELECT DISTINCT format('%I.%I', vn.nspname, v.relname) AS name
+        FROM pg_depend d
+        JOIN pg_rewrite r ON r.oid = d.objid
+        JOIN pg_class v ON v.oid = r.ev_class
+        JOIN pg_namespace vn ON vn.oid = v.relnamespace
+        JOIN pg_class t ON t.oid = d.refobjid
+        JOIN pg_namespace tn ON tn.oid = t.relnamespace
+        WHERE d.classid = 'pg_rewrite'::regclass
+          AND d.refclassid = 'pg_class'::regclass
+          AND tn.nspname = ${ANALYTICS_SCHEMA}
+          AND vn.nspname <> ${ANALYTICS_SCHEMA}
+        ORDER BY 1`;
+      if (dependentViews.length > 0) {
+        throw new Error(
+          `Views outside the ${ANALYTICS_SCHEMA} schema read the copy and would be dropped with it: ${dependentViews.map((v) => v.name).join(', ')}`,
+        );
+      }
+
       // Swap the new copy in. Dropping the old schema waits for running queries, so do not wait forever.
-      // CASCADE also drops views that readers created in the analytics schema; they belong in their own schema.
+      // CASCADE drops views inside the analytics schema; they are not part of the copy.
       await dst.unsafe(`SET LOCAL lock_timeout = '60s'`);
       await dst.unsafe(`DROP SCHEMA IF EXISTS ${quoteIdent(ANALYTICS_SCHEMA)} CASCADE`);
       await dst.unsafe(`ALTER SCHEMA ${quoteIdent(STAGING_SCHEMA)} RENAME TO ${quoteIdent(ANALYTICS_SCHEMA)}`);

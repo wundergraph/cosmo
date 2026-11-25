@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-analytics-database-sync"
+  name: "{{ include "controlplane.fullname" . | trunc 28 | trimSuffix "-" }}-analytics-database-sync"
   labels:
     {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.analyticsDatabaseSync.additionalLabels "context" .) | nindent 4 }}
 spec:
@@ -16,7 +16,7 @@ spec:
       parallelism: 1
       template:
         metadata:
-          name: "{{ include "controlplane.fullname" . }}-analytics-database-sync"
+          name: "{{ include "controlplane.fullname" . | trunc 28 | trimSuffix "-" }}-analytics-database-sync"
           labels:
             {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.analyticsDatabaseSync.additionalLabels "context" .) | nindent 12 }}
         spec:
