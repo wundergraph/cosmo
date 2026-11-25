@@ -1,5 +1,5 @@
 export const docsBaseURL = 'https://cosmo-docs.wundergraph.com';
-export const scimBaseURL = 'https://cosmo-cp.wundergraph.com/scim/v2';
+export const scimBaseURL = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/scim/v2`;
 export const calURL = 'https://wg.cal.com/ethan';
 export const lintCategories = [
   {
