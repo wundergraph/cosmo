@@ -297,6 +297,7 @@ export const CollectionsPanel = () => {
 
       <CollectionDialogs
         dialog={dialog}
+        collections={collections}
         closeDialog={closeDialog}
         onChanged={onChanged}
         canCreateTeamCollection={canCreateTeamCollection}
