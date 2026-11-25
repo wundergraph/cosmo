@@ -584,7 +584,8 @@ export const analyticsCopyPolicy = {
   schemaCheckLintAction: {
     id: 'copy',
     schemaCheckId: 'copy',
-    lintRuleType: 'copy',
+    // Subgraph check extensions can report rules with names of their own.
+    lintRuleType: 'content',
     message: 'content',
     isError: 'copy',
     location: 'copy',
