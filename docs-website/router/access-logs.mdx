@@ -417,16 +417,16 @@ access_logs:
 
 In addition to the router access logger, you can also add attributes to the subgraph access logger, this is useful when you want to log anything related to the `subgraph` expression context object.
 
-To tell which connection a subgraph request was sent on, log `subgraph.request.clientTrace.connection.localAddr`. Entries with the same value used the same connection. The subgraph sees the same value as the client address, so it also matches the subgraph's own logs.
+To tell which connection a subgraph request was sent on, log `subgraph.request.clientTrace.connection.localAddr` and `subgraph.request.clientTrace.connection.remoteAddr`. Entries with the same value used the same connection. The subgraph sees the same value as the client address if no proxy is involved.
 
 ```yaml
 access_logs:
   subgraphs:
     enabled: true
     fields:
-      - key: "connection_local_addr"
+      - key: "connection_id"
         value_from:
-          expression: "subgraph.request.clientTrace.connection.localAddr"
+          expression: "subgraph.request.clientTrace.connection.localAddr + '::' + subgraph.request.clientTrace.connection.remoteAddr"
       - key: "connection_reused"
         value_from:
           expression: "subgraph.request.clientTrace.connection.reused"
