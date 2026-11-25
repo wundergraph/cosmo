@@ -281,8 +281,14 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 		useSse       = q.Has(WgSseParam)
 		bestType     = ""
 		bestQ        = -1.0 // Default to lowest possible q-value
-		bestJSONType = ""
-		bestJSONQ    = -1.0
+		acceptsJSON  bool
+
+		// jsonResponseType is the JSON media type the client prefers for a non-streamed response:
+		// application/json or application/graphql-response+json. Empty when the client accepts neither.
+		jsonResponseType = ""
+		// jsonResponseQ is the q-value of jsonResponseType. It starts at 0 because a q-value
+		// of 0 rejects a media type, so only a higher q-value can select one.
+		jsonResponseQ = 0.0
 	)
 
 	for _, acceptHeader := range elements {
@@ -294,23 +300,31 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 			}
 		}
 
+		// The preferred JSON media type. Wildcards accept application/json, the default
+		jsonType := mediaType
+		if mediaType == "*/*" || mediaType == "application/*" {
+			jsonType = jsonContent
+		}
+		if (jsonType == jsonContent || jsonType == graphqlResponseMime) && qValue > jsonResponseQ {
+			jsonResponseQ = qValue
+			jsonResponseType = jsonType
+		}
+
+		// We also have an exception where we prioritize json over higher priority media types
+		if preferJson && qValue > 0 && (mediaType == jsonContent || mediaType == graphqlResponseMime) {
+			acceptsJSON = true
+		}
+
 		// Find the media type with the highest q-value. If none is provided, it will default to the first option
 		// in the header, per https://www.rfc-editor.org/rfc/rfc9110.html#name-accept
 		if qValue > bestQ {
 			bestQ = qValue
 			bestType = mediaType
 		}
-
-		// The best of the two JSON media types, used instead of bestType when json is preferred
-		if (mediaType == jsonContent || mediaType == graphqlResponseMime) && qValue > bestJSONQ {
-			bestJSONQ = qValue
-			bestJSONType = mediaType
-		}
 	}
 
-	// We also have an exception where we prioritize json over higher priority media types
-	if preferJson && bestJSONType != "" {
-		bestType = bestJSONType
+	if acceptsJSON {
+		bestType = jsonContent
 	}
 
 	subscribeOnce := q.Has(WgSubscribeOnceParam)
@@ -321,7 +335,7 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 		UseSse:                 useSse,
 		SubscribeOnce:          subscribeOnce,
 		UseMultipart:           useMultipart,
-		UseGraphQLResponseJSON: bestType == graphqlResponseMime,
+		UseGraphQLResponseJSON: !useSse && !useMultipart && jsonResponseType == graphqlResponseMime,
 	}
 }
 

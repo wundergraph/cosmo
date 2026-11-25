@@ -276,6 +276,12 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{
 		NoRetryClient: true,
+		ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+			securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+				Enabled:   true,
+				Condition: "request.header.Get('X-Block') == 'subscription'",
+			}
+		},
 		RouterOptions: []core.Option{
 			core.WithIntrospection(false, config.IntrospectionConfiguration{Enabled: false}),
 		},
@@ -353,6 +359,22 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 				Header: http.Header{"Accept": []string{"text/event-stream, application/graphql-response+json"}},
 			})
 			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "text/event-stream", res.Response.Header.Get("Content-Type"))
+		})
+
+		t.Run("legacy status code for a subscription error over text/event-stream", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `subscription { countEmp2(max: 1, intervalMilliseconds: 10) }`,
+				Header: http.Header{
+					"Accept":  []string{"text/event-stream, application/graphql-response+json"},
+					"X-Block": []string{"subscription"},
+				},
+			})
+			require.NoError(t, err)
+			require.Equal(t, "event: next\ndata: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", res.Body)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, "text/event-stream", res.Response.Header.Get("Content-Type"))
 		})

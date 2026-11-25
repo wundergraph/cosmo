@@ -257,6 +257,12 @@ func TestAcceptsGraphQLResponseJSON(t *testing.T) {
 		{name: "json preferred by q-value", accept: "application/graphql-response+json;q=0.5, application/json", want: false},
 		{name: "json types preferred over streaming", accept: "text/event-stream, application/json;q=0.5, application/graphql-response+json;q=0.8", want: true},
 		{name: "case insensitive", accept: "Application/GraphQL-Response+JSON", want: true},
+		{name: "rejected with q=0", accept: "application/graphql-response+json;q=0", want: false},
+		{name: "rejected with q=0, json through wildcard", accept: "application/graphql-response+json;q=0, */*;q=1", want: false},
+		{name: "wildcard preferred over graphql-response+json", accept: "*/*, application/graphql-response+json;q=0.5", want: false},
+		{name: "application wildcard preferred over graphql-response+json", accept: "application/*, application/graphql-response+json;q=0.5", want: false},
+		{name: "preferred over wildcard", accept: "application/graphql-response+json, */*;q=0.8", want: true},
+		{name: "preferred over json rejected with q=0", accept: "application/json;q=0, application/graphql-response+json;q=0.1", want: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
