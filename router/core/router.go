@@ -816,6 +816,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			spanNameFormatterChain = append(spanNameFormatterChain, provider.WrapSpanNameFormatter)
 		}
 
+		if provider, ok := moduleInstance.(SubgraphDialerProvider); ok {
+			r.subgraphDialerProviders = append(r.subgraphDialerProviders, provider)
+		}
+
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
@@ -3085,7 +3089,7 @@ func (r *Router) shutdownConnectionMetrics(ctx context.Context) error {
 	return r.connectionMetrics.Shutdown(ctx)
 }
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config, providers []SubgraphDialerProvider) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -3093,9 +3097,7 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
 	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
 	transport := &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, network, addr)
-		},
+		DialContext: dialer.DialContext,
 		// The defaults value 0 = unbounded.
 		// We set to some value to prevent resource exhaustion e.g max requests and ports.
 		MaxConnsPerHost: opts.MaxConnsPerHost,
@@ -3121,6 +3123,9 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 		transport.TLSClientConfig = clientTLS.Clone()
 	}
 
+	for _, provider := range slices.Backward(providers) {
+		transport.DialContext = provider.WrapSubgraphDialer(subgraph, transport.DialContext)
+	}
 	if traceDialer != nil {
 		transport.DialContext = traceDialer.WrapDial(transport.DialContext, subgraph)
 		traceDialer.connectionPoolStats.AddSubgraphHostCount(subgraph, int64(opts.MaxConnsPerHost))

@@ -256,6 +256,20 @@ func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext
   https://github.com/wundergraph/cosmo/tree/main/router/cmd/custom
 </Info>
 
+### Track TCP retransmissions to subgraphs
+
+Implement `core.SubgraphDialerProvider` to wrap the outbound HTTP dialer. The router calls `WrapSubgraphDialer(subgraph string, next core.DialerFunc) core.DialerFunc` when it builds a transport. The subgraph name is empty for the shared default transport. Modules wrap the dialer in priority order. Call `next` to use the configured dial timeout and keepalive settings.
+
+The [Linux example module](https://github.com/wundergraph/cosmo/tree/main/router-tests/modules/tcpretransmits) wraps each TCP connection. Just before closing the socket, it reads `tcpi_total_retrans` from Linux `TCP_INFO` and adds the value to `module.subgraph.tcp.retransmits`. The counter measures segments retransmitted by the router to its TCP peer, which can be a proxy. HTTP/2 requests that share a connection contribute to the same sample.
+
+Run the example on Linux from the `router-tests` directory with your usual router configuration and a metrics exporter enabled.
+
+```shell
+go run ./cmd/tcpretransmits
+```
+
+The module exports `module_subgraph_tcp_retransmits_total` to Prometheus and `module.subgraph.tcp.retransmits` to OTLP. Connections on a dedicated subgraph transport carry the `wg.subgraph.name` attribute. Connections on the shared transport are aggregated without that attribute.
+
 ### Add custom metrics
 
 `core.ModuleContext` exposes the router's OpenTelemetry meter providers in the `Provision` hook:

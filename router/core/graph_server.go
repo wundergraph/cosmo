@@ -186,7 +186,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS)
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS, r.subgraphDialerProviders)
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
@@ -195,7 +195,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		if sgTLS, ok := perSubgraphTLS[subgraph]; ok {
 			clientTLS = sgTLS
 		}
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph, clientTLS)
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph, clientTLS, r.subgraphDialerProviders)
 		subgraphTransports[subgraph] = subgraphBaseTransport
 	}
 
@@ -203,7 +203,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	// per-subgraph transport options (they inherit the base transport options).
 	for subgraph, sgTLS := range perSubgraphTLS {
 		if _, exists := subgraphTransports[subgraph]; !exists {
-			subgraphBaseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, subgraph, sgTLS)
+			subgraphBaseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, subgraph, sgTLS, r.subgraphDialerProviders)
 			subgraphTransports[subgraph] = subgraphBaseTransport
 		}
 	}
