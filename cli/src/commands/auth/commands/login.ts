@@ -6,8 +6,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { createOutput, readOutputOverride, toFailure } from '@wundergraph/wgc-plugin-sdk';
 import type { Failure, Output } from '@wundergraph/wgc-plugin-sdk';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { config, getBaseHeaders } from '../../../core/config.js';
-import { ConfigData, updateConfigFile } from '../../../utils.js';
+import { commandName, config, getBaseHeaders } from '../../../core/config.js';
+import { ConfigData, readConfigFile, updateConfigFile } from '../../../utils.js';
 import { describeHubAudience, readHubAudience } from '../hub-audience.js';
 import { organizationSlugs, pollForToken, requestDeviceAuthorization } from '../device-login.js';
 import type { DeviceAuthorization, KeycloakEndpoints } from '../device-login.js';
@@ -31,6 +31,7 @@ export interface LoginDependencies {
   sleep: (milliseconds: number) => Promise<void>;
   openBrowser: (url: string) => Promise<void>;
   saveSession: (session: ConfigData) => void;
+  readSession: () => ConfigData;
   /** True when a person sits at the terminal: stdin and stdout are TTYs. */
   interactive: boolean;
   createOutput: (json: boolean) => Output;
@@ -48,6 +49,7 @@ const defaultDependencies = (opts: BaseCommandOptions): LoginDependencies => ({
     await open(url);
   },
   saveSession: updateConfigFile,
+  readSession: readConfigFile,
   interactive: Boolean(process.stdin.isTTY && process.stdout.isTTY),
   createOutput: (json) => createOutput({ json: json || readOutputOverride(process.env) === 'json' }),
   describeOrganizations: async (accessToken, slugs) => {
@@ -76,8 +78,8 @@ const defaultDependencies = (opts: BaseCommandOptions): LoginDependencies => ({
 
 const completeCommand = (deviceCode: string, org: string | undefined): string =>
   org === undefined
-    ? `wgc auth login --complete ${deviceCode}`
-    : `wgc auth login --complete ${deviceCode} --org ${org}`;
+    ? `${commandName} auth login --complete ${deviceCode}`
+    : `${commandName} auth login --complete ${deviceCode} --org ${org}`;
 
 /** Agents get the browser URL and pairing code to hand to a person, and the command that finishes the login. */
 const printLoginStart = (output: Output, authorization: DeviceAuthorization, org: string | undefined): void => {
@@ -98,12 +100,15 @@ const printLoginStart = (output: Output, authorization: DeviceAuthorization, org
   );
 };
 
-/** The organization to sign in to: `--org`, the only one, or the person's choice. Never a guess. */
+/**
+ * The organization to sign in to: `--org`, the only one, or the person's choice. Never a guess.
+ * `deviceCode` is the `--complete` code; without one a person is there to ask.
+ */
 const pickOrganization = async (
   token: KeycloakToken,
   options: LoginOptions,
   dependencies: LoginDependencies,
-  canAsk: boolean,
+  deviceCode: string | undefined,
 ): Promise<{ slug: string } | { failure: Failure }> => {
   const slugs = organizationSlugs(token.accessToken);
   if (slugs.length === 0) {
@@ -134,13 +139,16 @@ const pickOrganization = async (
     return { slug: slugs[0] };
   }
 
-  if (!canAsk) {
+  if (deviceCode !== undefined) {
+    // The identity server redeems a device code once, so keep the token for the rerun with --org.
+    dependencies.saveSession({ pendingLogin: { ...token, deviceCode } });
+    const finish = completeCommand(deviceCode, '<slug>');
     return {
       failure: {
         kind: 'usage',
         message: `Your account belongs to ${slugs.length} organizations: ${slugs.join(', ')}.`,
-        remediation: 'Start a new login that names one: `wgc auth login --non-interactive --org <slug>`.',
-        next: ['wgc auth login --non-interactive --org <slug>'],
+        remediation: `Finish this login with the one to use: \`${finish}\`.`,
+        next: [finish],
       },
     };
   }
@@ -154,15 +162,15 @@ const finishLogin = async (
   token: KeycloakToken,
   options: LoginOptions,
   dependencies: LoginDependencies,
-  canAsk: boolean,
+  deviceCode: string | undefined,
 ): Promise<void> => {
-  const picked = await pickOrganization(token, options, dependencies, canAsk);
+  const picked = await pickOrganization(token, options, dependencies, deviceCode);
   if ('failure' in picked) {
     output.fail(picked.failure);
     return;
   }
 
-  dependencies.saveSession({ ...token, organizationSlug: picked.slug });
+  dependencies.saveSession({ ...token, organizationSlug: picked.slug, pendingLogin: undefined });
 
   const hubAudience = readHubAudience(token.accessToken);
   output.result({ organizationSlug: picked.slug, hubAudience: hubAudience ?? null }, (data) =>
@@ -178,6 +186,13 @@ const runLogin = async (options: LoginOptions, dependencies: LoginDependencies):
   const output = dependencies.createOutput(options.json === true || agentMode);
 
   if (options.complete !== undefined) {
+    const { pendingLogin } = dependencies.readSession();
+    if (pendingLogin?.deviceCode === options.complete) {
+      const { deviceCode, ...token } = pendingLogin;
+      await finishLogin(output, token, options, dependencies, deviceCode);
+      return;
+    }
+
     const token = await pollForToken({
       fetchImpl: dependencies.fetchImpl,
       endpoints: dependencies.endpoints,
@@ -189,7 +204,7 @@ const runLogin = async (options: LoginOptions, dependencies: LoginDependencies):
       output.fail(toFailure(token));
       return;
     }
-    await finishLogin(output, token.data, options, dependencies, false);
+    await finishLogin(output, token.data, options, dependencies, options.complete);
     return;
   }
 
@@ -226,7 +241,7 @@ const runLogin = async (options: LoginOptions, dependencies: LoginDependencies):
     output.fail(toFailure(token));
     return;
   }
-  await finishLogin(output, token.data, options, dependencies, true);
+  await finishLogin(output, token.data, options, dependencies, undefined);
 };
 
 export default (opts: BaseCommandOptions, dependencies: LoginDependencies = defaultDependencies(opts)) =>
@@ -243,6 +258,8 @@ export default (opts: BaseCommandOptions, dependencies: LoginDependencies = defa
     .option('--json', 'Machine-readable output')
     .addHelpText(
       'after',
-      ['', 'Examples', '  wgc auth login', '  wgc auth login --non-interactive --org acme'].join('\n'),
+      ['', 'Examples', `  ${commandName} auth login`, `  ${commandName} auth login --non-interactive --org acme`].join(
+        '\n',
+      ),
     )
     .action((options: LoginOptions) => runLogin(options, dependencies));

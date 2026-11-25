@@ -2,10 +2,15 @@ import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { createOutput } from '@wundergraph/wgc-plugin-sdk';
 import { Command } from 'commander';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import LoginCommand from '../src/commands/auth/commands/login.js';
 import type { LoginDependencies, OrganizationChoice } from '../src/commands/auth/commands/login.js';
 import type { ConfigData } from '../src/utils.js';
+
+vi.mock('../src/core/config.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/core/config.js')>()),
+  commandName: 'wgcm',
+}));
 
 const unsignedJwt = (claims: object): string =>
   ['{"alg":"none"}', JSON.stringify(claims)].map((part) => Buffer.from(part).toString('base64url')).join('.') + '.';
@@ -50,7 +55,8 @@ const runLogin = async (
   {
     tokenAnswers = [],
     interactive = false,
-  }: { tokenAnswers?: Array<{ status: number; body: object }>; interactive?: boolean },
+    session = {},
+  }: { tokenAnswers?: Array<{ status: number; body: object }>; interactive?: boolean; session?: ConfigData },
 ) => {
   let stdout = '';
   let stderr = '';
@@ -68,7 +74,11 @@ const runLogin = async (
       opened.push(url);
       return Promise.resolve();
     },
-    saveSession: (session) => saved.push(session),
+    saveSession: (update) => {
+      saved.push(update);
+      Object.assign(session, update);
+    },
+    readSession: () => session,
     interactive,
     createOutput: (json) =>
       createOutput({
@@ -101,7 +111,7 @@ afterEach(() => {
   process.exitCode = 0;
 });
 
-describe('wgc auth login', () => {
+describe('wgcm auth login', () => {
   test('a person sees the pairing code the browser shows, and the login is saved for their organization', async () => {
     const run = await runLogin([], { interactive: true, tokenAnswers: [pending, granted(['/acme'])] });
 
@@ -138,9 +148,9 @@ describe('wgc auth login', () => {
         browser_url: 'https://accounts.example/realms/cosmo/device?user_code=WDJB-MJHT',
         verification_code: 'WDJB-MJHT',
         expires_in: 600,
-        next_step: 'wgc auth login --complete device-secret --org acme',
+        next_step: 'wgcm auth login --complete device-secret --org acme',
       },
-      next: ['wgc auth login --complete device-secret --org acme'],
+      next: ['wgcm auth login --complete device-secret --org acme'],
     });
     expect(run.requests).toEqual(['auth/device']);
     expect(run.saved).toEqual([]);
@@ -169,11 +179,30 @@ describe('wgc auth login', () => {
       error: {
         code: 'USAGE_ERROR',
         message: 'Your account belongs to 2 organizations: acme, globex.',
-        remediation: 'Start a new login that names one: `wgc auth login --non-interactive --org <slug>`.',
-        next: ['wgc auth login --non-interactive --org <slug>'],
+        remediation: 'Finish this login with the one to use: `wgcm auth login --complete device-secret --org <slug>`.',
+        next: ['wgcm auth login --complete device-secret --org <slug>'],
       },
     });
-    expect(run.saved).toEqual([]);
+    expect(run.saved.map((session) => session.organizationSlug)).toEqual([undefined]);
+  });
+
+  test('an account in several organizations finishes the same login with --org, without a new browser login', async () => {
+    const session: ConfigData = {};
+    await runLogin(['--complete', 'device-secret'], { tokenAnswers: [granted(['/acme', '/globex'])], session });
+
+    const run = await runLogin(['--complete', 'device-secret', '--org', 'globex'], { session });
+
+    expect(run.exitCode).toBe(0);
+    expect(JSON.parse(run.stdout)).toEqual({
+      ok: true,
+      data: { organizationSlug: 'globex', hubAudience: { audiences: ['hub'], acceptedByHub: true } },
+    });
+    expect(run.requests).toEqual([]);
+    expect([session.organizationSlug, session.refreshToken, session.pendingLogin]).toEqual([
+      'globex',
+      'refresh',
+      undefined,
+    ]);
   });
 
   test('an expired code exits 4 and says to start again', async () => {
@@ -185,8 +214,8 @@ describe('wgc auth login', () => {
     expect(JSON.parse(run.stdout).error).toEqual({
       code: 'LOGIN_NOT_APPROVED',
       message: 'The login code expired before it was approved.',
-      remediation: 'Start a new login with `wgc auth login`.',
-      next: ['wgc auth login'],
+      remediation: 'Start a new login with `wgcm auth login`.',
+      next: ['wgcm auth login'],
     });
   });
 });

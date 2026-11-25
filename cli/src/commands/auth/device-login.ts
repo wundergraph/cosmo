@@ -2,6 +2,7 @@ import jwtDecode from 'jwt-decode';
 import { z } from 'zod';
 import { failure, failWith, ok } from '@wundergraph/wgc-plugin-sdk';
 import type { Result } from '@wundergraph/wgc-plugin-sdk';
+import { commandName } from '../../core/config.js';
 import type { KeycloakToken } from './utils.js';
 
 export interface KeycloakEndpoints {
@@ -130,8 +131,8 @@ export const pollForToken = async ({
         reason === 'expired_token'
           ? 'The login code expired before it was approved.'
           : `The login was not approved (${reason}).`,
-      remediation: 'Start a new login with `wgc auth login`.',
-      next: ['wgc auth login'],
+      remediation: `Start a new login with \`${commandName} auth login\`.`,
+      next: [`${commandName} auth login`],
     });
   }
 };

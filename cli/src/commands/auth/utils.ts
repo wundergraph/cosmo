@@ -1,6 +1,6 @@
 import { program } from 'commander';
 import pc from 'picocolors';
-import { config } from '../../core/config.js';
+import { commandName, config } from '../../core/config.js';
 import { readConfigFile, updateConfigFile } from '../../utils.js';
 
 export interface KeycloakToken {
@@ -79,7 +79,9 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
       return;
     }
 
-    program.error(pc.red('Organization slug is not set. Please run `wgc auth login` to set the organization slug.'));
+    program.error(
+      pc.red(`Organization slug is not set. Please run \`${commandName} auth login\` to set the organization slug.`),
+    );
   }
 
   // Access token is present and does not expire in the next 60 seconds
@@ -99,7 +101,7 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
       return;
     }
 
-    program.error(pc.red('Refresh token has expired. Please login again with `wgc auth login`'));
+    program.error(pc.red(`Refresh token has expired. Please login again with \`${commandName} auth login\``));
   }
 
   // Refresh tokens with the offline token

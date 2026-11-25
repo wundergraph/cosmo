@@ -208,7 +208,14 @@ export function composeSubgraphs(
   });
 }
 
-export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+export type ConfigData = Partial<
+  KeycloakToken & {
+    organizationSlug: string;
+    lastUpdateCheck: number;
+    /** A browser login whose account is in several organizations, kept until `--complete` names one. */
+    pendingLogin: KeycloakToken & { deviceCode: string };
+  }
+>;
 
 /**
  * Asynchronously checks whether a file (or directory) exists at the given path.
