@@ -27,6 +27,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	pubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -137,7 +138,8 @@ type RequestContext interface {
 	SetAuthenticationScopes(scopes []string)
 
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
-	// This can be used, e.g. to obfuscate sensitive data in the response
+	// This can be used, e.g. to obfuscate sensitive data in the response.
+	// A renderer set on a WebSocket upgrade is shared by concurrent operations on that connection.
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
 
 	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
@@ -270,6 +272,7 @@ type requestContext struct {
 	cacheControl *cachedirective.RequestCacheDirectives
 	// subgraphResolver can be used to resolve Subgraph by ID or by request
 	subgraphResolver *SubgraphResolver
+	executionConfig  *routerconfig.ExecutionConfig
 	// dataSourceNames the list of datasource involved in resolving the operation
 	dataSourceNames []string
 	// graphQLErrorServices are the services that produced the GraphQL errors
@@ -947,6 +950,21 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 	return s.subgraphsByURL[u]
 }
 
+// ExecutionConfigFromContext returns the execution config of the base or
+// feature-flag graph serving the request, or nil if no graph was selected.
+// Modules can pass RequestContext.Request().Context().
+//
+// The pointer is stable for the lifetime of that graph instance. All requests
+// served by it receive the same pointer, including after a reload that reuses
+// the graph. A rebuilt graph gets a distinct pointer even if its config is
+// identical. Modules can use the pointer as a process-local cache key.
+func ExecutionConfigFromContext(ctx context.Context) *routerconfig.ExecutionConfig {
+	if rc := getRequestContext(ctx); rc != nil {
+		return rc.executionConfig
+	}
+	return nil
+}
+
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
 	return context.WithValue(ctx, rcontext.SubgraphResolverContextKey, resolver)
 }
@@ -957,6 +975,8 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 }
 
 type requestContextOptions struct {
+	executionConfig               *routerconfig.ExecutionConfig
+	subgraphResolver              *SubgraphResolver
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
 	metricSetAttributes           map[string]string
@@ -991,6 +1011,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
+		executionConfig:   opts.executionConfig,
+		subgraphResolver:  opts.subgraphResolver,
 	}
 }
