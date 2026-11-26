@@ -98,6 +98,9 @@ patchedDependencies:
   graphql@16.9.0: patches/graphql@16.9.0.patch
   ora@8.2.0: patches/ora@8.2.0.patch
 
+# A filtered install or deploy, as in the controlplane image, leaves out the packages some patches are for.
+allowUnusedPatches: true
+
 catalog:
   # Build/test tooling
   typescript: 6.0.3
