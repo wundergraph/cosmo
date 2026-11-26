@@ -48,10 +48,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: ./.github/actions/mise
         with:
-          go-version-file: router/go.mod
-          cache: true
+          tools: go
       - name: Check for query-planner label
         id: check_label
         uses: actions/github-script@v7

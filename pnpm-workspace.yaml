@@ -22,11 +22,13 @@ minimumReleaseAge: 4320
 
 allowBuilds:
   '@bufbuild/buf': true
+  '@parcel/watcher': false
   '@sentry-internal/node-cpu-profiler': true
   '@sentry-internal/node-native-stacktrace': true
   '@sentry/cli': true
   core-js: true
   esbuild: true
+  keytar: false
   msgpackr-extract: true
   msw: true
   protobufjs: true
