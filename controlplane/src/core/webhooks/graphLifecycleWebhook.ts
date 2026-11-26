@@ -1,13 +1,12 @@
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import type { AuthContext } from '../../types/index.js';
 import type { RouterOptions } from '../routes.js';
-import { LifecycleGraph, OrganizationWebhookService } from './OrganizationWebhookService.js';
+import { GraphLifecycleEventName, LifecycleGraph, OrganizationWebhookService } from './OrganizationWebhookService.js';
 
-/** Sends GRAPH_CREATED or GRAPH_DELETED to the organization's webhooks that take it. */
+/** Sends GRAPH_CREATED, GRAPH_DELETED or GRAPH_MOVED to the organization's webhooks that take it. */
 export function sendGraphLifecycle(
   opts: RouterOptions,
   input: {
-    eventName: OrganizationEventName.GRAPH_CREATED | OrganizationEventName.GRAPH_DELETED;
+    eventName: GraphLifecycleEventName;
     authContext: AuthContext;
     graph: LifecycleGraph;
   },

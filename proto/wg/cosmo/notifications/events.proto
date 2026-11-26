@@ -17,6 +17,7 @@ enum OrganizationEventName {
   ORGANIZATION_GOVERNANCE_UPDATED = 5;
   GRAPH_CREATED = 6;
   GRAPH_DELETED = 7;
+  GRAPH_MOVED = 8;
 }
 
 message GraphSchemaUpdatedMeta {

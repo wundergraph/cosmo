@@ -1,14 +1,17 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   RenameNamespaceRequest,
   RenameNamespaceResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 
 export function renameNamespace(
   opts: RouterOptions,
@@ -73,6 +76,22 @@ export function renameNamespace(
     await namespaceRepo.rename({
       ...req,
     });
+
+    // Every graph in the namespace now lives under its new name.
+    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const graphs = await fedGraphRepo.list({ namespaceIds: [exists.id], offset: 0, limit: 0 });
+    for (const graph of graphs) {
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_MOVED,
+        authContext,
+        graph: {
+          id: graph.id,
+          name: graph.name,
+          namespace: req.newName,
+          type: graph.supportsFederation ? 'federated' : 'monograph',
+        },
+      });
+    }
 
     return {
       response: {

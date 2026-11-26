@@ -182,6 +182,11 @@ export interface OrganizationGovernanceUpdated {
   };
 }
 
+export type GraphLifecycleEventName =
+  | OrganizationEventName.GRAPH_CREATED
+  | OrganizationEventName.GRAPH_DELETED
+  | OrganizationEventName.GRAPH_MOVED;
+
 /** A federated graph or a monograph as the graph lifecycle events name it. */
 export type LifecycleGraph = {
   id: string;
@@ -191,11 +196,12 @@ export type LifecycleGraph = {
 };
 
 /**
- * Organization-wide events without a graph filter: a graph was created or deleted. `api_key_name` names the
- * API key that made the change, so a receiver can tell its own changes apart.
+ * Organization-wide events without a graph filter: a graph was created, deleted, or moved to another namespace
+ * (by a move or a namespace rename; `graph.namespace` is then the new one). `api_key_name` names the API key that
+ * made the change, so a receiver can tell its own changes apart.
  */
 export interface GraphLifecycleEvent {
-  eventName: OrganizationEventName.GRAPH_CREATED | OrganizationEventName.GRAPH_DELETED;
+  eventName: GraphLifecycleEventName;
   payload: {
     graph: LifecycleGraph;
     organization: {
@@ -334,7 +340,8 @@ export class OrganizationWebhookService {
         }
         case OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED:
         case OrganizationEventName.GRAPH_CREATED:
-        case OrganizationEventName.GRAPH_DELETED: {
+        case OrganizationEventName.GRAPH_DELETED:
+        case OrganizationEventName.GRAPH_MOVED: {
           // Organization-wide event without a graph filter.
           meta = { case: undefined };
           break;

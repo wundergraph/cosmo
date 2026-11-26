@@ -1,5 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -10,6 +11,7 @@ import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 import type { PlainMessage } from '../../../types/index.js';
 
 export function moveMonograph(
@@ -155,6 +157,12 @@ export function moveMonograph(
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: newNamespace.id,
         targetNamespaceDisplayName: newNamespace.name,
+      });
+
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_MOVED,
+        authContext,
+        graph: { id: movedGraph.id, name: movedGraph.name, namespace: newNamespace.name, type: 'monograph' },
       });
     }
 

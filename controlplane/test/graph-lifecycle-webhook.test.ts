@@ -3,8 +3,15 @@ import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notificat
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { createFederatedGraph, DEFAULT_NAMESPACE, DEFAULT_ROUTER_URL, SetupTest } from './test-util.js';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import {
+  createFederatedGraph,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  DEFAULT_ROUTER_URL,
+  SetupTest,
+} from './test-util.js';
 
 let dbname = '';
 
@@ -14,6 +21,8 @@ const lifecycleEvents = [
   OrganizationEventName[OrganizationEventName.GRAPH_CREATED],
   OrganizationEventName[OrganizationEventName.GRAPH_DELETED],
 ];
+
+const movedEvents = ['GRAPH_MOVED'];
 
 describe('Graph lifecycle webhooks', () => {
   let capturedWebhooks: Record<string, unknown>[] = [];
@@ -123,6 +132,152 @@ describe('Graph lifecycle webhooks', () => {
       'monograph',
       'monograph',
     ]);
+  });
+
+  test('moving a federated graph sends GRAPH_MOVED with its new namespace, for its contracts too', async (testContext) => {
+    const { client, server, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const graphName = genID('fedGraph');
+    const contractName = genID('contract');
+    const newNamespace = genID('namespace').toLowerCase();
+    const label = genUniqueLabel('label');
+    await createThenPublishSubgraph(
+      client,
+      genID('subgraph'),
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String! }',
+      [label],
+      'http://localhost:8082',
+    );
+    await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+    const contractResponse = await client.createContract({
+      name: contractName,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: graphName,
+      excludeTags: ['internal'],
+      routingUrl: 'http://localhost:3003',
+    });
+    expect(contractResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect((await client.createNamespace({ name: newNamespace })).response?.code).toBe(EnumStatusCode.OK);
+
+    const graph = await client.getFederatedGraphByName({ name: graphName, namespace: DEFAULT_NAMESPACE });
+    const contract = await client.getFederatedGraphByName({ name: contractName, namespace: DEFAULT_NAMESPACE });
+
+    await client.createOrganizationWebhookConfig({ endpoint: webhookUrl, events: movedEvents, eventsMeta: [] });
+
+    // The subgraph stays behind, so the moved graph no longer composes; the move itself still happens.
+    await client.moveFederatedGraph({ name: graphName, namespace: DEFAULT_NAMESPACE, newNamespace });
+    const moved = await client.getFederatedGraphByName({ name: graphName, namespace: newNamespace });
+    expect(moved.graph?.id).toBe(graph.graph?.id);
+
+    await vi.waitFor(() => {
+      expect(capturedWebhooks).toHaveLength(2);
+    });
+
+    const organization = {
+      id: users.adminAliceCompanyA.organizationId,
+      slug: users.adminAliceCompanyA.organizationSlug,
+    };
+    expect(capturedWebhooks).toEqual(
+      expect.arrayContaining([
+        {
+          version: 1,
+          event: 'GRAPH_MOVED',
+          payload: {
+            graph: { id: graph.graph?.id, name: graphName, namespace: newNamespace, type: 'federated' },
+            organization,
+            actor_id: users.adminAliceCompanyA.userId,
+          },
+        },
+        {
+          version: 1,
+          event: 'GRAPH_MOVED',
+          payload: {
+            graph: { id: contract.graph?.id, name: contractName, namespace: newNamespace, type: 'federated' },
+            organization,
+            actor_id: users.adminAliceCompanyA.userId,
+          },
+        },
+      ]),
+    );
+  });
+
+  test('moving a monograph sends GRAPH_MOVED with its new namespace', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const monographName = genID('monograph');
+    const newNamespace = genID('namespace').toLowerCase();
+    await client.createMonograph({
+      name: monographName,
+      namespace: DEFAULT_NAMESPACE,
+      graphUrl: 'http://localhost:4000',
+      routingUrl: 'http://localhost:3002',
+    });
+    await client.createNamespace({ name: newNamespace });
+    const monograph = await client.getFederatedGraphByName({ name: monographName, namespace: DEFAULT_NAMESPACE });
+
+    await client.createOrganizationWebhookConfig({ endpoint: webhookUrl, events: movedEvents, eventsMeta: [] });
+
+    const moveResponse = await client.moveMonograph({
+      name: monographName,
+      namespace: DEFAULT_NAMESPACE,
+      newNamespace,
+    });
+    expect(moveResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await vi.waitFor(() => {
+      expect(capturedWebhooks).toHaveLength(1);
+    });
+
+    expect(capturedWebhooks[0].event).toBe('GRAPH_MOVED');
+    expect((capturedWebhooks[0].payload as { graph: unknown }).graph).toEqual({
+      id: monograph.graph?.id,
+      name: monographName,
+      namespace: newNamespace,
+      type: 'monograph',
+    });
+  });
+
+  test('renaming a namespace sends GRAPH_MOVED for every graph in it', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const renamed = genID('renamed').toLowerCase();
+    const graphName = genID('fedGraph');
+    const monographName = genID('monograph');
+    await client.createNamespace({ name: namespace });
+    await createFederatedGraph(client, graphName, namespace, [], DEFAULT_ROUTER_URL);
+    await client.createMonograph({
+      name: monographName,
+      namespace,
+      graphUrl: 'http://localhost:4000',
+      routingUrl: 'http://localhost:3002',
+    });
+    const graph = await client.getFederatedGraphByName({ name: graphName, namespace });
+    const monograph = await client.getFederatedGraphByName({ name: monographName, namespace });
+
+    await client.createOrganizationWebhookConfig({ endpoint: webhookUrl, events: movedEvents, eventsMeta: [] });
+
+    const renameResponse = await client.renameNamespace({ name: namespace, newName: renamed });
+    expect(renameResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await vi.waitFor(() => {
+      expect(capturedWebhooks).toHaveLength(2);
+    });
+
+    const graphs = capturedWebhooks.map((webhook) => {
+      expect(webhook.event).toBe('GRAPH_MOVED');
+      return (webhook.payload as { graph: unknown }).graph;
+    });
+    expect(graphs).toEqual(
+      expect.arrayContaining([
+        { id: graph.graph?.id, name: graphName, namespace: renamed, type: 'federated' },
+        { id: monograph.graph?.id, name: monographName, namespace: renamed, type: 'monograph' },
+      ]),
+    );
   });
 
   test('every event carries its own delivery id, and a retry of the event repeats it', async (testContext) => {
