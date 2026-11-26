@@ -378,8 +378,6 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/wrappers.proto";
-
       // Service definition for DefaultService
       service DefaultService {
       }
@@ -392,7 +390,7 @@ describe('SDL to Proto Directive', () => {
         string last_name = 3 [deprecated = true];
         string full_name = 4;
         // Deprecation notice: This field will be removed
-        google.protobuf.Int32Value age = 5 [deprecated = true];
+        optional int32 age = 5 [deprecated = true];
         string email = 6;
       }"
     `);
@@ -471,8 +469,6 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/wrappers.proto";
-
       // Service definition for DefaultService
       service DefaultService {
       }
@@ -493,7 +489,7 @@ describe('SDL to Proto Directive', () => {
         // Deprecation notice: Use status field instead
         bool is_active = 5 [deprecated = true];
         // Deprecation notice: This field is deprecated
-        google.protobuf.StringValue metadata = 6 [deprecated = true];
+        optional string metadata = 6 [deprecated = true];
       }"
     `);
   });

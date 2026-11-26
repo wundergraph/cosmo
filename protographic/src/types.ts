@@ -70,9 +70,15 @@ export interface ProtoMessageField {
   typeName: string;
   fieldNumber: number;
   isRepeated?: boolean;
+  // Marks the field as proto3 optional, so it tracks presence and can represent null
+  isOptional?: boolean;
   description?: string;
   // The original name of the field in the GraphQL schema
   graphqlName?: string;
+  // Marks the field with the [deprecated = true] option
+  isDeprecated?: boolean;
+  // Printed as a comment above the field
+  deprecationReason?: string;
 
   /**
    * The composite type of the field. When building a proto message
@@ -116,7 +122,19 @@ export type ProtoFieldType = {
   typeName: string;
   isWrapper: boolean;
   isRepeated: boolean;
+  /** Whether the field is a nullable scalar that uses proto3 optional instead of a wrapper type */
+  isOptional?: boolean;
   listWrapper?: ListWrapper;
+};
+
+/**
+ * Options for mapping a GraphQL type to a protobuf type
+ */
+export type ProtoTypeOptions = {
+  /** Map nullable scalars to their plain protobuf type, e.g. for list items. */
+  ignoreNullability?: boolean;
+  /** Use wrapper types instead of proto3 optional for nullable scalars. The default is false. */
+  useWrapperTypes?: boolean;
 };
 
 export enum CompositeMessageKind {

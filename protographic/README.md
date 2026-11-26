@@ -21,7 +21,7 @@ Protographic bridges GraphQL and Protocol Buffers (protobuf) ecosystems through 
 - Handles GraphQL features including unions, interfaces, directives, and fragments
 - First-class support for Federation entity mapping
 - Deterministic field ordering with proto.lock.json for backward compatibility
-- Use of Protocol Buffer wrappers for nullable fields to distinguish between semantic nulls and zero values
+- Proto3 `optional` fields for nullable scalars to distinguish between semantic nulls and zero values (Protocol Buffer wrapper types are available via `useWrapperTypes`)
 
 ## Installation
 
@@ -54,9 +54,12 @@ const protoOutput = compileGraphQLToProto(
     packageName: 'user.v1', // Package name
     goPackage: 'cosmo/pkg/my_package', // Go package name
     lockFilePath: './proto.lock.json', // Optional: Path to proto.lock.json for deterministic field ordering
+    useWrapperTypes: false, // Optional: Use google.protobuf wrapper types instead of proto3 optional for nullable scalars (default: false)
   },
 );
 ```
+
+> **Warning**: Protographic generated wrapper types until now. If you regenerate an existing schema with the default, the wrapper fields change to proto3 `optional` fields. The two are not wire-compatible, so a service that was built from the old proto cannot read the new messages. To keep the wrapper types, set `useWrapperTypes: true` (`--legacy-wrapper-types` in the CLI).
 
 ### Using proto.lock.json for Deterministic Field Ordering
 

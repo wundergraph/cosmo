@@ -1081,42 +1081,40 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Check that all required components are present
       expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
+        "syntax = "proto3";
+        package service.v1;
 
-      import "google/protobuf/wrappers.proto";
+        // Service definition for DefaultService
+        service DefaultService {
+          rpc QueryEvent(QueryEventRequest) returns (QueryEventResponse) {}
+          rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
+        }
 
-      // Service definition for DefaultService
-      service DefaultService {
-        rpc QueryEvent(QueryEventRequest) returns (QueryEventResponse) {}
-        rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
-      }
+        // Request message for events operation.
+        message QueryEventsRequest {
+        }
+        // Response message for events operation.
+        message QueryEventsResponse {
+          repeated Event events = 1;
+        }
+        // Request message for event operation.
+        message QueryEventRequest {
+          string id = 1;
+        }
+        // Response message for event operation.
+        message QueryEventResponse {
+          Event event = 1;
+        }
 
-      // Request message for events operation.
-      message QueryEventsRequest {
-      }
-      // Response message for events operation.
-      message QueryEventsResponse {
-        repeated Event events = 1;
-      }
-      // Request message for event operation.
-      message QueryEventRequest {
-        string id = 1;
-      }
-      // Response message for event operation.
-      message QueryEventResponse {
-        Event event = 1;
-      }
-
-      message Event {
-        string id = 1;
-        string name = 2;
-        string start_time = 3;
-        google.protobuf.StringValue end_time = 4;
-        google.protobuf.StringValue metadata = 5;
-        google.protobuf.StringValue attachment = 6;
-      }"
-    `);
+        message Event {
+          string id = 1;
+          string name = 2;
+          string start_time = 3;
+          optional string end_time = 4;
+          optional string metadata = 5;
+          optional string attachment = 6;
+        }"
+      `);
     });
   });
 
@@ -2377,100 +2375,98 @@ describe('SDL to Proto - Federation and Special Types', () => {
       expectValidProto(protoText);
 
       expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
+        "syntax = "proto3";
+        package service.v1;
 
-      import "google/protobuf/wrappers.proto";
+        // Service definition for DefaultService
+        service DefaultService {
+          // Lookup User entity by id
+          rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+          rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+          rpc RequireUserPostById(RequireUserPostByIdRequest) returns (RequireUserPostByIdResponse) {}
+        }
 
-      // Service definition for DefaultService
-      service DefaultService {
-        // Lookup User entity by id
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
-        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
-        rpc RequireUserPostById(RequireUserPostByIdRequest) returns (RequireUserPostByIdResponse) {}
-      }
+        // Key message for User entity lookup
+        message LookupUserByIdRequestKey {
+          // Key field for User entity lookup.
+          string id = 1;
+        }
 
-      // Key message for User entity lookup
-      message LookupUserByIdRequestKey {
-        // Key field for User entity lookup.
-        string id = 1;
-      }
+        // Request message for User entity lookup.
+        message LookupUserByIdRequest {
+          /*
+           * List of keys to look up User entities.
+           * Order matters - each key maps to one entity in LookupUserByIdResponse.
+           */
+          repeated LookupUserByIdRequestKey keys = 1;
+        }
 
-      // Request message for User entity lookup.
-      message LookupUserByIdRequest {
-        /*
-         * List of keys to look up User entities.
-         * Order matters - each key maps to one entity in LookupUserByIdResponse.
-         */
-        repeated LookupUserByIdRequestKey keys = 1;
-      }
+        // Response message for User entity lookup.
+        message LookupUserByIdResponse {
+          /*
+           * List of User entities in the same order as the keys in LookupUserByIdRequest.
+           * Always return the same number of entities as keys. Use null for entities that cannot be found.
+           * 
+           * Example:
+           *   LookupUserByIdRequest:
+           *     keys:
+           *       - id: 1
+           *       - id: 2
+           *   LookupUserByIdResponse:
+           *     result:
+           *       - id: 1 # User with id 1 found
+           *       - null  # User with id 2 not found
+           */
+          repeated User result = 1;
+        }
 
-      // Response message for User entity lookup.
-      message LookupUserByIdResponse {
-        /*
-         * List of User entities in the same order as the keys in LookupUserByIdRequest.
-         * Always return the same number of entities as keys. Use null for entities that cannot be found.
-         * 
-         * Example:
-         *   LookupUserByIdRequest:
-         *     keys:
-         *       - id: 1
-         *       - id: 2
-         *   LookupUserByIdResponse:
-         *     result:
-         *       - id: 1 # User with id 1 found
-         *       - null  # User with id 2 not found
-         */
-        repeated User result = 1;
-      }
+        // Request message for user operation.
+        message QueryUserRequest {
+          string id = 1;
+        }
+        // Response message for user operation.
+        message QueryUserResponse {
+          User user = 1;
+        }
+        message RequireUserPostByIdRequest {
+          // RequireUserPostByIdContext provides the context for the required fields method RequireUserPostById.
+          repeated RequireUserPostByIdContext context = 1;
+          // RequireUserPostByIdArgs provides the field arguments for the required field with method RequireUserPostById.
+          RequireUserPostByIdArgs field_args = 2;
+        }
 
-      // Request message for user operation.
-      message QueryUserRequest {
-        string id = 1;
-      }
-      // Response message for user operation.
-      message QueryUserResponse {
-        User user = 1;
-      }
-      message RequireUserPostByIdRequest {
-        // RequireUserPostByIdContext provides the context for the required fields method RequireUserPostById.
-        repeated RequireUserPostByIdContext context = 1;
-        // RequireUserPostByIdArgs provides the field arguments for the required field with method RequireUserPostById.
-        RequireUserPostByIdArgs field_args = 2;
-      }
+        message RequireUserPostByIdContext {
+          LookupUserByIdRequestKey key = 1;
+          RequireUserPostByIdFields fields = 2;
+        }
 
-      message RequireUserPostByIdContext {
-        LookupUserByIdRequestKey key = 1;
-        RequireUserPostByIdFields fields = 2;
-      }
+        message RequireUserPostByIdArgs {
+          optional string slug = 1;
+        }
 
-      message RequireUserPostByIdArgs {
-        google.protobuf.StringValue slug = 1;
-      }
+        message RequireUserPostByIdResponse {
+          // RequireUserPostByIdResult provides the result for the required fields method RequireUserPostById.
+          repeated RequireUserPostByIdResult result = 1;
+        }
 
-      message RequireUserPostByIdResponse {
-        // RequireUserPostByIdResult provides the result for the required fields method RequireUserPostById.
-        repeated RequireUserPostByIdResult result = 1;
-      }
+        message RequireUserPostByIdResult {
+          Post post = 1;
+        }
 
-      message RequireUserPostByIdResult {
-        Post post = 1;
-      }
+        message RequireUserPostByIdFields {
+          string name = 1;
+        }
 
-      message RequireUserPostByIdFields {
-        string name = 1;
-      }
+        message User {
+          string id = 1;
+        }
 
-      message User {
-        string id = 1;
-      }
-
-      message Post {
-        string id = 1;
-        User author = 2;
-        string title = 3;
-      }"
-    `);
+        message Post {
+          string id = 1;
+          User author = 2;
+          string title = 3;
+        }"
+      `);
     });
     test('should generate rpc method for required field with randomly ordered fields', () => {
       const sdl = `

@@ -61,11 +61,27 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 | GraphQL Type | Protocol Buffer Type (Non-Null) | Protocol Buffer Type (Nullable) |
 | ------------ | ------------------------------- | ------------------------------- |
-| ID           | string                          | google.protobuf.StringValue     |
-| String       | string                          | google.protobuf.StringValue     |
-| Int          | int32                           | google.protobuf.Int32Value      |
-| Float        | double                          | google.protobuf.DoubleValue     |
-| Boolean      | bool                            | google.protobuf.BoolValue       |
+| ID           | string                          | optional string                 |
+| String       | string                          | optional string                 |
+| Int          | int32                           | optional int32                  |
+| Float        | double                          | optional double                 |
+| Boolean      | bool                            | optional bool                   |
+
+Nullable scalars are generated as proto3 `optional` fields, so an unset value (`null`) can be distinguished from the zero value. This applies to message fields, input fields and field arguments. Custom scalars are mapped to `string` and follow the same rule. Nullable enums and object types are not marked `optional`, and nullable lists use wrapper messages (see [List Types](#list-types)).
+
+#### Legacy Wrapper Types
+
+Set the `useWrapperTypes` option to `true` (CLI: `--legacy-wrapper-types`) to generate `google.protobuf` wrapper types for nullable scalars instead, as earlier versions did. The generated proto then imports `google/protobuf/wrappers.proto`.
+
+| GraphQL Type | Protocol Buffer Type (Nullable) |
+| ------------ | ------------------------------- |
+| ID           | google.protobuf.StringValue     |
+| String       | google.protobuf.StringValue     |
+| Int          | google.protobuf.Int32Value      |
+| Float        | google.protobuf.DoubleValue     |
+| Boolean      | google.protobuf.BoolValue       |
+
+Proto3 `optional` fields and wrapper types have different wire formats, so switching between them is a breaking change for existing clients.
 
 ### Complex Types
 
@@ -720,10 +736,10 @@ message ResolveProductCountContext {
 }
 
 message ProductCountFilter {
-  google.protobuf.DoubleValue min_price = 1;
-  google.protobuf.DoubleValue max_price = 2;
-  google.protobuf.BoolValue in_stock = 3;
-  google.protobuf.StringValue search_term = 4;
+  optional double min_price = 1;
+  optional double max_price = 2;
+  optional bool in_stock = 3;
+  optional string search_term = 4;
 }
 ```
 
@@ -1056,15 +1072,13 @@ type User {
 Generates:
 
 ```protobuf
-import "google/protobuf/wrappers.proto";
-
 message User {
   string id = 1;
   string name = 2;
   string email = 3;
-  google.protobuf.Int32Value age = 4;
-  google.protobuf.StringValue bio = 5;
-  google.protobuf.BoolValue is_active = 6;
+  optional int32 age = 4;
+  optional string bio = 5;
+  optional bool is_active = 6;
 }
 ```
 
@@ -1084,13 +1098,11 @@ type User {
 Generates (with range notation for reserved fields):
 
 ```protobuf
-import "google/protobuf/wrappers.proto";
-
 message User {
   reserved 3 to 5;  // Efficiently reserves fields 3, 4, and 5
   string id = 1;
   string name = 2;
-  google.protobuf.BoolValue is_active = 6;
+  optional bool is_active = 6;
 }
 ```
 
@@ -1109,15 +1121,13 @@ type User {
 Generates:
 
 ```protobuf
-import "google/protobuf/wrappers.proto";
-
 message User {
   reserved 3 to 4;  // Fields 3 and 4 remain reserved
   string id = 1;
   string name = 2;
-  google.protobuf.StringValue bio = 5;   // Restored field keeps its original number
-  google.protobuf.BoolValue is_active = 6;
-  google.protobuf.StringValue created_at = 7; // New field gets next available number
+  optional string bio = 5;   // Restored field keeps its original number
+  optional bool is_active = 6;
+  optional string created_at = 7; // New field gets next available number
 }
 ```
 
