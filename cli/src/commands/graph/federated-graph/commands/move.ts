@@ -14,7 +14,7 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-t, --to [string]', 'The new namespace of the federated graph.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
-    const spinner = ora('Subgraph is being moved...').start();
+    const spinner = ora('Federated graph is being moved...').start();
 
     const resp = await opts.client.platform.moveFederatedGraph(
       {
