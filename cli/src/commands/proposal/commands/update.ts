@@ -26,7 +26,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--new-subgraph <subgraph>',
-    'Specify a new subgraph to add in the proposal. Format: name:subgraph-name,schemaPath:path-to-schema,labels:"key=value key=value". Can be specified multiple times.',
+    'Specify a new subgraph to add in the proposal. Format: name:subgraph-name,schemaPath:path-to-schema,labels:key=value key=value. Quote the whole value when it has several labels. Can be specified multiple times.',
     (value: string, previous: string[]) => {
       previous.push(value);
       return previous;
