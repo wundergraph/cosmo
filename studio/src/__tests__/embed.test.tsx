@@ -152,12 +152,13 @@ describe('EmbedLayout', () => {
     resized();
 
     expect(postMessage.mock.calls).toEqual([
-      [{ source: 'cosmo-studio', type: 'height', height: 640 }, hubOrigin],
-      [{ source: 'cosmo-studio', type: 'height', height: 901 }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 640, overlay: false }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 901, overlay: false }, hubOrigin],
     ]);
   });
 
-  test('makes room for all of an open dialog and goes back to the content height when it closes', async () => {
+  test('tells Hub while a dialog is open, and posts the content height whatever size the dialog takes', async () => {
+    let frameHeight = 300;
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -168,24 +169,28 @@ describe('EmbedLayout', () => {
         disconnect() {}
       },
     );
+    // A full-height sheet is as tall as the frame.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      return this.getAttribute('role') === 'dialog' ? new DOMRect(0, -100, 800, 500) : new DOMRect(0, 0, 800, 300);
+      return this.getAttribute('role') === 'dialog' ? new DOMRect(0, 0, 800, frameHeight) : new DOMRect(0, 0, 800, 300);
     });
-    const postMessage = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
+    const postMessage = vi.spyOn(window, 'postMessage').mockImplementation((message) => {
+      frameHeight = message.overlay ? 900 : message.height;
+    });
 
     render(<EmbedLayout>members</EmbedLayout>);
     const dialog = document.createElement('div');
     dialog.setAttribute('role', 'dialog');
-    Object.defineProperty(dialog, 'offsetHeight', { value: 500 });
     document.body.append(dialog);
     await waitFor(() => expect(postMessage).toHaveBeenCalledTimes(2));
+    dialog.append(document.createElement('p'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     dialog.remove();
     await waitFor(() => expect(postMessage).toHaveBeenCalledTimes(3));
 
     expect(postMessage.mock.calls).toEqual([
-      [{ source: 'cosmo-studio', type: 'height', height: 300 }, hubOrigin],
-      [{ source: 'cosmo-studio', type: 'height', height: 532 }, hubOrigin],
-      [{ source: 'cosmo-studio', type: 'height', height: 300 }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 300, overlay: false }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 300, overlay: true }, hubOrigin],
+      [{ source: 'cosmo-studio', type: 'height', height: 300, overlay: false }, hubOrigin],
     ]);
   });
 

@@ -4,7 +4,7 @@ import { hubOrigin } from '@/lib/hub';
 export const embedSessionPath = '/embed/session';
 
 export type HubMessage =
-  | { source: 'cosmo-studio'; type: 'height'; height: number }
+  | { source: 'cosmo-studio'; type: 'height'; height: number; overlay: boolean }
   | { source: 'cosmo-studio'; type: 'unauthorized' };
 
 /** Posts to the Hub page framing Studio. Without a Hub URL there is no one to tell. */

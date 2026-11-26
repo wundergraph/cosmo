@@ -2,18 +2,6 @@ import { postToHub } from '@/lib/embed';
 import { ReactNode, useEffect, useRef } from 'react';
 
 const dialogSelector = '[role="dialog"], [role="alertdialog"]';
-const dialogMargin = 16;
-
-/**
- * The height Hub gives the frame: the content, or while a dialog is open, enough for all of the dialog. Dialogs are
- * centered in the frame, so a dialog fits once the frame is its height plus a margin on each side.
- */
-const frameHeight = (content: HTMLElement) =>
-  Array.from(document.querySelectorAll<HTMLElement>(dialogSelector)).reduce(
-    (height, dialog) =>
-      Math.max(height, dialog.getBoundingClientRect().bottom + dialogMargin, dialog.offsetHeight + 2 * dialogMargin),
-    content.getBoundingClientRect().height,
-  );
 
 /** A Studio page inside Hub's frame: no navigation or title, and Hub sizes the frame to the content. */
 export const EmbedLayout = ({ toolbar, children }: { toolbar?: ReactNode; children?: ReactNode }) => {
@@ -25,25 +13,25 @@ export const EmbedLayout = ({ toolbar, children }: { toolbar?: ReactNode; childr
       return;
     }
 
-    let postedHeight: number | undefined;
+    let posted: { height: number; overlay: boolean } | undefined;
     const postHeight = () => {
-      const height = Math.ceil(frameHeight(content));
-      if (height === postedHeight) {
+      // Dialogs and sheets are sized and placed by the frame, so the frame's height is the content's alone. While one
+      // is open Hub gives the frame the viewport's height instead.
+      const height = Math.ceil(content.getBoundingClientRect().height);
+      const overlay = document.querySelector(dialogSelector) !== null;
+      if (posted?.height === height && posted.overlay === overlay) {
         return;
       }
 
-      postedHeight = height;
-      postToHub({ source: 'cosmo-studio', type: 'height', height });
+      posted = { height, overlay };
+      postToHub({ source: 'cosmo-studio', type: 'height', height, overlay });
     };
 
     const resizeObserver = new ResizeObserver(postHeight);
     resizeObserver.observe(content);
 
     // Dialogs render in a portal outside the content.
-    const dialogObserver = new MutationObserver(() => {
-      document.querySelectorAll(dialogSelector).forEach((dialog) => resizeObserver.observe(dialog));
-      postHeight();
-    });
+    const dialogObserver = new MutationObserver(postHeight);
     dialogObserver.observe(document.body, { childList: true, subtree: true });
 
     return () => {
