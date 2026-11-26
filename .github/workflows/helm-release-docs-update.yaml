@@ -42,10 +42,10 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: ./.github/actions/go
-
-      - name: Install tools
-        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+      - uses: ./.github/actions/mise
+        with:
+          working-directory: helm
+          tools: helm-docs
 
       - name: Generate Helm docs
         run: make docs

@@ -4,6 +4,10 @@ on:
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-ci.yaml"
+      - "mise.toml"
+      - "mise.lock"
+      - ".github/actions/mise/**"
+      - ".mise/locks/**"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -19,10 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/go
-
-      - name: Install tools
-        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+      - uses: ./.github/actions/mise
+        with:
+          working-directory: helm
+          tools: helm-docs
 
       - name: Generate Helm docs
         run: make docs
