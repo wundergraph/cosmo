@@ -280,6 +280,45 @@ describe('Graph lifecycle webhooks', () => {
     );
   });
 
+  test('deleting a namespace sends GRAPH_DELETED for every graph in it', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const namespace = genID('namespace').toLowerCase();
+    const graphName = genID('fedGraph');
+    const monographName = genID('monograph');
+    await client.createNamespace({ name: namespace });
+    await createFederatedGraph(client, graphName, namespace, [], DEFAULT_ROUTER_URL);
+    await client.createMonograph({
+      name: monographName,
+      namespace,
+      graphUrl: 'http://localhost:4000',
+      routingUrl: 'http://localhost:3002',
+    });
+    const graph = await client.getFederatedGraphByName({ name: graphName, namespace });
+    const monograph = await client.getFederatedGraphByName({ name: monographName, namespace });
+
+    await client.createOrganizationWebhookConfig({ endpoint: webhookUrl, events: lifecycleEvents, eventsMeta: [] });
+
+    const deleteResponse = await client.deleteNamespace({ name: namespace });
+    expect(deleteResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await vi.waitFor(() => {
+      expect(capturedWebhooks).toHaveLength(2);
+    });
+
+    const graphs = capturedWebhooks.map((webhook) => {
+      expect(webhook.event).toBe('GRAPH_DELETED');
+      return (webhook.payload as { graph: unknown }).graph;
+    });
+    expect(graphs).toEqual(
+      expect.arrayContaining([
+        { id: graph.graph?.id, name: graphName, namespace, type: 'federated' },
+        { id: monograph.graph?.id, name: monographName, namespace, type: 'monograph' },
+      ]),
+    );
+  });
+
   test('every event carries its own delivery id, and a retry of the event repeats it', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());
