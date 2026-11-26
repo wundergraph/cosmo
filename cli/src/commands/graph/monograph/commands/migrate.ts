@@ -12,19 +12,22 @@ export default (opts: BaseCommandOptions) => {
   command.description('Migrates the monograph into a federated graph. This action is irreversible.');
   command.argument('<name>', 'The name of the monograph to migrate.');
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
+  command.option('-f, --force', 'Migrate without a confirmation prompt.');
   command.action(async (name, options) => {
-    refuseWithoutTerminal(
-      `Migrating the monograph "${name}" is irreversible and needs confirmation in an interactive terminal.`,
-    );
+    if (!options.force) {
+      refuseWithoutTerminal(
+        `Migrating the monograph "${name}" is irreversible and needs confirmation. Re-run with --force to migrate it without a prompt.`,
+      );
 
-    const inquiry = await inquirer.prompt({
-      name: 'confirmMigration',
-      type: 'confirm',
-      message: 'This action is irreversible. Are you sure you want to migrate this monograph?',
-    });
-    if (!inquiry.confirmMigration) {
-      process.exitCode = 1;
-      return;
+      const inquiry = await inquirer.prompt({
+        name: 'confirmMigration',
+        type: 'confirm',
+        message: 'This action is irreversible. Are you sure you want to migrate this monograph?',
+      });
+      if (!inquiry.confirmMigration) {
+        process.exitCode = 1;
+        return;
+      }
     }
 
     const spinner = ora('Monograph is being migrated...').start();
@@ -49,6 +52,7 @@ export default (opts: BaseCommandOptions) => {
       );
     } else {
       spinner.fail(pc.red(`Could not migrate monograph. ${resp.response?.details ?? ''}`));
+      process.exitCode = 1;
     }
   });
 
