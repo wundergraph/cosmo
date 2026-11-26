@@ -1701,9 +1701,12 @@
       "role": {
         "type": "string",
         "enum": [
+          "admin",
           "editor",
           "viewer"
-        ]
+        ],
+        "description": "The role of a member within an organization",
+        "title": "Organization Member Role"
       },
       "canMakeChanges": {
         "type": "boolean",
