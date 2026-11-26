@@ -41,7 +41,7 @@ const readBody = async (request: IncomingMessage): Promise<string> => {
   return Buffer.concat(chunks).toString('utf8');
 };
 
-type ToolOutcome = { structuredContent?: Json; isError?: boolean; text?: string };
+export type ToolOutcome = { structuredContent?: Json; isError?: boolean; text?: string };
 
 /** Hub's own output schema of every tool the commands call, copied from Hub's tests/fixtures/wgc-hub-answers.json. */
 const hubAnswers: Record<string, z.core.JSONSchema.JSONSchema> = JSON.parse(

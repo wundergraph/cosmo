@@ -12,6 +12,7 @@ import {
   step,
   tempRepo,
 } from './harness.js';
+import type { ToolOutcome } from './harness.js';
 
 let hub: FakeHub | undefined;
 afterEach(async () => {
@@ -159,16 +160,27 @@ describe('wgc hub sandbox launch', () => {
     );
   });
 
-  test("--init-from-graph writes Hub's wundergraph_yaml to wundergraph.yaml before launching", async () => {
+  test("--init-from-graph launches from the schema, then writes the sandbox's wundergraph_yaml to wundergraph.yaml", async () => {
     hub = await startFakeHub({
       tools: {
-        export_sandbox_config: () => ({
-          structuredContent: {
-            wundergraph_yaml: wundergraphYaml,
-            router_version: '0.214.0',
-            sources: ['accounts', 'catalog', 'orders'],
-          },
-        }),
+        export_sandbox_config: (args): ToolOutcome => {
+          if (args.sandbox !== 'shop/shop-nithin') {
+            return {
+              isError: true,
+              structuredContent: {
+                code: 'FORBIDDEN',
+                message: `"${String(args.sandbox)}" is a schema, which is read-only.`,
+              },
+            };
+          }
+          return {
+            structuredContent: {
+              wundergraph_yaml: wundergraphYaml,
+              router_version: '0.214.0',
+              sources: ['accounts', 'catalog', 'orders'],
+            },
+          };
+        },
         ...launchTools(hubOperation({ status: 'succeeded', steps: launchSteps(allSucceeded) })),
       },
     });
@@ -182,12 +194,18 @@ describe('wgc hub sandbox launch', () => {
 
     expect(run.exitCode).toBe(0);
     expect(run.stderr.split('\n').slice(0, 3)).toEqual([
+      'Launching sandbox "shop-nithin"',
       'Created wundergraph.yaml (router 0.214.0, 3 sources from graph shop)',
       '',
-      'Launching sandbox "shop-nithin"',
     ]);
     expect(await readFile(path.join(dir, 'wundergraph.yaml'), 'utf8')).toBe(wundergraphYaml);
-    expect(hub.toolCalls()[0]).toEqual({ name: 'export_sandbox_config', arguments: { sandbox: 'shop' } });
+    expect(hub.toolCalls().slice(0, 2)).toEqual([
+      {
+        name: 'launch_sandbox',
+        arguments: { from: 'shop', name: 'shop-nithin', idempotency_key: expect.any(String) },
+      },
+      { name: 'export_sandbox_config', arguments: { sandbox: 'shop/shop-nithin' } },
+    ]);
   });
 
   test('a failed step prints the error block with its remediation, and exits 1', async () => {

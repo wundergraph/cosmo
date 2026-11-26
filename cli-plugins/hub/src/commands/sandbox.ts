@@ -2,10 +2,10 @@ import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command } from 'commander';
-import { failWith, toFailure } from '@wundergraph/wgc-plugin-sdk';
-import type { Output, Result, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
+import { failWith, ok, toFailure } from '@wundergraph/wgc-plugin-sdk';
+import type { HubClient, Output, Result, ToolArgument } from '@wundergraph/wgc-plugin-sdk';
 import { configFileName, loadConfig } from '@wundergraph/wgc-plugin-sdk/config';
-import type { LoadedConfig, WundergraphConfig } from '@wundergraph/wgc-plugin-sdk/config';
+import type { LoadedConfig } from '@wundergraph/wgc-plugin-sdk/config';
 import { announceOperation, asGroup, openSandboxSession, withExamples, withSandboxOptions } from '../common/command.js';
 import type { SandboxOptions } from '../common/command.js';
 import { hubResults, hubTools, logSources, logWaitSeconds } from '../common/contract.js';
@@ -29,16 +29,14 @@ interface LaunchOptions {
   input?: boolean;
 }
 
-/** wundergraph.yaml as found, or as written from a Hub graph with `--init-from-graph`. */
-const prepareConfig = async (
-  options: LaunchOptions,
-  dependencies: HubDependencies,
-  output: Output,
-): Promise<Result<LoadedConfig>> => {
-  const cwd = dependencies.runtime.cwd();
+/** What a launch starts from: wundergraph.yaml as found, or with `--init-from-graph` the Hub graph to copy and write it for. */
+type LaunchPlan = { kind: 'config'; loaded: LoadedConfig } | { kind: 'graph'; graph: string; target: string };
+
+const planLaunch = async (options: LaunchOptions, cwd: string): Promise<Result<LaunchPlan>> => {
   const located = locateProjectConfig(cwd, options.config);
   if (located !== undefined && existsSync(located)) {
-    return loadConfig(located);
+    const loaded = await loadConfig(located);
+    return loaded.success ? ok({ kind: 'config', loaded: loaded.data }) : loaded;
   }
 
   const graph = options.initFromGraph;
@@ -52,50 +50,62 @@ const prepareConfig = async (
       remediation: `Run \`wgc hub sandbox launch --init-from-graph <graph>\` to create one, or pass --config <path>.`,
     });
   }
+  return ok({ kind: 'graph', graph, target: located ?? path.join(cwd, configFileName) });
+};
 
-  const hub = connectHub(dependencies.context, resolveAudience(options, dependencies.runtime.env));
-  const exported = await hub.callTool(hubTools.exportSandboxConfig, { sandbox: graph }, hubResults.exportSandboxConfig);
+/** What the launch copies: the Cosmo graph of wundergraph.yaml or the `--init-from-graph` schema, or the sandbox `--from` names in it or as `<schema>/<sandbox>`. */
+const launchSource = (plan: LaunchPlan, from: string | undefined): Record<string, ToolArgument> => {
+  const schema = plan.kind === 'config' ? plan.loaded.config.graph : plan.graph;
+  if (from !== undefined) {
+    return { from: from.includes('/') ? from : `${schema}/${from}` };
+  }
+  if (plan.kind === 'graph') {
+    return { from: plan.graph };
+  }
+  return { graph: plan.loaded.config.graph, namespace: plan.loaded.config.namespace };
+};
+
+/** Writes the launched sandbox as wundergraph.yaml; Hub exports a sandbox, never a schema. */
+const writeSandboxConfig = async (
+  hub: HubClient,
+  output: Output,
+  sandbox: string,
+  plan: { graph: string; target: string },
+): Promise<Result<string>> => {
+  const exported = await hub.callTool(hubTools.exportSandboxConfig, { sandbox }, hubResults.exportSandboxConfig);
   if (!exported.success) {
     return exported;
   }
 
-  const target = located ?? path.join(cwd, configFileName);
-  await writeFile(target, exported.data.wundergraphYaml);
+  await writeFile(plan.target, exported.data.wundergraphYaml);
   const { routerVersion, sources } = exported.data;
   output.message(
-    `Created ${configFileName} (router ${routerVersion}, ${sources.length} sources from graph ${graph})\n`,
-    { event: 'config_created', path: target, router_version: routerVersion, graph },
+    `Created ${configFileName} (router ${routerVersion}, ${sources.length} sources from graph ${plan.graph})\n`,
+    { event: 'config_created', path: plan.target, router_version: routerVersion, graph: plan.graph },
   );
-  return loadConfig(target);
-};
-
-/** What the launch copies: the Cosmo graph of wundergraph.yaml, or the sandbox `--from` names in it or as `<schema>/<sandbox>`. */
-const launchSource = (config: WundergraphConfig, from: string | undefined): Record<string, ToolArgument> => {
-  if (from === undefined) {
-    return { graph: config.graph, namespace: config.namespace };
-  }
-  return { from: from.includes('/') ? from : `${config.graph}/${from}` };
+  return ok(path.dirname(plan.target));
 };
 
 const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies): Promise<void> => {
   const { context, runtime } = dependencies;
   const output = context.output({ json: options.json });
 
-  const prepared = await prepareConfig(options, dependencies, output);
-  if (!prepared.success) {
-    output.fail(toFailure(prepared));
+  const planned = await planLaunch(options, runtime.cwd());
+  if (!planned.success) {
+    output.fail(toFailure(planned));
     return;
   }
 
-  const { config, dir } = prepared.data;
-  const name = options.name ?? `${config.graph}-${runtime.env.USER ?? 'sandbox'}`;
+  const plan = planned.data;
+  const graph = plan.kind === 'config' ? plan.loaded.config.graph : plan.graph;
+  const name = options.name ?? `${graph}-${runtime.env.USER ?? 'sandbox'}`;
   output.message(`Launching sandbox "${name}"`);
 
   const hub = connectHub(context, resolveAudience(options, runtime.env));
   const launched = await hub.callTool(
     hubTools.launchSandbox,
     {
-      ...launchSource(config, options.from),
+      ...launchSource(plan, options.from),
       name,
       idempotency_key: options.idempotencyKey ?? runtime.newIdempotencyKey(),
     },
@@ -107,7 +117,14 @@ const runLaunch = async (options: LaunchOptions, dependencies: HubDependencies):
   }
 
   const { sandbox, operation } = launched.data;
-  const link = await writeLink(dir, { sandbox: sandbox.address });
+  const dir =
+    plan.kind === 'config' ? ok(plan.loaded.dir) : await writeSandboxConfig(hub, output, sandbox.address, plan);
+  if (!dir.success) {
+    output.fail(toFailure(dir));
+    return;
+  }
+
+  const link = await writeLink(dir.data, { sandbox: sandbox.address });
   const linked = { path: linkFilePath, ...link };
   announceOperation(output, operation);
 
