@@ -19,6 +19,7 @@ import { camelCase, upperFirst } from 'lodash-es';
 import pupa from 'pupa';
 import { program } from 'commander';
 import { dataDir } from '../../../../core/config.js';
+import { refuseWithoutTerminal } from '../../../../core/prompt.js';
 import TsTemplates from './templates/typescript.js';
 import { renderValidationResults } from './helper.js';
 
@@ -394,6 +395,10 @@ export async function checkAndInstallTools(
         '\n' +
         pc.white('by following the documentation at https://cosmo-docs.wundergraph.com') +
         '\n',
+    );
+
+    refuseWithoutTerminal(
+      'Installing the required toolchain needs confirmation. Re-run with --yes to install it without a prompt.',
     );
 
     // Ask user for confirmation to install tools

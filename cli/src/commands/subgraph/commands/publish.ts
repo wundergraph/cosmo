@@ -20,6 +20,7 @@ import { printTruncationWarning, validateSubscriptionProtocols } from '../../../
 import { runAfterHooks, runBeforeHooks } from '../../../core/plugins/hooks.js';
 import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
 import { forEachConfigSubgraph, readConfigSubgraphs } from '../../../core/repo-config.js';
+import { type GeneratedProtoFiles, readProtoFiles } from '../../../core/grpc-generated.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -88,7 +89,7 @@ export default (opts: BaseCommandOptions) => {
     '50',
   );
 
-  const publishOne = async (name: string, options: OptionValues) => {
+  const publishOne = async (name: string, options: OptionValues, protoFiles?: GeneratedProtoFiles) => {
     const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
@@ -105,6 +106,8 @@ export default (opts: BaseCommandOptions) => {
         pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
       );
     }
+
+    const proto = protoFiles === undefined ? undefined : await readProtoFiles(protoFiles);
 
     validateSubscriptionProtocols({
       subscriptionProtocol: options.subscriptionProtocol,
@@ -145,7 +148,8 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
-        type: SubgraphType.STANDARD,
+        type: proto === undefined ? SubgraphType.STANDARD : SubgraphType.GRPC_SERVICE,
+        proto,
         limit,
       },
       {
@@ -338,12 +342,16 @@ export default (opts: BaseCommandOptions) => {
     }
     const subgraphs = await readConfigSubgraphs(options.config, name);
     await forEachConfigSubgraph(subgraphs, (subgraph) =>
-      publishOne(subgraph.name, {
-        ...options,
-        schema: subgraph.schemaFile,
-        namespace: options.namespace || subgraph.namespace,
-        routingUrl: options.routingUrl ?? subgraph.routingUrl,
-      }),
+      publishOne(
+        subgraph.name,
+        {
+          ...options,
+          schema: subgraph.schemaFile,
+          namespace: options.namespace || subgraph.namespace,
+          routingUrl: options.routingUrl ?? subgraph.routingUrl,
+        },
+        subgraph.protoFiles,
+      ),
     );
   });
 

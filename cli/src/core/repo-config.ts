@@ -7,6 +7,7 @@ import pc from 'picocolors';
 import { errorMessage } from '@wundergraph/wgc-plugin-sdk';
 import { configFileName, loadConfig, locateConfig, subgraphSchemaFile } from '@wundergraph/wgc-plugin-sdk/config';
 import type { Subgraph } from '@wundergraph/wgc-plugin-sdk/config';
+import { type GeneratedProtoFiles, protoLockFile } from './grpc-generated.js';
 
 /** One subgraph of wundergraph.yaml, as subgraph check and publish take it. */
 export interface ConfigSubgraph {
@@ -15,6 +16,8 @@ export interface ConfigSubgraph {
   /** The SDL file; a `command:` source's output is written to a temporary file first. */
   schemaFile: string;
   routingUrl: string | undefined;
+  /** A `kind: grpc` subgraph's proto files, which publish sends with it as a gRPC service. */
+  protoFiles: GeneratedProtoFiles | undefined;
 }
 
 const routingUrlOf = (subgraph: Subgraph): string | undefined =>
@@ -64,6 +67,14 @@ export const readConfigSubgraphs = async (configFlag: string | true, only: strin
       namespace: config.namespace,
       schemaFile,
       routingUrl: routingUrlOf(subgraph),
+      protoFiles:
+        subgraph.kind === 'grpc'
+          ? {
+              schema: resolve(dir, subgraph.proto),
+              mappings: resolve(dir, subgraph.mapping),
+              lock: protoLockFile(resolve(dir, subgraph.proto)),
+            }
+          : undefined,
     });
   }
   return subgraphs;

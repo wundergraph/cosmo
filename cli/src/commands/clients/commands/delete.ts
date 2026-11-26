@@ -6,6 +6,7 @@ import type {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import inquirer from 'inquirer';
 import pc from 'picocolors';
+import { refuseWithoutTerminal } from '../../../core/prompt.js';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { stripProtobufInternals } from '../../../utils.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -241,6 +242,8 @@ export default (opts: BaseCommandOptions) => {
         process.exitCode = 1;
         return;
       }
+
+      refuseWithoutTerminal(`${warning} Re-run with --force to delete it without a prompt.`);
 
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',

@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import inquirer from 'inquirer';
 import ora from 'ora';
+import { refuseWithoutTerminal } from '../../../core/prompt.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
@@ -20,6 +21,10 @@ export default (opts: BaseCommandOptions) => {
 
   command.action(async (name, options) => {
     if (!options.force) {
+      refuseWithoutTerminal(
+        `Deleting the feature flag "${name}" needs confirmation. Re-run with --force to delete it without a prompt.`,
+      );
+
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',

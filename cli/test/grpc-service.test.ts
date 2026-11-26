@@ -3,11 +3,12 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { dirname } from 'pathe';
 import GenerateCommand from '../src/commands/grpc-service/commands/generate.js';
+import PublishCommand from '../src/commands/grpc-service/commands/publish.js';
 import GRPCCommands from '../src/commands/grpc-service/index.js';
 import { Client } from '../src/core/client/client.js';
 
@@ -223,5 +224,51 @@ describe('gRPC Generate Command', () => {
     expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
     expect(existsSync(join(tmpDir, 'service.proto'))).toBe(false);
     expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
+  });
+});
+
+describe('gRPC publish of a --with-operations folder', () => {
+  test('fails before any request and says the folder is a Connect RPC contract, not a gRPC subgraph', async (testContext) => {
+    const tmpDir = join(tmpdir(), `grpc-ops-test-${Date.now()}`);
+    mkdirSync(join(tmpDir, 'operations'), { recursive: true });
+    testContext.onTestFinished(() => {
+      rmSync(tmpDir, { recursive: true });
+    });
+    const schemaPath = join(tmpDir, 'schema.graphql');
+    writeFileSync(schemaPath, 'type Query { carrier(id: ID!): String }');
+    writeFileSync(join(tmpDir, 'operations', 'carrier.graphql'), 'query GetCarrier($id: ID!) { carrier(id: $id) }');
+    const generatedDir = join(tmpDir, 'generated');
+    const requests: unknown[] = [];
+    const client: Client = {
+      platform: createClient(
+        PlatformService,
+        createRouterTransport(({ service }) => {
+          service(PlatformService, {
+            publishFederatedSubgraph: (request) => {
+              requests.push(request);
+              return {};
+            },
+          });
+        }),
+      ),
+    };
+    const program = new Command();
+    program.addCommand(GenerateCommand({ client }));
+    program.addCommand(PublishCommand({ client }));
+    await program.parseAsync(
+      ['generate', 'carrier', '-i', schemaPath, '-o', generatedDir, '--with-operations', join(tmpDir, 'operations')],
+      { from: 'user' },
+    );
+    const errors = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    testContext.onTestFinished(() => errors.mockRestore());
+
+    await expect(
+      program.parseAsync(['publish', 'carrier', '--schema', schemaPath, '--generated', generatedDir], { from: 'user' }),
+    ).rejects.toThrow('process.exit unexpectedly called with "1"');
+
+    expect(requests).toEqual([]);
+    expect(errors.mock.calls.flat().join('')).toContain(
+      `With --with-operations it writes a Connect RPC contract for the router instead, which has no mapping and cannot be published as a gRPC subgraph.`,
+    );
   });
 });

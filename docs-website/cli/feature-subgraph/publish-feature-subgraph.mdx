@@ -12,3 +12,12 @@ Publish a feature subgraph within the specified (otherwise "default") namespace.
 
 The command to publish the feature subgraph is the same as the subgraph. Please refer to [subgraph publish](/cli/subgraph/publish).
 
+
+## gRPC service subgraphs
+
+A feature subgraph of a gRPC service subgraph is published with its generated proto files. Generate them from the feature subgraph's schema, then pass the output folder with `--generated`.
+
+```bash
+wgc grpc-service generate carrier-override --input carrier.graphql --output generated
+wgc feature-subgraph publish carrier-override --schema carrier.graphql --generated generated
+```

@@ -9,6 +9,7 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
+import { readGeneratedProto } from '../../../core/grpc-generated.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -60,61 +61,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red(pc.bold(`The schema file '${schemaFile}' is empty. Please provide a valid schema.`)));
     }
 
-    const grpcSubgraphGeneratedDir = resolve(options.generated);
-    if (!existsSync(grpcSubgraphGeneratedDir)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The gRPC subgraph generated directory '${grpcSubgraphGeneratedDir}' does not exist. Please check the path and try again.`,
-          ),
-        ),
-      );
-    }
-
-    const protoSchemaFile = resolve(grpcSubgraphGeneratedDir, 'service.proto');
-    const protoMappingFile = resolve(grpcSubgraphGeneratedDir, 'mapping.json');
-    const protoLockFile = resolve(grpcSubgraphGeneratedDir, 'service.proto.lock.json');
-
-    if (!existsSync(protoSchemaFile)) {
-      program.error(
-        pc.red(
-          pc.bold(`The proto schema file '${protoSchemaFile}' does not exist. Please check the path and try again.`),
-        ),
-      );
-    }
-    const protoSchemaBuffer = await readFile(protoSchemaFile);
-    const protoSchema = new TextDecoder().decode(protoSchemaBuffer);
-    if (protoSchema.trim().length === 0) {
-      program.error(
-        pc.red(pc.bold(`The proto schema file '${protoSchemaFile}' is empty. Please provide a valid schema.`)),
-      );
-    }
-
-    if (!existsSync(protoMappingFile)) {
-      program.error(
-        pc.red(
-          pc.bold(`The proto mapping file '${protoMappingFile}' does not exist. Please check the path and try again.`),
-        ),
-      );
-    }
-    const protoMappingBuffer = await readFile(protoMappingFile);
-    const protoMapping = new TextDecoder().decode(protoMappingBuffer);
-    if (protoMapping.trim().length === 0) {
-      program.error(
-        pc.red(pc.bold(`The proto mapping file '${protoMappingFile}' is empty. Please provide a valid mapping.`)),
-      );
-    }
-
-    if (!existsSync(protoLockFile)) {
-      program.error(
-        pc.red(pc.bold(`The proto lock file '${protoLockFile}' does not exist. Please check the path and try again.`)),
-      );
-    }
-    const protoLockBuffer = await readFile(protoLockFile);
-    const protoLock = new TextDecoder().decode(protoLockBuffer);
-    if (protoLock.trim().length === 0) {
-      program.error(pc.red(pc.bold(`The proto lock file '${protoLockFile}' is empty. Please provide a valid lock.`)));
-    }
+    const proto = await readGeneratedProto(options.generated);
 
     const spinner = ora('GRPC Subgraph is being published...').start();
 
@@ -127,11 +74,7 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         labels: options.label.map((label: string) => splitLabel(label)),
         type: SubgraphType.GRPC_SERVICE,
-        proto: {
-          schema: protoSchema,
-          mappings: protoMapping,
-          lock: protoLock,
-        },
+        proto,
       },
       {
         headers: getBaseHeaders(),
