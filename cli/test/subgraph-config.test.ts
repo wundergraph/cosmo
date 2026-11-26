@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'pathe';
 import { Command } from 'commander';
@@ -10,6 +10,8 @@ import {
   IsGitHubAppInstalledResponseSchema,
   PlatformService,
   PublishFederatedSubgraphResponseSchema,
+  type PublishFederatedSubgraphRequest,
+  SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import CheckSchema from '../src/commands/subgraph/commands/check.js';
@@ -71,6 +73,51 @@ const platform = (sent: Sent[], failing: string | undefined) =>
       });
     }),
   );
+
+const grpcRepo = (files: { lock: boolean }) => {
+  const dir = mkdtempSync(join(tmpdir(), 'wgc-config-grpc-'));
+  mkdirSync(join(dir, 'carrier', 'generated'), { recursive: true });
+  writeFileSync(join(dir, 'carrier', 'schema.graphql'), 'type Query { carrier: String }\n');
+  writeFileSync(join(dir, 'carrier', 'generated', 'service.proto'), 'syntax = "proto3";\n');
+  writeFileSync(join(dir, 'carrier', 'generated', 'mapping.json'), '{"version":1}\n');
+  if (files.lock) {
+    writeFileSync(join(dir, 'carrier', 'generated', 'service.proto.lock.json'), '{"version":"1.0.0"}\n');
+  }
+  writeFileSync(
+    join(dir, 'wundergraph.yaml'),
+    [
+      'graph: shop',
+      'subgraphs:',
+      '  - name: carrier',
+      '    kind: grpc',
+      '    schema: { file: carrier/schema.graphql }',
+      '    proto: carrier/generated/service.proto',
+      '    mapping: carrier/generated/mapping.json',
+      '    routing_url: dns:///carrier:4011',
+      '',
+    ].join('\n'),
+  );
+  return dir;
+};
+
+const publishRequests = async (dir: string) => {
+  const requests: PublishFederatedSubgraphRequest[] = [];
+  const client = createClient(
+    PlatformService,
+    createRouterTransport(({ service }) => {
+      service(PlatformService, {
+        publishFederatedSubgraph: (request) => {
+          requests.push(request);
+          return create(PublishFederatedSubgraphResponseSchema, { response: { code: EnumStatusCode.OK } });
+        },
+      });
+    }),
+  );
+  const program = new Command();
+  program.addCommand(PublishSchema({ client: { platform: client } }));
+  await program.parseAsync(['publish', '--config', join(dir, 'wundergraph.yaml')], { from: 'user' });
+  return requests;
+};
 
 describe('subgraph check and publish --config', () => {
   beforeEach(() => {
@@ -137,5 +184,47 @@ describe('subgraph check and publish --config', () => {
       { subgraph: 'reviews', namespace: 'staging', schema: 'type Query { reviews: [String] }', routingUrl: undefined },
     ]);
     expect(process.exitCode).toBe(0);
+  });
+
+  describe('a kind: grpc subgraph', () => {
+    test('publish sends it as a gRPC service with its proto, mapping and the lock beside the proto', async (testContext) => {
+      const dir = grpcRepo({ lock: true });
+      testContext.onTestFinished(() => rmSync(dir, { recursive: true }));
+
+      const requests = await publishRequests(dir);
+
+      expect(
+        requests.map(({ name, schema, routingUrl, type, proto }) => ({
+          name,
+          schema,
+          routingUrl,
+          type,
+          proto: { schema: proto?.schema, mappings: proto?.mappings, lock: proto?.lock },
+        })),
+      ).toEqual([
+        {
+          name: 'carrier',
+          schema: 'type Query { carrier: String }\n',
+          routingUrl: 'dns:///carrier:4011',
+          type: SubgraphType.GRPC_SERVICE,
+          proto: { schema: 'syntax = "proto3";\n', mappings: '{"version":1}\n', lock: '{"version":"1.0.0"}\n' },
+        },
+      ]);
+      expect(process.exitCode).toBe(0);
+    });
+
+    test('publish fails for it without a request when the lock is not committed beside the proto', async (testContext) => {
+      const dir = grpcRepo({ lock: false });
+      testContext.onTestFinished(() => rmSync(dir, { recursive: true }));
+      const errors = vi.spyOn(process.stderr, 'write');
+
+      const requests = await publishRequests(dir);
+
+      expect(requests).toEqual([]);
+      expect(process.exitCode).toBe(1);
+      expect(errors.mock.calls.flat().join('\n')).toContain(
+        `The proto lock file '${join(dir, 'carrier', 'generated', 'service.proto.lock.json')}' does not exist.`,
+      );
+    });
   });
 });
