@@ -10,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { organizationSchema } from '../../constants.js';
+import { sendGovernanceUpdated } from '../../webhooks/governanceWebhook.js';
 import type { PlainMessage } from '../../../types/index.js';
 
 export function updateOrganizationDetails(
@@ -130,6 +131,16 @@ export function updateOrganizationDetails(
       apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
+
+    // A new slug changes the organization's URLs, so linked tools follow it.
+    if (org.slug !== validatedReq.data.slug) {
+      sendGovernanceUpdated(opts, {
+        organizationId: authContext.organizationId,
+        organizationSlug: validatedReq.data.slug,
+        actorId: authContext.userId,
+        reason: 'organization',
+      });
+    }
 
     return {
       response: {

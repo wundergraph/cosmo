@@ -387,4 +387,44 @@ describe('Hub governance', () => {
       },
     });
   });
+
+  test('a new organization slug sends ORGANIZATION_GOVERNANCE_UPDATED with it, and a name change alone sends nothing', async (testContext) => {
+    const { client, server, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    await client.createOrganizationWebhookConfig({
+      endpoint: webhookUrl,
+      events: [OrganizationEventName[OrganizationEventName.ORGANIZATION_GOVERNANCE_UPDATED]],
+      eventsMeta: [],
+    });
+
+    const renamed = await client.updateOrganizationDetails({
+      organizationName: 'Renamed',
+      organizationSlug: users.adminAliceCompanyA.organizationSlug,
+      userID: '',
+    });
+    expect(renamed.response?.code).toBe(EnumStatusCode.OK);
+
+    const newSlug = genID('newslug').toLowerCase();
+    const moved = await client.updateOrganizationDetails({
+      organizationName: 'Renamed',
+      organizationSlug: newSlug,
+      userID: '',
+    });
+    expect(moved.response?.code).toBe(EnumStatusCode.OK);
+
+    await vi.waitFor(() => {
+      expect(capturedWebhooks).toHaveLength(1);
+    });
+
+    expect(capturedWebhooks[0]).toEqual({
+      version: 1,
+      event: 'ORGANIZATION_GOVERNANCE_UPDATED',
+      payload: {
+        organization: { id: users.adminAliceCompanyA.organizationId, slug: newSlug },
+        actor_id: users.adminAliceCompanyA.userId,
+        reason: 'organization',
+      },
+    });
+  });
 });

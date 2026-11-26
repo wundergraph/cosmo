@@ -1,5 +1,6 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   DeleteNamespaceRequest,
   DeleteNamespaceResponse,
@@ -13,6 +14,7 @@ import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
 
 export function deleteNamespace(
   opts: RouterOptions,
@@ -74,7 +76,7 @@ export function deleteNamespace(
       throw new UnauthorizedError();
     }
 
-    await opts.db.transaction(async (tx) => {
+    const deletedGraphs = await opts.db.transaction(async (tx) => {
       const federatedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
@@ -147,7 +149,23 @@ export function deleteNamespace(
         apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
+
+      return federatedGraphs;
     });
+
+    // Every graph in the namespace is gone with it.
+    for (const graph of deletedGraphs) {
+      sendGraphLifecycle(opts, {
+        eventName: OrganizationEventName.GRAPH_DELETED,
+        authContext,
+        graph: {
+          id: graph.id,
+          name: graph.name,
+          namespace: graph.namespace,
+          type: graph.supportsFederation ? 'federated' : 'monograph',
+        },
+      });
+    }
 
     return {
       response: {
