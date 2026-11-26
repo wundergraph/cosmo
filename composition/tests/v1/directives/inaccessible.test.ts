@@ -736,6 +736,80 @@ describe('@inaccessible tests', () => {
     );
   });
 
+  test('that an error is returned if a non-null Input field with a default is declared @inaccessible and another subgraph declares it nullable without a default #1', () => {
+    const { errors } = federateSubgraphsFailure([fal, fam], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      inaccessibleRequiredInputValueError(
+        {
+          federatedCoords: 'Input.name',
+          kind: Kind.INPUT_VALUE_DEFINITION,
+          name: 'name',
+        } as InputValueData,
+        'Input',
+      ),
+    );
+  });
+
+  test('that an error is returned if a non-null Input field with a default is declared @inaccessible and another subgraph declares it nullable without a default #2', () => {
+    const { errors } = federateSubgraphsFailure([fam, fal], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      inaccessibleRequiredInputValueError(
+        {
+          federatedCoords: 'Input.name',
+          kind: Kind.INPUT_VALUE_DEFINITION,
+          name: 'name',
+        } as InputValueData,
+        'Input',
+      ),
+    );
+  });
+
+  test('that an Input field that only one subgraph defines can reference an @inaccessible type if it is declared @inaccessible #1', () => {
+    const { federatedGraphClientSchema, warnings } = federateSubgraphsSuccess(
+      [fan, fao],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        input Input {
+          id: ID!
+        }
+
+        type Query {
+          field(input: Input!): String!
+        }
+      `,
+      ),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an Input field that only one subgraph defines can reference an @inaccessible type if it is declared @inaccessible #2', () => {
+    const { federatedGraphClientSchema, warnings } = federateSubgraphsSuccess(
+      [fao, fan],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        input Input {
+          id: ID!
+        }
+
+        type Query {
+          field(input: Input!): String!
+        }
+      `,
+      ),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that a field argument can be declared @inaccessible if the field is also declared @inaccessible #1.1', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fac, fad], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
@@ -1406,6 +1480,61 @@ const fak: Subgraph = {
     input Input @inaccessible {
       id: ID!
       name: String!
+    }
+  `),
+};
+
+const fal: Subgraph = {
+  name: 'fal',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field(input: Input!): String!
+    }
+
+    input Input {
+      id: ID!
+      name: String
+    }
+  `),
+};
+
+const fam: Subgraph = {
+  name: 'fam',
+  url: '',
+  definitions: parse(`
+    input Input {
+      id: ID!
+      name: String! = "name" @inaccessible
+    }
+  `),
+};
+
+const fan: Subgraph = {
+  name: 'fan',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field(input: Input!): String!
+    }
+
+    input Input {
+      id: ID!
+    }
+  `),
+};
+
+const fao: Subgraph = {
+  name: 'fao',
+  url: '',
+  definitions: parse(`
+    input Hidden @inaccessible {
+      value: String
+    }
+
+    input Input {
+      id: ID!
+      secret: Hidden @inaccessible
     }
   `),
 };

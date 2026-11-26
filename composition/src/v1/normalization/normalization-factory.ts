@@ -88,6 +88,7 @@ import {
   expectedEntityError,
   externalInterfaceFieldsError,
   fieldAlreadyProvidedErrorMessage,
+  fromContextArgumentDefaultValueErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesError,
   inlineFragmentWithoutTypeConditionErrorMessage,
@@ -265,6 +266,7 @@ import {
   isInterfaceNode,
   isLeafKind,
   isNodeExternalOrShareable,
+  isNonNullWithoutDefault,
   isOutputNodeKind,
   isParentDataCompositeOutputType,
   isTypeNodeListType,
@@ -817,6 +819,9 @@ export class NormalizationFactory {
     if (unexpectedArgumentNames.size > 0) {
       errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, [...unexpectedArgumentNames]));
     }
+    if (directiveName === FROM_CONTEXT && data.kind === Kind.ARGUMENT && data.defaultValue) {
+      errorMessages.push(fromContextArgumentDefaultValueErrorMessage);
+    }
     const undefinedArgumentNames = getEntriesNotInHashSet(requiredArgumentNames, definedArgumentNames);
     if (undefinedArgumentNames.length > 0) {
       errorMessages.push(
@@ -1267,11 +1272,11 @@ export class NormalizationFactory {
         ),
       );
     }
-    const isRequired = isTypeRequired(node.type);
-    if (node.defaultValue) {
-      optionalArgumentNames.add(name);
-    } else if (isRequired) {
+    const isRequired = isNonNullWithoutDefault(node);
+    if (isRequired) {
       requiredArgumentNames.add(name);
+    } else if (node.defaultValue) {
+      optionalArgumentNames.add(name);
     }
     const namedTypeName = getTypeNodeNamedTypeName(node.type);
     const argumentData = newDirectiveArgumentData({
@@ -1445,7 +1450,7 @@ export class NormalizationFactory {
       originalParentTypeName: originalParentTypeName,
       federatedDirectivesData: newFederatedDirectivesData(),
       renamedParentTypeName: federatedParentTypeName,
-      requiredSubgraphNames: new Set<SubgraphName>(isTypeRequired(node.type) ? [this.subgraphName] : []),
+      requiredSubgraphNames: new Set<SubgraphName>(isNonNullWithoutDefault(node) ? [this.subgraphName] : []),
       subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       type: getMutableTypeNode(node.type, originalParentTypeName, this.errors),
       defaultValue: node.defaultValue, // TODO validate
@@ -2620,12 +2625,12 @@ export class NormalizationFactory {
             invalidFieldImplementation.invalidImplementedArguments.push({ actualType, argumentName, expectedType });
           }
         }
-        // Additional arguments must be optional (nullable)
+        // Additional arguments must be optional
         for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
           if (handledArguments.has(argumentName)) {
             continue;
           }
-          if (argumentData.type.kind !== Kind.NON_NULL_TYPE) {
+          if (argumentData.requiredSubgraphNames.size < 1) {
             continue;
           }
           hasErrors = true;

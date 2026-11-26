@@ -2034,6 +2034,8 @@ export function semanticNonNullLevelsNonNullErrorMessage({
 
 export const semanticNonNullArgumentErrorMessage = `Argument "${LEVELS}" validation error.`;
 
+export const fromContextArgumentDefaultValueErrorMessage = ` An ${ARGUMENT} that defines "@${FROM_CONTEXT}" must not define a default value.`;
+
 export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
   const coords = `${data.renamedParentTypeName}.${data.name}`;
   let message =

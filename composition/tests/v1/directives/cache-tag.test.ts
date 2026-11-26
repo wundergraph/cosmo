@@ -1107,6 +1107,35 @@ describe('@cacheTag tests', () => {
       ]);
     });
 
+    test('that a reference to a @fromContext argument is rejected if another subgraph declares it non-null with a default', () => {
+      const { errors } = federateSubgraphsFailure(
+        [
+          createSubgraph(
+            'a',
+            `
+            type Query @context(name: "q") {
+              products(id: ID!, ctx: String @fromContext(field: "$q { x }")): [Product!]!
+                @shareable @cacheTag(format: "products-{$args.ctx}")
+              x: String
+            }
+            type Product @key(fields: "id") { id: ID! }
+          `,
+          ),
+          createProductsSubgraph('b', '@shareable', 'id: ID!, ctx: String! = "x"'),
+        ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toStrictEqual([
+        unavailableCacheTagReferencesError('Query.products', [
+          fromContextCacheTagReferenceErrorMessage({
+            coords: 'Query.products(ctx: ...)',
+            reference: 'ctx',
+            subgraphName: 'a',
+          }),
+        ]),
+      ]);
+    });
+
     test('that a reference to an argument defined by every subgraph that defines the field is valid', () => {
       const { warnings } = federateSubgraphsSuccess(
         [
@@ -1358,30 +1387,14 @@ describe('@cacheTag tests', () => {
       );
     });
 
-    /* The argument is optional and inaccessible in "a" but required in "b".
-     * Federated in this order, the required-inaccessible error is not raised, so the reference is reported instead.
-     */
-    test('that a reference to an inaccessible argument that another subgraph requires is rejected', () => {
-      const { errors } = federateSubgraphsFailure(
-        [
-          createProductsSubgraph(
-            'a',
-            '@shareable @cacheTag(format: "products-{$args.region}")',
-            'id: ID!, region: String @inaccessible',
-          ),
+    test('that a referenced inaccessible argument that another subgraph requires produces only its own error', () => {
+      expectErrorsUnchangedByCacheTag(
+        (cacheTag) => [
+          createProductsSubgraph('a', `@shareable ${cacheTag}`, 'id: ID!, region: String @inaccessible'),
           createProductsSubgraph('b', '@shareable', 'id: ID!, region: String!'),
         ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
+        '@cacheTag(format: "products-{$args.region}")',
       );
-      expect(errors).toStrictEqual([
-        unavailableCacheTagReferencesError('Query.products', [
-          inaccessibleCacheTagReferenceErrorMessage({
-            coords: 'Query.products(region: ...)',
-            reference: 'region',
-            subgraphName: 'a',
-          }),
-        ]),
-      ]);
     });
   });
 

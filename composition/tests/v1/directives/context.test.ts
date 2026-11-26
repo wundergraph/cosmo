@@ -4,10 +4,15 @@ import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
+  FIRST_ORDINAL,
+  FROM_CONTEXT,
+  fromContextArgumentDefaultValueErrorMessage,
+  invalidDirectiveError,
   requiredContextArgumentError,
   type ImplementationErrors,
   type InvalidFieldImplementation,
@@ -353,6 +358,60 @@ describe('@context and @fromContext directives', () => {
         `),
       );
     });
+
+    test('returns an error if a nullable context argument defines a default value', () => {
+      const subgraph = createSubgraph(
+        'subgraph-default-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") {
+            id: ID!
+            apply(plan: String = "basic" @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { errors } = normalizeSubgraphFailure(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(FROM_CONTEXT, 'Wallet.apply(plan: ...)', FIRST_ORDINAL, [
+          fromContextArgumentDefaultValueErrorMessage,
+        ]),
+      ]);
+    });
+
+    test('returns an error if a non-null context argument defines a default value', () => {
+      const subgraph = createSubgraph(
+        'subgraph-default-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") {
+            id: ID!
+            apply(plan: String! = "basic" @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { errors } = normalizeSubgraphFailure(subgraph, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(FROM_CONTEXT, 'Wallet.apply(plan: ...)', FIRST_ORDINAL, [
+          fromContextArgumentDefaultValueErrorMessage,
+        ]),
+      ]);
+    });
   });
 
   describe('federation', () => {
@@ -665,6 +724,122 @@ describe('@context and @fromContext directives', () => {
           }
         `),
       );
+    });
+
+    test('strips a context argument that another subgraph declares non-null with a default', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-defaulted-argument',
+        `
+          type Query {
+            noop: Int
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String! = "basic"): Int!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const expectedSchema = normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Member {
+          id: ID!
+          plan: String!
+        }
+
+        type Query {
+          member(id: ID!): Member
+          noop: Int
+        }
+
+        type Wallet {
+          apply: Int!
+          id: ID!
+        }
+      `);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    });
+
+    test('strips a context argument that another subgraph declares non-null with a default regardless of the subgraph order', () => {
+      const subgraphA = createSubgraph(
+        'subgraph-defaulted-argument',
+        `
+          type Query {
+            noop: Int
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String! = "basic"): Int!
+          }
+        `,
+      );
+      const subgraphB = createSubgraph(
+        'subgraph-context-argument',
+        `
+          type Query {
+            member(id: ID!): Member
+          }
+
+          type Member @key(fields: "id") @context(name: "memberContext") {
+            id: ID!
+            plan: String!
+          }
+
+          type Wallet @key(fields: "id") @shareable {
+            id: ID!
+            apply(plan: String @fromContext(field: "$memberContext { plan }")): Int!
+          }
+        `,
+      );
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const expectedSchema = normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Member {
+          id: ID!
+          plan: String!
+        }
+
+        type Query {
+          member(id: ID!): Member
+          noop: Int
+        }
+
+        type Wallet {
+          apply: Int!
+          id: ID!
+        }
+      `);
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
     });
 
     test('returns an error if an argument takes a context in one subgraph and is required in another', () => {

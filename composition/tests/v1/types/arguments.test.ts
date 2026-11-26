@@ -373,6 +373,39 @@ describe('Argument tests', () => {
     expect(errors[1]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Object.field', errorArrayTwo));
   });
 
+  test('that a non-null argument with a default that is not defined in all definitions of a field is not present in the federated graph', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID! = "1"): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a: ID
+        }
+      `,
+    );
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a, b],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const expectedSchema = normalizeString(`
+      ${SCHEMA_QUERY_DEFINITION}
+
+      type Query {
+        a: ID
+      }
+    `);
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(expectedSchema);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(expectedSchema);
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
     const { errors } = normalizeSubgraphFailure(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(2);
@@ -536,6 +569,101 @@ describe('Argument tests', () => {
     expect(warnings).toHaveLength(0);
   });
 
+  test('that a non-null argument with a default can be declared @inaccessible', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query {
+          a(a: String! = "1" @inaccessible): ID
+        }
+      `,
+    );
+
+    const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [a],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        type Query {
+          a: ID
+        }
+      `),
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(`
+        ${SCHEMA_QUERY_DEFINITION}
+
+        ${INACCESSIBLE_DIRECTIVE}
+
+        type Query {
+          a(a: String! = "1" @inaccessible): ID
+        }
+      `),
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if a non-null argument with a default is declared @inaccessible and another subgraph declares it nullable without a default #1', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID! = "1" @inaccessible): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if a non-null argument with a default is declared @inaccessible and another subgraph declares it nullable without a default #2', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID! = "1" @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
   test('that an error is returned if a required argument is declared @inaccessible #2', () => {
     const a = createSubgraph(
       'a',
@@ -550,6 +678,35 @@ describe('Argument tests', () => {
       `
         type Query @shareable {
           a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+
+    const { errors, warnings } = federateSubgraphsFailure([a, b], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      inaccessibleRequiredInputValueError(
+        { federatedCoords: 'Query.a(a: ...)', kind: Kind.ARGUMENT, name: 'a' } as InputValueData,
+        'Query.a',
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
+  });
+
+  test('that an error is returned if a required argument is declared @inaccessible #3', () => {
+    const a = createSubgraph(
+      'a',
+      `
+        type Query @shareable {
+          a(a: ID @inaccessible): ID
+        }
+      `,
+    );
+    const b = createSubgraph(
+      'b',
+      `
+        type Query @shareable {
+          a(a: ID!): ID
         }
       `,
     );
