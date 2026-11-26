@@ -673,6 +673,46 @@ describe('@interfaceObject tests', () => {
     );
   });
 
+  test('inherits external key fields from each Interface Object in the concrete type configuration', () => {
+    const accounts = createSubgraph(
+      'accounts',
+      `
+      type Query { users: [User!]! }
+      interface User @key(fields: "id") @key(fields: "handle") { id: ID! handle: ID! }
+      interface Account @key(fields: "handle") @key(fields: "region") { handle: ID! region: ID! }
+      type Admin implements User & Account @key(fields: "id") @key(fields: "handle") @key(fields: "region") {
+        id: ID!
+        handle: ID!
+        region: ID!
+      }
+      type Member implements User @key(fields: "id") @key(fields: "handle") { id: ID! handle: ID! }
+    `,
+    );
+    const profiles = createSubgraph(
+      'profiles',
+      `
+      type Query { bUser: User! }
+      type User @interfaceObject @key(fields: "id") @key(fields: "handle") {
+        id: ID! @external
+        handle: ID!
+      }
+      type Account @interfaceObject @key(fields: "handle") @key(fields: "region") {
+        handle: ID!
+        region: ID! @external
+      }
+    `,
+    );
+
+    const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      [accounts, profiles],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const types = subgraphConfigBySubgraphName.get(profiles.name)!.configurationDataByTypeName;
+    expect(types.get('Admin')!.externalFieldNames).toStrictEqual(new Set(['id', 'region']));
+    expect(types.get('Member')!.externalFieldNames).toStrictEqual(new Set(['id']));
+    expect(types.get('Admin')!.fieldNames).toStrictEqual(new Set(['handle']));
+  });
+
   test('that @external fields to satisfy an entity Interface are propagated from Interface Object to implementations', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
