@@ -2,23 +2,22 @@ package data
 
 import (
 	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "1",
 		Name:                "Cloud Migration Overhaul",
-		Description:         &wrapperspb.StringValue{Value: "Migrate legacy systems to cloud-native architecture"},
+		Description:         new("Migrate legacy systems to cloud-native architecture"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:           &wrapperspb.StringValue{Value: "2021-01-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
+		StartDate:           new("2021-01-01"),
+		EndDate:             new("2025-08-20"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{}, // Will be resolved by GraphQL resolvers
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"1", "2", "3"}}},
 		Milestones:          GetMilestonesByProjectID("1"),
 		Tasks:               GetTasksByProjectID("1"),
-		Progress:            &wrapperspb.DoubleValue{Value: 65.0},
+		Progress:            new(65.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"cloud", "migration", "priority"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}}, // nullable list of nullable projects
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}}, // will be populated by helper function
@@ -30,16 +29,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "2",
 		Name:                "Microservices Revolution",
-		Description:         &wrapperspb.StringValue{Value: "Break down monolith into microservices"},
+		Description:         new("Break down monolith into microservices"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:           &wrapperspb.StringValue{Value: "2021-01-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
+		StartDate:           new("2021-01-01"),
+		EndDate:             new("2025-08-20"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"4", "5", "6"}}},
 		Milestones:          GetMilestonesByProjectID("2"),
 		Tasks:               GetTasksByProjectID("2"),
-		Progress:            &wrapperspb.DoubleValue{Value: 75.0},
+		Progress:            new(75.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"microservices", "architecture"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -51,16 +50,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "3",
 		Name:                "AI-Powered Analytics",
-		Description:         &wrapperspb.StringValue{Value: "Implement machine learning for business intelligence"},
+		Description:         new("Implement machine learning for business intelligence"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:           &wrapperspb.StringValue{Value: "2021-01-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
+		StartDate:           new("2021-01-01"),
+		EndDate:             new("2025-08-20"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("3"),
 		Tasks:               GetTasksByProjectID("3"),
-		Progress:            &wrapperspb.DoubleValue{Value: 45.0},
+		Progress:            new(45.0),
 		Tags:                nil, // nullable list example
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -72,16 +71,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "4",
 		Name:                "DevOps Transformation",
-		Description:         &wrapperspb.StringValue{Value: "Implement CI/CD and infrastructure as code"},
+		Description:         new("Implement CI/CD and infrastructure as code"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_PLANNING,
-		StartDate:           &wrapperspb.StringValue{Value: "2023-03-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2024-12-31"},
+		StartDate:           new("2023-03-01"),
+		EndDate:             new("2024-12-31"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("4"),
 		Tasks:               GetTasksByProjectID("4"),
-		Progress:            &wrapperspb.DoubleValue{Value: 10.0},
+		Progress:            new(10.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"devops", "ci-cd", "infrastructure"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -93,16 +92,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "5",
 		Name:                "Security Overhaul",
-		Description:         &wrapperspb.StringValue{Value: "Implement zero-trust security architecture"},
+		Description:         new("Implement zero-trust security architecture"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ON_HOLD,
-		StartDate:           &wrapperspb.StringValue{Value: "2023-06-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2024-06-30"},
+		StartDate:           new("2023-06-01"),
+		EndDate:             new("2024-06-30"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("5"),
 		Tasks:               GetTasksByProjectID("5"),
-		Progress:            &wrapperspb.DoubleValue{Value: 5.0},
+		Progress:            new(5.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"security", "zero-trust"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -114,16 +113,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "6",
 		Name:                "Mobile App Development",
-		Description:         &wrapperspb.StringValue{Value: "Build native mobile applications for iOS and Android"},
+		Description:         new("Build native mobile applications for iOS and Android"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:           &wrapperspb.StringValue{Value: "2023-09-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2024-09-30"},
+		StartDate:           new("2023-09-01"),
+		EndDate:             new("2024-09-30"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"7", "8"}}},
 		Milestones:          GetMilestonesByProjectID("6"),
 		Tasks:               GetTasksByProjectID("6"),
-		Progress:            &wrapperspb.DoubleValue{Value: 30.0},
+		Progress:            new(30.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"mobile", "ios", "android"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -135,16 +134,16 @@ var ServiceProjects = []*projects.Project{
 	{
 		Id:                  "7",
 		Name:                "Data Lake Implementation",
-		Description:         &wrapperspb.StringValue{Value: "Build enterprise data lake for analytics"},
+		Description:         new("Build enterprise data lake for analytics"),
 		Status:              projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:           &wrapperspb.StringValue{Value: "2023-01-01"},
-		EndDate:             &wrapperspb.StringValue{Value: "2024-12-31"},
+		StartDate:           new("2023-01-01"),
+		EndDate:             new("2024-12-31"),
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
 		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"9", "10"}}},
 		Milestones:          GetMilestonesByProjectID("7"),
 		Tasks:               GetTasksByProjectID("7"),
-		Progress:            &wrapperspb.DoubleValue{Value: 40.0},
+		Progress:            new(40.0),
 		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"data", "analytics", "lake"}}},
 		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
@@ -191,7 +190,7 @@ func GetTasksByProjectID(projectID string) []*projects.Task {
 func GetTasksByMilestoneID(milestoneID string) []*projects.Task {
 	var tasks []*projects.Task
 	for _, task := range ServiceTasks {
-		if task.MilestoneId != nil && task.MilestoneId.Value == milestoneID {
+		if task.MilestoneId != nil && *task.MilestoneId == milestoneID {
 			tasks = append(tasks, task)
 		}
 	}

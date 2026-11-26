@@ -3,8 +3,6 @@ package service;
 
 option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects";
 
-import "google/protobuf/wrappers.proto";
-
 // Service definition for ProjectsService
 service ProjectsService {
   // Lookup Employee entity by id
@@ -488,7 +486,7 @@ message MutationUpdateProjectStatusResponse {
   ProjectUpdate update_project_status = 1;
 }
 message ResolveProjectSubProjectsArgs {
-  google.protobuf.BoolValue include_archived = 1;
+  optional bool include_archived = 1;
 }
 
 message ResolveProjectSubProjectsContext {
@@ -515,7 +513,7 @@ message ResolveProjectSubProjectsResponse {
 message ResolveProjectFilteredTasksArgs {
   TaskStatus status = 1;
   TaskPriority priority = 2;
-  google.protobuf.Int32Value limit = 3;
+  optional int32 limit = 3;
 }
 
 message ResolveProjectFilteredTasksContext {
@@ -538,13 +536,13 @@ message ResolveProjectFilteredTasksResponse {
 }
 
 message ResolveProjectCompletionRateArgs {
-  google.protobuf.BoolValue include_subtasks = 1;
+  optional bool include_subtasks = 1;
 }
 
 message ResolveProjectCompletionRateContext {
   string id = 1;
-  google.protobuf.StringValue start_date = 2;
-  google.protobuf.StringValue end_date = 3;
+  optional string start_date = 2;
+  optional string end_date = 3;
   ProjectStatus status = 4;
 }
 
@@ -564,12 +562,12 @@ message ResolveProjectCompletionRateResponse {
 }
 
 message ResolveProjectEstimatedDaysRemainingArgs {
-  google.protobuf.StringValue from_date = 1;
+  optional string from_date = 1;
 }
 
 message ResolveProjectEstimatedDaysRemainingContext {
   string id = 1;
-  google.protobuf.StringValue end_date = 2;
+  optional string end_date = 2;
   ProjectStatus status = 3;
 }
 
@@ -581,7 +579,7 @@ message ResolveProjectEstimatedDaysRemainingRequest {
 }
 
 message ResolveProjectEstimatedDaysRemainingResult {
-  google.protobuf.Int32Value estimated_days_remaining = 1;
+  optional int32 estimated_days_remaining = 1;
 }
 
 message ResolveProjectEstimatedDaysRemainingResponse {
@@ -589,7 +587,7 @@ message ResolveProjectEstimatedDaysRemainingResponse {
 }
 
 message ResolveProjectCriticalDeadlineArgs {
-  google.protobuf.Int32Value within_days = 1;
+  optional int32 within_days = 1;
 }
 
 message ResolveProjectCriticalDeadlineContext {
@@ -614,7 +612,7 @@ message ResolveProjectCriticalDeadlineResponse {
 }
 
 message ResolveProjectTopPriorityItemArgs {
-  google.protobuf.StringValue category = 1;
+  optional string category = 1;
 }
 
 message ResolveProjectTopPriorityItemContext {
@@ -672,14 +670,14 @@ message ResolveProjectActiveMilestoneCountResponse {
 }
 
 message ResolveMilestoneIsAtRiskArgs {
-  google.protobuf.DoubleValue threshold = 1;
+  optional double threshold = 1;
 }
 
 message ResolveMilestoneIsAtRiskContext {
   string id = 1;
-  google.protobuf.StringValue end_date = 2;
+  optional string end_date = 2;
   MilestoneStatus status = 3;
-  google.protobuf.DoubleValue completion_percentage = 4;
+  optional double completion_percentage = 4;
 }
 
 message ResolveMilestoneIsAtRiskRequest {
@@ -698,11 +696,11 @@ message ResolveMilestoneIsAtRiskResponse {
 }
 
 message ResolveMilestoneDaysUntilDueArgs {
-  google.protobuf.StringValue from_date = 1;
+  optional string from_date = 1;
 }
 
 message ResolveMilestoneDaysUntilDueContext {
-  google.protobuf.StringValue end_date = 1;
+  optional string end_date = 1;
 }
 
 message ResolveMilestoneDaysUntilDueRequest {
@@ -713,7 +711,7 @@ message ResolveMilestoneDaysUntilDueRequest {
 }
 
 message ResolveMilestoneDaysUntilDueResult {
-  google.protobuf.Int32Value days_until_due = 1;
+  optional int32 days_until_due = 1;
 }
 
 message ResolveMilestoneDaysUntilDueResponse {
@@ -721,7 +719,7 @@ message ResolveMilestoneDaysUntilDueResponse {
 }
 
 message ResolveTaskIsBlockedArgs {
-  google.protobuf.BoolValue check_dependencies = 1;
+  optional bool check_dependencies = 1;
 }
 
 message ResolveTaskIsBlockedContext {
@@ -745,13 +743,13 @@ message ResolveTaskIsBlockedResponse {
 }
 
 message ResolveTaskTotalEffortArgs {
-  google.protobuf.BoolValue include_subtasks = 1;
+  optional bool include_subtasks = 1;
 }
 
 message ResolveTaskTotalEffortContext {
   string id = 1;
-  google.protobuf.DoubleValue estimated_hours = 2;
-  google.protobuf.DoubleValue actual_hours = 3;
+  optional double estimated_hours = 2;
+  optional double actual_hours = 3;
 }
 
 message ResolveTaskTotalEffortRequest {
@@ -762,7 +760,7 @@ message ResolveTaskTotalEffortRequest {
 }
 
 message ResolveTaskTotalEffortResult {
-  google.protobuf.DoubleValue total_effort = 1;
+  optional double total_effort = 1;
 }
 
 message ResolveTaskTotalEffortResponse {
@@ -857,8 +855,8 @@ message ResolveWorkAuditStepEffortResponse {
 }
 
 message ResolveEmployeeCurrentWorkloadArgs {
-  google.protobuf.BoolValue include_completed = 1;
-  google.protobuf.StringValue project_id = 2;
+  optional bool include_completed = 1;
+  optional string project_id = 2;
 }
 
 message ResolveEmployeeCurrentWorkloadContext {
@@ -881,7 +879,7 @@ message ResolveEmployeeCurrentWorkloadResponse {
 }
 
 message ResolveEmployeeAverageTaskCompletionDaysArgs {
-  google.protobuf.StringValue project_id = 1;
+  optional string project_id = 1;
   TaskPriority priority = 2;
 }
 
@@ -897,7 +895,7 @@ message ResolveEmployeeAverageTaskCompletionDaysRequest {
 }
 
 message ResolveEmployeeAverageTaskCompletionDaysResult {
-  google.protobuf.DoubleValue average_task_completion_days = 1;
+  optional double average_task_completion_days = 1;
 }
 
 message ResolveEmployeeAverageTaskCompletionDaysResponse {
@@ -1382,16 +1380,16 @@ message RequireEmployeeWorkAuditByIdFields {
 message Project {
   string id = 1;
   string name = 2;
-  google.protobuf.StringValue description = 3;
-  google.protobuf.StringValue start_date = 4;
-  google.protobuf.StringValue end_date = 5;
+  optional string description = 3;
+  optional string start_date = 4;
+  optional string end_date = 5;
   ProjectStatus status = 6;
   repeated Employee team_members = 7;
   repeated Product related_products = 8;
   ListOfString milestone_ids = 9;
   repeated Milestone milestones = 10;
   repeated Task tasks = 11;
-  google.protobuf.DoubleValue progress = 12;
+  optional double progress = 12;
   ListOfString tags = 13;
   ListOfProject alternative_projects = 14;
   ListOfProject dependencies = 15;
@@ -1405,11 +1403,11 @@ message Milestone {
   string id = 1;
   string project_id = 2;
   string name = 3;
-  google.protobuf.StringValue description = 4;
-  google.protobuf.StringValue start_date = 5;
-  google.protobuf.StringValue end_date = 6;
+  optional string description = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
   MilestoneStatus status = 7;
-  google.protobuf.DoubleValue completion_percentage = 8;
+  optional double completion_percentage = 8;
   repeated Milestone dependencies = 9;
   ListOfTask subtasks = 10;
   ListOfEmployee reviewers = 11;
@@ -1419,17 +1417,17 @@ message Task {
   reserved 18 to 19;
   string id = 1;
   string project_id = 2;
-  google.protobuf.StringValue milestone_id = 3;
-  google.protobuf.Int32Value assignee_id = 4;
+  optional string milestone_id = 3;
+  optional int32 assignee_id = 4;
   string name = 5;
-  google.protobuf.StringValue description = 6;
+  optional string description = 6;
   TaskPriority priority = 7;
   TaskStatus status = 8;
   // Deprecation notice: No more estimations!
-  google.protobuf.DoubleValue estimated_hours = 9 [deprecated = true];
-  google.protobuf.DoubleValue actual_hours = 10;
-  google.protobuf.StringValue created_at = 11;
-  google.protobuf.StringValue completed_at = 12;
+  optional double estimated_hours = 9 [deprecated = true];
+  optional double actual_hours = 10;
+  optional string created_at = 11;
+  optional string completed_at = 12;
   ListOfString labels = 13;
   ListOfTask subtasks = 14;
   repeated Task dependencies = 15;
@@ -1497,28 +1495,28 @@ message Node {
 
 message ProjectInput {
   string name = 1;
-  google.protobuf.StringValue description = 2;
-  google.protobuf.StringValue start_date = 3;
-  google.protobuf.StringValue end_date = 4;
+  optional string description = 2;
+  optional string start_date = 3;
+  optional string end_date = 4;
   ProjectStatus status = 5;
 }
 
 message MilestoneInput {
   string project_id = 1;
   string name = 2;
-  google.protobuf.StringValue description = 3;
-  google.protobuf.StringValue due_date = 4;
+  optional string description = 3;
+  optional string due_date = 4;
   MilestoneStatus status = 5;
 }
 
 message TaskInput {
   string project_id = 1;
-  google.protobuf.Int32Value assignee_id = 2;
+  optional int32 assignee_id = 2;
   string name = 3;
-  google.protobuf.StringValue description = 4;
+  optional string description = 4;
   TaskPriority priority = 5;
   TaskStatus status = 6;
-  google.protobuf.DoubleValue estimated_hours = 7;
+  optional double estimated_hours = 7;
 }
 
 message ProjectUpdate {
@@ -1528,7 +1526,7 @@ message ProjectUpdate {
   ProjectUpdateType update_type = 4;
   string description = 5;
   string timestamp = 6;
-  google.protobuf.StringValue metadata = 7;
+  optional string metadata = 7;
 }
 
 message Timestamped {

@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const bufSize = 1024 * 1024
@@ -291,10 +290,10 @@ func TestMutationAddProject(t *testing.T) {
 
 	newProject := &projects.ProjectInput{
 		Name:        "Test Project",
-		Description: &wrapperspb.StringValue{Value: "Test Description"},
+		Description: new("Test Description"),
 		Status:      projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:   &wrapperspb.StringValue{Value: "2024-01-01"},
-		EndDate:     &wrapperspb.StringValue{Value: "2024-12-31"},
+		StartDate:   new("2024-01-01"),
+		EndDate:     new("2024-12-31"),
 	}
 
 	resp, err := svc.client.MutationAddProject(context.Background(), &projects.MutationAddProjectRequest{
@@ -304,10 +303,10 @@ func TestMutationAddProject(t *testing.T) {
 	assert.NotNil(t, resp.AddProject)
 	assert.Equal(t, "8", resp.AddProject.Id) // Next ID after the last project in data
 	assert.Equal(t, newProject.Name, resp.AddProject.Name)
-	assert.Equal(t, newProject.Description.Value, resp.AddProject.Description.Value)
+	assert.Equal(t, *newProject.Description, *resp.AddProject.Description)
 	assert.Equal(t, newProject.Status, resp.AddProject.Status)
-	assert.Equal(t, newProject.StartDate.Value, resp.AddProject.StartDate.Value)
-	assert.Equal(t, newProject.EndDate.Value, resp.AddProject.EndDate.Value)
+	assert.Equal(t, *newProject.StartDate, *resp.AddProject.StartDate)
+	assert.Equal(t, *newProject.EndDate, *resp.AddProject.EndDate)
 }
 
 // Test for the new nested list functionality

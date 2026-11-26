@@ -16,6 +16,9 @@ import {
   MutationAddLessonResponse,
   LookupEmployeeByIdRequest,
   LookupEmployeeByIdResponse,
+  ResolveCourseDescriptionPreviewRequest,
+  ResolveCourseDescriptionPreviewResponse,
+  ResolveCourseDescriptionPreviewResult,
   Course,
   Lesson,
   Employee,
@@ -358,6 +361,29 @@ const pluginImplementation = {
       results.push(employeeDataToEmployee(employeeData));
     }
     
+    response.setResultList(results);
+    callback(null, response);
+  },
+
+  // Field resolver: Course.descriptionPreview
+  // It reads the description from the resolver context, not from the course data.
+  resolveCourseDescriptionPreview: (
+    call: grpc.ServerUnaryCall<ResolveCourseDescriptionPreviewRequest, ResolveCourseDescriptionPreviewResponse>,
+    callback: grpc.sendUnaryData<ResolveCourseDescriptionPreviewResponse>
+  ) => {
+    const maxLength = call.request.getFieldArgs()?.getMaxLength()?.getValue();
+
+    const results = call.request.getContextList().map((context) => {
+      const result = new ResolveCourseDescriptionPreviewResult();
+      const description = context.getDescription();
+      if (description) {
+        const value = description.getValue();
+        result.setDescriptionPreview(new StringValue().setValue(maxLength === undefined ? value : value.slice(0, maxLength)));
+      }
+      return result;
+    });
+
+    const response = new ResolveCourseDescriptionPreviewResponse();
     response.setResultList(results);
     callback(null, response);
   },

@@ -14,7 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // Relationship mappings - easily configurable and maintainable
@@ -172,7 +171,7 @@ func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service
 		StartDate:            nil, // Will be set when milestone work starts
 		EndDate:              req.Milestone.DueDate,
 		Status:               req.Milestone.Status,
-		CompletionPercentage: &wrapperspb.DoubleValue{Value: 0.0},
+		CompletionPercentage: new(0.0),
 	}
 
 	data.ServiceMilestones = append(data.ServiceMilestones, milestone)
@@ -205,8 +204,8 @@ func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.Muta
 		Priority:       req.Task.Priority,
 		Status:         req.Task.Status,
 		EstimatedHours: req.Task.EstimatedHours,
-		ActualHours:    &wrapperspb.DoubleValue{Value: 0.0},
-		CreatedAt:      &wrapperspb.StringValue{Value: time.Now().Format(time.RFC3339)},
+		ActualHours:    new(0.0),
+		CreatedAt:      new(time.Now().Format(time.RFC3339)),
 		CompletedAt:    nil,
 	}
 
@@ -257,7 +256,7 @@ func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *
 		UpdateType:  service.ProjectUpdateType_PROJECT_UPDATE_TYPE_STATUS_CHANGE,
 		Description: "Project status updated via API",
 		Timestamp:   time.Now().Format(time.RFC3339),
-		Metadata:    &wrapperspb.StringValue{Value: `{"new_status": "` + req.Status.String() + `"}`},
+		Metadata:    new(`{"new_status": "` + req.Status.String() + `"}`),
 	}
 
 	data.ServiceProjectUpdates = append(data.ServiceProjectUpdates, projectUpdate)
@@ -403,7 +402,7 @@ func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.
 	// Search projects
 	for _, project := range data.ServiceProjects {
 		if strings.Contains(strings.ToLower(project.Name), query) ||
-			(project.Description != nil && strings.Contains(strings.ToLower(project.Description.Value), query)) {
+			(project.Description != nil && strings.Contains(strings.ToLower(*project.Description), query)) {
 			populatedProject := p.populateProjectRelationships(project)
 			searchResults = append(searchResults, &service.ProjectSearchResult{
 				Value: &service.ProjectSearchResult_Project{Project: populatedProject},
@@ -414,7 +413,7 @@ func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.
 	// Search milestones
 	for _, milestone := range data.ServiceMilestones {
 		if strings.Contains(strings.ToLower(milestone.Name), query) ||
-			(milestone.Description != nil && strings.Contains(strings.ToLower(milestone.Description.Value), query)) {
+			(milestone.Description != nil && strings.Contains(strings.ToLower(*milestone.Description), query)) {
 			searchResults = append(searchResults, &service.ProjectSearchResult{
 				Value: &service.ProjectSearchResult_Milestone{Milestone: milestone},
 			})
@@ -424,7 +423,7 @@ func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.
 	// Search tasks
 	for _, task := range data.ServiceTasks {
 		if strings.Contains(strings.ToLower(task.Name), query) ||
-			(task.Description != nil && strings.Contains(strings.ToLower(task.Description.Value), query)) {
+			(task.Description != nil && strings.Contains(strings.ToLower(*task.Description), query)) {
 			searchResults = append(searchResults, &service.ProjectSearchResult{
 				Value: &service.ProjectSearchResult_Task{Task: task},
 			})
@@ -1044,7 +1043,7 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 		MilestoneIds:    &service.ListOfString{List: &service.ListOfString_List{Items: []string{}}},
 		Milestones:      []*service.Milestone{},
 		Tasks:           []*service.Task{},
-		Progress:        &wrapperspb.DoubleValue{Value: 0.0},
+		Progress:        new(0.0),
 	}
 
 	data.ServiceProjects = append(data.ServiceProjects, project)
