@@ -175,6 +175,7 @@ overrides:
 
 patchedDependencies:
   graphql@16.9.0: 5d5a536f5d50c101aa252296c4351a7ac6440bf4af8c1d19657a2234c50c193f
+  ora@8.2.0: b7b1b5e0426529fd5ca92467dedf77f5a8ec7d6c63c9566b7c763e3a3596e69f
 
 importers:
 
@@ -434,7 +435,7 @@ importers:
         version: 9.1.0
       ora:
         specifier: 8.2.0
-        version: 8.2.0
+        version: 8.2.0(patch_hash=b7b1b5e0426529fd5ca92467dedf77f5a8ec7d6c63c9566b7c763e3a3596e69f)
       pathe:
         specifier: 1.1.1
         version: 1.1.1
@@ -27488,7 +27489,7 @@ snapshots:
       strip-ansi: 6.0.1
       wcwidth: 1.0.1
 
-  ora@8.2.0:
+  ora@8.2.0(patch_hash=b7b1b5e0426529fd5ca92467dedf77f5a8ec7d6c63c9566b7c763e3a3596e69f):
     dependencies:
       chalk: 5.3.0
       cli-cursor: 5.0.0

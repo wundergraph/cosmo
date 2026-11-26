@@ -96,6 +96,7 @@ overrides:
 
 patchedDependencies:
   graphql@16.9.0: patches/graphql@16.9.0.patch
+  ora@8.2.0: patches/ora@8.2.0.patch
 
 catalog:
   # Build/test tooling

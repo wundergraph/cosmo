@@ -1,0 +1,13 @@
+diff --git a/index.js b/index.js
+index 940f120ada54ba4a4cbb43ebcd0af1b31e365cf3..7fac9a5381d595efb705eb00e1381c844dfd87b7 100644
+--- a/index.js
++++ b/index.js
+@@ -187,7 +187,7 @@ class Ora {
+ 	}
+ 
+ 	#updateLineCount() {
+-		const columns = this.#stream.columns ?? 80;
++		const columns = this.#stream.columns || 80;
+ 		const fullPrefixText = this.#getFullPrefixText(this.#prefixText, '-');
+ 		const fullSuffixText = this.#getFullSuffixText(this.#suffixText, '-');
+ 		const fullText = ' '.repeat(this.#indent) + fullPrefixText + '--' + this.#text + '--' + fullSuffixText;
