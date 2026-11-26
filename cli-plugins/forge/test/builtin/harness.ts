@@ -212,7 +212,7 @@ export const runForge = async (
     homeDir: '/nonexistent/.wgc',
     caller,
     endpoints: { cosmoApiUrl: '', cosmoWebUrl: '', hubUrl: '', hubAppUrl: '', wgcInstallArgs: 'wgc@latest' },
-    credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
+    credentials: createCredentials({ env: {}, login: () => Promise.resolve(undefined) }),
     prompts,
     stdout: { write: (chunk) => (stdout += chunk) },
     stderr: { write: (chunk) => (stderr += chunk) },

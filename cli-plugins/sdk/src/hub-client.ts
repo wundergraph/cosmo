@@ -130,6 +130,10 @@ export const createHubClient = ({
       'mcp-protocol-version': protocolVersion,
       'user-agent': `wgc/${clientVersion}`,
     };
+    if (credentials.data.kind === 'login') {
+      // Hub, like Cosmo, acts in the organization the login chose; the token lists all of the account's.
+      headers['cosmo-org-slug'] = credentials.data.organizationSlug;
+    }
     if (sessionId) {
       headers['mcp-session-id'] = sessionId;
     }

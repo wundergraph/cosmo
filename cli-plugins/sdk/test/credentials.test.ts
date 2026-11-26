@@ -13,7 +13,7 @@ describe('createCredentials', () => {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.example/req?api-version=2.0',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'req-token',
       },
-      loginToken: () => Promise.resolve('login'),
+      login: () => Promise.resolve({ token: 'login', organizationSlug: 'acme' }),
       fetchImpl: (input, init) => {
         urls.push(`${String(input)} ${new Headers(init?.headers).get('authorization')}`);
         return Promise.resolve(Response.json({ value: 'gh-oidc' }));
@@ -30,7 +30,7 @@ describe('createCredentials', () => {
   test('GitLab CI: reads the configured id_tokens variable', async () => {
     const credentials = createCredentials({
       env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gl-oidc' },
-      loginToken: () => Promise.resolve(undefined),
+      login: () => Promise.resolve(undefined),
     });
 
     expect(await credentials.resolveBearer(request, target)).toEqual({
@@ -40,18 +40,21 @@ describe('createCredentials', () => {
   });
 
   test('locally falls back to the wgc auth login token', async () => {
-    const credentials = createCredentials({ env: {}, loginToken: () => Promise.resolve('login') });
+    const credentials = createCredentials({
+      env: {},
+      login: () => Promise.resolve({ token: 'login', organizationSlug: 'acme' }),
+    });
 
     expect(await credentials.resolveBearer(request, target)).toEqual({
       success: true,
-      data: { token: 'login', kind: 'login' },
+      data: { token: 'login', kind: 'login', organizationSlug: 'acme' },
     });
   });
 
   test('a GitHub job without id-token permission says how to grant it', async () => {
     const credentials = createCredentials({
       env: { GITHUB_ACTIONS: 'true' },
-      loginToken: () => Promise.resolve(undefined),
+      login: () => Promise.resolve(undefined),
     });
 
     const result = await credentials.resolveBearer(request, target);
@@ -66,7 +69,7 @@ describe('createCredentials', () => {
     const asked: string[] = [];
     const credentials = createCredentials({
       env: {},
-      loginToken: () => Promise.resolve('wg_orbstack_pat_s3cret'),
+      login: () => Promise.resolve({ token: 'wg_orbstack_pat_s3cret', organizationSlug: 'acme' }),
       authorizeTarget: (token, to) => {
         asked.push(`${token} ${to.href}`);
         return Promise.resolve(failure('not this instance'));
@@ -92,7 +95,7 @@ describe('createCredentials', () => {
       const calls: string[] = [];
       const credentials = createCredentials({
         env: githubJob,
-        loginToken: () => Promise.resolve('login'),
+        login: () => Promise.resolve({ token: 'login', organizationSlug: 'acme' }),
         fetchImpl: (input, init) => {
           calls.push(`${init?.method ?? 'GET'} ${String(input)} ${new Headers(init?.headers).get('authorization')}`);
           if (String(input).startsWith('https://token.example/')) {
@@ -120,7 +123,7 @@ describe('createCredentials', () => {
     test('outside a CI job, asks Hub for nothing', async () => {
       const credentials = createCredentials({
         env: {},
-        loginToken: () => Promise.resolve('login'),
+        login: () => Promise.resolve({ token: 'login', organizationSlug: 'acme' }),
         fetchImpl: () => Promise.reject(new Error('no request expected')),
       });
 
@@ -130,7 +133,7 @@ describe('createCredentials', () => {
     test('reports why Hub refused the job', async () => {
       const credentials = createCredentials({
         env: { GITLAB_CI: 'true', HUB_ID_TOKEN: 'gl-oidc' },
-        loginToken: () => Promise.resolve(undefined),
+        login: () => Promise.resolve(undefined),
         fetchImpl: () => Promise.resolve(Response.json({ error: 'CI identity token rejected' }, { status: 401 })),
       });
 

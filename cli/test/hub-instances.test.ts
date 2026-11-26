@@ -61,7 +61,7 @@ const setup = (overrides: Record<string, object> = {}) => {
   const callHub = (hubUrl: string, token: string) => {
     const credentials = createCredentials({
       env: {},
-      loginToken: () => Promise.resolve(token),
+      login: () => Promise.resolve({ token, organizationSlug: 'acme' }),
       authorizeTarget: registry.authorize,
     });
     return createHubClient({

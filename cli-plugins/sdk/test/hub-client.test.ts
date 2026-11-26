@@ -1,8 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { createHubClient, ok, toFailure } from '../src/index.js';
+import type { Bearer } from '../src/index.js';
 
-type Call = { url: string; method: string; body: string; auth: string | null; session: string | null };
+type Call = {
+  url: string;
+  method: string;
+  body: string;
+  auth: string | null;
+  org: string | null;
+  session: string | null;
+};
 
 const fakeHub = (toolResult: object) => {
   const calls: Call[] = [];
@@ -16,6 +24,7 @@ const fakeHub = (toolResult: object) => {
       method: message.method ?? 'POST',
       body,
       auth: headers.get('authorization'),
+      org: headers.get('cosmo-org-slug'),
       session: headers.get('mcp-session-id'),
     });
     if (message.method === 'initialize') {
@@ -37,10 +46,12 @@ const fakeHub = (toolResult: object) => {
   return { calls, fetchImpl };
 };
 
-const client = (fetchImpl: typeof fetch) =>
+const loginBearer: Bearer = { token: 't0k', kind: 'login', organizationSlug: 'guide-northwind' };
+
+const client = (fetchImpl: typeof fetch, bearer: Bearer = loginBearer) =>
   createHubClient({
     baseUrl: 'https://hub.example',
-    bearer: () => Promise.resolve(ok({ token: 't0k', kind: 'login' as const })),
+    bearer: () => Promise.resolve(ok(bearer)),
     clientVersion: '1.0.0',
     fetchImpl,
   });
@@ -63,6 +74,16 @@ describe('createHubClient', () => {
       ['https://hub.example/mcp', 'tools/call', 's-1', 'Bearer t0k'],
     ]);
     expect(JSON.parse(hub.calls[2].body).params).toEqual({ name: 'list_sandboxes', arguments: { schema: 'shop' } });
+  });
+
+  test('names the organization a login chose on every call, and none for a CI token', async () => {
+    const loginHub = fakeHub({ content: [], structuredContent: { sandboxes: [] } });
+    await client(loginHub.fetchImpl).callTool('list_sandboxes', {}, sandboxes);
+    const ciHub = fakeHub({ content: [], structuredContent: { sandboxes: [] } });
+    await client(ciHub.fetchImpl, { token: 'oidc', kind: 'ci-oidc' }).callTool('list_sandboxes', {}, sandboxes);
+
+    expect(loginHub.calls.map((call) => call.org)).toEqual(['guide-northwind', 'guide-northwind', 'guide-northwind']);
+    expect(ciHub.calls.map((call) => call.org)).toEqual([null, null, null]);
   });
 
   test('falls back to JSON in the text content when there is no structured content', async () => {
