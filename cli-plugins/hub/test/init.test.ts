@@ -38,6 +38,25 @@ describe('wgc hub init', () => {
     });
   });
 
+  test("writes the graph's namespace", async () => {
+    const dir = await tempRepo({ 'a.graphql': 'type Query { a: Int }' });
+
+    const run = await runWgc(['hub', 'init', '--dir', dir, '--graph', 'storefront', '--namespace', 'legacy']);
+
+    expect(run.exitCode).toBe(0);
+    expect(await readFile(path.join(dir, 'wundergraph.yaml'), 'utf8')).toBe(
+      [
+        'graph: storefront',
+        'namespace: legacy',
+        'subgraphs:',
+        '  - name: a',
+        '    schema:',
+        '      file: a.graphql',
+        '',
+      ].join('\n'),
+    );
+  });
+
   test('says the CI workflow comes from connecting the repository in Hub', async () => {
     const dir = await tempRepo({ 'a.graphql': 'type Query { a: Int }' });
 

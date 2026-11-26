@@ -13,6 +13,7 @@ type FileAction = 'created' | 'kept' | 'overwritten';
 interface InitOptions {
   dir: string;
   graph?: string;
+  namespace: string;
   command?: string;
   force?: boolean;
   json?: boolean;
@@ -149,7 +150,7 @@ const runInit = async (options: InitOptions, context: PluginContext): Promise<vo
     return;
   }
 
-  const content = renderConfig({ graph: graph.data, namespace: 'default', subgraphs: subgraphs.data });
+  const content = renderConfig({ graph: graph.data, namespace: options.namespace, subgraphs: subgraphs.data });
   const written = await writeIfAbsent(dir, configFileName, content, options.force === true);
   if (!written.success) {
     output.fail(toFailure(written));
@@ -175,6 +176,7 @@ export const initCommand = (context: PluginContext): Command =>
     .description(`Write ${configFileName} for this repository`)
     .option('--dir <path>', 'Repository directory', '.')
     .option('--graph <name>', 'Federated graph name in Cosmo')
+    .option('-n, --namespace <name>', 'Cosmo namespace of the federated graph', 'default')
     .option('--command <command>', 'Command that prints the subgraph SDL, when the repository has no .graphql files')
     .option('--force', `Overwrite an existing ${configFileName}`)
     .option('--json', 'Print the result as JSON')
