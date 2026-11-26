@@ -56,4 +56,3 @@ WunderGraph Cosmo GraphQL Metrics Collector
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `10` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
-

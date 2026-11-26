@@ -1,17 +1,33 @@
 name: 'Setup Go'
-description: 'This action install go and cache modules and build dependencies'
+description: 'This action installs Go and the tools from mise.toml, and caches modules and build dependencies'
 inputs:
-  go-version:
-    description: 'The go version to install'
-    default: '1.26'
+  working-directory:
+    description: 'The directory whose mise tools are installed'
+    default: '.'
     required: false
   cache-dependency-path:
     description: 'The path to the dependency to cache'
+    default: '**/go.sum'
+    required: false
 
 runs:
   using: 'composite'
   steps:
-    - uses: actions/setup-go@v5
+    - uses: ./.github/actions/mise
       with:
-        go-version: ${{ inputs.go-version }}
-        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - name: Find Go cache directories
+      id: go-env
+      run: |
+        echo "modcache=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+        echo "cache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        echo "version=$(go env GOVERSION)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.go-env.outputs.modcache }}
+          ${{ steps.go-env.outputs.cache }}
+        key: go-${{ runner.os }}-${{ runner.arch }}-${{ steps.go-env.outputs.version }}-${{ hashFiles(inputs.cache-dependency-path) }}
