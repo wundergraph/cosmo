@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -119,7 +120,7 @@ func argument(request *dynamicpb.Message, fieldName string) (string, bool) {
 
 	value := request.Get(field)
 	if field.Kind() != protoreflect.MessageKind {
-		return value.String(), true
+		return text(value, field.Kind()), true
 	}
 	if !request.Has(field) {
 		return "", false
@@ -129,7 +130,19 @@ func argument(request *dynamicpb.Message, fieldName string) (string, bool) {
 	if wrapped == nil {
 		return "", false
 	}
-	return value.Message().Get(wrapped).String(), true
+	return text(value.Message().Get(wrapped), wrapped.Kind()), true
+}
+
+// text writes a number as digits, never in exponent notation, which REST APIs do not read as a number.
+func text(value protoreflect.Value, kind protoreflect.Kind) string {
+	switch kind {
+	case protoreflect.DoubleKind:
+		return strconv.FormatFloat(value.Float(), 'f', -1, 64)
+	case protoreflect.FloatKind:
+		return strconv.FormatFloat(value.Float(), 'f', -1, 32)
+	default:
+		return value.String()
+	}
 }
 
 // fill puts the REST response body into the one field of the response message.
@@ -151,13 +164,9 @@ func fill(response *dynamicpb.Message, body []byte, types map[string]map[string]
 	return protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(shaped, response)
 }
 
-// rename rewrites REST property names to proto field names, following the message the value is read into.
+// rename rewrites REST property names to proto field names, following the message the value is read into. A number
+// read into a string field, as a 64-bit integer is, becomes its digits.
 func rename(value any, field protoreflect.FieldDescriptor, types map[string]map[string]string) any {
-	message := field.Message()
-	if message == nil {
-		return value
-	}
-
 	switch typed := value.(type) {
 	case []any:
 		items := make([]any, 0, len(typed))
@@ -165,7 +174,16 @@ func rename(value any, field protoreflect.FieldDescriptor, types map[string]map[
 			items = append(items, rename(item, field, types))
 		}
 		return items
+	case json.Number:
+		if field.Kind() == protoreflect.StringKind || field.Message() != nil && field.Message().FullName() == "google.protobuf.StringValue" {
+			return typed.String()
+		}
+		return value
 	case map[string]any:
+		message := field.Message()
+		if message == nil {
+			return value
+		}
 		fields := types[string(message.Name())]
 		renamed := make(map[string]any, len(typed))
 		for property, propertyValue := range typed {

@@ -179,3 +179,39 @@ func TestConfiguredHeadersReachTheRESTAPI(t *testing.T) {
 	}
 	expectJSON(t, response, `{"catalogItem": {"itemId": "42"}}`)
 }
+
+func TestANumberArgumentIsWrittenWithoutAnExponent(t *testing.T) {
+	var queries []string
+	started := startSubgraph(t, restAPI(t, func(writer http.ResponseWriter, request *http.Request) {
+		queries = append(queries, request.URL.RawQuery)
+		_, _ = writer.Write([]byte(`[]`))
+	}))
+
+	_, err := started.invoke("QueryItems", func(request *dynamicpb.Message) {
+		minPrice := request.Descriptor().Fields().ByName("min_price")
+		wrapper := request.Mutable(minPrice).Message()
+		wrapper.Set(minPrice.Message().Fields().ByName("value"), protoreflect.ValueOfFloat64(801698932))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(queries, []string{"min_price=801698932"}) {
+		t.Fatalf("want the query min_price=801698932, got %v", queries)
+	}
+}
+
+func TestA64BitIntegerIsReadAsText(t *testing.T) {
+	started := startSubgraph(t, restAPI(t, func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = writer.Write([]byte(`{"item_id": "42", "units_sold": 9007199254740993, "tags": []}`))
+	}))
+
+	response, err := started.invoke("QueryCatalogItem", func(request *dynamicpb.Message) {
+		setString(request, "id", "42")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectJSON(t, response, `{"catalogItem": {"itemId": "42", "unitsSold": "9007199254740993"}}`)
+}
