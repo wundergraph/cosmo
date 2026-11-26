@@ -230,7 +230,10 @@ export const runWgc = async (
       hubAppUrl,
       wgcInstallArgs,
     },
-    credentials: createCredentials({ env, loginToken: () => Promise.resolve(loginToken) }),
+    credentials: createCredentials({
+      env,
+      login: () => Promise.resolve(loginToken === '' ? undefined : { token: loginToken, organizationSlug: 'acme' }),
+    }),
     outputOverride: output,
     prompts,
     stdout: { write: (chunk: string) => (stdout += chunk) },
@@ -393,7 +396,10 @@ export const hubHooks = ({ hubUrl, env }: { hubUrl: string; env: NodeJS.ProcessE
       hubAppUrl: 'http://hub-app.invalid',
       wgcInstallArgs: 'wgc@latest',
     },
-    credentials: createCredentials({ env, loginToken: () => Promise.resolve('login-token') }),
+    credentials: createCredentials({
+      env,
+      login: () => Promise.resolve({ token: 'login-token', organizationSlug: 'acme' }),
+    }),
   });
   const runtime: HubRuntime = {
     cwd: () => process.cwd(),

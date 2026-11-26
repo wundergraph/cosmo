@@ -3,9 +3,13 @@ import { failure, failWith, ok, Result } from './result.js';
 
 export type BearerKind = 'ci-oidc' | 'login';
 
-export interface Bearer {
+/** A `wgc auth login` token lists every organization of its account; `organizationSlug` is the one the login chose. */
+export type Bearer = { token: string; kind: 'ci-oidc' } | { token: string; kind: 'login'; organizationSlug: string };
+
+/** The current `wgc auth login`: its access token and the organization chosen at login. */
+export interface Login {
   token: string;
-  kind: BearerKind;
+  organizationSlug: string;
 }
 
 export interface BearerRequest {
@@ -45,13 +49,13 @@ const hubErrorResponse = z.object({ error: z.string() });
 
 export const createCredentials = ({
   env,
-  loginToken,
+  login,
   authorizeTarget = () => Promise.resolve(ok(undefined)),
   fetchImpl = fetch,
 }: {
   env: NodeJS.ProcessEnv;
-  /** The current `wgc auth login` access token, refreshed when needed. */
-  loginToken: () => Promise<string | undefined>;
+  /** The current `wgc auth login`, its token refreshed when needed. */
+  login: () => Promise<Login | undefined>;
   /** Fails when `token` must not be sent to `target`. */
   authorizeTarget?: (token: string, target: URL) => Promise<Result<void>>;
   fetchImpl?: typeof fetch;
@@ -90,9 +94,9 @@ export const createCredentials = ({
       return ok({ token: ci.data, kind: 'ci-oidc' });
     }
 
-    const token = await loginToken();
-    if (token) {
-      return ok({ token, kind: 'login' });
+    const current = await login();
+    if (current) {
+      return ok({ token: current.token, kind: 'login', organizationSlug: current.organizationSlug });
     }
 
     if (env.GITHUB_ACTIONS) {

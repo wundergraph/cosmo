@@ -3,7 +3,15 @@ export type { CallerKind, OutputOverride } from './caller.js';
 export { asGroup, withExamples } from './command.js';
 export { createPluginContext } from './context.js';
 export { createCredentials } from './credentials.js';
-export type { Bearer, BearerKind, BearerRequest, CosmoToken, CosmoTokenRequest, Credentials } from './credentials.js';
+export type {
+  Bearer,
+  BearerKind,
+  BearerRequest,
+  CosmoToken,
+  CosmoTokenRequest,
+  Credentials,
+  Login,
+} from './credentials.js';
 export { createHubClient, hubFailureKind } from './hub-client.js';
 export type { CallOptions, HubClient, ToolArgument } from './hub-client.js';
 export { hookableCommands } from './hooks.js';

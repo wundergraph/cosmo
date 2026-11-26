@@ -36,7 +36,7 @@ export const createTestContext = (
       hubAppUrl: 'http://app.hub.test',
       wgcInstallArgs: 'wgc@latest',
     },
-    credentials: createCredentials({ env: {}, loginToken: () => Promise.resolve(undefined) }),
+    credentials: createCredentials({ env: {}, login: () => Promise.resolve(undefined) }),
     stdout,
     stderr,
   });

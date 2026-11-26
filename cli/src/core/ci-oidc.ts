@@ -25,7 +25,7 @@ export const useCiIdentityForCosmo = async ({
     return ok('api-key');
   }
 
-  const credentials = createCredentials({ env, loginToken: () => Promise.resolve(undefined), fetchImpl });
+  const credentials = createCredentials({ env, login: () => Promise.resolve(undefined), fetchImpl });
 
   if (deploymentKind === 'hub') {
     const cosmoToken = await credentials.cosmoToken({
